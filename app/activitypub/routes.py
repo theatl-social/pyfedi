@@ -449,7 +449,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             activity_log.activity_type = 'exception'
                             db.session.commit()
                             return
-                        community = find_actor_or_create(community_ap_id)
+                        community = find_actor_or_create(community_ap_id, community_only=True)
                         user = find_actor_or_create(user_ap_id)
                         if (user and not user.is_local()) and community:
                             user.last_seen = community.last_active = site.last_active = utcnow()
@@ -460,12 +460,22 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                 in_reply_to = request_json['object']['inReplyTo'] if 'inReplyTo' in request_json['object'] else None
                                 if not in_reply_to:
                                     if can_create_post(user, community):
-                                        post = create_post(activity_log, community, request_json, user)
+                                        try:
+                                            post = create_post(activity_log, community, request_json, user)
+                                        except TypeError as e:
+                                            activity_log.exception_message = 'TypeError. See log file.'
+                                            current_app.logger.error('TypeError: ' + str(request_json))
+                                            post = None
                                     else:
                                         post = None
                                 else:
                                     if can_create_post_reply(user, community):
-                                        post = create_post_reply(activity_log, community, in_reply_to, request_json, user)
+                                        try:
+                                            post = create_post_reply(activity_log, community, in_reply_to, request_json, user)
+                                        except TypeError as e:
+                                            activity_log.exception_message = 'TypeError. See log file.'
+                                            current_app.logger.error('TypeError: ' + str(request_json))
+                                            post = None
                                     else:
                                         post = None
                             else:
@@ -491,7 +501,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             activity_log.activity_type = 'exception'
                             db.session.commit()
                             return
-                        community = find_actor_or_create(community_ap_id)
+                        community = find_actor_or_create(community_ap_id, community_only=True)
                         user = find_actor_or_create(user_ap_id)
                         if (user and not user.is_local()) and community:
                             user.last_seen = community.last_active = site.last_active = utcnow()
@@ -664,7 +674,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                     community_ap_id = request_json['object']
                     follow_id = request_json['id']
                     user = find_actor_or_create(user_ap_id)
-                    community = find_actor_or_create(community_ap_id)
+                    community = find_actor_or_create(community_ap_id, community_only=True)
                     if community and community.local_only:
                         # todo: send Deny activity
                         activity_log.exception_message = 'Local only cannot be followed by remote users'
@@ -708,7 +718,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                         community_ap_id = request_json['actor']
                         user_ap_id = request_json['object']['actor']
                         user = find_actor_or_create(user_ap_id)
-                        community = find_actor_or_create(community_ap_id)
+                        community = find_actor_or_create(community_ap_id, community_only=True)
                         if user and community:
                             join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
                             if join_request:
@@ -724,7 +734,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                         community_ap_id = request_json['object']['object']
                         user_ap_id = request_json['object']['actor']
                         user = find_actor_or_create(user_ap_id)
-                        community = find_actor_or_create(community_ap_id)
+                        community = find_actor_or_create(community_ap_id, community_only=True)
                         if user and community:
                             user.last_seen = utcnow()
                             member = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
@@ -892,36 +902,40 @@ def process_delete_request(request_json, activitypublog_id, ip_address):
     with current_app.app_context():
         activity_log = ActivityPubLog.query.get(activitypublog_id)
         if 'type' in request_json and request_json['type'] == 'Delete':
-            actor_to_delete = request_json['object'].lower()
-            user = User.query.filter_by(ap_profile_id=actor_to_delete).first()
-            if user:
-                # check that the user really has been deleted, to avoid spoofing attacks
-                if not user.is_local():
-                    if user_removed_from_remote_server(actor_to_delete, is_piefed=user.instance.software == 'PieFed'):
-                        # Delete all their images to save moderators from having to see disgusting stuff.
-                        files = File.query.join(Post).filter(Post.user_id == user.id).all()
-                        for file in files:
-                            file.delete_from_disk()
-                            file.source_url = ''
-                        if user.avatar_id:
-                            user.avatar.delete_from_disk()
-                            user.avatar.source_url = ''
-                        if user.cover_id:
-                            user.cover.delete_from_disk()
-                            user.cover.source_url = ''
-                        user.banned = True
-                        user.deleted = True
-                        activity_log.result = 'success'
+            if isinstance(request_json['object'], dict):
+                # wafrn sends invalid delete requests
+                return
+            else:
+                actor_to_delete = request_json['object'].lower()
+                user = User.query.filter_by(ap_profile_id=actor_to_delete).first()
+                if user:
+                    # check that the user really has been deleted, to avoid spoofing attacks
+                    if not user.is_local():
+                        if user_removed_from_remote_server(actor_to_delete, is_piefed=user.instance.software == 'PieFed'):
+                            # Delete all their images to save moderators from having to see disgusting stuff.
+                            files = File.query.join(Post).filter(Post.user_id == user.id).all()
+                            for file in files:
+                                file.delete_from_disk()
+                                file.source_url = ''
+                            if user.avatar_id:
+                                user.avatar.delete_from_disk()
+                                user.avatar.source_url = ''
+                            if user.cover_id:
+                                user.cover.delete_from_disk()
+                                user.cover.source_url = ''
+                            user.banned = True
+                            user.deleted = True
+                            activity_log.result = 'success'
+                        else:
+                            activity_log.result = 'ignored'
+                            activity_log.exception_message = 'User not actually deleted.'
                     else:
                         activity_log.result = 'ignored'
-                        activity_log.exception_message = 'User not actually deleted.'
+                        activity_log.exception_message = 'Only remote users can be deleted remotely'
                 else:
                     activity_log.result = 'ignored'
-                    activity_log.exception_message = 'Only remote users can be deleted remotely'
-            else:
-                activity_log.result = 'ignored'
-                activity_log.exception_message = 'Does not exist here'
-            db.session.commit()
+                    activity_log.exception_message = 'Does not exist here'
+                db.session.commit()
 
 
 def announce_activity_to_followers(community, creator, activity):
@@ -1055,7 +1069,7 @@ def comment_ap(comment_id):
             }
         resp = jsonify(reply_data)
         resp.content_type = 'application/activity+json'
-        resp.headers.set('Vary', 'Accept, Accept-Encoding, Cookie')
+        resp.headers.set('Vary', 'Accept')
         return resp
     else:
         reply = PostReply.query.get_or_404(comment_id)
@@ -1076,7 +1090,7 @@ def post_ap(post_id):
         post_data['@context'] = default_context()
         resp = jsonify(post_data)
         resp.content_type = 'application/activity+json'
-        resp.headers.set('Vary', 'Accept, Accept-Encoding, Cookie')
+        resp.headers.set('Vary', 'Accept')
         return resp
     else:
         return show_post(post_id)

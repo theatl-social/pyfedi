@@ -283,6 +283,13 @@ html {
           padding-right: 7px;
         }
       }
+
+      &.missing_thumbnail {
+        .fe::before {
+          font-size: x-large;
+          opacity: 0.8;
+        }
+      }
     }
     &.blocked {
       opacity: 0.2;
@@ -950,4 +957,15 @@ fieldset {
   text-align: right;
   margin-bottom: 10px;
   display: block;
+}
+
+.redo_search {
+  display: inline;
+  input[type=search] {
+    width: unset;
+    display: inline;
+    font-size: inherit;
+    line-height: initial;
+    max-width: 100%;
+  }
 }

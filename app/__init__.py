@@ -36,6 +36,13 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
+    if app.config['SENTRY_DSN']:
+        import sentry_sdk
+        sentry_sdk.init(
+            dsn=app.config["SENTRY_DSN"],
+            enable_tracing=True
+        )
+
     db.init_app(app)
     migrate.init_app(app, db, render_as_batch=True)
     login.init_app(app)
@@ -80,6 +87,9 @@ def create_app(config_class=Config):
     from app.chat import bp as chat_bp
     app.register_blueprint(chat_bp)
 
+    from app.search import bp as search_bp
+    app.register_blueprint(search_bp)
+
     def get_resource_as_string(name, charset='utf-8'):
         with app.open_resource(name) as f:
             return f.read().decode(charset)
@@ -87,7 +97,7 @@ def create_app(config_class=Config):
     app.jinja_env.globals['get_resource_as_string'] = get_resource_as_string
 
     # send error reports via email
-    if app.config['MAIL_SERVER']:
+    if app.config['MAIL_SERVER'] and app.config['MAIL_ERRORS']:
         auth = None
         if app.config['MAIL_USERNAME'] or app.config['MAIL_PASSWORD']:
             auth = (app.config['MAIL_USERNAME'],

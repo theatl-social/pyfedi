@@ -11,18 +11,19 @@ class Config(object):
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
                               'sqlite:///' + os.path.join(basedir, 'app.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    MAIL_SERVER = os.environ.get('MAIL_SERVER')
+    MAIL_SERVER = os.environ.get('MAIL_SERVER') or None
     MAIL_PORT = int(os.environ.get('MAIL_PORT') or 25)
     MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS') is not None
-    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
-    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
-    MAIL_FROM = os.environ.get('MAIL_FROM')
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME') or None
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD') or None
+    MAIL_FROM = os.environ.get('MAIL_FROM') or None
+    MAIL_ERRORS = os.environ.get('MAIL_ERRORS') is not None
     ADMINS = os.environ.get('ADMINS')
     RECAPTCHA_PUBLIC_KEY = os.environ.get("RECAPTCHA_PUBLIC_KEY")
     RECAPTCHA_PRIVATE_KEY = os.environ.get("RECAPTCHA_PRIVATE_KEY")
     MODE = os.environ.get('MODE') or 'development'
     LANGUAGES = ['en']
-    FULL_AP_CONTEXT = os.environ.get('FULL_AP_CONTEXT') or True
+    FULL_AP_CONTEXT = os.environ.get('FULL_AP_CONTEXT') is not None
     CACHE_TYPE = os.environ.get('CACHE_TYPE') or 'FileSystemCache'
     CACHE_REDIS_URL = os.environ.get('CACHE_REDIS_URL') or 'redis://localhost:6379/1'
     CACHE_DIR = os.environ.get('CACHE_DIR') or '/dev/shm/pyfedi'
@@ -38,3 +39,6 @@ class Config(object):
     BOUNCE_USERNAME = os.environ.get('BOUNCE_USERNAME') or ''
     BOUNCE_PASSWORD = os.environ.get('BOUNCE_PASSWORD') or ''
 
+    SENTRY_DSN = os.environ.get('SENTRY_DSN') or None
+
+    AWS_REGION = os.environ.get('AWS_REGION') or None

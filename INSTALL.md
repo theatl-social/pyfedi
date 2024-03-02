@@ -116,13 +116,29 @@ while RedisCache should be used in production. If using RedisCache, set CACHE_RE
 
 CELERY_BROKER_URL is similar to CACHE_REDIS_URL but with a different number on the end: 'redis://localhost:6379/0'
 
+MAIL_* is for sending email using a SMTP server. Leave MAIL_SERVER empty to send email using AWS SES instead.
 
+AWS_REGION is the name of the AWS region where you chose to set up SES, if using SES. [SES credentials are stored in ~/.aws/credentials](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html). That file has a format like
 
+```
+[default]
+aws_access_key_id = JKJHER*#KJFFF
+aws_secret_access_key = /jkhejhkrejhkre
+region=ap-southeast-2
+```
+You can also [use environment variables](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html#environment-variables) if you prefer.
 
-Virtual Env setup (inside the api root directory)
+Test email sending by going to https://yourdomain/test_email. It will try to send an email to the current user's email address.
+If it does not work check the log file at logs/pyfedi.log for clues.
+
 ---
-    python -m venv ./venv
 
+
+Virtual Env setup (inside the root directory)
+---
+    python3 -m venv ./venv
+
+    pip install -r requirements.txt
 
 ---
 
@@ -204,6 +220,12 @@ If you have more than 4 GB of RAM, consider [turning on 'huge pages'](https://ww
 also [see this](https://pganalyze.com/blog/5mins-postgres-tuning-huge-pages).
 
 (PgBouncer)[https://www.pgbouncer.org] can be helpful in a high traffic situation.
+
+---
+
+
+Background services
+---
 
 Gunicorn and Celery need to run as background services:
 
@@ -303,7 +325,11 @@ Inspect log files at:
     /your_piefed_installation/logs/pyfedi.log
 
 
-### Nginx
+---
+
+
+Nginx
+---
 
 You need a reverse proxy that sends all traffic to port 5000. Something like:
 
@@ -340,4 +366,24 @@ You need a reverse proxy that sends all traffic to port 5000. Something like:
     }
 
 The above is not a complete configuration - you will want to add more settings for SSL, etc.
+
+---
+
+
+Cron tasks
+---
+
+To send email reminders about unread notifications, put this in a new file under /etc/cron.d
+
+```
+1 */6 * * * rimu cd /home/rimu/pyfedi && /home/rimu/pyfedi/email_notifs.sh
+```
+
+Change /home/rimu/pyfedi to the location of your installation and change 'rimu' to the user that piefed runs as.
+
+Once a week or so it's good to run remove_orphan_files.sh to save disk space:
+
+```
+5 4 * * 1 rimu cd /home/rimu/pyfedi && /home/rimu/pyfedi/remove_orphan_files.sh
+```
 

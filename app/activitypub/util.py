@@ -196,7 +196,7 @@ def instance_allowed(host: str) -> bool:
     return instance is not None
 
 
-def find_actor_or_create(actor: str, create_if_not_found=True) -> Union[User, Community, None]:
+def find_actor_or_create(actor: str, create_if_not_found=True, community_only=False) -> Union[User, Community, None]:
     actor = actor.strip().lower()
     user = None
     # actor parameter must be formatted as https://server/u/actor or https://server/c/actor
@@ -248,7 +248,10 @@ def find_actor_or_create(actor: str, create_if_not_found=True) -> Union[User, Co
                 if actor_data.status_code == 200:
                     actor_json = actor_data.json()
                     actor_data.close()
-                    return actor_json_to_model(actor_json, address, server)
+                    actor_model = actor_json_to_model(actor_json, address, server)
+                    if community_only and not isinstance(actor_model, Community):
+                        return None
+                    return actor_model
             else:
                 # retrieve user details via webfinger, etc
                 try:
@@ -274,7 +277,10 @@ def find_actor_or_create(actor: str, create_if_not_found=True) -> Union[User, Co
                             if actor_data.status_code == 200:
                                 actor_json = actor_data.json()
                                 actor_data.close()
-                                return actor_json_to_model(actor_json, address, server)
+                                actor_model = actor_json_to_model(actor_json, address, server)
+                                if community_only and not isinstance(actor_model, Community):
+                                    return None
+                                return actor_model
     return None
 
 
@@ -465,27 +471,32 @@ def refresh_community_profile_task(community_id):
 
 def actor_json_to_model(activity_json, address, server):
     if activity_json['type'] == 'Person':
-        user = User(user_name=activity_json['preferredUsername'],
-                    title=activity_json['name'] if 'name' in activity_json else None,
-                    email=f"{address}@{server}",
-                    about_html=parse_summary(activity_json),
-                    matrix_user_id=activity_json['matrixUserId'] if 'matrixUserId' in activity_json else '',
-                    indexable=activity_json['indexable'] if 'indexable' in activity_json else False,
-                    searchable=activity_json['discoverable'] if 'discoverable' in activity_json else True,
-                    created=activity_json['published'] if 'published' in activity_json else utcnow(),
-                    ap_id=f"{address}@{server}",
-                    ap_public_url=activity_json['id'],
-                    ap_profile_id=activity_json['id'].lower(),
-                    ap_inbox_url=activity_json['endpoints']['sharedInbox'],
-                    ap_followers_url=activity_json['followers'] if 'followers' in activity_json else None,
-                    ap_preferred_username=activity_json['preferredUsername'],
-                    ap_manually_approves_followers=activity_json['manuallyApprovesFollowers'] if 'manuallyApprovesFollowers' in activity_json else False,
-                    ap_fetched_at=utcnow(),
-                    ap_domain=server,
-                    public_key=activity_json['publicKey']['publicKeyPem'],
-                    instance_id=find_instance_id(server)
-                    # language=community_json['language'][0]['identifier'] # todo: language
-                    )
+        try:
+            user = User(user_name=activity_json['preferredUsername'],
+                        title=activity_json['name'] if 'name' in activity_json else None,
+                        email=f"{address}@{server}",
+                        about_html=parse_summary(activity_json),
+                        matrix_user_id=activity_json['matrixUserId'] if 'matrixUserId' in activity_json else '',
+                        indexable=activity_json['indexable'] if 'indexable' in activity_json else False,
+                        searchable=activity_json['discoverable'] if 'discoverable' in activity_json else True,
+                        created=activity_json['published'] if 'published' in activity_json else utcnow(),
+                        ap_id=f"{address}@{server}",
+                        ap_public_url=activity_json['id'],
+                        ap_profile_id=activity_json['id'].lower(),
+                        ap_inbox_url=activity_json['endpoints']['sharedInbox'] if 'endpoints' in activity_json else activity_json['inbox'] if 'inbox' in activity_json else '',
+                        ap_followers_url=activity_json['followers'] if 'followers' in activity_json else None,
+                        ap_preferred_username=activity_json['preferredUsername'],
+                        ap_manually_approves_followers=activity_json['manuallyApprovesFollowers'] if 'manuallyApprovesFollowers' in activity_json else False,
+                        ap_fetched_at=utcnow(),
+                        ap_domain=server,
+                        public_key=activity_json['publicKey']['publicKeyPem'],
+                        instance_id=find_instance_id(server)
+                        # language=community_json['language'][0]['identifier'] # todo: language
+                        )
+        except KeyError as e:
+            current_app.logger.error(f'KeyError for {address}@{server} while parsing ' + str(activity_json))
+            return None
+
         if 'icon' in activity_json:
             avatar = File(source_url=activity_json['icon']['url'])
             user.avatar = avatar
@@ -1056,7 +1067,7 @@ def delete_post_or_comment(user_ap_id, community_ap_id, to_be_deleted_ap_id):
 @celery.task
 def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id):
     deletor = find_actor_or_create(user_ap_id)
-    community = find_actor_or_create(community_ap_id)
+    community = find_actor_or_create(community_ap_id, community_only=True)
     to_delete = find_liked_object(to_be_deleted_ap_id)
 
     if deletor and community and to_delete:
@@ -1105,11 +1116,12 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
                                ap_create_id=request_json['id'],
                                ap_announce_id=announce_id,
                                instance_id=user.instance_id)
-        if 'source' in request_json['object'] and \
+        # Get comment content. Lemmy and Kbin put this in different places.
+        if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
                 request_json['object']['source']['mediaType'] == 'text/markdown':
             post_reply.body = request_json['object']['source']['content']
             post_reply.body_html = markdown_to_html(post_reply.body)
-        elif 'content' in request_json['object']:
+        elif 'content' in request_json['object']:   # Kbin
             post_reply.body_html = allowlist_html(request_json['object']['content'])
             post_reply.body = html_to_markdown(post_reply.body_html)
         if post_id is not None:
@@ -1180,10 +1192,12 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
         activity_log.exception_message = 'Community is local only, post discarded'
         activity_log.result = 'ignored'
         return None
+    if 'name' not in request_json['object']:    # Microblog posts sometimes get Announced by lemmy. They don't have a title, so we can't use them.
+        return None
     nsfl_in_title = '[NSFL]' in request_json['object']['name'].upper() or '(NSFL)' in request_json['object']['name'].upper()
     post = Post(user_id=user.id, community_id=community.id,
                 title=html.unescape(request_json['object']['name']),
-                comments_enabled=request_json['object']['commentsEnabled'],
+                comments_enabled=request_json['object']['commentsEnabled'] if 'commentsEnabled' in request_json['object'] else True,
                 sticky=request_json['object']['stickied'] if 'stickied' in request_json['object'] else False,
                 nsfw=request_json['object']['sensitive'],
                 nsfl=request_json['object']['nsfl'] if 'nsfl' in request_json['object'] else nsfl_in_title,
@@ -1195,10 +1209,11 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
                 score=instance_weight(user.ap_domain),
                 instance_id=user.instance_id
                 )
-    if 'source' in request_json['object'] and request_json['object']['source']['mediaType'] == 'text/markdown':
+    # Get post content. Lemmy and Kbin put this in different places.
+    if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and request_json['object']['source']['mediaType'] == 'text/markdown': # Lemmy
         post.body = request_json['object']['source']['content']
         post.body_html = markdown_to_html(post.body)
-    elif 'content' in request_json['object'] and request_json['object']['content'] is not None:
+    elif 'content' in request_json['object'] and request_json['object']['content'] is not None: # Kbin
         post.body_html = allowlist_html(request_json['object']['content'])
         post.body = html_to_markdown(post.body_html)
     if 'attachment' in request_json['object'] and len(request_json['object']['attachment']) > 0 and \
@@ -1269,7 +1284,9 @@ def notify_about_post(post: Post):
 
 
 def update_post_reply_from_activity(reply: PostReply, request_json: dict):
-    if 'source' in request_json['object'] and request_json['object']['source']['mediaType'] == 'text/markdown':
+    if 'source' in request_json['object'] and \
+            isinstance(request_json['object']['source'], dict) and \
+            request_json['object']['source']['mediaType'] == 'text/markdown':
         reply.body = request_json['object']['source']['content']
         reply.body_html = markdown_to_html(reply.body)
     elif 'content' in request_json['object']:
@@ -1281,7 +1298,9 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
 
 def update_post_from_activity(post: Post, request_json: dict):
     post.title = request_json['object']['name']
-    if 'source' in request_json['object'] and request_json['object']['source']['mediaType'] == 'text/markdown':
+    if 'source' in request_json['object'] and \
+            isinstance(request_json['object']['source'], dict) and \
+            request_json['object']['source']['mediaType'] == 'text/markdown':
         post.body = request_json['object']['source']['content']
         post.body_html = markdown_to_html(post.body)
     elif 'content' in request_json['object']:
