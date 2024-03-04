@@ -172,7 +172,7 @@ class File(db.Model):
     file_name = db.Column(db.String(255))
     width = db.Column(db.Integer)
     height = db.Column(db.Integer)
-    alt_text = db.Column(db.String(256))
+    alt_text = db.Column(db.String(300))
     source_url = db.Column(db.String(1024))
     thumbnail_path = db.Column(db.String(255))
     thumbnail_width = db.Column(db.Integer)
@@ -338,7 +338,7 @@ class Community(db.Model):
         if self.ap_id is None:
             return self.name
         else:
-            return self.ap_id
+            return self.ap_id.lower()
 
     @cache.memoize(timeout=30)
     def moderators(self):
@@ -376,7 +376,8 @@ class Community(db.Model):
 
 
     def profile_id(self):
-        return self.ap_profile_id if self.ap_profile_id else f"https://{current_app.config['SERVER_NAME']}/c/{self.name}"
+        retval = self.ap_profile_id if self.ap_profile_id else f"https://{current_app.config['SERVER_NAME']}/c/{self.name}"
+        return retval.lower()
 
     def is_local(self):
         return self.ap_id is None or self.profile_id().startswith('https://' + current_app.config['SERVER_NAME'])
@@ -678,7 +679,8 @@ class User(UserMixin, db.Model):
             join(CommunityMember).filter(CommunityMember.is_banned == False, CommunityMember.user_id == self.id).all()
 
     def profile_id(self):
-        return self.ap_profile_id if self.ap_profile_id else f"https://{current_app.config['SERVER_NAME']}/u/{self.user_name}"
+        result = self.ap_profile_id if self.ap_profile_id else f"https://{current_app.config['SERVER_NAME']}/u/{self.user_name}"
+        return result
 
     def created_recently(self):
         return self.created and self.created > utcnow() - timedelta(days=7)

@@ -144,6 +144,9 @@ def register(app):
             user_name = input("Admin user name (ideally not 'admin'): ")
             email = input("Admin email address: ")
             password = input("Admin password: ")
+            while '@' in user_name:
+                print('User name cannot be an email address.')
+                user_name = input("Admin user name (ideally not 'admin'): ")
             verification_token = random_token(16)
             private_key, public_key = RsaKeys.generate_keypair()
             admin_user = User(user_name=user_name, title=user_name,
@@ -303,6 +306,12 @@ def register(app):
                         else:
                             account.bounces += 1
                     db.session.commit()
+
+    @app.cli.command("clean_up_old_activities")
+    def clean_up_old_activities():
+        with app.app_context():
+            db.session.query(ActivityPubLog).filter(ActivityPubLog.created_at < utcnow() - timedelta(days=3)).delete()
+            db.session.commit()
 
 
 def parse_communities(interests_source, segment):
