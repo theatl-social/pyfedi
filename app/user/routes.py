@@ -207,7 +207,6 @@ def change_settings():
                            joined_communities=joined_communities(current_user.get_id())
                            )
 
-
 @bp.route('/u/<actor>/ban', methods=['GET'])
 @login_required
 def ban_profile(actor):
