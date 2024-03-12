@@ -11,7 +11,8 @@ from app.activitypub.util import default_context, find_actor_or_create
 from app.community.util import save_icon_file, save_banner_file, retrieve_mods_and_backfill
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_PENDING
 from app.models import Post, Community, CommunityMember, User, PostReply, PostVote, Notification, utcnow, File, Site, \
-    Instance, Report, UserBlock, CommunityBan, CommunityJoinRequest, CommunityBlock, Filter
+    Instance, Report, UserBlock, CommunityBan, CommunityJoinRequest, CommunityBlock, Filter, Domain, DomainBlock, \
+    InstanceBlock
 from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, FilterEditForm
 from app.user.utils import purge_user_then_delete
@@ -78,6 +79,7 @@ def show_profile(user):
                            description=description, subscribed=subscribed, upvoted=upvoted,
                            post_next_url=post_next_url, post_prev_url=post_prev_url,
                            replies_next_url=replies_next_url, replies_prev_url=replies_prev_url,
+                           noindex=not user.indexable,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id())
                            )
@@ -158,6 +160,7 @@ def change_settings():
     form = SettingsForm()
     form.theme.choices = theme_list()
     if form.validate_on_submit():
+        propagate_indexable = form.indexable.data != current_user.indexable
         current_user.newsletter = form.newsletter.data
         current_user.ignore_bots = form.ignore_bots.data
         current_user.show_nsfw = form.nsfw.data
@@ -169,6 +172,10 @@ def change_settings():
         current_user.email_unread = form.email_unread.data
         current_user.markdown_editor = form.markdown_editor.data
         import_file = request.files['import_file']
+        if propagate_indexable:
+            db.session.execute(text('UPDATE "post" set indexable = :indexable WHERE user_id = :user_id'),
+                               {'user_id': current_user.id,
+                                'indexable': current_user.indexable})
         if import_file and import_file.filename != '':
             file_ext = os.path.splitext(import_file.filename)[1]
             if file_ext.lower() != '.json':
@@ -614,7 +621,17 @@ def import_settings_task(user_id, filename):
 @login_required
 def user_settings_filters():
     filters = Filter.query.filter_by(user_id=current_user.id).order_by(Filter.title).all()
+    blocked_users = User.query.join(UserBlock, UserBlock.blocked_id == User.id).\
+        filter(UserBlock.blocker_id == current_user.id).order_by(User.user_name).all()
+    blocked_communities = Community.query.join(CommunityBlock, CommunityBlock.community_id == Community.id).\
+        filter(CommunityBlock.user_id == current_user.id).order_by(Community.title).all()
+    blocked_domains = Domain.query.join(DomainBlock, DomainBlock.domain_id == Domain.id).\
+        filter(DomainBlock.user_id == current_user.id).order_by(Domain.name).all()
+    blocked_instances = Instance.query.join(InstanceBlock, InstanceBlock.instance_id == Instance.id).\
+        filter(InstanceBlock.user_id == current_user.id).order_by(Instance.domain).all()
     return render_template('user/filters.html', filters=filters, user=current_user,
+                           blocked_users=blocked_users, blocked_communities=blocked_communities,
+                           blocked_domains=blocked_domains, blocked_instances=blocked_instances,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id())
                            )
