@@ -4,10 +4,10 @@ from flask import current_app, json
 
 from app import celery, db
 from app.activitypub.signature import post_request
-from app.activitypub.util import default_context
+from app.activitypub.util import default_context, actor_json_to_model
 from app.community.util import send_to_remote_instance
-from app.models import User, CommunityMember, Community, Instance, Site, utcnow, ActivityPubLog
-from app.utils import gibberish, ap_datetime, instance_banned
+from app.models import User, CommunityMember, Community, Instance, Site, utcnow, ActivityPubLog, BannedInstances
+from app.utils import gibberish, ap_datetime, instance_banned, get_request
 
 
 def purge_user_then_delete(user_id):
@@ -114,3 +114,42 @@ def unsubscribe_from_community(community, user):
     post_request(community.ap_inbox_url, undo, user.private_key, user.profile_id() + '#main-key')
     activity.result = 'success'
     db.session.commit()
+
+
+def search_for_user(address: str):
+    if '@' in address:
+        name, server = address.lower().split('@')
+    else:
+        name = address
+        server = ''
+
+    if server:
+        banned = BannedInstances.query.filter_by(domain=server).first()
+        if banned:
+            reason = f" Reason: {banned.reason}" if banned.reason is not None else ''
+            raise Exception(f"{server} is blocked.{reason}")
+        already_exists = User.query.filter_by(ap_id=address).first()
+    else:
+        already_exists = User.query.filter_by(user_name=name).first()
+    if already_exists:
+        return already_exists
+
+    # Look up the profile address of the user using WebFinger
+    # todo: try, except block around every get_request
+    webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
+                                 params={'resource': f"acct:{address[1:]}"})
+    if webfinger_data.status_code == 200:
+        webfinger_json = webfinger_data.json()
+        for links in webfinger_json['links']:
+            if 'rel' in links and links['rel'] == 'self':  # this contains the URL of the activitypub profile
+                type = links['type'] if 'type' in links else 'application/activity+json'
+                # retrieve the activitypub profile
+                user_data = get_request(links['href'], headers={'Accept': type})
+                # to see the structure of the json contained in community_data, do a GET to https://lemmy.world/c/technology with header Accept: application/activity+json
+                if user_data.status_code == 200:
+                    user_json = user_data.json()
+                    user_data.close()
+                    if user_json['type'] == 'Person':
+                        user = actor_json_to_model(user_json, name, server)
+                        return user
+    return None

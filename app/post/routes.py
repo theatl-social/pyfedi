@@ -23,7 +23,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
     request_etag_matches, ip_address, user_ip_banned, instance_banned, can_downvote, can_upvote, post_ranking, \
     reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, moderating_communities, joined_communities, \
-    blocked_instances, blocked_domains
+    blocked_instances, blocked_domains, community_moderators
 
 
 def show_post(post_id: int):
@@ -43,7 +43,7 @@ def show_post(post_id: int):
     if post.mea_culpa:
         flash(_('%(name)s has indicated they made a mistake in this post.', name=post.author.user_name), 'warning')
 
-    mods = community.moderators()
+    mods = community_moderators(community.id)
     is_moderator = current_user.is_authenticated and any(mod.user_id == current_user.id for mod in mods)
 
     # handle top-level comments/replies

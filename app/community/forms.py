@@ -13,7 +13,7 @@ from io import BytesIO
 import pytesseract
 
 
-class AddLocalCommunity(FlaskForm):
+class AddCommunityForm(FlaskForm):
     community_name = StringField(_l('Name'), validators=[DataRequired()])
     url = StringField(_l('Url'))
     description = TextAreaField(_l('Description'))
@@ -35,6 +35,29 @@ class AddLocalCommunity(FlaskForm):
                 self.url.errors.append(_('- cannot be in Url. Use _ instead?'))
                 return False
         return True
+
+
+class EditCommunityForm(FlaskForm):
+    title = StringField(_l('Title'), validators=[DataRequired()])
+    description = TextAreaField(_l('Description'))
+    icon_file = FileField(_('Icon image'))
+    banner_file = FileField(_('Banner image'))
+    rules = TextAreaField(_l('Rules'))
+    nsfw = BooleanField(_l('Porn community'))
+    local_only = BooleanField(_l('Only accept posts from current instance'))
+    restricted_to_mods = BooleanField(_l('Only moderators can post'))
+    new_mods_wanted = BooleanField(_l('New moderators wanted'))
+    topic = SelectField(_l('Topic'), coerce=int, validators=[Optional()])
+    layouts = [('', _l('List')),
+               ('masonry', _l('Masonry')),
+               ('masonry_wide', _l('Wide masonry'))]
+    default_layout = SelectField(_l('Layout'), coerce=str, choices=layouts, validators=[Optional()])
+    submit = SubmitField(_l('Save'))
+
+
+class AddModeratorForm(FlaskForm):
+    user_name = StringField(_l('User name'), validators=[DataRequired()])
+    submit = SubmitField(_l('Add'))
 
 
 class SearchRemoteCommunity(FlaskForm):

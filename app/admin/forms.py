@@ -52,6 +52,7 @@ class EditCommunityForm(FlaskForm):
     banner_file = FileField(_('Banner image'))
     rules = TextAreaField(_l('Rules'))
     nsfw = BooleanField(_l('Porn community'))
+    banned = BooleanField(_l('Banned - no new posts accepted'))
     local_only = BooleanField(_l('Only accept posts from current instance'))
     restricted_to_mods = BooleanField(_l('Only moderators can post'))
     new_mods_wanted = BooleanField(_l('New moderators wanted'))

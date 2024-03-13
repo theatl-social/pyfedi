@@ -342,7 +342,7 @@ class Community(db.Model):
         else:
             return self.ap_id.lower()
 
-    @cache.memoize(timeout=30)
+    @cache.memoize(timeout=3)
     def moderators(self):
         return CommunityMember.query.filter((CommunityMember.community_id == self.id) &
                                      (or_(
