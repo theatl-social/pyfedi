@@ -611,6 +611,16 @@ def joined_communities(user_id):
         filter(CommunityMember.user_id == user_id).order_by(Community.title).all()
 
 
+@cache.memoize(timeout=300)
+def community_moderators(community_id):
+    return CommunityMember.query.filter((CommunityMember.community_id == community_id) &
+                                        (or_(
+                                            CommunityMember.is_owner,
+                                            CommunityMember.is_moderator
+                                        ))
+                                        ).all()
+
+
 def finalize_user_setup(user, application_required=False):
     from app.activitypub.signature import RsaKeys
     user.verified = True

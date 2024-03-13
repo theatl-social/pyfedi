@@ -9,10 +9,10 @@ from app.models import User, ChatMessage, Notification, utcnow, Conversation
 from app.utils import allowlist_html, shorten_string, gibberish, markdown_to_html
 
 
-def send_message(form, conversation_id: int) -> ChatMessage:
+def send_message(message: str, conversation_id: int) -> ChatMessage:
     conversation = Conversation.query.get(conversation_id)
     reply = ChatMessage(sender_id=current_user.id, conversation_id=conversation.id,
-                        body=form.message.data, body_html=allowlist_html(markdown_to_html(form.message.data)))
+                        body=message, body_html=allowlist_html(markdown_to_html(message)))
     for recipient in conversation.members:
         if recipient.id != current_user.id:
             if recipient.is_local():

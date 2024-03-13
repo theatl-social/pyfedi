@@ -24,6 +24,8 @@
                 {% if current_user.is_authenticated %}
                     {% include 'community/_notification_toggle.html' %}
                 {% endif %}
+                {% if community.nsfw %}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif %}
+                {% if community.nsfl %}<span class="warning_badge nsfl" title="{{ _('Not safe for life') }}">nsfl</span>{% endif %}
             </h1>
         {% elif community.icon_id and not low_bandwidth %}
             <div class="row">
@@ -43,6 +45,8 @@
                         {% if current_user.is_authenticated %}
                             {% include 'community/_notification_toggle.html' %}
                         {% endif %}
+                        {% if community.nsfw %}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif %}
+                        {% if community.nsfl %}<span class="warning_badge nsfl" title="{{ _('Not safe for life') }}">nsfl</span>{% endif %}
                     </h1>
                 </div>
             </div>
@@ -59,6 +63,8 @@
                 {% if current_user.is_authenticated %}
                     {% include 'community/_notification_toggle.html' %}
                 {% endif %}
+                {% if community.nsfw %}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif %}
+                {% if community.nsfl %}<span class="warning_badge nsfl" title="{{ _('Not safe for life') }}">nsfl</span>{% endif %}
             </h1>
         {% endif %}
         {% include "community/_community_nav.html" %}
@@ -170,8 +176,8 @@
             </div>
             <div class="card-body">
                 <p><a href="#" class="btn btn-primary">{{ _('Moderate') }}</a></p>
-                <p><a href="#" class="btn btn-primary">{{ _('Settings') }}</a></p>
-                {% if community.is_owner() or current_user.is_admin() %}
+                <p><a href="{{ url_for('community.community_edit', community_id=community.id) }}" class="btn btn-primary">{{ _('Settings') }}</a></p>
+                {% if community.is_local() and (community.is_owner() or current_user.is_admin()) %}
                     <p><a class="btn btn-primary btn-warning" href="{{ url_for('community.community_delete', community_id=community.id) }}" rel="nofollow">Delete community</a></p>
                 {% endif %}
             </div>

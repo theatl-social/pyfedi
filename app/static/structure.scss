@@ -900,6 +900,13 @@ fieldset {
     color:black;
   }
 }
+
+h1 .warning_badge {
+  position: relative;
+  left: 15px;
+  top: -6px;
+}
+
 [data-bs-theme=dark] .warning_badge.nsfl {
   border:1px solid white;
   color:white;

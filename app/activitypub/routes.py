@@ -21,7 +21,8 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
     update_post_from_activity, undo_vote, undo_downvote
 from app.utils import gibberish, get_setting, is_image_url, allowlist_html, html_to_markdown, render_template, \
     domain_from_url, markdown_to_html, community_membership, ap_datetime, markdown_to_text, ip_address, can_downvote, \
-    can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest
+    can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
+    community_moderators
 import werkzeug.exceptions
 
 
@@ -987,11 +988,11 @@ def community_outbox(actor):
 
 
 @bp.route('/c/<actor>/moderators', methods=['GET'])
-def community_moderators(actor):
+def community_moderators_route(actor):
     actor = actor.strip()
     community = Community.query.filter_by(name=actor, banned=False, ap_id=None).first()
     if community is not None:
-        moderator_ids = community.moderators()
+        moderator_ids = community_moderators(community.id)
         moderators = User.query.filter(User.id.in_([mod.user_id for mod in moderator_ids])).all()
         community_data = {
             "@context": default_context(),
