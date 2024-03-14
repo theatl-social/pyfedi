@@ -127,7 +127,7 @@
                 {% for instance in blocked_instances %}
                     <tr>
                         <td><a href="#">{{ instance.domain }}</a></td>
-                        <td><a class="no-underline confirm_first" href="#" rel="nofollow"><span class="fe fe-delete"> {{ _('Unblock') }}</span></a></td>
+                        <td><a class="no-underline confirm_first" href="{{ url_for('user.instance_unblock', instance_id=instance.id) }}" rel="nofollow"><span class="fe fe-delete"> {{ _('Unblock') }}</span></a></td>
                     </tr>
                 {% endfor %}
                 </table>
