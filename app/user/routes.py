@@ -18,7 +18,7 @@ from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportU
 from app.user.utils import purge_user_then_delete
 from app.utils import get_setting, render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     is_image_url, ensure_directory_exists, gibberish, file_get_contents, community_membership, user_filters_home, \
-    user_filters_posts, user_filters_replies, moderating_communities, joined_communities, theme_list
+    user_filters_posts, user_filters_replies, moderating_communities, joined_communities, theme_list, blocked_instances
 from sqlalchemy import desc, or_, text
 import os
 
@@ -384,6 +384,21 @@ def delete_profile(actor):
         abort(401)
 
     goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
+    return redirect(goto)
+
+
+@bp.route('/instance/<int:instance_id>/unblock', methods=['GET'])
+@login_required
+def instance_unblock(instance_id):
+    instance = Instance.query.get_or_404(instance_id)
+    existing_block = InstanceBlock.query.filter_by(user_id=current_user.id, instance_id=instance.id).first()
+    if existing_block:
+        db.session.delete(existing_block)
+        db.session.commit()
+        cache.delete_memoized(blocked_instances, current_user.id)
+        flash(f'{instance.domain} has been unblocked.')
+
+    goto = request.args.get('redirect') if 'redirect' in request.args else url_for('user.user_settings_filters')
     return redirect(goto)
 
 

@@ -605,7 +605,7 @@ def post_edit(post_id: int):
     post = Post.query.get_or_404(post_id)
     form = CreatePostForm()
     del form.communities
-    if post.user_id == current_user.id or post.community.is_moderator():
+    if post.user_id == current_user.id or post.community.is_moderator() or current_user.is_admin():
         if g.site.enable_nsfl is False:
             form.nsfl.render_kw = {'disabled': True}
         if post.community.nsfw:
