@@ -1,0 +1,48 @@
+{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
+    {% extends 'themes/' + theme() + '/base.html' %}
+{% else %}
+    {% extends "base.html" %}
+{% endif %} %}
+{% from 'bootstrap/form.html' import render_field %}
+
+{% block app_content %}
+<div class="row">
+    <div class="col-12 col-md-8 position-relative main_pane">
+        <nav aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not none else community.name) }}">{{ (community.title + '@' + community.ap_domain)|shorten }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('community.community_edit', community_id=community.id) }}">{{ _('Settings') }}</a></li>
+            <li class="breadcrumb-item active">{{ _('Moderators') }}</li>
+          </ol>
+        </nav>
+        <div class="row">
+            <div class="col-12 col-md-10">
+                <h1 class="mt-2">{{ _('Moderators for %(community)s', community=community.display_name()) }}</h1>
+            </div>
+            <div class="col-12 col-md-2 text-right">
+                <a class="btn btn-primary" href="{{ url_for('community.community_add_moderator', community_id=community.id) }}">{{ _('Add moderator') }}</a>
+            </div>
+        </div>
+        <table class="table table-responsive">
+            <thead>
+                <tr>
+                    <th>{{ _('Name') }}</th>
+                    <th>{{ _('Action') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for moderator in moderators %}
+                    <tr>
+                        <td>{{ moderator.display_name() }}</td>
+                        <td>{% if not community.is_owner(moderator) %}
+                            <a class="no-underline confirm_first"
+                               href="{{ url_for('community.community_remove_moderator', community_id=community.id, user_id=moderator.id) }}"
+                               rel="nofollow"><span class="fe fe-delete"> {{ _('Remove') }}</span></a>{% endif %}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

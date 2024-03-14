@@ -342,7 +342,7 @@ class Community(db.Model):
         else:
             return self.ap_id.lower()
 
-    @cache.memoize(timeout=30)
+    @cache.memoize(timeout=3)
     def moderators(self):
         return CommunityMember.query.filter((CommunityMember.community_id == self.id) &
                                      (or_(
@@ -776,7 +776,7 @@ class Post(db.Model):
     nsfl = db.Column(db.Boolean, default=False, index=True)
     sticky = db.Column(db.Boolean, default=False)
     notify_author = db.Column(db.Boolean, default=True)
-    indexable = db.Column(db.Boolean, default=False)
+    indexable = db.Column(db.Boolean, default=True)
     from_bot = db.Column(db.Boolean, default=False, index=True)
     created_at = db.Column(db.DateTime, index=True, default=utcnow)    # this is when the content arrived here
     posted_at = db.Column(db.DateTime, index=True, default=utcnow)     # this is when the original server created it

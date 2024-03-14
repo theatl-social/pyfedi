@@ -8,9 +8,9 @@ from app import db, constants, cache
 from app.inoculation import inoculation
 from app.models import Post, Domain, Community, DomainBlock
 from app.domain import bp
-from app.utils import get_setting, render_template, permission_required, joined_communities, moderating_communities, \
-    user_filters_posts, blocked_domains
-from sqlalchemy import desc
+from app.utils import render_template, permission_required, joined_communities, moderating_communities, \
+    user_filters_posts, blocked_domains, blocked_instances
+from sqlalchemy import desc, or_
 
 
 @bp.route('/d/<domain_id>', methods=['GET'])
@@ -32,6 +32,9 @@ def show_domain(domain_id):
             posts = Post.query.join(Community).filter(Post.domain_id == domain.id, Community.banned == False).order_by(desc(Post.posted_at))
 
         if current_user.is_authenticated:
+            instance_ids = blocked_instances(current_user.id)
+            if instance_ids:
+                posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
             content_filters = user_filters_posts(current_user.id)
         else:
             content_filters = {}
@@ -77,7 +80,7 @@ def domains():
 
 @bp.route('/domains/banned', methods=['GET'])
 @login_required
-def blocked_domains():
+def domains_blocked_list():
     if not current_user.trustworthy():
         abort(404)
 

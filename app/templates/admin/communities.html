@@ -32,7 +32,7 @@
                 <tr>
                     <td>{{ community.name }}</td>
                     <td><img src="{{ community.icon_image('tiny') }}" class="community_icon rounded-circle" loading="lazy" />
-                        {{ community.display_name() }}</td>
+                        {{ community.display_name() }}{% if community.banned %} (banned){% endif %}</td>
                     <td>{{ community.topic.name  }}</td>
                     <td>{{ community.post_count  }}</td>
                     <th>{{ '&check;'|safe if community.show_home else '&cross;'|safe }}</th>

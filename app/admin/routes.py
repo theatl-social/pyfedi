@@ -199,7 +199,7 @@ def admin_communities():
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
 
-    communities = Community.query.filter_by(banned=False)
+    communities = Community.query
     if search:
         communities = communities.filter(Community.title.ilike(f"%{search}%"))
     communities = communities.order_by(Community.title).paginate(page=page, per_page=1000, error_out=False)
@@ -228,6 +228,7 @@ def admin_community_edit(community_id):
         community.rules = form.rules.data
         community.rules_html = markdown_to_html(form.rules.data)
         community.nsfw = form.nsfw.data
+        community.banned = form.banned.data
         community.local_only = form.local_only.data
         community.restricted_to_mods = form.restricted_to_mods.data
         community.new_mods_wanted = form.new_mods_wanted.data
@@ -255,7 +256,8 @@ def admin_community_edit(community_id):
                 community.image = file
 
         db.session.commit()
-        community.topic.num_communities = community.topic.communities.count()
+        if community.topic_id:
+            community.topic.num_communities = community.topic.communities.count()
         db.session.commit()
         flash(_('Saved'))
         return redirect(url_for('admin.admin_communities'))
@@ -267,6 +269,7 @@ def admin_community_edit(community_id):
         form.description.data = community.description
         form.rules.data = community.rules
         form.nsfw.data = community.nsfw
+        form.banned.data = community.banned
         form.local_only.data = community.local_only
         form.new_mods_wanted.data = community.new_mods_wanted
         form.restricted_to_mods.data = community.restricted_to_mods

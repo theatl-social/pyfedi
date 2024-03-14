@@ -9,21 +9,24 @@ from sqlalchemy import or_, desc
 
 from app import db, constants, cache
 from app.activitypub.signature import RsaKeys, post_request
-from app.activitypub.util import default_context, notify_about_post
-from app.community.forms import SearchRemoteCommunity, AddLocalCommunity, CreatePostForm, ReportCommunityForm, \
-    DeleteCommunityForm
+from app.activitypub.util import default_context, notify_about_post, find_actor_or_create
+from app.chat.util import send_message
+from app.community.forms import SearchRemoteCommunity, CreatePostForm, ReportCommunityForm, \
+    DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm
 from app.community.util import search_for_community, community_url_exists, actor_to_community, \
     opengraph_parse, url_to_thumbnail_file, save_post, save_icon_file, save_banner_file, send_to_remote_instance
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, \
-    File, PostVote, utcnow, Report, Notification, InstanceBlock, ActivityPubLog, Topic
+    File, PostVote, utcnow, Report, Notification, InstanceBlock, ActivityPubLog, Topic, Conversation
 from app.community import bp
+from app.user.utils import search_for_user
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, gibberish, community_membership, ap_datetime, \
     request_etag_matches, return_304, instance_banned, can_create_post, can_upvote, can_downvote, user_filters_posts, \
-    joined_communities, moderating_communities, blocked_domains, mimetype_from_url
+    joined_communities, moderating_communities, blocked_domains, mimetype_from_url, blocked_instances, \
+    community_moderators
 from feedgen.feed import FeedGenerator
 from datetime import timezone, timedelta
 
@@ -32,7 +35,7 @@ from datetime import timezone, timedelta
 @login_required
 def add_local():
     flash('PieFed is still being tested so hosting communities on piefed.social is not advised except for testing purposes.', 'warning')
-    form = AddLocalCommunity()
+    form = AddCommunityForm()
     if g.site.enable_nsfw is False:
         form.nsfw.render_kw = {'disabled': True}
 
@@ -124,7 +127,7 @@ def show_community(community: Community):
     if current_user.is_anonymous and request_etag_matches(current_etag):
         return return_304(current_etag)
 
-    mods = community.moderators()
+    mods = community_moderators(community.id)
 
     is_moderator = current_user.is_authenticated and any(mod.user_id == current_user.id for mod in mods)
     is_owner = current_user.is_authenticated and any(
@@ -152,9 +155,13 @@ def show_community(community: Community):
             posts = posts.filter(Post.nsfw == False)
         content_filters = user_filters_posts(current_user.id)
 
+        # filter domains and instances
         domains_ids = blocked_domains(current_user.id)
         if domains_ids:
             posts = posts.filter(or_(Post.domain_id.not_in(domains_ids), Post.domain_id == None))
+        instance_ids = blocked_instances(current_user.id)
+        if instance_ids:
+            posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
 
     if sort == '' or sort == 'hot':
         posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
@@ -580,6 +587,65 @@ def community_report(community_id: int):
     return render_template('community/community_report.html', title=_('Report community'), form=form, community=community)
 
 
+@bp.route('/community/<int:community_id>/edit', methods=['GET', 'POST'])
+@login_required
+def community_edit(community_id: int):
+    from app.admin.util import topics_for_form
+    community = Community.query.get_or_404(community_id)
+    if community.is_owner() or current_user.is_admin():
+        form = EditCommunityForm()
+        form.topic.choices = topics_for_form(0)
+        if form.validate_on_submit():
+            community.title = form.title.data
+            community.description = form.description.data
+            community.description_html = markdown_to_html(form.description.data)
+            community.rules = form.rules.data
+            community.rules_html = markdown_to_html(form.rules.data)
+            community.nsfw = form.nsfw.data
+            community.local_only = form.local_only.data
+            community.restricted_to_mods = form.restricted_to_mods.data
+            community.new_mods_wanted = form.new_mods_wanted.data
+            community.topic_id = form.topic.data if form.topic.data != 0 else None
+            community.default_layout = form.default_layout.data
+
+            icon_file = request.files['icon_file']
+            if icon_file and icon_file.filename != '':
+                if community.icon_id:
+                    community.icon.delete_from_disk()
+                file = save_icon_file(icon_file)
+                if file:
+                    community.icon = file
+            banner_file = request.files['banner_file']
+            if banner_file and banner_file.filename != '':
+                if community.image_id:
+                    community.image.delete_from_disk()
+                file = save_banner_file(banner_file)
+                if file:
+                    community.image = file
+
+            db.session.commit()
+            community.topic.num_communities = community.topic.communities.count()
+            db.session.commit()
+            flash(_('Saved'))
+            return redirect(url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not None else community.name))
+        else:
+            form.title.data = community.title
+            form.description.data = community.description
+            form.rules.data = community.rules
+            form.nsfw.data = community.nsfw
+            form.local_only.data = community.local_only
+            form.new_mods_wanted.data = community.new_mods_wanted
+            form.restricted_to_mods.data = community.restricted_to_mods
+            form.topic.data = community.topic_id if community.topic_id else None
+            form.default_layout.data = community.default_layout
+        return render_template('community/community_edit.html', title=_('Edit community'), form=form,
+                               current_app=current_app,
+                               community=community, moderating_communities=moderating_communities(current_user.get_id()),
+                               joined_communities=joined_communities(current_user.get_id()))
+    else:
+        abort(401)
+
+
 @bp.route('/community/<int:community_id>/delete', methods=['GET', 'POST'])
 @login_required
 def community_delete(community_id: int):
@@ -602,6 +668,96 @@ def community_delete(community_id: int):
                            joined_communities=joined_communities(current_user.get_id()))
     else:
         abort(401)
+
+
+@bp.route('/community/<int:community_id>/moderators', methods=['GET', 'POST'])
+@login_required
+def community_mod_list(community_id: int):
+    community = Community.query.get_or_404(community_id)
+    if community.is_owner() or current_user.is_admin():
+
+        moderators = User.query.filter(User.banned == False).join(CommunityMember, CommunityMember.user_id == User.id).\
+            filter(CommunityMember.community_id == community_id, or_(CommunityMember.is_moderator == True, CommunityMember.is_owner == True)).all()
+
+        return render_template('community/community_mod_list.html', title=_('Moderators for %(community)s', community=community.display_name()),
+                        moderators=moderators, community=community,
+                        moderating_communities=moderating_communities(current_user.get_id()),
+                        joined_communities=joined_communities(current_user.get_id())
+                        )
+
+
+@bp.route('/community/<int:community_id>/moderators/add', methods=['GET', 'POST'])
+@login_required
+def community_add_moderator(community_id: int):
+    community = Community.query.get_or_404(community_id)
+    if community.is_owner() or current_user.is_admin():
+        form = AddModeratorForm()
+        if form.validate_on_submit():
+            new_moderator = search_for_user(form.user_name.data)
+            if new_moderator:
+                existing_member = CommunityMember.query.filter(CommunityMember.user_id == new_moderator.id, CommunityMember.community_id == community_id).first()
+                if existing_member:
+                    existing_member.is_moderator = True
+                else:
+                    new_member = CommunityMember(community_id=community_id, user_id=new_moderator.id, is_moderator=True)
+                    db.session.add(new_member)
+                db.session.commit()
+                flash(_('Moderator added'))
+
+                # Notify new mod
+                if new_moderator.is_local():
+                    notify = Notification(title=_('You are now a moderator of %(name)s', name=community.display_name()),
+                                          url='/c/' + community.name, user_id=new_moderator.id,
+                                          author_id=current_user.id)
+                    new_moderator.unread_notifications += 1
+                    db.session.add(notify)
+                    db.session.commit()
+                else:
+                    # for remote users, send a chat message to let them know
+                    existing_conversation = Conversation.find_existing_conversation(recipient=new_moderator,
+                                                                                    sender=current_user)
+                    if not existing_conversation:
+                        existing_conversation = Conversation(user_id=current_user.id)
+                        existing_conversation.members.append(new_moderator)
+                        existing_conversation.members.append(current_user)
+                        db.session.add(existing_conversation)
+                        db.session.commit()
+                    server = current_app.config['SERVER_NAME']
+                    send_message(f"Hi there. I've added you as a moderator to the community !{community.name}@{server}.", existing_conversation.id)
+
+                # Flush cache
+                cache.delete_memoized(moderating_communities, new_moderator.id)
+                cache.delete_memoized(joined_communities, new_moderator.id)
+                cache.delete_memoized(community_moderators, community_id)
+                return redirect(url_for('community.community_mod_list', community_id=community.id))
+            else:
+                flash(_('Account not found'), 'warning')
+
+        return render_template('community/community_add_moderator.html', title=_('Add moderator to %(community)s', community=community.display_name()),
+                        community=community, form=form,
+                        moderating_communities=moderating_communities(current_user.get_id()),
+                        joined_communities=joined_communities(current_user.get_id())
+                        )
+
+
+@bp.route('/community/<int:community_id>/moderators/remove/<int:user_id>', methods=['GET', 'POST'])
+@login_required
+def community_remove_moderator(community_id: int, user_id: int):
+    community = Community.query.get_or_404(community_id)
+    if community.is_owner() or current_user.is_admin():
+
+        existing_member = CommunityMember.query.filter(CommunityMember.user_id == user_id,
+                                                       CommunityMember.community_id == community_id).first()
+        if existing_member:
+            existing_member.is_moderator = False
+            db.session.commit()
+            flash(_('Moderator removed'))
+            # Flush cache
+            cache.delete_memoized(moderating_communities, user_id)
+            cache.delete_memoized(joined_communities, user_id)
+            cache.delete_memoized(community_moderators, community_id)
+
+        return redirect(url_for('community.community_mod_list', community_id=community.id))
 
 
 @bp.route('/community/<int:community_id>/block_instance', methods=['GET', 'POST'])
