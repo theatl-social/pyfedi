@@ -23,9 +23,9 @@ The following are the goals for a 1.0 release, good enough for production use. I
 
 ### Search
 
-- content & users
+- ✅ content & users
 - hashtags
-- privacy controls
+- ✅ privacy controls
 
 ### Moderation
 
@@ -35,7 +35,7 @@ The following are the goals for a 1.0 release, good enough for production use. I
 
 ### Onboarding
 
-- choose interests to auto-subscribe new accounts
+- ✅ choose interests to auto-subscribe new accounts
 
 ### Performance and scaling
 
