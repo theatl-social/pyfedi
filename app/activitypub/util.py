@@ -589,7 +589,7 @@ def actor_json_to_model(activity_json, address, server):
         return community
 
 
-def post_json_to_model(post_json, user, community) -> Post:
+def post_json_to_model(activity_log, post_json, user, community) -> Post:
     try:
         post = Post(user_id=user.id, community_id=community.id,
                     title=html.unescape(post_json['name']),
@@ -637,6 +637,7 @@ def post_json_to_model(post_json, user, community) -> Post:
                                 admin.unread_notifications += 1
                     if domain.banned:
                         post = None
+                        activity_log.exception_message = domain.name + ' is blocked by admin'
                     if not domain.banned:
                         domain.post_count += 1
                         post.domain = domain
@@ -648,6 +649,7 @@ def post_json_to_model(post_json, user, community) -> Post:
         if post is not None:
             db.session.add(post)
             community.post_count += 1
+            activity_log.result = 'success'
             db.session.commit()
         return post
     except KeyError as e:
