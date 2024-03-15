@@ -30,3 +30,4 @@ redis==5.0.1
 Werkzeug==2.3.3
 pytesseract==0.3.10
 sentry-sdk==1.40.6
+validators
