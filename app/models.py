@@ -374,7 +374,12 @@ class Community(db.Model):
 
     def user_is_banned(self, user):
         membership = CommunityMember.query.filter(CommunityMember.community_id == self.id, CommunityMember.user_id == user.id).first()
-        return membership.is_banned if membership else False
+        if membership.is_banned:
+            return True
+        banned = CommunityBan.query.filter(CommunityBan.community_id == self.id, CommunityBan.user_id == user.id).first()
+        if banned:
+            return True
+        return False
 
 
     def profile_id(self):
@@ -980,7 +985,7 @@ class CommunityMember(db.Model):
 
 # people banned from communities
 class CommunityBan(db.Model):
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)             # person who is banned, not the banner
     community_id = db.Column(db.Integer, db.ForeignKey('community.id'), primary_key=True)
     banned_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     reason = db.Column(db.String(50))

@@ -38,7 +38,13 @@
                         <td><span style="color: red;">{{ activity.result }}</span></td>
                     {% endif %}
                     <td>{{ activity.exception_message if activity.exception_message else '' }}</td>
-                    <td><a href="{{ url_for('admin.activity_json', activity_id=activity.id) }}">View</a></td>
+                    <td>
+                    {% if activity.activity_json is none %}
+                        None
+                    {% else %}
+                        <a href="{{ url_for('admin.activity_json', activity_id=activity.id) }}">View</a>
+                    {% endif %}
+                    </td>
                 </tr>
             {% endfor %}
         </table>
