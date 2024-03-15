@@ -1,7 +1,6 @@
 from flask import request, g
 from flask_login import current_user
 from flask_wtf import FlaskForm
-from validators import Min
 from wtforms import StringField, SubmitField, TextAreaField, BooleanField, HiddenField, SelectField, FileField, \
     DateField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Optional
