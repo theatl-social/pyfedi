@@ -17,7 +17,7 @@ from app.models import Community, File, BannedInstances, PostReply, PostVote, Po
 from app.utils import get_request, gibberish, markdown_to_html, domain_from_url, allowlist_html, \
     html_to_markdown, is_image_url, ensure_directory_exists, inbox_domain, post_ranking, shorten_string, parse_page, \
     remove_tracking_from_link, ap_datetime, instance_banned
-from sqlalchemy import func
+from sqlalchemy import func, desc
 import os
 
 
@@ -118,8 +118,8 @@ def retrieve_mods_and_backfill(community_id: int):
                         if activities_processed >= 50:
                             break
                     c = Community.query.get(community.id)
-                    c.post_count = activities_processed
-                    c.last_active = site.last_active = utcnow()
+                    if c.post_count > 0:
+                        c.last_active = Post.query.filter(Post.community_id == community_id).order_by(desc(Post.posted_at)).first().posted_at
                     db.session.commit()
 
 
