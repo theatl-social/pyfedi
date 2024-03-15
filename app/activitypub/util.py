@@ -591,19 +591,20 @@ def actor_json_to_model(activity_json, address, server):
 
 def post_json_to_model(activity_log, post_json, user, community) -> Post:
     try:
+        nsfl_in_title = '[NSFL]' in post_json['name'].upper() or '(NSFL)' in post_json['name'].upper()
         post = Post(user_id=user.id, community_id=community.id,
                     title=html.unescape(post_json['name']),
-                    comments_enabled=post_json['commentsEnabled'],
+                    comments_enabled=post_json['commentsEnabled'] if 'commentsEnabled' in post_json else True,
                     sticky=post_json['stickied'] if 'stickied' in post_json else False,
                     nsfw=post_json['sensitive'],
-                    nsfl=post_json['nsfl'] if 'nsfl' in post_json else False,
+                    nsfl=post_json['nsfl'] if 'nsfl' in post_json else nsfl_in_title,
                     ap_id=post_json['id'],
                     type=constants.POST_TYPE_ARTICLE,
                     posted_at=post_json['published'],
                     last_active=post_json['published'],
-                    instance_id=user.instance_id
+                    instance_id=user.instance_id,
+                    indexable = user.indexable
                     )
-        post.indexable = user.indexable
         if 'source' in post_json and \
                 post_json['source']['mediaType'] == 'text/markdown':
             post.body = post_json['source']['content']
@@ -616,8 +617,15 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
                 post.url = post_json['attachment'][0]['href']
                 if is_image_url(post.url):
                     post.type = POST_TYPE_IMAGE
+                    if 'image' in post_json and 'url' in post_json['image']:
+                        image = File(source_url=post_json['image']['url'])
+                    else:
+                        image = File(source_url=post.url)
+                    db.session.add(image)
+                    post.image = image
                 else:
                     post.type = POST_TYPE_LINK
+                    post.url = remove_tracking_from_link(post.url)
 
                 domain = domain_from_url(post.url)
                 # notify about links to banned websites.
@@ -641,7 +649,7 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
                     if not domain.banned:
                         domain.post_count += 1
                         post.domain = domain
-        if 'image' in post_json and post:
+        if 'image' in post_json and post.image is None:
             image = File(source_url=post_json['image']['url'])
             db.session.add(image)
             post.image = image
@@ -651,6 +659,10 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
             community.post_count += 1
             activity_log.result = 'success'
             db.session.commit()
+
+            if post.image_id:
+                make_image_sizes(post.image_id, 150, 512, 'posts')  # the 512 sized image is for masonry view
+
         return post
     except KeyError as e:
         current_app.logger.error(f'KeyError in post_json_to_model: ' + str(post_json))
