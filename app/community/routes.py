@@ -12,14 +12,15 @@ from app.activitypub.signature import RsaKeys, post_request
 from app.activitypub.util import default_context, notify_about_post, find_actor_or_create
 from app.chat.util import send_message
 from app.community.forms import SearchRemoteCommunity, CreatePostForm, ReportCommunityForm, \
-    DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm
+    DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm
 from app.community.util import search_for_community, community_url_exists, actor_to_community, \
-    opengraph_parse, url_to_thumbnail_file, save_post, save_icon_file, save_banner_file, send_to_remote_instance
+    opengraph_parse, url_to_thumbnail_file, save_post, save_icon_file, save_banner_file, send_to_remote_instance, \
+    delete_post_from_community, delete_post_reply_from_community
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, \
-    File, PostVote, utcnow, Report, Notification, InstanceBlock, ActivityPubLog, Topic, Conversation
+    File, PostVote, utcnow, Report, Notification, InstanceBlock, ActivityPubLog, Topic, Conversation, PostReply
 from app.community import bp
 from app.user.utils import search_for_user
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
@@ -770,6 +771,62 @@ def community_block_instance(community_id: int):
         db.session.commit()
     flash(_('Content from %(name)s will be hidden.', name=community.instance.domain))
     return redirect(community.local_url())
+
+
+@bp.route('/community/<int:community_id>/<int:user_id>/ban_user_community', methods=['GET', 'POST'])
+@login_required
+def community_ban_user(community_id: int, user_id: int):
+    community = Community.query.get_or_404(community_id)
+    user = User.query.get_or_404(user_id)
+    existing = CommunityBan.query.filter_by(community_id=community.id, user_id=user.id).first()
+
+    form = BanUserCommunityForm()
+    if form.validate_on_submit():
+        if not existing:
+            new_ban = CommunityBan(community_id=community_id, user_id=user.id, banned_by=current_user.id,
+                                   reason=form.reason.data)
+            if form.ban_until.data is not None and form.ban_until.data < utcnow().date():
+                new_ban.ban_until = form.ban_until.data
+            db.session.add(new_ban)
+            db.session.commit()
+            flash(_('%(name)s has been banned.', name=user.display_name()))
+
+        if form.delete_posts.data:
+            posts = Post.query.filter(Post.user_id == user.id, Post.community_id == community.id).all()
+            for post in posts:
+                delete_post_from_community(post.id)
+            if posts:
+                flash(_('Posts by %(name)s have been deleted.', name=user.display_name()))
+        if form.delete_post_replies.data:
+            post_replies = PostReply.query.filter(PostReply.user_id == user.id, Post.community_id == community.id).all()
+            for post_reply in post_replies:
+                delete_post_reply_from_community(post_reply.id)
+            if post_replies:
+                flash(_('Comments by %(name)s have been deleted.', name=user.display_name()))
+
+        # todo: federate ban to post author instance
+
+        # notify banned person
+        if user.is_local():
+            notify = Notification(title=shorten_string('You have been banned from ' + community.title),
+                                  url=f'/', user_id=user.id,
+                                  author_id=1)
+            db.session.add(notify)
+            user.unread_notifications += 1
+            db.session.commit()
+        else:
+            ...
+            # todo: send chatmessage to remote user and federate it
+
+        return redirect(community.local_url())
+    else:
+        return render_template('community/community_ban_user.html', title=_('Ban from community'), form=form, community=community,
+                               user=user,
+                               moderating_communities=moderating_communities(current_user.get_id()),
+                               joined_communities=joined_communities(current_user.get_id()),
+                               inoculation=inoculation[randint(0, len(inoculation) - 1)]
+                               )
+
 
 
 @bp.route('/<int:community_id>/notification', methods=['GET', 'POST'])

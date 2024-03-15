@@ -10,12 +10,13 @@ from pillow_heif import register_heif_opener
 
 from app import db, cache, celery
 from app.activitypub.signature import post_request
-from app.activitypub.util import find_actor_or_create, actor_json_to_model, post_json_to_model
+from app.activitypub.util import find_actor_or_create, actor_json_to_model, post_json_to_model, default_context
 from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE
 from app.models import Community, File, BannedInstances, PostReply, PostVote, Post, utcnow, CommunityMember, Site, \
     Instance, Notification, User
 from app.utils import get_request, gibberish, markdown_to_html, domain_from_url, allowlist_html, \
-    html_to_markdown, is_image_url, ensure_directory_exists, inbox_domain, post_ranking, shorten_string, parse_page, remove_tracking_from_link
+    html_to_markdown, is_image_url, ensure_directory_exists, inbox_domain, post_ranking, shorten_string, parse_page, \
+    remove_tracking_from_link, ap_datetime, instance_banned
 from sqlalchemy import func
 import os
 
@@ -281,6 +282,121 @@ def save_post(form, post: Post):
         db.session.add(post)
 
     g.site.last_active = utcnow()
+
+
+def delete_post_from_community(post_id):
+    if current_app.debug:
+        delete_post_from_community_task(post_id)
+    else:
+        delete_post_from_community_task.delay(post_id)
+
+
+@celery.task
+def delete_post_from_community_task(post_id):
+    post = Post.query.get(post_id)
+    community = post.community
+    post.delete_dependencies()
+    post.flush_cache()
+    db.session.delete(post)
+    db.session.commit()
+
+    if not community.local_only:
+        delete_json = {
+            'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+            'type': 'Delete',
+            'actor': current_user.profile_id(),
+            'audience': post.community.profile_id(),
+            'to': [post.community.profile_id(), 'https://www.w3.org/ns/activitystreams#Public'],
+            'published': ap_datetime(utcnow()),
+            'cc': [
+                current_user.followers_url()
+            ],
+            'object': post.ap_id,
+        }
+
+        if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
+            success = post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
+                                   current_user.ap_profile_id + '#main-key')
+        else:  # local community - send it to followers on remote instances
+            announce = {
+                "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+                "type": 'Announce',
+                "to": [
+                    "https://www.w3.org/ns/activitystreams#Public"
+                ],
+                "actor": post.community.ap_profile_id,
+                "cc": [
+                    post.community.ap_followers_url
+                ],
+                '@context': default_context(),
+                'object': delete_json
+            }
+
+            for instance in post.community.following_instances():
+                if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(
+                        instance.domain):
+                    send_to_remote_instance(instance.id, post.community.id, announce)
+
+
+def delete_post_reply_from_community(post_reply_id):
+    if current_app.debug:
+        delete_post_reply_from_community_task(post_reply_id)
+    else:
+        delete_post_reply_from_community_task.delay(post_reply_id)
+
+
+@celery.task
+def delete_post_reply_from_community_task(post_reply_id):
+    post_reply = PostReply.query.get(post_reply_id)
+    post = post_reply.post
+    community = post.community
+    if post_reply.user_id == current_user.id or community.is_moderator():
+        if post_reply.has_replies():
+            post_reply.body = 'Deleted by author' if post_reply.author.id == current_user.id else 'Deleted by moderator'
+            post_reply.body_html = markdown_to_html(post_reply.body)
+        else:
+            post_reply.delete_dependencies()
+            db.session.delete(post_reply)
+        db.session.commit()
+        post.flush_cache()
+        # federate delete
+        if not post.community.local_only:
+            delete_json = {
+                'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+                'type': 'Delete',
+                'actor': current_user.profile_id(),
+                'audience': post.community.profile_id(),
+                'to': [post.community.profile_id(), 'https://www.w3.org/ns/activitystreams#Public'],
+                'published': ap_datetime(utcnow()),
+                'cc': [
+                    current_user.followers_url()
+                ],
+                'object': post_reply.ap_id,
+            }
+
+            if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
+                success = post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
+                                       current_user.ap_profile_id + '#main-key')
+
+            else:  # local community - send it to followers on remote instances
+                announce = {
+                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+                    "type": 'Announce',
+                    "to": [
+                        "https://www.w3.org/ns/activitystreams#Public"
+                    ],
+                    "actor": post.community.ap_profile_id,
+                    "cc": [
+                        post.community.ap_followers_url
+                    ],
+                    '@context': default_context(),
+                    'object': delete_json
+                }
+
+                for instance in post.community.following_instances():
+                    if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(
+                            instance.domain):
+                        send_to_remote_instance(instance.id, post.community.id, announce)
 
 
 def remove_old_file(file_id):
