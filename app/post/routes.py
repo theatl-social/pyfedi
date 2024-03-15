@@ -17,7 +17,8 @@ from app.community.forms import CreatePostForm
 from app.post.util import post_replies, get_comment_branch, post_reply_count
 from app.constants import SUBSCRIPTION_MEMBER, POST_TYPE_LINK, POST_TYPE_IMAGE
 from app.models import Post, PostReply, \
-    PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, InstanceBlock, Report, Site, Community, Topic
+    PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, InstanceBlock, Report, Site, Community, \
+    Topic
 from app.post import bp
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
@@ -585,7 +586,8 @@ def add_reply(post_id: int, comment_id: int):
 @bp.route('/post/<int:post_id>/options', methods=['GET'])
 def post_options(post_id: int):
     post = Post.query.get_or_404(post_id)
-    return render_template('post/post_options.html', post=post, moderating_communities=moderating_communities(current_user.get_id()),
+    return render_template('post/post_options.html', post=post,
+                           moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()))
 
 

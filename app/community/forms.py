@@ -1,12 +1,14 @@
 from flask import request, g
 from flask_login import current_user
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, TextAreaField, BooleanField, HiddenField, SelectField, FileField
+from validators import Min
+from wtforms import StringField, SubmitField, TextAreaField, BooleanField, HiddenField, SelectField, FileField, \
+    DateField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Optional
 from flask_babel import _, lazy_gettext as _l
 
 from app import db
-from app.models import Community
+from app.models import Community, utcnow
 from app.utils import domain_from_url, MultiCheckboxField
 from PIL import Image, ImageOps
 from io import BytesIO
@@ -63,6 +65,14 @@ class AddModeratorForm(FlaskForm):
 class SearchRemoteCommunity(FlaskForm):
     address = StringField(_l('Community address'), render_kw={'placeholder': 'e.g. !name@server', 'autofocus': True}, validators=[DataRequired()])
     submit = SubmitField(_l('Search'))
+
+
+class BanUserCommunityForm(FlaskForm):
+    reason = StringField(_l('Reason'), render_kw={'autofocus': True}, validators=[DataRequired()])
+    ban_until = DateField(_l('Ban until'))
+    delete_posts = BooleanField(_l('Also delete all their posts'))
+    delete_post_replies = BooleanField(_l('Also delete all their comments'))
+    submit = SubmitField(_l('Ban'))
 
 
 class CreatePostForm(FlaskForm):
