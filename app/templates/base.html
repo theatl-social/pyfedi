@@ -239,7 +239,7 @@
     <script type="text/javascript" src="{{ url_for('static', filename='js/scripts.js', changed=getmtime('js/scripts.js')) }}"></script>
     {% if not low_bandwidth %}
         {% if post_layout == 'masonry' or post_layout == 'masonry_wide' %}
-            <script type="text/javascript" src="{{ url_for('static', filename='js/fslightbox.js') }}"></script>
+            <!-- -->
         {% endif %}
         <script type="text/javascript" src="{{ url_for('static', filename='js/markdown/downarea.js') }}"></script>
     {% endif %}
