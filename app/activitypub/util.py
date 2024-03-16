@@ -693,6 +693,11 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory):
                     source_image_response.close()
 
                     file_ext = os.path.splitext(file.source_url)[1]
+                    # fall back to parsing the http content type if the url does not contain a file extension
+                    if file_ext == '':
+                        content_type_parts = content_type.split('/')
+                        if content_type_parts:
+                            file_ext = '.' + content_type_parts[-1]
 
                     new_filename = gibberish(15)
 
