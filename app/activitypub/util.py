@@ -1152,6 +1152,7 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
                                instance_id=user.instance_id)
         # Get comment content. Lemmy and Kbin put this in different places.
         if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
+                'mediaType' in request_json['object']['source'] and \
                 request_json['object']['source']['mediaType'] == 'text/markdown':
             post_reply.body = request_json['object']['source']['content']
             post_reply.body_html = markdown_to_html(post_reply.body)
