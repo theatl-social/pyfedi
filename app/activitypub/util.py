@@ -1284,11 +1284,11 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
             if not domain.banned:
                 domain.post_count += 1
                 post.domain = domain
-    if 'image' in request_json['object'] and post.image is None:
-        image = File(source_url=request_json['object']['image']['url'])
-        db.session.add(image)
-        post.image = image
     if post is not None:
+        if 'image' in request_json['object'] and post.image is None:
+            image = File(source_url=request_json['object']['image']['url'])
+            db.session.add(image)
+            post.image = image
         db.session.add(post)
         post.ranking = post_ranking(post.score, post.posted_at)
         community.post_count += 1
