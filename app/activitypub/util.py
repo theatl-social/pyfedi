@@ -1234,7 +1234,7 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
                 title=html.unescape(request_json['object']['name']),
                 comments_enabled=request_json['object']['commentsEnabled'] if 'commentsEnabled' in request_json['object'] else True,
                 sticky=request_json['object']['stickied'] if 'stickied' in request_json['object'] else False,
-                nsfw=request_json['object']['sensitive'],
+                nsfw=request_json['object']['sensitive'] if 'sensitive' in request_json['object'] else False,
                 nsfl=request_json['object']['nsfl'] if 'nsfl' in request_json['object'] else nsfl_in_title,
                 ap_id=request_json['object']['id'],
                 ap_create_id=request_json['id'],
@@ -1351,7 +1351,8 @@ def update_post_from_activity(post: Post, request_json: dict):
         post.body = html_to_markdown(post.body_html)
     if 'attachment' in request_json['object'] and 'href' in request_json['object']['attachment']:
         post.url = request_json['object']['attachment']['href']
-    post.nsfw = request_json['object']['sensitive']
+    if 'sensitive' in request_json['object']:
+        post.nsfw = request_json['object']['sensitive']
     nsfl_in_title = '[NSFL]' in request_json['object']['name'].upper() or '(NSFL)' in request_json['object']['name'].upper()
     if 'nsfl' in request_json['object'] or nsfl_in_title:
         post.nsfl = request_json['object']['nsfl']
