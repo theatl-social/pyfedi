@@ -825,6 +825,7 @@ fieldset legend {
 
 .post_image img {
   max-width: 100%;
+  max-height: 90vh;
 }
 
 .render_username {
