@@ -39,7 +39,7 @@ import arrow
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
-from flask import Request, current_app, g
+from flask import Request, current_app
 from datetime import datetime
 from dateutil import parser
 from pyld import jsonld
@@ -82,8 +82,7 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str, con
         body['@context'] = default_context()
     type = body['type'] if 'type' in body else ''
     log = ActivityPubLog(direction='out', activity_type=type, result='processing', activity_id=body['id'], exception_message='')
-    if g.site.log_activitypub_json:
-        log.activity_json=json.dumps(body)
+    log.activity_json=json.dumps(body)
     db.session.add(log)
     db.session.commit()
     try:
