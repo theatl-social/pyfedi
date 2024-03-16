@@ -1278,12 +1278,12 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
                                               url=post.ap_id, user_id=admin.id,
                                               author_id=user.id)
                         db.session.add(notify)
-            if domain.banned:
-                post = None
-                activity_log.exception_message = domain.name + ' is blocked by admin'
             if not domain.banned:
                 domain.post_count += 1
                 post.domain = domain
+            else:
+                post = None
+                activity_log.exception_message = domain.name + ' is blocked by admin'
     if post is not None:
         if 'image' in request_json['object'] and post.image is None:
             image = File(source_url=request_json['object']['image']['url'])
