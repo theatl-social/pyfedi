@@ -374,7 +374,7 @@ class Community(db.Model):
 
     def user_is_banned(self, user):
         membership = CommunityMember.query.filter(CommunityMember.community_id == self.id, CommunityMember.user_id == user.id).first()
-        if membership.is_banned:
+        if membership and membership.is_banned:
             return True
         banned = CommunityBan.query.filter(CommunityBan.community_id == self.id, CommunityBan.user_id == user.id).first()
         if banned:
