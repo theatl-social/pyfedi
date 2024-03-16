@@ -248,7 +248,12 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                     actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
                 except requests.exceptions.ReadTimeout:
                     time.sleep(randint(3, 10))
-                    actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
+                    try:
+                        actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
+                    except requests.exceptions.ReadTimeout:
+                        return None
+                except requests.exceptions.ConnectionError:
+                    return None
                 if actor_data.status_code == 200:
                     actor_json = actor_data.json()
                     actor_data.close()

@@ -91,6 +91,9 @@ def get_request(uri, params=None, headers=None) -> requests.Response:
     except requests.exceptions.ReadTimeout as read_timeout:
         current_app.logger.info(f"{uri} {read_timeout}")
         raise requests.exceptions.ReadTimeout from read_timeout
+    except requests.exceptions.ConnectionError as connection_error:
+        current_app.logger.info(f"{uri} {connection_error}")
+        raise requests.exceptions.ConnectionError from connection_error
 
     return response
 
