@@ -13,7 +13,9 @@ import math
 from urllib.parse import urlparse, parse_qs, urlencode
 from functools import wraps
 import flask
-from bs4 import BeautifulSoup, NavigableString
+from bs4 import BeautifulSoup, NavigableString, MarkupResemblesLocatorWarning
+import warnings
+warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 import requests
 import os
 from flask import current_app, json, redirect, url_for, request, make_response, Response, g
