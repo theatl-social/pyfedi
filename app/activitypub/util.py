@@ -200,6 +200,7 @@ def instance_allowed(host: str) -> bool:
 
 
 def find_actor_or_create(actor: str, create_if_not_found=True, community_only=False) -> Union[User, Community, None]:
+    actor_url = actor.strip()
     actor = actor.strip().lower()
     user = None
     # actor parameter must be formatted as https://server/u/actor or https://server/c/actor
@@ -244,10 +245,10 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
         if create_if_not_found:
             if actor.startswith('https://'):
                 try:
-                    actor_data = get_request(actor, headers={'Accept': 'application/activity+json'})
+                    actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
                 except requests.exceptions.ReadTimeout:
                     time.sleep(randint(3, 10))
-                    actor_data = get_request(actor, headers={'Accept': 'application/activity+json'})
+                    actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
                 if actor_data.status_code == 200:
                     actor_json = actor_data.json()
                     actor_data.close()
