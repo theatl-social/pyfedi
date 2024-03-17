@@ -13,7 +13,9 @@ import math
 from urllib.parse import urlparse, parse_qs, urlencode
 from functools import wraps
 import flask
-from bs4 import BeautifulSoup, NavigableString
+from bs4 import BeautifulSoup, NavigableString, MarkupResemblesLocatorWarning
+import warnings
+warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 import requests
 import os
 from flask import current_app, json, redirect, url_for, request, make_response, Response, g
@@ -91,6 +93,9 @@ def get_request(uri, params=None, headers=None) -> requests.Response:
     except requests.exceptions.ReadTimeout as read_timeout:
         current_app.logger.info(f"{uri} {read_timeout}")
         raise requests.exceptions.ReadTimeout from read_timeout
+    except requests.exceptions.ConnectionError as connection_error:
+        current_app.logger.info(f"{uri} {connection_error}")
+        raise requests.exceptions.ConnectionError from connection_error
 
     return response
 
