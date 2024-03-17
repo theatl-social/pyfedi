@@ -25,7 +25,6 @@ function setupLightboxGallery() {
         baguetteBox.run('.post_list_masonry_wide', {
             fullScreen: false,
             titleTag: true,
-            buttons: true,
             preload: 5,
             captions: function(element) {
                 return element.getElementsByTagName('img')[0].title;
@@ -36,7 +35,6 @@ function setupLightboxGallery() {
         baguetteBox.run('.post_list_masonry', {
             fullScreen: false,
             titleTag: true,
-            buttons: true,
             preload: 5,
             captions: function(element) {
                 return element.getElementsByTagName('img')[0].title;
