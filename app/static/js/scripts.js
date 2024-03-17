@@ -26,6 +26,7 @@ function setupLightboxGallery() {
             fullScreen: false,
             titleTag: true,
             buttons: true,
+            preload: 5,
             captions: function(element) {
                 return element.getElementsByTagName('img')[0].title;
             }
@@ -36,6 +37,7 @@ function setupLightboxGallery() {
             fullScreen: false,
             titleTag: true,
             buttons: true,
+            preload: 5,
             captions: function(element) {
                 return element.getElementsByTagName('img')[0].title;
             }
