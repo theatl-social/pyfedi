@@ -43,6 +43,7 @@
             <link href="{{ url_for('static', filename='themes/high_contrast/styles.css') }}" type="text/css" rel="alternate stylesheet" title="High contrast" />
             {% if not low_bandwidth %}
                 <link href="{{ url_for('static', filename='js/markdown/downarea.css') }}" type="text/css" rel="stylesheet" />
+                <link href="{{ url_for('static', filename='js/lightbox/baguetteBox.css') }}" type="text/css" rel="stylesheet" />
             {% endif %}
             {% if theme() and file_exists('app/templates/themes/' + theme() + '/styles.css') %}
                 <link href="{{ url_for('static', filename='themes/' + theme() + '/styles.css') }}" type="text/css" rel="stylesheet" />
@@ -234,6 +235,7 @@
     {% endblock %}
     {% if not low_bandwidth %}
         {{ str(bootstrap.load_js()).replace('<script ', '<script nonce="' + session['nonce'] + '" ')|safe }}
+        <script src="{{ url_for('static', filename='js/lightbox/baguetteBox.js') }}" nonce="{{ session['nonce'] }}"></script>
     {% endif %}
     <script type="text/javascript" src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/scripts.js', changed=getmtime('js/scripts.js')) }}"></script>

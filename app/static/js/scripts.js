@@ -12,7 +12,36 @@ document.addEventListener("DOMContentLoaded", function () {
     setupTopicChooser();
     setupConversationChooser();
     setupMarkdownEditorEnabler();
+    setupLightboxGallery();
 });
+
+function setupLightboxGallery() {
+    // Check if there are elements with either "post_list_masonry_wide" or "post_list_masonry" class
+    var widePosts = document.querySelectorAll('.post_list_masonry_wide');
+    var regularPosts = document.querySelectorAll('.post_list_masonry');
+
+    // Enable lightbox on masonry images
+    if (widePosts.length > 0) {
+        baguetteBox.run('.post_list_masonry_wide', {
+            fullScreen: false,
+            titleTag: true,
+            buttons: true,
+            captions: function(element) {
+                return element.getElementsByTagName('img')[0].title;
+            }
+        });
+    }
+    if (regularPosts.length > 0) {
+        baguetteBox.run('.post_list_masonry', {
+            fullScreen: false,
+            titleTag: true,
+            buttons: true,
+            captions: function(element) {
+                return element.getElementsByTagName('img')[0].title;
+            }
+        });
+    }
+}
 
 
 // fires after all resources have loaded, including stylesheets and js files
