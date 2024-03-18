@@ -936,6 +936,11 @@ def refresh_instance_profile_task(instance_id: int):
                                     InstanceRole.instance_id == instance.id,
                                     InstanceRole.role == 'admin').delete()
                                 db.session.commit()
+        elif instance_data.status_code == 406:  # Mastodon does this
+            instance.software = 'Mastodon'
+            instance.inbox = f"https://{instance.domain}/inbox"
+            instance.updated_at = utcnow()
+            db.session.commit()
 
 
 # alter the effect of upvotes based on their instance. Default to 1.0
