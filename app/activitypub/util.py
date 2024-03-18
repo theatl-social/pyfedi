@@ -125,24 +125,24 @@ def post_to_activity(post: Post, community: Community):
         ],
         "object": {
             "id": create_id,
-            "actor": f"https://{current_app.config['SERVER_NAME']}/u/{post.author.user_name}",
+            "actor": post.author.ap_public_url,
             "to": [
                 "https://www.w3.org/ns/activitystreams#Public"
             ],
             "object": {
                 "type": "Page",
-                "id": f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
-                "attributedTo": f"https://{current_app.config['SERVER_NAME']}/u/{post.author.user_name}",
+                "id": post.ap_id,
+                "attributedTo": post.author.ap_public_url,
                 "to": [
                     f"https://{current_app.config['SERVER_NAME']}/c/{community.name}",
                     "https://www.w3.org/ns/activitystreams#Public"
                 ],
                 "name": post.title,
                 "cc": [],
-                "content": post.body_html,
+                "content": post.body_html if post.body_html else '',
                 "mediaType": "text/html",
                 "source": {
-                    "content": post.body,
+                    "content": post.body if post.body else '',
                     "mediaType": "text/markdown"
                 },
                 "attachment": [],
