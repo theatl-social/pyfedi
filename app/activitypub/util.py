@@ -874,7 +874,7 @@ def refresh_instance_profile(instance_id: int):
 @celery.task
 def refresh_instance_profile_task(instance_id: int):
     instance = Instance.query.get(instance_id)
-    if instance.updated_at < utcnow() - timedelta(days=7):
+    if instance.inbox is None or instance.updated_at < utcnow() - timedelta(days=7):
         try:
             instance_data = get_request(f"https://{instance.domain}", headers={'Accept': 'application/activity+json'})
         except:
