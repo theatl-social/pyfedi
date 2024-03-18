@@ -704,6 +704,9 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory):
                         content_type_parts = content_type.split('/')
                         if content_type_parts:
                             file_ext = '.' + content_type_parts[-1]
+                    else:
+                        if '?' in file_ext:
+                            file_ext = file_ext.split('?')[0]
 
                     new_filename = gibberish(15)
 
