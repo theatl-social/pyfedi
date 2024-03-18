@@ -19,6 +19,13 @@ from sqlalchemy_searchable import make_searchable
 from config import Config
 
 
+def get_locale():
+    try:
+        return request.accept_languages.best_match(current_app.config['LANGUAGES'])
+    except:
+        return 'en'
+
+
 db = SQLAlchemy()  # engine_options={'pool_size': 5, 'max_overflow': 10} # session_options={"autoflush": False}
 migrate = Migrate()
 login = LoginManager()
@@ -27,7 +34,7 @@ login.login_message = _l('Please log in to access this page.')
 mail = Mail()
 bootstrap = Bootstrap5()
 moment = Moment()
-babel = Babel()
+babel = Babel(locale_selector=get_locale)
 cache = Cache()
 celery = Celery(__name__, broker=Config.CELERY_BROKER_URL)
 
@@ -128,13 +135,6 @@ def create_app(config_class=Config):
     app.logger.info('Started!') # let's go!
 
     return app
-
-
-def get_locale():
-    try:
-        return request.accept_languages.best_match(current_app.config['LANGUAGES'])
-    except:
-        return 'en_US'
 
 
 from app import models

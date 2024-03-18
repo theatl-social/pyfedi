@@ -4,7 +4,7 @@ from time import sleep
 from typing import List
 import requests
 from PIL import Image, ImageOps
-from flask import request, abort, g, current_app
+from flask import request, abort, g, current_app, json
 from flask_login import current_user
 from pillow_heif import register_heif_opener
 
@@ -13,11 +13,11 @@ from app.activitypub.signature import post_request
 from app.activitypub.util import find_actor_or_create, actor_json_to_model, post_json_to_model, default_context
 from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE
 from app.models import Community, File, BannedInstances, PostReply, PostVote, Post, utcnow, CommunityMember, Site, \
-    Instance, Notification, User
+    Instance, Notification, User, ActivityPubLog
 from app.utils import get_request, gibberish, markdown_to_html, domain_from_url, allowlist_html, \
     html_to_markdown, is_image_url, ensure_directory_exists, inbox_domain, post_ranking, shorten_string, parse_page, \
     remove_tracking_from_link, ap_datetime, instance_banned
-from sqlalchemy import func
+from sqlalchemy import func, desc
 import os
 
 
@@ -100,19 +100,26 @@ def retrieve_mods_and_backfill(community_id: int):
                     activities_processed = 0
                     for activity in outbox_data['orderedItems']:
                         user = find_actor_or_create(activity['object']['actor'])
+                        activity_log = ActivityPubLog(direction='in', activity_id=activity['id'], activity_type='Announce', result='failure')
+                        if site.log_activitypub_json:
+                            activity_log.activity_json = json.dumps(activity)
+                        db.session.add(activity_log)
                         if user:
-                            post = post_json_to_model(activity['object']['object'], user, community)
+                            post = post_json_to_model(activity_log, activity['object']['object'], user, community)
                             post.ap_create_id = activity['object']['id']
                             post.ap_announce_id = activity['id']
                             post.ranking = post_ranking(post.score, post.posted_at)
+                            db.session.commit()
+                        else:
+                            activity_log.exception_message = 'Could not find or create actor'
                             db.session.commit()
 
                         activities_processed += 1
                         if activities_processed >= 50:
                             break
                     c = Community.query.get(community.id)
-                    c.post_count = activities_processed
-                    c.last_active = site.last_active = utcnow()
+                    if c.post_count > 0:
+                        c.last_active = Post.query.filter(Post.community_id == community_id).order_by(desc(Post.posted_at)).first().posted_at
                     db.session.commit()
 
 

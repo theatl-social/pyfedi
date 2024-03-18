@@ -121,7 +121,13 @@ def show_community(community: Community):
     page = request.args.get('page', 1, type=int)
     sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
-    post_layout = request.args.get('layout', community.default_layout if not low_bandwidth else None)
+    if low_bandwidth:
+        post_layout = None
+    else:
+        if community.default_layout is not None:
+            post_layout = request.args.get('layout', community.default_layout)
+        else:
+            post_layout = request.args.get('layout', 'list')
 
     # If nothing has changed since their last visit, return HTTP 304
     current_etag = f"{community.id}{sort}{post_layout}_{hash(community.last_active)}"
@@ -846,3 +852,59 @@ def community_notification(community_id: int):
             db.session.commit()
 
     return render_template('community/_notification_toggle.html', community=community)
+
+
+@bp.route('/<actor>/moderate', methods=['GET'])
+@login_required
+def community_moderate(actor):
+    community = actor_to_community(actor)
+
+    if community is not None:
+        if community.is_moderator() or current_user.is_admin():
+
+            page = request.args.get('page', 1, type=int)
+            search = request.args.get('search', '')
+            local_remote = request.args.get('local_remote', '')
+
+            reports = Report.query.filter_by(status=0, in_community_id=community.id)
+            if local_remote == 'local':
+                reports = reports.filter_by(ap_id=None)
+            if local_remote == 'remote':
+                reports = reports.filter(Report.ap_id != None)
+            reports = reports.order_by(desc(Report.created_at)).paginate(page=page, per_page=1000, error_out=False)
+
+            next_url = url_for('admin.admin_reports', page=reports.next_num) if reports.has_next else None
+            prev_url = url_for('admin.admin_reports', page=reports.prev_num) if reports.has_prev and page != 1 else None
+
+            return render_template('community/community_moderate.html', title=_('Moderation of %(community)s', community=community.display_name()),
+                                   community=community, reports=reports, current='reports',
+                                   next_url=next_url, prev_url=prev_url,
+                                   moderating_communities=moderating_communities(current_user.get_id()),
+                                   joined_communities=joined_communities(current_user.get_id()),
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)]
+                                   )
+        else:
+            abort(401)
+    else:
+        abort(404)
+
+
+@bp.route('/<actor>/moderate/banned', methods=['GET'])
+@login_required
+def community_moderate_banned(actor):
+    community = actor_to_community(actor)
+
+    if community is not None:
+        if community.is_moderator() or current_user.is_admin():
+            banned_people = User.query.join(CommunityBan, CommunityBan.user_id == User.id).filter(CommunityBan.community_id == community.id).all()
+            return render_template('community/community_moderate_banned.html',
+                                   title=_('People banned from of %(community)s', community=community.display_name()),
+                                   community=community, banned_people=banned_people, current='banned',
+                                   moderating_communities=moderating_communities(current_user.get_id()),
+                                   joined_communities=joined_communities(current_user.get_id()),
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)]
+                                   )
+        else:
+            abort(401)
+    else:
+        abort(404)

@@ -1104,7 +1104,10 @@ def post_ap(post_id):
 def activities_json(type, id):
     activity = ActivityPubLog.query.filter_by(activity_id=f"https://{current_app.config['SERVER_NAME']}/activities/{type}/{id}").first()
     if activity:
-        activity_json = json.loads(activity.activity_json)
+        if activity.activity_json is not None:
+            activity_json = json.loads(activity.activity_json)
+        else:
+            activity_json = {}
         resp = jsonify(activity_json)
         resp.content_type = 'application/activity+json'
         return resp

@@ -200,6 +200,7 @@ def instance_allowed(host: str) -> bool:
 
 
 def find_actor_or_create(actor: str, create_if_not_found=True, community_only=False) -> Union[User, Community, None]:
+    actor_url = actor.strip()
     actor = actor.strip().lower()
     user = None
     # actor parameter must be formatted as https://server/u/actor or https://server/c/actor
@@ -244,10 +245,15 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
         if create_if_not_found:
             if actor.startswith('https://'):
                 try:
-                    actor_data = get_request(actor, headers={'Accept': 'application/activity+json'})
+                    actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
                 except requests.exceptions.ReadTimeout:
                     time.sleep(randint(3, 10))
-                    actor_data = get_request(actor, headers={'Accept': 'application/activity+json'})
+                    try:
+                        actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
+                    except requests.exceptions.ReadTimeout:
+                        return None
+                except requests.exceptions.ConnectionError:
+                    return None
                 if actor_data.status_code == 200:
                     actor_json = actor_data.json()
                     actor_data.close()
@@ -589,21 +595,22 @@ def actor_json_to_model(activity_json, address, server):
         return community
 
 
-def post_json_to_model(post_json, user, community) -> Post:
+def post_json_to_model(activity_log, post_json, user, community) -> Post:
     try:
+        nsfl_in_title = '[NSFL]' in post_json['name'].upper() or '(NSFL)' in post_json['name'].upper()
         post = Post(user_id=user.id, community_id=community.id,
                     title=html.unescape(post_json['name']),
-                    comments_enabled=post_json['commentsEnabled'],
+                    comments_enabled=post_json['commentsEnabled'] if 'commentsEnabled' in post_json else True,
                     sticky=post_json['stickied'] if 'stickied' in post_json else False,
                     nsfw=post_json['sensitive'],
-                    nsfl=post_json['nsfl'] if 'nsfl' in post_json else False,
+                    nsfl=post_json['nsfl'] if 'nsfl' in post_json else nsfl_in_title,
                     ap_id=post_json['id'],
                     type=constants.POST_TYPE_ARTICLE,
                     posted_at=post_json['published'],
                     last_active=post_json['published'],
-                    instance_id=user.instance_id
+                    instance_id=user.instance_id,
+                    indexable = user.indexable
                     )
-        post.indexable = user.indexable
         if 'source' in post_json and \
                 post_json['source']['mediaType'] == 'text/markdown':
             post.body = post_json['source']['content']
@@ -616,8 +623,15 @@ def post_json_to_model(post_json, user, community) -> Post:
                 post.url = post_json['attachment'][0]['href']
                 if is_image_url(post.url):
                     post.type = POST_TYPE_IMAGE
+                    if 'image' in post_json and 'url' in post_json['image']:
+                        image = File(source_url=post_json['image']['url'])
+                    else:
+                        image = File(source_url=post.url)
+                    db.session.add(image)
+                    post.image = image
                 else:
                     post.type = POST_TYPE_LINK
+                    post.url = remove_tracking_from_link(post.url)
 
                 domain = domain_from_url(post.url)
                 # notify about links to banned websites.
@@ -637,10 +651,11 @@ def post_json_to_model(post_json, user, community) -> Post:
                                 admin.unread_notifications += 1
                     if domain.banned:
                         post = None
+                        activity_log.exception_message = domain.name + ' is blocked by admin'
                     if not domain.banned:
                         domain.post_count += 1
                         post.domain = domain
-        if 'image' in post_json and post:
+        if 'image' in post_json and post.image is None:
             image = File(source_url=post_json['image']['url'])
             db.session.add(image)
             post.image = image
@@ -648,7 +663,12 @@ def post_json_to_model(post_json, user, community) -> Post:
         if post is not None:
             db.session.add(post)
             community.post_count += 1
+            activity_log.result = 'success'
             db.session.commit()
+
+            if post.image_id:
+                make_image_sizes(post.image_id, 150, 512, 'posts')  # the 512 sized image is for masonry view
+
         return post
     except KeyError as e:
         current_app.logger.error(f'KeyError in post_json_to_model: ' + str(post_json))
@@ -679,6 +699,11 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory):
                     source_image_response.close()
 
                     file_ext = os.path.splitext(file.source_url)[1]
+                    # fall back to parsing the http content type if the url does not contain a file extension
+                    if file_ext == '':
+                        content_type_parts = content_type.split('/')
+                        if content_type_parts:
+                            file_ext = '.' + content_type_parts[-1]
 
                     new_filename = gibberish(15)
 
@@ -849,7 +874,7 @@ def refresh_instance_profile(instance_id: int):
 @celery.task
 def refresh_instance_profile_task(instance_id: int):
     instance = Instance.query.get(instance_id)
-    if instance.updated_at < utcnow() - timedelta(days=7):
+    if instance.inbox is None or instance.updated_at < utcnow() - timedelta(days=7):
         try:
             instance_data = get_request(f"https://{instance.domain}", headers={'Accept': 'application/activity+json'})
         except:
@@ -911,6 +936,11 @@ def refresh_instance_profile_task(instance_id: int):
                                     InstanceRole.instance_id == instance.id,
                                     InstanceRole.role == 'admin').delete()
                                 db.session.commit()
+        elif instance_data.status_code == 406:  # Mastodon does this
+            instance.software = 'Mastodon'
+            instance.inbox = f"https://{instance.domain}/inbox"
+            instance.updated_at = utcnow()
+            db.session.commit()
 
 
 # alter the effect of upvotes based on their instance. Default to 1.0
@@ -1133,6 +1163,7 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
                                instance_id=user.instance_id)
         # Get comment content. Lemmy and Kbin put this in different places.
         if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
+                'mediaType' in request_json['object']['source'] and \
                 request_json['object']['source']['mediaType'] == 'text/markdown':
             post_reply.body = request_json['object']['source']['content']
             post_reply.body_html = markdown_to_html(post_reply.body)
@@ -1214,7 +1245,7 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
                 title=html.unescape(request_json['object']['name']),
                 comments_enabled=request_json['object']['commentsEnabled'] if 'commentsEnabled' in request_json['object'] else True,
                 sticky=request_json['object']['stickied'] if 'stickied' in request_json['object'] else False,
-                nsfw=request_json['object']['sensitive'],
+                nsfw=request_json['object']['sensitive'] if 'sensitive' in request_json['object'] else False,
                 nsfl=request_json['object']['nsfl'] if 'nsfl' in request_json['object'] else nsfl_in_title,
                 ap_id=request_json['object']['id'],
                 ap_create_id=request_json['id'],
@@ -1264,17 +1295,17 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
                                               url=post.ap_id, user_id=admin.id,
                                               author_id=user.id)
                         db.session.add(notify)
-            if domain.banned:
-                post = None
-                activity_log.exception_message = domain.name + ' is blocked by admin'
             if not domain.banned:
                 domain.post_count += 1
                 post.domain = domain
-    if 'image' in request_json['object'] and post.image is None:
-        image = File(source_url=request_json['object']['image']['url'])
-        db.session.add(image)
-        post.image = image
+            else:
+                post = None
+                activity_log.exception_message = domain.name + ' is blocked by admin'
     if post is not None:
+        if 'image' in request_json['object'] and post.image is None:
+            image = File(source_url=request_json['object']['image']['url'])
+            db.session.add(image)
+            post.image = image
         db.session.add(post)
         post.ranking = post_ranking(post.score, post.posted_at)
         community.post_count += 1
@@ -1331,7 +1362,8 @@ def update_post_from_activity(post: Post, request_json: dict):
         post.body = html_to_markdown(post.body_html)
     if 'attachment' in request_json['object'] and 'href' in request_json['object']['attachment']:
         post.url = request_json['object']['attachment']['href']
-    post.nsfw = request_json['object']['sensitive']
+    if 'sensitive' in request_json['object']:
+        post.nsfw = request_json['object']['sensitive']
     nsfl_in_title = '[NSFL]' in request_json['object']['name'].upper() or '(NSFL)' in request_json['object']['name'].upper()
     if 'nsfl' in request_json['object'] or nsfl_in_title:
         post.nsfl = request_json['object']['nsfl']

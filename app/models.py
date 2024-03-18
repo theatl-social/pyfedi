@@ -374,7 +374,7 @@ class Community(db.Model):
 
     def user_is_banned(self, user):
         membership = CommunityMember.query.filter(CommunityMember.community_id == self.id, CommunityMember.user_id == user.id).first()
-        if membership.is_banned:
+        if membership and membership.is_banned:
             return True
         banned = CommunityBan.query.filter(CommunityBan.community_id == self.id, CommunityBan.user_id == user.id).first()
         if banned:
@@ -1120,11 +1120,12 @@ class Report(db.Model):
     status = db.Column(db.Integer, default=0)
     type = db.Column(db.Integer, default=0)     # 0 = user, 1 = post, 2 = reply, 3 = community, 4 = conversation
     reporter_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    suspect_community_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    suspect_community_id = db.Column(db.Integer, db.ForeignKey('community.id'))
     suspect_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     suspect_post_id = db.Column(db.Integer, db.ForeignKey('post.id'))
     suspect_post_reply_id = db.Column(db.Integer, db.ForeignKey('post_reply.id'))
     suspect_conversation_id = db.Column(db.Integer, db.ForeignKey('conversation.id'))
+    in_community_id = db.Column(db.Integer, db.ForeignKey('community.id'))
     created_at = db.Column(db.DateTime, default=utcnow)
     updated = db.Column(db.DateTime, default=utcnow)
 
