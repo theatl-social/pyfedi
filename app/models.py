@@ -1120,11 +1120,12 @@ class Report(db.Model):
     status = db.Column(db.Integer, default=0)
     type = db.Column(db.Integer, default=0)     # 0 = user, 1 = post, 2 = reply, 3 = community, 4 = conversation
     reporter_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    suspect_community_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    suspect_community_id = db.Column(db.Integer, db.ForeignKey('community.id'))
     suspect_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     suspect_post_id = db.Column(db.Integer, db.ForeignKey('post.id'))
     suspect_post_reply_id = db.Column(db.Integer, db.ForeignKey('post_reply.id'))
     suspect_conversation_id = db.Column(db.Integer, db.ForeignKey('conversation.id'))
+    in_community_id = db.Column(db.Integer, db.ForeignKey('community.id'))
     created_at = db.Column(db.DateTime, default=utcnow)
     updated = db.Column(db.DateTime, default=utcnow)
 

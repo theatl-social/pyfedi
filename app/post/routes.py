@@ -795,7 +795,7 @@ def post_report(post_id: int):
     if form.validate_on_submit():
         report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
                         type=1, reporter_id=current_user.id, suspect_user_id=post.author.id, suspect_post_id=post.id,
-                        suspect_community_id=post.community.id)
+                        suspect_community_id=post.community.id, in_community_id=post.community.id)
         db.session.add(report)
 
         # Notify moderators
