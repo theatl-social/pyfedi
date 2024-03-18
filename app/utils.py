@@ -199,7 +199,7 @@ def allowlist_html(html: str) -> str:
         else:
             # Filter and sanitize attributes
             for attr in list(tag.attrs):
-                if attr not in ['href', 'src', 'alt']:
+                if attr not in ['href', 'src', 'alt', 'class']:
                     del tag[attr]
             # Add nofollow and target=_blank to anchors
             if tag.name == 'a':
@@ -251,7 +251,7 @@ def html_to_markdown_worker(element, indent_level=0):
 
 def markdown_to_html(markdown_text) -> str:
     if markdown_text:
-        return allowlist_html(markdown2.markdown(markdown_text, safe_mode=True, extras={'middle-word-em': False, 'tables': True}))
+        return allowlist_html(markdown2.markdown(markdown_text, safe_mode=True, extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'spoiler': True}))
     else:
         return ''
 
