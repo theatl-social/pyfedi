@@ -125,24 +125,24 @@ def post_to_activity(post: Post, community: Community):
         ],
         "object": {
             "id": create_id,
-            "actor": f"https://{current_app.config['SERVER_NAME']}/u/{post.author.user_name}",
+            "actor": post.author.ap_public_url,
             "to": [
                 "https://www.w3.org/ns/activitystreams#Public"
             ],
             "object": {
                 "type": "Page",
-                "id": f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
-                "attributedTo": f"https://{current_app.config['SERVER_NAME']}/u/{post.author.user_name}",
+                "id": post.ap_id,
+                "attributedTo": post.author.ap_public_url,
                 "to": [
                     f"https://{current_app.config['SERVER_NAME']}/c/{community.name}",
                     "https://www.w3.org/ns/activitystreams#Public"
                 ],
                 "name": post.title,
                 "cc": [],
-                "content": post.body_html,
+                "content": post.body_html if post.body_html else '',
                 "mediaType": "text/html",
                 "source": {
-                    "content": post.body,
+                    "content": post.body if post.body else '',
                     "mediaType": "text/markdown"
                 },
                 "attachment": [],
@@ -200,6 +200,7 @@ def instance_allowed(host: str) -> bool:
 
 
 def find_actor_or_create(actor: str, create_if_not_found=True, community_only=False) -> Union[User, Community, None]:
+    actor_url = actor.strip()
     actor = actor.strip().lower()
     user = None
     # actor parameter must be formatted as https://server/u/actor or https://server/c/actor
@@ -244,10 +245,15 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
         if create_if_not_found:
             if actor.startswith('https://'):
                 try:
-                    actor_data = get_request(actor, headers={'Accept': 'application/activity+json'})
+                    actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
                 except requests.exceptions.ReadTimeout:
                     time.sleep(randint(3, 10))
-                    actor_data = get_request(actor, headers={'Accept': 'application/activity+json'})
+                    try:
+                        actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
+                    except requests.exceptions.ReadTimeout:
+                        return None
+                except requests.exceptions.ConnectionError:
+                    return None
                 if actor_data.status_code == 200:
                     actor_json = actor_data.json()
                     actor_data.close()
@@ -698,6 +704,9 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory):
                         content_type_parts = content_type.split('/')
                         if content_type_parts:
                             file_ext = '.' + content_type_parts[-1]
+                    else:
+                        if '?' in file_ext:
+                            file_ext = file_ext.split('?')[0]
 
                     new_filename = gibberish(15)
 
@@ -868,7 +877,7 @@ def refresh_instance_profile(instance_id: int):
 @celery.task
 def refresh_instance_profile_task(instance_id: int):
     instance = Instance.query.get(instance_id)
-    if instance.updated_at < utcnow() - timedelta(days=7):
+    if instance.inbox is None or instance.updated_at < utcnow() - timedelta(days=7):
         try:
             instance_data = get_request(f"https://{instance.domain}", headers={'Accept': 'application/activity+json'})
         except:
@@ -930,6 +939,11 @@ def refresh_instance_profile_task(instance_id: int):
                                     InstanceRole.instance_id == instance.id,
                                     InstanceRole.role == 'admin').delete()
                                 db.session.commit()
+        elif instance_data.status_code == 406:  # Mastodon does this
+            instance.software = 'Mastodon'
+            instance.inbox = f"https://{instance.domain}/inbox"
+            instance.updated_at = utcnow()
+            db.session.commit()
 
 
 # alter the effect of upvotes based on their instance. Default to 1.0

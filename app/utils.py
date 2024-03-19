@@ -13,7 +13,9 @@ import math
 from urllib.parse import urlparse, parse_qs, urlencode
 from functools import wraps
 import flask
-from bs4 import BeautifulSoup, NavigableString
+from bs4 import BeautifulSoup, NavigableString, MarkupResemblesLocatorWarning
+import warnings
+warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 import requests
 import os
 from flask import current_app, json, redirect, url_for, request, make_response, Response, g
@@ -57,7 +59,7 @@ def return_304(etag, content_type=None):
     resp = make_response('', 304)
     resp.headers.add_header('ETag', request.headers['If-None-Match'])
     resp.headers.add_header('Cache-Control', 'no-cache, max-age=600, must-revalidate')
-    resp.headers.add_header('Vary', 'Accept, Cookie')
+    resp.headers.add_header('Vary', 'Accept, Cookie, Accept-Language')
     if content_type:
         resp.headers.set('Content-Type', content_type)
     return resp
@@ -91,6 +93,9 @@ def get_request(uri, params=None, headers=None) -> requests.Response:
     except requests.exceptions.ReadTimeout as read_timeout:
         current_app.logger.info(f"{uri} {read_timeout}")
         raise requests.exceptions.ReadTimeout from read_timeout
+    except requests.exceptions.ConnectionError as connection_error:
+        current_app.logger.info(f"{uri} {connection_error}")
+        raise requests.exceptions.ConnectionError from connection_error
 
     return response
 
@@ -194,7 +199,7 @@ def allowlist_html(html: str) -> str:
         else:
             # Filter and sanitize attributes
             for attr in list(tag.attrs):
-                if attr not in ['href', 'src', 'alt']:
+                if attr not in ['href', 'src', 'alt', 'class']:
                     del tag[attr]
             # Add nofollow and target=_blank to anchors
             if tag.name == 'a':
@@ -246,7 +251,7 @@ def html_to_markdown_worker(element, indent_level=0):
 
 def markdown_to_html(markdown_text) -> str:
     if markdown_text:
-        return allowlist_html(markdown2.markdown(markdown_text, safe_mode=True, extras={'middle-word-em': False, 'tables': True}))
+        return allowlist_html(markdown2.markdown(markdown_text, safe_mode=True, extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'spoiler': True}))
     else:
         return ''
 
