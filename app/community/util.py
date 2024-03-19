@@ -211,7 +211,7 @@ def save_post(form, post: Post):
                     filename = opengraph.get('og:image') or opengraph.get('og:image:url')
                     filename_for_extension = filename.split('?')[0] if '?' in filename else filename
                     unused, file_extension = os.path.splitext(filename_for_extension)
-                    if file_extension.lower() in allowed_extensions:
+                    if file_extension.lower() in allowed_extensions and not filename.startswith('/'):
                         file = url_to_thumbnail_file(filename)
                         if file:
                             file.alt_text = opengraph.get('og:title')
