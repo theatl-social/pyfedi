@@ -579,8 +579,8 @@ class User(UserMixin, db.Model):
 
     def num_content(self):
         content = 0
-        content += db.session.execute(text('SELECT COUNT(id) as c FROM "post" WHERE user_id = ' + str(self.id))).scalar()
-        content += db.session.execute(text('SELECT COUNT(id) as c FROM "post_reply" WHERE user_id = ' + str(self.id))).scalar()
+        content += db.session.execute(text('SELECT COUNT(id) as c FROM "post" WHERE user_id = :user_id'), {'user_id': self.id}).scalar()
+        content += db.session.execute(text('SELECT COUNT(id) as c FROM "post_reply" WHERE user_id = :user_id'), {'user_id': self.id}).scalar()
         return content
 
     def is_local(self):
