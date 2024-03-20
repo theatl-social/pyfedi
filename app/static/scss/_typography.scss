@@ -282,6 +282,14 @@ h1 {
   }
 }
 
+.fe-bot-account {
+  position: relative;
+  top: 1px;
+  &:before {
+    content: "\e94d";
+  }
+}
+
 .fe-video {
   position: relative;
   top: 2px;

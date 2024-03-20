@@ -305,6 +305,14 @@ h1 .fe-bell, h1 .fe-no-bell {
   content: "\e986";
 }
 
+.fe-bot-account {
+  position: relative;
+  top: 1px;
+}
+.fe-bot-account:before {
+  content: "\e94d";
+}
+
 .fe-video {
   position: relative;
   top: 2px;
