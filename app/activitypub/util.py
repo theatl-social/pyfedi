@@ -488,7 +488,7 @@ def refresh_community_profile_task(community_id):
 
 
 def actor_json_to_model(activity_json, address, server):
-    if activity_json['type'] == 'Person':
+    if activity_json['type'] == 'Person' or activity_json['type'] == 'Service':
         try:
             user = User(user_name=activity_json['preferredUsername'],
                         title=activity_json['name'] if 'name' in activity_json else None,
@@ -508,6 +508,7 @@ def actor_json_to_model(activity_json, address, server):
                         ap_fetched_at=utcnow(),
                         ap_domain=server,
                         public_key=activity_json['publicKey']['publicKeyPem'],
+                        bot=True if activity_json['type'] == 'Service' else False,
                         instance_id=find_instance_id(server)
                         # language=community_json['language'][0]['identifier'] # todo: language
                         )
