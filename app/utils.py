@@ -442,7 +442,7 @@ def banned_ip_addresses() -> List[str]:
 
 
 def can_downvote(user, community: Community, site=None) -> bool:
-    if user is None or community is None or user.banned:
+    if user is None or community is None or user.banned or user.bot:
         return False
 
     if site is None:
@@ -464,7 +464,7 @@ def can_downvote(user, community: Community, site=None) -> bool:
 
 
 def can_upvote(user, community: Community) -> bool:
-    if user is None or community is None or user.banned:
+    if user is None or community is None or user.banned or user.bot:
         return False
 
     return True
