@@ -309,6 +309,19 @@ h1 {
   }
 }
 
+.fe-sticky-left::before {
+  position: relative;
+  top: 2px;
+  content: "\e934";
+}
+
+.fe-sticky-right::before {
+  position: relative;
+  top: 2px;
+  content: "\e933";
+}
+
+
 a.no-underline {
   text-decoration: none;
   &:hover {

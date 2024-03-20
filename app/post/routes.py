@@ -649,6 +649,7 @@ def post_edit(post_id: int):
                     'commentsEnabled': post.comments_enabled,
                     'sensitive': post.nsfw,
                     'nsfl': post.nsfl,
+                    'stickied': post.sticky,
                     'published': ap_datetime(post.posted_at),
                     'updated': ap_datetime(post.edited_at),
                     'audience': post.community.ap_profile_id
@@ -722,6 +723,9 @@ def post_edit(post_id: int):
             form.notify_author.data = post.notify_author
             form.nsfw.data = post.nsfw
             form.nsfl.data = post.nsfl
+            form.sticky.data = post.sticky
+            if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
+                form.sticky.render_kw = {'disabled': True}
             return render_template('post/post_edit.html', title=_('Edit post'), form=form, post=post,
                                    markdown_editor=current_user.markdown_editor,
                                    moderating_communities=moderating_communities(current_user.get_id()),

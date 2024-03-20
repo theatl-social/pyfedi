@@ -266,6 +266,7 @@ class Community(db.Model):
     ap_deleted_at = db.Column(db.DateTime)
     ap_inbox_url = db.Column(db.String(255))
     ap_outbox_url = db.Column(db.String(255))
+    ap_featured_url = db.Column(db.String(255))
     ap_moderators_url = db.Column(db.String(255))
     ap_domain = db.Column(db.String(255))
 

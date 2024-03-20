@@ -121,6 +121,18 @@ def retrieve_mods_and_backfill(community_id: int):
                     if c.post_count > 0:
                         c.last_active = Post.query.filter(Post.community_id == community_id).order_by(desc(Post.posted_at)).first().posted_at
                     db.session.commit()
+                if community.ap_featured_url:
+                    featured_request = get_request(community.ap_featured_url, headers={'Accept': 'application/activityjson'})
+                    if featured_request.status_code == 200:
+                        featured_data = featured_request.json()
+                        featured_request.close()
+                        if featured_data['type'] == 'OrderedCollection' and 'orderedItems' in featured_data:
+                            for item in featured_data['orderedItems']:
+                                featured_id = item['id']
+                                p = Post.query.filter(Post.ap_id == featured_id).first()
+                                if p:
+                                    p.sticky = True
+                                    db.session.commit()
 
 
 def community_url_exists(url) -> bool:
@@ -173,6 +185,7 @@ def url_to_thumbnail_file(filename) -> File:
 
 def save_post(form, post: Post):
     post.indexable = current_user.indexable
+    post.sticky = form.sticky.data
     post.nsfw = form.nsfw.data
     post.nsfl = form.nsfl.data
     post.notify_author = form.notify_author.data

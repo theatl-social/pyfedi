@@ -666,6 +666,24 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             target_ap_id = request_json['object']['object']['object']           # object object object!
                             post = undo_vote(activity_log, comment, post, target_ap_id, user)
                             activity_log.result = 'success'
+                    elif request_json['object']['type'] == 'Add':
+                        activity_log.activity_type = request_json['object']['type']
+                        featured_url = Community.query.filter(Community.ap_public_url == request_json['actor']).first().ap_featured_url
+                        if featured_url:
+                           if 'target' in request_json['object'] and featured_url == request_json['object']['target']:
+                                post = Post.query.filter(Post.ap_id == request_json['object']['object']).first()
+                                if post:
+                                    post.sticky = True
+                                    activity_log.result = 'success'
+                    elif request_json['object']['type'] == 'Remove':
+                        activity_log.activity_type = request_json['object']['type']
+                        featured_url = Community.query.filter(Community.ap_public_url == request_json['actor']).first().ap_featured_url
+                        if featured_url:
+                           if 'target' in request_json['object'] and featured_url == request_json['object']['target']:
+                                post = Post.query.filter(Post.ap_id == request_json['object']['object']).first()
+                                if post:
+                                    post.sticky = False
+                                    activity_log.result = 'success'
                     else:
                         activity_log.exception_message = 'Invalid type for Announce'
 

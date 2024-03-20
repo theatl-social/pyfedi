@@ -562,6 +562,7 @@ def actor_json_to_model(activity_json, address, server):
                               ap_followers_url=activity_json['followers'],
                               ap_inbox_url=activity_json['endpoints']['sharedInbox'],
                               ap_outbox_url=activity_json['outbox'],
+                              ap_featured_url=activity_json['featured'],
                               ap_moderators_url=mods_url,
                               ap_fetched_at=utcnow(),
                               ap_domain=server,
