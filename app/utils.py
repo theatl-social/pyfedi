@@ -251,7 +251,7 @@ def html_to_markdown_worker(element, indent_level=0):
 
 def markdown_to_html(markdown_text) -> str:
     if markdown_text:
-        return allowlist_html(markdown2.markdown(markdown_text, safe_mode=True, extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'spoiler': True}))
+        return allowlist_html(markdown2.markdown(markdown_text, safe_mode=True, extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True}))
     else:
         return ''
 
