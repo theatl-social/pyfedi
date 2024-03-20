@@ -120,6 +120,8 @@ def show_community(community: Community):
 
     page = request.args.get('page', 1, type=int)
     sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)
+    if sort is None:
+        sort = ''
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
     if low_bandwidth:
         post_layout = None
@@ -171,13 +173,13 @@ def show_community(community: Community):
             posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
 
     if sort == '' or sort == 'hot':
-        posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
+        posts = posts.order_by(desc(Post.sticky)).order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
     elif sort == 'top':
-        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=7)).order_by(desc(Post.score))
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=7)).order_by(desc(Post.sticky)).order_by(desc(Post.score))
     elif sort == 'new':
         posts = posts.order_by(desc(Post.posted_at))
     elif sort == 'active':
-        posts = posts.order_by(desc(Post.last_active))
+        posts = posts.order_by(desc(Post.sticky)).order_by(desc(Post.last_active))
     per_page = 100
     if post_layout == 'masonry':
         per_page = 200
@@ -444,6 +446,8 @@ def add_post(actor):
     if community.nsfl:
         form.nsfl.data = True
         form.nsfw.render_kw = {'disabled': True}
+    if not(community.is_moderator() or community.is_owner() or current_user.is_admin()):
+        form.sticky.render_kw = {'disabled': True}
 
     form.communities.choices = [(c.id, c.display_name()) for c in current_user.communities()]
 
@@ -485,6 +489,7 @@ def add_post(actor):
                 'commentsEnabled': post.comments_enabled,
                 'sensitive': post.nsfw,
                 'nsfl': post.nsfl,
+                'stickied': post.sticky,
                 'published': ap_datetime(utcnow()),
                 'audience': community.ap_profile_id
             }

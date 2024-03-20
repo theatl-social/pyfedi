@@ -89,6 +89,7 @@ class CreatePostForm(FlaskForm):
                                     render_kw={'placeholder': 'Text (optional)'})
     image_file = FileField(_('Image'))
     # flair = SelectField(_l('Flair'), coerce=int)
+    sticky = BooleanField(_l('Sticky'))
     nsfw = BooleanField(_l('NSFW'))
     nsfl = BooleanField(_l('Gore/gross'))
     notify_author = BooleanField(_l('Notify about replies'))

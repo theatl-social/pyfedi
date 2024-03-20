@@ -43,7 +43,7 @@
                                     </div>
                                 {% endif %}
                             {% endif %}
-                            <h3><a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None) }}" class="post_teaser_title_a">{{ post.title }}</a>
+                            <h3>{% if post.sticky %}<span class="fe fe-sticky-left"></span>{% endif %}<a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None) }}" class="post_teaser_title_a">{{ post.title }}</a>
                             {% if post.type == POST_TYPE_IMAGE %}<span class="fe fe-image" aria-hidden="true"> </span>{% endif %}
                             {% if post.type == POST_TYPE_LINK and post.domain_id %}
                                 {% if post.url and 'youtube.com' in post.url %}
@@ -58,6 +58,7 @@
                             {% if post.reports and current_user.is_authenticated and post.community.is_moderator(current_user) %}
                                 <span class="red fe fe-report" title="{{ _('Reported. Check post for issues.') }}"></span>
                             {% endif %}
+                            {% if post.sticky %}<span class="fe fe-sticky-right"></span>{% endif %}
                             </h3>
 
                             <span class="small">{% if show_post_community %}<strong><a href="/c/{{ post.community.link() }}" aria-label="{{ _('Go to community %(name)s', name=post.community.name) }}">c/{{ post.community.name }}</a></strong>{% endif %}
