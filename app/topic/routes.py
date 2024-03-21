@@ -16,7 +16,8 @@ from app.topic import bp
 from app import db, celery, cache
 from app.topic.forms import ChooseTopicsForm
 from app.utils import render_template, user_filters_posts, moderating_communities, joined_communities, \
-    community_membership, blocked_domains, validation_required, mimetype_from_url, blocked_instances
+    community_membership, blocked_domains, validation_required, mimetype_from_url, blocked_instances, \
+    communities_banned_from
 
 
 @bp.route('/topic/<path:topic_path>', methods=['GET'])
@@ -68,6 +69,9 @@ def show_topic(topic_path):
             instance_ids = blocked_instances(current_user.id)
             if instance_ids:
                 posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
+            banned_from = communities_banned_from(current_user.id)
+            if banned_from:
+                posts = posts.filter(Post.community_id.not_in(banned_from))
 
         # sorting
         if sort == '' or sort == 'hot':
