@@ -6,10 +6,10 @@ from flask_login import login_required, current_user
 from flask_babel import _
 from sqlalchemy import text, desc
 
-from app import db, celery
+from app import db, celery, cache
 from app.activitypub.routes import process_inbox_request, process_delete_request
 from app.activitypub.signature import post_request
-from app.activitypub.util import default_context
+from app.activitypub.util import default_context, instance_allowed, instance_blocked
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
@@ -18,7 +18,7 @@ from app.community.util import save_icon_file, save_banner_file
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
-    moderating_communities, joined_communities, finalize_user_setup, theme_list
+    moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases
 from app.admin import bp
 
 
@@ -123,13 +123,18 @@ def admin_federation():
             for allow in form.allowlist.data.split('\n'):
                 if allow.strip():
                     db.session.add(AllowedInstances(domain=allow.strip()))
+                    cache.delete_memoized(instance_allowed, allow.strip())
         if form.use_blocklist.data:
             set_setting('use_allowlist', False)
             db.session.execute(text('DELETE FROM banned_instances'))
             for banned in form.blocklist.data.split('\n'):
                 if banned.strip():
                     db.session.add(BannedInstances(domain=banned.strip()))
+                    cache.delete_memoized(instance_blocked, banned.strip())
+        site.blocked_phrases = form.blocked_phrases.data
+        cache.delete_memoized(blocked_phrases)
         db.session.commit()
+
         flash(_('Admin settings saved'))
 
     elif request.method == 'GET':
@@ -139,6 +144,7 @@ def admin_federation():
         form.blocklist.data = '\n'.join([instance.domain for instance in instances])
         instances = AllowedInstances.query.all()
         form.allowlist.data = '\n'.join([instance.domain for instance in instances])
+        form.blocked_phrases.data = site.blocked_phrases
 
     return render_template('admin/federation.html', title=_('Federation settings'), form=form,
                            moderating_communities=moderating_communities(current_user.get_id()),

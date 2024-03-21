@@ -330,6 +330,15 @@ def blocked_instances(user_id) -> List[int]:
     return [block.instance_id for block in blocks]
 
 
+@cache.memoize(timeout=86400)
+def blocked_phrases() -> List[str]:
+    site = Site.query.get(1)
+    if site.blocked_phrases:
+        return [phrase for phrase in site.blocked_phrases.split('\n') if phrase != '']
+    else:
+        return []
+
+
 def retrieve_block_list():
     try:
         response = requests.get('https://raw.githubusercontent.com/rimu/no-qanon/master/domains.txt', timeout=1)

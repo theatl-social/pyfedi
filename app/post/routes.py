@@ -24,7 +24,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
     request_etag_matches, ip_address, user_ip_banned, instance_banned, can_downvote, can_upvote, post_ranking, \
     reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, moderating_communities, joined_communities, \
-    blocked_instances, blocked_domains, community_moderators
+    blocked_instances, blocked_domains, community_moderators, blocked_phrases
 
 
 def show_post(post_id: int):
@@ -466,6 +466,10 @@ def add_reply(post_id: int, comment_id: int):
                           body_html=markdown_to_html(form.body.data), body_html_safe=True,
                           from_bot=current_user.bot, nsfw=post.nsfw, nsfl=post.nsfl,
                           notify_author=form.notify_author.data, instance_id=1)
+        if reply.body:
+            for blocked_phrase in blocked_phrases():
+                if blocked_phrase in reply.body:
+                    abort(401)
         db.session.add(reply)
         if in_reply_to.notify_author and current_user.id != in_reply_to.user_id and in_reply_to.author.ap_id is None:    # todo: check if replier is blocked
             notification = Notification(title=shorten_string(_('Reply from %(name)s on %(post_title)s',

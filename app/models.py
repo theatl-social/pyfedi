@@ -1170,7 +1170,8 @@ class Site(db.Model):
     allow_or_block_list = db.Column(db.Integer, default=2)  # 1 = allow list, 2 = block list
     allowlist = db.Column(db.Text, default='')
     blocklist = db.Column(db.Text, default='')
-    auto_decline_referrers = db.Column(db.Text, default='rdrama.net')
+    blocked_phrases = db.Column(db.Text, default='')                     # discard incoming content with these phrases
+    auto_decline_referrers = db.Column(db.Text, default='rdrama.net')   # automatically decline registration requests if the referrer is one of these
     created_at = db.Column(db.DateTime, default=utcnow)
     updated = db.Column(db.DateTime, default=utcnow)
     last_active = db.Column(db.DateTime, default=utcnow)
