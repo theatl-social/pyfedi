@@ -195,7 +195,7 @@ def user_profile(actor):
         if is_activitypub_request():
             server = current_app.config['SERVER_NAME']
             actor_data = {  "@context": default_context(),
-                            "type": "Person",
+                            "type": "Person" if not user.bot else "Service",
                             "id": f"https://{server}/u/{actor}",
                             "preferredUsername": actor,
                             "name": user.title if user.title else user.user_name,
