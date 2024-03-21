@@ -666,23 +666,47 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             target_ap_id = request_json['object']['object']['object']           # object object object!
                             post = undo_vote(activity_log, comment, post, target_ap_id, user)
                             activity_log.result = 'success'
-                    elif request_json['object']['type'] == 'Add':
+                    elif request_json['object']['type'] == 'Add' and 'target' in request_json['object']:
                         activity_log.activity_type = request_json['object']['type']
-                        featured_url = Community.query.filter(Community.ap_public_url == request_json['actor']).first().ap_featured_url
-                        if featured_url:
-                           if 'target' in request_json['object'] and featured_url == request_json['object']['target']:
-                                post = Post.query.filter(Post.ap_id == request_json['object']['object']).first()
+                        target = request_json['object']['target']
+                        community = Community.query.filter_by(ap_public_url=request_json['actor']).first()
+                        if community:
+                            featured_url = community.ap_featured_url
+                            moderators_url = community.ap_moderators_url
+                            if target == featured_url:
+                                post = Post.query.filter_by(ap_id=request_json['object']['object']).first()
                                 if post:
                                     post.sticky = True
                                     activity_log.result = 'success'
-                    elif request_json['object']['type'] == 'Remove':
+                            if target == moderators_url:
+                                user = find_actor_or_create(request_json['object']['object'])
+                                if user:
+                                    existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=user.id).first()
+                                    if existing_membership:
+                                        existing_membership.is_moderator = True
+                                    else:
+                                        new_membership = CommunityMember(community_id=community.id, user_id=user.id, is_moderator=True)
+                                        db.session.add(new_membership)
+                                        db.session.commit()
+                                    activity_log.result = 'success'
+                    elif request_json['object']['type'] == 'Remove' and 'target' in request_json['object']:
                         activity_log.activity_type = request_json['object']['type']
-                        featured_url = Community.query.filter(Community.ap_public_url == request_json['actor']).first().ap_featured_url
-                        if featured_url:
-                           if 'target' in request_json['object'] and featured_url == request_json['object']['target']:
-                                post = Post.query.filter(Post.ap_id == request_json['object']['object']).first()
+                        target = request_json['object']['target']
+                        community = Community.query.filter_by(ap_public_url=request_json['actor']).first()
+                        if community:
+                            featured_url = community.ap_featured_url
+                            moderators_url = community.ap_moderators_url
+                            if target == featured_url:
+                                post = Post.query.filter_by(ap_id=request_json['object']['object']).first()
                                 if post:
                                     post.sticky = False
+                                    activity_log.result = 'success'
+                            if target == moderators_url:
+                                user = find_actor_or_create(request_json['object']['object'], create_if_not_found=False)
+                                if user:
+                                    existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=user.id).first()
+                                    if existing_membership:
+                                        existing_membership.is_moderator = False
                                     activity_log.result = 'success'
                     else:
                         activity_log.exception_message = 'Invalid type for Announce'
