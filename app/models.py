@@ -488,7 +488,7 @@ class User(UserMixin, db.Model):
     ap_fetched_at = db.Column(db.DateTime)
     ap_followers_url = db.Column(db.String(255))
     ap_preferred_username = db.Column(db.String(255))
-    ap_manually_approves_followers = db.Column(db.Boolean)
+    ap_manually_approves_followers = db.Column(db.Boolean, default=False)
     ap_deleted_at = db.Column(db.DateTime)
     ap_inbox_url = db.Column(db.String(255))
     ap_domain = db.Column(db.String(255))

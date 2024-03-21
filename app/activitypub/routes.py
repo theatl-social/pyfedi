@@ -203,7 +203,7 @@ def user_profile(actor):
                             "outbox": f"https://{server}/u/{actor}/outbox",
                             "discoverable": user.searchable,
                             "indexable": user.indexable,
-                            "manuallyApprovesFollowers": user.ap_manually_approves_followers,
+                            "manuallyApprovesFollowers": False if not user.ap_manually_approves_followers else user.ap_manually_approves_followers,
                             "publicKey": {
                                 "id": f"https://{server}/u/{actor}#main-key",
                                 "owner": f"https://{server}/u/{actor}",
