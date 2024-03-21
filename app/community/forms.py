@@ -68,7 +68,7 @@ class SearchRemoteCommunity(FlaskForm):
 
 class BanUserCommunityForm(FlaskForm):
     reason = StringField(_l('Reason'), render_kw={'autofocus': True}, validators=[DataRequired()])
-    ban_until = DateField(_l('Ban until'))
+    ban_until = DateField(_l('Ban until'), validators=[Optional()])
     delete_posts = BooleanField(_l('Also delete all their posts'))
     delete_post_replies = BooleanField(_l('Also delete all their comments'))
     submit = SubmitField(_l('Ban'))
