@@ -42,3 +42,7 @@ class Config(object):
     SENTRY_DSN = os.environ.get('SENTRY_DSN') or None
 
     AWS_REGION = os.environ.get('AWS_REGION') or None
+
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'

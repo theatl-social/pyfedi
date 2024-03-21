@@ -24,7 +24,7 @@ from sqlalchemy_searchable import search
 from app.utils import render_template, get_setting, gibberish, request_etag_matches, return_304, blocked_domains, \
     ap_datetime, ip_address, retrieve_block_list, shorten_string, markdown_to_text, user_filters_home, \
     joined_communities, moderating_communities, parse_page, theme_list, get_request, markdown_to_html, allowlist_html, \
-    blocked_instances
+    blocked_instances, communities_banned_from
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Domain, Topic, File, Instance, \
     InstanceRole, Notification
 from PIL import Image
@@ -131,7 +131,13 @@ def home_page(type, sort):
         next_url = url_for('main.all_posts', page=posts.next_num, sort=sort) if posts.has_next else None
         prev_url = url_for('main.all_posts', page=posts.prev_num, sort=sort) if posts.has_prev and page != 1 else None
 
-    active_communities = Community.query.filter_by(banned=False).order_by(desc(Community.last_active)).limit(5).all()
+    # Active Communities
+    active_communities = Community.query.filter_by(banned=False)
+    if current_user.is_authenticated:   # do not show communities current user is banned from
+        banned_from = communities_banned_from(current_user.id)
+        if banned_from:
+            active_communities = active_communities.filter(Community.id.not_in(banned_from))
+    active_communities = active_communities.order_by(desc(Community.last_active)).limit(5).all()
 
     return render_template('index.html', posts=posts, active_communities=active_communities, show_post_community=True,
                            POST_TYPE_IMAGE=POST_TYPE_IMAGE, POST_TYPE_LINK=POST_TYPE_LINK,
@@ -177,6 +183,11 @@ def list_communities():
 
     if topic_id != 0:
         communities = communities.filter_by(topic_id=topic_id)
+
+    if current_user.is_authenticated:
+        banned_from = communities_banned_from(current_user.id)
+        if banned_from:
+            communities = communities.filter(Community.id.not_in(banned_from))
 
     return render_template('list_communities.html', communities=communities.order_by(sort_by).all(), search=search_param, title=_('Communities'),
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,

@@ -15,6 +15,8 @@ def post_replies(post_id: int, sort_by: str, show_first: int = 0) -> List[PostRe
         instance_ids = blocked_instances(current_user.id)
         if instance_ids:
             comments = comments.filter(or_(PostReply.instance_id.not_in(instance_ids), PostReply.instance_id == None))
+        if current_user.ignore_bots:
+            comments = comments.filter(PostReply.from_bot == False)
     if sort_by == 'hot':
         comments = comments.order_by(desc(PostReply.ranking))
     elif sort_by == 'top':

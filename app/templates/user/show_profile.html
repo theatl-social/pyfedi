@@ -57,6 +57,9 @@
             </div>
         {% endif %}
         <p class="small">{{ _('Joined') }}: {{ moment(user.created).fromNow(refresh=True) }}<br />
+            {% if user.bot %}
+                {{ _('Bot Account') }}<br />
+            {% endif %}
             {{ _('Attitude') }}: <span title="{{ _('Ratio of upvotes cast to downvotes cast. Higher is more positive.') }}">{{ (user.attitude * 100) | round | int }}%</span></p>
         {{ user.about_html|safe }}
         {% if posts %}

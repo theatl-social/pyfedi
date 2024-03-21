@@ -149,7 +149,7 @@ def search_for_user(address: str):
                 if user_data.status_code == 200:
                     user_json = user_data.json()
                     user_data.close()
-                    if user_json['type'] == 'Person':
+                    if user_json['type'] == 'Person' or user_json['type'] == 'Service':
                         user = actor_json_to_model(user_json, name, server)
                         return user
     return None
