@@ -1159,6 +1159,7 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
                                root_id=root_id,
                                nsfw=community.nsfw,
                                nsfl=community.nsfl,
+                               from_bot=user.bot,
                                up_votes=1,
                                depth=depth,
                                score=instance_weight(user.ap_domain),
@@ -1257,6 +1258,7 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
                 ap_announce_id=announce_id,
                 type=constants.POST_TYPE_ARTICLE,
                 up_votes=1,
+                from_bot=user.bot,
                 score=instance_weight(user.ap_domain),
                 instance_id=user.instance_id,
                 indexable=user.indexable
