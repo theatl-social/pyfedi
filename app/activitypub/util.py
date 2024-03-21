@@ -1177,6 +1177,9 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
             post_reply.body_html = allowlist_html(request_json['object']['content'])
             post_reply.body = html_to_markdown(post_reply.body_html)
         if post_id is not None:
+            # block shitpost flood
+            if post_reply.body and "SNEED'S" in post_reply.body:
+                return None
             post = Post.query.get(post_id)
             if post.comments_enabled:
                 anchor = None
