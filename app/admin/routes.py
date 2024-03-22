@@ -18,7 +18,7 @@ from app.community.util import save_icon_file, save_banner_file
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
-    moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases
+    moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers
 from app.admin import bp
 
 
@@ -80,12 +80,14 @@ def admin_misc():
         site.reports_email_admins = form.reports_email_admins.data
         site.registration_mode = form.registration_mode.data
         site.application_question = form.application_question.data
+        site.auto_decline_referrers = form.auto_decline_referrers.data
         site.log_activitypub_json = form.log_activitypub_json.data
         site.updated = utcnow()
         site.default_theme = form.default_theme.data
         if site.id is None:
             db.session.add(site)
         db.session.commit()
+        cache.delete_memoized(blocked_referrers)
         flash('Settings saved.')
     elif request.method == 'GET':
         form.enable_downvotes.data = site.enable_downvotes
@@ -97,6 +99,7 @@ def admin_misc():
         form.reports_email_admins.data = site.reports_email_admins
         form.registration_mode.data = site.registration_mode
         form.application_question.data = site.application_question
+        form.auto_decline_referrers.data = site.auto_decline_referrers
         form.log_activitypub_json.data = site.log_activitypub_json
         form.default_theme.data = site.default_theme if site.default_theme is not None else ''
     return render_template('admin/misc.html', title=_('Misc settings'), form=form,

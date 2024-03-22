@@ -12,7 +12,7 @@ from app.auth.util import random_token, normalize_utf
 from app.email import send_verification_email, send_password_reset_email
 from app.models import User, utcnow, IpBan, UserRegistration, Notification, Site
 from app.utils import render_template, ip_address, user_ip_banned, user_cookie_banned, banned_ip_addresses, \
-    finalize_user_setup
+    finalize_user_setup, blocked_referrers
 
 
 @bp.route('/login', methods=['GET', 'POST'])
@@ -98,6 +98,11 @@ def register():
             if form.user_name.data in disallowed_usernames:
                 flash(_('Sorry, you cannot use that user name'), 'error')
             else:
+                for referrer in blocked_referrers():
+                    if referrer in session.get('Referer'):
+                        resp = make_response(redirect(url_for('auth.please_wait')))
+                        resp.set_cookie('sesion', '17489047567495', expires=datetime(year=2099, month=12, day=30))
+                        return resp
                 verification_token = random_token(16)
                 form.user_name.data = form.user_name.data.strip()
                 before_normalize = form.user_name.data

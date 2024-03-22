@@ -339,6 +339,14 @@ def blocked_phrases() -> List[str]:
         return []
 
 
+@cache.memoize(timeout=86400)
+def blocked_referrers() -> List[str]:
+    site = Site.query.get(1)
+    if site.auto_decline_referrers:
+        return [referrer for referrer in site.auto_decline_referrers.split('\n') if referrer != '']
+    else:
+        return []
+
 def retrieve_block_list():
     try:
         response = requests.get('https://raw.githubusercontent.com/rimu/no-qanon/master/domains.txt', timeout=1)
