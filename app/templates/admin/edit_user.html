@@ -18,6 +18,8 @@
         <form method="post" enctype="multipart/form-data" id="add_local_user_form">
             {{ form.csrf_token() }}
             {{ user.about_html|safe if user.about_html }}
+            <p>Created: {{ moment(user.created).format('MMMM Do YYYY, h:mm:ss a') }}</p>
+            <p>Last active: {{ moment(user.last_seen).format('MMMM Do YYYY, h:mm:ss a') }}</p>
             <p>Email: <a href="mailto:{{ user.email }}">{{ user.email }}</a></p>
             <p>Matrix: {{ user.matrix_user_id if user.matrix_user_id }}</p>
             {% if user.avatar_id %}
@@ -43,8 +45,6 @@
             {% if not user.is_local() %}
                 <a href="{{ user.profile_id() }}" class="btn btn-primary">View original profile</a>
             {% endif %}
-            <a href="" class="btn btn-warning confirm_first">Ban</a>
-            <a href="" class="btn btn-warning confirm_first">Ban + Purge</a>
         </p>
     </div>
 </div>
