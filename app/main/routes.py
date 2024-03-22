@@ -5,6 +5,7 @@ from random import randint
 
 import flask
 import markdown2
+import requests
 from sqlalchemy.sql.operators import or_, and_
 
 from app import db, cache
@@ -276,7 +277,22 @@ def list_files(directory):
 
 @bp.route('/test')
 def test():
-    x = find_actor_or_create('artporn@lemm.ee')
+    headers = {
+        'Authorization': f"Bearer {current_app.config['CLOUDFLARE_API_TOKEN']}",
+        'Content-Type': 'application/json'
+    }
+    body = {
+        'files': ['']
+    }
+    zone_id = current_app.config['CLOUDFLARE_ZONE_ID']
+    response = requests.request(
+        'POST',
+        f'https://api.cloudflare.com/client/v4/zones/{zone_id}/purge_cache',
+        headers=headers,
+        data=body,
+        timeout=5,
+    )
+
     return 'ok'
 
     users_to_notify = User.query.join(Notification, User.id == Notification.user_id).filter(

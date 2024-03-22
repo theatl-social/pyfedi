@@ -46,3 +46,6 @@ class Config(object):
     SESSION_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
+
+    CLOUDFLARE_API_TOKEN = os.environ.get('CLOUDFLARE_API_TOKEN') or ''
+    CLOUDFLARE_ZONE_ID = os.environ.get('CLOUDFLARE_ZONE_ID') or ''
