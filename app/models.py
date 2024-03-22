@@ -488,7 +488,7 @@ class User(UserMixin, db.Model):
     ap_fetched_at = db.Column(db.DateTime)
     ap_followers_url = db.Column(db.String(255))
     ap_preferred_username = db.Column(db.String(255))
-    ap_manually_approves_followers = db.Column(db.Boolean)
+    ap_manually_approves_followers = db.Column(db.Boolean, default=False)
     ap_deleted_at = db.Column(db.DateTime)
     ap_inbox_url = db.Column(db.String(255))
     ap_domain = db.Column(db.String(255))
@@ -1170,7 +1170,8 @@ class Site(db.Model):
     allow_or_block_list = db.Column(db.Integer, default=2)  # 1 = allow list, 2 = block list
     allowlist = db.Column(db.Text, default='')
     blocklist = db.Column(db.Text, default='')
-    auto_decline_referrers = db.Column(db.Text, default='rdrama.net')
+    blocked_phrases = db.Column(db.Text, default='')                     # discard incoming content with these phrases
+    auto_decline_referrers = db.Column(db.Text, default='rdrama.net\nahrefs.com')   # automatically decline registration requests if the referrer is one of these
     created_at = db.Column(db.DateTime, default=utcnow)
     updated = db.Column(db.DateTime, default=utcnow)
     last_active = db.Column(db.DateTime, default=utcnow)

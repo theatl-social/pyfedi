@@ -18,13 +18,13 @@ from app.post.util import post_replies, get_comment_branch, post_reply_count
 from app.constants import SUBSCRIPTION_MEMBER, POST_TYPE_LINK, POST_TYPE_IMAGE
 from app.models import Post, PostReply, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, InstanceBlock, Report, Site, Community, \
-    Topic
+    Topic, User
 from app.post import bp
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
     request_etag_matches, ip_address, user_ip_banned, instance_banned, can_downvote, can_upvote, post_ranking, \
     reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, moderating_communities, joined_communities, \
-    blocked_instances, blocked_domains, community_moderators
+    blocked_instances, blocked_domains, community_moderators, blocked_phrases
 
 
 def show_post(post_id: int):
@@ -46,6 +46,12 @@ def show_post(post_id: int):
 
     mods = community_moderators(community.id)
     is_moderator = current_user.is_authenticated and any(mod.user_id == current_user.id for mod in mods)
+
+    if community.private_mods:
+        mod_list = []
+    else:
+        mod_user_ids = [mod.user_id for mod in mods]
+        mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
 
     # handle top-level comments/replies
     form = NewReplyForm()
@@ -213,7 +219,7 @@ def show_post(post_id: int):
         breadcrumbs.append(breadcrumb)
 
     response = render_template('post/post.html', title=post.title, post=post, is_moderator=is_moderator, community=post.community,
-                           breadcrumbs=breadcrumbs, related_communities=related_communities,
+                           breadcrumbs=breadcrumbs, related_communities=related_communities, mods=mod_list,
                            canonical=post.ap_id, form=form, replies=replies, THREAD_CUTOFF_DEPTH=constants.THREAD_CUTOFF_DEPTH,
                            description=description, og_image=og_image, POST_TYPE_IMAGE=constants.POST_TYPE_IMAGE,
                            POST_TYPE_LINK=constants.POST_TYPE_LINK, POST_TYPE_ARTICLE=constants.POST_TYPE_ARTICLE,
@@ -409,9 +415,14 @@ def continue_discussion(post_id, comment_id):
         abort(404)
     mods = post.community.moderators()
     is_moderator = current_user.is_authenticated and any(mod.user_id == current_user.id for mod in mods)
+    if post.community.private_mods:
+        mod_list = []
+    else:
+        mod_user_ids = [mod.user_id for mod in mods]
+        mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
     replies = get_comment_branch(post.id, comment.id, 'top')
 
-    response = render_template('post/continue_discussion.html', title=_('Discussing %(title)s', title=post.title), post=post,
+    response = render_template('post/continue_discussion.html', title=_('Discussing %(title)s', title=post.title), post=post, mods=mod_list,
                            is_moderator=is_moderator, comment=comment, replies=replies, markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()), community=post.community,
@@ -438,6 +449,11 @@ def add_reply(post_id: int, comment_id: int):
     in_reply_to = PostReply.query.get_or_404(comment_id)
     mods = post.community.moderators()
     is_moderator = current_user.is_authenticated and any(mod.user_id == current_user.id for mod in mods)
+    if post.community.private_mods:
+        mod_list = []
+    else:
+        mod_user_ids = [mod.user_id for mod in mods]
+        mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
 
     if in_reply_to.author.has_blocked_user(current_user.id):
         flash(_('You cannot reply to %(name)s', name=in_reply_to.author.display_name()))
@@ -466,6 +482,10 @@ def add_reply(post_id: int, comment_id: int):
                           body_html=markdown_to_html(form.body.data), body_html_safe=True,
                           from_bot=current_user.bot, nsfw=post.nsfw, nsfl=post.nsfl,
                           notify_author=form.notify_author.data, instance_id=1)
+        if reply.body:
+            for blocked_phrase in blocked_phrases():
+                if blocked_phrase in reply.body:
+                    abort(401)
         db.session.add(reply)
         if in_reply_to.notify_author and current_user.id != in_reply_to.user_id and in_reply_to.author.ap_id is None:    # todo: check if replier is blocked
             notification = Notification(title=shorten_string(_('Reply from %(name)s on %(post_title)s',
@@ -578,7 +598,7 @@ def add_reply(post_id: int, comment_id: int):
         form.notify_author.data = True
         return render_template('post/add_reply.html', title=_('Discussing %(title)s', title=post.title), post=post,
                                is_moderator=is_moderator, form=form, comment=in_reply_to, markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
-                               moderating_communities=moderating_communities(current_user.get_id()),
+                               moderating_communities=moderating_communities(current_user.get_id()), mods=mod_list,
                                joined_communities = joined_communities(current_user.id),
                                inoculation=inoculation[randint(0, len(inoculation) - 1)])
 
@@ -607,6 +627,14 @@ def post_edit(post_id: int):
     post = Post.query.get_or_404(post_id)
     form = CreatePostForm()
     del form.communities
+
+    mods = post.community.moderators()
+    if post.community.private_mods:
+        mod_list = []
+    else:
+        mod_user_ids = [mod.user_id for mod in mods]
+        mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
+
     if post.user_id == current_user.id or post.community.is_moderator() or current_user.is_admin():
         if g.site.enable_nsfl is False:
             form.nsfl.render_kw = {'disabled': True}
@@ -727,7 +755,7 @@ def post_edit(post_id: int):
             if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
                 form.sticky.render_kw = {'disabled': True}
             return render_template('post/post_edit.html', title=_('Edit post'), form=form, post=post,
-                                   markdown_editor=current_user.markdown_editor,
+                                   markdown_editor=current_user.markdown_editor, mods=mod_list,
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)]

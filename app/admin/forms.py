@@ -31,6 +31,7 @@ class SiteMiscForm(FlaskForm):
     types = [('Open', _l('Open')), ('RequireApplication', _l('Require application')), ('Closed', _l('Closed'))]
     registration_mode = SelectField(_l('Registration mode'), choices=types, default=1, coerce=str)
     application_question = TextAreaField(_l('Question to ask people applying for an account'))
+    auto_decline_referrers = TextAreaField(_l('Block registrations from these referrers (one per line)'))
     log_activitypub_json = BooleanField(_l('Log ActivityPub JSON for debugging'))
     default_theme = SelectField(_l('Default theme'), coerce=str)
     submit = SubmitField(_l('Save'))
@@ -41,6 +42,7 @@ class FederationForm(FlaskForm):
     allowlist = TextAreaField(_l('Allow federation with these instances'))
     use_blocklist = BooleanField(_l('Blocklist instead of allowlist'))
     blocklist = TextAreaField(_l('Deny federation with these instances'))
+    blocked_phrases = TextAreaField(_l('Discard all posts and comments with these phrases (one per line)'))
     submit = SubmitField(_l('Save'))
 
 
