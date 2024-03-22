@@ -122,7 +122,7 @@ def retrieve_mods_and_backfill(community_id: int):
                         c.last_active = Post.query.filter(Post.community_id == community_id).order_by(desc(Post.posted_at)).first().posted_at
                     db.session.commit()
                 if community.ap_featured_url:
-                    featured_request = get_request(community.ap_featured_url, headers={'Accept': 'application/activityjson'})
+                    featured_request = get_request(community.ap_featured_url, headers={'Accept': 'application/activity+json'})
                     if featured_request.status_code == 200:
                         featured_data = featured_request.json()
                         featured_request.close()
