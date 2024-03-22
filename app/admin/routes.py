@@ -535,46 +535,20 @@ def admin_user_edit(user_id):
     form = EditUserForm()
     user = User.query.get_or_404(user_id)
     if form.validate_on_submit():
-        user.about = form.about.data
-        user.email = form.email.data
-        user.about_html = markdown_to_html(form.about.data)
-        user.matrix_user_id = form.matrix_user_id.data
         user.bot = form.bot.data
         user.verified = form.verified.data
         user.banned = form.banned.data
-        profile_file = request.files['profile_file']
-        if profile_file and profile_file.filename != '':
-            # remove old avatar
-            if user.avatar_id:
-                file = File.query.get(user.avatar_id)
-                file.delete_from_disk()
-                user.avatar_id = None
-                db.session.delete(file)
+        if form.remove_avatar.data and user.avatar_id:
+            file = File.query.get(user.avatar_id)
+            file.delete_from_disk()
+            user.avatar_id = None
+            db.session.delete(file)
 
-            # add new avatar
-            file = save_icon_file(profile_file, 'users')
-            if file:
-                user.avatar = file
-        banner_file = request.files['banner_file']
-        if banner_file and banner_file.filename != '':
-            # remove old cover
-            if user.cover_id:
-                file = File.query.get(user.cover_id)
-                file.delete_from_disk()
-                user.cover_id = None
-                db.session.delete(file)
-
-            # add new cover
-            file = save_banner_file(banner_file, 'users')
-            if file:
-                user.cover = file
-        user.newsletter = form.newsletter.data
-        user.ignore_bots = form.ignore_bots.data
-        user.show_nsfw = form.nsfw.data
-        user.show_nsfl = form.nsfl.data
-        user.searchable = form.searchable.data
-        user.indexable = form.indexable.data
-        user.ap_manually_approves_followers = form.manually_approves_followers.data
+        if form.remove_banner.data and user.cover_id:
+            file = File.query.get(user.cover_id)
+            file.delete_from_disk()
+            user.cover_id = None
+            db.session.delete(file)
 
         # Update user roles. The UI only lets the user choose 1 role but the DB structure allows for multiple roles per user.
         db.session.execute(text('DELETE FROM user_role WHERE user_id = :user_id'), {'user_id': user.id})
@@ -589,19 +563,9 @@ def admin_user_edit(user_id):
     else:
         if not user.is_local():
             flash(_('This is a remote user - most settings here will be regularly overwritten with data from the original server.'), 'warning')
-        form.about.data = user.about
-        form.email.data = user.email
-        form.matrix_user_id.data = user.matrix_user_id
-        form.newsletter.data = user.newsletter
         form.bot.data = user.bot
         form.verified.data = user.verified
         form.banned.data = user.banned
-        form.ignore_bots.data = user.ignore_bots
-        form.nsfw.data = user.show_nsfw
-        form.nsfl.data = user.show_nsfl
-        form.searchable.data = user.searchable
-        form.indexable.data = user.indexable
-        form.manually_approves_followers.data = user.ap_manually_approves_followers
         if user.roles and user.roles.count() > 0:
             form.role.data = user.roles[0].id
 
