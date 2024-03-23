@@ -18,7 +18,11 @@
 
 ## Setup Database
 
-#### Install postgresql 16            
+#### Install postgresql
+
+PieFed should work on version 13.x or newer. If you have errors running `flask init-db`, check your postrgesql version.
+
+##### Install postgresql 16:
 
 For installation environments that use 'apt' as a package manager:
 
