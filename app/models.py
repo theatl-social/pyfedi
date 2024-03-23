@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta, date, timezone
 from time import time
-from typing import List
+from typing import List, Union
 
+import requests
 from flask import current_app, escape, url_for, render_template_string
 from flask_login import UserMixin, current_user
 from sqlalchemy import or_, text
@@ -11,7 +12,7 @@ from sqlalchemy.orm import backref
 from sqlalchemy_utils.types import TSVectorType # https://sqlalchemy-searchable.readthedocs.io/en/latest/installation.html
 from flask_sqlalchemy import BaseQuery
 from sqlalchemy_searchable import SearchQueryMixin
-from app import db, login, cache
+from app import db, login, cache, celery
 import jwt
 import os
 
@@ -203,12 +204,20 @@ class File(db.Model):
         return f"https://{current_app.config['SERVER_NAME']}/{thumbnail_path}"
 
     def delete_from_disk(self):
+        purge_from_cache = []
         if self.file_path and os.path.isfile(self.file_path):
             os.unlink(self.file_path)
+            purge_from_cache.append(self.file_path.replace('app/', f"https://{current_app.config['SERVER_NAME']}/"))
         if self.thumbnail_path and os.path.isfile(self.thumbnail_path):
             os.unlink(self.thumbnail_path)
+            purge_from_cache.append(self.thumbnail_path.replace('app/', f"https://{current_app.config['SERVER_NAME']}/"))
         if self.source_url and not self.source_url.startswith('http') and os.path.isfile(self.source_url):
             os.unlink(self.source_url)
+            purge_from_cache.append(self.source_url.replace('app/', f"https://{current_app.config['SERVER_NAME']}/"))
+
+        if purge_from_cache:
+            flush_cdn_cache(purge_from_cache)
+
 
     def filesize(self):
         size = 0
@@ -217,6 +226,50 @@ class File(db.Model):
         if self.thumbnail_path and os.path.exists(self.thumbnail_path):
             size += os.path.getsize(self.thumbnail_path)
         return size
+
+
+def flush_cdn_cache(url: Union[str, List[str]]):
+    zone_id = current_app.config['CLOUDFLARE_ZONE_ID']
+    token = current_app.config['CLOUDFLARE_API_TOKEN']
+    if zone_id and token:
+        if current_app.debug:
+            flush_cdn_cache_task(url)
+        else:
+            flush_cdn_cache_task.delay(url)
+
+
+@celery.task
+def flush_cdn_cache_task(to_purge: Union[str, List[str]]):
+    zone_id = current_app.config['CLOUDFLARE_ZONE_ID']
+    token = current_app.config['CLOUDFLARE_API_TOKEN']
+    headers = {
+        'Authorization': f"Bearer {token}",
+        'Content-Type': 'application/json'
+    }
+    # url can be a string or a list of strings
+    body = ''
+    if isinstance(to_purge, str) and to_purge == 'all':
+        body = {
+            'purge_everything': True
+        }
+    else:
+        if isinstance(to_purge, str):
+            body = {
+                'files': [to_purge]
+            }
+        elif isinstance(to_purge, list):
+            body = {
+                'files': to_purge
+            }
+
+    if body:
+        response = requests.request(
+            'POST',
+            f'https://api.cloudflare.com/client/v4/zones/{zone_id}/purge_cache',
+            headers=headers,
+            json=body,
+            timeout=5,
+        )
 
 
 class Topic(db.Model):

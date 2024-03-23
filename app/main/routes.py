@@ -277,23 +277,7 @@ def list_files(directory):
 
 @bp.route('/test')
 def test():
-    headers = {
-        'Authorization': f"Bearer {current_app.config['CLOUDFLARE_API_TOKEN']}",
-        'Content-Type': 'application/json'
-    }
-    body = {
-        'files': ['']
-    }
-    zone_id = current_app.config['CLOUDFLARE_ZONE_ID']
-    response = requests.request(
-        'POST',
-        f'https://api.cloudflare.com/client/v4/zones/{zone_id}/purge_cache',
-        headers=headers,
-        data=body,
-        timeout=5,
-    )
-
-    return 'ok'
+    return ''
 
     users_to_notify = User.query.join(Notification, User.id == Notification.user_id).filter(
             User.ap_id == None,
