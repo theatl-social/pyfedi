@@ -351,6 +351,16 @@ at ~/.aws/credentials or environment variables. Details at https://boto3.amazona
 
 In your .env you need to set the AWS region you're using for SES. Something like AWS_REGION = 'ap-southeast-2'.
 
+#### CDN
+
+A CDN like Cloudflare is recommended for instances with more than a handful of users. [Recommended caching settings](https://join.piefed.social/2024/02/20/how-much-difference-does-a-cdn-make-to-a-fediverse-instance/).
+
+PieFed has the capability to automatically remove file copies from the Cloudflare cache whenever
+ those files are deleted from the server. To enable this, set these variables in your .env file:
+
+- CLOUDFLARE_API_TOKEN - go to https://dash.cloudflare.com/profile/api-tokens and create a "Zone.Cache Purge" token.
+- CLOUDFLARE_ZONE_ID - this can be found in the right hand column of your Cloudflare dashboard in the API section.
+
 #### SMTP
 
 To use SMTP you need to set all the MAIL_* environment variables in you .env file. See env.sample for a list of them.
