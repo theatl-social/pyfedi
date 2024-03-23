@@ -79,7 +79,7 @@ def show_profile(user):
                            description=description, subscribed=subscribed, upvoted=upvoted,
                            post_next_url=post_next_url, post_prev_url=post_prev_url,
                            replies_next_url=replies_next_url, replies_prev_url=replies_prev_url,
-                           noindex=not user.indexable,
+                           noindex=not user.indexable, show_post_community=True,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id())
                            )

@@ -31,6 +31,7 @@ class SiteMiscForm(FlaskForm):
     types = [('Open', _l('Open')), ('RequireApplication', _l('Require application')), ('Closed', _l('Closed'))]
     registration_mode = SelectField(_l('Registration mode'), choices=types, default=1, coerce=str)
     application_question = TextAreaField(_l('Question to ask people applying for an account'))
+    auto_decline_referrers = TextAreaField(_l('Block registrations from these referrers (one per line)'))
     log_activitypub_json = BooleanField(_l('Log ActivityPub JSON for debugging'))
     default_theme = SelectField(_l('Default theme'), coerce=str)
     submit = SubmitField(_l('Save'))
@@ -41,6 +42,7 @@ class FederationForm(FlaskForm):
     allowlist = TextAreaField(_l('Allow federation with these instances'))
     use_blocklist = BooleanField(_l('Blocklist instead of allowlist'))
     blocklist = TextAreaField(_l('Deny federation with these instances'))
+    blocked_phrases = TextAreaField(_l('Discard all posts and comments with these phrases (one per line)'))
     submit = SubmitField(_l('Save'))
 
 
@@ -165,26 +167,16 @@ class AddUserForm(FlaskForm):
 
 
 class EditUserForm(FlaskForm):
-    about = TextAreaField(_l('Bio'), validators=[Optional(), Length(min=3, max=5000)])
-    email = StringField(_l('Email address'), validators=[Optional(), Length(max=255)])
-    matrix_user_id = StringField(_l('Matrix User ID'), validators=[Optional(), Length(max=255)])
-    profile_file = FileField(_l('Avatar image'))
-    banner_file = FileField(_l('Top banner image'))
     bot = BooleanField(_l('This profile is a bot'))
     verified = BooleanField(_l('Email address is verified'))
     banned = BooleanField(_l('Banned'))
-    newsletter = BooleanField(_l('Subscribe to email newsletter'))
-    ignore_bots = BooleanField(_l('Hide posts by bots'))
-    nsfw = BooleanField(_l('Show NSFW posts'))
-    nsfl = BooleanField(_l('Show NSFL posts'))
-    searchable = BooleanField(_l('Show profile in user list'))
-    indexable = BooleanField(_l('Allow search engines to index this profile'))
-    manually_approves_followers = BooleanField(_l('Manually approve followers'))
     role_options = [(2, _l('User')),
                (3, _l('Staff')),
                (4, _l('Admin')),
                ]
     role = SelectField(_l('Role'), choices=role_options, default=2, coerce=int)
+    remove_avatar = BooleanField(_l('Remove avatar'))
+    remove_banner = BooleanField(_l('Remove banner'))
     submit = SubmitField(_l('Save'))
 
 

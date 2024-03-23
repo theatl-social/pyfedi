@@ -90,6 +90,9 @@
                                 {% if comment['comment'].author.created_recently() %}
                                     <span class="fe fe-new-account small" title="New account"> </span>
                                 {% endif %}
+                                {% if comment['comment'].author.bot %}
+                                    <span class="fe fe-bot-account small" title="Bot account"> </span>
+                                {% endif %}
                                 {% if comment['comment'].author.id != current_user.id %}
                                     {% if comment['comment'].author.reputation < -10 %}
                                         <span class="fe fe-warning red" title="Very low reputation. Beware."> </span>

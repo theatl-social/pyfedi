@@ -6,10 +6,10 @@ from flask_login import login_required, current_user
 from flask_babel import _
 from sqlalchemy import text, desc
 
-from app import db, celery
+from app import db, celery, cache
 from app.activitypub.routes import process_inbox_request, process_delete_request
 from app.activitypub.signature import post_request
-from app.activitypub.util import default_context
+from app.activitypub.util import default_context, instance_allowed, instance_blocked
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
@@ -18,7 +18,7 @@ from app.community.util import save_icon_file, save_banner_file
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
-    moderating_communities, joined_communities, finalize_user_setup, theme_list
+    moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers
 from app.admin import bp
 
 
@@ -80,12 +80,14 @@ def admin_misc():
         site.reports_email_admins = form.reports_email_admins.data
         site.registration_mode = form.registration_mode.data
         site.application_question = form.application_question.data
+        site.auto_decline_referrers = form.auto_decline_referrers.data
         site.log_activitypub_json = form.log_activitypub_json.data
         site.updated = utcnow()
         site.default_theme = form.default_theme.data
         if site.id is None:
             db.session.add(site)
         db.session.commit()
+        cache.delete_memoized(blocked_referrers)
         flash('Settings saved.')
     elif request.method == 'GET':
         form.enable_downvotes.data = site.enable_downvotes
@@ -97,6 +99,7 @@ def admin_misc():
         form.reports_email_admins.data = site.reports_email_admins
         form.registration_mode.data = site.registration_mode
         form.application_question.data = site.application_question
+        form.auto_decline_referrers.data = site.auto_decline_referrers
         form.log_activitypub_json.data = site.log_activitypub_json
         form.default_theme.data = site.default_theme if site.default_theme is not None else ''
     return render_template('admin/misc.html', title=_('Misc settings'), form=form,
@@ -123,13 +126,18 @@ def admin_federation():
             for allow in form.allowlist.data.split('\n'):
                 if allow.strip():
                     db.session.add(AllowedInstances(domain=allow.strip()))
+                    cache.delete_memoized(instance_allowed, allow.strip())
         if form.use_blocklist.data:
             set_setting('use_allowlist', False)
             db.session.execute(text('DELETE FROM banned_instances'))
             for banned in form.blocklist.data.split('\n'):
                 if banned.strip():
                     db.session.add(BannedInstances(domain=banned.strip()))
+                    cache.delete_memoized(instance_blocked, banned.strip())
+        site.blocked_phrases = form.blocked_phrases.data
+        cache.delete_memoized(blocked_phrases)
         db.session.commit()
+
         flash(_('Admin settings saved'))
 
     elif request.method == 'GET':
@@ -139,6 +147,7 @@ def admin_federation():
         form.blocklist.data = '\n'.join([instance.domain for instance in instances])
         instances = AllowedInstances.query.all()
         form.allowlist.data = '\n'.join([instance.domain for instance in instances])
+        form.blocked_phrases.data = site.blocked_phrases
 
     return render_template('admin/federation.html', title=_('Federation settings'), form=form,
                            moderating_communities=moderating_communities(current_user.get_id()),
@@ -526,46 +535,20 @@ def admin_user_edit(user_id):
     form = EditUserForm()
     user = User.query.get_or_404(user_id)
     if form.validate_on_submit():
-        user.about = form.about.data
-        user.email = form.email.data
-        user.about_html = markdown_to_html(form.about.data)
-        user.matrix_user_id = form.matrix_user_id.data
         user.bot = form.bot.data
         user.verified = form.verified.data
         user.banned = form.banned.data
-        profile_file = request.files['profile_file']
-        if profile_file and profile_file.filename != '':
-            # remove old avatar
-            if user.avatar_id:
-                file = File.query.get(user.avatar_id)
-                file.delete_from_disk()
-                user.avatar_id = None
-                db.session.delete(file)
+        if form.remove_avatar.data and user.avatar_id:
+            file = File.query.get(user.avatar_id)
+            file.delete_from_disk()
+            user.avatar_id = None
+            db.session.delete(file)
 
-            # add new avatar
-            file = save_icon_file(profile_file, 'users')
-            if file:
-                user.avatar = file
-        banner_file = request.files['banner_file']
-        if banner_file and banner_file.filename != '':
-            # remove old cover
-            if user.cover_id:
-                file = File.query.get(user.cover_id)
-                file.delete_from_disk()
-                user.cover_id = None
-                db.session.delete(file)
-
-            # add new cover
-            file = save_banner_file(banner_file, 'users')
-            if file:
-                user.cover = file
-        user.newsletter = form.newsletter.data
-        user.ignore_bots = form.ignore_bots.data
-        user.show_nsfw = form.nsfw.data
-        user.show_nsfl = form.nsfl.data
-        user.searchable = form.searchable.data
-        user.indexable = form.indexable.data
-        user.ap_manually_approves_followers = form.manually_approves_followers.data
+        if form.remove_banner.data and user.cover_id:
+            file = File.query.get(user.cover_id)
+            file.delete_from_disk()
+            user.cover_id = None
+            db.session.delete(file)
 
         # Update user roles. The UI only lets the user choose 1 role but the DB structure allows for multiple roles per user.
         db.session.execute(text('DELETE FROM user_role WHERE user_id = :user_id'), {'user_id': user.id})
@@ -580,19 +563,9 @@ def admin_user_edit(user_id):
     else:
         if not user.is_local():
             flash(_('This is a remote user - most settings here will be regularly overwritten with data from the original server.'), 'warning')
-        form.about.data = user.about
-        form.email.data = user.email
-        form.matrix_user_id.data = user.matrix_user_id
-        form.newsletter.data = user.newsletter
         form.bot.data = user.bot
         form.verified.data = user.verified
         form.banned.data = user.banned
-        form.ignore_bots.data = user.ignore_bots
-        form.nsfw.data = user.show_nsfw
-        form.nsfl.data = user.show_nsfl
-        form.searchable.data = user.searchable
-        form.indexable.data = user.indexable
-        form.manually_approves_followers.data = user.ap_manually_approves_followers
         if user.roles and user.roles.count() > 0:
             form.role.data = user.roles[0].id
 

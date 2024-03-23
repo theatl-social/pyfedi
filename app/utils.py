@@ -28,7 +28,7 @@ import re
 
 from app.email import send_welcome_email
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, ActivityPubLog, IpBan, \
-    Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock
+    Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan
 
 
 # Flask's render_template function, with support for themes added
@@ -251,7 +251,7 @@ def html_to_markdown_worker(element, indent_level=0):
 
 def markdown_to_html(markdown_text) -> str:
     if markdown_text:
-        return allowlist_html(markdown2.markdown(markdown_text, safe_mode=True, extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'spoiler': True}))
+        return allowlist_html(markdown2.markdown(markdown_text, safe_mode=True, extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True}))
     else:
         return ''
 
@@ -313,6 +313,12 @@ def community_membership(user: User, community: Community) -> int:
 
 
 @cache.memoize(timeout=86400)
+def communities_banned_from(user_id) -> List[int]:
+    community_bans = CommunityBan.query.filter(CommunityBan.user_id == user_id).all()
+    return [cb.community_id for cb in community_bans]
+
+
+@cache.memoize(timeout=86400)
 def blocked_domains(user_id) -> List[int]:
     blocks = DomainBlock.query.filter_by(user_id=user_id)
     return [block.domain_id for block in blocks]
@@ -323,6 +329,23 @@ def blocked_instances(user_id) -> List[int]:
     blocks = InstanceBlock.query.filter_by(user_id=user_id)
     return [block.instance_id for block in blocks]
 
+
+@cache.memoize(timeout=86400)
+def blocked_phrases() -> List[str]:
+    site = Site.query.get(1)
+    if site.blocked_phrases:
+        return [phrase for phrase in site.blocked_phrases.split('\n') if phrase != '']
+    else:
+        return []
+
+
+@cache.memoize(timeout=86400)
+def blocked_referrers() -> List[str]:
+    site = Site.query.get(1)
+    if site.auto_decline_referrers:
+        return [referrer for referrer in site.auto_decline_referrers.split('\n') if referrer != '']
+    else:
+        return []
 
 def retrieve_block_list():
     try:
@@ -442,7 +465,7 @@ def banned_ip_addresses() -> List[str]:
 
 
 def can_downvote(user, community: Community, site=None) -> bool:
-    if user is None or community is None or user.banned:
+    if user is None or community is None or user.banned or user.bot:
         return False
 
     if site is None:
@@ -460,11 +483,17 @@ def can_downvote(user, community: Community, site=None) -> bool:
     if user.attitude < -0.40 or user.reputation < -10:  # this should exclude about 3.7% of users.
         return False
 
+    if community.id in communities_banned_from(user.id):
+        return False
+
     return True
 
 
 def can_upvote(user, community: Community) -> bool:
-    if user is None or community is None or user.banned:
+    if user is None or community is None or user.banned or user.bot:
+        return False
+
+    if community.id in communities_banned_from(user.id):
         return False
 
     return True
@@ -483,6 +512,9 @@ def can_create_post(user, content: Community) -> bool:
     if content.local_only and not user.is_local():
         return False
 
+    if content.id in communities_banned_from(user.id):
+        return False
+
     return True
 
 
@@ -494,6 +526,9 @@ def can_create_post_reply(user, content: Community) -> bool:
         return True
 
     if content.local_only and not user.is_local():
+        return False
+
+    if content.id in communities_banned_from(user.id):
         return False
 
     return True
@@ -602,7 +637,8 @@ def moderating_communities(user_id):
         return []
     return Community.query.join(CommunityMember, Community.id == CommunityMember.community_id).\
         filter(Community.banned == False).\
-        filter(or_(CommunityMember.is_moderator == True, CommunityMember.is_owner == True)).\
+        filter(or_(CommunityMember.is_moderator == True, CommunityMember.is_owner == True)). \
+        filter(CommunityMember.is_banned == False). \
         filter(CommunityMember.user_id == user_id).order_by(Community.title).all()
 
 
@@ -613,6 +649,7 @@ def joined_communities(user_id):
     return Community.query.join(CommunityMember, Community.id == CommunityMember.community_id).\
         filter(Community.banned == False). \
         filter(CommunityMember.is_moderator == False, CommunityMember.is_owner == False). \
+        filter(CommunityMember.is_banned == False). \
         filter(CommunityMember.user_id == user_id).order_by(Community.title).all()
 
 

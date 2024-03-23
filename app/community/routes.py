@@ -27,7 +27,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     shorten_string, gibberish, community_membership, ap_datetime, \
     request_etag_matches, return_304, instance_banned, can_create_post, can_upvote, can_downvote, user_filters_posts, \
     joined_communities, moderating_communities, blocked_domains, mimetype_from_url, blocked_instances, \
-    community_moderators
+    community_moderators, communities_banned_from
 from feedgen.feed import FeedGenerator
 from datetime import timezone, timedelta
 
@@ -793,6 +793,9 @@ def community_ban_user(community_id: int, user_id: int):
 
     form = BanUserCommunityForm()
     if form.validate_on_submit():
+        # Both CommunityBan and CommunityMember need to be updated. CommunityBan is under the control of moderators while
+        # CommunityMember can be cleared by the user by leaving the group and rejoining. CommunityMember.is_banned stops
+        # posts from the community from showing up in the banned person's home feed.
         if not existing:
             new_ban = CommunityBan(community_id=community_id, user_id=user.id, banned_by=current_user.id,
                                    reason=form.reason.data)
@@ -800,7 +803,13 @@ def community_ban_user(community_id: int, user_id: int):
                 new_ban.ban_until = form.ban_until.data
             db.session.add(new_ban)
             db.session.commit()
-            flash(_('%(name)s has been banned.', name=user.display_name()))
+
+        community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=user.id).first()
+        if community_membership_record:
+            community_membership_record.is_banned = True
+            db.session.commit()
+
+        flash(_('%(name)s has been banned.', name=user.display_name()))
 
         if form.delete_posts.data:
             posts = Post.query.filter(Post.user_id == user.id, Post.community_id == community.id).all()
@@ -819,8 +828,11 @@ def community_ban_user(community_id: int, user_id: int):
 
         # notify banned person
         if user.is_local():
+            cache.delete_memoized(communities_banned_from, user.id)
+            cache.delete_memoized(joined_communities, user.id)
+            cache.delete_memoized(moderating_communities, user.id)
             notify = Notification(title=shorten_string('You have been banned from ' + community.title),
-                                  url=f'/', user_id=user.id,
+                                  url=f'/notifications', user_id=user.id,
                                   author_id=1)
             db.session.add(notify)
             user.unread_notifications += 1
@@ -838,6 +850,42 @@ def community_ban_user(community_id: int, user_id: int):
                                inoculation=inoculation[randint(0, len(inoculation) - 1)]
                                )
 
+
+@bp.route('/community/<int:community_id>/<int:user_id>/unban_user_community', methods=['GET', 'POST'])
+@login_required
+def community_unban_user(community_id: int, user_id: int):
+    community = Community.query.get_or_404(community_id)
+    user = User.query.get_or_404(user_id)
+    existing_ban = CommunityBan.query.filter_by(community_id=community.id, user_id=user.id).first()
+    if existing_ban:
+        db.session.delete(existing_ban)
+        db.session.commit()
+
+    community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=user.id).first()
+    if community_membership_record:
+        community_membership_record.is_banned = False
+        db.session.commit()
+
+    flash(_('%(name)s has been unbanned.', name=user.display_name()))
+
+    # todo: federate ban to post author instance
+
+    # notify banned person
+    if user.is_local():
+        cache.delete_memoized(communities_banned_from, user.id)
+        cache.delete_memoized(joined_communities, user.id)
+        cache.delete_memoized(moderating_communities, user.id)
+        notify = Notification(title=shorten_string('You have been un-banned from ' + community.title),
+                              url=f'/notifications', user_id=user.id,
+                              author_id=1)
+        db.session.add(notify)
+        user.unread_notifications += 1
+        db.session.commit()
+    else:
+        ...
+        # todo: send chatmessage to remote user and federate it
+
+    return redirect(url_for('community.community_moderate_banned', actor=community.link()))
 
 
 @bp.route('/<int:community_id>/notification', methods=['GET', 'POST'])

@@ -48,11 +48,12 @@
                         <td>{{ user.reports if user.reports > 0 }} </td>
                         <td>{{ user.ip_address if user.ip_address }} </td>
                         <td>{% if user.is_local() %}
-                                <a href="/u/{{ user.link() }}">View local</a>
+                                <a href="/u/{{ user.link() }}">View</a>
                             {% else %}
+                                <a href="/u/{{ user.link() }}">View local</a> |
                                 <a href="{{ user.ap_profile_id }}">View remote</a>
                             {% endif %}
-                            | <a href="#" class="confirm_first">{{ _('Un ban') }}</a>
+                            | <a href="{{ url_for('community.community_unban_user', community_id=community.id, user_id=user.id) }}" class="confirm_first">{{ _('Un ban') }}</a>
                         </td>
                     </tr>
                 {% endfor %}
