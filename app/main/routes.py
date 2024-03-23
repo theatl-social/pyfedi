@@ -5,6 +5,7 @@ from random import randint
 
 import flask
 import markdown2
+import requests
 from sqlalchemy.sql.operators import or_, and_
 
 from app import db, cache
@@ -276,8 +277,7 @@ def list_files(directory):
 
 @bp.route('/test')
 def test():
-    x = find_actor_or_create('artporn@lemm.ee')
-    return 'ok'
+    return ''
 
     users_to_notify = User.query.join(Notification, User.id == Notification.user_id).filter(
             User.ap_id == None,
