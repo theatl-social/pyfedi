@@ -178,6 +178,43 @@ def post_to_activity(post: Post, community: Community):
     return activity_data
 
 
+def post_to_page(post: Post, community: Community):
+    activity_data = {
+        "type": "Page",
+        "id": post.ap_id,
+        "attributedTo": post.author.ap_public_url,
+        "to": [
+            f"https://{current_app.config['SERVER_NAME']}/c/{community.name}",
+            "https://www.w3.org/ns/activitystreams#Public"
+        ],
+        "name": post.title,
+        "cc": [],
+        "content": post.body_html if post.body_html else '',
+        "mediaType": "text/html",
+        "source": {
+            "content": post.body if post.body else '',
+            "mediaType": "text/markdown"
+        },
+        "attachment": [],
+        "commentsEnabled": post.comments_enabled,
+        "sensitive": post.nsfw or post.nsfl,
+        "published": ap_datetime(post.created_at),
+        "stickied": post.sticky,
+        "audience": f"https://{current_app.config['SERVER_NAME']}/c/{community.name}"
+    }
+    if post.edited_at is not None:
+        activity_data["updated"] = ap_datetime(post.edited_at)
+    if post.language is not None:
+        activity_data["language"] = {"identifier": post.language}
+    if post.type == POST_TYPE_LINK and post.url is not None:
+        activity_data["attachment"] = [{"href": post.url, "type": "Link"}]
+    if post.image_id is not None:
+        activity_data["image"] = {"url": post.image.view_url(), "type": "Image"}
+        if post.image.alt_text:
+            activity_data["image"]['altText'] = post.image.alt_text
+    return activity_data
+
+
 def banned_user_agents():
     return []  # todo: finish this function
 
