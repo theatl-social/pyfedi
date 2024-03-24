@@ -118,12 +118,12 @@ def show_post(post_id: int):
         reply_json = {
             'type': 'Note',
             'id': reply.profile_id(),
-            'attributedTo': current_user.profile_id(),
+            'attributedTo': current_user.public_url(),
             'to': [
                 'https://www.w3.org/ns/activitystreams#Public'
             ],
             'cc': [
-                community.profile_id(),
+                community.public_url(), post.author.public_url()
             ],
             'content': reply.body_html,
             'inReplyTo': post.profile_id(),
@@ -134,20 +134,30 @@ def show_post(post_id: int):
             },
             'published': ap_datetime(utcnow()),
             'distinguished': False,
-            'audience': community.profile_id()
+            'audience': community.public_url(),
+            'tag': [{
+                'href': post.author.public_url(),
+                'name': post.author.mention_tag(),
+                'type': 'Mention'
+            }]
         }
         create_json = {
             'type': 'Create',
-            'actor': current_user.profile_id(),
-            'audience': community.profile_id(),
+            'actor': current_user.public_url(),
+            'audience': community.public_url(),
             'to': [
                 'https://www.w3.org/ns/activitystreams#Public'
             ],
             'cc': [
-                community.ap_profile_id
+                community.public_url(), post.author.public_url()
             ],
             'object': reply_json,
-            'id': f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}"
+            'id': f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}",
+            'tag': [{
+                'href': post.author.public_url(),
+                'name': post.author.mention_tag(),
+                'type': 'Mention'
+            }]
         }
         if not community.is_local():    # this is a remote community, send it to the instance that hosts it
             success = post_request(community.ap_inbox_url, create_json, current_user.private_key,
@@ -161,7 +171,7 @@ def show_post(post_id: int):
                 "to": [
                     "https://www.w3.org/ns/activitystreams#Public"
                 ],
-                "actor": community.ap_profile_id,
+                "actor": community.public_url(),
                 "cc": [
                     community.ap_followers_url
                 ],
