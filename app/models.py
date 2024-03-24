@@ -440,6 +440,10 @@ class Community(db.Model):
         retval = self.ap_profile_id if self.ap_profile_id else f"https://{current_app.config['SERVER_NAME']}/c/{self.name}"
         return retval.lower()
 
+    def public_url(self):
+        result = self.ap_public_url if self.ap_public_url else f"https://{current_app.config['SERVER_NAME']}/c/{self.name}"
+        return result
+
     def is_local(self):
         return self.ap_id is None or self.profile_id().startswith('https://' + current_app.config['SERVER_NAME'])
 
@@ -748,6 +752,10 @@ class User(UserMixin, db.Model):
 
     def profile_id(self):
         result = self.ap_profile_id if self.ap_profile_id else f"https://{current_app.config['SERVER_NAME']}/u/{self.user_name}"
+        return result
+
+    def public_url(self):
+        result = self.ap_public_url if self.ap_public_url else f"https://{current_app.config['SERVER_NAME']}/u/{self.user_name}"
         return result
 
     def created_recently(self):
