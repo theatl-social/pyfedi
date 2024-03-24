@@ -892,12 +892,15 @@ def refresh_instance_profile_task(instance_id: int):
             except requests.exceptions.JSONDecodeError as ex:
                 instance_json = {}
             if 'type' in instance_json and instance_json['type'] == 'Application':
+                # 'name' is unreliable as the admin can change it to anything. todo: find better way
                 if instance_json['name'].lower() == 'kbin':
                     software = 'Kbin'
                 elif instance_json['name'].lower() == 'mbin':
                     software = 'Mbin'
                 elif instance_json['name'].lower() == 'piefed':
                     software = 'PieFed'
+                elif instance_json['name'].lower() == 'system account':
+                    software = 'Friendica'
                 else:
                     software = 'Lemmy'
                 instance.inbox = instance_json['inbox']
