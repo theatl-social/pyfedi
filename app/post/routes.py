@@ -183,6 +183,12 @@ def show_post(post_id: int):
                 if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
                     send_to_remote_instance(instance.id, community.id, announce)
 
+        # send copy of Note to post author (who won't otherwise get it if they're not subscribed to the community)
+        if not post.author.is_local():
+            if post.author.ap_domain != community.ap_domain:
+                post_request(post.author.ap_inbox_url, create_json, current_user.private_key,
+                                                       current_user.ap_profile_id + '#main-key')
+
         return redirect(url_for('activitypub.post_ap', post_id=post_id))  # redirect to current page to avoid refresh resubmitting the form
     else:
         replies = post_replies(post.id, sort)
