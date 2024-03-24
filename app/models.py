@@ -811,6 +811,12 @@ class User(UserMixin, db.Model):
             reply.body = reply.body_html = ''
         db.session.commit()
 
+    def mention_tag(self):
+        if self.ap_domain is None:
+            return '@' + self.user_name + '@' + current_app.config['SERVER_NAME']
+        else:
+            return '@' + self.user_name + '@' + self.ap_domain
+
 
 class ActivityLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
