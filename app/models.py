@@ -470,6 +470,14 @@ class Community(db.Model):
         instances = instances.filter(Instance.id != 1, Instance.gone_forever == False)
         return instances.all()
 
+    def has_followers_from_domain(self, domain: str) -> bool:
+        instances = Instance.query.join(User, User.instance_id == Instance.id).join(CommunityMember, CommunityMember.user_id == User.id)
+        instances = instances.filter(CommunityMember.community_id == self.id, CommunityMember.is_banned == False)
+        for instance in instances:
+            if instance.domain == domain:
+                return True
+        return False
+
     def delete_dependencies(self):
         for post in self.posts:
             post.delete_dependencies()
