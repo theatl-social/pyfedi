@@ -136,9 +136,10 @@ class CreatePostForm(FlaskForm):
                     current_user.reputation -= 1
                     db.session.commit()
                     return False
-            community = Community.query.get(self.communities.data)
-            if community.is_local() and g.site.allow_local_image_posts is False:
-                self.communities.errors.append(_('Images cannot be posted to local communities.'))
+            if self.communities:
+                community = Community.query.get(self.communities.data)
+                if community.is_local() and g.site.allow_local_image_posts is False:
+                    self.communities.errors.append(_('Images cannot be posted to local communities.'))
         elif self.post_type.data == 'poll':
             self.discussion_title.errors.append(_('Poll not implemented yet.'))
             return False
