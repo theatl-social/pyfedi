@@ -96,7 +96,7 @@ def retrieve_mods_and_backfill(community_id: int):
             if outbox_request.status_code == 200:
                 outbox_data = outbox_request.json()
                 outbox_request.close()
-                if outbox_data['type'] == 'OrderedCollection' and 'orderedItems' in outbox_data:
+                if 'type' in outbox_data and outbox_data['type'] == 'OrderedCollection' and 'orderedItems' in outbox_data:
                     activities_processed = 0
                     for activity in outbox_data['orderedItems']:
                         user = find_actor_or_create(activity['object']['actor'])

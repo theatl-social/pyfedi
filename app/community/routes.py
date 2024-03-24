@@ -102,9 +102,9 @@ def add_remote():
                 flash(_('Community not found.'), 'warning')
             else:
                 flash(_('Community not found. If you are searching for a nsfw community it is blocked by this instance.'), 'warning')
-
-        if new_community.banned:
-            flash(_('That community is banned from %(site)s.', site=g.site.name), 'warning')
+        else:
+            if new_community.banned:
+                flash(_('That community is banned from %(site)s.', site=g.site.name), 'warning')
 
     return render_template('community/add_remote.html',
                            title=_('Add remote community'), form=form, new_community=new_community,
