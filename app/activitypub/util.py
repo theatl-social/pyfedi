@@ -227,6 +227,11 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
             return None
         if user is None:
             user = Community.query.filter(Community.ap_profile_id == actor).first()
+            if user and user.banned:
+                # Try to find a non-banned copy of the community. Sometimes duplicates happen and one copy is banned.
+                user = Community.query.filter(Community.ap_profile_id == actor).filter(Community.banned == False).first()
+                if user is None:    # no un-banned version of this community exists, only the banned one. So it was banned for being bad, not for being a duplicate.
+                    return None
 
     if user is not None:
         if not user.is_local() and (user.ap_fetched_at is None or user.ap_fetched_at < utcnow() - timedelta(days=7)):
