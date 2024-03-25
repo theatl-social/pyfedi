@@ -627,7 +627,7 @@ def admin_users_add():
         private_key, public_key = RsaKeys.generate_keypair()
         user.private_key = private_key
         user.public_key = public_key
-        user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}"
+        user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}".lower()
         user.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}"
         user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}/inbox"
         user.roles.append(Role.query.get(form.role.data))
