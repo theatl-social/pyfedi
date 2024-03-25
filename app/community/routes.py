@@ -9,7 +9,7 @@ from sqlalchemy import or_, desc
 
 from app import db, constants, cache
 from app.activitypub.signature import RsaKeys, post_request
-from app.activitypub.util import default_context, notify_about_post, find_actor_or_create
+from app.activitypub.util import default_context, notify_about_post, find_actor_or_create, make_image_sizes
 from app.chat.util import send_message
 from app.community.forms import SearchRemoteCommunity, CreatePostForm, ReportCommunityForm, \
     DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm
@@ -49,7 +49,8 @@ def add_local():
                               rules=form.rules.data, nsfw=form.nsfw.data, private_key=private_key,
                               public_key=public_key, description_html=markdown_to_html(form.description.data),
                               rules_html=markdown_to_html(form.rules.data), local_only=form.local_only.data,
-                              ap_profile_id='https://' + current_app.config['SERVER_NAME'] + '/c/' + form.url.data,
+                              ap_profile_id='https://' + current_app.config['SERVER_NAME'] + '/c/' + form.url.data.lower(),
+                              ap_public_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + form.url.data,
                               ap_followers_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + form.url.data + '/followers',
                               ap_domain=current_app.config['SERVER_NAME'],
                               subscriptions_count=1, instance_id=1, low_quality='memes' in form.url.data)
@@ -102,9 +103,9 @@ def add_remote():
                 flash(_('Community not found.'), 'warning')
             else:
                 flash(_('Community not found. If you are searching for a nsfw community it is blocked by this instance.'), 'warning')
-
-        if new_community.banned:
-            flash(_('That community is banned from %(site)s.', site=g.site.name), 'warning')
+        else:
+            if new_community.banned:
+                flash(_('That community is banned from %(site)s.', site=g.site.name), 'warning')
 
     return render_template('community/add_remote.html',
                            title=_('Add remote community'), form=form, new_community=new_community,
@@ -465,6 +466,8 @@ def add_post(actor):
         db.session.commit()
         post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
         db.session.commit()
+        if post.image_id and post.image.file_path is None:
+            make_image_sizes(post.image_id, 150, 512, 'posts')  # the 512 sized image is for masonry view
 
         notify_about_post(post)
 

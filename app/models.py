@@ -440,6 +440,10 @@ class Community(db.Model):
         retval = self.ap_profile_id if self.ap_profile_id else f"https://{current_app.config['SERVER_NAME']}/c/{self.name}"
         return retval.lower()
 
+    def public_url(self):
+        result = self.ap_public_url if self.ap_public_url else f"https://{current_app.config['SERVER_NAME']}/c/{self.name}"
+        return result
+
     def is_local(self):
         return self.ap_id is None or self.profile_id().startswith('https://' + current_app.config['SERVER_NAME'])
 
@@ -465,6 +469,14 @@ class Community(db.Model):
             instances = instances.filter(Instance.dormant == False)
         instances = instances.filter(Instance.id != 1, Instance.gone_forever == False)
         return instances.all()
+
+    def has_followers_from_domain(self, domain: str) -> bool:
+        instances = Instance.query.join(User, User.instance_id == Instance.id).join(CommunityMember, CommunityMember.user_id == User.id)
+        instances = instances.filter(CommunityMember.community_id == self.id, CommunityMember.is_banned == False)
+        for instance in instances:
+            if instance.domain == domain:
+                return True
+        return False
 
     def delete_dependencies(self):
         for post in self.posts:
@@ -750,6 +762,10 @@ class User(UserMixin, db.Model):
         result = self.ap_profile_id if self.ap_profile_id else f"https://{current_app.config['SERVER_NAME']}/u/{self.user_name}"
         return result
 
+    def public_url(self):
+        result = self.ap_public_url if self.ap_public_url else f"https://{current_app.config['SERVER_NAME']}/u/{self.user_name}"
+        return result
+
     def created_recently(self):
         return self.created and self.created > utcnow() - timedelta(days=7)
 
@@ -802,6 +818,12 @@ class User(UserMixin, db.Model):
         for reply in post_replies:
             reply.body = reply.body_html = ''
         db.session.commit()
+
+    def mention_tag(self):
+        if self.ap_domain is None:
+            return '@' + self.user_name + '@' + current_app.config['SERVER_NAME']
+        else:
+            return '@' + self.user_name + '@' + self.ap_domain
 
 
 class ActivityLog(db.Model):
