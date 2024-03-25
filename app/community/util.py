@@ -210,13 +210,13 @@ def save_post(form, post: Post):
                 remove_old_file(post.image_id)
                 post.image_id = None
 
-            unused, file_extension = os.path.splitext(form.link_url.data)  # do not use _ here instead of 'unused'
-            # this url is a link to an image - generate a thumbnail of it
+            unused, file_extension = os.path.splitext(form.link_url.data)
+            # this url is a link to an image - turn it into a image post
             if file_extension.lower() in allowed_extensions:
-                file = url_to_thumbnail_file(form.link_url.data)
-                if file:
-                    post.image = file
-                    db.session.add(file)
+                file = File(source_url=form.link_url.data)
+                post.image = file
+                db.session.add(file)
+                post.type = POST_TYPE_IMAGE
             else:
                 # check opengraph tags on the page and make a thumbnail if an image is available in the og:image meta tag
                 opengraph = opengraph_parse(form.link_url.data)
@@ -270,13 +270,13 @@ def save_post(form, post: Post):
                 img = ImageOps.exif_transpose(img)
                 img_width = img.width
                 img_height = img.height
-                if img.width > 2000 or img.height > 2000:
-                    img.thumbnail((2000, 2000))
+                if img.width > 512 or img.height > 512:
+                    img.thumbnail((512, 512))
                     img.save(final_place)
                     img_width = img.width
                     img_height = img.height
                 # save a second, smaller, version as a thumbnail
-                img.thumbnail((256, 256))
+                img.thumbnail((150, 150))
                 img.save(final_place_thumbnail, format="WebP", quality=93)
                 thumbnail_width = img.width
                 thumbnail_height = img.height

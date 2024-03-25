@@ -120,8 +120,16 @@ If it does not work check the log file at logs/pyfedi.log for clues.
 <div id="initialise-database-and-setup-admin-account"></div>
 
 ## Initialise database, and set up admin account
-`flask init-db`       
+`export FLASK_APP=pyfedi.py`
+
+`flask db upgrade`
+
+`flask init-db`
+
 (choose a new username, email address, and password for your PyFedi admin account)
+
+If you see an error message "ModuleNotFoundError: No module named 'flask_babel'" then use `venv/bin/flask` instead of `flask`
+for all flask commands.
 
 <div id="run-the-app"></div>
 
