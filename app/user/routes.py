@@ -34,6 +34,12 @@ def show_people():
                            joined_communities=joined_communities(current_user.get_id()), title=_('People'))
 
 
+@bp.route('/user/<int:user_id>', methods=['GET'])
+def show_profile_by_id(user_id):
+    user = User.query.get_or_404(user_id)
+    return show_profile(user)
+
+
 def show_profile(user):
     if (user.deleted or user.banned) and current_user.is_anonymous:
         abort(404)
