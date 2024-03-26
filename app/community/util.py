@@ -96,7 +96,7 @@ def retrieve_mods_and_backfill(community_id: int):
             if outbox_request.status_code == 200:
                 outbox_data = outbox_request.json()
                 outbox_request.close()
-                if outbox_data['type'] == 'OrderedCollection' and 'orderedItems' in outbox_data:
+                if 'type' in outbox_data and outbox_data['type'] == 'OrderedCollection' and 'orderedItems' in outbox_data:
                     activities_processed = 0
                     for activity in outbox_data['orderedItems']:
                         user = find_actor_or_create(activity['object']['actor'])
@@ -210,13 +210,13 @@ def save_post(form, post: Post):
                 remove_old_file(post.image_id)
                 post.image_id = None
 
-            unused, file_extension = os.path.splitext(form.link_url.data)  # do not use _ here instead of 'unused'
-            # this url is a link to an image - generate a thumbnail of it
+            unused, file_extension = os.path.splitext(form.link_url.data)
+            # this url is a link to an image - turn it into a image post
             if file_extension.lower() in allowed_extensions:
-                file = url_to_thumbnail_file(form.link_url.data)
-                if file:
-                    post.image = file
-                    db.session.add(file)
+                file = File(source_url=form.link_url.data)
+                post.image = file
+                db.session.add(file)
+                post.type = POST_TYPE_IMAGE
             else:
                 # check opengraph tags on the page and make a thumbnail if an image is available in the og:image meta tag
                 opengraph = opengraph_parse(form.link_url.data)
@@ -255,6 +255,7 @@ def save_post(form, post: Post):
 
             # save the file
             final_place = os.path.join(directory, new_filename + file_ext)
+            final_place_medium = os.path.join(directory, new_filename + '_medium.webp')
             final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail.webp')
             uploaded_file.seek(0)
             uploaded_file.save(final_place)
@@ -270,18 +271,20 @@ def save_post(form, post: Post):
                 img = ImageOps.exif_transpose(img)
                 img_width = img.width
                 img_height = img.height
-                if img.width > 2000 or img.height > 2000:
-                    img.thumbnail((2000, 2000))
-                    img.save(final_place)
+                img.thumbnail((2000, 2000))
+                img.save(final_place)
+                if img.width > 512 or img.height > 512:
+                    img.thumbnail((512, 512))
+                    img.save(final_place_medium, format="WebP", quality=93)
                     img_width = img.width
                     img_height = img.height
                 # save a second, smaller, version as a thumbnail
-                img.thumbnail((256, 256))
+                img.thumbnail((150, 150))
                 img.save(final_place_thumbnail, format="WebP", quality=93)
                 thumbnail_width = img.width
                 thumbnail_height = img.height
 
-                file = File(file_path=final_place, file_name=new_filename + file_ext, alt_text=alt_text,
+                file = File(file_path=final_place_medium, file_name=new_filename + file_ext, alt_text=alt_text,
                             width=img_width, height=img_height, thumbnail_width=thumbnail_width,
                             thumbnail_height=thumbnail_height, thumbnail_path=final_place_thumbnail,
                             source_url=final_place.replace('app/static/', f"https://{current_app.config['SERVER_NAME']}/static/"))

@@ -227,6 +227,11 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
             return None
         if user is None:
             user = Community.query.filter(Community.ap_profile_id == actor).first()
+            if user and user.banned:
+                # Try to find a non-banned copy of the community. Sometimes duplicates happen and one copy is banned.
+                user = Community.query.filter(Community.ap_profile_id == actor).filter(Community.banned == False).first()
+                if user is None:    # no un-banned version of this community exists, only the banned one. So it was banned for being bad, not for being a duplicate.
+                    return None
 
     if user is not None:
         if not user.is_local() and (user.ap_fetched_at is None or user.ap_fetched_at < utcnow() - timedelta(days=7)):
@@ -564,7 +569,7 @@ def actor_json_to_model(activity_json, address, server):
                               ap_followers_url=activity_json['followers'],
                               ap_inbox_url=activity_json['endpoints']['sharedInbox'],
                               ap_outbox_url=activity_json['outbox'],
-                              ap_featured_url=activity_json['featured'],
+                              ap_featured_url=activity_json['featured'] if 'featured' in activity_json else '',
                               ap_moderators_url=mods_url,
                               ap_fetched_at=utcnow(),
                               ap_domain=server,
@@ -892,12 +897,15 @@ def refresh_instance_profile_task(instance_id: int):
             except requests.exceptions.JSONDecodeError as ex:
                 instance_json = {}
             if 'type' in instance_json and instance_json['type'] == 'Application':
+                # 'name' is unreliable as the admin can change it to anything. todo: find better way
                 if instance_json['name'].lower() == 'kbin':
                     software = 'Kbin'
                 elif instance_json['name'].lower() == 'mbin':
                     software = 'Mbin'
                 elif instance_json['name'].lower() == 'piefed':
                     software = 'PieFed'
+                elif instance_json['name'].lower() == 'system account':
+                    software = 'Friendica'
                 else:
                     software = 'Lemmy'
                 instance.inbox = instance_json['inbox']

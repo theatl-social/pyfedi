@@ -582,7 +582,11 @@ var DownArea = (function () {
         if (self.textarea.selectionStart != self.textarea.selectionEnd) {
             end = self.textarea.value.substr(self.textarea.selectionEnd);
             var range = self.textarea.value.slice(self.textarea.selectionStart, self.textarea.selectionEnd);
-            blockquote = "".concat(blockquote).concat(range.trim());
+            var lines = range.trim().split('\n');
+            var modifiedLines = lines.map(function (line) {
+                return "> " + line.trim();
+            });
+            blockquote = modifiedLines.join('\n') + '\n';
         }
         if (start.length && start[start.length - 1] != '\n') {
             blockquote = "\n".concat(blockquote);

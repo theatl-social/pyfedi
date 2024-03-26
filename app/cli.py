@@ -76,15 +76,13 @@ def register(app):
             db.configure_mappers()
             db.create_all()
             private_key, public_key = RsaKeys.generate_keypair()
-            db.session.add(Site(name="PieFed", description='', public_key=public_key, private_key=private_key))
+            db.session.add(Site(name="PieFed", description='Explore Anything, Discuss Everything.', public_key=public_key, private_key=private_key))
             db.session.add(Instance(domain=app.config['SERVER_NAME'], software='PieFed'))   # Instance 1 is always the local instance
             db.session.add(Settings(name='allow_nsfw', value=json.dumps(False)))
             db.session.add(Settings(name='allow_nsfl', value=json.dumps(False)))
             db.session.add(Settings(name='allow_dislike', value=json.dumps(True)))
             db.session.add(Settings(name='allow_local_image_posts', value=json.dumps(True)))
             db.session.add(Settings(name='allow_remote_image_posts', value=json.dumps(True)))
-            db.session.add(Settings(name='registration_open', value=json.dumps(True)))
-            db.session.add(Settings(name='approve_registrations', value=json.dumps(False)))
             db.session.add(Settings(name='federation', value=json.dumps(True)))
             banned_instances = ['anonib.al','lemmygrad.ml', 'gab.com', 'rqd2.net', 'exploding-heads.com', 'hexbear.net',
                                 'threads.net', 'noauthority.social', 'pieville.net', 'links.hackliberty.org',
@@ -94,21 +92,6 @@ def register(app):
             for bi in banned_instances:
                 db.session.add(BannedInstances(domain=bi))
                 print("Added banned instance", bi)
-
-            print("Populating DB with instances and interests")
-            print("See interests.txt")
-            interests = file_get_contents('interests.txt')
-            db.session.add(Interest(name='🕊 Chilling', communities=parse_communities(interests, 'chilling')))
-            db.session.add(Interest(name='💭 Interesting stuff', communities=parse_communities(interests, 'interesting stuff')))
-            db.session.add(Interest(name='📰 News & Politics', communities=parse_communities(interests, 'news & politics')))
-            db.session.add(Interest(name='🎮 Gaming', communities=parse_communities(interests, 'gaming')))
-            db.session.add(Interest(name='🤓 Linux', communities=parse_communities(interests, 'linux')))
-            db.session.add(Interest(name='♻️ Environment', communities=parse_communities(interests, 'environment')))
-            db.session.add(Interest(name='🏳‍🌈 LGBTQ+', communities=parse_communities(interests, 'lgbtq')))
-            db.session.add(Interest(name='🛠 Programming', communities=parse_communities(interests, 'programming')))
-            db.session.add(Interest(name='🖥️ Tech', communities=parse_communities(interests, 'tech')))
-            db.session.add(Interest(name='🤗 Mental Health', communities=parse_communities(interests, 'mental health')))
-            db.session.add(Interest(name='💊 Health', communities=parse_communities(interests, 'health')))
 
             # Load initial domain block list
             block_list = retrieve_block_list()

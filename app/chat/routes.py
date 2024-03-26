@@ -145,7 +145,7 @@ def chat_report(conversation_id):
 
         if form.validate_on_submit():
             report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
-                            type=4, reporter_id=current_user.id, suspect_conversation_id=conversation_id)
+                            type=4, reporter_id=current_user.id, suspect_conversation_id=conversation_id, source_instance_id=1)
             db.session.add(report)
 
             # Notify site admin
