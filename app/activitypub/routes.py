@@ -432,20 +432,43 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                 activity_log.result = 'success'
                     else:
                         try:
-                            community_ap_id = request_json['to'][0]
-                            if community_ap_id == 'https://www.w3.org/ns/activitystreams#Public':  # kbin does this when posting a reply
-                                if 'to' in request_json['object'] and request_json['object']['to']:
-                                    community_ap_id = request_json['object']['to'][0]
-                                    if community_ap_id == 'https://www.w3.org/ns/activitystreams#Public' and 'cc' in \
-                                            request_json['object'] and request_json['object']['cc']:
-                                        community_ap_id = request_json['object']['cc'][0]
-                                elif 'cc' in request_json['object'] and request_json['object']['cc']:
-                                    community_ap_id = request_json['object']['cc'][0]
-                                if community_ap_id.endswith('/followers'):  # mastodon
-                                    if 'inReplyTo' in request_json['object']:
-                                        post_being_replied_to = Post.query.filter_by(ap_id=request_json['object']['inReplyTo']).first()
-                                        if post_being_replied_to:
-                                            community_ap_id = post_being_replied_to.community.ap_profile_id
+                            community_ap_id = ''
+                            locations = ['audience', 'cc', 'to']
+                            if 'object' in request_json:
+                                rjs = [ request_json, request_json['object'] ]
+                            else:
+                                rjs = [ request_json ]
+                            local_community_prefix = f"https://{current_app.config['SERVER_NAME']}/c/"
+                            followers_suffix = '/followers'
+                            for rj in rjs:
+                                for loc in locations:
+                                    if loc in rj:
+                                        id = rj[loc]
+                                        if isinstance(id, str):
+                                            if id.startswith(local_community_prefix) and not id.endswith(followers_suffix):
+                                                community_ap_id = id
+                                        if isinstance(id, list):
+                                            for c in id:
+                                                if c.startswith(local_community_prefix) and not c.endswith(followers_suffix):
+                                                    community_ap_id = c
+                                                    break
+                                    if community_ap_id:
+                                        break
+                                if community_ap_id:
+                                    break
+                            if not community_ap_id and 'object' in request_json and 'inReplyTo' in request_json['object']:
+                                post_being_replied_to = Post.query.filter_by(ap_id=request_json['object']['inReplyTo']).first()
+                                if post_being_replied_to:
+                                    community_ap_id = post_being_replied_to.community.ap_profile_id
+                                else:
+                                    comment_being_replied_to = PostReply.query.filter_by(ap_id=request_json['object']['inReplyTo']).first()
+                                    if comment_being_replied_to:
+                                        community_ap_id = comment_being_replied_to.community.ap_profile_id
+                            if not community_ap_id:
+                                activity_log.result = 'failure'
+                                activity_log.exception_message = 'Unable to extract community'
+                                db.session.commit()
+                                return
                         except:
                             activity_log.activity_type = 'exception'
                             db.session.commit()
