@@ -578,7 +578,7 @@ def community_report(community_id: int):
     form = ReportCommunityForm()
     if form.validate_on_submit():
         report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
-                        type=1, reporter_id=current_user.id, suspect_community_id=community.id)
+                        type=1, reporter_id=current_user.id, suspect_community_id=community.id, source_instance_id=1)
         db.session.add(report)
 
         # Notify admin
@@ -924,13 +924,13 @@ def community_moderate(actor):
 
             reports = Report.query.filter_by(status=0, in_community_id=community.id)
             if local_remote == 'local':
-                reports = reports.filter_by(ap_id=None)
+                reports = reports.filter(Report.source_instance_id == 1)
             if local_remote == 'remote':
-                reports = reports.filter(Report.ap_id != None)
-            reports = reports.order_by(desc(Report.created_at)).paginate(page=page, per_page=1000, error_out=False)
+                reports = reports.filter(Report.source_instance_id != 1)
+            reports = reports.filter(Report.status >= 0).order_by(desc(Report.created_at)).paginate(page=page, per_page=1000, error_out=False)
 
-            next_url = url_for('admin.admin_reports', page=reports.next_num) if reports.has_next else None
-            prev_url = url_for('admin.admin_reports', page=reports.prev_num) if reports.has_prev and page != 1 else None
+            next_url = url_for('community.community_moderate', page=reports.next_num) if reports.has_next else None
+            prev_url = url_for('community.community_moderate', page=reports.prev_num) if reports.has_prev and page != 1 else None
 
             return render_template('community/community_moderate.html', title=_('Moderation of %(community)s', community=community.display_name()),
                                    community=community, reports=reports, current='reports',

@@ -338,7 +338,7 @@ def report_profile(actor):
     if user and not user.banned:
         if form.validate_on_submit():
             report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
-                            type=0, reporter_id=current_user.id, suspect_user_id=user.id)
+                            type=0, reporter_id=current_user.id, suspect_user_id=user.id, source_instance_id=1)
             db.session.add(report)
 
             # Notify site admin

@@ -1193,7 +1193,7 @@ class Report(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     reasons = db.Column(db.String(256))
     description = db.Column(db.String(256))
-    status = db.Column(db.Integer, default=0)
+    status = db.Column(db.Integer, default=0)   # 0 = new, 1 = escalated to admin, 2 = being appealed, 3 = resolved, 4 = discarded
     type = db.Column(db.Integer, default=0)     # 0 = user, 1 = post, 2 = reply, 3 = community, 4 = conversation
     reporter_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     suspect_community_id = db.Column(db.Integer, db.ForeignKey('community.id'))
@@ -1202,6 +1202,7 @@ class Report(db.Model):
     suspect_post_reply_id = db.Column(db.Integer, db.ForeignKey('post_reply.id'))
     suspect_conversation_id = db.Column(db.Integer, db.ForeignKey('conversation.id'))
     in_community_id = db.Column(db.Integer, db.ForeignKey('community.id'))
+    source_instance_id = db.Column(db.Integer, db.ForeignKey('instance.id'))   # the instance of the reporter. mostly used to distinguish between local (instance 1) and remote reports
     created_at = db.Column(db.DateTime, default=utcnow)
     updated = db.Column(db.DateTime, default=utcnow)
 
@@ -1214,7 +1215,7 @@ class Report(db.Model):
             return types[self.type]
 
     def is_local(self):
-        return True
+        return self.source_instance == 1
 
 
 class IpBan(db.Model):
