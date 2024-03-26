@@ -1215,7 +1215,7 @@ class Report(db.Model):
             return types[self.type]
 
     def is_local(self):
-        return self.source_instance == 1
+        return self.source_instance_id == 1
 
 
 class IpBan(db.Model):
