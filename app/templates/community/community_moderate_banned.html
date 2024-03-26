@@ -15,16 +15,17 @@
             <li class="breadcrumb-item active">{{ _('Moderation') }}</li>
           </ol>
         </nav>
+        {% include "community/_community_moderation_nav.html" %}
         <div class="row">
             <div class="col-12 col-md-10">
-                <h1 class="mt-2">{{ _('Moderation of %(community)s', community=community.display_name()) }}</h1>
+                <h1 class="mt-2">{{ _('Banned people') }}</h1>
             </div>
             <div class="col-12 col-md-2 text-right">
                 <!-- <a class="btn btn-primary" href="{{ url_for('community.community_add_moderator', community_id=community.id) }}">{{ _('Add moderator') }}</a> -->
             </div>
         </div>
-        {% include "community/_community_moderation_nav.html" %}
-        <h2>{{ _('Banned people') }}</h2>
+        <p>{{ _('See and manage who is banned from %(community)s', community=community.display_name()) }}</p>
+        <h2></h2>
         {% if banned_people %}
             <form method="get">
                 <input type="search" name="search" value="{{ search }}">
