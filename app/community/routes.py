@@ -639,7 +639,8 @@ def community_edit(community_id: int):
                     community.image = file
 
             db.session.commit()
-            community.topic.num_communities = community.topic.communities.count()
+            if community.topic:
+                community.topic.num_communities = community.topic.communities.count()
             db.session.commit()
             flash(_('Saved'))
             return redirect(url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not None else community.name))
