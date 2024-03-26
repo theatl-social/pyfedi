@@ -3,7 +3,7 @@ from flask_login import current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, TextAreaField, BooleanField, HiddenField, SelectField, FileField, \
     DateField
-from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Optional
+from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Regexp, Optional
 from flask_babel import _, lazy_gettext as _l
 
 from app import db
@@ -82,7 +82,7 @@ class CreatePostForm(FlaskForm):
     link_title = StringField(_l('Title'), validators={Optional(), Length(min=3, max=255)})
     link_body = TextAreaField(_l('Body'), validators={Optional(), Length(min=3, max=5000)},
                                     render_kw={'placeholder': 'Text (optional)'})
-    link_url = StringField(_l('URL'), render_kw={'placeholder': 'https://...'})
+    link_url = StringField(_l('URL'), validators=[Regexp(r'^https?://', message='Submitted links need to start with "http://"" or "https://"')], render_kw={'placeholder': 'https://...'})
     image_title = StringField(_l('Title'), validators={Optional(), Length(min=3, max=255)})
     image_alt_text = StringField(_l('Alt text'), validators={Optional(), Length(min=3, max=255)})
     image_body = TextAreaField(_l('Body'), validators={Optional(), Length(min=3, max=5000)},
