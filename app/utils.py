@@ -227,6 +227,31 @@ def markdown_to_text(markdown_text) -> str:
     return markdown_text.replace("# ", '')
 
 
+def microblog_content_to_title(html: str) -> str:
+    soup = BeautifulSoup(html, 'html.parser')
+
+    title_found = False
+    for tag in soup.find_all():
+        if tag.name == 'p':
+            if not title_found:
+                title_found = True
+                continue
+            else:
+                tag = tag.extract()
+
+    if title_found:
+        result = soup.text
+        if len(result) > 150:
+            for i in range(149, -1, -1):
+                if result[i] == ' ':
+                    break;
+            result = result[:i] + ' ...' if i > 0 else ''
+    else:
+        result = ''
+
+    return result
+
+
 def domain_from_url(url: str, create=True) -> Domain:
     parsed_url = urlparse(url.lower().replace('www.', ''))
     if parsed_url and parsed_url.hostname:
