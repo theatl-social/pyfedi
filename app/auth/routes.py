@@ -99,7 +99,7 @@ def register():
                 flash(_('Sorry, you cannot use that user name'), 'error')
             else:
                 for referrer in blocked_referrers():
-                    if referrer in session.get('Referer'):
+                    if referrer in session.get('Referer', ''):
                         resp = make_response(redirect(url_for('auth.please_wait')))
                         resp.set_cookie('sesion', '17489047567495', expires=datetime(year=2099, month=12, day=30))
                         return resp
@@ -112,7 +112,7 @@ def register():
                 user = User(user_name=form.user_name.data, title=form.user_name.data, email=form.real_email.data,
                             verification_token=verification_token, instance_id=1, ip_address=ip_address(),
                             banned=user_ip_banned() or user_cookie_banned(), email_unread_sent=False,
-                            referrer=session.get('Referer'))
+                            referrer=session.get('Referer', ''))
                 user.set_password(form.password.data)
                 db.session.add(user)
                 db.session.commit()
