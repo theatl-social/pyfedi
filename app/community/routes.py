@@ -639,7 +639,8 @@ def community_edit(community_id: int):
                     community.image = file
 
             db.session.commit()
-            community.topic.num_communities = community.topic.communities.count()
+            if community.topic:
+                community.topic.num_communities = community.topic.communities.count()
             db.session.commit()
             flash(_('Saved'))
             return redirect(url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not None else community.name))
@@ -654,7 +655,7 @@ def community_edit(community_id: int):
             form.topic.data = community.topic_id if community.topic_id else None
             form.default_layout.data = community.default_layout
         return render_template('community/community_edit.html', title=_('Edit community'), form=form,
-                               current_app=current_app,
+                               current_app=current_app, current="edit_settings",
                                community=community, moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()))
     else:
@@ -695,7 +696,7 @@ def community_mod_list(community_id: int):
             filter(CommunityMember.community_id == community_id, or_(CommunityMember.is_moderator == True, CommunityMember.is_owner == True)).all()
 
         return render_template('community/community_mod_list.html', title=_('Moderators for %(community)s', community=community.display_name()),
-                        moderators=moderators, community=community,
+                        moderators=moderators, community=community, current="moderators",
                         moderating_communities=moderating_communities(current_user.get_id()),
                         joined_communities=joined_communities(current_user.get_id())
                         )
