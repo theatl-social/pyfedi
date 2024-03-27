@@ -419,6 +419,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                                           body_html=allowlist_html(markdown_to_html(request_json['object']['source']['content'])),
                                                           encrypted=encrypted)
                                 db.session.add(new_message)
+                                existing_conversation.updated_at = utcnow()
                                 db.session.commit()
 
                                 # Notify recipient
