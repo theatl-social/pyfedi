@@ -15,7 +15,7 @@ from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE
 from app.models import Community, File, BannedInstances, PostReply, PostVote, Post, utcnow, CommunityMember, Site, \
     Instance, Notification, User, ActivityPubLog
 from app.utils import get_request, gibberish, markdown_to_html, domain_from_url, allowlist_html, \
-    html_to_markdown, is_image_url, ensure_directory_exists, inbox_domain, post_ranking, shorten_string, parse_page, \
+    is_image_url, ensure_directory_exists, inbox_domain, post_ranking, shorten_string, parse_page, \
     remove_tracking_from_link, ap_datetime, instance_banned, blocked_phrases
 from sqlalchemy import func, desc
 import os

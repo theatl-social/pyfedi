@@ -214,41 +214,6 @@ def allowlist_html(html: str) -> str:
     return str(soup)
 
 
-# convert basic HTML to Markdown
-def html_to_markdown(html: str) -> str:
-    soup = BeautifulSoup(html, 'html.parser')
-    return html_to_markdown_worker(soup)
-
-
-def html_to_markdown_worker(element, indent_level=0):
-    formatted_text = ''
-    for item in element.contents:
-        if isinstance(item, str):
-            formatted_text += item
-        elif item.name == 'p':
-            formatted_text += '\n\n'
-        elif item.name == 'br':
-            formatted_text += '  \n'  # Double space at the end for line break
-        elif item.name == 'strong':
-            formatted_text += '**' + html_to_markdown_worker(item) + '**'
-        elif item.name == 'ul':
-            formatted_text += '\n'
-            formatted_text += html_to_markdown_worker(item, indent_level + 1)
-            formatted_text += '\n'
-        elif item.name == 'ol':
-            formatted_text += '\n'
-            formatted_text += html_to_markdown_worker(item, indent_level + 1)
-            formatted_text += '\n'
-        elif item.name == 'li':
-            bullet = '-' if item.find_parent(['ul', 'ol']) and item.find_previous_sibling() is None else ''
-            formatted_text += '  ' * indent_level + bullet + ' ' + html_to_markdown_worker(item).strip() + '\n'
-        elif item.name == 'blockquote':
-            formatted_text += '  ' * indent_level + '> ' + html_to_markdown_worker(item).strip() + '\n'
-        elif item.name == 'code':
-            formatted_text += '`' + html_to_markdown_worker(item) + '`'
-    return formatted_text
-
-
 def markdown_to_html(markdown_text) -> str:
     if markdown_text:
         return allowlist_html(markdown2.markdown(markdown_text, safe_mode=True, extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True}))

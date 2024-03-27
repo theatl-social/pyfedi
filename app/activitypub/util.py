@@ -22,7 +22,7 @@ from PIL import Image, ImageOps
 from io import BytesIO
 import pytesseract
 
-from app.utils import get_request, allowlist_html, html_to_markdown, get_setting, ap_datetime, markdown_to_html, \
+from app.utils import get_request, allowlist_html, get_setting, ap_datetime, markdown_to_html, \
     is_image_url, domain_from_url, gibberish, ensure_directory_exists, markdown_to_text, head_request, post_ranking, \
     shorten_string, reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, remove_tracking_from_link, \
     blocked_phrases
@@ -434,7 +434,7 @@ def refresh_community_profile_task(community_id):
                 community.description_html = markdown_to_html(community.description)
             elif 'content' in activity_json:
                 community.description_html = allowlist_html(activity_json['content'])
-                community.description = html_to_markdown(community.description_html)
+                community.description = ''
 
             icon_changed = cover_changed = False
             if 'icon' in activity_json:
@@ -585,7 +585,7 @@ def actor_json_to_model(activity_json, address, server):
             community.description_html = markdown_to_html(community.description)
         elif 'content' in activity_json:
             community.description_html = allowlist_html(activity_json['content'])
-            community.description = html_to_markdown(community.description_html)
+            community.description = ''
         if 'icon' in activity_json:
             icon = File(source_url=activity_json['icon']['url'])
             community.icon = icon
@@ -625,7 +625,7 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
             post.body_html = markdown_to_html(post.body)
         elif 'content' in post_json:
             post.body_html = allowlist_html(post_json['content'])
-            post.body = html_to_markdown(post.body_html)
+            post.body = ''
         if 'attachment' in post_json and len(post_json['attachment']) > 0 and 'type' in post_json['attachment'][0]:
             if post_json['attachment'][0]['type'] == 'Link':
                 post.url = post_json['attachment'][0]['href']
@@ -773,7 +773,7 @@ def parse_summary(user_json) -> str:
     if 'source' in user_json and user_json['source'].get('mediaType') == 'text/markdown':
         # Convert Markdown to HTML
         markdown_text = user_json['source']['content']
-        html_content = html_to_markdown(markdown_text)
+        html_content = allowlist_html(markdown_to_html(markdown_text))
         return html_content
     elif 'summary' in user_json:
         return allowlist_html(user_json['summary'])
@@ -1184,7 +1184,7 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
             post_reply.body_html = markdown_to_html(post_reply.body)
         elif 'content' in request_json['object']:   # Kbin
             post_reply.body_html = allowlist_html(request_json['object']['content'])
-            post_reply.body = html_to_markdown(post_reply.body_html)
+            post_reply.body = ''
         if post_id is not None:
             # Discard post_reply if it contains certain phrases. Good for stopping spam floods.
             if post_reply.body:
@@ -1283,7 +1283,7 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
         post.body_html = markdown_to_html(post.body)
     elif 'content' in request_json['object'] and request_json['object']['content'] is not None: # Kbin
         post.body_html = allowlist_html(request_json['object']['content'])
-        post.body = html_to_markdown(post.body_html)
+        post.body = ''
     # Discard post if it contains certain phrases. Good for stopping spam floods.
     blocked_phrases_list = blocked_phrases()
     for blocked_phrase in blocked_phrases_list:
@@ -1375,7 +1375,7 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
         reply.body_html = markdown_to_html(reply.body)
     elif 'content' in request_json['object']:
         reply.body_html = allowlist_html(request_json['object']['content'])
-        reply.body = html_to_markdown(reply.body_html)
+        reply.body = ''
     reply.edited_at = utcnow()
     db.session.commit()
 
@@ -1389,7 +1389,7 @@ def update_post_from_activity(post: Post, request_json: dict):
         post.body_html = markdown_to_html(post.body)
     elif 'content' in request_json['object']:
         post.body_html = allowlist_html(request_json['object']['content'])
-        post.body = html_to_markdown(post.body_html)
+        post.body = ''
     if 'attachment' in request_json['object'] and 'href' in request_json['object']['attachment']:
         post.url = request_json['object']['attachment']['href']
     if 'sensitive' in request_json['object']:
