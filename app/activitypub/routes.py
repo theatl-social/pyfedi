@@ -19,8 +19,8 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
     upvote_post, activity_already_ingested, delete_post_or_comment, community_members, \
     user_removed_from_remote_server, create_post, create_post_reply, update_post_reply_from_activity, \
     update_post_from_activity, undo_vote, undo_downvote, post_to_page
-from app.utils import gibberish, get_setting, is_image_url, allowlist_html, html_to_markdown, render_template, \
-    domain_from_url, markdown_to_html, community_membership, ap_datetime, markdown_to_text, ip_address, can_downvote, \
+from app.utils import gibberish, get_setting, is_image_url, allowlist_html, render_template, \
+    domain_from_url, markdown_to_html, community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
     community_moderators
 import werkzeug.exceptions
