@@ -1326,7 +1326,7 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
         post.body_html = markdown_to_html(post.body)
     elif 'content' in request_json['object'] and request_json['object']['content'] is not None: # Kbin
         post.body_html = allowlist_html(request_json['object']['content'])
-        post.body = html_to_markdown(post.body_html)
+        post.body = ''
         if name == "[Microblog]":
             name += ' ' + microblog_content_to_title(post.body_html)
             if '[NSFL]' in name.upper() or '(NSFL)' in name.upper():
