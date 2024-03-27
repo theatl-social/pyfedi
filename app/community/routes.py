@@ -5,19 +5,20 @@ from random import randint
 from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, g, json
 from flask_login import current_user, login_required
 from flask_babel import _
-from sqlalchemy import or_, desc
+from sqlalchemy import or_, desc, text
 
 from app import db, constants, cache
 from app.activitypub.signature import RsaKeys, post_request
 from app.activitypub.util import default_context, notify_about_post, find_actor_or_create, make_image_sizes
 from app.chat.util import send_message
 from app.community.forms import SearchRemoteCommunity, CreatePostForm, ReportCommunityForm, \
-    DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm
+    DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm, \
+    EscalateReportForm, ResolveReportForm
 from app.community.util import search_for_community, community_url_exists, actor_to_community, \
     opengraph_parse, url_to_thumbnail_file, save_post, save_icon_file, save_banner_file, send_to_remote_instance, \
     delete_post_from_community, delete_post_reply_from_community
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
-    SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR
+    SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, \
     File, PostVote, utcnow, Report, Notification, InstanceBlock, ActivityPubLog, Topic, Conversation, PostReply
@@ -965,3 +966,48 @@ def community_moderate_banned(actor):
             abort(401)
     else:
         abort(404)
+
+
+@bp.route('/community/<int:community_id>/moderate_report/<int:report_id>/escalate', methods=['GET', 'POST'])
+@login_required
+def community_moderate_report_escalate(community_id, report_id):
+    community = Community.query.get_or_404(community_id)
+    if community.is_moderator() or current_user.is_admin():
+        report = Report.query.filter_by(in_community_id=community.id, id=report_id, status=REPORT_STATE_NEW).first()
+        if report:
+            form = EscalateReportForm()
+            if form.validate_on_submit():
+                notify = Notification(title='Escalated report', url='/admin/reports', user_id=1,
+                                      author_id=current_user.id)
+                db.session.add(notify)
+                report.description = form.reason.data
+                report.status = REPORT_STATE_ESCALATED
+                db.session.commit()
+                flash(_('Admin has been notified about this report.'))
+                # todo: remove unread notifications about this report
+                # todo: append to mod log
+                return redirect(url_for('community.community_moderate', actor=community.link()))
+            else:
+                form.reason.data = report.description
+                return render_template('community/community_moderate_report_escalate.html', form=form)
+    else:
+        abort(401)
+
+
+@bp.route('/community/<int:community_id>/moderate_report/<int:report_id>/resolve', methods=['GET', 'POST'])
+@login_required
+def community_moderate_report_resolve(community_id, report_id):
+    community = Community.query.get_or_404(community_id)
+    if community.is_moderator() or current_user.is_admin():
+        report = Report.query.filter_by(in_community_id=community.id, id=report_id).first()
+        if report:
+            form = ResolveReportForm()
+            if form.validate_on_submit():
+                report.status = REPORT_STATE_RESOLVED
+                db.session.commit()
+                # todo: remove unread notifications about this report
+                # todo: append to mod log
+                flash(_('Report resolved.'))
+                return redirect(url_for('community.community_moderate', actor=community.link()))
+            else:
+                return render_template('community/community_moderate_report_resolve.html', form=form)

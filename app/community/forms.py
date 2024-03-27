@@ -61,6 +61,17 @@ class AddModeratorForm(FlaskForm):
     submit = SubmitField(_l('Add'))
 
 
+class EscalateReportForm(FlaskForm):
+    reason = StringField(_l('Amend the report description if necessary'), validators=[DataRequired()])
+    submit = SubmitField(_l('Escalate report'))
+
+
+class ResolveReportForm(FlaskForm):
+    note = StringField(_l('Note for mod log'), validators=[Optional()])
+    also_resolve_others = BooleanField(_l('Also resolve all other reports about the same thing.'), default=True)
+    submit = SubmitField(_l('Resolve report'))
+
+
 class SearchRemoteCommunity(FlaskForm):
     address = StringField(_l('Community address'), render_kw={'placeholder': 'e.g. !name@server', 'autofocus': True}, validators=[DataRequired()])
     submit = SubmitField(_l('Search'))
