@@ -88,15 +88,15 @@ class BanUserCommunityForm(FlaskForm):
 class CreatePostForm(FlaskForm):
     communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int)
     post_type = HiddenField() # https://getbootstrap.com/docs/4.6/components/navs/#tabs
-    discussion_title = StringField(_l('Title'), validators={Optional(), Length(min=3, max=255)})
-    discussion_body = TextAreaField(_l('Body'), validators={Optional(), Length(min=3, max=5000)}, render_kw={'placeholder': 'Text (optional)'})
-    link_title = StringField(_l('Title'), validators={Optional(), Length(min=3, max=255)})
-    link_body = TextAreaField(_l('Body'), validators={Optional(), Length(min=3, max=5000)},
+    discussion_title = StringField(_l('Title'), validators=[Optional(), Length(min=3, max=255)])
+    discussion_body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'placeholder': 'Text (optional)'})
+    link_title = StringField(_l('Title'), validators=[Optional(), Length(min=3, max=255)])
+    link_body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=5000)],
                                     render_kw={'placeholder': 'Text (optional)'})
-    link_url = StringField(_l('URL'), validators=[Regexp(r'^https?://', message='Submitted links need to start with "http://"" or "https://"')], render_kw={'placeholder': 'https://...'})
-    image_title = StringField(_l('Title'), validators={Optional(), Length(min=3, max=255)})
-    image_alt_text = StringField(_l('Alt text'), validators={Optional(), Length(min=3, max=255)})
-    image_body = TextAreaField(_l('Body'), validators={Optional(), Length(min=3, max=5000)},
+    link_url = StringField(_l('URL'), validators=[Optional(), Regexp(r'^https?://', message='Submitted links need to start with "http://"" or "https://"')], render_kw={'placeholder': 'https://...'})
+    image_title = StringField(_l('Title'), validators=[Optional(), Length(min=3, max=255)])
+    image_alt_text = StringField(_l('Alt text'), validators=[Optional(), Length(min=3, max=255)])
+    image_body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=5000)],
                                     render_kw={'placeholder': 'Text (optional)'})
     image_file = FileField(_('Image'))
     # flair = SelectField(_l('Flair'), coerce=int)
