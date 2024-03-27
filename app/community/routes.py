@@ -1007,6 +1007,18 @@ def community_moderate_report_resolve(community_id, report_id):
                 db.session.commit()
                 # todo: remove unread notifications about this report
                 # todo: append to mod log
+                if form.also_resolve_others.data:
+                    if report.suspect_post_reply_id:
+                        db.session.execute(text('UPDATE "report" SET status = :new_status WHERE suspect_post_reply_id = :suspect_post_reply_id'),
+                                           {'new_status': REPORT_STATE_RESOLVED,
+                                            'suspect_post_reply_id': report.suspect_post_reply_id})
+                        # todo: remove unread notifications about these reports
+                    elif report.suspect_post_id:
+                        db.session.execute(text('UPDATE "report" SET status = :new_status WHERE suspect_post_id = :suspect_post_id'),
+                                           {'new_status': REPORT_STATE_RESOLVED,
+                                            'suspect_post_id': report.suspect_post_id})
+                        # todo: remove unread notifications about these reports
+                    db.session.commit()
                 flash(_('Report resolved.'))
                 return redirect(url_for('community.community_moderate', actor=community.link()))
             else:
