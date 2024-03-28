@@ -13,6 +13,7 @@ def send_message(message: str, conversation_id: int) -> ChatMessage:
     conversation = Conversation.query.get(conversation_id)
     reply = ChatMessage(sender_id=current_user.id, conversation_id=conversation.id,
                         body=message, body_html=allowlist_html(markdown_to_html(message)))
+    conversation.updated_at = utcnow()
     for recipient in conversation.members:
         if recipient.id != current_user.id:
             if recipient.is_local():

@@ -214,41 +214,6 @@ def allowlist_html(html: str) -> str:
     return str(soup)
 
 
-# convert basic HTML to Markdown
-def html_to_markdown(html: str) -> str:
-    soup = BeautifulSoup(html, 'html.parser')
-    return html_to_markdown_worker(soup)
-
-
-def html_to_markdown_worker(element, indent_level=0):
-    formatted_text = ''
-    for item in element.contents:
-        if isinstance(item, str):
-            formatted_text += item
-        elif item.name == 'p':
-            formatted_text += '\n\n'
-        elif item.name == 'br':
-            formatted_text += '  \n'  # Double space at the end for line break
-        elif item.name == 'strong':
-            formatted_text += '**' + html_to_markdown_worker(item) + '**'
-        elif item.name == 'ul':
-            formatted_text += '\n'
-            formatted_text += html_to_markdown_worker(item, indent_level + 1)
-            formatted_text += '\n'
-        elif item.name == 'ol':
-            formatted_text += '\n'
-            formatted_text += html_to_markdown_worker(item, indent_level + 1)
-            formatted_text += '\n'
-        elif item.name == 'li':
-            bullet = '-' if item.find_parent(['ul', 'ol']) and item.find_previous_sibling() is None else ''
-            formatted_text += '  ' * indent_level + bullet + ' ' + html_to_markdown_worker(item).strip() + '\n'
-        elif item.name == 'blockquote':
-            formatted_text += '  ' * indent_level + '> ' + html_to_markdown_worker(item).strip() + '\n'
-        elif item.name == 'code':
-            formatted_text += '`' + html_to_markdown_worker(item) + '`'
-    return formatted_text
-
-
 def markdown_to_html(markdown_text) -> str:
     if markdown_text:
         return allowlist_html(markdown2.markdown(markdown_text, safe_mode=True, extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True}))
@@ -260,6 +225,31 @@ def markdown_to_text(markdown_text) -> str:
     if not markdown_text or markdown_text == '':
         return ''
     return markdown_text.replace("# ", '')
+
+
+def microblog_content_to_title(html: str) -> str:
+    soup = BeautifulSoup(html, 'html.parser')
+
+    title_found = False
+    for tag in soup.find_all():
+        if tag.name == 'p':
+            if not title_found:
+                title_found = True
+                continue
+            else:
+                tag = tag.extract()
+
+    if title_found:
+        result = soup.text
+        if len(result) > 150:
+            for i in range(149, -1, -1):
+                if result[i] == ' ':
+                    break;
+            result = result[:i] + ' ...' if i > 0 else ''
+    else:
+        result = ''
+
+    return result
 
 
 def domain_from_url(url: str, create=True) -> Domain:
@@ -670,7 +660,7 @@ def finalize_user_setup(user, application_required=False):
     private_key, public_key = RsaKeys.generate_keypair()
     user.private_key = private_key
     user.public_key = public_key
-    user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}"
+    user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}".lower()
     user.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}"
     user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}/inbox"
     db.session.commit()

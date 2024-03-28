@@ -3,7 +3,7 @@ from flask_login import current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, TextAreaField, BooleanField, HiddenField, SelectField, FileField, \
     DateField
-from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Optional
+from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Regexp, Optional
 from flask_babel import _, lazy_gettext as _l
 
 from app import db
@@ -61,6 +61,17 @@ class AddModeratorForm(FlaskForm):
     submit = SubmitField(_l('Add'))
 
 
+class EscalateReportForm(FlaskForm):
+    reason = StringField(_l('Amend the report description if necessary'), validators=[DataRequired()])
+    submit = SubmitField(_l('Escalate report'))
+
+
+class ResolveReportForm(FlaskForm):
+    note = StringField(_l('Note for mod log'), validators=[Optional()])
+    also_resolve_others = BooleanField(_l('Also resolve all other reports about the same thing.'), default=True)
+    submit = SubmitField(_l('Resolve report'))
+
+
 class SearchRemoteCommunity(FlaskForm):
     address = StringField(_l('Community address'), render_kw={'placeholder': 'e.g. !name@server', 'autofocus': True}, validators=[DataRequired()])
     submit = SubmitField(_l('Search'))
@@ -77,15 +88,15 @@ class BanUserCommunityForm(FlaskForm):
 class CreatePostForm(FlaskForm):
     communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int)
     post_type = HiddenField() # https://getbootstrap.com/docs/4.6/components/navs/#tabs
-    discussion_title = StringField(_l('Title'), validators={Optional(), Length(min=3, max=255)})
-    discussion_body = TextAreaField(_l('Body'), validators={Optional(), Length(min=3, max=5000)}, render_kw={'placeholder': 'Text (optional)'})
-    link_title = StringField(_l('Title'), validators={Optional(), Length(min=3, max=255)})
-    link_body = TextAreaField(_l('Body'), validators={Optional(), Length(min=3, max=5000)},
+    discussion_title = StringField(_l('Title'), validators=[Optional(), Length(min=3, max=255)])
+    discussion_body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'placeholder': 'Text (optional)'})
+    link_title = StringField(_l('Title'), validators=[Optional(), Length(min=3, max=255)])
+    link_body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=5000)],
                                     render_kw={'placeholder': 'Text (optional)'})
-    link_url = StringField(_l('URL'), render_kw={'placeholder': 'https://...'})
-    image_title = StringField(_l('Title'), validators={Optional(), Length(min=3, max=255)})
-    image_alt_text = StringField(_l('Alt text'), validators={Optional(), Length(min=3, max=255)})
-    image_body = TextAreaField(_l('Body'), validators={Optional(), Length(min=3, max=5000)},
+    link_url = StringField(_l('URL'), validators=[Optional(), Regexp(r'^https?://', message='Submitted links need to start with "http://"" or "https://"')], render_kw={'placeholder': 'https://...'})
+    image_title = StringField(_l('Title'), validators=[Optional(), Length(min=3, max=255)])
+    image_alt_text = StringField(_l('Alt text'), validators=[Optional(), Length(min=3, max=255)])
+    image_body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=5000)],
                                     render_kw={'placeholder': 'Text (optional)'})
     image_file = FileField(_('Image'))
     # flair = SelectField(_l('Flair'), coerce=int)

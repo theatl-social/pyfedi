@@ -15,7 +15,7 @@ from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE
 from app.models import Community, File, BannedInstances, PostReply, PostVote, Post, utcnow, CommunityMember, Site, \
     Instance, Notification, User, ActivityPubLog
 from app.utils import get_request, gibberish, markdown_to_html, domain_from_url, allowlist_html, \
-    html_to_markdown, is_image_url, ensure_directory_exists, inbox_domain, post_ranking, shorten_string, parse_page, \
+    is_image_url, ensure_directory_exists, inbox_domain, post_ranking, shorten_string, parse_page, \
     remove_tracking_from_link, ap_datetime, instance_banned, blocked_phrases
 from sqlalchemy import func, desc
 import os
@@ -96,7 +96,7 @@ def retrieve_mods_and_backfill(community_id: int):
             if outbox_request.status_code == 200:
                 outbox_data = outbox_request.json()
                 outbox_request.close()
-                if outbox_data['type'] == 'OrderedCollection' and 'orderedItems' in outbox_data:
+                if 'type' in outbox_data and outbox_data['type'] == 'OrderedCollection' and 'orderedItems' in outbox_data:
                     activities_processed = 0
                     for activity in outbox_data['orderedItems']:
                         user = find_actor_or_create(activity['object']['actor'])
@@ -255,6 +255,7 @@ def save_post(form, post: Post):
 
             # save the file
             final_place = os.path.join(directory, new_filename + file_ext)
+            final_place_medium = os.path.join(directory, new_filename + '_medium.webp')
             final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail.webp')
             uploaded_file.seek(0)
             uploaded_file.save(final_place)
@@ -270,9 +271,11 @@ def save_post(form, post: Post):
                 img = ImageOps.exif_transpose(img)
                 img_width = img.width
                 img_height = img.height
+                img.thumbnail((2000, 2000))
+                img.save(final_place)
                 if img.width > 512 or img.height > 512:
                     img.thumbnail((512, 512))
-                    img.save(final_place)
+                    img.save(final_place_medium, format="WebP", quality=93)
                     img_width = img.width
                     img_height = img.height
                 # save a second, smaller, version as a thumbnail
@@ -281,7 +284,7 @@ def save_post(form, post: Post):
                 thumbnail_width = img.width
                 thumbnail_height = img.height
 
-                file = File(file_path=final_place, file_name=new_filename + file_ext, alt_text=alt_text,
+                file = File(file_path=final_place_medium, file_name=new_filename + file_ext, alt_text=alt_text,
                             width=img_width, height=img_height, thumbnail_width=thumbnail_width,
                             thumbnail_height=thumbnail_height, thumbnail_path=final_place_thumbnail,
                             source_url=final_place.replace('app/static/', f"https://{current_app.config['SERVER_NAME']}/static/"))

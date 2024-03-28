@@ -4,7 +4,7 @@ from time import sleep
 from flask import request, flash, json, url_for, current_app, redirect, g
 from flask_login import login_required, current_user
 from flask_babel import _
-from sqlalchemy import text, desc
+from sqlalchemy import text, desc, or_
 
 from app import db, celery, cache
 from app.activitypub.routes import process_inbox_request, process_delete_request
@@ -15,6 +15,7 @@ from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditC
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topic_tree, topics_for_form
 from app.community.util import save_icon_file, save_banner_file
+from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
@@ -627,7 +628,7 @@ def admin_users_add():
         private_key, public_key = RsaKeys.generate_keypair()
         user.private_key = private_key
         user.public_key = public_key
-        user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}"
+        user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}".lower()
         user.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}"
         user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}/inbox"
         user.roles.append(Role.query.get(form.role.data))
@@ -674,7 +675,7 @@ def admin_reports():
     search = request.args.get('search', '')
     local_remote = request.args.get('local_remote', '')
 
-    reports = Report.query.filter_by(status=0)
+    reports = Report.query.filter(or_(Report.status == REPORT_STATE_NEW, Report.status == REPORT_STATE_ESCALATED))
     if local_remote == 'local':
         reports = reports.filter_by(ap_id=None)
     if local_remote == 'remote':

@@ -246,7 +246,7 @@
         {% if post_layout == 'masonry' or post_layout == 'masonry_wide' %}
             <!-- -->
         {% endif %}
-        <script type="text/javascript" src="{{ url_for('static', filename='js/markdown/downarea.js') }}"></script>
+        <script type="text/javascript" src="{{ url_for('static', filename='js/markdown/downarea.js', changed=getmtime('js/markdown/downarea.js')) }}"></script>
     {% endif %}
     {% if theme() and file_exists('app/templates/themes/' + theme() + '/scripts.js') %}
         <script src="{{ url_for('static', filename='themes/' + theme() + '/scripts.js') }}" />

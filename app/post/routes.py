@@ -118,12 +118,12 @@ def show_post(post_id: int):
         reply_json = {
             'type': 'Note',
             'id': reply.profile_id(),
-            'attributedTo': current_user.profile_id(),
+            'attributedTo': current_user.public_url(),
             'to': [
                 'https://www.w3.org/ns/activitystreams#Public'
             ],
             'cc': [
-                community.profile_id(),
+                community.public_url(), post.author.public_url()
             ],
             'content': reply.body_html,
             'inReplyTo': post.profile_id(),
@@ -134,20 +134,30 @@ def show_post(post_id: int):
             },
             'published': ap_datetime(utcnow()),
             'distinguished': False,
-            'audience': community.profile_id()
+            'audience': community.public_url(),
+            'tag': [{
+                'href': post.author.public_url(),
+                'name': post.author.mention_tag(),
+                'type': 'Mention'
+            }]
         }
         create_json = {
             'type': 'Create',
-            'actor': current_user.profile_id(),
-            'audience': community.profile_id(),
+            'actor': current_user.public_url(),
+            'audience': community.public_url(),
             'to': [
                 'https://www.w3.org/ns/activitystreams#Public'
             ],
             'cc': [
-                community.ap_profile_id
+                community.public_url(), post.author.public_url()
             ],
             'object': reply_json,
-            'id': f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}"
+            'id': f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}",
+            'tag': [{
+                'href': post.author.public_url(),
+                'name': post.author.mention_tag(),
+                'type': 'Mention'
+            }]
         }
         if not community.is_local():    # this is a remote community, send it to the instance that hosts it
             success = post_request(community.ap_inbox_url, create_json, current_user.private_key,
@@ -161,7 +171,7 @@ def show_post(post_id: int):
                 "to": [
                     "https://www.w3.org/ns/activitystreams#Public"
                 ],
-                "actor": community.ap_profile_id,
+                "actor": community.public_url(),
                 "cc": [
                     community.ap_followers_url
                 ],
@@ -172,6 +182,17 @@ def show_post(post_id: int):
             for instance in community.following_instances():
                 if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
                     send_to_remote_instance(instance.id, community.id, announce)
+
+        # send copy of Note to post author (who won't otherwise get it if no-one else on their instance is subscribed to the community)
+        if not post.author.is_local() and post.author.ap_domain != community.ap_domain:
+            if not community.is_local() or (community.is_local and not community.has_followers_from_domain(post.author.ap_domain)):
+                success = post_request(post.author.ap_inbox_url, create_json, current_user.private_key,
+                                                       current_user.ap_profile_id + '#main-key')
+                if not success:
+                    # sending to shared inbox is good enough for Mastodon, but Lemmy will reject it the local community has no followers
+                    personal_inbox = post.author.public_url() + '/inbox'
+                    post_request(personal_inbox, create_json, current_user.private_key,
+                                                       current_user.ap_profile_id + '#main-key')
 
         return redirect(url_for('activitypub.post_ap', post_id=post_id))  # redirect to current page to avoid refresh resubmitting the form
     else:
@@ -518,14 +539,13 @@ def add_reply(post_id: int, comment_id: int):
             reply_json = {
                 'type': 'Note',
                 'id': reply.profile_id(),
-                'attributedTo': current_user.profile_id(),
+                'attributedTo': current_user.public_url(),
                 'to': [
-                    'https://www.w3.org/ns/activitystreams#Public',
-                    in_reply_to.author.profile_id()
+                    'https://www.w3.org/ns/activitystreams#Public'
                 ],
                 'cc': [
-                    post.community.profile_id(),
-                    current_user.followers_url()
+                    post.community.public_url(),
+                    in_reply_to.author.public_url()
                 ],
                 'content': reply.body_html,
                 'inReplyTo': in_reply_to.profile_id(),
@@ -537,7 +557,7 @@ def add_reply(post_id: int, comment_id: int):
                 },
                 'published': ap_datetime(utcnow()),
                 'distinguished': False,
-                'audience': post.community.profile_id(),
+                'audience': post.community.public_url(),
                 'contentMap': {
                     'en': reply.body_html
                 }
@@ -545,15 +565,14 @@ def add_reply(post_id: int, comment_id: int):
             create_json = {
                 '@context': default_context(),
                 'type': 'Create',
-                'actor': current_user.profile_id(),
-                'audience': post.community.profile_id(),
+                'actor': current_user.public_url(),
+                'audience': post.community.public_url(),
                 'to': [
-                    'https://www.w3.org/ns/activitystreams#Public',
-                    in_reply_to.author.profile_id()
+                    'https://www.w3.org/ns/activitystreams#Public'
                 ],
                 'cc': [
-                    post.community.profile_id(),
-                    current_user.followers_url()
+                    post.community.public_url(),
+                    in_reply_to.author.public_url()
                 ],
                 'object': reply_json,
                 'id': f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}"
@@ -561,8 +580,15 @@ def add_reply(post_id: int, comment_id: int):
             if in_reply_to.notify_author and in_reply_to.author.ap_id is not None:
                 reply_json['tag'] = [
                     {
-                        'href': in_reply_to.author.ap_profile_id,
-                        'name': '@' + in_reply_to.author.ap_id,
+                        'href': in_reply_to.author.public_url(),
+                        'name': in_reply_to.author.mention_tag(),
+                        'type': 'Mention'
+                    }
+                ]
+                create_json['tag'] = [
+                    {
+                        'href': in_reply_to.author.public_url(),
+                        'name': in_reply_to.author.mention_tag(),
                         'type': 'Mention'
                     }
                 ]
@@ -578,7 +604,7 @@ def add_reply(post_id: int, comment_id: int):
                     "to": [
                         "https://www.w3.org/ns/activitystreams#Public"
                     ],
-                    "actor": post.community.ap_profile_id,
+                    "actor": post.community.public_url(),
                     "cc": [
                         post.community.ap_followers_url
                     ],
@@ -589,6 +615,17 @@ def add_reply(post_id: int, comment_id: int):
                 for instance in post.community.following_instances():
                     if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
                         send_to_remote_instance(instance.id, post.community.id, announce)
+
+            # send copy of Note to comment author (who won't otherwise get it if no-one else on their instance is subscribed to the community)
+            if not in_reply_to.author.is_local() and in_reply_to.author.ap_domain != reply.community.ap_domain:
+                if not post.community.is_local() or (post.community.is_local and not post.community.has_followers_from_domain(in_reply_to.author.ap_domain)):
+                    success = post_request(in_reply_to.author.ap_inbox_url, create_json, current_user.private_key,
+                                                           current_user.ap_profile_id + '#main-key')
+                    if not success:
+                        # sending to shared inbox is good enough for Mastodon, but Lemmy will reject it the local community has no followers
+                        personal_inbox = in_reply_to.author.public_url() + '/inbox'
+                        post_request(personal_inbox, create_json, current_user.private_key,
+                                                       current_user.ap_profile_id + '#main-key')
 
         if reply.depth <= constants.THREAD_CUTOFF_DEPTH:
             return redirect(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{reply.id}'))
@@ -827,7 +864,7 @@ def post_report(post_id: int):
     if form.validate_on_submit():
         report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
                         type=1, reporter_id=current_user.id, suspect_user_id=post.author.id, suspect_post_id=post.id,
-                        suspect_community_id=post.community.id, in_community_id=post.community.id)
+                        suspect_community_id=post.community.id, in_community_id=post.community.id, source_instance_id=1)
         db.session.add(report)
 
         # Notify moderators
@@ -931,7 +968,8 @@ def post_reply_report(post_id: int, comment_id: int):
     if form.validate_on_submit():
         report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
                         type=2, reporter_id=current_user.id, suspect_post_id=post.id, suspect_community_id=post.community.id,
-                        suspect_user_id=post_reply.author.id, suspect_post_reply_id=post_reply.id)
+                        suspect_user_id=post_reply.author.id, suspect_post_reply_id=post_reply.id, in_community_id=post.community.id,
+                        source_instance_id=1)
         db.session.add(report)
 
         # Notify moderators
@@ -1025,14 +1063,13 @@ def post_reply_edit(post_id: int, comment_id: int):
                 reply_json = {
                     'type': 'Note',
                     'id': post_reply.profile_id(),
-                    'attributedTo': current_user.profile_id(),
+                    'attributedTo': current_user.public_url(),
                     'to': [
-                        'https://www.w3.org/ns/activitystreams#Public',
-                        in_reply_to.author.profile_id()
+                        'https://www.w3.org/ns/activitystreams#Public'
                     ],
                     'cc': [
-                        post.community.profile_id(),
-                        current_user.followers_url()
+                        post.community.public_url(),
+                        in_reply_to.author.public_url()
                     ],
                     'content': post_reply.body_html,
                     'inReplyTo': in_reply_to.profile_id(),
@@ -1045,37 +1082,54 @@ def post_reply_edit(post_id: int, comment_id: int):
                     'published': ap_datetime(post_reply.posted_at),
                     'updated': ap_datetime(post_reply.edited_at),
                     'distinguished': False,
-                    'audience': post.community.profile_id(),
+                    'audience': post.community.public_url(),
                     'contentMap': {
                         'en': post_reply.body_html
                     }
                 }
                 update_json = {
-                    'id': f"https://{current_app.config['SERVER_NAME']}/activities/update/{gibberish(15)}",
+                    '@context': default_context(),
                     'type': 'Update',
-                    'actor': current_user.profile_id(),
-                    'audience': post.community.profile_id(),
-                    'to': [post.community.profile_id(), 'https://www.w3.org/ns/activitystreams#Public'],
-                    'published': ap_datetime(utcnow()),
+                    'actor': current_user.public_url(),
+                    'audience': post.community.public_url(),
+                    'to': [
+                        'https://www.w3.org/ns/activitystreams#Public'
+                    ],
                     'cc': [
-                        current_user.followers_url()
+                        post.community.public_url(),
+                        in_reply_to.author.public_url()
                     ],
                     'object': reply_json,
+                    'id': f"https://{current_app.config['SERVER_NAME']}/activities/update/{gibberish(15)}"
                 }
-
-                if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
+                if in_reply_to.notify_author and in_reply_to.author.ap_id is not None:
+                    reply_json['tag'] = [
+                        {
+                            'href': in_reply_to.author.public_url(),
+                            'name': in_reply_to.author.mention_tag(),
+                            'type': 'Mention'
+                        }
+                    ]
+                    update_json['tag'] = [
+                        {
+                            'href': in_reply_to.author.public_url(),
+                            'name': in_reply_to.author.mention_tag(),
+                            'type': 'Mention'
+                        }
+                    ]
+                if not post.community.is_local():    # this is a remote community, send it to the instance that hosts it
                     success = post_request(post.community.ap_inbox_url, update_json, current_user.private_key,
-                                           current_user.ap_profile_id + '#main-key')
+                                                               current_user.ap_profile_id + '#main-key')
                     if not success:
-                        flash('Failed to send edit to remote server', 'error')
-                else:  # local community - send it to followers on remote instances
+                        flash('Failed to send send edit to remote server', 'error')
+                else:                       # local community - send it to followers on remote instances
                     announce = {
                         "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
                         "type": 'Announce',
                         "to": [
                             "https://www.w3.org/ns/activitystreams#Public"
                         ],
-                        "actor": post.community.ap_profile_id,
+                        "actor": post.community.public_url(),
                         "cc": [
                             post.community.ap_followers_url
                         ],
@@ -1084,9 +1138,20 @@ def post_reply_edit(post_id: int, comment_id: int):
                     }
 
                     for instance in post.community.following_instances():
-                        if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(
-                                instance.domain):
+                        if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
                             send_to_remote_instance(instance.id, post.community.id, announce)
+
+                # send copy of Note to post author (who won't otherwise get it if no-one else on their instance is subscribed to the community)
+                if not in_reply_to.author.is_local() and in_reply_to.author.ap_domain != post_reply.community.ap_domain:
+                    if not post.community.is_local() or (post.community.is_local and not post.community.has_followers_from_domain(in_reply_to.author.ap_domain)):
+                        success = post_request(in_reply_to.author.ap_inbox_url, update_json, current_user.private_key,
+                                                               current_user.ap_profile_id + '#main-key')
+                        if not success:
+                            # sending to shared inbox is good enough for Mastodon, but Lemmy will reject it the local community has no followers
+                            personal_inbox = in_reply_to.author.public_url() + '/inbox'
+                            post_request(personal_inbox, update_json, current_user.private_key,
+                                                           current_user.ap_profile_id + '#main-key')
+
             return redirect(url_for('activitypub.post_ap', post_id=post.id))
         else:
             form.body.data = post_reply.body
