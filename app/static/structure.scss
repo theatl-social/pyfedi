@@ -5,6 +5,8 @@ nav, etc which are used site-wide */
 @import "scss/typography";
 @import "scss/controls";
 
+$min-touch-target: 44px;
+
 html {
   @include breakpoint(phablet) {
     scroll-padding-top: 80px;
@@ -553,6 +555,8 @@ html {
     position: relative;
     cursor: pointer;
     color: rgba(var(--bs-link-color-rgb),var(--bs-link-opacity,1));
+    min-width: $min-touch-target;
+    min-height: $min-touch-target;
 
     &.digits_4 {
       width: 68px;
@@ -625,7 +629,7 @@ html {
 .voting_buttons {
   float: right;
   display: block;
-  width: 55px;
+  min-width: $min-touch-target + 10;
   padding: 0 0 5px 5px;
   line-height: 30px;
   font-size: 14px;
@@ -640,9 +644,13 @@ html {
 
   .upvote_button, .downvote_button {
     position: relative;
-    padding-left: 3px;
+    padding: 0 3px;
+    min-height: $min-touch-target;
+    min-width: $min-touch-target;
     border-radius: 3px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
 
     &.digits_4 {
       width: 68px;

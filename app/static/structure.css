@@ -920,6 +920,8 @@ fieldset legend {
   position: relative;
   cursor: pointer;
   color: rgba(var(--bs-link-color-rgb), var(--bs-link-opacity, 1));
+  min-width: 44px;
+  min-height: 44px;
 }
 .voting_buttons_new .upvote_button.digits_4, .voting_buttons_new .downvote_button.digits_4 {
   width: 68px;
@@ -987,7 +989,7 @@ fieldset legend {
 .voting_buttons {
   float: right;
   display: block;
-  width: 55px;
+  min-width: 54px;
   padding: 0 0 5px 5px;
   line-height: 30px;
   font-size: 14px;
@@ -1002,9 +1004,13 @@ fieldset legend {
 }
 .voting_buttons .upvote_button, .voting_buttons .downvote_button {
   position: relative;
-  padding-left: 3px;
+  padding: 0 3px;
+  min-height: 44px;
+  min-width: 44px;
   border-radius: 3px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
 }
 .voting_buttons .upvote_button.digits_4, .voting_buttons .downvote_button.digits_4 {
   width: 68px;
