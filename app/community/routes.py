@@ -1028,3 +1028,41 @@ def community_moderate_report_resolve(community_id, report_id):
                 return redirect(url_for('community.community_moderate', actor=community.link()))
             else:
                 return render_template('community/community_moderate_report_resolve.html', form=form)
+
+
+@bp.route('/lookup/<community>/<domain>')
+def lookup(community, domain):
+    if domain == current_app.config['SERVER_NAME']:
+        return redirect('/c/' + community)
+
+    exists = Community.query.filter_by(name=community, ap_domain=domain).first()
+    if exists:
+        return redirect('/c/' + community + '@' + domain)
+    else:
+        address = '!' + community + '@' + domain
+        if current_user.is_authenticated:
+            new_community = None
+
+            new_community = search_for_community(address)
+            if new_community is None:
+                if g.site.enable_nsfw:
+                    flash(_('Community not found.'), 'warning')
+                else:
+                    flash(_('Community not found. If you are searching for a nsfw community it is blocked by this instance.'), 'warning')
+            else:
+                if new_community.banned:
+                    flash(_('That community is banned from %(site)s.', site=g.site.name), 'warning')
+
+            return render_template('community/lookup_remote.html',
+                           title=_('Search result for remote community'), new_community=new_community,
+                           subscribed=community_membership(current_user, new_community) >= SUBSCRIPTION_MEMBER)
+        else:
+            # send them back where they came from
+            flash('Searching for remote communities requires login', 'error')
+            referrer = request.headers.get('Referer', None)
+            if referrer is not None:
+                return redirect(referrer)
+            else:
+                return redirect('/')
+
+

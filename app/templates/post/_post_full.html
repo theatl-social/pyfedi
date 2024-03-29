@@ -42,7 +42,7 @@
                 {% endif %}
             </div>
             <div class="post_body mt-2">
-                {{ post.body_html|safe if post.body_html else '' }}
+                {{ post.body_html|community_links|safe if post.body_html else '' }}
             </div>
         </div>
     {% else %}
@@ -99,7 +99,7 @@
                 {% endif %}
             {% endif %}
             <div class="post_body">
-                {{ post.body_html|safe if post.body_html else '' }}
+                {{ post.body_html|community_links|safe if post.body_html else '' }}
             </div>
         </div>
     {% endif %}
