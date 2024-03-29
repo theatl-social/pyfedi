@@ -99,19 +99,6 @@ def create_app(config_class=Config):
     from app.search import bp as search_bp
     app.register_blueprint(search_bp)
 
-    def get_resource_as_string(name, charset='utf-8'):
-        with app.open_resource(name) as f:
-            return f.read().decode(charset)
-
-    app.jinja_env.globals['get_resource_as_string'] = get_resource_as_string
-
-    def community_link_to_href(link: str) -> str:
-        pattern = r"!([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
-        server = r'<a href=https://' + app.config['SERVER_NAME'] + r'/community/lookup/'
-        return re.sub(pattern, server + r'\g<1>/\g<2>>' + r'!\g<1>@\g<2></a>', link)
-
-    app.jinja_env.filters['community_links'] = community_link_to_href
-
     # send error reports via email
     if app.config['MAIL_SERVER'] and app.config['MAIL_ERRORS']:
         auth = None
