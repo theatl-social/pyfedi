@@ -534,8 +534,7 @@ fieldset legend {
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;
-  border-radius: 5px 5px 0 0;
-  /* top-left | top-right | bottom-right | bottom-left */
+  border-radius: 5px 5px 0 0; /* top-left | top-right | bottom-right | bottom-left */
   height: 176px;
   margin-left: -12px;
   margin-right: -12px;
@@ -641,6 +640,9 @@ fieldset legend {
 .post_list .post_teaser .utilities_row a {
   display: inline-block;
   min-width: 44px;
+  min-height: 44px;
+  justify-content: center;
+  align-content: center;
 }
 .post_list .post_teaser .utilities_row .preview_image, .post_list .post_teaser .utilities_row .post_options {
   text-align: center;
@@ -698,6 +700,19 @@ fieldset legend {
 }
 .post_list .post_teaser.blocked .voting_buttons .upvote_button, .post_list .post_teaser.blocked .voting_buttons .downvote_button {
   font-size: 80%;
+}
+
+.post_utilities_bar {
+  display: flex;
+  min-height: 44px;
+}
+.post_utilities_bar .post_options_link {
+  display: flex;
+  width: 44px;
+  height: 44px;
+  padding: 3px;
+  justify-content: center;
+  align-items: center;
 }
 
 .post_list_masonry, .post_list_masonry_wide {
