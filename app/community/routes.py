@@ -932,9 +932,6 @@ def community_moderate(actor):
 
             next_url = url_for('community.community_moderate', page=reports.next_num) if reports.has_next else None
             prev_url = url_for('community.community_moderate', page=reports.prev_num) if reports.has_prev and page != 1 else None
-            subscribers = community_subscribers(community.id)
-            subscriber_user_ids = [subscriber.user_id for subscriber in subscribers]
-            subscriber_list = User.query.filter(User.id.in_(subscriber_user_ids)).all()
 
             return render_template('community/community_moderate.html', title=_('Moderation of %(community)s', community=community.display_name()),
                                    community=community, reports=reports, current='reports',
@@ -956,6 +953,7 @@ def community_moderate_subscribers(actor):
     if community is not None:
         if community.is_moderator() or current_user.is_admin():
 
+            #TODO - not sure if this is the most efficient query and we might want to look in to paging the results
             subscribers = CommunityMember.query.filter(CommunityMember.community_id == community.id).all()
             subscriber_user_ids = [subscriber.user_id for subscriber in subscribers]
             subscriber_list = User.query.filter(User.id.in_(subscriber_user_ids)).all()
