@@ -935,7 +935,7 @@ def community_moderate(actor):
 
             return render_template('community/community_moderate.html', title=_('Moderation of %(community)s', community=community.display_name()),
                                    community=community, reports=reports, current='reports',
-                                   next_url=next_url, prev_url=prev_url, subscribers=subscriber_list,
+                                   next_url=next_url, prev_url=prev_url,
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)]
