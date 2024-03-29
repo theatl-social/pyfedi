@@ -252,6 +252,12 @@ def microblog_content_to_title(html: str) -> str:
     return result
 
 
+def community_link_to_href(link: str) -> str:
+    pattern = r"!([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
+    server = r'<a href=https://' + current_app.config['SERVER_NAME'] + r'/community/lookup/'
+    return re.sub(pattern, server + r'\g<1>/\g<2>>' + r'!\g<1>@\g<2></a>', link)
+
+
 def domain_from_url(url: str, create=True) -> Domain:
     parsed_url = urlparse(url.lower().replace('www.', ''))
     if parsed_url and parsed_url.hostname:

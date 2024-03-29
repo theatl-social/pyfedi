@@ -175,12 +175,12 @@ def user_profile(actor):
     actor = actor.strip()
     if current_user.is_authenticated and current_user.is_admin():
         if '@' in actor:
-            user: User = User.query.filter_by(ap_id=actor.lower()).first()
+            user: User = User.query.filter_by(ap_id=actor).first()
         else:
             user: User = User.query.filter_by(user_name=actor, ap_id=None).first()
     else:
         if '@' in actor:
-            user: User = User.query.filter_by(ap_id=actor.lower(), deleted=False, banned=False).first()
+            user: User = User.query.filter_by(ap_id=actor, deleted=False, banned=False).first()
         else:
             user: User = User.query.filter_by(user_name=actor, deleted=False, ap_id=None).first()
 
