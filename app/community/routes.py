@@ -911,7 +911,6 @@ def community_notification(community_id: int):
 
     return render_template('community/_notification_toggle.html', community=community)
 
-
 @bp.route('/<actor>/moderate', methods=['GET'])
 @login_required
 def community_moderate(actor):
@@ -933,10 +932,13 @@ def community_moderate(actor):
 
             next_url = url_for('community.community_moderate', page=reports.next_num) if reports.has_next else None
             prev_url = url_for('community.community_moderate', page=reports.prev_num) if reports.has_prev and page != 1 else None
+            subscribers = community_subscribers(community.id)
+            subscriber_user_ids = [subscriber.user_id for subscriber in subscribers]
+            subscriber_list = User.query.filter(User.id.in_(subscriber_user_ids)).all()
 
             return render_template('community/community_moderate.html', title=_('Moderation of %(community)s', community=community.display_name()),
                                    community=community, reports=reports, current='reports',
-                                   next_url=next_url, prev_url=prev_url,
+                                   next_url=next_url, prev_url=prev_url, subscribers=subscriber_list,
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)]
@@ -946,18 +948,22 @@ def community_moderate(actor):
     else:
         abort(404)
 
-
-@bp.route('/<actor>/moderate/banned', methods=['GET'])
+@bp.route('/<actor>/moderate/subscribers', methods=['GET'])
 @login_required
-def community_moderate_banned(actor):
+def community_moderate_subscribers(actor):
     community = actor_to_community(actor)
 
     if community is not None:
         if community.is_moderator() or current_user.is_admin():
+
+            subscribers = CommunityMember.query.filter(CommunityMember.community_id == community.id).all()
+            subscriber_user_ids = [subscriber.user_id for subscriber in subscribers]
+            subscriber_list = User.query.filter(User.id.in_(subscriber_user_ids)).all()
+
             banned_people = User.query.join(CommunityBan, CommunityBan.user_id == User.id).filter(CommunityBan.community_id == community.id).all()
-            return render_template('community/community_moderate_banned.html',
-                                   title=_('People banned from of %(community)s', community=community.display_name()),
-                                   community=community, banned_people=banned_people, current='banned',
+
+            return render_template('community/community_moderate_subscribers.html', title=_('Moderation of %(community)s', community=community.display_name()),
+                                   community=community, current='subscribers', subscribers=subscriber_list, banned_people=banned_people,
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)]
@@ -966,7 +972,6 @@ def community_moderate_banned(actor):
             abort(401)
     else:
         abort(404)
-
 
 @bp.route('/community/<int:community_id>/moderate_report/<int:report_id>/escalate', methods=['GET', 'POST'])
 @login_required
