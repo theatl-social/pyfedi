@@ -109,7 +109,7 @@
                                 {% endif %}
                             </div>
                             <div class="comment_body hidable {% if comment['comment'].reports and current_user.is_authenticated and post.community.is_moderator(current_user) %}reported{% endif %}">
-                                {{ comment['comment'].body_html | safe }}
+                                {{ comment['comment'].body_html | community_links | safe }}
                             </div>{% if not comment['comment'].author.indexable %}<!--googleon: all-->{% endif %}
                         </div>
                         <div class="comment_actions hidable">
