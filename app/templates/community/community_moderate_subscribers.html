@@ -1,0 +1,129 @@
+{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
+    {% extends 'themes/' + theme() + '/base.html' %}
+{% else %}
+    {% extends "base.html" %}
+{% endif %} %}
+{% from 'bootstrap/form.html' import render_field %}
+
+{% block app_content %}
+<div class="row">
+    <div class="col-12 col-md-8 position-relative main_pane">
+        <nav aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not none else community.name) }}">{{ (community.title + '@' + community.ap_domain)|shorten }}</a></li>
+            <li class="breadcrumb-item active">{{ _('Moderation') }}</li>
+          </ol>
+        </nav>
+        {% include "community/_community_moderation_nav.html" %}
+        <div class="row">
+            <div class="col-12 col-md-10">
+                <h1 class="mt-2">{{ _('Subscribers') }}</h1>
+            </div>
+            <div class="col-12 col-md-2 text-right">
+                <!-- <a class="btn btn-primary" href="{{ url_for('community.community_add_moderator', community_id=community.id) }}">{{ _('Add moderator') }}</a> -->
+            </div>
+        </div>
+        <p>{{ _('See who is subscribed to %(community)s', community=community.display_name()) }}</p>
+        <h2></h2>
+        {% if subscribers %}
+        <div class="table-responsive-lg">
+            <table class="table table-striped mt-1">
+                <tr>
+                   <th>Name</th>
+                   <th>Local/Remote</th>
+                   <th>Last Seen</th>
+                   <th>IP</th>
+                   <th>Actions</th>
+                </tr>
+                {% for user in subscribers.items %}
+                    <tr>
+                        <td>
+                            <a href="/u/{{ user.link() }}">{{ render_username(user) }}</a>
+                        </td>
+                        <td>{% if user.is_local() %} Local {% else %} <a href="{{ user.ap_profile_id }}">{{ user.ap_domain }}</a>{% endif %}</td>
+                        <td>{{ moment(user.last_seen).fromNow() }} </td>
+                        <td>{{ user.ip_address if user.ip_address }} </td>
+                        <td>
+                            <div class="dropdown">
+                              <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Actions
+                              </button>
+                              <ul class="dropdown-menu">
+                                {% if user.is_local() %}<li><a class="dropdown-item" href="/chat/{{ user.id }}/new">Send Message</a></li>{% endif %}
+                                <li><a class="dropdown-item" href="/u/{{ user.link() }}/report">Report</a></li>
+                                <div class="dropdown-divider"></div>
+                                <li><a class="dropdown-item" href="{{ url_for('community.community_ban_user', community_id=community.id, user_id=user.id) }}" class="confirm_first">{{ _('Ban') }}</a></li>
+                              </ul>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+        <nav aria-label="Pagination" class="mt-4" role="navigation">
+            {% if prev_url %}
+                <a href="{{ prev_url }}" class="btn btn-primary" rel="nofollow">
+                    <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
+                </a>
+            {% endif %}
+            {% if next_url %}
+                <a href="{{ next_url }}" class="btn btn-primary" rel="nofollow">
+                    {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
+                </a>
+            {% endif %}
+        </nav>
+        {% else %}
+            <p>{{ _('This community has no subscribers') }}</p>
+        {% endif %}
+        <h1 class="mt-2">{{ _('Banned People') }}</h1>
+        <p>{{ _('See and manage who is banned from %(community)s', community=community.display_name()) }}</p>
+        {% if banned_people %}
+            <form method="get">
+                <input type="search" name="search" value="{{ search }}">
+                <input type="radio" name="local_remote" value="local" id="local_remote_local" {{ 'checked' if local_remote == 'local' }}><label for="local_remote_local"> Local</label>
+                <input type="radio" name="local_remote" value="remote" id="local_remote_remote" {{ 'checked' if local_remote == 'remote' }}><label for="local_remote_remote"> Remote</label>
+                <input type="submit" name="submit" value="Search" class="btn btn-primary">
+            </form>
+            <div class="table-responsive-lg">
+            <table class="table table-striped mt-1">
+                <tr>
+                   <th>Name</th>
+                   <th>Local/Remote</th>
+                   <th>Reports</th>
+                   <th>IP</th>
+                   <th>Actions</th>
+                </tr>
+                {% for user in banned_people %}
+                    <tr>
+                        <td><a href="/u/{{ user.link() }}">{{ render_username(user) }}</a></td>
+                        <td>{% if user.is_local() %} Local {% else %} <a href="{{ user.ap_profile_id }}">{{ user.ap_domain }}</a>{% endif %}</td>
+                        <td>{{ user.reports if user.reports > 0 }} </td>
+                        <td>{{ user.ip_address if user.ip_address }} </td>
+                        <td>
+                            <div class="dropdown">
+                              <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Actions
+                              </button>
+                              <ul class="dropdown-menu">
+                                {% if user.is_local() %}<li><a class="dropdown-item" href="/chat/{{ user.id }}/new">Send Message</a></li>
+                                <li><a class="dropdown-item" href="/u/{{ user.link() }}">View</a></li>
+                            {% else %}
+                                <li><a class="dropdown-item" href="/u/{{ user.link() }}">View local</a> </li>
+                                <li><a class="dropdown-item"href="{{ user.ap_profile_id }}">View remote</a></li>
+                            {% endif %}
+                                <div class="dropdown-divider"></div>
+                                <li><a class="dropdown-item" href="{{ url_for('community.community_unban_user', community_id=community.id, user_id=user.id) }}" class="confirm_first">{{ _('Unban') }}</a></li>
+                              </ul>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+        {% else %}
+            <p>{{ _('No banned people yet') }}</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
