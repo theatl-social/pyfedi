@@ -88,6 +88,9 @@ def register():
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
     form = RegistrationForm()
+    # Recaptcha is optional
+    if not current_app.config['RECAPTCHA_PUBLIC_KEY'] or not current_app.config['RECAPTCHA_PRIVATE_KEY']:
+        del form.recaptcha
     if g.site.registration_mode != 'RequireApplication':
         form.question.validators = ()
     if form.validate_on_submit():
