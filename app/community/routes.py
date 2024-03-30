@@ -911,6 +911,7 @@ def community_notification(community_id: int):
 
     return render_template('community/_notification_toggle.html', community=community)
 
+
 @bp.route('/<actor>/moderate', methods=['GET'])
 @login_required
 def community_moderate(actor):
@@ -945,6 +946,7 @@ def community_moderate(actor):
     else:
         abort(404)
 
+
 @bp.route('/<actor>/moderate/subscribers', methods=['GET'])
 @login_required
 def community_moderate_subscribers(actor):
@@ -970,6 +972,7 @@ def community_moderate_subscribers(actor):
             abort(401)
     else:
         abort(404)
+
 
 @bp.route('/community/<int:community_id>/moderate_report/<int:report_id>/escalate', methods=['GET', 'POST'])
 @login_required
