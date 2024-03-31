@@ -200,6 +200,15 @@
   content: "\e990";
 }
 
+.fe-layers {
+  position: relative;
+  top: 1px;
+}
+
+.fe-layers::before {
+  content: "\e97f";
+}
+
 .fe-report::before {
   content: "\e967";
 }
