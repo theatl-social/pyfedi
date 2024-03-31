@@ -1081,7 +1081,7 @@ fieldset legend {
 
 .comment {
   clear: both;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   margin-left: 15px;
   padding-top: 8px;
 }
@@ -1148,7 +1148,7 @@ fieldset legend {
   padding: 5px 15px;
 }
 .comment .replies {
-  margin-top: 15px;
+  margin-top: 0px;
   border-left: solid 1px #ddd;
   border-top: solid 1px #ddd;
 }
