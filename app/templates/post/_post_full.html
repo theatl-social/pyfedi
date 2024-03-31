@@ -103,5 +103,7 @@
             </div>
         </div>
     {% endif %}
-    <a href="{{ url_for('post.post_options', post_id=post.id) }}" class="post_options_link" rel="nofollow"><span class="fe fe-options" title="Options"> </span></a>
+    <div class="post_utilities_bar">
+        <a href="{{ url_for('post.post_options', post_id=post.id) }}" class="post_options_link" rel="nofollow"><span class="fe fe-options" title="Options"> </span></a>
+    </div>
 </div>

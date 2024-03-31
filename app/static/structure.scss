@@ -268,7 +268,10 @@ html {
     .utilities_row {
       a {
         display: inline-block;
-        min-width: 44px;
+        min-width: $min-touch-target;
+        min-height: $min-touch-target;
+        justify-content: center;
+        align-content: center;
       }
       .preview_image, .post_options {
         text-align: center;
@@ -336,6 +339,20 @@ html {
         }
       }
     }
+  }
+}
+
+.post_utilities_bar {
+  display: flex;
+  min-height: $min-touch-target;
+
+  .post_options_link {
+    display: flex;
+    width: $min-touch-target;
+    height: $min-touch-target;
+    padding: 3px;
+    justify-content: center;
+    align-items: center;
   }
 }
 
@@ -814,7 +831,7 @@ html {
   }
 
   .replies {
-    margin-top: 0px;
+    margin-top: 0;
     border-left: solid 1px $light-grey;
     border-top: solid 1px $light-grey;
   }
