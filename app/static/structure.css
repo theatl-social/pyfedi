@@ -637,6 +637,32 @@ fieldset legend {
 .post_list .post_teaser .meta_row a, .post_list .post_teaser .main_row a, .post_list .post_teaser .utilities_row a {
   text-decoration: none;
 }
+.post_list .post_teaser .main_row {
+  position: relative;
+}
+.post_list .post_teaser .main_row .author {
+  margin-bottom: 30px;
+  display: inline-block;
+  max-width: 78%;
+}
+.post_list .post_teaser .main_row .post_utilities {
+  position: absolute;
+  bottom: -12px;
+  left: 10px;
+}
+.post_list .post_teaser .main_row .post_utilities a {
+  display: inline-block;
+  min-width: 44px;
+  line-height: 44px;
+  text-align: center;
+}
+.post_list .post_teaser .main_row .post_utilities a:first-child {
+  text-align: left;
+}
+.post_list .post_teaser .main_row .post_options {
+  position: absolute;
+  bottom: -1px;
+}
 .post_list .post_teaser .utilities_row a {
   display: inline-block;
   min-width: 44px;
@@ -935,6 +961,8 @@ fieldset legend {
   position: relative;
   cursor: pointer;
   color: rgba(var(--bs-link-color-rgb), var(--bs-link-opacity, 1));
+  min-width: 44px;
+  min-height: 44px;
 }
 .voting_buttons_new .upvote_button.digits_4, .voting_buttons_new .downvote_button.digits_4 {
   width: 68px;
@@ -1002,7 +1030,7 @@ fieldset legend {
 .voting_buttons {
   float: right;
   display: block;
-  width: 55px;
+  min-width: 54px;
   padding: 0 0 5px 5px;
   line-height: 30px;
   font-size: 14px;
@@ -1017,9 +1045,14 @@ fieldset legend {
 }
 .voting_buttons .upvote_button, .voting_buttons .downvote_button {
   position: relative;
-  padding-left: 3px;
+  padding: 0 3px;
+  min-height: 44px;
+  min-width: 44px;
   border-radius: 3px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .voting_buttons .upvote_button.digits_4, .voting_buttons .downvote_button.digits_4 {
   width: 68px;
@@ -1064,7 +1097,7 @@ fieldset legend {
 
 .comment {
   clear: both;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   margin-left: 15px;
   padding-top: 8px;
 }
@@ -1131,7 +1164,7 @@ fieldset legend {
   padding: 5px 15px;
 }
 .comment .replies {
-  margin-top: 15px;
+  margin-top: 0px;
   border-left: solid 1px #ddd;
   border-top: solid 1px #ddd;
 }

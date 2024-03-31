@@ -3,7 +3,6 @@ document.addEventListener("DOMContentLoaded", function () {
     setupCommunityNameInput();
     setupShowMoreLinks();
     setupConfirmFirst();
-    setupImageExpander();
     setupSubmitOnInputChange();
     setupTimeTracking();
     setupMobileNav();
@@ -107,6 +106,8 @@ function setupAutoResize(element) {
 
 }
 
+
+// disabled for now
 function setupImageExpander() {
     // Get all elements with the class "preview_image"
     var imageLinks = document.querySelectorAll('.preview_image');

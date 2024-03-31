@@ -947,17 +947,30 @@ def community_moderate(actor):
         abort(404)
 
 
-@bp.route('/<actor>/moderate/banned', methods=['GET'])
+@bp.route('/<actor>/moderate/subscribers', methods=['GET'])
 @login_required
-def community_moderate_banned(actor):
+def community_moderate_subscribers(actor):
     community = actor_to_community(actor)
 
     if community is not None:
         if community.is_moderator() or current_user.is_admin():
+
+            page = request.args.get('page', 1, type=int)
+            low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+
+            subscribers = User.query.join(CommunityMember, CommunityMember.user_id == User.id).filter(CommunityMember.community_id == community.id)
+            subscribers = subscribers.filter(CommunityMember.is_banned == False)
+
+            # Pagination
+            subscribers = subscribers.paginate(page=page, per_page=100 if not low_bandwidth else 50, error_out=False)
+            next_url = url_for('community.community_moderate_subscribers', actor=actor, page=subscribers.next_num) if subscribers.has_next else None
+            prev_url = url_for('community.community_moderate_subscribers', actor=actor, page=subscribers.prev_num) if subscribers.has_prev and page != 1 else None
+
             banned_people = User.query.join(CommunityBan, CommunityBan.user_id == User.id).filter(CommunityBan.community_id == community.id).all()
-            return render_template('community/community_moderate_banned.html',
-                                   title=_('People banned from of %(community)s', community=community.display_name()),
-                                   community=community, banned_people=banned_people, current='banned',
+
+            return render_template('community/community_moderate_subscribers.html', title=_('Moderation of %(community)s', community=community.display_name()),
+                                   community=community, current='subscribers', subscribers=subscribers, banned_people=banned_people,
+                                   next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth,
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)]
