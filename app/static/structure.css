@@ -648,13 +648,16 @@ fieldset legend {
 .post_list .post_teaser .main_row .post_utilities {
   position: absolute;
   bottom: -12px;
-  left: 4px;
+  left: 10px;
 }
 .post_list .post_teaser .main_row .post_utilities a {
   display: inline-block;
   min-width: 44px;
   line-height: 44px;
   text-align: center;
+}
+.post_list .post_teaser .main_row .post_utilities a:first-child {
+  text-align: left;
 }
 .post_list .post_teaser .main_row .post_options {
   position: absolute;
