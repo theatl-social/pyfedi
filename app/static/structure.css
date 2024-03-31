@@ -337,7 +337,8 @@ h1 .fe-bell, h1 .fe-no-bell {
   left: 1px;
 }
 .fe-poll:before {
-  content: "\e91b"; /* possibly e985 */
+    content: "\e91b";
+  /* possibly e985 */
 }
 
 .fe-sticky-left::before {
@@ -474,14 +475,18 @@ fieldset legend {
 
 .skip-link {
   position: absolute;
-  top: -40px; /* Adjust as needed to hide the link off-screen */
+  top: -40px;
+  /* Adjust as needed to hide the link off-screen */
   left: 0;
-  background-color: #fff; /* Background color to cover the link for screen readers */
-  z-index: 1060; /* Ensure it's above other content */
+  background-color: #fff;
+  /* Background color to cover the link for screen readers */
+  z-index: 1060;
+  /* Ensure it's above other content */
 }
 
 .skip-link:focus {
-  top: 0; /* Bring the link back into view when it receives focus */
+  top: 0;
+  /* Bring the link back into view when it receives focus */
 }
 
 .form-group {
