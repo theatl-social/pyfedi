@@ -337,7 +337,7 @@ h1 .fe-bell, h1 .fe-no-bell {
   left: 1px;
 }
 .fe-poll:before {
-    content: "\e91b";
+  content: "\e91b";
   /* possibly e985 */
 }
 
