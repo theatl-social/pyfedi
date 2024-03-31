@@ -234,6 +234,32 @@ html {
       }
     }
 
+    .main_row {
+      position: relative;
+
+      .author {
+        margin-bottom: 30px;
+        display: inline-block;
+      }
+
+      .post_utilities {
+        position: absolute;
+        bottom: -12px;
+        left: 4px;
+        a {
+          display: inline-block;
+          min-width: 44px;
+          line-height: 44px;
+          text-align: center;
+        }
+      }
+
+      .post_options {
+        position: absolute;
+        bottom: -1px;
+      }
+    }
+
     .utilities_row {
       a {
         display: inline-block;
@@ -651,6 +677,7 @@ html {
     cursor: pointer;
     display: flex;
     align-items: center;
+    justify-content: center;
 
     &.digits_4 {
       width: 68px;
