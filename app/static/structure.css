@@ -644,6 +644,7 @@ fieldset legend {
 .post_list .post_teaser .main_row .author {
   margin-bottom: 30px;
   display: inline-block;
+  max-width: 78%;
 }
 .post_list .post_teaser .main_row .post_utilities {
   position: absolute;
