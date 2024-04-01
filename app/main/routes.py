@@ -229,6 +229,23 @@ def list_subscribed_communities():
 def donate():
     return render_template('donate.html')
 
+@bp.route('/about')
+def about_page():
+
+    users = User.query.filter_by(ap_id=None, deleted=False, banned=False).all()
+    user_amount = len(users)
+    # Todo, figure out how to filter the user list with the list of user_role user_id == 4
+    #admins = users.filter()
+    # Todo, figure out how to filter the user list with the list of user_role user_id == 4
+    #staff = users.filter()
+    
+    domains_amount = len(Domain.query.filter_by(banned=False).all())
+    community_amount = len(Community.query.all())
+    instance = Instance.query.filter_by(id=1).first()
+    
+
+    return render_template('about.html', user_amount=user_amount, domains_amount=domains_amount, community_amount=community_amount, instance=instance)#, admins=admins)
+
 
 @bp.route('/privacy')
 def privacy():
