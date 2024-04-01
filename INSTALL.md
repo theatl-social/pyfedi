@@ -382,7 +382,8 @@ server {
 }
 ```
 
-**_The above is not a complete configuration_** - you will want to add more settings for SSL, etc.
+**_The above is not a complete configuration_** - you will want to add more settings for SSL, etc. See also
+https://codeberg.org/rimu/pyfedi/issues/136#issuecomment-1726739
 
 ### Cron tasks
 
