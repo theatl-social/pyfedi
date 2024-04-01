@@ -19,7 +19,7 @@ h1, h2 {
 }
 
 :root {
-    --bs-body-bg: black;
+    --bs-body-bg: #1d1f1d;
     --bs-link-color: #ffb700;
     --bs-link-color-rgb: #ffb700;
     --bs-link-hover-color-rgb: #eee;
@@ -29,7 +29,7 @@ h1, h2 {
 }
 
 [data-bs-theme="dark"] {
-    --bs-body-bg: black;
+    --bs-body-bg: #1d1f1d;
     --bs-link-color: #66FF66;
     --bs-link-color-rgb: #66FF66;
     --bs-link-hover-color-rgb: #eee;
@@ -65,15 +65,15 @@ h1, h2 {
 .btn-primary {
     --bs-btn-bg: #ffb700;
     --bs-btn-border-color: #ffb700;
-    --bs-btn-hover-color: black;
+    --bs-btn-hover-color: #1d1f1d;
     --bs-btn-hover-bg: white;
 }
 
 [data-bs-theme="dark"] .btn-primary {
     --bs-btn-bg: #66FF66;
-    --bs-btn-color: black;
+    --bs-btn-color: #1d1f1d;
     --bs-btn-border-color: #66FF66;
-    --bs-btn-hover-color: black;
+    --bs-btn-hover-color: #1d1f1d;
     --bs-btn-hover-bg: white;
 }
 
@@ -98,7 +98,7 @@ h1, h2 {
 }
 
 .list-group-item {
-    --bs-list-group-border-color: #black;
+    --bs-list-group-border-color: ##1d1f1d;
 }
 
 [data-bs-theme="dark"] .post_list .post_teaser {
@@ -115,28 +115,28 @@ h1, h2 {
 
 .form-control {
     color: #ffb700;
-    background-color: black;
+    background-color: #1d1f1d;
     border: solid 1px #ffb700;
     border-radius: 0;
 }
 
 [data-bs-theme="dark"] .form-control {
     color: #66FF66;
-    background-color: black;
+    background-color: #1d1f1d;
     border: solid 1px #66FF66;
     border-radius: 0;
 }
 
 .form-control:focus {
     color: #ffb700;
-    background-color: black;
+    background-color: #1d1f1d;
     border: solid 1px #ffb700;
     box-shadow: 0 0 0 2px #ffb700;
 }
 
 [data-bs-theme="dark"] .form-control:focus {
     color: #66FF66;
-    background-color: black;
+    background-color: #1d1f1d;
     border: solid 1px #66FF66;
     box-shadow: 0 0 0 2px #66FF66;
 }
