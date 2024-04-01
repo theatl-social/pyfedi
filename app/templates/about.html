@@ -1,0 +1,24 @@
+{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
+    {% extends 'themes/' + theme() + '/base.html' %}
+{% else %}
+    {% extends "base.html" %}
+{% endif %} %}
+
+{% block app_content %}
+<div class="row">
+    <div class="col-12 col-md-8 position-relative main_pane">
+        <h1>{{ _('About %(site_name)s', site_name=g.site.name) }}</h1>
+
+        <p> {{g.site.name}} is a <a href="https://join.piefed.social/">pyfedi</a> instance created on {{instance.created_at}}. It is home to <a href="/people">{{user_amount}} users</a>, <a href="/communities/local"> {{community_amount}} communities</a> who discussed <a href="/domains">{{domains_amount}} domains</a>. This instance is administerred and staffed by $PLACEHOLDER_ADMINS and $PLACEHOLDER_STAFF.</p>
+        <h2>Contact</h2>
+        <p>Placeholder Admin email</p>
+        <h2> About Us </h2>
+        <p> {{g.site.description | safe}} </p>
+        <p> {{g.site.sidebar}} </p>
+        {% if g.site.legal_information %}
+        <h2> Legal Information </h2>
+        <p> {{g.site.legal_information}} </p>
+        <p> <a href="/privacy"> Our Privacy Policy </a> </p>
+        {% endif %}
+</div>
+{% endblock %}
