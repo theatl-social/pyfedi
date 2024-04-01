@@ -36,7 +36,7 @@ div.navbar, footer {
 [data-bs-theme="dark"] .side_pane .card {
     --bs-card-bg: #cd8393;
 }
-.post_body a {
+.post_body a, .comment_body a {
     color: white;
 }
 .text-muted {
