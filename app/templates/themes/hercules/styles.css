@@ -98,7 +98,7 @@ h1, h2 {
 }
 
 .list-group-item {
-    --bs-list-group-border-color: ##1d1f1d;
+    --bs-list-group-border-color: #1d1f1d;
 }
 
 [data-bs-theme="dark"] .post_list .post_teaser {
