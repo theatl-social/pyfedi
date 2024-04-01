@@ -234,10 +234,44 @@ html {
       }
     }
 
+    .main_row {
+      position: relative;
+
+      .author {
+        margin-bottom: 30px;
+        display: inline-block;
+        max-width: 78%;
+      }
+
+      .post_utilities {
+        position: absolute;
+        bottom: -12px;
+        left: 10px;
+        a {
+          display: inline-block;
+          min-width: 44px;
+          line-height: 44px;
+          text-align: center;
+
+          &:first-child {
+            text-align: left;
+          }
+        }
+      }
+
+      .post_options {
+        position: absolute;
+        bottom: -1px;
+      }
+    }
+
     .utilities_row {
       a {
         display: inline-block;
-        min-width: 44px;
+        min-width: $min-touch-target;
+        min-height: $min-touch-target;
+        justify-content: center;
+        align-content: center;
       }
       .preview_image, .post_options {
         text-align: center;
@@ -305,6 +339,20 @@ html {
         }
       }
     }
+  }
+}
+
+.post_utilities_bar {
+  display: flex;
+  min-height: $min-touch-target;
+
+  .post_options_link {
+    display: flex;
+    width: $min-touch-target;
+    height: $min-touch-target;
+    padding: 3px;
+    justify-content: center;
+    align-items: center;
   }
 }
 
@@ -651,6 +699,7 @@ html {
     cursor: pointer;
     display: flex;
     align-items: center;
+    justify-content: center;
 
     &.digits_4 {
       width: 68px;
@@ -703,7 +752,7 @@ html {
 
 .comment {
   clear: both;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   margin-left: 15px;
   padding-top: 8px;
 
@@ -782,7 +831,7 @@ html {
   }
 
   .replies {
-    margin-top: 15px;
+    margin-top: 0;
     border-left: solid 1px $light-grey;
     border-top: solid 1px $light-grey;
   }

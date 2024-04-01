@@ -18,7 +18,8 @@ from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportU
 from app.user.utils import purge_user_then_delete
 from app.utils import get_setting, render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     is_image_url, ensure_directory_exists, gibberish, file_get_contents, community_membership, user_filters_home, \
-    user_filters_posts, user_filters_replies, moderating_communities, joined_communities, theme_list, blocked_instances
+    user_filters_posts, user_filters_replies, moderating_communities, joined_communities, theme_list, blocked_instances, \
+    allowlist_html
 from sqlalchemy import desc, or_, text
 import os
 
@@ -66,7 +67,6 @@ def show_profile(user):
 
     # profile info
     canonical = user.ap_public_url if user.ap_public_url else None
-    user.about_html = markdown_to_html(user.about)
     description = shorten_string(markdown_to_text(user.about), 150) if user.about else None
 
     # pagination urls
@@ -107,7 +107,7 @@ def edit_profile(actor):
         if form.password_field.data.strip() != '':
             current_user.set_password(form.password_field.data)
         current_user.about = form.about.data
-        current_user.about_html = markdown_to_html(form.about.data)
+        current_user.about_html = allowlist_html(markdown_to_html(form.about.data))
         current_user.matrix_user_id = form.matrixuserid.data
         current_user.bot = form.bot.data
         profile_file = request.files['profile_file']

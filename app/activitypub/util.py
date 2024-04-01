@@ -1446,7 +1446,9 @@ def update_post_from_activity(post: Post, request_json: dict):
     if 'sensitive' in request_json['object']:
         post.nsfw = request_json['object']['sensitive']
     nsfl_in_title = '[NSFL]' in request_json['object']['name'].upper() or '(NSFL)' in request_json['object']['name'].upper()
-    if 'nsfl' in request_json['object'] or nsfl_in_title:
+    if nsfl_in_title:
+        post.nsfl = True
+    elif 'nsfl' in request_json['object']:
         post.nsfl = request_json['object']['nsfl']
     post.comments_enabled = request_json['object']['commentsEnabled']
     post.edited_at = utcnow()

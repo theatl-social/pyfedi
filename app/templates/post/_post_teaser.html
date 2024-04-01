@@ -61,24 +61,21 @@
                             {% if post.sticky %}<span class="fe fe-sticky-right"></span>{% endif %}
                             </h3>
 
-                            <span class="small">{% if show_post_community %}<strong><a href="/c/{{ post.community.link() }}" aria-label="{{ _('Go to community %(name)s', name=post.community.name) }}">c/{{ post.community.name }}</a></strong>{% endif %}
+                            <span class="author small">{% if show_post_community %}<strong><a href="/c/{{ post.community.link() }}" aria-label="{{ _('Go to community %(name)s', name=post.community.name) }}">c/{{ post.community.name }}</a></strong>{% endif %}
                                 by {{ render_username(post.author) }} {{ moment(post.last_active if sort == 'active' else post.posted_at).fromNow() }}</span>
-
-                        </div>
-
-                    </div>
-                    <div class="row utilities_row">
-                        <div class="col-6">
-                            <a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None, _anchor='post_replies') }}" aria-label="{{ _('View comments') }}"><span class="fe fe-reply"></span> <span aria-label="{{ _('Number of comments:') }}">{{ post.reply_count }}</span></a>
-                            {% if post.type == POST_TYPE_IMAGE %}
-                                {% if post.image_id %}
-                                    <a href="{{ post.image.view_url() }}" rel="nofollow ugc" class="preview_image" aria-label="{{ _('View image') }}" aria-hidden="true"><span class="fe fe-magnify"></span></a>
-                                {% else %}
-                                    <a href="{{ post.url }}" rel="nofollow ugc" class="preview_image" target="_blank" aria-label="{{ _('View image') }}" aria-hidden="true"><span class="fe fe-magnify"></span></a>
+                            <div class="post_utilities">
+                                <a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None, _anchor='post_replies') }}" aria-label="{{ _('View comments') }}"><span class="fe fe-reply"></span> <span aria-label="{{ _('Number of comments:') }}">{{ post.reply_count }}</span></a>
+                                {% if post.type == POST_TYPE_IMAGE %}
+                                    {% if post.image_id %}
+                                        <a href="{{ post.image.view_url() }}" rel="nofollow ugc" class="preview_image" aria-label="{{ _('View image') }}" aria-hidden="true"><span class="fe fe-magnify"></span></a>
+                                    {% else %}
+                                        <a href="{{ post.url }}" rel="nofollow ugc" class="preview_image" target="_blank" aria-label="{{ _('View image') }}" aria-hidden="true"><span class="fe fe-magnify"></span></a>
+                                    {% endif %}
                                 {% endif %}
-                            {% endif %}
+                                <a href="{{ url_for('post.post_options', post_id=post.id) }}" rel="nofollow" class="post_options" aria-label="{{ _('Options') }}"><span class="fe fe-options" title="Options"> </span></a>
+                            </div>
                         </div>
-                        <div class="col-6 text-right"><a href="{{ url_for('post.post_options', post_id=post.id) }}" rel="nofollow" class="post_options" aria-label="{{ _('Options') }}"><span class="fe fe-options" title="Options"> </span></a></div>
+
                     </div>
                 </div>
             </div>
