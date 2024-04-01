@@ -534,7 +534,8 @@ fieldset legend {
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;
-  border-radius: 5px 5px 0 0; /* top-left | top-right | bottom-right | bottom-left */
+  border-radius: 5px 5px 0 0;
+  /* top-left | top-right | bottom-right | bottom-left */
   height: 176px;
   margin-left: -12px;
   margin-right: -12px;
