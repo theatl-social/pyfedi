@@ -25,7 +25,7 @@ div.navbar, footer {
     background-color: #f5a8b8;
 }
 
-[data-bs-theme="dark"] div.navbar, footer {
+[data-bs-theme="dark"] div.navbar, [data-bs-theme="dark"] footer {
     background-color: #cd8393;
 }
 
