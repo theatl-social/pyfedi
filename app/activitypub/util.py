@@ -1432,23 +1432,92 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
 
 
 def update_post_from_activity(post: Post, request_json: dict):
-    post.title = request_json['object']['name']
+    if 'name' not in request_json['object']:    # Microblog posts
+        name = "[Microblog]"
+    else:
+        name = request_json['object']['name']
+
+    nsfl_in_title = '[NSFL]' in name.upper() or '(NSFL)' in name.upper()
+    post.title = name
     if 'source' in request_json['object'] and \
             isinstance(request_json['object']['source'], dict) and \
             request_json['object']['source']['mediaType'] == 'text/markdown':
         post.body = request_json['object']['source']['content']
         post.body_html = markdown_to_html(post.body)
-    elif 'content' in request_json['object']:
+    elif 'content' in request_json['object'] and request_json['object']['content'] is not None: # Kbin
         post.body_html = allowlist_html(request_json['object']['content'])
         post.body = ''
-    if 'attachment' in request_json['object'] and 'href' in request_json['object']['attachment']:
-        post.url = request_json['object']['attachment']['href']
+        if name == "[Microblog]":
+            name += ' ' + microblog_content_to_title(post.body_html)
+            nsfl_in_title = '[NSFL]' in name.upper() or '(NSFL)' in name.upper()
+            post.title = name
+    old_url = post.url
+    old_image_id = post.image_id
+    post.url = ''
+    if 'attachment' in request_json['object'] and len(request_json['object']['attachment']) > 0 and \
+            'type' in request_json['object']['attachment'][0]:
+        if request_json['object']['attachment'][0]['type'] == 'Link':
+            post.url = request_json['object']['attachment'][0]['href']              # Lemmy
+        if request_json['object']['attachment'][0]['type'] == 'Document':
+            post.url = request_json['object']['attachment'][0]['url']               # Mastodon
+    if post.url == '':
+        post.type = POST_TYPE_ARTICLE
+    if (post.url and post.url != old_url) or (post.url == '' and old_url != ''):
+        if post.image_id:
+            old_image = File.query.get(post.image_id)
+            post.image_id = None
+            old_image.delete_from_disk()
+            File.query.filter_by(id=old_image_id).delete()
+            post.image = None
+    if (post.url and post.url != old_url):
+        if is_image_url(post.url):
+            post.type = POST_TYPE_IMAGE
+            if 'image' in request_json['object'] and 'url' in request_json['object']['image']:
+                image = File(source_url=request_json['object']['image']['url'])
+            else:
+                image = File(source_url=post.url)
+            db.session.add(image)
+            post.image = image
+        else:
+            post.type = POST_TYPE_LINK
+            post.url = remove_tracking_from_link(post.url)
+        domain = domain_from_url(post.url)
+        # notify about links to banned websites.
+        already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
+        if domain.notify_mods:
+            for community_member in post.community.moderators():
+                notify = Notification(title='Suspicious content', url=post.ap_id,
+                                          user_id=community_member.user_id,
+                                          author_id=user.id)
+                db.session.add(notify)
+                already_notified.add(community_member.user_id)
+        if domain.notify_admins:
+            for admin in Site.admins():
+                if admin.id not in already_notified:
+                    notify = Notification(title='Suspicious content',
+                                              url=post.ap_id, user_id=admin.id,
+                                              author_id=user.id)
+                    db.session.add(notify)
+        if not domain.banned:
+            domain.post_count += 1
+            post.domain = domain
+        else:
+            post.url = old_url              # don't change if url changed from non-banned domain to banned domain
+    if post is not None:
+        if 'image' in request_json['object'] and post.image is None:
+            image = File(source_url=request_json['object']['image']['url'])
+            db.session.add(image)
+            post.image = image
+            db.session.add(post)
+            db.session.commit()
+
+        if post.image_id and post.image_id != old_image_id:
+            make_image_sizes(post.image_id, 150, 512, 'posts')  # the 512 sized image is for masonry view
     if 'sensitive' in request_json['object']:
         post.nsfw = request_json['object']['sensitive']
-    nsfl_in_title = '[NSFL]' in request_json['object']['name'].upper() or '(NSFL)' in request_json['object']['name'].upper()
     if 'nsfl' in request_json['object'] or nsfl_in_title:
         post.nsfl = request_json['object']['nsfl']
-    post.comments_enabled = request_json['object']['commentsEnabled']
+    post.comments_enabled = request_json['object']['commentsEnabled'] if 'commentsEnabled' in request_json['object'] else True
     post.edited_at = utcnow()
     db.session.commit()
 
