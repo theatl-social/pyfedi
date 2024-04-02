@@ -470,6 +470,20 @@ def add_post(actor):
         if post.image_id and post.image.file_path is None:
             make_image_sizes(post.image_id, 150, 512, 'posts')  # the 512 sized image is for masonry view
 
+        if post.url:
+            other_posts = Post.query.filter(Post.id != post.id, Post.url == post.url,
+                                    Post.posted_at > post.posted_at - timedelta(days=6)).all()
+            for op in other_posts:
+                if op.cross_posts is None:
+                    op.cross_posts = [post.id]
+                else:
+                    op.cross_posts.append(post.id)
+                if post.cross_posts is None:
+                    post.cross_posts = [op.id]
+                else:
+                    post.cross_posts.append(op.id)
+            db.session.commit()
+
         notify_about_post(post)
 
         if not community.local_only:

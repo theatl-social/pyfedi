@@ -10,6 +10,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_babel import _, lazy_gettext as _l
 from sqlalchemy.orm import backref
 from sqlalchemy_utils.types import TSVectorType # https://sqlalchemy-searchable.readthedocs.io/en/latest/installation.html
+from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.ext.mutable import MutableList
 from flask_sqlalchemy import BaseQuery
 from sqlalchemy_searchable import SearchQueryMixin
 from app import db, login, cache, celery
@@ -869,6 +871,7 @@ class Post(db.Model):
     language = db.Column(db.String(10))
     edited_at = db.Column(db.DateTime)
     reports = db.Column(db.Integer, default=0)                          # how many times this post has been reported. Set to -1 to ignore reports
+    cross_posts = db.Column(MutableList.as_mutable(ARRAY(db.Integer)))
 
     ap_id = db.Column(db.String(255), index=True)
     ap_create_id = db.Column(db.String(100))
