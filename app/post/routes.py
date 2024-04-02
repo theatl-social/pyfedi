@@ -1,5 +1,5 @@
 from collections import namedtuple
-from datetime import datetime
+from datetime import datetime, timedelta
 from random import randint
 
 from flask import redirect, url_for, flash, current_app, abort, request, g, make_response
@@ -683,12 +683,36 @@ def post_edit(post_id: int):
             form.nsfw.render_kw = {'disabled': True}
 
         #form.communities.choices = [(c.id, c.display_name()) for c in current_user.communities()]
+        old_url = post.url
 
         if form.validate_on_submit():
             save_post(form, post)
             post.community.last_active = utcnow()
             post.edited_at = utcnow()
             db.session.commit()
+
+            if post.url != old_url:
+                if post.cross_posts is not None:
+                    old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
+                    post.cross_posts.clear()
+                    for ocp in old_cross_posts:
+                        if ocp.cross_posts is not None:
+                            ocp.cross_posts.remove(post.id)
+
+                new_cross_posts = Post.query.filter(Post.id != post.id, Post.url == post.url,
+                                                Post.posted_at > post.edited_at - timedelta(days=6)).all()
+                for ncp in new_cross_posts:
+                    if ncp.cross_posts is None:
+                        ncp.cross_posts = [post.id]
+                    else:
+                        ncp.cross_posts.append(post.id)
+                    if post.cross_posts is None:
+                        post.cross_posts = [ncp.id]
+                    else:
+                        post.cross_posts.append(ncp.id)
+
+                db.session.commit()
+
             post.flush_cache()
             flash(_('Your changes have been saved.'), 'success')
             # federate edit
