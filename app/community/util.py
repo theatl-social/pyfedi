@@ -212,7 +212,7 @@ def save_post(form, post: Post):
         post.body = form.link_body.data
         post.body_html = markdown_to_html(post.body)
         url_changed = post.id is None or form.link_url.data != post.url
-        post.url = remove_tracking_from_link(form.link_url.data)
+        post.url = remove_tracking_from_link(form.link_url.data.strip())
         post.type = POST_TYPE_LINK
         domain = domain_from_url(form.link_url.data)
         domain.post_count += 1

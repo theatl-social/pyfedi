@@ -470,6 +470,7 @@ def add_post(actor):
         if post.image_id and post.image.file_path is None:
             make_image_sizes(post.image_id, 150, 512, 'posts')  # the 512 sized image is for masonry view
 
+        # Update list of cross posts
         if post.url:
             other_posts = Post.query.filter(Post.id != post.id, Post.url == post.url,
                                     Post.posted_at > post.posted_at - timedelta(days=6)).all()
