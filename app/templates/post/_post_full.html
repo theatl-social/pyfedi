@@ -20,10 +20,6 @@
                 {% if post.nsfw %}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif %}
                 {% if post.nsfl %}<span class="warning_badge nsfl" title="{{ _('Potentially emotionally scarring content') }}">nsfl</span>{% endif %}
             </h1>
-            {% if post.cross_posts %}
-                <a href="{{ url_for('post.post_cross_posts', post_id=post.id) }}" aria-label="{{ _('Show cross-posts') }}"><span class="fe fe-layers"></span></a>
-                <span aria-label="{{ _('Number of cross-posts:') }}">{{ len(post.cross_posts) }}</span>
-            {% endif %}
             {% if post.url %}
                 <p><a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="Go to image">{{ post.url|shorten_url }}
                     <span class="fe fe-external"></span></a></p>
@@ -70,10 +66,6 @@
                 {% if post.nsfw %}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif %}
                 {% if post.nsfl %}<span class="warning_badge nsfl" title="{{ _('Potentially emotionally scarring content') }}">nsfl</span>{% endif %}
             </h1>
-            {% if post.cross_posts %}
-                <a href="{{ url_for('post.post_cross_posts', post_id=post.id) }}" aria-label="{{ _('Show cross-posts') }}"><span class="fe fe-layers"></span></a>
-                <span aria-label="{{ _('Number of cross-posts:') }}">{{ len(post.cross_posts) }}</span>
-            {% endif %}
             {% if post.type == POST_TYPE_LINK and post.image_id and not (post.url and 'youtube.com' in post.url) %}
                 <div class="url_thumbnail">
                     <a href="{{ post.url }}" target="_blank" rel="nofollow ugc" class="post_link"><img src="{{ post.image.thumbnail_url() }}" alt="{{ post.image.alt_text if post.image.alt_text else '' }}"
@@ -112,6 +104,13 @@
         </div>
     {% endif %}
     <div class="post_utilities_bar">
+        {% if post.cross_posts %}
+        <div class="cross_post_button">
+            <a href="{{ url_for('post.post_cross_posts', post_id=post.id) }}" aria-label="{{ _('Show cross-posts') }}"
+               title="{{ _('Show cross-posts') }}"><span class="fe fe-layers"></span>
+            <span aria-label="{{ _('Number of cross-posts:') }}">{{ len(post.cross_posts) }}</span></a>
+        </div>
+        {% endif %}
         <a href="{{ url_for('post.post_options', post_id=post.id) }}" class="post_options_link" rel="nofollow"><span class="fe fe-options" title="Options"> </span></a>
     </div>
 </div>

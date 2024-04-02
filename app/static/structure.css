@@ -742,6 +742,16 @@ fieldset legend {
   display: flex;
   min-height: 44px;
 }
+.post_utilities_bar .cross_post_button {
+  display: flex;
+  justify-content: left;
+  align-items: center;
+  width: 44px;
+  height: 44px;
+  line-height: 44px;
+  padding: 3px;
+  padding-left: 0;
+}
 .post_utilities_bar .post_options_link {
   display: flex;
   width: 44px;
