@@ -831,6 +831,13 @@ def post_delete(post_id: int):
     post = Post.query.get_or_404(post_id)
     community = post.community
     if post.user_id == current_user.id or community.is_moderator() or current_user.is_admin():
+        if post.url:
+            if post.cross_posts is not None:
+                old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
+                post.cross_posts.clear()
+                for ocp in old_cross_posts:
+                    if ocp.cross_posts is not None:
+                        ocp.cross_posts.remove(post.id)
         post.delete_dependencies()
         post.flush_cache()
         db.session.delete(post)
