@@ -1272,3 +1272,10 @@ def post_reply_notification(post_reply_id: int):
         post_reply.notify_author = not post_reply.notify_author
         db.session.commit()
     return render_template('post/_reply_notification_toggle.html', comment={'comment': post_reply})
+
+
+@bp.route('/post/<int:post_id>/cross_posts', methods=['GET'])
+def post_cross_posts(post_id: int):
+    post = Post.query.get_or_404(post_id)
+    cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
+    return render_template('post/post_cross_posts.html', post=post, cross_posts=cross_posts)
