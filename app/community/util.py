@@ -106,10 +106,23 @@ def retrieve_mods_and_backfill(community_id: int):
                         db.session.add(activity_log)
                         if user:
                             post = post_json_to_model(activity_log, activity['object']['object'], user, community)
-                            post.ap_create_id = activity['object']['id']
-                            post.ap_announce_id = activity['id']
-                            post.ranking = post_ranking(post.score, post.posted_at)
-                            db.session.commit()
+                            if post:
+                                post.ap_create_id = activity['object']['id']
+                                post.ap_announce_id = activity['id']
+                                post.ranking = post_ranking(post.score, post.posted_at)
+                                if post.url:
+                                    other_posts = Post.query.filter(Post.id != post.id, Post.url == post.url,
+                                            Post.posted_at > post.posted_at - timedelta(days=3), Post.posted_at < post.posted_at + timedelta(days=3)).all()
+                                    for op in other_posts:
+                                        if op.cross_posts is None:
+                                            op.cross_posts = [post.id]
+                                        else:
+                                            op.cross_posts.append(post.id)
+                                        if post.cross_posts is None:
+                                            post.cross_posts = [op.id]
+                                        else:
+                                            post.cross_posts.append(op.id)
+                                db.session.commit()
                         else:
                             activity_log.exception_message = 'Could not find or create actor'
                             db.session.commit()
