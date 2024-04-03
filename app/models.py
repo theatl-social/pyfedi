@@ -405,7 +405,7 @@ class Community(db.Model):
                                      (or_(
                                          CommunityMember.is_owner,
                                          CommunityMember.is_moderator
-                                     ))
+                                     )) & CommunityMember.is_banned == False
                                      ).all()
 
     def is_moderator(self, user=None):
