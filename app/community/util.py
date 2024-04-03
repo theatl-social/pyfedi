@@ -240,7 +240,7 @@ def save_post(form, post: Post):
                     if file_extension.lower() in allowed_extensions and not filename.startswith('/'):
                         file = url_to_thumbnail_file(filename)
                         if file:
-                            file.alt_text = opengraph.get('og:title')
+                            file.alt_text = shorten_string(opengraph.get('og:title'), 295)
                             post.image = file
                             db.session.add(file)
 
