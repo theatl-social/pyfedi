@@ -5,6 +5,7 @@ from random import randint
 from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, g, json
 from flask_login import current_user, login_required
 from flask_babel import _
+from slugify import slugify
 from sqlalchemy import or_, desc, text
 
 from app import db, constants, cache
@@ -47,6 +48,7 @@ def add_local():
         # todo: more intense data validation
         if form.url.data.strip().lower().startswith('/c/'):
             form.url.data = form.url.data[3:]
+        form.url.data = slugify(form.url.data)
         private_key, public_key = RsaKeys.generate_keypair()
         community = Community(title=form.community_name.data, name=form.url.data, description=form.description.data,
                               rules=form.rules.data, nsfw=form.nsfw.data, private_key=private_key,
