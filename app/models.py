@@ -213,9 +213,10 @@ class File(db.Model):
         if self.thumbnail_path and os.path.isfile(self.thumbnail_path):
             os.unlink(self.thumbnail_path)
             purge_from_cache.append(self.thumbnail_path.replace('app/', f"https://{current_app.config['SERVER_NAME']}/"))
-        if self.source_url and not self.source_url.startswith('http') and os.path.isfile(self.source_url):
-            os.unlink(self.source_url)
-            purge_from_cache.append(self.source_url.replace('app/', f"https://{current_app.config['SERVER_NAME']}/"))
+        if self.source_url and self.source_url.startswith('http') and current_app.config['SERVER_NAME'] in self.source_url:
+            # self.source_url is always a url rather than a file path, which makes deleting the file a bit fiddly
+            os.unlink(self.source_url.replace(f"https://{current_app.config['SERVER_NAME']}/", 'app/'))
+            purge_from_cache.append(self.source_url) # otoh it makes purging the cdn cache super easy.
 
         if purge_from_cache:
             flush_cdn_cache(purge_from_cache)
