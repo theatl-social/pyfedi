@@ -117,6 +117,23 @@ def nodeinfo2():
     return jsonify(nodeinfo_data)
 
 
+@bp.route('/api/v1/instance')
+@cache.cached(timeout=600)
+def api_v1_instance():
+    retval = {
+        'title': g.site.name,
+        'uri': current_app.config['SERVER_NAME'],
+        'stats': {
+            "user_count": users_total(),
+            "status_count": local_posts() + local_comments(),
+            "domain_count": 1
+        },
+        'registrations': g.site.registration_mode != 'Closed',
+        'approval_required': g.site.registration_mode == 'RequireApplication'
+    }
+    return jsonify(retval)
+
+
 @bp.route('/api/v1/instance/domain_blocks')
 @cache.cached(timeout=600)
 def domain_blocks():
