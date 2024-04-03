@@ -48,7 +48,7 @@ def add_local():
         # todo: more intense data validation
         if form.url.data.strip().lower().startswith('/c/'):
             form.url.data = form.url.data[3:]
-        form.url.data = slugify(form.url.data)
+        form.url.data = slugify(form.url.data.strip(), separator='_')
         private_key, public_key = RsaKeys.generate_keypair()
         community = Community(title=form.community_name.data, name=form.url.data, description=form.description.data,
                               rules=form.rules.data, nsfw=form.nsfw.data, private_key=private_key,
