@@ -688,9 +688,8 @@ def community_delete(community_id: int):
             if community.is_local():
                 community.banned = True
                 # todo: federate deletion out to all instances. At end of federation process, delete_dependencies() and delete community
-            else:
-                community.delete_dependencies()
-                db.session.delete(community)
+            community.delete_dependencies()
+            db.session.delete(community)
             db.session.commit()
             flash(_('Community deleted'))
             return redirect('/communities')
