@@ -132,6 +132,12 @@ div.navbar {
   }
 }
 
+.side_pane {
+  img {
+    max-width: 100%;
+  }
+}
+
 [data-bs-theme=dark] .main_pane {
   border-color: $super-dark-grey;
 }
