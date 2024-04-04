@@ -5,6 +5,8 @@ import os
 from datetime import timedelta
 from random import randint
 from typing import Union, Tuple
+
+import redis
 from flask import current_app, request, g, url_for
 from flask_babel import _
 from sqlalchemy import text, func
@@ -17,7 +19,7 @@ import requests
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from app.constants import *
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 from PIL import Image, ImageOps
 from io import BytesIO
 import pytesseract
@@ -1008,11 +1010,6 @@ def is_activitypub_request():
     return 'application/ld+json' in request.headers.get('Accept', '') or 'application/activity+json' in request.headers.get('Accept', '')
 
 
-def activity_already_ingested(ap_id):
-    return db.session.execute(text('SELECT id FROM "activity_pub_log" WHERE activity_id = :activity_id'),
-                              {'activity_id': ap_id}).scalar()
-
-
 def downvote_post(post, user):
     user.last_seen = utcnow()
     user.recalculate_attitude()
@@ -1397,6 +1394,21 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
         if post.image_id:
             make_image_sizes(post.image_id, 150, 512, 'posts')  # the 512 sized image is for masonry view
 
+        # Update list of cross posts
+        if post.url:
+            other_posts = Post.query.filter(Post.id != post.id, Post.url == post.url,
+                                    Post.posted_at > post.posted_at - timedelta(days=6)).all()
+            for op in other_posts:
+                if op.cross_posts is None:
+                    op.cross_posts = [post.id]
+                else:
+                    op.cross_posts.append(post.id)
+                if post.cross_posts is None:
+                    post.cross_posts = [op.id]
+                else:
+                    post.cross_posts.append(op.id)
+            db.session.commit()
+
         notify_about_post(post)
 
         if user.reputation > 100:
@@ -1432,25 +1444,115 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
 
 
 def update_post_from_activity(post: Post, request_json: dict):
-    post.title = request_json['object']['name']
+    if 'name' not in request_json['object']:    # Microblog posts
+        name = "[Microblog]"
+    else:
+        name = request_json['object']['name']
+
+    nsfl_in_title = '[NSFL]' in name.upper() or '(NSFL)' in name.upper()
+    post.title = name
     if 'source' in request_json['object'] and \
             isinstance(request_json['object']['source'], dict) and \
             request_json['object']['source']['mediaType'] == 'text/markdown':
         post.body = request_json['object']['source']['content']
         post.body_html = markdown_to_html(post.body)
-    elif 'content' in request_json['object']:
+    elif 'content' in request_json['object'] and request_json['object']['content'] is not None: # Kbin
         post.body_html = allowlist_html(request_json['object']['content'])
         post.body = ''
-    if 'attachment' in request_json['object'] and 'href' in request_json['object']['attachment']:
-        post.url = request_json['object']['attachment']['href']
+        if name == "[Microblog]":
+            name += ' ' + microblog_content_to_title(post.body_html)
+            nsfl_in_title = '[NSFL]' in name.upper() or '(NSFL)' in name.upper()
+            post.title = name
+    old_url = post.url
+    old_image_id = post.image_id
+    post.url = ''
+    if 'attachment' in request_json['object'] and len(request_json['object']['attachment']) > 0 and \
+            'type' in request_json['object']['attachment'][0]:
+        if request_json['object']['attachment'][0]['type'] == 'Link':
+            post.url = request_json['object']['attachment'][0]['href']              # Lemmy
+        if request_json['object']['attachment'][0]['type'] == 'Document':
+            post.url = request_json['object']['attachment'][0]['url']               # Mastodon
+    if post.url == '':
+        post.type = POST_TYPE_ARTICLE
+    if (post.url and post.url != old_url) or (post.url == '' and old_url != ''):
+        if post.image_id:
+            old_image = File.query.get(post.image_id)
+            post.image_id = None
+            old_image.delete_from_disk()
+            File.query.filter_by(id=old_image_id).delete()
+            post.image = None
+    if (post.url and post.url != old_url):
+        if is_image_url(post.url):
+            post.type = POST_TYPE_IMAGE
+            if 'image' in request_json['object'] and 'url' in request_json['object']['image']:
+                image = File(source_url=request_json['object']['image']['url'])
+            else:
+                image = File(source_url=post.url)
+            db.session.add(image)
+            post.image = image
+        else:
+            post.type = POST_TYPE_LINK
+            post.url = remove_tracking_from_link(post.url)
+        domain = domain_from_url(post.url)
+        # notify about links to banned websites.
+        already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
+        if domain.notify_mods:
+            for community_member in post.community.moderators():
+                notify = Notification(title='Suspicious content', url=post.ap_id,
+                                          user_id=community_member.user_id,
+                                          author_id=1)
+                db.session.add(notify)
+                already_notified.add(community_member.user_id)
+        if domain.notify_admins:
+            for admin in Site.admins():
+                if admin.id not in already_notified:
+                    notify = Notification(title='Suspicious content',
+                                              url=post.ap_id, user_id=admin.id,
+                                              author_id=1)
+                    db.session.add(notify)
+        if not domain.banned:
+            domain.post_count += 1
+            post.domain = domain
+        else:
+            post.url = old_url              # don't change if url changed from non-banned domain to banned domain
+
+        new_cross_posts = Post.query.filter(Post.id != post.id, Post.url == post.url,
+                                    Post.posted_at > utcnow() - timedelta(days=6)).all()
+        for ncp in new_cross_posts:
+            if ncp.cross_posts is None:
+                ncp.cross_posts = [post.id]
+            else:
+                ncp.cross_posts.append(post.id)
+            if post.cross_posts is None:
+                post.cross_posts = [ncp.id]
+            else:
+                post.cross_posts.append(ncp.id)
+
+    if post.url != old_url:
+        if post.cross_posts is not None:
+            old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
+            post.cross_posts.clear()
+            for ocp in old_cross_posts:
+                if ocp.cross_posts is not None:
+                    ocp.cross_posts.remove(post.id)
+
+    if post is not None:
+        if 'image' in request_json['object'] and post.image is None:
+            image = File(source_url=request_json['object']['image']['url'])
+            db.session.add(image)
+            post.image = image
+            db.session.add(post)
+            db.session.commit()
+
+        if post.image_id and post.image_id != old_image_id:
+            make_image_sizes(post.image_id, 150, 512, 'posts')  # the 512 sized image is for masonry view
     if 'sensitive' in request_json['object']:
         post.nsfw = request_json['object']['sensitive']
-    nsfl_in_title = '[NSFL]' in request_json['object']['name'].upper() or '(NSFL)' in request_json['object']['name'].upper()
     if nsfl_in_title:
         post.nsfl = True
     elif 'nsfl' in request_json['object']:
         post.nsfl = request_json['object']['nsfl']
-    post.comments_enabled = request_json['object']['commentsEnabled']
+    post.comments_enabled = request_json['object']['commentsEnabled'] if 'commentsEnabled' in request_json['object'] else True
     post.edited_at = utcnow()
     db.session.commit()
 
@@ -1519,6 +1621,57 @@ def undo_vote(activity_log, comment, post, target_ap_id, user):
             activity_log.exception_message = 'Activity about local content which is already present'
             activity_log.result = 'ignored'
     return post
+
+
+def get_redis_connection() -> redis.Redis:
+    connection_string = current_app.config['CACHE_REDIS_URL']
+    if connection_string.startswith('unix://'):
+        unix_socket_path, db, password = parse_redis_pipe_string(connection_string)
+        return redis.Redis(unix_socket_path=unix_socket_path, db=db, password=password)
+    else:
+        host, port, db, password = parse_redis_socket_string(connection_string)
+        return redis.Redis(host=host, port=port, db=db, password=password)
+
+
+def parse_redis_pipe_string(connection_string: str):
+    if connection_string.startswith('unix://'):
+        # Parse the connection string
+        parsed_url = urlparse(connection_string)
+
+        # Extract the path (Unix socket path)
+        unix_socket_path = parsed_url.path
+
+        # Extract query parameters (if any)
+        query_params = parse_qs(parsed_url.query)
+
+        # Extract database number (default to 0 if not provided)
+        db = int(query_params.get('db', [0])[0])
+
+        # Extract password (if provided)
+        password = query_params.get('password', [None])[0]
+
+        return unix_socket_path, db, password
+
+
+def parse_redis_socket_string(connection_string: str):
+    # Parse the connection string
+    parsed_url = urlparse(connection_string)
+
+    # Extract username (if provided) and password
+    if parsed_url.username:
+        username = parsed_url.username
+    else:
+        username = None
+    password = parsed_url.password
+
+    # Extract host and port
+    host = parsed_url.hostname
+    port = parsed_url.port
+
+    # Extract database number (default to 0 if not provided)
+    db = int(parsed_url.path.lstrip('/') or 0)
+
+    return host, port, db, password
 
 
 def lemmy_site_data():

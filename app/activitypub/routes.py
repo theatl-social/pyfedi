@@ -1,3 +1,5 @@
+from urllib.parse import urlparse, parse_qs
+
 from flask_login import current_user
 
 from app import db, constants, cache, celery
@@ -16,14 +18,25 @@ from app.models import User, Community, CommunityJoinRequest, CommunityMember, C
 from app.activitypub.util import public_key, users_total, active_half_year, active_month, local_posts, local_comments, \
     post_to_activity, find_actor_or_create, default_context, instance_blocked, find_reply_parent, find_liked_object, \
     lemmy_site_data, instance_weight, is_activitypub_request, downvote_post_reply, downvote_post, upvote_post_reply, \
-    upvote_post, activity_already_ingested, delete_post_or_comment, community_members, \
+    upvote_post, delete_post_or_comment, community_members, \
     user_removed_from_remote_server, create_post, create_post_reply, update_post_reply_from_activity, \
-    update_post_from_activity, undo_vote, undo_downvote, post_to_page
+    update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection
 from app.utils import gibberish, get_setting, is_image_url, allowlist_html, render_template, \
     domain_from_url, markdown_to_html, community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
     community_moderators
 import werkzeug.exceptions
+
+
+@bp.route('/testredis')
+def testredis_get():
+    redis_client = get_redis_connection()
+    redis_client.set("cowbell", "1", ex=600)
+    x = redis_client.get('cowbell')
+    if x is not None:
+        return "Redis: OK"
+    else:
+        return "Redis: FAIL"
 
 
 @bp.route('/.well-known/webfinger')
@@ -115,6 +128,23 @@ def nodeinfo2():
                 "openRegistrations": g.site.registration_mode == 'Open'
             }
     return jsonify(nodeinfo_data)
+
+
+@bp.route('/api/v1/instance')
+@cache.cached(timeout=600)
+def api_v1_instance():
+    retval = {
+        'title': g.site.name,
+        'uri': current_app.config['SERVER_NAME'],
+        'stats': {
+            "user_count": users_total(),
+            "status_count": local_posts() + local_comments(),
+            "domain_count": 1
+        },
+        'registrations': g.site.registration_mode != 'Closed',
+        'approval_required': g.site.registration_mode == 'RequireApplication'
+    }
+    return jsonify(retval)
 
 
 @bp.route('/api/v1/instance/domain_blocks')
@@ -333,13 +363,15 @@ def shared_inbox():
             return ''
 
         if 'id' in request_json:
-            if activity_already_ingested(request_json['id']):   # Lemmy has an extremely short POST timeout and tends to retry unnecessarily. Ignore their retries.
+            redis_client = get_redis_connection()
+            if redis_client.get(request_json['id']) is not None:   # Lemmy has an extremely short POST timeout and tends to retry unnecessarily. Ignore their retries.
                 activity_log.result = 'ignored'
                 activity_log.exception_message = 'Unnecessary retry attempt'
                 db.session.add(activity_log)
                 db.session.commit()
                 return ''
 
+            redis_client.set(request_json['id'], 1, ex=90)  # Save the activity ID into redis, to avoid duplicate activities that Lemmy sometimes sends
             activity_log.activity_id = request_json['id']
             if g.site.log_activitypub_json:
                 activity_log.activity_json = json.dumps(request_json)
@@ -629,6 +661,13 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             activity_log.result = 'failure'
                             activity_log.exception_message = 'dict instead of string ' + str(to_be_deleted_ap_id)
                         else:
+                            post = Post.query.filter_by(ap_id=to_be_deleted_ap_id).first()
+                            if post and post.url and post.cross_posts is not None:
+                                old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
+                                post.cross_posts.clear()
+                                for ocp in old_cross_posts:
+                                    if ocp.cross_posts is not None:
+                                        ocp.cross_posts.remove(post.id)
                             delete_post_or_comment(user_ap_id, community_ap_id, to_be_deleted_ap_id)
                             activity_log.result = 'success'
                     elif request_json['object']['type'] == 'Page': # Editing a post
@@ -858,6 +897,12 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                     post = Post.query.filter_by(ap_id=ap_id).first()
                     # Delete post
                     if post:
+                        if post.url and post.cross_posts is not None:
+                            old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
+                            post.cross_posts.clear()
+                            for ocp in old_cross_posts:
+                                if ocp.cross_posts is not None:
+                                    ocp.cross_posts.remove(post.id)
                         post.delete_dependencies()
                         post.community.post_count -= 1
                         db.session.delete(post)
