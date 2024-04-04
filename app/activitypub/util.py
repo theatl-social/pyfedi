@@ -5,6 +5,8 @@ import os
 from datetime import timedelta
 from random import randint
 from typing import Union, Tuple
+
+import redis
 from flask import current_app, request, g, url_for
 from flask_babel import _
 from sqlalchemy import text, func
@@ -17,7 +19,7 @@ import requests
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from app.constants import *
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 from PIL import Image, ImageOps
 from io import BytesIO
 import pytesseract
@@ -1008,11 +1010,6 @@ def is_activitypub_request():
     return 'application/ld+json' in request.headers.get('Accept', '') or 'application/activity+json' in request.headers.get('Accept', '')
 
 
-def activity_already_ingested(ap_id):
-    return db.session.execute(text('SELECT id FROM "activity_pub_log" WHERE activity_id = :activity_id'),
-                              {'activity_id': ap_id}).scalar()
-
-
 def downvote_post(post, user):
     user.last_seen = utcnow()
     user.recalculate_attitude()
@@ -1624,6 +1621,57 @@ def undo_vote(activity_log, comment, post, target_ap_id, user):
             activity_log.exception_message = 'Activity about local content which is already present'
             activity_log.result = 'ignored'
     return post
+
+
+def get_redis_connection() -> redis.Redis:
+    connection_string = current_app.config['CACHE_REDIS_URL']
+    if connection_string.startswith('unix://'):
+        unix_socket_path, db, password = parse_redis_pipe_string(connection_string)
+        return redis.Redis(unix_socket_path=unix_socket_path, db=db, password=password)
+    else:
+        host, port, db, password = parse_redis_socket_string(connection_string)
+        return redis.Redis(host=host, port=port, db=db, password=password)
+
+
+def parse_redis_pipe_string(connection_string: str):
+    if connection_string.startswith('unix://'):
+        # Parse the connection string
+        parsed_url = urlparse(connection_string)
+
+        # Extract the path (Unix socket path)
+        unix_socket_path = parsed_url.path
+
+        # Extract query parameters (if any)
+        query_params = parse_qs(parsed_url.query)
+
+        # Extract database number (default to 0 if not provided)
+        db = int(query_params.get('db', [0])[0])
+
+        # Extract password (if provided)
+        password = query_params.get('password', [None])[0]
+
+        return unix_socket_path, db, password
+
+
+def parse_redis_socket_string(connection_string: str):
+    # Parse the connection string
+    parsed_url = urlparse(connection_string)
+
+    # Extract username (if provided) and password
+    if parsed_url.username:
+        username = parsed_url.username
+    else:
+        username = None
+    password = parsed_url.password
+
+    # Extract host and port
+    host = parsed_url.hostname
+    port = parsed_url.port
+
+    # Extract database number (default to 0 if not provided)
+    db = int(parsed_url.path.lstrip('/') or 0)
+
+    return host, port, db, password
 
 
 def lemmy_site_data():
