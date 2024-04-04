@@ -33,7 +33,7 @@ def testredis_get():
     redis_client = get_redis_connection()
     redis_client.set("cowbell", "1", ex=600)
     x = redis_client.get('cowbell')
-    if x == '1':
+    if x is not None:
         return "Redis: OK"
     else:
         return "Redis: FAIL"
