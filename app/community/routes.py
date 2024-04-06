@@ -19,7 +19,8 @@ from app.community.util import search_for_community, community_url_exists, actor
     opengraph_parse, url_to_thumbnail_file, save_post, save_icon_file, save_banner_file, send_to_remote_instance, \
     delete_post_from_community, delete_post_reply_from_community
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
-    SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED
+    SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
+    REPORT_STATE_DISCARDED
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, \
     File, PostVote, utcnow, Report, Notification, InstanceBlock, ActivityPubLog, Topic, Conversation, PostReply
@@ -1082,6 +1083,44 @@ def community_moderate_report_resolve(community_id, report_id):
                 return redirect(url_for('community.community_moderate', actor=community.link()))
             else:
                 return render_template('community/community_moderate_report_resolve.html', form=form)
+
+
+@bp.route('/community/<int:community_id>/moderate_report/<int:report_id>/ignore', methods=['GET', 'POST'])
+@login_required
+def community_moderate_report_ignore(community_id, report_id):
+    community = Community.query.get_or_404(community_id)
+    if community.is_moderator() or current_user.is_admin():
+        report = Report.query.filter_by(in_community_id=community.id, id=report_id).first()
+        if report:
+            # Set the 'reports' counter on the comment, post or user to -1 to ignore all future reports
+            if report.suspect_post_reply_id:
+                post_reply = PostReply.query.get(report.suspect_post_reply_id)
+                post_reply.reports = -1
+            elif report.suspect_post_id:
+                post = Post.query.get(report.suspect_post_id)
+                post.reports = -1
+            elif report.suspect_user_id:
+                user = User.query.get(report.suspect_user_id)
+                user.reports = -1
+            db.session.commit()
+
+            # todo: append to mod log
+
+            if report.suspect_post_reply_id:
+                db.session.execute(text('UPDATE "report" SET status = :new_status WHERE suspect_post_reply_id = :suspect_post_reply_id'),
+                                   {'new_status': REPORT_STATE_DISCARDED,
+                                    'suspect_post_reply_id': report.suspect_post_reply_id})
+                # todo: remove unread notifications about these reports
+            elif report.suspect_post_id:
+                db.session.execute(text('UPDATE "report" SET status = :new_status WHERE suspect_post_id = :suspect_post_id'),
+                                   {'new_status': REPORT_STATE_DISCARDED,
+                                    'suspect_post_id': report.suspect_post_id})
+                # todo: remove unread notifications about these reports
+            db.session.commit()
+            flash(_('Report ignored.'))
+            return redirect(url_for('community.community_moderate', actor=community.link()))
+        else:
+            abort(404)
 
 
 @bp.route('/lookup/<community>/<domain>')

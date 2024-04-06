@@ -888,7 +888,12 @@ def post_delete(post_id: int):
 def post_report(post_id: int):
     post = Post.query.get_or_404(post_id)
     form = ReportPostForm()
+    if post.reports == -1:  # When a mod decides to ignore future reports, post.reports is set to -1
+        flash(_('Moderators have already assessed reports regarding this post, no further reports are necessary.'), 'warning')
     if form.validate_on_submit():
+        if post.reports == -1:
+            flash(_('Post has already been reported, thank you!'))
+            return redirect(post.community.local_url())
         report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
                         type=1, reporter_id=current_user.id, suspect_user_id=post.author.id, suspect_post_id=post.id,
                         suspect_community_id=post.community.id, in_community_id=post.community.id, source_instance_id=1)
@@ -992,7 +997,16 @@ def post_reply_report(post_id: int, comment_id: int):
     post = Post.query.get_or_404(post_id)
     post_reply = PostReply.query.get_or_404(comment_id)
     form = ReportPostForm()
+
+    if post_reply.reports == -1:  # When a mod decides to ignore future reports, post_reply.reports is set to -1
+        flash(_('Moderators have already assessed reports regarding this comment, no further reports are necessary.'), 'warning')
+
     if form.validate_on_submit():
+
+        if post_reply.reports == -1:
+            flash(_('Comment has already been reported, thank you!'))
+            return redirect(post.community.local_url())
+
         report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
                         type=2, reporter_id=current_user.id, suspect_post_id=post.id, suspect_community_id=post.community.id,
                         suspect_user_id=post_reply.author.id, suspect_post_reply_id=post_reply.id, in_community_id=post.community.id,
