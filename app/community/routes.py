@@ -1051,7 +1051,19 @@ def community_moderate_report_resolve(community_id, report_id):
             form = ResolveReportForm()
             if form.validate_on_submit():
                 report.status = REPORT_STATE_RESOLVED
+
+                # Reset the 'reports' counter on the comment, post or user
+                if report.suspect_post_reply_id:
+                    post_reply = PostReply.query.get(report.suspect_post_reply_id)
+                    post_reply.reports = 0
+                elif report.suspect_post_id:
+                    post = Post.query.get(report.suspect_post_id)
+                    post.reports = 0
+                elif report.suspect_user_id:
+                    user = User.query.get(report.suspect_user_id)
+                    user.reports = 0
                 db.session.commit()
+
                 # todo: remove unread notifications about this report
                 # todo: append to mod log
                 if form.also_resolve_others.data:
