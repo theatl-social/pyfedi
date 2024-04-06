@@ -18,7 +18,7 @@ from app.post.util import post_replies, get_comment_branch, post_reply_count
 from app.constants import SUBSCRIPTION_MEMBER, POST_TYPE_LINK, POST_TYPE_IMAGE
 from app.models import Post, PostReply, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, InstanceBlock, Report, Site, Community, \
-    Topic, User
+    Topic, User, Instance
 from app.post import bp
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
@@ -916,9 +916,29 @@ def post_report(post_id: int):
                 admin.unread_notifications += 1
         db.session.commit()
 
-        # todo: federate report to originating instance
+        # federate report to community instance
         if not post.community.is_local() and form.report_remote.data:
-            ...
+            summary = form.reasons_to_string(form.reasons.data)
+            if form.description.data:
+                summary += ' - ' + form.description.data
+            report_json = {
+              "actor": current_user.profile_id(),
+              "audience": post.community.profile_id(),
+              "content": None,
+              "id": f"https://{current_app.config['SERVER_NAME']}/activities/flag/{gibberish(15)}",
+              "object": post.ap_id,
+              "summary": summary,
+              "to": [
+                post.community.profile_id()
+              ],
+              "type": "Flag"
+            }
+            instance = Instance.query.get(post.community.instance_id)
+            if post.community.ap_inbox_url and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
+                success = post_request(post.community.ap_inbox_url, report_json, current_user.private_key,
+                                       current_user.ap_profile_id + '#main-key')
+                if not success:
+                    flash('Failed to send report to remote server', 'error')
 
         flash(_('Post has been reported, thank you!'))
         return redirect(post.community.local_url())
@@ -1030,9 +1050,30 @@ def post_reply_report(post_id: int, comment_id: int):
                 admin.unread_notifications += 1
         db.session.commit()
 
-        # todo: federate report to originating instance
+        # federate report to originating instance
         if not post.community.is_local() and form.report_remote.data:
-            ...
+            summary = form.reasons_to_string(form.reasons.data)
+            if form.description.data:
+                summary += ' - ' + form.description.data
+            report_json = {
+                "actor": current_user.profile_id(),
+                "audience": post.community.profile_id(),
+                "content": None,
+                "id": f"https://{current_app.config['SERVER_NAME']}/activities/flag/{gibberish(15)}",
+                "object": post_reply.ap_id,
+                "summary": summary,
+                "to": [
+                    post.community.profile_id()
+                ],
+                "type": "Flag"
+            }
+            instance = Instance.query.get(post.community.instance_id)
+            if post.community.ap_inbox_url and not current_user.has_blocked_instance(
+                    instance.id) and not instance_banned(instance.domain):
+                success = post_request(post.community.ap_inbox_url, report_json, current_user.private_key,
+                                       current_user.ap_profile_id + '#main-key')
+                if not success:
+                    flash('Failed to send report to remote server', 'error')
 
         flash(_('Comment has been reported, thank you!'))
         return redirect(post.community.local_url())
