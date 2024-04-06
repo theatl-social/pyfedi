@@ -211,7 +211,9 @@ def allowlist_html(html: str) -> str:
             if tag.name == 'table':
                 tag.attrs['class'] = 'table'
 
-    return str(soup)
+    # avoid returning empty anchors
+    re_empty_anchor = re.compile(r'<a href="(.*?)" rel="nofollow ugc" target="_blank"><\/a>')
+    return re_empty_anchor.sub(r'<a href="\1" rel="nofollow ugc" target="_blank">\1</a>', str(soup))
 
 
 def markdown_to_html(markdown_text) -> str:
