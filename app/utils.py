@@ -219,7 +219,9 @@ def allowlist_html(html: str) -> str:
 def markdown_to_html(markdown_text) -> str:
     if markdown_text:
         raw_html = markdown2.markdown(markdown_text, safe_mode=True, extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True})
-        # todo: in raw_html, replace lemmy spoiler tokens with appropriate html tags instead.
+        # replace lemmy spoiler tokens with appropriate html tags instead. (until possibly added as extra to markdown2)
+        re_spoiler = re.compile(r':{3} spoiler\s+?(\S.+?\n)(.+?)\n:{3}', re.S)
+        raw_html = re_spoiler.sub(r'<details><summary>\1</summary>\2</details>', raw_html)
         return allowlist_html(raw_html)
     else:
         return ''
