@@ -4,6 +4,7 @@ from time import sleep
 from flask import request, flash, json, url_for, current_app, redirect, g
 from flask_login import login_required, current_user
 from flask_babel import _
+from slugify import slugify
 from sqlalchemy import text, desc, or_
 
 from app import db, celery, cache
@@ -357,7 +358,7 @@ def admin_topic_add():
     form = EditTopicForm()
     form.parent_id.choices = topics_for_form(0)
     if form.validate_on_submit():
-        topic = Topic(name=form.name.data, machine_name=form.machine_name.data, num_communities=0)
+        topic = Topic(name=form.name.data, machine_name=slugify(form.machine_name.data.strip()), num_communities=0)
         if form.parent_id.data:
             topic.parent_id = form.parent_id.data
         else:
