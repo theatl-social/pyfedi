@@ -1066,6 +1066,9 @@ def process_delete_request(request_json, activitypublog_id, ip_address):
 
 
 def announce_activity_to_followers(community, creator, activity):
+    # remove context from what will be inner object
+    del activity["@context"]
+
     announce_activity = {
         '@context': default_context(),
         "actor": community.profile_id(),
