@@ -14,13 +14,14 @@ from app.activitypub.util import default_context, instance_allowed, instance_blo
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
-    topic_tree, topics_for_form
+    topics_for_form
 from app.community.util import save_icon_file, save_banner_file
 from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
-    moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers
+    moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
+    topic_tree
 from app.admin import bp
 
 

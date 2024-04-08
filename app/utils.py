@@ -28,7 +28,7 @@ import re
 
 from app.email import send_welcome_email
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, ActivityPubLog, IpBan, \
-    Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan
+    Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic
 
 
 # Flask's render_template function, with support for themes added
@@ -677,6 +677,21 @@ def finalize_user_setup(user, application_required=False):
     user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}/inbox"
     db.session.commit()
     send_welcome_email(user, application_required)
+
+
+# topics, in a tree
+def topic_tree() -> List:
+    topics = Topic.query.order_by(Topic.name)
+
+    topics_dict = {topic.id: {'topic': topic, 'children': []} for topic in topics.all()}
+
+    for topic in topics:
+        if topic.parent_id is not None:
+            parent_comment = topics_dict.get(topic.parent_id)
+            if parent_comment:
+                parent_comment['children'].append(topics_dict[topic.id])
+
+    return [topic for topic in topics_dict.values() if topic['topic'].parent_id is None]
 
 
 # All the following post/comment ranking math is explained at https://medium.com/hacking-and-gonzo/how-reddit-ranking-algorithms-work-ef111e33d0d9
