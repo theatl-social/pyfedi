@@ -10,7 +10,11 @@
 {% if len(topics) > 0 %}
     {% macro render_topic(topic, depth) %}
         <tr>
-            <td nowrap="nowrap">{{ '--' * depth }} {{ topic['topic'].name }}</td>
+            <td nowrap="nowrap">{{ '--' * depth }}
+                {% if depth == 0 %}<strong>{% endif %}
+                    <a href="/topic/{{ topic['topic'].path() }}">{{ topic['topic'].name }}</a>
+                {% if depth == 0 %}</strong>{% endif %}
+            </td>
         </tr>
         {% if topic['children'] %}
             {% for topic in topic['children'] %}

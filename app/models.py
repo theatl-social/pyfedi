@@ -292,6 +292,18 @@ class Topic(db.Model):
     parent_id = db.Column(db.Integer)
     communities = db.relationship('Community', lazy='dynamic', backref='topic', cascade="all, delete-orphan")
 
+    def path(self):
+        return_value = [self.machine_name]
+        parent_id = self.parent_id
+        while parent_id is not None:
+            parent_topic = Topic.query.get(parent_id)
+            if parent_topic is None:
+                break
+            return_value.append(parent_topic.machine_name)
+            parent_id = parent_topic.parent_id
+        return_value = list(reversed(return_value))
+        return '/'.join(return_value)
+
 
 class Community(db.Model):
     query_class = FullTextSearchQuery
