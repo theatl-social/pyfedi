@@ -53,7 +53,8 @@ with app.app_context():
 def before_request():
     session['nonce'] = gibberish()
     g.locale = str(get_locale())
-    g.site = Site.query.get(1)
+    if request.path != '/inbox' and not request.path.startswith('/static/'):        # do not load g.site on shared inbox, to increase chance of duplicate detection working properly
+        g.site = Site.query.get(1)
     if current_user.is_authenticated:
         current_user.last_seen = datetime.utcnow()
         current_user.email_unread_sent = False

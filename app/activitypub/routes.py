@@ -374,6 +374,7 @@ def shared_inbox():
 
             redis_client.set(request_json['id'], 1, ex=90)  # Save the activity ID into redis, to avoid duplicate activities that Lemmy sometimes sends
             activity_log.activity_id = request_json['id']
+            g.site = Site.query.get(1)                      # g.site is not initialized by @app.before_request when request.path == '/inbox'
             if g.site.log_activitypub_json:
                 activity_log.activity_json = json.dumps(request_json)
             activity_log.result = 'processing'
