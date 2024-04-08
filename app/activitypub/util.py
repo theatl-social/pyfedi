@@ -561,11 +561,11 @@ def actor_json_to_model(activity_json, address, server):
             current_app.logger.error(f'KeyError for {address}@{server} while parsing ' + str(activity_json))
             return None
 
-        if 'icon' in activity_json:
+        if 'icon' in activity_json and activity_json['icon'] is not None and 'url' in activity_json['icon']:
             avatar = File(source_url=activity_json['icon']['url'])
             user.avatar = avatar
             db.session.add(avatar)
-        if 'image' in activity_json:
+        if 'image' in activity_json and activity_json['image'] is not None and 'url' in activity_json['image']:
             cover = File(source_url=activity_json['image']['url'])
             user.cover = cover
             db.session.add(cover)
@@ -625,11 +625,11 @@ def actor_json_to_model(activity_json, address, server):
         elif 'content' in activity_json:
             community.description_html = allowlist_html(activity_json['content'])
             community.description = ''
-        if 'icon' in activity_json:
+        if 'icon' in activity_json and activity_json['icon'] is not None and 'url' in activity_json['icon']:
             icon = File(source_url=activity_json['icon']['url'])
             community.icon = icon
             db.session.add(icon)
-        if 'image' in activity_json:
+        if 'image' in activity_json and activity_json['image'] is not None and 'url' in activity_json['image']:
             image = File(source_url=activity_json['image']['url'])
             community.image = image
             db.session.add(image)
