@@ -2072,7 +2072,7 @@ msgstr "Lösche \"%(community_title)s\""
 #: app/templates/community/community_edit.html:23
 #, fuzzy, python-format
 msgid "Edit %(community)s"
-msgstr "%(community_name)s bearbeiten"
+msgstr "%(community)s bearbeiten"
 
 #: app/templates/community/community_edit.html:28
 #, fuzzy
