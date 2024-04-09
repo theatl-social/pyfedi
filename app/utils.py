@@ -796,7 +796,7 @@ def current_theme():
         else:
             return g.site.default_theme if g.site.default_theme is not None else ''
     else:
-        return g.site.default_theme if g.site.default_theme is not None else ''
+        return ''
 
 
 def theme_list():
