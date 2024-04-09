@@ -796,7 +796,11 @@ def current_theme():
         if current_user.theme is not None and current_user.theme != '':
             return current_user.theme
         else:
-            return g.site.default_theme if g.site.default_theme is not None else ''
+            if hasattr(g, 'site'):
+                site = g.site
+            else:
+                site = Site.query.get(1)
+            return site.default_theme if site.default_theme is not None else ''
     else:
         return ''
 
