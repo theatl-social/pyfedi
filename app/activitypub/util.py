@@ -706,12 +706,12 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
                     if not domain.banned:
                         domain.post_count += 1
                         post.domain = domain
-        if 'image' in post_json and post.image is None:
-            image = File(source_url=post_json['image']['url'])
-            db.session.add(image)
-            post.image = image
 
         if post is not None:
+            if 'image' in post_json and post.image is None:
+                image = File(source_url=post_json['image']['url'])
+                db.session.add(image)
+                post.image = image
             db.session.add(post)
             community.post_count += 1
             activity_log.result = 'success'
