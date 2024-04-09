@@ -223,6 +223,8 @@ def banned_user_agents():
 
 @cache.memoize(150)
 def instance_blocked(host: str) -> bool:        # see also utils.instance_banned()
+    if host is None or host == '':
+        return True
     host = host.lower()
     if 'https://' in host or 'http://' in host:
         host = urlparse(host).hostname
@@ -232,6 +234,8 @@ def instance_blocked(host: str) -> bool:        # see also utils.instance_banned
 
 @cache.memoize(150)
 def instance_allowed(host: str) -> bool:
+    if host is None or host == '':
+        return True
     host = host.lower()
     if 'https://' in host or 'http://' in host:
         host = urlparse(host).hostname

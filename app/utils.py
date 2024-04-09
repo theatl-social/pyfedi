@@ -451,6 +451,8 @@ def user_ip_banned() -> bool:
 
 @cache.memoize(timeout=30)
 def instance_banned(domain: str) -> bool:   # see also activitypub.util.instance_blocked()
+    if domain is None or domain == '':
+        return False
     banned = BannedInstances.query.filter_by(domain=domain).first()
     return banned is not None
 
