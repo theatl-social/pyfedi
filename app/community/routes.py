@@ -436,7 +436,7 @@ def join_then_add(actor):
         db.session.commit()
         flash('You joined ' + community.title)
     if not community.user_is_banned(current_user):
-        return redirect(url_for('community.add_post', actor=community.link()))
+        return redirect(url_for('community.add_discussion_post', actor=community.link()))
     else:
         abort(401)
 
