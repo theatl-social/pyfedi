@@ -466,8 +466,11 @@ def admin_users_trash():
         users = users.filter(User.ap_id != None)
     if search:
         users = users.filter(User.email.ilike(f"%{search}%"))
-    users = users.filter(User.reputation < -10)
-    users = users.order_by(User.reputation).paginate(page=page, per_page=1000, error_out=False)
+    #users = users.filter(User.reputation < -10)
+    #users = users.order_by(User.reputation).paginate(page=page, per_page=1000, error_out=False)
+
+    users = users.filter(User.attitude < 0.0)
+    users = users.order_by(-User.attitude).paginate(page=page, per_page=1000, error_out=False)
 
     next_url = url_for('admin.admin_users_trash', page=users.next_num) if users.has_next else None
     prev_url = url_for('admin.admin_users_trash', page=users.prev_num) if users.has_prev and page != 1 else None
