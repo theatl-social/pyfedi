@@ -25,7 +25,7 @@ from sqlalchemy_searchable import search
 from app.utils import render_template, get_setting, gibberish, request_etag_matches, return_304, blocked_domains, \
     ap_datetime, ip_address, retrieve_block_list, shorten_string, markdown_to_text, user_filters_home, \
     joined_communities, moderating_communities, parse_page, theme_list, get_request, markdown_to_html, allowlist_html, \
-    blocked_instances, communities_banned_from, topic_tree
+    blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Domain, Topic, File, Instance, \
     InstanceRole, Notification
 from PIL import Image
@@ -140,9 +140,18 @@ def home_page(type, sort):
             active_communities = active_communities.filter(Community.id.not_in(banned_from))
     active_communities = active_communities.order_by(desc(Community.last_active)).limit(5).all()
 
+    # Voting history
+    if current_user.is_authenticated:
+        recently_upvoted = recently_upvoted_posts(current_user.id)
+        recently_downvoted = recently_downvoted_posts(current_user.id)
+    else:
+        recently_upvoted = []
+        recently_downvoted = []
+
     return render_template('index.html', posts=posts, active_communities=active_communities, show_post_community=True,
                            POST_TYPE_IMAGE=POST_TYPE_IMAGE, POST_TYPE_LINK=POST_TYPE_LINK,
-                           low_bandwidth=low_bandwidth,
+                           low_bandwidth=low_bandwidth, recently_upvoted=recently_upvoted,
+                           recently_downvoted=recently_downvoted,
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            etag=f"{type}_{sort}_{hash(str(g.site.last_active))}", next_url=next_url, prev_url=prev_url,
                            #rss_feed=f"https://{current_app.config['SERVER_NAME']}/feed",
@@ -294,6 +303,9 @@ def list_files(directory):
 
 @bp.route('/test')
 def test():
+    x = recently_upvoted_posts(1)
+
+    return x
 
     md = "::: spoiler I'm all for ya having fun and your right to hurt yourself.\n\nI am a former racer, commuter, and professional Buyer for a chain of bike shops. I'm also disabled from the crash involving the 6th and 7th cars that have hit me in the last 170k+ miles of riding. I only barely survived what I simplify as a \"broken neck and back.\" Cars making U-turns are what will get you if you ride long enough, \n\nespecially commuting. It will look like just another person turning in front of you, you'll compensate like usual, and before your brain can even register what is really happening, what was your normal escape route will close and you're going to crash really hard. It is the only kind of crash that your intuition is useless against.\n:::"
 

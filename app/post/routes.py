@@ -24,7 +24,8 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
     request_etag_matches, ip_address, user_ip_banned, instance_banned, can_downvote, can_upvote, post_ranking, \
     reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, moderating_communities, joined_communities, \
-    blocked_instances, blocked_domains, community_moderators, blocked_phrases, show_ban_message
+    blocked_instances, blocked_domains, community_moderators, blocked_phrases, show_ban_message, recently_upvoted_posts, \
+    recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies
 
 
 def show_post(post_id: int):
@@ -239,12 +240,26 @@ def show_post(post_id: int):
         breadcrumb.url = '/communities'
         breadcrumbs.append(breadcrumb)
 
+    # Voting history
+    if current_user.is_authenticated:
+        recently_upvoted = recently_upvoted_posts(current_user.id)
+        recently_downvoted = recently_downvoted_posts(current_user.id)
+        recently_upvoted_replies = recently_upvoted_post_replies(current_user.id)
+        recently_downvoted_replies = recently_downvoted_post_replies(current_user.id)
+    else:
+        recently_upvoted = []
+        recently_downvoted = []
+        recently_upvoted_replies = []
+        recently_downvoted_replies = []
+
     response = render_template('post/post.html', title=post.title, post=post, is_moderator=is_moderator, community=post.community,
                            breadcrumbs=breadcrumbs, related_communities=related_communities, mods=mod_list,
                            canonical=post.ap_id, form=form, replies=replies, THREAD_CUTOFF_DEPTH=constants.THREAD_CUTOFF_DEPTH,
                            description=description, og_image=og_image, POST_TYPE_IMAGE=constants.POST_TYPE_IMAGE,
                            POST_TYPE_LINK=constants.POST_TYPE_LINK, POST_TYPE_ARTICLE=constants.POST_TYPE_ARTICLE,
                            noindex=not post.author.indexable,
+                           recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
+                           recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies,
                            etag=f"{post.id}{sort}_{hash(post.last_active)}", markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
                            low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1', SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            moderating_communities=moderating_communities(current_user.get_id()),
@@ -259,7 +274,6 @@ def show_post(post_id: int):
 @login_required
 @validation_required
 def post_vote(post_id: int, vote_direction):
-    upvoted_class = downvoted_class = ''
     post = Post.query.get_or_404(post_id)
     existing_vote = PostVote.query.filter_by(user_id=current_user.id, post_id=post.id).first()
     if existing_vote:
@@ -275,7 +289,6 @@ def post_vote(post_id: int, vote_direction):
                 post.up_votes -= 1
                 post.down_votes += 1
                 post.score -= 2
-                downvoted_class = 'voted_down'
         else:  # previous vote was down
             if vote_direction == 'downvote':  # new vote is also down, so remove it
                 db.session.delete(existing_vote)
@@ -286,18 +299,15 @@ def post_vote(post_id: int, vote_direction):
                 post.up_votes += 1
                 post.down_votes -= 1
                 post.score += 2
-                upvoted_class = 'voted_up'
     else:
         if vote_direction == 'upvote':
             effect = 1
             post.up_votes += 1
             post.score += 1
-            upvoted_class = 'voted_up'
         else:
             effect = -1
             post.down_votes += 1
             post.score -= 1
-            downvoted_class = 'voted_down'
         vote = PostVote(user_id=current_user.id, post_id=post.id, author_id=post.author.id,
                              effect=effect)
         # upvotes do not increase reputation in low quality communities
@@ -346,17 +356,25 @@ def post_vote(post_id: int, vote_direction):
         current_user.recalculate_attitude()
         db.session.commit()
     post.flush_cache()
+
+    recently_upvoted = []
+    recently_downvoted = []
+    if vote_direction == 'upvote':
+        recently_upvoted = [post_id]
+    elif vote_direction == 'downvote':
+        recently_downvoted = [post_id]
+    cache.delete_memoized(recently_upvoted_posts, current_user.id)
+    cache.delete_memoized(recently_downvoted_posts, current_user.id)
+
     template = 'post/_post_voting_buttons.html' if request.args.get('style', '') == '' else 'post/_post_voting_buttons_masonry.html'
-    return render_template(template, post=post, community=post.community,
-                           upvoted_class=upvoted_class,
-                           downvoted_class=downvoted_class)
+    return render_template(template, post=post, community=post.community, recently_upvoted=recently_upvoted,
+                           recently_downvoted=recently_downvoted)
 
 
 @bp.route('/comment/<int:comment_id>/<vote_direction>', methods=['POST'])
 @login_required
 @validation_required
 def comment_vote(comment_id, vote_direction):
-    upvoted_class = downvoted_class = ''
     comment = PostReply.query.get_or_404(comment_id)
     existing_vote = PostReplyVote.query.filter_by(user_id=current_user.id, post_reply_id=comment.id).first()
     if existing_vote:
@@ -423,9 +441,20 @@ def comment_vote(comment_id, vote_direction):
     db.session.commit()
 
     comment.post.flush_cache()
+
+    recently_upvoted = []
+    recently_downvoted = []
+    if vote_direction == 'upvote':
+        recently_upvoted = [comment_id]
+    elif vote_direction == 'downvote':
+        recently_downvoted = [comment_id]
+    cache.delete_memoized(recently_upvoted_post_replies, current_user.id)
+    cache.delete_memoized(recently_downvoted_post_replies, current_user.id)
+
     return render_template('post/_comment_voting_buttons.html', comment=comment,
-                           upvoted_class=upvoted_class,
-                           downvoted_class=downvoted_class, community=comment.community)
+                           recently_upvoted_replies=recently_upvoted,
+                           recently_downvoted_replies=recently_downvoted,
+                           community=comment.community)
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>')

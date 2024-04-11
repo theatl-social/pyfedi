@@ -11,7 +11,8 @@ from flask import session, g, json, request, current_app
 from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_ARTICLE
 from app.models import Site
 from app.utils import getmtime, gibberish, shorten_string, shorten_url, digits, user_access, community_membership, \
-    can_create_post, can_upvote, can_downvote, shorten_number, ap_datetime, current_theme, community_link_to_href
+    can_create_post, can_upvote, can_downvote, shorten_number, ap_datetime, current_theme, community_link_to_href, \
+    in_sorted_list
 
 app = create_app()
 cli.register(app)
@@ -42,6 +43,7 @@ with app.app_context():
     app.jinja_env.globals['can_create'] = can_create_post
     app.jinja_env.globals['can_upvote'] = can_upvote
     app.jinja_env.globals['can_downvote'] = can_downvote
+    app.jinja_env.globals['in_sorted_list'] = in_sorted_list
     app.jinja_env.globals['theme'] = current_theme
     app.jinja_env.globals['file_exists'] = os.path.exists
     app.jinja_env.filters['community_links'] = community_link_to_href
