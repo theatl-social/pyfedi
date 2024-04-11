@@ -8,9 +8,11 @@
                 <div class="col-12">
                     <div class="row main_row">
                         <div class="col">
+                            {% if not hide_vote_buttons %}
                             <div class="voting_buttons" aria-hidden="true">
                                 {% include "post/_post_voting_buttons.html" %}
                             </div>
+                            {% endif %}
                             {% if post.image_id %}
                                 <div class="thumbnail{{ ' lbw' if low_bandwidth }}" aria-hidden="true">
                                     {% if low_bandwidth %}

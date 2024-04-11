@@ -79,23 +79,13 @@ def show_profile(user):
     replies_prev_url = url_for('activitypub.user_profile', actor=user.ap_id if user.ap_id is not None else user.user_name,
                        replies_page=post_replies.prev_num) if post_replies.has_prev and replies_page != 1 else None
 
-    # Voting history
-    if current_user.is_authenticated:
-        recently_upvoted = recently_upvoted_posts(current_user.id)
-        recently_downvoted = recently_downvoted_posts(current_user.id)
-    else:
-        recently_upvoted = []
-        recently_downvoted = []
-
     return render_template('user/show_profile.html', user=user, posts=posts, post_replies=post_replies,
                            moderates=moderates.all(), canonical=canonical, title=_('Posts by %(user_name)s',
                                                                                    user_name=user.user_name),
                            description=description, subscribed=subscribed, upvoted=upvoted,
                            post_next_url=post_next_url, post_prev_url=post_prev_url,
                            replies_next_url=replies_next_url, replies_prev_url=replies_prev_url,
-                           recently_upvoted=recently_upvoted,
-                           recently_downvoted=recently_downvoted,
-                           noindex=not user.indexable, show_post_community=True,
+                           noindex=not user.indexable, show_post_community=True, hide_vote_buttons=True,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id())
                            )
