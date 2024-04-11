@@ -19,7 +19,7 @@ from app.user.utils import purge_user_then_delete
 from app.utils import get_setting, render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     is_image_url, ensure_directory_exists, gibberish, file_get_contents, community_membership, user_filters_home, \
     user_filters_posts, user_filters_replies, moderating_communities, joined_communities, theme_list, blocked_instances, \
-    allowlist_html
+    allowlist_html, recently_upvoted_posts, recently_downvoted_posts
 from sqlalchemy import desc, or_, text
 import os
 
@@ -79,12 +79,22 @@ def show_profile(user):
     replies_prev_url = url_for('activitypub.user_profile', actor=user.ap_id if user.ap_id is not None else user.user_name,
                        replies_page=post_replies.prev_num) if post_replies.has_prev and replies_page != 1 else None
 
+    # Voting history
+    if current_user.is_authenticated:
+        recently_upvoted = recently_upvoted_posts(current_user.id)
+        recently_downvoted = recently_downvoted_posts(current_user.id)
+    else:
+        recently_upvoted = []
+        recently_downvoted = []
+
     return render_template('user/show_profile.html', user=user, posts=posts, post_replies=post_replies,
                            moderates=moderates.all(), canonical=canonical, title=_('Posts by %(user_name)s',
                                                                                    user_name=user.user_name),
                            description=description, subscribed=subscribed, upvoted=upvoted,
                            post_next_url=post_next_url, post_prev_url=post_prev_url,
                            replies_next_url=replies_next_url, replies_prev_url=replies_prev_url,
+                           recently_upvoted=recently_upvoted,
+                           recently_downvoted=recently_downvoted,
                            noindex=not user.indexable, show_post_community=True,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id())
