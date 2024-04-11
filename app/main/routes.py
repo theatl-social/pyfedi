@@ -364,6 +364,36 @@ def test_email():
     return f'Email sent to {current_user.email}.'
 
 
+@bp.route('/find_voters')
+def find_voters():
+    user_ids = db.session.execute(text('SELECT id from "user" ORDER BY last_seen DESC LIMIT 5000')).scalars()
+    voters = {}
+    for user_id in user_ids:
+        recently_downvoted = recently_downvoted_posts(user_id)
+        if len(recently_downvoted) > 10:
+            voters[user_id] = str(recently_downvoted)
+
+    return str(find_duplicate_values(voters))
+
+
+def find_duplicate_values(dictionary):
+    # Create a dictionary to store the keys for each value
+    value_to_keys = {}
+
+    # Iterate through the input dictionary
+    for key, value in dictionary.items():
+        # If the value is not already in the dictionary, add it
+        if value not in value_to_keys:
+            value_to_keys[value] = [key]
+        else:
+            # If the value is already in the dictionary, append the key to the list
+            value_to_keys[value].append(key)
+
+    # Filter out the values that have only one key (i.e., unique values)
+    duplicates = {value: keys for value, keys in value_to_keys.items() if len(keys) > 1}
+
+    return duplicates
+
 def verification_warning():
     if hasattr(current_user, 'verified') and current_user.verified is False:
         flash(_('Please click the link in your email inbox to verify your account.'), 'warning')
