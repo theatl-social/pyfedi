@@ -7,7 +7,7 @@ from app.utils import MultiCheckboxField
 
 
 class NewReplyForm(FlaskForm):
-    body = TextAreaField(_l('Body'), render_kw={'placeholder': 'What are your thoughts?', 'rows': 3}, validators={DataRequired(), Length(min=3, max=5000)})
+    body = TextAreaField(_l('Body'), render_kw={'placeholder': 'What are your thoughts?', 'rows': 5}, validators={DataRequired(), Length(min=3, max=5000)})
     notify_author = BooleanField(_l('Notify about replies'))
     submit = SubmitField(_l('Comment'))
 
