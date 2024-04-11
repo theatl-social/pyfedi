@@ -244,6 +244,8 @@ def microblog_content_to_title(html: str) -> str:
                 continue
             else:
                 tag = tag.extract()
+        else:
+            tag = tag.extract()
 
     if title_found:
         result = soup.text
