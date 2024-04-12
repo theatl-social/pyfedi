@@ -14,7 +14,7 @@ class ProfileForm(FlaskForm):
     email = EmailField(_l('Email address'), validators=[Email(), DataRequired(), Length(min=5, max=255)])
     password_field = PasswordField(_l('Set new password'), validators=[Optional(), Length(min=1, max=50)],
                                    render_kw={"autocomplete": 'new-password'})
-    about = TextAreaField(_l('Bio'), validators=[Optional(), Length(min=3, max=5000)])
+    about = TextAreaField(_l('Bio'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5})
     matrixuserid = StringField(_l('Matrix User ID'), validators=[Optional(), Length(max=255)], render_kw={'autocomplete': 'off'})
     profile_file = FileField(_('Avatar image'))
     banner_file = FileField(_('Top banner image'))

@@ -19,7 +19,7 @@ from app.user.utils import purge_user_then_delete
 from app.utils import get_setting, render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     is_image_url, ensure_directory_exists, gibberish, file_get_contents, community_membership, user_filters_home, \
     user_filters_posts, user_filters_replies, moderating_communities, joined_communities, theme_list, blocked_instances, \
-    allowlist_html
+    allowlist_html, recently_upvoted_posts, recently_downvoted_posts
 from sqlalchemy import desc, or_, text
 import os
 
@@ -85,7 +85,7 @@ def show_profile(user):
                            description=description, subscribed=subscribed, upvoted=upvoted,
                            post_next_url=post_next_url, post_prev_url=post_prev_url,
                            replies_next_url=replies_next_url, replies_prev_url=replies_prev_url,
-                           noindex=not user.indexable, show_post_community=True,
+                           noindex=not user.indexable, show_post_community=True, hide_vote_buttons=True,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id())
                            )

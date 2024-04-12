@@ -223,6 +223,8 @@ def banned_user_agents():
 
 @cache.memoize(150)
 def instance_blocked(host: str) -> bool:        # see also utils.instance_banned()
+    if host is None or host == '':
+        return True
     host = host.lower()
     if 'https://' in host or 'http://' in host:
         host = urlparse(host).hostname
@@ -232,6 +234,8 @@ def instance_blocked(host: str) -> bool:        # see also utils.instance_banned
 
 @cache.memoize(150)
 def instance_allowed(host: str) -> bool:
+    if host is None or host == '':
+        return True
     host = host.lower()
     if 'https://' in host or 'http://' in host:
         host = urlparse(host).hostname
@@ -561,11 +565,11 @@ def actor_json_to_model(activity_json, address, server):
             current_app.logger.error(f'KeyError for {address}@{server} while parsing ' + str(activity_json))
             return None
 
-        if 'icon' in activity_json:
+        if 'icon' in activity_json and activity_json['icon'] is not None and 'url' in activity_json['icon']:
             avatar = File(source_url=activity_json['icon']['url'])
             user.avatar = avatar
             db.session.add(avatar)
-        if 'image' in activity_json:
+        if 'image' in activity_json and activity_json['image'] is not None and 'url' in activity_json['image']:
             cover = File(source_url=activity_json['image']['url'])
             user.cover = cover
             db.session.add(cover)
@@ -625,11 +629,11 @@ def actor_json_to_model(activity_json, address, server):
         elif 'content' in activity_json:
             community.description_html = allowlist_html(activity_json['content'])
             community.description = ''
-        if 'icon' in activity_json:
+        if 'icon' in activity_json and activity_json['icon'] is not None and 'url' in activity_json['icon']:
             icon = File(source_url=activity_json['icon']['url'])
             community.icon = icon
             db.session.add(icon)
-        if 'image' in activity_json:
+        if 'image' in activity_json and activity_json['image'] is not None and 'url' in activity_json['image']:
             image = File(source_url=activity_json['image']['url'])
             community.image = image
             db.session.add(image)
@@ -702,12 +706,12 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
                     if not domain.banned:
                         domain.post_count += 1
                         post.domain = domain
-        if 'image' in post_json and post.image is None:
-            image = File(source_url=post_json['image']['url'])
-            db.session.add(image)
-            post.image = image
 
         if post is not None:
+            if 'image' in post_json and post.image is None:
+                image = File(source_url=post_json['image']['url'])
+                db.session.add(image)
+                post.image = image
             db.session.add(post)
             community.post_count += 1
             activity_log.result = 'success'
@@ -793,18 +797,19 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory):
                     db.session.commit()
 
                     # Alert regarding fascist meme content
-                    try:
-                        image_text = pytesseract.image_to_string(Image.open(BytesIO(source_image)).convert('L'), timeout=30)
-                    except FileNotFoundError as e:
-                        image_text = ''
-                    if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):   # chan posts usually contain the text 'Anonymous' and ' No.12345'
-                        post = Post.query.filter_by(image_id=file.id).first()
-                        notification = Notification(title='Review this',
-                                                    user_id=1,
-                                                    author_id=post.user_id,
-                                                    url=url_for('activitypub.post_ap', post_id=post.id))
-                        db.session.add(notification)
-                        db.session.commit()
+                    if img_width < 2000:    # images > 2000px tend to be real photos instead of 4chan screenshots.
+                        try:
+                            image_text = pytesseract.image_to_string(Image.open(BytesIO(source_image)).convert('L'), timeout=30)
+                        except FileNotFoundError as e:
+                            image_text = ''
+                        if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):   # chan posts usually contain the text 'Anonymous' and ' No.12345'
+                            post = Post.query.filter_by(image_id=file.id).first()
+                            notification = Notification(title='Review this',
+                                                        user_id=1,
+                                                        author_id=post.user_id,
+                                                        url=url_for('activitypub.post_ap', post_id=post.id))
+                            db.session.add(notification)
+                            db.session.commit()
 
 
 # create a summary from markdown if present, otherwise use html if available
@@ -1548,7 +1553,7 @@ def update_post_from_activity(post: Post, request_json: dict):
             old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
             post.cross_posts.clear()
             for ocp in old_cross_posts:
-                if ocp.cross_posts is not None:
+                if ocp.cross_posts is not None and post.id in ocp.cross_posts:
                     ocp.cross_posts.remove(post.id)
 
     if post is not None:

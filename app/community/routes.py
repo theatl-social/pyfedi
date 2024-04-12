@@ -30,7 +30,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     shorten_string, gibberish, community_membership, ap_datetime, \
     request_etag_matches, return_304, instance_banned, can_create_post, can_upvote, can_downvote, user_filters_posts, \
     joined_communities, moderating_communities, blocked_domains, mimetype_from_url, blocked_instances, \
-    community_moderators, communities_banned_from, show_ban_message
+    community_moderators, communities_banned_from, show_ban_message, recently_upvoted_posts, recently_downvoted_posts
 from feedgen.feed import FeedGenerator
 from datetime import timezone, timedelta
 
@@ -241,12 +241,21 @@ def show_community(community: Community):
     prev_url = url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not None else community.name,
                        page=posts.prev_num, sort=sort, layout=post_layout) if posts.has_prev and page != 1 else None
 
+    # Voting history
+    if current_user.is_authenticated:
+        recently_upvoted = recently_upvoted_posts(current_user.id)
+        recently_downvoted = recently_downvoted_posts(current_user.id)
+    else:
+        recently_upvoted = []
+        recently_downvoted = []
+
     return render_template('community/community.html', community=community, title=community.title, breadcrumbs=breadcrumbs,
                            is_moderator=is_moderator, is_owner=is_owner, is_admin=is_admin, mods=mod_list, posts=posts, description=description,
                            og_image=og_image, POST_TYPE_IMAGE=POST_TYPE_IMAGE, POST_TYPE_LINK=POST_TYPE_LINK, SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING,
                            SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                            etag=f"{community.id}{sort}{post_layout}_{hash(community.last_active)}", related_communities=related_communities,
                            next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth,
+                           recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
                            rss_feed=f"https://{current_app.config['SERVER_NAME']}/community/{community.link()}/feed", rss_feed_name=f"{community.title} on PieFed",
                            content_filters=content_filters, moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()), sort=sort,
@@ -436,7 +445,7 @@ def join_then_add(actor):
         db.session.commit()
         flash('You joined ' + community.title)
     if not community.user_is_banned(current_user):
-        return redirect(url_for('community.add_post', actor=community.link()))
+        return redirect(url_for('community.add_discussion_post', actor=community.link()))
     else:
         abort(401)
 

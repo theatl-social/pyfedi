@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import bisect
 import hashlib
 import mimetypes
 import random
@@ -220,8 +221,8 @@ def markdown_to_html(markdown_text) -> str:
     if markdown_text:
         raw_html = markdown2.markdown(markdown_text, safe_mode=True, extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True})
         # replace lemmy spoiler tokens with appropriate html tags instead. (until possibly added as extra to markdown2)
-        re_spoiler = re.compile(r':{3} spoiler\s+?(\S.+?\n)(.+?)\n:{3}', re.S)
-        raw_html = re_spoiler.sub(r'<details><summary>\1</summary>\2</details>', raw_html)
+        re_spoiler = re.compile(r':{3} spoiler\s+?(\S.+?)(?:\n|</p>)(.+?)(?:\n|<p>):{3}', re.S)
+        raw_html = re_spoiler.sub(r'<details><summary>\1</summary><p>\2</p></details>', raw_html)
         return allowlist_html(raw_html)
     else:
         return ''
@@ -244,6 +245,8 @@ def microblog_content_to_title(html: str) -> str:
                 continue
             else:
                 tag = tag.extract()
+        else:
+            tag = tag.extract()
 
     if title_found:
         result = soup.text
@@ -451,6 +454,8 @@ def user_ip_banned() -> bool:
 
 @cache.memoize(timeout=30)
 def instance_banned(domain: str) -> bool:   # see also activitypub.util.instance_blocked()
+    if domain is None or domain == '':
+        return False
     banned = BannedInstances.query.filter_by(domain=domain).first()
     return banned is not None
 
@@ -794,9 +799,13 @@ def current_theme():
         if current_user.theme is not None and current_user.theme != '':
             return current_user.theme
         else:
-            return g.site.default_theme if g.site.default_theme is not None else ''
+            if hasattr(g, 'site'):
+                site = g.site
+            else:
+                site = Site.query.get(1)
+            return site.default_theme if site.default_theme is not None else ''
     else:
-        return g.site.default_theme if g.site.default_theme is not None else ''
+        return ''
 
 
 def theme_list():
@@ -855,3 +864,37 @@ def show_ban_message():
     resp = make_response(redirect(url_for('main.index')))
     resp.set_cookie('sesion', '17489047567495', expires=datetime(year=2099, month=12, day=30))
     return resp
+
+
+# search a sorted list using a binary search. Faster than using 'in' with a unsorted list.
+def in_sorted_list(arr, target):
+    index = bisect.bisect_left(arr, target)
+    return index < len(arr) and arr[index] == target
+
+
+@cache.memoize(timeout=600)
+def recently_upvoted_posts(user_id) -> List[int]:
+    post_ids = db.session.execute(text('SELECT post_id FROM "post_vote" WHERE user_id = :user_id AND effect > 0 ORDER BY id DESC LIMIT 1000'),
+                               {'user_id': user_id}).scalars()
+    return sorted(post_ids)     # sorted so that in_sorted_list can be used
+
+
+@cache.memoize(timeout=600)
+def recently_downvoted_posts(user_id) -> List[int]:
+    post_ids = db.session.execute(text('SELECT post_id FROM "post_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 1000'),
+                               {'user_id': user_id}).scalars()
+    return sorted(post_ids)
+
+
+@cache.memoize(timeout=600)
+def recently_upvoted_post_replies(user_id) -> List[int]:
+    reply_ids = db.session.execute(text('SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect > 0 ORDER BY id DESC LIMIT 1000'),
+                               {'user_id': user_id}).scalars()
+    return sorted(reply_ids)     # sorted so that in_sorted_list can be used
+
+
+@cache.memoize(timeout=600)
+def recently_downvoted_post_replies(user_id) -> List[int]:
+    reply_ids = db.session.execute(text('SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 1000'),
+                               {'user_id': user_id}).scalars()
+    return sorted(reply_ids)
