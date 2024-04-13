@@ -985,7 +985,8 @@ fieldset legend {
 }
 .voting_buttons_new .upvote_button, .voting_buttons_new .downvote_button {
   display: inline-block;
-  padding: 5px 15px;
+  padding: 5px 0;
+  text-align: center;
   position: relative;
   cursor: pointer;
   color: rgba(var(--bs-link-color-rgb), var(--bs-link-opacity, 1));
@@ -1012,11 +1013,6 @@ fieldset legend {
 .voting_buttons_new .upvote_button {
   top: 1px;
 }
-@media (min-width: 1280px) {
-  .voting_buttons_new .upvote_button {
-    padding-right: 5px;
-  }
-}
 .voting_buttons_new .upvote_button .htmx-indicator {
   left: 13px;
   top: 7px;
@@ -1028,9 +1024,6 @@ fieldset legend {
   left: 12px;
 }
 @media (min-width: 1280px) {
-  .voting_buttons_new .downvote_button {
-    padding-left: 5px;
-  }
   .voting_buttons_new .downvote_button .htmx-indicator {
     left: 2px;
   }
@@ -1125,7 +1118,6 @@ fieldset legend {
 
 .comment {
   clear: both;
-  margin-bottom: 10px;
   margin-left: 15px;
   padding-top: 8px;
 }
@@ -1178,7 +1170,7 @@ fieldset legend {
 }
 .comment .comment_actions a {
   text-decoration: none;
-  padding: 5px 0;
+  padding: 0;
 }
 .comment .comment_actions .hide_button {
   display: inline-block;
