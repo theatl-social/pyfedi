@@ -666,13 +666,8 @@ html {
     top: 1px;
     .htmx-indicator {
       left: 12px;
+      top: 5px;
     }
-    @include breakpoint(laptop) {
-      .htmx-indicator {
-        left: 2px;
-      }
-    }
-
   }
 
   .htmx-indicator{
