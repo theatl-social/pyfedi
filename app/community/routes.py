@@ -30,7 +30,8 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     shorten_string, gibberish, community_membership, ap_datetime, \
     request_etag_matches, return_304, instance_banned, can_create_post, can_upvote, can_downvote, user_filters_posts, \
     joined_communities, moderating_communities, blocked_domains, mimetype_from_url, blocked_instances, \
-    community_moderators, communities_banned_from, show_ban_message, recently_upvoted_posts, recently_downvoted_posts
+    community_moderators, communities_banned_from, show_ban_message, recently_upvoted_posts, recently_downvoted_posts, \
+    blocked_users
 from feedgen.feed import FeedGenerator
 from datetime import timezone, timedelta
 
@@ -180,6 +181,11 @@ def show_community(community: Community):
         instance_ids = blocked_instances(current_user.id)
         if instance_ids:
             posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
+
+        # filter blocked users
+        blocked_accounts = blocked_users(current_user.id)
+        if blocked_accounts:
+            posts = posts.filter(Post.user_id.not_in(blocked_accounts))
 
     if sort == '' or sort == 'hot':
         posts = posts.order_by(desc(Post.sticky)).order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))

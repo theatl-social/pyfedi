@@ -19,7 +19,7 @@ from app.user.utils import purge_user_then_delete
 from app.utils import get_setting, render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     is_image_url, ensure_directory_exists, gibberish, file_get_contents, community_membership, user_filters_home, \
     user_filters_posts, user_filters_replies, moderating_communities, joined_communities, theme_list, blocked_instances, \
-    allowlist_html, recently_upvoted_posts, recently_downvoted_posts
+    allowlist_html, recently_upvoted_posts, recently_downvoted_posts, blocked_users
 from sqlalchemy import desc, or_, text
 import os
 
@@ -294,6 +294,7 @@ def block_profile(actor):
             # federate block
 
         flash(f'{actor} has been blocked.')
+        cache.delete_memoized(blocked_users, current_user.id)
 
     goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
     return redirect(goto)
@@ -322,6 +323,7 @@ def unblock_profile(actor):
             # federate unblock
 
         flash(f'{actor} has been unblocked.')
+        cache.delete_memoized(blocked_users, current_user.id)
 
     goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
     return redirect(goto)

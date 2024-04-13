@@ -29,7 +29,7 @@ import re
 
 from app.email import send_welcome_email
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, ActivityPubLog, IpBan, \
-    Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic
+    Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock
 
 
 # Flask's render_template function, with support for themes added
@@ -333,6 +333,12 @@ def blocked_domains(user_id) -> List[int]:
 def blocked_instances(user_id) -> List[int]:
     blocks = InstanceBlock.query.filter_by(user_id=user_id)
     return [block.instance_id for block in blocks]
+
+
+@cache.memoize(timeout=86400)
+def blocked_users(user_id) -> List[int]:
+    blocks = UserBlock.query.filter_by(blocker_id=user_id)
+    return [block.blocked_id for block in blocks]
 
 
 @cache.memoize(timeout=86400)
