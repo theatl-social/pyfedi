@@ -305,15 +305,19 @@ def post_vote(post_id: int, vote_direction):
             post.up_votes += 1
             # Make 'hot' sort more spicy by amplifying the effect of early upvotes
             if post.up_votes + post.down_votes <= 10:
+                post.score += 10
+            elif post.up_votes + post.down_votes <= 30:
                 post.score += 5
-            elif post.up_votes + post.down_votes <= 100:
+            elif post.up_votes + post.down_votes <= 60:
                 post.score += 2
             else:
                 post.score += 1
         else:
             effect = -1
             post.down_votes += 1
-            if post.up_votes + post.down_votes <= 100:
+            if post.up_votes + post.down_votes <= 30:
+                post.score -= 5
+            elif post.up_votes + post.down_votes <= 60:
                 post.score -= 2
             else:
                 post.score -= 1
