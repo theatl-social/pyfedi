@@ -303,11 +303,20 @@ def post_vote(post_id: int, vote_direction):
         if vote_direction == 'upvote':
             effect = 1
             post.up_votes += 1
-            post.score += 1
+            # Make 'hot' sort more spicy by amplifying the effect of early upvotes
+            if post.up_votes + post.down_votes <= 10:
+                post.score += 5
+            elif post.up_votes + post.down_votes <= 100:
+                post.score += 2
+            else:
+                post.score += 1
         else:
             effect = -1
             post.down_votes += 1
-            post.score -= 1
+            if post.up_votes + post.down_votes <= 100:
+                post.score -= 2
+            else:
+                post.score -= 1
         vote = PostVote(user_id=current_user.id, post_id=post.id, author_id=post.author.id,
                              effect=effect)
         # upvotes do not increase reputation in low quality communities

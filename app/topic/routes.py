@@ -77,7 +77,7 @@ def show_topic(topic_path):
         if sort == '' or sort == 'hot':
             posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
         elif sort == 'top':
-            posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=7)).order_by(desc(Post.score))
+            posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=7)).order_by(desc(Post.up_votes - Post.down_votes))
         elif sort == 'new':
             posts = posts.order_by(desc(Post.posted_at))
         elif sort == 'active':
