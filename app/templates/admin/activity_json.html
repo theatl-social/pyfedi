@@ -4,20 +4,24 @@
     {% extends "base.html" %}
 {% endif %} %}
 {% from 'bootstrap/form.html' import render_form %}
+{% set active_child = 'admin_activities' %}
 
 {% block app_content %}
-<div class="row">
-    <div class="col">
-        {% include 'admin/_nav.html' %}
-    </div>
-</div>
 
 <div class="row">
     <div class="col">
+        <h1>{{ _('Activity JSON') }}</h1>
         <code><pre>{{ activity_json_data | tojson(indent=2) }}</pre></code>
         {% if current_app.debug %}
         <p><a class="btn btn-warning" href="{{ url_for('admin.activity_replay', activity_id=activity.id) }}">Re-submit this activity</a></p>
         {% endif %}
     </div>
 </div>
+<hr />
+<div class="row">
+    <div class="col">
+        {% include 'admin/_nav.html' %}
+    </div>
+</div>
+<hr />
 {% endblock %}

@@ -4,16 +4,12 @@
     {% extends "base.html" %}
 {% endif %} %}
 {% from 'bootstrap/form.html' import render_form %}
+{% set active_child = 'admin_reports' %}
 
 {% block app_content %}
 <div class="row">
     <div class="col">
-        {% include 'admin/_nav.html' %}
-    </div>
-</div>
-
-<div class="row">
-    <div class="col">
+        <h1>{{ _('Reports') }}</h1>
         <form method="get">
             <input type="search" name="search" value="{{ search }}">
             <input type="radio" name="local_remote" value="local" id="local_remote_local" {{ 'checked' if local_remote == 'local' }}><label for="local_remote_local"> Local</label>
@@ -66,4 +62,11 @@
         </nav>
     </div>
 </div>
+<hr />
+<div class="row">
+    <div class="col">
+        {% include 'admin/_nav.html' %}
+    </div>
+</div>
+<hr />
 {% endblock %}

@@ -4,16 +4,12 @@
     {% extends "base.html" %}
 {% endif %} %}
 {% from 'bootstrap/form.html' import render_form %}
+{% set active_child = 'admin_approve_registrations' %}
 
 {% block app_content %}
 <div class="row">
     <div class="col">
-        {% include 'admin/_nav.html' %}
-    </div>
-</div>
-
-<div class="row">
-    <div class="col">
+        <h1>{{ _('Registrations') }}</h1>
         {% if registrations %}
         <p>{{ _('When registering, people are asked "%(question)s".', question=site.application_question) }} </p>
         <form method="get">
@@ -52,4 +48,11 @@
         {% endif %}
     </div>
 </div>
+<hr />
+<div class="row">
+    <div class="col">
+        {% include 'admin/_nav.html' %}
+    </div>
+</div>
+<hr />
 {% endblock %}
