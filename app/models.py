@@ -838,9 +838,11 @@ class User(UserMixin, db.Model):
             post.delete_dependencies()
             post.flush_cache()
             db.session.delete(post)
+        db.session.commit()
         post_replies = PostReply.query.filter_by(user_id=self.id).all()
         for reply in post_replies:
-            reply.body = reply.body_html = ''
+            reply.delete_dependencies()
+            db.session.delete(reply)
         db.session.commit()
 
     def mention_tag(self):
@@ -1018,12 +1020,19 @@ class PostReply(db.Model):
             return parent.author.profile_id()
 
     def delete_dependencies(self):
+        for child_reply in self.child_replies():
+            child_reply.delete_dependencies()
+            db.session.delete(child_reply)
+
         db.session.query(Report).filter(Report.suspect_post_reply_id == self.id).delete()
         db.session.execute(text('DELETE FROM post_reply_vote WHERE post_reply_id = :post_reply_id'),
                            {'post_reply_id': self.id})
         if self.image_id:
             file = File.query.get(self.image_id)
             file.delete_from_disk()
+
+    def child_replies(self):
+        return PostReply.query.filter_by(parent_id=self.id).all()
 
     def has_replies(self):
         reply = PostReply.query.filter_by(parent_id=self.id).first()
