@@ -4,17 +4,13 @@
     {% extends "base.html" %}
 {% endif %} %}
 {% from 'bootstrap/form.html' import render_field %}
+{% set active_child = 'admin_site' %}
 
 {% block app_content %}
 
 <div class="row">
     <div class="col">
-        {% include 'admin/_nav.html' %}
-    </div>
-</div>
-
-<div class="row">
-    <div class="col">
+        <h1>{{ _('Site profile') }}</h1>
         <form method="post" enctype="multipart/form-data">
             {{ form.csrf_token() }}
             {{ render_field(form.name) }}
@@ -28,4 +24,11 @@
         </form>
     </div>
 </div>
+<hr />
+<div class="row">
+    <div class="col">
+        {% include 'admin/_nav.html' %}
+    </div>
+</div>
+<hr />
 {% endblock %}

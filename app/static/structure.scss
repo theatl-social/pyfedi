@@ -65,6 +65,19 @@ html {
 
 .form-group {
   margin-bottom: 1.1rem;
+
+  &.required {
+    label {
+      &:after {
+        content: '*';
+        color: red;
+        margin-left: 2px;
+        font-size: 80%;
+        position: relative;
+        top: -1px;
+      }
+    }
+  }
 }
 
 .card {
@@ -610,7 +623,8 @@ html {
 
   .upvote_button, .downvote_button {
     display: inline-block;
-    padding: 5px 15px;
+    padding: 5px 0 5px 3px;
+    text-align: center;
     position: relative;
     cursor: pointer;
     color: rgba(var(--bs-link-color-rgb),var(--bs-link-opacity,1));
@@ -641,9 +655,7 @@ html {
 
   .upvote_button {
     top: 1px;
-    @include breakpoint(laptop) {
-      padding-right: 5px;
-    }
+
     .htmx-indicator {
       left: 13px;
       top: 7px;
@@ -654,14 +666,8 @@ html {
     top: 1px;
     .htmx-indicator {
       left: 12px;
+      top: 5px;
     }
-    @include breakpoint(laptop) {
-      padding-left: 5px;
-      .htmx-indicator {
-        left: 2px;
-      }
-    }
-
   }
 
   .htmx-indicator{
@@ -763,7 +769,6 @@ html {
 
 .comment {
   clear: both;
-  margin-bottom: 10px;
   margin-left: 15px;
   padding-top: 8px;
 
@@ -823,7 +828,7 @@ html {
     position: relative;
     a {
       text-decoration: none;
-      padding: 5px 0;
+      padding: 0;
     }
 
     .hide_button {

@@ -4,20 +4,22 @@
     {% extends "base.html" %}
 {% endif %} %}
 {% from 'bootstrap/form.html' import render_form %}
+{% set active_child = 'admin_topics' %}
 
 {% block app_content %}
+<div class="row">
+    <div class="col col-login mx-auto">
+        {% if topic %}
+            <h1>{{ _('Edit %(topic_name)s', topic_name=topic.name) }}</h1>
+        {% endif %}
+        {{ render_form(form) }}
+    </div>
+</div>
+<hr />
 <div class="row">
     <div class="col">
         {% include 'admin/_nav.html' %}
     </div>
 </div>
-
-<div class="row">
-    <div class="col col-login mx-auto">
-        {% if topic %}
-            <h3>{{ _('Edit %(topic_name)s', topic_name=topic.name) }}</h3>
-        {% endif %}
-        {{ render_form(form) }}
-    </div>
-</div>
+<hr />
 {% endblock %}

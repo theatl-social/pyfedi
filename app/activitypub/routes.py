@@ -20,7 +20,8 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
     lemmy_site_data, instance_weight, is_activitypub_request, downvote_post_reply, downvote_post, upvote_post_reply, \
     upvote_post, delete_post_or_comment, community_members, \
     user_removed_from_remote_server, create_post, create_post_reply, update_post_reply_from_activity, \
-    update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection
+    update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection, find_reported_object, \
+    process_report
 from app.utils import gibberish, get_setting, is_image_url, allowlist_html, render_template, \
     domain_from_url, markdown_to_html, community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
@@ -373,6 +374,7 @@ def shared_inbox():
 
             redis_client.set(request_json['id'], 1, ex=90)  # Save the activity ID into redis, to avoid duplicate activities that Lemmy sometimes sends
             activity_log.activity_id = request_json['id']
+            g.site = Site.query.get(1)                      # g.site is not initialized by @app.before_request when request.path == '/inbox'
             if g.site.log_activitypub_json:
                 activity_log.activity_json = json.dumps(request_json)
             activity_log.result = 'processing'
@@ -990,7 +992,19 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                         else:
                             activity_log.exception_message = 'Cannot downvote this'
                             activity_log.result = 'ignored'
-                # Flush the caches of any major object that was created. To be sure.
+                elif request_json['type'] == 'Flag':    # Reported content
+                    activity_log.activity_type = 'Report'
+                    user_ap_id = request_json['actor']
+                    user = find_actor_or_create(user_ap_id)
+                    target_ap_id = request_json['object']
+                    reported = find_reported_object(target_ap_id)
+                    if user and reported:
+                        process_report(user, reported, request_json, activity_log)
+                        activity_log.result = 'success'
+                    else:
+                        activity_log.exception_message = 'Report ignored due to missing user or content'
+
+                    # Flush the caches of any major object that was created. To be sure.
                 if 'user' in vars() and user is not None:
                     user.flush_cache()
                     if user.instance_id and user.instance_id != 1:
@@ -1053,6 +1067,9 @@ def process_delete_request(request_json, activitypublog_id, ip_address):
 
 
 def announce_activity_to_followers(community, creator, activity):
+    # remove context from what will be inner object
+    del activity["@context"]
+
     announce_activity = {
         '@context': default_context(),
         "actor": community.profile_id(),

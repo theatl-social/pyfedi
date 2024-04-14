@@ -4,21 +4,19 @@
     {% extends "base.html" %}
 {% endif %} %}
 {% from 'bootstrap/form.html' import render_form %}
+{% set active_child = 'admin_users' %}
 
 {% block app_content %}
 <div class="row">
     <div class="col">
-        {% include 'admin/_nav.html' %}
-    </div>
-</div>
-
-<div class="row">
-    <div class="col">
+        <h1>{{ _('Users') }}</h1>
         <a class="btn btn-primary" href="{{ url_for('admin.admin_users_add') }}" style="float: right;">{{ _('Add local user') }}</a>
         <form method="get">
             <input type="search" name="search" value="{{ search }}">
             <input type="radio" name="local_remote" value="local" id="local_remote_local" {{ 'checked' if local_remote == 'local' }}><label for="local_remote_local"> Local</label>
             <input type="radio" name="local_remote" value="remote" id="local_remote_remote" {{ 'checked' if local_remote == 'remote' }}><label for="local_remote_remote"> Remote</label>
+            <input type="radio" name="type" value="bad_rep" id="type_bad_rep" {{ 'checked' if type == 'bad_rep' }}><label for="type_bad_rep"> Bad rep</label>
+            <input type="radio" name="type" value="bad_attitude" id="type_bad_attitude" {{ 'checked' if type == 'bad_attitude' }}><label for="type_bad_attitude"> Bad attitude</label>
             <input type="submit" name="submit" value="Search" class="btn btn-primary">
         </form>
         <table class="table table-striped mt-1">
@@ -77,4 +75,11 @@
         </nav>
     </div>
 </div>
+<hr />
+<div class="row">
+    <div class="col">
+        {% include 'admin/_nav.html' %}
+    </div>
+</div>
+<hr />
 {% endblock %}

@@ -12,7 +12,7 @@ from flask_babel import _
 from sqlalchemy import text, func
 from app import db, cache, constants, celery
 from app.models import User, Post, Community, BannedInstances, File, PostReply, AllowedInstances, Instance, utcnow, \
-    PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole
+    PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation
 import time
 import base64
 import requests
@@ -223,6 +223,8 @@ def banned_user_agents():
 
 @cache.memoize(150)
 def instance_blocked(host: str) -> bool:        # see also utils.instance_banned()
+    if host is None or host == '':
+        return True
     host = host.lower()
     if 'https://' in host or 'http://' in host:
         host = urlparse(host).hostname
@@ -232,6 +234,8 @@ def instance_blocked(host: str) -> bool:        # see also utils.instance_banned
 
 @cache.memoize(150)
 def instance_allowed(host: str) -> bool:
+    if host is None or host == '':
+        return True
     host = host.lower()
     if 'https://' in host or 'http://' in host:
         host = urlparse(host).hostname
@@ -561,11 +565,11 @@ def actor_json_to_model(activity_json, address, server):
             current_app.logger.error(f'KeyError for {address}@{server} while parsing ' + str(activity_json))
             return None
 
-        if 'icon' in activity_json:
+        if 'icon' in activity_json and activity_json['icon'] is not None and 'url' in activity_json['icon']:
             avatar = File(source_url=activity_json['icon']['url'])
             user.avatar = avatar
             db.session.add(avatar)
-        if 'image' in activity_json:
+        if 'image' in activity_json and activity_json['image'] is not None and 'url' in activity_json['image']:
             cover = File(source_url=activity_json['image']['url'])
             user.cover = cover
             db.session.add(cover)
@@ -625,11 +629,11 @@ def actor_json_to_model(activity_json, address, server):
         elif 'content' in activity_json:
             community.description_html = allowlist_html(activity_json['content'])
             community.description = ''
-        if 'icon' in activity_json:
+        if 'icon' in activity_json and activity_json['icon'] is not None and 'url' in activity_json['icon']:
             icon = File(source_url=activity_json['icon']['url'])
             community.icon = icon
             db.session.add(icon)
-        if 'image' in activity_json:
+        if 'image' in activity_json and activity_json['image'] is not None and 'url' in activity_json['image']:
             image = File(source_url=activity_json['image']['url'])
             community.image = image
             db.session.add(image)
@@ -702,12 +706,12 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
                     if not domain.banned:
                         domain.post_count += 1
                         post.domain = domain
-        if 'image' in post_json and post.image is None:
-            image = File(source_url=post_json['image']['url'])
-            db.session.add(image)
-            post.image = image
 
         if post is not None:
+            if 'image' in post_json and post.image is None:
+                image = File(source_url=post_json['image']['url'])
+                db.session.add(image)
+                post.image = image
             db.session.add(post)
             community.post_count += 1
             activity_log.result = 'success'
@@ -793,18 +797,19 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory):
                     db.session.commit()
 
                     # Alert regarding fascist meme content
-                    try:
-                        image_text = pytesseract.image_to_string(Image.open(BytesIO(source_image)).convert('L'), timeout=30)
-                    except FileNotFoundError as e:
-                        image_text = ''
-                    if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):   # chan posts usually contain the text 'Anonymous' and ' No.12345'
-                        post = Post.query.filter_by(image_id=file.id).first()
-                        notification = Notification(title='Review this',
-                                                    user_id=1,
-                                                    author_id=post.user_id,
-                                                    url=url_for('activitypub.post_ap', post_id=post.id))
-                        db.session.add(notification)
-                        db.session.commit()
+                    if img_width < 2000:    # images > 2000px tend to be real photos instead of 4chan screenshots.
+                        try:
+                            image_text = pytesseract.image_to_string(Image.open(BytesIO(source_image)).convert('L'), timeout=30)
+                        except FileNotFoundError as e:
+                            image_text = ''
+                        if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):   # chan posts usually contain the text 'Anonymous' and ' No.12345'
+                            post = Post.query.filter_by(image_id=file.id).first()
+                            notification = Notification(title='Review this',
+                                                        user_id=1,
+                                                        author_id=post.user_id,
+                                                        url=url_for('activitypub.post_ap', post_id=post.id))
+                            db.session.add(notification)
+                            db.session.commit()
 
 
 # create a summary from markdown if present, otherwise use html if available
@@ -892,6 +897,21 @@ def find_liked_object(ap_id) -> Union[Post, PostReply, None]:
         post_reply = PostReply.get_by_ap_id(ap_id)
         if post_reply:
             return post_reply
+    return None
+
+
+def find_reported_object(ap_id) -> Union[User, Post, PostReply, None]:
+    post = Post.get_by_ap_id(ap_id)
+    if post:
+        return post
+    else:
+        post_reply = PostReply.get_by_ap_id(ap_id)
+        if post_reply:
+            return post_reply
+        else:
+            user = find_actor_or_create(ap_id, create_if_not_found=False)
+            if user:
+                return user
     return None
 
 
@@ -1017,7 +1037,13 @@ def downvote_post(post, user):
     if not existing_vote:
         effect = -1.0
         post.down_votes += 1
-        post.score -= 1.0
+        # Make 'hot' sort more spicy by amplifying the effect of early downvotes
+        if post.up_votes + post.down_votes <= 30:
+            post.score -= 5.0
+        elif post.up_votes + post.down_votes <= 60:
+            post.score -= 2.0
+        else:
+            post.score -= 1.0
         vote = PostVote(user_id=user.id, post_id=post.id, author_id=post.author.id,
                         effect=effect)
         post.author.reputation += effect
@@ -1119,10 +1145,18 @@ def upvote_post(post, user):
     user.last_seen = utcnow()
     user.recalculate_attitude()
     effect = instance_weight(user.ap_domain)
+    # Make 'hot' sort more spicy by amplifying the effect of early upvotes
+    spicy_effect = effect
+    if post.up_votes + post.down_votes <= 10:
+        spicy_effect = effect * 10
+    elif post.up_votes + post.down_votes <= 30:
+        spicy_effect = effect * 5
+    elif post.up_votes + post.down_votes <= 60:
+        spicy_effect = effect * 2
     existing_vote = PostVote.query.filter_by(user_id=user.id, post_id=post.id).first()
     if not existing_vote:
         post.up_votes += 1
-        post.score += effect
+        post.score += spicy_effect
         vote = PostVote(user_id=user.id, post_id=post.id, author_id=post.author.id,
                         effect=effect)
         if post.community.low_quality and effect > 0:
@@ -1533,7 +1567,7 @@ def update_post_from_activity(post: Post, request_json: dict):
             old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
             post.cross_posts.clear()
             for ocp in old_cross_posts:
-                if ocp.cross_posts is not None:
+                if ocp.cross_posts is not None and post.id in ocp.cross_posts:
                     ocp.cross_posts.remove(post.id)
 
     if post is not None:
@@ -1621,6 +1655,77 @@ def undo_vote(activity_log, comment, post, target_ap_id, user):
             activity_log.exception_message = 'Activity about local content which is already present'
             activity_log.result = 'ignored'
     return post
+
+
+def process_report(user, reported, request_json, activity_log):
+    if len(request_json['summary']) < 15:
+        reasons = request_json['summary']
+        description = ''
+    else:
+        reasons = request_json['summary'][:15]
+        description = request_json['summary'][15:]
+    if isinstance(reported, User):
+        if reported.reports == -1:
+            return
+        type = 0
+        report = Report(reasons=reasons, description=description,
+                        type=type, reporter_id=user.id, suspect_user_id=reported.id, source_instance_id=user.instance_id)
+        db.session.add(report)
+
+        # Notify site admin
+        already_notified = set()
+        for admin in Site.admins():
+            if admin.id not in already_notified:
+                notify = Notification(title='Reported user', url='/admin/reports', user_id=admin.id,
+                                      author_id=user.id)
+                db.session.add(notify)
+                admin.unread_notifications += 1
+        reported.reports += 1
+        db.session.commit()
+    elif isinstance(reported, Post):
+        if reported.reports == -1:
+            return
+        type = 1
+        report = Report(reasons=reasons, description=description, type=type, reporter_id=user.id,
+                        suspect_user_id=reported.author.id, suspect_post_id=reported.id,
+                        suspect_community_id=reported.community.id, in_community_id=reported.community.id,
+                        source_instance_id=user.instance_id)
+        db.session.add(report)
+
+        already_notified = set()
+        for mod in reported.community.moderators():
+            notification = Notification(user_id=mod.user_id, title=_('A post has been reported'),
+                                        url=f"https://{current_app.config['SERVER_NAME']}/post/{reported.id}",
+                                        author_id=user.id)
+            db.session.add(notification)
+            already_notified.add(mod.user_id)
+        reported.reports += 1
+        db.session.commit()
+    elif isinstance(reported, PostReply):
+        if reported.reports == -1:
+            return
+        type = 2
+        post = Post.query.get(reported.post_id)
+        report = Report(reasons=reasons, description=description, type=type, reporter_id=user.id, suspect_post_id=post.id,
+                        suspect_community_id=post.community.id,
+                        suspect_user_id=reported.author.id, suspect_post_reply_id=reported.id,
+                        in_community_id=post.community.id,
+                        source_instance_id=user.instance_id)
+        db.session.add(report)
+        # Notify moderators
+        already_notified = set()
+        for mod in post.community.moderators():
+            notification = Notification(user_id=mod.user_id, title=_('A comment has been reported'),
+                                        url=f"https://{current_app.config['SERVER_NAME']}/comment/{reported.id}",
+                                        author_id=user.id)
+            db.session.add(notification)
+            already_notified.add(mod.user_id)
+        reported.reports += 1
+        db.session.commit()
+    elif isinstance(reported, Community):
+        ...
+    elif isinstance(reported, Conversation):
+        ...
 
 
 def get_redis_connection() -> redis.Redis:

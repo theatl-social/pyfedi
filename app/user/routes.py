@@ -19,7 +19,7 @@ from app.user.utils import purge_user_then_delete
 from app.utils import get_setting, render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     is_image_url, ensure_directory_exists, gibberish, file_get_contents, community_membership, user_filters_home, \
     user_filters_posts, user_filters_replies, moderating_communities, joined_communities, theme_list, blocked_instances, \
-    allowlist_html
+    allowlist_html, recently_upvoted_posts, recently_downvoted_posts, blocked_users
 from sqlalchemy import desc, or_, text
 import os
 
@@ -85,7 +85,7 @@ def show_profile(user):
                            description=description, subscribed=subscribed, upvoted=upvoted,
                            post_next_url=post_next_url, post_prev_url=post_prev_url,
                            replies_next_url=replies_next_url, replies_prev_url=replies_prev_url,
-                           noindex=not user.indexable, show_post_community=True,
+                           noindex=not user.indexable, show_post_community=True, hide_vote_buttons=True,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id())
                            )
@@ -294,6 +294,7 @@ def block_profile(actor):
             # federate block
 
         flash(f'{actor} has been blocked.')
+        cache.delete_memoized(blocked_users, current_user.id)
 
     goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
     return redirect(goto)
@@ -322,6 +323,7 @@ def unblock_profile(actor):
             # federate unblock
 
         flash(f'{actor} has been unblocked.')
+        cache.delete_memoized(blocked_users, current_user.id)
 
     goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
     return redirect(goto)
@@ -335,8 +337,18 @@ def report_profile(actor):
     else:
         user: User = User.query.filter_by(user_name=actor, deleted=False, ap_id=None).first()
     form = ReportUserForm()
+
+    if user and user.reports == -1:  # When a mod decides to ignore future reports, user.reports is set to -1
+        flash(_('Moderators have already assessed reports regarding this person, no further reports are necessary.'), 'warning')
+
     if user and not user.banned:
         if form.validate_on_submit():
+
+            if user.reports == -1:
+                flash(_('%(user_name)s has already been reported, thank you!', user_name=actor))
+                goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
+                return redirect(goto)
+
             report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
                             type=0, reporter_id=current_user.id, suspect_user_id=user.id, source_instance_id=1)
             db.session.add(report)

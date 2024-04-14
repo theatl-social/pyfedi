@@ -105,7 +105,7 @@ def empty():
 @login_required
 def chat_options(conversation_id):
     conversation = Conversation.query.get_or_404(conversation_id)
-    if current_user.is_admin() or current_user.is_member(current_user):
+    if current_user.is_admin() or conversation.is_member(current_user):
         return render_template('chat/chat_options.html', conversation=conversation,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),

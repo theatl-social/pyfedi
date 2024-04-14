@@ -4,6 +4,7 @@ from time import sleep
 from flask import request, flash, json, url_for, current_app, redirect, g
 from flask_login import login_required, current_user
 from flask_babel import _
+from slugify import slugify
 from sqlalchemy import text, desc, or_
 
 from app import db, celery, cache
@@ -13,13 +14,14 @@ from app.activitypub.util import default_context, instance_allowed, instance_blo
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
-    topic_tree, topics_for_form
+    topics_for_form
 from app.community.util import save_icon_file, save_banner_file
 from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
-    moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers
+    moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
+    topic_tree
 from app.admin import bp
 
 
@@ -357,7 +359,7 @@ def admin_topic_add():
     form = EditTopicForm()
     form.parent_id.choices = topics_for_form(0)
     if form.validate_on_submit():
-        topic = Topic(name=form.name.data, machine_name=form.machine_name.data, num_communities=0)
+        topic = Topic(name=form.name.data, machine_name=slugify(form.machine_name.data.strip()), num_communities=0)
         if form.parent_id.data:
             topic.parent_id = form.parent_id.data
         else:
@@ -456,6 +458,7 @@ def admin_users_trash():
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
     local_remote = request.args.get('local_remote', '')
+    type = request.args.get('type', 'bad_rep')
 
     users = User.query.filter_by(deleted=False)
     if local_remote == 'local':
@@ -464,14 +467,19 @@ def admin_users_trash():
         users = users.filter(User.ap_id != None)
     if search:
         users = users.filter(User.email.ilike(f"%{search}%"))
-    users = users.filter(User.reputation < -10)
-    users = users.order_by(User.reputation).paginate(page=page, per_page=1000, error_out=False)
+
+    if type == '' or type == 'bad_rep':
+        users = users.filter(User.reputation < -10)
+        users = users.order_by(User.reputation).paginate(page=page, per_page=1000, error_out=False)
+    elif type == 'bad_attitude':
+        users = users.filter(User.attitude < 0.0)
+        users = users.order_by(-User.attitude).paginate(page=page, per_page=1000, error_out=False)
 
     next_url = url_for('admin.admin_users_trash', page=users.next_num) if users.has_next else None
     prev_url = url_for('admin.admin_users_trash', page=users.prev_num) if users.has_prev and page != 1 else None
 
     return render_template('admin/users.html', title=_('Problematic users'), next_url=next_url, prev_url=prev_url, users=users,
-                           local_remote=local_remote, search=search,
+                           local_remote=local_remote, search=search, type=type,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            site=g.site

@@ -17,7 +17,7 @@ from app import db, celery, cache
 from app.topic.forms import ChooseTopicsForm
 from app.utils import render_template, user_filters_posts, moderating_communities, joined_communities, \
     community_membership, blocked_domains, validation_required, mimetype_from_url, blocked_instances, \
-    communities_banned_from
+    communities_banned_from, blocked_users
 
 
 @bp.route('/topic/<path:topic_path>', methods=['GET'])
@@ -63,12 +63,18 @@ def show_topic(topic_path):
                 posts = posts.filter(Post.nsfw == False)
             content_filters = user_filters_posts(current_user.id)
 
+            # filter blocked domains and instances
             domains_ids = blocked_domains(current_user.id)
             if domains_ids:
                 posts = posts.filter(or_(Post.domain_id.not_in(domains_ids), Post.domain_id == None))
             instance_ids = blocked_instances(current_user.id)
             if instance_ids:
                 posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
+            # filter blocked users
+            blocked_accounts = blocked_users(current_user.id)
+            if blocked_accounts:
+                posts = posts.filter(Post.user_id.not_in(blocked_accounts))
+
             banned_from = communities_banned_from(current_user.id)
             if banned_from:
                 posts = posts.filter(Post.community_id.not_in(banned_from))
@@ -77,7 +83,7 @@ def show_topic(topic_path):
         if sort == '' or sort == 'hot':
             posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
         elif sort == 'top':
-            posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=7)).order_by(desc(Post.score))
+            posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=7)).order_by(desc(Post.up_votes - Post.down_votes))
         elif sort == 'new':
             posts = posts.order_by(desc(Post.posted_at))
         elif sort == 'active':

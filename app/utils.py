@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import bisect
 import hashlib
 import mimetypes
 import random
@@ -28,7 +29,7 @@ import re
 
 from app.email import send_welcome_email
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, ActivityPubLog, IpBan, \
-    Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan
+    Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock
 
 
 # Flask's render_template function, with support for themes added
@@ -169,7 +170,7 @@ def allowlist_html(html: str) -> str:
     if html is None or html == '':
         return ''
     allowed_tags = ['p', 'strong', 'a', 'ul', 'ol', 'li', 'em', 'blockquote', 'cite', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre',
-                    'code', 'img', 'details', 'summary', 'table', 'tr', 'td', 'th', 'tbody', 'thead']
+                    'code', 'img', 'details', 'summary', 'table', 'tr', 'td', 'th', 'tbody', 'thead', 'hr']
     # Parse the HTML using BeautifulSoup
     soup = BeautifulSoup(html, 'html.parser')
 
@@ -211,13 +212,17 @@ def allowlist_html(html: str) -> str:
             if tag.name == 'table':
                 tag.attrs['class'] = 'table'
 
-    return str(soup)
+    # avoid returning empty anchors
+    re_empty_anchor = re.compile(r'<a href="(.*?)" rel="nofollow ugc" target="_blank"><\/a>')
+    return re_empty_anchor.sub(r'<a href="\1" rel="nofollow ugc" target="_blank">\1</a>', str(soup))
 
 
 def markdown_to_html(markdown_text) -> str:
     if markdown_text:
         raw_html = markdown2.markdown(markdown_text, safe_mode=True, extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True})
-        # todo: in raw_html, replace lemmy spoiler tokens with appropriate html tags instead.
+        # replace lemmy spoiler tokens with appropriate html tags instead. (until possibly added as extra to markdown2)
+        re_spoiler = re.compile(r':{3} spoiler\s+?(\S.+?)(?:\n|</p>)(.+?)(?:\n|<p>):{3}', re.S)
+        raw_html = re_spoiler.sub(r'<details><summary>\1</summary><p>\2</p></details>', raw_html)
         return allowlist_html(raw_html)
     else:
         return ''
@@ -240,6 +245,8 @@ def microblog_content_to_title(html: str) -> str:
                 continue
             else:
                 tag = tag.extract()
+        else:
+            tag = tag.extract()
 
     if title_found:
         result = soup.text
@@ -326,6 +333,12 @@ def blocked_domains(user_id) -> List[int]:
 def blocked_instances(user_id) -> List[int]:
     blocks = InstanceBlock.query.filter_by(user_id=user_id)
     return [block.instance_id for block in blocks]
+
+
+@cache.memoize(timeout=86400)
+def blocked_users(user_id) -> List[int]:
+    blocks = UserBlock.query.filter_by(blocker_id=user_id)
+    return [block.blocked_id for block in blocks]
 
 
 @cache.memoize(timeout=86400)
@@ -447,6 +460,8 @@ def user_ip_banned() -> bool:
 
 @cache.memoize(timeout=30)
 def instance_banned(domain: str) -> bool:   # see also activitypub.util.instance_blocked()
+    if domain is None or domain == '':
+        return False
     banned = BannedInstances.query.filter_by(domain=domain).first()
     return banned is not None
 
@@ -675,6 +690,21 @@ def finalize_user_setup(user, application_required=False):
     send_welcome_email(user, application_required)
 
 
+# topics, in a tree
+def topic_tree() -> List:
+    topics = Topic.query.order_by(Topic.name)
+
+    topics_dict = {topic.id: {'topic': topic, 'children': []} for topic in topics.all()}
+
+    for topic in topics:
+        if topic.parent_id is not None:
+            parent_comment = topics_dict.get(topic.parent_id)
+            if parent_comment:
+                parent_comment['children'].append(topics_dict[topic.id])
+
+    return [topic for topic in topics_dict.values() if topic['topic'].parent_id is None]
+
+
 # All the following post/comment ranking math is explained at https://medium.com/hacking-and-gonzo/how-reddit-ranking-algorithms-work-ef111e33d0d9
 epoch = datetime(1970, 1, 1)
 
@@ -775,9 +805,13 @@ def current_theme():
         if current_user.theme is not None and current_user.theme != '':
             return current_user.theme
         else:
-            return g.site.default_theme if g.site.default_theme is not None else ''
+            if hasattr(g, 'site'):
+                site = g.site
+            else:
+                site = Site.query.get(1)
+            return site.default_theme if site.default_theme is not None else ''
     else:
-        return g.site.default_theme if g.site.default_theme is not None else ''
+        return ''
 
 
 def theme_list():
@@ -836,3 +870,37 @@ def show_ban_message():
     resp = make_response(redirect(url_for('main.index')))
     resp.set_cookie('sesion', '17489047567495', expires=datetime(year=2099, month=12, day=30))
     return resp
+
+
+# search a sorted list using a binary search. Faster than using 'in' with a unsorted list.
+def in_sorted_list(arr, target):
+    index = bisect.bisect_left(arr, target)
+    return index < len(arr) and arr[index] == target
+
+
+@cache.memoize(timeout=600)
+def recently_upvoted_posts(user_id) -> List[int]:
+    post_ids = db.session.execute(text('SELECT post_id FROM "post_vote" WHERE user_id = :user_id AND effect > 0 ORDER BY id DESC LIMIT 1000'),
+                               {'user_id': user_id}).scalars()
+    return sorted(post_ids)     # sorted so that in_sorted_list can be used
+
+
+@cache.memoize(timeout=600)
+def recently_downvoted_posts(user_id) -> List[int]:
+    post_ids = db.session.execute(text('SELECT post_id FROM "post_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 1000'),
+                               {'user_id': user_id}).scalars()
+    return sorted(post_ids)
+
+
+@cache.memoize(timeout=600)
+def recently_upvoted_post_replies(user_id) -> List[int]:
+    reply_ids = db.session.execute(text('SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect > 0 ORDER BY id DESC LIMIT 1000'),
+                               {'user_id': user_id}).scalars()
+    return sorted(reply_ids)     # sorted so that in_sorted_list can be used
+
+
+@cache.memoize(timeout=600)
+def recently_downvoted_post_replies(user_id) -> List[int]:
+    reply_ids = db.session.execute(text('SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 1000'),
+                               {'user_id': user_id}).scalars()
+    return sorted(reply_ids)
