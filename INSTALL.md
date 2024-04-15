@@ -79,7 +79,7 @@ sudo apt install tesseract-ocr
 
 * Clone PyFedi            
 
-```basg
+```bash
 git clone https://codeberg.org/rimu/pyfedi.git
 ```
 
