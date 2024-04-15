@@ -15,7 +15,7 @@ from app.inoculation import inoculation
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm
 from app.community.forms import CreateLinkForm, CreateImageForm, CreateDiscussionForm
 from app.post.util import post_replies, get_comment_branch, post_reply_count
-from app.constants import SUBSCRIPTION_MEMBER, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_ARTICLE
+from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_ARTICLE
 from app.models import Post, PostReply, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, InstanceBlock, Report, Site, Community, \
     Topic, User, Instance
@@ -262,6 +262,7 @@ def show_post(post_id: int):
                            recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies,
                            etag=f"{post.id}{sort}_{hash(post.last_active)}", markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
                            low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1', SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
+                           SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            inoculation=inoculation[randint(0, len(inoculation) - 1)]
@@ -489,6 +490,7 @@ def continue_discussion(post_id, comment_id):
                            is_moderator=is_moderator, comment=comment, replies=replies, markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()), community=post.community,
+                           SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)])
     response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
     return response
@@ -674,7 +676,8 @@ def add_reply(post_id: int, comment_id: int):
         return render_template('post/add_reply.html', title=_('Discussing %(title)s', title=post.title), post=post,
                                is_moderator=is_moderator, form=form, comment=in_reply_to, markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
                                moderating_communities=moderating_communities(current_user.get_id()), mods=mod_list,
-                               joined_communities = joined_communities(current_user.id),
+                               joined_communities = joined_communities(current_user.id), community=post.community,
+                               SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                                inoculation=inoculation[randint(0, len(inoculation) - 1)])
 
 
@@ -1430,7 +1433,8 @@ def post_reply_edit(post_id: int, comment_id: int):
             form.notify_author.data = post_reply.notify_author
             return render_template('post/post_reply_edit.html', title=_('Edit comment'), form=form, post=post, post_reply=post_reply,
                                    comment=comment, markdown_editor=current_user.markdown_editor, moderating_communities=moderating_communities(current_user.get_id()),
-                                   joined_communities=joined_communities(current_user.get_id()),
+                                   joined_communities=joined_communities(current_user.get_id()), community=post.community,
+                                   SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)])
     else:
         abort(401)
