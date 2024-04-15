@@ -305,20 +305,20 @@ def post_vote(post_id: int, vote_direction):
             post.up_votes += 1
             # Make 'hot' sort more spicy by amplifying the effect of early upvotes
             if post.up_votes + post.down_votes <= 10:
-                post.score += 10
+                post.score += current_app.config['SPICY_UNDER_10']
             elif post.up_votes + post.down_votes <= 30:
-                post.score += 5
+                post.score += current_app.config['SPICY_UNDER_30']
             elif post.up_votes + post.down_votes <= 60:
-                post.score += 2
+                post.score += current_app.config['SPICY_UNDER_60']
             else:
                 post.score += 1
         else:
             effect = -1
             post.down_votes += 1
             if post.up_votes + post.down_votes <= 30:
-                post.score -= 5
+                post.score -= current_app.config['SPICY_UNDER_30']
             elif post.up_votes + post.down_votes <= 60:
-                post.score -= 2
+                post.score -= current_app.config['SPICY_UNDER_60']
             else:
                 post.score -= 1
         vote = PostVote(user_id=current_user.id, post_id=post.id, author_id=post.author.id,

@@ -1039,9 +1039,9 @@ def downvote_post(post, user):
         post.down_votes += 1
         # Make 'hot' sort more spicy by amplifying the effect of early downvotes
         if post.up_votes + post.down_votes <= 30:
-            post.score -= 5.0
+            post.score -= current_app.config['SPICY_UNDER_30']
         elif post.up_votes + post.down_votes <= 60:
-            post.score -= 2.0
+            post.score -= current_app.config['SPICY_UNDER_60']
         else:
             post.score -= 1.0
         vote = PostVote(user_id=user.id, post_id=post.id, author_id=post.author.id,
@@ -1148,11 +1148,11 @@ def upvote_post(post, user):
     # Make 'hot' sort more spicy by amplifying the effect of early upvotes
     spicy_effect = effect
     if post.up_votes + post.down_votes <= 10:
-        spicy_effect = effect * 10
+        spicy_effect = effect * current_app.config['SPICY_UNDER_10']
     elif post.up_votes + post.down_votes <= 30:
-        spicy_effect = effect * 5
+        spicy_effect = effect * current_app.config['SPICY_UNDER_30']
     elif post.up_votes + post.down_votes <= 60:
-        spicy_effect = effect * 2
+        spicy_effect = effect * current_app.config['SPICY_UNDER_60']
     existing_vote = PostVote.query.filter_by(user_id=user.id, post_id=post.id).first()
     if not existing_vote:
         post.up_votes += 1
