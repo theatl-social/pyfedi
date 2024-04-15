@@ -1442,7 +1442,7 @@ def post_reply_delete(post_id: int, comment_id: int):
     post = Post.query.get_or_404(post_id)
     post_reply = PostReply.query.get_or_404(comment_id)
     community = post.community
-    if post_reply.user_id == current_user.id or community.is_moderator():
+    if post_reply.user_id == current_user.id or community.is_moderator() or current_user.is_admin():
         if post_reply.has_replies():
             post_reply.body = 'Deleted by author' if post_reply.author.id == current_user.id else 'Deleted by moderator'
             post_reply.body_html = markdown_to_html(post_reply.body)
