@@ -932,6 +932,11 @@ fieldset legend {
   border-top: solid 1px #bbb;
   margin-right: 8px;
 }
+.comments > .comment .comment_body hr {
+  margin-left: 15px;
+  margin-right: 15px;
+  opacity: 0.1;
+}
 .comments > .comment:first-child {
   border-top: none;
   padding-top: 0;

@@ -552,6 +552,14 @@ html {
   border-top: solid 1px $grey;
   margin-right: 8px;
 
+  .comment_body {
+    hr {
+      margin-left: 15px;
+      margin-right: 15px;
+      opacity: 0.1;
+    }
+  }
+
   &:first-child {
     border-top: none;
     padding-top: 0;
