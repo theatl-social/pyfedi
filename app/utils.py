@@ -284,10 +284,13 @@ def domain_from_url(url: str, create=True) -> Domain:
 
 
 def shorten_string(input_str, max_length=50):
-    if len(input_str) <= max_length:
-        return input_str
+    if input_str:
+        if len(input_str) <= max_length:
+            return input_str
+        else:
+            return input_str[:max_length - 3] + '…'
     else:
-        return input_str[:max_length - 3] + '…'
+        return ''
 
 
 def shorten_url(input: str, max_length=20):
