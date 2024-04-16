@@ -27,7 +27,7 @@ import pytesseract
 from app.utils import get_request, allowlist_html, get_setting, ap_datetime, markdown_to_html, \
     is_image_url, domain_from_url, gibberish, ensure_directory_exists, markdown_to_text, head_request, post_ranking, \
     shorten_string, reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, remove_tracking_from_link, \
-    blocked_phrases, microblog_content_to_title
+    blocked_phrases, microblog_content_to_title, generate_image_from_video_url
 
 
 def public_key():
@@ -738,78 +738,117 @@ def make_image_sizes(file_id, thumbnail_width=50, medium_width=120, directory='p
 def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory):
     file = File.query.get(file_id)
     if file and file.source_url:
-        try:
-            source_image_response = get_request(file.source_url)
-        except:
-            pass
+        # Videos
+        if file.source_url.endswith('.mp4') or file.source_url.endswith('.webm'):
+            new_filename = gibberish(15)
+
+            # set up the storage directory
+            directory = f'app/static/media/{directory}/' + new_filename[0:2] + '/' + new_filename[2:4]
+            ensure_directory_exists(directory)
+
+            # file path and names to store the resized images on disk
+            final_place = os.path.join(directory, new_filename + '.jpg')
+            final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail.webp')
+
+            generate_image_from_video_url(file.source_url, final_place)
+
+            image = Image.open(final_place)
+            img_width = image.width
+
+            # Resize the image to medium
+            if medium_width:
+                if img_width > medium_width:
+                    image.thumbnail((medium_width, medium_width))
+                image.save(final_place)
+                file.file_path = final_place
+                file.width = image.width
+                file.height = image.height
+
+            # Resize the image to a thumbnail (webp)
+            if thumbnail_width:
+                if img_width > thumbnail_width:
+                    image.thumbnail((thumbnail_width, thumbnail_width))
+                image.save(final_place_thumbnail, format="WebP", quality=93)
+                file.thumbnail_path = final_place_thumbnail
+                file.thumbnail_width = image.width
+                file.thumbnail_height = image.height
+
+            db.session.commit()
+
+        # Images
         else:
-            if source_image_response.status_code == 200:
-                content_type = source_image_response.headers.get('content-type')
-                if content_type and content_type.startswith('image'):
-                    source_image = source_image_response.content
-                    source_image_response.close()
+            try:
+                source_image_response = get_request(file.source_url)
+            except:
+                pass
+            else:
+                if source_image_response.status_code == 200:
+                    content_type = source_image_response.headers.get('content-type')
+                    if content_type and content_type.startswith('image'):
+                        source_image = source_image_response.content
+                        source_image_response.close()
 
-                    file_ext = os.path.splitext(file.source_url)[1]
-                    # fall back to parsing the http content type if the url does not contain a file extension
-                    if file_ext == '':
-                        content_type_parts = content_type.split('/')
-                        if content_type_parts:
-                            file_ext = '.' + content_type_parts[-1]
-                    else:
-                        if '?' in file_ext:
-                            file_ext = file_ext.split('?')[0]
+                        file_ext = os.path.splitext(file.source_url)[1]
+                        # fall back to parsing the http content type if the url does not contain a file extension
+                        if file_ext == '':
+                            content_type_parts = content_type.split('/')
+                            if content_type_parts:
+                                file_ext = '.' + content_type_parts[-1]
+                        else:
+                            if '?' in file_ext:
+                                file_ext = file_ext.split('?')[0]
 
-                    new_filename = gibberish(15)
+                        new_filename = gibberish(15)
 
-                    # set up the storage directory
-                    directory = f'app/static/media/{directory}/' + new_filename[0:2] + '/' + new_filename[2:4]
-                    ensure_directory_exists(directory)
+                        # set up the storage directory
+                        directory = f'app/static/media/{directory}/' + new_filename[0:2] + '/' + new_filename[2:4]
+                        ensure_directory_exists(directory)
 
-                    # file path and names to store the resized images on disk
-                    final_place = os.path.join(directory, new_filename + file_ext)
-                    final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail.webp')
+                        # file path and names to store the resized images on disk
+                        final_place = os.path.join(directory, new_filename + file_ext)
+                        final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail.webp')
 
-                    # Load image data into Pillow
-                    Image.MAX_IMAGE_PIXELS = 89478485
-                    image = Image.open(BytesIO(source_image))
-                    image = ImageOps.exif_transpose(image)
-                    img_width = image.width
-                    img_height = image.height
+                        # Load image data into Pillow
+                        Image.MAX_IMAGE_PIXELS = 89478485
+                        image = Image.open(BytesIO(source_image))
+                        image = ImageOps.exif_transpose(image)
+                        img_width = image.width
+                        img_height = image.height
 
-                    # Resize the image to medium
-                    if medium_width:
-                        if img_width > medium_width:
-                            image.thumbnail((medium_width, medium_width))
-                        image.save(final_place)
-                        file.file_path = final_place
-                        file.width = image.width
-                        file.height = image.height
+                        # Resize the image to medium
+                        if medium_width:
+                            if img_width > medium_width:
+                                image.thumbnail((medium_width, medium_width))
+                            image.save(final_place)
+                            file.file_path = final_place
+                            file.width = image.width
+                            file.height = image.height
 
-                    # Resize the image to a thumbnail (webp)
-                    if thumbnail_width:
-                        if img_width > thumbnail_width:
-                            image.thumbnail((thumbnail_width, thumbnail_width))
-                        image.save(final_place_thumbnail, format="WebP", quality=93)
-                        file.thumbnail_path = final_place_thumbnail
-                        file.thumbnail_width = image.width
-                        file.thumbnail_height = image.height
+                        # Resize the image to a thumbnail (webp)
+                        if thumbnail_width:
+                            if img_width > thumbnail_width:
+                                image.thumbnail((thumbnail_width, thumbnail_width))
+                            image.save(final_place_thumbnail, format="WebP", quality=93)
+                            file.thumbnail_path = final_place_thumbnail
+                            file.thumbnail_width = image.width
+                            file.thumbnail_height = image.height
 
-                    db.session.commit()
+                        db.session.commit()
 
-                    # Alert regarding fascist meme content
-                    if img_width < 2000:    # images > 2000px tend to be real photos instead of 4chan screenshots.
-                        try:
-                            image_text = pytesseract.image_to_string(Image.open(BytesIO(source_image)).convert('L'), timeout=30)
-                        except FileNotFoundError as e:
-                            image_text = ''
-                        if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):   # chan posts usually contain the text 'Anonymous' and ' No.12345'
-                            post = Post.query.filter_by(image_id=file.id).first()
-                            notification = Notification(title='Review this',
-                                                        user_id=1,
-                                                        author_id=post.user_id,
-                                                        url=url_for('activitypub.post_ap', post_id=post.id))
-                            db.session.add(notification)
-                            db.session.commit()
+                        # Alert regarding fascist meme content
+                        if img_width < 2000:    # images > 2000px tend to be real photos instead of 4chan screenshots.
+                            try:
+                                image_text = pytesseract.image_to_string(Image.open(BytesIO(source_image)).convert('L'), timeout=30)
+                            except FileNotFoundError as e:
+                                image_text = ''
+                            if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):   # chan posts usually contain the text 'Anonymous' and ' No.12345'
+                                post = Post.query.filter_by(image_id=file.id).first()
+                                notification = Notification(title='Review this',
+                                                            user_id=1,
+                                                            author_id=post.user_id,
+                                                            url=url_for('activitypub.post_ap', post_id=post.id))
+                                db.session.add(notification)
+                                db.session.commit()
 
 
 # create a summary from markdown if present, otherwise use html if available

@@ -83,6 +83,15 @@
                 <span class="fe fe-external"></span></a></p>
                 {% if post.url.endswith('.mp3') %}
                     <p><audio controls preload="{{ 'none' if low_bandwidth else 'metadata' }}" src="{{ post.url }}"></audio></p>
+                {% elif post.url.endswith('.mp4') or post.url.endswith('.webm') %}
+                    <p>
+                        <video class="responsive-video" controls preload="{{ 'metadata' if low_bandwidth else 'auto' }}">
+                        {% if post.url.endswith('.mp4') %}
+                            <source src="{{ post.url }}" media="video/mp4" />
+                        {% elif post.url.endswith('.webm') %}
+                            <source src="{{ post.url }}" media="video/webm" />
+                        {% endif %}
+                        </video></p>
                 {% endif %}
                 {% if 'youtube.com' in post.url %}
                     <p><a href="https://piped.video/watch?v={{ post.youtube_embed() }}">{{ _('Watch on piped.video') }} <span class="fe fe-external"></span></a></p>

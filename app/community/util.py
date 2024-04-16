@@ -112,7 +112,8 @@ def retrieve_mods_and_backfill(community_id: int):
                                 post.ranking = post_ranking(post.score, post.posted_at)
                                 if post.url:
                                     other_posts = Post.query.filter(Post.id != post.id, Post.url == post.url,
-                                            Post.posted_at > post.posted_at - timedelta(days=3), Post.posted_at < post.posted_at + timedelta(days=3)).all()
+                                                                    Post.posted_at > post.posted_at - timedelta(days=3),
+                                                                    Post.posted_at < post.posted_at + timedelta(days=3)).all()
                                     for op in other_posts:
                                         if op.cross_posts is None:
                                             op.cross_posts = [post.id]
@@ -223,26 +224,31 @@ def save_post(form, post: Post, type: str):
                 remove_old_file(post.image_id)
                 post.image_id = None
 
-            unused, file_extension = os.path.splitext(form.link_url.data)
-            # this url is a link to an image - turn it into a image post
-            if file_extension.lower() in allowed_extensions:
-                file = File(source_url=form.link_url.data)
+            if post.url.endswith('.mp4') or post.url.endswith('.webm'):
+                file = File(source_url=form.link_url.data)  # make_image_sizes() will take care of turning this into a still image
                 post.image = file
                 db.session.add(file)
-                post.type = POST_TYPE_IMAGE
             else:
-                # check opengraph tags on the page and make a thumbnail if an image is available in the og:image meta tag
-                opengraph = opengraph_parse(form.link_url.data)
-                if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
-                    filename = opengraph.get('og:image') or opengraph.get('og:image:url')
-                    filename_for_extension = filename.split('?')[0] if '?' in filename else filename
-                    unused, file_extension = os.path.splitext(filename_for_extension)
-                    if file_extension.lower() in allowed_extensions and not filename.startswith('/'):
-                        file = url_to_thumbnail_file(filename)
-                        if file:
-                            file.alt_text = shorten_string(opengraph.get('og:title'), 295)
-                            post.image = file
-                            db.session.add(file)
+                unused, file_extension = os.path.splitext(form.link_url.data)
+                # this url is a link to an image - turn it into a image post
+                if file_extension.lower() in allowed_extensions:
+                    file = File(source_url=form.link_url.data)
+                    post.image = file
+                    db.session.add(file)
+                    post.type = POST_TYPE_IMAGE
+                else:
+                    # check opengraph tags on the page and make a thumbnail if an image is available in the og:image meta tag
+                    opengraph = opengraph_parse(form.link_url.data)
+                    if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
+                        filename = opengraph.get('og:image') or opengraph.get('og:image:url')
+                        filename_for_extension = filename.split('?')[0] if '?' in filename else filename
+                        unused, file_extension = os.path.splitext(filename_for_extension)
+                        if file_extension.lower() in allowed_extensions and not filename.startswith('/'):
+                            file = url_to_thumbnail_file(filename)
+                            if file:
+                                file.alt_text = shorten_string(opengraph.get('og:title'), 295)
+                                post.image = file
+                                db.session.add(file)
 
     elif type == 'image':
         post.title = form.image_title.data
