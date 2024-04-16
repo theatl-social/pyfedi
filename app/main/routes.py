@@ -12,7 +12,7 @@ from app import db, cache
 from app.activitypub.util import default_context, make_image_sizes_async, refresh_user_profile, find_actor_or_create, \
     refresh_community_profile_task
 from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, POST_TYPE_IMAGE, POST_TYPE_LINK, \
-    SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR
+    SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_VIDEO
 from app.email import send_email, send_welcome_email
 from app.inoculation import inoculation
 from app.main import bp
@@ -150,7 +150,7 @@ def home_page(type, sort):
         recently_downvoted = []
 
     return render_template('index.html', posts=posts, active_communities=active_communities, show_post_community=True,
-                           POST_TYPE_IMAGE=POST_TYPE_IMAGE, POST_TYPE_LINK=POST_TYPE_LINK,
+                           POST_TYPE_IMAGE=POST_TYPE_IMAGE, POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_VIDEO=POST_TYPE_VIDEO,
                            low_bandwidth=low_bandwidth, recently_upvoted=recently_upvoted,
                            recently_downvoted=recently_downvoted,
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,

@@ -707,6 +707,10 @@ fieldset legend {
   border-radius: 2px;
   top: 0;
 }
+.post_list .post_teaser .thumbnail .fe-video {
+  left: 121px;
+  top: 0;
+}
 .post_list .post_teaser .thumbnail img {
   height: 60px;
   width: 60px;

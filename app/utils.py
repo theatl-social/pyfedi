@@ -168,6 +168,13 @@ def is_image_url(url):
     return any(path.endswith(extension) for extension in common_image_extensions)
 
 
+def is_video_url(url):
+    parsed_url = urlparse(url)
+    path = parsed_url.path.lower()
+    common_video_extensions = ['.mp4', '.webm']
+    return any(path.endswith(extension) for extension in common_video_extensions)
+
+
 # sanitise HTML using an allow list
 def allowlist_html(html: str) -> str:
     if html is None or html == '':

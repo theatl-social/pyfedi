@@ -11,7 +11,7 @@ from pillow_heif import register_heif_opener
 from app import db, cache, celery
 from app.activitypub.signature import post_request
 from app.activitypub.util import find_actor_or_create, actor_json_to_model, post_json_to_model, default_context
-from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE
+from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO
 from app.models import Community, File, BannedInstances, PostReply, PostVote, Post, utcnow, CommunityMember, Site, \
     Instance, Notification, User, ActivityPubLog
 from app.utils import get_request, gibberish, markdown_to_html, domain_from_url, allowlist_html, \
@@ -309,11 +309,31 @@ def save_post(form, post: Post, type: str):
                             source_url=final_place.replace('app/static/', f"https://{current_app.config['SERVER_NAME']}/static/"))
                 post.image = file
                 db.session.add(file)
+    elif type == 'video':
+        post.title = form.video_title.data
+        post.body = form.video_body.data
+        post.body_html = markdown_to_html(post.body)
+        url_changed = post.id is None or form.video_url.data != post.url
+        post.url = remove_tracking_from_link(form.video_url.data.strip())
+        post.type = POST_TYPE_VIDEO
+        domain = domain_from_url(form.video_url.data)
+        domain.post_count += 1
+        post.domain = domain
+
+        if url_changed:
+            if post.image_id:
+                remove_old_file(post.image_id)
+                post.image_id = None
+
+            file = File(source_url=form.video_url.data)  # make_image_sizes() will take care of turning this into a still image
+            post.image = file
+            db.session.add(file)
 
     elif type == 'poll':
         ...
     else:
         raise Exception('invalid post type')
+
     if post.id is None:
         if current_user.reputation > 100:
             post.up_votes = 1

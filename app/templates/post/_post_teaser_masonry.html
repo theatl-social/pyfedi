@@ -11,7 +11,7 @@
                 {% set thumbnail = post.image.view_url() %}
             {% endif %}
             <div class="masonry_thumb" title="{{ post.title }}">
-                {% if post.type == POST_TYPE_LINK %}
+                {% if post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO %}
                     {% if post.image.medium_url() %}
                         <a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="{{ _('View image') }}"><img src="{{ post.image.medium_url() }}"
                            alt="{{ post.image.alt_text if post.image.alt_text else '' }}" title="{{ post.title }}"

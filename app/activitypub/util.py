@@ -27,7 +27,7 @@ import pytesseract
 from app.utils import get_request, allowlist_html, get_setting, ap_datetime, markdown_to_html, \
     is_image_url, domain_from_url, gibberish, ensure_directory_exists, markdown_to_text, head_request, post_ranking, \
     shorten_string, reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, remove_tracking_from_link, \
-    blocked_phrases, microblog_content_to_title, generate_image_from_video_url
+    blocked_phrases, microblog_content_to_title, generate_image_from_video_url, is_video_url
 
 
 def public_key():
@@ -171,7 +171,7 @@ def post_to_activity(post: Post, community: Community):
         activity_data["object"]["object"]["updated"] = ap_datetime(post.edited_at)
     if post.language is not None:
         activity_data["object"]["object"]["language"] = {"identifier": post.language}
-    if post.type == POST_TYPE_LINK and post.url is not None:
+    if (post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO) and post.url is not None:
         activity_data["object"]["object"]["attachment"] = [{"href": post.url, "type": "Link"}]
     if post.image_id is not None:
         activity_data["object"]["object"]["image"] = {"url": post.image.view_url(), "type": "Image"}
@@ -208,7 +208,7 @@ def post_to_page(post: Post, community: Community):
         activity_data["updated"] = ap_datetime(post.edited_at)
     if post.language is not None:
         activity_data["language"] = {"identifier": post.language}
-    if post.type == POST_TYPE_LINK and post.url is not None:
+    if (post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO) and post.url is not None:
         activity_data["attachment"] = [{"href": post.url, "type": "Link"}]
     if post.image_id is not None:
         activity_data["image"] = {"url": post.image.view_url(), "type": "Image"}
@@ -1426,6 +1426,11 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
                     image = File(source_url=post.url)
                 db.session.add(image)
                 post.image = image
+            elif is_video_url(post.url):
+                post.type = POST_TYPE_VIDEO
+                image = File(source_url=post.url)
+                db.session.add(image)
+                post.image = image
             else:
                 post.type = POST_TYPE_LINK
                 post.url = remove_tracking_from_link(post.url)
@@ -1561,6 +1566,11 @@ def update_post_from_activity(post: Post, request_json: dict):
                 image = File(source_url=request_json['object']['image']['url'])
             else:
                 image = File(source_url=post.url)
+            db.session.add(image)
+            post.image = image
+        elif is_video_url(post.url):
+            post.type == POST_TYPE_VIDEO
+            image = File(source_url=post.url)
             db.session.add(image)
             post.image = image
         else:

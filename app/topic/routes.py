@@ -9,7 +9,7 @@ from flask_babel import _
 from sqlalchemy import text, desc, or_
 
 from app.activitypub.signature import post_request
-from app.constants import SUBSCRIPTION_NONMEMBER, POST_TYPE_IMAGE, POST_TYPE_LINK
+from app.constants import SUBSCRIPTION_NONMEMBER, POST_TYPE_IMAGE, POST_TYPE_LINK, POST_TYPE_VIDEO
 from app.inoculation import inoculation
 from app.models import Topic, Community, Post, utcnow, CommunityMember, CommunityJoinRequest, User
 from app.topic import bp
@@ -117,7 +117,8 @@ def show_topic(topic_path):
                                show_post_community=True, moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
                                inoculation=inoculation[randint(0, len(inoculation) - 1)],
-                               POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE)
+                               POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
+                               POST_TYPE_VIDEO=POST_TYPE_VIDEO)
     else:
         abort(404)
 

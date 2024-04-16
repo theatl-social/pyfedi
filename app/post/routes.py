@@ -13,9 +13,9 @@ from app.activitypub.util import default_context
 from app.community.util import save_post, send_to_remote_instance
 from app.inoculation import inoculation
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm
-from app.community.forms import CreateLinkForm, CreateImageForm, CreateDiscussionForm
+from app.community.forms import CreateLinkForm, CreateImageForm, CreateDiscussionForm, CreateVideoForm
 from app.post.util import post_replies, get_comment_branch, post_reply_count
-from app.constants import SUBSCRIPTION_MEMBER, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_ARTICLE
+from app.constants import SUBSCRIPTION_MEMBER, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_ARTICLE, POST_TYPE_VIDEO
 from app.models import Post, PostReply, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, InstanceBlock, Report, Site, Community, \
     Topic, User, Instance
@@ -257,6 +257,7 @@ def show_post(post_id: int):
                            canonical=post.ap_id, form=form, replies=replies, THREAD_CUTOFF_DEPTH=constants.THREAD_CUTOFF_DEPTH,
                            description=description, og_image=og_image, POST_TYPE_IMAGE=constants.POST_TYPE_IMAGE,
                            POST_TYPE_LINK=constants.POST_TYPE_LINK, POST_TYPE_ARTICLE=constants.POST_TYPE_ARTICLE,
+                           POST_TYPE_VIDEO=constants.POST_TYPE_VIDEO, autoplay=request.args.get('autoplay', False),
                            noindex=not post.author.indexable,
                            recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
                            recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies,
@@ -706,6 +707,8 @@ def post_edit(post_id: int):
         return redirect(url_for('post.post_edit_link_post', post_id=post_id))
     elif post.type == POST_TYPE_IMAGE:
         return redirect(url_for('post.post_edit_image_post', post_id=post_id))
+    elif post.type == POST_TYPE_VIDEO:
+        return redirect(url_for('post.post_edit_video_post', post_id=post_id))
     else:
         abort(404)
 
@@ -931,6 +934,87 @@ def post_edit_link_post(post_id: int):
         abort(401)
 
 
+@bp.route('/post/<int:post_id>/edit_video', methods=['GET', 'POST'])
+@login_required
+def post_edit_video_post(post_id: int):
+    post = Post.query.get_or_404(post_id)
+    form = CreateVideoForm()
+    del form.communities
+
+    mods = post.community.moderators()
+    if post.community.private_mods:
+        mod_list = []
+    else:
+        mod_user_ids = [mod.user_id for mod in mods]
+        mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
+
+    if post.user_id == current_user.id or post.community.is_moderator() or current_user.is_admin():
+        if g.site.enable_nsfl is False:
+            form.nsfl.render_kw = {'disabled': True}
+        if post.community.nsfw:
+            form.nsfw.data = True
+            form.nsfw.render_kw = {'disabled': True}
+        if post.community.nsfl:
+            form.nsfl.data = True
+            form.nsfw.render_kw = {'disabled': True}
+
+        old_url = post.url
+
+        if form.validate_on_submit():
+            save_post(form, post, 'video')
+            post.community.last_active = utcnow()
+            post.edited_at = utcnow()
+            db.session.commit()
+
+            if post.url != old_url:
+                if post.cross_posts is not None:
+                    old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
+                    post.cross_posts.clear()
+                    for ocp in old_cross_posts:
+                        if ocp.cross_posts is not None:
+                            ocp.cross_posts.remove(post.id)
+
+                new_cross_posts = Post.query.filter(Post.id != post.id, Post.url == post.url,
+                                                Post.posted_at > post.edited_at - timedelta(days=6)).all()
+                for ncp in new_cross_posts:
+                    if ncp.cross_posts is None:
+                        ncp.cross_posts = [post.id]
+                    else:
+                        ncp.cross_posts.append(post.id)
+                    if post.cross_posts is None:
+                        post.cross_posts = [ncp.id]
+                    else:
+                        post.cross_posts.append(ncp.id)
+
+                db.session.commit()
+
+            post.flush_cache()
+            flash(_('Your changes have been saved.'), 'success')
+            # federate edit
+
+            if not post.community.local_only:
+                federate_post_update(post)
+
+            return redirect(url_for('activitypub.post_ap', post_id=post.id))
+        else:
+            form.video_title.data = post.title
+            form.video_body.data = post.body
+            form.video_url.data = post.url
+            form.notify_author.data = post.notify_author
+            form.nsfw.data = post.nsfw
+            form.nsfl.data = post.nsfl
+            form.sticky.data = post.sticky
+            if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
+                form.sticky.render_kw = {'disabled': True}
+            return render_template('post/post_edit_video.html', title=_('Edit post'), form=form, post=post,
+                                   markdown_editor=current_user.markdown_editor, mods=mod_list,
+                                   moderating_communities=moderating_communities(current_user.get_id()),
+                                   joined_communities=joined_communities(current_user.get_id()),
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)]
+                                   )
+    else:
+        abort(401)
+
 def federate_post_update(post):
     page_json = {
         'type': 'Page',
@@ -969,7 +1053,7 @@ def federate_post_update(post):
         ],
         'object': page_json,
     }
-    if post.type == POST_TYPE_LINK:
+    if post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO:
         page_json['attachment'] = [{'href': post.url, 'type': 'Link'}]
     elif post.image_id:
         if post.image.file_path:
