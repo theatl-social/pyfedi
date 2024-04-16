@@ -13,13 +13,13 @@
         <p>This instance is administerred by {% for admin in admins %}<a href="/u/{{ admin.user_name }}">{{ admin.user_name }}</a>{{ ", " if not loop.last }}{% endfor %}.</p>
         <p>It is moderated by {% for s in staff %}<a href="/u/{{ s.user_name }}">{{ s.user_name }}</a>{{ ", " if not loop.last }}{% endfor %}.</p>
         <h2>Contact</h2>
-        <p>$PLACEHOLDER_EMAIL</p>
+        <p>{{g.site.contact_email | safe }}</p>
         <h2> About Us </h2>
-        <p> {{g.site.description | safe}} </p>
-        <p> {{g.site.sidebar}} </p>
+        <p> {{g.site.description | safe }} </p>
+        <p> {{g.site.sidebar | safe }} </p>
         {% if g.site.legal_information %}
         <h2> Legal Information </h2>
-        <p> {{g.site.legal_information}} </p>
+        <p> {{g.site.legal_information | safe }} </p>
         <p> <a href="/privacy"> Our Privacy Policy </a> </p>
         {% endif %}
 </div>
