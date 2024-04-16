@@ -10,7 +10,7 @@ from sqlalchemy.sql.operators import or_, and_
 
 from app import db, cache
 from app.activitypub.util import default_context, make_image_sizes_async, refresh_user_profile, find_actor_or_create, \
-    refresh_community_profile_task
+    refresh_community_profile_task, users_total, active_month, local_posts, local_communities, local_comments
 from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, POST_TYPE_IMAGE, POST_TYPE_LINK, \
     SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_VIDEO
 from app.email import send_email, send_welcome_email
@@ -48,7 +48,6 @@ def index(sort=None):
 @bp.route('/popular/<sort>', methods=['GET'])
 def popular(sort=None):
     return home_page('popular', sort)
-
 
 @bp.route('/all', methods=['GET'])
 @bp.route('/all/<sort>', methods=['GET'])
@@ -242,19 +241,17 @@ def donate():
 @bp.route('/about')
 def about_page():
 
-    users = User.query.filter_by(ap_id=None, deleted=False, banned=False).all()
-    user_amount = len(users)
-    # Todo, figure out how to filter the user list with the list of user_role user_id == 4
-    #admins = users.filter()
-    # Todo, figure out how to filter the user list with the list of user_role user_id == 4
-    #staff = users.filter()
-    
-    domains_amount = len(Domain.query.filter_by(banned=False).all())
-    community_amount = len(Community.query.all())
+    user_amount = users_total()
+    MAU = active_month()
+    posts_amount = local_posts()
+
+    admins = db.session.execute(text('SELECT user_name, email  FROM "user" WHERE "id" IN (SELECT "user_id" FROM "user_role" WHERE "role_id" = 4) ORDER BY id')).all()
+    staff = db.session.execute(text('SELECT user_name FROM "user" WHERE "id" IN (SELECT "user_id" FROM "user_role" WHERE "role_id" = 2) ORDER BY id')).all()
+    domains_amount = db.session.execute(text('SELECT COUNT(id) as c FROM "domain" WHERE "banned" IS false')).scalar()
+    community_amount = local_communities()
     instance = Instance.query.filter_by(id=1).first()
     
-
-    return render_template('about.html', user_amount=user_amount, domains_amount=domains_amount, community_amount=community_amount, instance=instance)#, admins=admins)
+    return render_template('about.html', user_amount=user_amount, mau=MAU, posts_amount=posts_amount, domains_amount=domains_amount, community_amount=community_amount, instance=instance, admins=admins, staff=staff)
 
 
 @bp.route('/privacy')

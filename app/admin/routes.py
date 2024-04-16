@@ -48,6 +48,7 @@ def admin_site():
         site.sidebar = form.sidebar.data
         site.legal_information = form.legal_information.data
         site.updated = utcnow()
+        site.contact_email = form.contact_email.data
         if site.id is None:
             db.session.add(site)
         db.session.commit()
