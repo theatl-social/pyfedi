@@ -708,7 +708,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             else:
                                 activity_log.exception_message = 'PostReply not found'
                     elif request_json['object']['type'] == 'Undo':
-                        if request_json['object']['object']['type'] == 'Like':
+                        if request_json['object']['object']['type'] == 'Like' or request_json['object']['object']['type'] == 'Dislike':
                             activity_log.activity_type = request_json['object']['object']['type']
                             user_ap_id = request_json['object']['actor']
                             user = find_actor_or_create(user_ap_id)

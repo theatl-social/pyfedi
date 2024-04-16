@@ -279,6 +279,7 @@ def show_post(post_id: int):
 def post_vote(post_id: int, vote_direction):
     post = Post.query.get_or_404(post_id)
     existing_vote = PostVote.query.filter_by(user_id=current_user.id, post_id=post.id).first()
+    undo = None
     if existing_vote:
         if not post.community.low_quality:
             post.author.reputation -= existing_vote.effect
@@ -287,6 +288,7 @@ def post_vote(post_id: int, vote_direction):
                 db.session.delete(existing_vote)
                 post.up_votes -= 1
                 post.score -= 1
+                undo = 'Like'
             else:  # new vote is down while previous vote was up, so reverse their previous vote
                 existing_vote.effect = -1
                 post.up_votes -= 1
@@ -297,6 +299,7 @@ def post_vote(post_id: int, vote_direction):
                 db.session.delete(existing_vote)
                 post.down_votes -= 1
                 post.score += 1
+                undo = 'Dislike'
             else:  # new vote is up while previous vote was down, so reverse their previous vote
                 existing_vote.effect = 1
                 post.up_votes += 1
@@ -332,7 +335,22 @@ def post_vote(post_id: int, vote_direction):
         post.author.reputation += effect
         db.session.add(vote)
 
-        if not post.community.local_only:
+    if not post.community.local_only:
+        if undo:
+            action_json = {
+                'actor': current_user.profile_id(),
+                'type': 'Undo',
+                'id': f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}",
+                'audience': post.community.profile_id(),
+                'object': {
+                    'actor': current_user.profile_id(),
+                    'object': post.profile_id(),
+                    'type': undo,
+                    'id': f"https://{current_app.config['SERVER_NAME']}/activities/{undo.lower()}/{gibberish(15)}",
+                    'audience': post.community.profile_id()
+                }
+            }
+        else:
             action_type = 'Like' if vote_direction == 'upvote' else 'Dislike'
             action_json = {
                 'actor': current_user.profile_id(),
@@ -341,8 +359,8 @@ def post_vote(post_id: int, vote_direction):
                 'id': f"https://{current_app.config['SERVER_NAME']}/activities/{action_type.lower()}/{gibberish(15)}",
                 'audience': post.community.profile_id()
             }
-            if post.community.is_local():
-                announce = {
+        if post.community.is_local():
+            announce = {
                     "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
                     "type": 'Announce',
                     "to": [
@@ -354,15 +372,15 @@ def post_vote(post_id: int, vote_direction):
                     ],
                     '@context': default_context(),
                     'object': action_json
-                }
-                for instance in post.community.following_instances():
-                    if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
-                        send_to_remote_instance(instance.id, post.community.id, announce)
-            else:
-                success = post_request(post.community.ap_inbox_url, action_json, current_user.private_key,
-                                                           current_user.ap_profile_id + '#main-key')
-                if not success:
-                    flash('Failed to send vote', 'warning')
+            }
+            for instance in post.community.following_instances():
+                if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
+                    send_to_remote_instance(instance.id, post.community.id, announce)
+        else:
+            success = post_request(post.community.ap_inbox_url, action_json, current_user.private_key,
+                                                            current_user.ap_profile_id + '#main-key')
+            if not success:
+                flash('Failed to send vote', 'warning')
 
     current_user.last_seen = utcnow()
     current_user.ip_address = ip_address()
@@ -375,9 +393,9 @@ def post_vote(post_id: int, vote_direction):
 
     recently_upvoted = []
     recently_downvoted = []
-    if vote_direction == 'upvote':
+    if vote_direction == 'upvote' and undo is None:
         recently_upvoted = [post_id]
-    elif vote_direction == 'downvote':
+    elif vote_direction == 'downvote' and undo is None:
         recently_downvoted = [post_id]
     cache.delete_memoized(recently_upvoted_posts, current_user.id)
     cache.delete_memoized(recently_downvoted_posts, current_user.id)
