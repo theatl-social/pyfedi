@@ -34,9 +34,10 @@ time of things.
 # Coding Standards / Guidelines
 
 **[PEP 8](https://peps.python.org/pep-0008/)** covers the basics. PyCharm encourages this by default - 
-VS Code coders are encouraged to try the free community edition of PyCharm but it is by no means required. 
+VS Code coders may like to try the free community edition of PyCharm but it is by no means required.
 
-Use PEP 8 conventions for line length, naming, indentation. Use descriptive commit messages.
+Use PEP 8 conventions for naming, indentation. Use descriptive commit messages. Try to limit lines of code
+to a length of roughly 120 characters.
 
 Database model classes are singular. As in "Car", not "Cars".
 

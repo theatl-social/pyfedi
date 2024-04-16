@@ -4,17 +4,12 @@
     {% extends "base.html" %}
 {% endif %} %}
 {% from 'bootstrap/form.html' import render_form %}
+{% set active_child = 'admin_content_trash' %}
 
 {% block app_content %}
 <div class="row">
     <div class="col">
-        {% include 'admin/_nav.html' %}
-    </div>
-</div>
-
-<div class="row">
-    <div class="col">
-        <h1>{{ _('Most downvoted in the last 3 days') }}</h1>
+        <h1>{{ _('Most downvoted posts in the last 3 days') }}</h1>
         <div class="post_list">
             {% for post in posts.items %}
                 {% include 'post/_post_teaser.html' %}
@@ -34,4 +29,11 @@
         </nav>
     </div>
 </div>
+<hr />
+<div class="row">
+    <div class="col">
+        {% include 'admin/_nav.html' %}
+    </div>
+</div>
+<hr />
 {% endblock %}

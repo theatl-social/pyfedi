@@ -169,6 +169,28 @@ class ChatMessage(db.Model):
     sender = db.relationship('User', foreign_keys=[sender_id])
 
 
+class Tag(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(256))
+
+
+class Language(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(5), index=True)
+    name = db.Column(db.String(50))
+
+
+community_language = db.Table('community_language', db.Column('community_id', db.Integer, db.ForeignKey('community.id')),
+                                          db.Column('language_id', db.Integer, db.ForeignKey('language.id')),
+                                          db.PrimaryKeyConstraint('community_id', 'language_id')
+                        )
+
+post_tag = db.Table('post_tag', db.Column('post_id', db.Integer, db.ForeignKey('post.id')),
+                                          db.Column('tag_id', db.Integer, db.ForeignKey('tag.id')),
+                                          db.PrimaryKeyConstraint('post_id', 'tag_id')
+                        )
+
+
 class File(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     file_path = db.Column(db.String(255))
@@ -365,6 +387,7 @@ class Community(db.Model):
     replies = db.relationship('PostReply', lazy='dynamic', cascade="all, delete-orphan")
     icon = db.relationship('File', foreign_keys=[icon_id], single_parent=True, backref='community', cascade="all, delete-orphan")
     image = db.relationship('File', foreign_keys=[image_id], single_parent=True, cascade="all, delete-orphan")
+    languages = db.relationship('Language', lazy='dynamic', secondary=community_language, backref=db.backref('communities', lazy='dynamic'))
 
     @cache.memoize(timeout=500)
     def icon_image(self, size='default') -> str:
@@ -838,9 +861,11 @@ class User(UserMixin, db.Model):
             post.delete_dependencies()
             post.flush_cache()
             db.session.delete(post)
+        db.session.commit()
         post_replies = PostReply.query.filter_by(user_id=self.id).all()
         for reply in post_replies:
-            reply.body = reply.body_html = ''
+            reply.delete_dependencies()
+            db.session.delete(reply)
         db.session.commit()
 
     def mention_tag(self):
@@ -893,7 +918,9 @@ class Post(db.Model):
     language = db.Column(db.String(10))
     edited_at = db.Column(db.DateTime)
     reports = db.Column(db.Integer, default=0)                          # how many times this post has been reported. Set to -1 to ignore reports
+    language_id = db.Column(db.Integer, index=True)
     cross_posts = db.Column(MutableList.as_mutable(ARRAY(db.Integer)))
+    tags = db.relationship('Tag', lazy='dynamic', secondary=post_tag, backref=db.backref('posts', lazy='dynamic'))
 
     ap_id = db.Column(db.String(255), index=True)
     ap_create_id = db.Column(db.String(100))
@@ -1018,12 +1045,19 @@ class PostReply(db.Model):
             return parent.author.profile_id()
 
     def delete_dependencies(self):
+        for child_reply in self.child_replies():
+            child_reply.delete_dependencies()
+            db.session.delete(child_reply)
+
         db.session.query(Report).filter(Report.suspect_post_reply_id == self.id).delete()
         db.session.execute(text('DELETE FROM post_reply_vote WHERE post_reply_id = :post_reply_id'),
                            {'post_reply_id': self.id})
         if self.image_id:
             file = File.query.get(self.image_id)
             file.delete_from_disk()
+
+    def child_replies(self):
+        return PostReply.query.filter_by(parent_id=self.id).all()
 
     def has_replies(self):
         reply = PostReply.query.filter_by(parent_id=self.id).first()

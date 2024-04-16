@@ -308,6 +308,11 @@ html {
         top: 0;
       }
 
+      .fe-video {
+        left: 121px;
+        top: 0;
+      }
+
       img {
         height: 60px;
         width: 60px;
@@ -552,6 +557,14 @@ html {
   border-top: solid 1px $grey;
   margin-right: 8px;
 
+  .comment_body {
+    hr {
+      margin-left: 15px;
+      margin-right: 15px;
+      opacity: 0.1;
+    }
+  }
+
   &:first-child {
     border-top: none;
     padding-top: 0;
@@ -623,7 +636,8 @@ html {
 
   .upvote_button, .downvote_button {
     display: inline-block;
-    padding: 5px 15px;
+    padding: 5px 0 5px 3px;
+    text-align: center;
     position: relative;
     cursor: pointer;
     color: rgba(var(--bs-link-color-rgb),var(--bs-link-opacity,1));
@@ -654,9 +668,7 @@ html {
 
   .upvote_button {
     top: 1px;
-    @include breakpoint(laptop) {
-      padding-right: 5px;
-    }
+
     .htmx-indicator {
       left: 13px;
       top: 7px;
@@ -667,14 +679,8 @@ html {
     top: 1px;
     .htmx-indicator {
       left: 12px;
+      top: 5px;
     }
-    @include breakpoint(laptop) {
-      padding-left: 5px;
-      .htmx-indicator {
-        left: 2px;
-      }
-    }
-
   }
 
   .htmx-indicator{
@@ -776,7 +782,6 @@ html {
 
 .comment {
   clear: both;
-  margin-bottom: 10px;
   margin-left: 15px;
   padding-top: 8px;
 
@@ -836,7 +841,7 @@ html {
     position: relative;
     a {
       text-decoration: none;
-      padding: 5px 0;
+      padding: 0;
     }
 
     .hide_button {
@@ -1057,4 +1062,9 @@ h1 .warning_badge {
     line-height: initial;
     max-width: 100%;
   }
+}
+
+.responsive-video {
+  max-width: 100%;
+  max-height: 90vh;
 }

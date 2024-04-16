@@ -4,16 +4,12 @@
     {% extends "base.html" %}
 {% endif %} %}
 {% from 'bootstrap/form.html' import render_form %}
+{% set active_child = 'admin_communities' %}
 
 {% block app_content %}
 <div class="row">
     <div class="col">
-        {% include 'admin/_nav.html' %}
-    </div>
-</div>
-
-<div class="row">
-    <div class="col">
+        <h1>{{ _('Communities') }}</h1>
         <form method="get">
             <input type="search" name="search"> <input type="submit" name="submit" value="Search">
         </form>
@@ -59,4 +55,11 @@
         </nav>
     </div>
 </div>
+<hr />
+<div class="row">
+    <div class="col">
+        {% include 'admin/_nav.html' %}
+    </div>
+</div>
+<hr />
 {% endblock %}

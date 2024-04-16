@@ -4,16 +4,12 @@
     {% extends "base.html" %}
 {% endif %} %}
 {% from 'bootstrap/form.html' import render_form %}
+{% set active_child = 'admin_users' %}
 
 {% block app_content %}
 <div class="row">
     <div class="col">
-        {% include 'admin/_nav.html' %}
-    </div>
-</div>
-
-<div class="row">
-    <div class="col">
+        <h1>{{ _('Users') }}</h1>
         <a class="btn btn-primary" href="{{ url_for('admin.admin_users_add') }}" style="float: right;">{{ _('Add local user') }}</a>
         <form method="get">
             <input type="search" name="search" value="{{ search }}">
@@ -79,4 +75,11 @@
         </nav>
     </div>
 </div>
+<hr />
+<div class="row">
+    <div class="col">
+        {% include 'admin/_nav.html' %}
+    </div>
+</div>
+<hr />
 {% endblock %}

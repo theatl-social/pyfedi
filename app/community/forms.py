@@ -116,6 +116,26 @@ class CreateLinkForm(FlaskForm):
         return True
 
 
+class CreateVideoForm(FlaskForm):
+    communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int)
+    video_title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])
+    video_body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5})
+    video_url = StringField(_l('URL'), validators=[DataRequired(), Regexp(r'^https?://', message='Submitted links need to start with "http://"" or "https://"')],
+                           render_kw={'placeholder': 'https://...'})
+    sticky = BooleanField(_l('Sticky'))
+    nsfw = BooleanField(_l('NSFW'))
+    nsfl = BooleanField(_l('Gore/gross'))
+    notify_author = BooleanField(_l('Notify about replies'))
+    submit = SubmitField(_l('Save'))
+
+    def validate(self, extra_validators=None) -> bool:
+        domain = domain_from_url(self.video_url.data, create=False)
+        if domain and domain.banned:
+            self.video_url.errors.append(_("Videos from %(domain)s are not allowed.", domain=domain.name))
+            return False
+        return True
+
+
 class CreateImageForm(FlaskForm):
     communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int)
     image_title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])

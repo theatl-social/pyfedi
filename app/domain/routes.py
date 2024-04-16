@@ -44,6 +44,7 @@ def show_domain(domain_id):
         prev_url = url_for('domain.show_domain', domain_id=domain_id, page=posts.prev_num) if posts.has_prev and page != 1 else None
         return render_template('domain/domain.html', domain=domain, title=domain.name, posts=posts,
                                POST_TYPE_IMAGE=constants.POST_TYPE_IMAGE, POST_TYPE_LINK=constants.POST_TYPE_LINK,
+                               POST_TYPE_VIDEO=constants.POST_TYPE_VIDEO,
                                next_url=next_url, prev_url=prev_url,
                                content_filters=content_filters,
                                moderating_communities=moderating_communities(current_user.get_id()),
