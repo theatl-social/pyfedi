@@ -1294,6 +1294,33 @@ class Site(db.Model):
         return User.query.filter_by(deleted=False, banned=False).join(user_role).filter(user_role.c.role_id == 4).all()
 
 
+class Tag(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(256))
+
+
+class Language(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(5), index=True)
+    name = db.Column(db.String(50))
+
+
+post_language = db.Table('post_language', db.Column('post_id', db.Integer, db.ForeignKey('post.id')),
+                                          db.Column('language_id', db.Integer, db.ForeignKey('language.id')),
+                                          db.PrimaryKeyConstraint('post_id', 'language_id')
+                        )
+
+community_language = db.Table('community_language', db.Column('community_id', db.Integer, db.ForeignKey('community.id')),
+                                          db.Column('language_id', db.Integer, db.ForeignKey('language.id')),
+                                          db.PrimaryKeyConstraint('community_id', 'language_id')
+                        )
+
+post_tag = db.Table('post_tag', db.Column('post_id', db.Integer, db.ForeignKey('post.id')),
+                                          db.Column('tag_id', db.Integer, db.ForeignKey('tag.id')),
+                                          db.PrimaryKeyConstraint('post_id', 'tag_id')
+                        )
+
+
 @login.user_loader
 def load_user(id):
     return User.query.get(int(id))
