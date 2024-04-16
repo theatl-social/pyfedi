@@ -12,7 +12,8 @@ from flask_babel import _
 from sqlalchemy import text, func
 from app import db, cache, constants, celery
 from app.models import User, Post, Community, BannedInstances, File, PostReply, AllowedInstances, Instance, utcnow, \
-    PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation
+    PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation, \
+    Language
 import time
 import base64
 import requests
@@ -342,6 +343,16 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
     return None
 
 
+def find_language_or_create(code: str, name: str) -> Language:
+    existing_language = Language.query.filter(Language.code == code).first()
+    if existing_language:
+        return existing_language
+    else:
+        new_language = Language(code=code, name=name)
+        db.session.add(new_language)
+        return new_language
+
+
 def extract_domain_and_actor(url_string: str):
     # Parse the URL
     parsed_url = urlparse(url_string)
@@ -637,6 +648,9 @@ def actor_json_to_model(activity_json, address, server):
             image = File(source_url=activity_json['image']['url'])
             community.image = image
             db.session.add(image)
+        if 'language' in activity_json and isinstance(activity_json['language'], list):
+            for ap_language in activity_json['language']:
+                community.languages.append(find_language_or_create(ap_language['identifier'], ap_language['name']))
         db.session.add(community)
         db.session.commit()
         if community.icon_id:
@@ -1457,6 +1471,9 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
             else:
                 post = None
                 activity_log.exception_message = domain.name + ' is blocked by admin'
+    if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
+        language = find_language_or_create(request_json['object']['language']['identifier'], request_json['object']['language']['name'])
+        post.language_id = language.id
     if post is not None:
         if 'image' in request_json['object'] and post.image is None:
             image = File(source_url=request_json['object']['image']['url'])
@@ -1541,6 +1558,11 @@ def update_post_from_activity(post: Post, request_json: dict):
             name += ' ' + microblog_content_to_title(post.body_html)
             nsfl_in_title = '[NSFL]' in name.upper() or '(NSFL)' in name.upper()
             post.title = name
+    # Language
+    if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
+        language = find_language_or_create(request_json['object']['language']['identifier'], request_json['object']['language']['name'])
+        post.language_id = language.id
+    # Links
     old_url = post.url
     old_image_id = post.image_id
     post.url = ''
@@ -1599,6 +1621,7 @@ def update_post_from_activity(post: Post, request_json: dict):
         else:
             post.url = old_url              # don't change if url changed from non-banned domain to banned domain
 
+        # Posts which link to the same url as other posts
         new_cross_posts = Post.query.filter(Post.id != post.id, Post.url == post.url,
                                     Post.posted_at > utcnow() - timedelta(days=6)).all()
         for ncp in new_cross_posts:

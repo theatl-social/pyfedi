@@ -10,7 +10,7 @@ from sqlalchemy import or_, desc, text
 
 from app import db, constants, cache
 from app.activitypub.signature import RsaKeys, post_request
-from app.activitypub.util import default_context, notify_about_post, find_actor_or_create, make_image_sizes
+from app.activitypub.util import default_context, notify_about_post, make_image_sizes
 from app.chat.util import send_message
 from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, CreateImageForm, CreateLinkForm, \
     ReportCommunityForm, \
