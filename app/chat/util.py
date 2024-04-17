@@ -14,21 +14,20 @@ def send_message(message: str, conversation_id: int) -> ChatMessage:
     reply = ChatMessage(sender_id=current_user.id, conversation_id=conversation.id,
                         body=message, body_html=allowlist_html(markdown_to_html(message)))
     conversation.updated_at = utcnow()
+    db.session.add(reply)
+    db.session.commit()
     for recipient in conversation.members:
         if recipient.id != current_user.id:
             if recipient.is_local():
                 # Notify local recipient
                 notify = Notification(title=shorten_string('New message from ' + current_user.display_name()),
-                                      url='/chat/' + str(conversation_id),
+                                      url=f'/chat/{conversation_id}#message_{reply.id}',
                                       user_id=recipient.id,
                                       author_id=current_user.id)
                 db.session.add(notify)
                 recipient.unread_notifications += 1
-                db.session.add(reply)
                 db.session.commit()
             else:
-                db.session.add(reply)
-                db.session.commit()
                 # Federate reply
                 reply_json = {
                     "actor": current_user.profile_id(),

@@ -82,7 +82,7 @@
                                 {% else %}
                                     {% if comment['comment'].author.avatar_id and comment['comment'].score > -10 and not low_bandwidth %}
                                     <a href="/u/{{ comment['comment'].author.link() }}" title="{{ comment['comment'].author.ap_id }}">
-                                        <img src="{{ comment['comment'].author.avatar_image() }}" alt="" loading="lazy" /></a>
+                                        <img src="{{ comment['comment'].author.avatar_thumbnail() }}" alt="" loading="lazy" /></a>
                                     {% endif %}
                                     <a href="/u/{{ comment['comment'].author.link() }}" title="{{ comment['comment'].author.link() }}" aria-label="{{ _('Author') }}">
                                             {{ comment['comment'].author.display_name() }}</a>
@@ -169,9 +169,11 @@
         <div class="card">
             <div class="card-body">
                 <div class="row">
-                    <div class="col-6">
-                        <a class="w-100 btn btn-primary" href="/community/{{ post.community.link() }}/submit">{{ _('Create post') }}</a>
-                    </div>
+                    {% if not community.restricted_to_mods or (community.restricted_to_mods and current_user.is_authenticated and community_membership(current_user, community) in [SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER]) %}
+                        <div class="col-6">
+                            <a class="w-100 btn btn-primary" href="/community/{{ post.community.link() }}/submit">{{ _('Create post') }}</a>
+                        </div>
+                    {% endif %}
                     <div class="col-6">
                         {% if current_user.is_authenticated and community_membership(current_user, post.community) >= SUBSCRIPTION_MEMBER %}
                             <a class="w-100 btn btn-primary" href="/community/{{ post.community.link() }}/unsubscribe" rel="nofollow">{{ _('Leave') }}</a>

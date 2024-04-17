@@ -4,6 +4,7 @@ import bisect
 import hashlib
 import mimetypes
 import random
+import tempfile
 import urllib
 from collections import defaultdict
 from datetime import datetime, timedelta, date
@@ -14,7 +15,7 @@ import math
 from urllib.parse import urlparse, parse_qs, urlencode
 from functools import wraps
 import flask
-from bs4 import BeautifulSoup, NavigableString, MarkupResemblesLocatorWarning
+from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
 import warnings
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 import requests
@@ -26,6 +27,8 @@ from wtforms.fields  import SelectField, SelectMultipleField
 from wtforms.widgets import Select, html_params, ListWidget, CheckboxInput
 from app import db, cache
 import re
+from moviepy.editor import VideoFileClip
+from PIL import Image
 
 from app.email import send_welcome_email
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, ActivityPubLog, IpBan, \
@@ -165,6 +168,13 @@ def is_image_url(url):
     return any(path.endswith(extension) for extension in common_image_extensions)
 
 
+def is_video_url(url):
+    parsed_url = urlparse(url)
+    path = parsed_url.path.lower()
+    common_video_extensions = ['.mp4', '.webm']
+    return any(path.endswith(extension) for extension in common_video_extensions)
+
+
 # sanitise HTML using an allow list
 def allowlist_html(html: str) -> str:
     if html is None or html == '':
@@ -221,7 +231,7 @@ def markdown_to_html(markdown_text) -> str:
     if markdown_text:
         raw_html = markdown2.markdown(markdown_text, safe_mode=True, extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True})
         # replace lemmy spoiler tokens with appropriate html tags instead. (until possibly added as extra to markdown2)
-        re_spoiler = re.compile(r':{3} spoiler\s+?(\S.+?)(?:\n|</p>)(.+?)(?:\n|<p>):{3}', re.S)
+        re_spoiler = re.compile(r':{3}\s*?spoiler\s+?(\S.+?)(?:\n|</p>)(.+?)(?:\n|<p>):{3}', re.S)
         raw_html = re_spoiler.sub(r'<details><summary>\1</summary><p>\2</p></details>', raw_html)
         return allowlist_html(raw_html)
     else:
@@ -284,10 +294,13 @@ def domain_from_url(url: str, create=True) -> Domain:
 
 
 def shorten_string(input_str, max_length=50):
-    if len(input_str) <= max_length:
-        return input_str
+    if input_str:
+        if len(input_str) <= max_length:
+            return input_str
+        else:
+            return input_str[:max_length - 3] + '…'
     else:
-        return input_str[:max_length - 3] + '…'
+        return ''
 
 
 def shorten_url(input: str, max_length=20):
@@ -876,6 +889,44 @@ def show_ban_message():
 def in_sorted_list(arr, target):
     index = bisect.bisect_left(arr, target)
     return index < len(arr) and arr[index] == target
+
+
+# Makes a still image from a video url, without downloading the whole video file
+def generate_image_from_video_url(video_url, output_path, length=2):
+
+    response = requests.get(video_url, stream=True)
+    content_type = response.headers.get('Content-Type')
+    if content_type:
+        if 'video/mp4' in content_type:
+            temp_file_extension = '.mp4'
+        elif 'video/webm' in content_type:
+            temp_file_extension = '.webm'
+        else:
+            raise ValueError("Unsupported video format")
+    else:
+        raise ValueError("Content-Type not found in response headers")
+
+    # Generate a random temporary file name
+    temp_file_name = gibberish(15) + temp_file_extension
+    temp_file_path = os.path.join(tempfile.gettempdir(), temp_file_name)
+
+    # Write the downloaded data to a temporary file
+    with open(temp_file_path, 'wb') as f:
+        for chunk in response.iter_content(chunk_size=4096):
+            f.write(chunk)
+            if os.path.getsize(temp_file_path) >= length * 1024 * 1024:
+                break
+
+    # Generate thumbnail from the temporary file
+    clip = VideoFileClip(temp_file_path)
+    thumbnail = clip.get_frame(0)
+    clip.close()
+
+    # Save the image
+    thumbnail_image = Image.fromarray(thumbnail)
+    thumbnail_image.save(output_path)
+
+    os.remove(temp_file_path)
 
 
 @cache.memoize(timeout=600)

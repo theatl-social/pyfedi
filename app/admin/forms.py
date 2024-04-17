@@ -1,7 +1,7 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileRequired, FileAllowed
 from sqlalchemy import func
-from wtforms import StringField, PasswordField, SubmitField, HiddenField, BooleanField, TextAreaField, SelectField, \
+from wtforms import StringField, PasswordField, SubmitField, EmailField, HiddenField, BooleanField, TextAreaField, SelectField, \
     FileField, IntegerField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Optional
 from flask_babel import _, lazy_gettext as _l
@@ -17,6 +17,7 @@ class SiteProfileForm(FlaskForm):
     ])
     sidebar = TextAreaField(_l('Sidebar'))
     legal_information = TextAreaField(_l('Legal information'))
+    contact_email = EmailField(_l('General instance contact email address'), validators=[Email(), DataRequired(), Length(min=5, max=255)])
     submit = SubmitField(_l('Save'))
 
 

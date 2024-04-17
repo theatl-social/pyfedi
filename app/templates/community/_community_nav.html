@@ -1,7 +1,9 @@
 {% if community %}
-    <div class="mobile_create_post d-md-none mt-1">
-        <a class="btn btn-primary" href="/community/{{ community.link() }}/submit">{{ _('Create post') }}</a>
-    </div>
+    {% if not community.restricted_to_mods or (community.restricted_to_mods and current_user.is_authenticated and community_membership(current_user, community) in [SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER]) %}
+        <div class="mobile_create_post d-md-none mt-1">
+            <a class="btn btn-primary" href="/community/{{ community.link() }}/submit">{{ _('Create post') }}</a>
+        </div>
+    {% endif %}
 {% endif %}
 <div class="btn-group mt-1 mb-2">
     <a href="?sort=hot&layout={{ post_layout }}" aria-label="{{ _('Sort by hot') }}" class="btn {{ 'btn-primary' if sort == '' or sort == 'hot' else 'btn-outline-secondary' }}" rel="nofollow noindex">

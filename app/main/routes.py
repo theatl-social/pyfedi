@@ -10,9 +10,9 @@ from sqlalchemy.sql.operators import or_, and_
 
 from app import db, cache
 from app.activitypub.util import default_context, make_image_sizes_async, refresh_user_profile, find_actor_or_create, \
-    refresh_community_profile_task
+    refresh_community_profile_task, users_total, active_month, local_posts, local_communities, local_comments
 from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, POST_TYPE_IMAGE, POST_TYPE_LINK, \
-    SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR
+    SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_VIDEO
 from app.email import send_email, send_welcome_email
 from app.inoculation import inoculation
 from app.main import bp
@@ -25,7 +25,8 @@ from sqlalchemy_searchable import search
 from app.utils import render_template, get_setting, gibberish, request_etag_matches, return_304, blocked_domains, \
     ap_datetime, ip_address, retrieve_block_list, shorten_string, markdown_to_text, user_filters_home, \
     joined_communities, moderating_communities, parse_page, theme_list, get_request, markdown_to_html, allowlist_html, \
-    blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts
+    blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
+    generate_image_from_video_url
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Domain, Topic, File, Instance, \
     InstanceRole, Notification
 from PIL import Image
@@ -47,7 +48,6 @@ def index(sort=None):
 @bp.route('/popular/<sort>', methods=['GET'])
 def popular(sort=None):
     return home_page('popular', sort)
-
 
 @bp.route('/all', methods=['GET'])
 @bp.route('/all/<sort>', methods=['GET'])
@@ -149,7 +149,7 @@ def home_page(type, sort):
         recently_downvoted = []
 
     return render_template('index.html', posts=posts, active_communities=active_communities, show_post_community=True,
-                           POST_TYPE_IMAGE=POST_TYPE_IMAGE, POST_TYPE_LINK=POST_TYPE_LINK,
+                           POST_TYPE_IMAGE=POST_TYPE_IMAGE, POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_VIDEO=POST_TYPE_VIDEO,
                            low_bandwidth=low_bandwidth, recently_upvoted=recently_upvoted,
                            recently_downvoted=recently_downvoted,
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
@@ -241,19 +241,17 @@ def donate():
 @bp.route('/about')
 def about_page():
 
-    users = User.query.filter_by(ap_id=None, deleted=False, banned=False).all()
-    user_amount = len(users)
-    # Todo, figure out how to filter the user list with the list of user_role user_id == 4
-    #admins = users.filter()
-    # Todo, figure out how to filter the user list with the list of user_role user_id == 4
-    #staff = users.filter()
-    
-    domains_amount = len(Domain.query.filter_by(banned=False).all())
-    community_amount = len(Community.query.all())
+    user_amount = users_total()
+    MAU = active_month()
+    posts_amount = local_posts()
+
+    admins = db.session.execute(text('SELECT user_name, email  FROM "user" WHERE "id" IN (SELECT "user_id" FROM "user_role" WHERE "role_id" = 4) ORDER BY id')).all()
+    staff = db.session.execute(text('SELECT user_name FROM "user" WHERE "id" IN (SELECT "user_id" FROM "user_role" WHERE "role_id" = 2) ORDER BY id')).all()
+    domains_amount = db.session.execute(text('SELECT COUNT(id) as c FROM "domain" WHERE "banned" IS false')).scalar()
+    community_amount = local_communities()
     instance = Instance.query.filter_by(id=1).first()
     
-
-    return render_template('about.html', user_amount=user_amount, domains_amount=domains_amount, community_amount=community_amount, instance=instance)#, admins=admins)
+    return render_template('about.html', user_amount=user_amount, mau=MAU, posts_amount=posts_amount, domains_amount=domains_amount, community_amount=community_amount, instance=instance, admins=admins, staff=staff)
 
 
 @bp.route('/privacy')
@@ -303,6 +301,7 @@ def list_files(directory):
 
 @bp.route('/test')
 def test():
+    x = find_actor_or_create('https://lemmy.ml/u/const_void')
     md = "::: spoiler I'm all for ya having fun and your right to hurt yourself.\n\nI am a former racer, commuter, and professional Buyer for a chain of bike shops. I'm also disabled from the crash involving the 6th and 7th cars that have hit me in the last 170k+ miles of riding. I only barely survived what I simplify as a \"broken neck and back.\" Cars making U-turns are what will get you if you ride long enough, \n\nespecially commuting. It will look like just another person turning in front of you, you'll compensate like usual, and before your brain can even register what is really happening, what was your normal escape route will close and you're going to crash really hard. It is the only kind of crash that your intuition is useless against.\n:::"
 
     return markdown_to_html(md)

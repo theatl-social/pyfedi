@@ -308,6 +308,11 @@ html {
         top: 0;
       }
 
+      .fe-video {
+        left: 121px;
+        top: 0;
+      }
+
       img {
         height: 60px;
         width: 60px;
@@ -551,6 +556,14 @@ html {
   margin-left: 0;
   border-top: solid 1px $grey;
   margin-right: 8px;
+
+  .comment_body {
+    hr {
+      margin-left: 15px;
+      margin-right: 15px;
+      opacity: 0.1;
+    }
+  }
 
   &:first-child {
     border-top: none;
@@ -1049,4 +1062,9 @@ h1 .warning_badge {
     line-height: initial;
     max-width: 100%;
   }
+}
+
+.responsive-video {
+  max-width: 100%;
+  max-height: 90vh;
 }

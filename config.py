@@ -49,3 +49,7 @@ class Config(object):
 
     CLOUDFLARE_API_TOKEN = os.environ.get('CLOUDFLARE_API_TOKEN') or ''
     CLOUDFLARE_ZONE_ID = os.environ.get('CLOUDFLARE_ZONE_ID') or ''
+
+    SPICY_UNDER_10 = float(os.environ.get('SPICY_UNDER_10', 1.0))
+    SPICY_UNDER_30 = float(os.environ.get('SPICY_UNDER_30', 1.0))
+    SPICY_UNDER_60 = float(os.environ.get('SPICY_UNDER_60', 1.0))

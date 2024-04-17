@@ -10,17 +10,18 @@ from sqlalchemy import or_, desc, text
 
 from app import db, constants, cache
 from app.activitypub.signature import RsaKeys, post_request
-from app.activitypub.util import default_context, notify_about_post, find_actor_or_create, make_image_sizes
+from app.activitypub.util import default_context, notify_about_post, make_image_sizes
 from app.chat.util import send_message
-from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, CreateImageForm, CreateLinkForm, ReportCommunityForm, \
+from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, CreateImageForm, CreateLinkForm, \
+    ReportCommunityForm, \
     DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm, \
-    EscalateReportForm, ResolveReportForm
+    EscalateReportForm, ResolveReportForm, CreateVideoForm
 from app.community.util import search_for_community, community_url_exists, actor_to_community, \
     opengraph_parse, url_to_thumbnail_file, save_post, save_icon_file, save_banner_file, send_to_remote_instance, \
     delete_post_from_community, delete_post_reply_from_community
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
-    REPORT_STATE_DISCARDED
+    REPORT_STATE_DISCARDED, POST_TYPE_VIDEO
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, \
     File, PostVote, utcnow, Report, Notification, InstanceBlock, ActivityPubLog, Topic, Conversation, PostReply
@@ -257,7 +258,7 @@ def show_community(community: Community):
 
     return render_template('community/community.html', community=community, title=community.title, breadcrumbs=breadcrumbs,
                            is_moderator=is_moderator, is_owner=is_owner, is_admin=is_admin, mods=mod_list, posts=posts, description=description,
-                           og_image=og_image, POST_TYPE_IMAGE=POST_TYPE_IMAGE, POST_TYPE_LINK=POST_TYPE_LINK, SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING,
+                           og_image=og_image, POST_TYPE_IMAGE=POST_TYPE_IMAGE, POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_VIDEO=POST_TYPE_VIDEO, SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING,
                            SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                            etag=f"{community.id}{sort}{post_layout}_{hash(community.last_active)}", related_communities=related_communities,
                            next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth,
@@ -499,7 +500,7 @@ def add_discussion_post(actor):
         if not community.local_only:
             federate_post(community, post)
 
-        return redirect(f"/c/{community.link()}")
+        return redirect(f"/post/{post.id}")
     else:
         form.communities.data = community.id
         form.notify_author.data = True
@@ -572,7 +573,7 @@ def add_image_post(actor):
         if not community.local_only:
             federate_post(community, post)
 
-        return redirect(f"/c/{community.link()}")
+        return redirect(f"/post/{post.id}")
     else:
         form.communities.data = community.id
         form.notify_author.data = True
@@ -645,12 +646,85 @@ def add_link_post(actor):
         if not community.local_only:
             federate_post(community, post)
 
-        return redirect(f"/c/{community.link()}")
+        return redirect(f"/post/{post.id}")
     else:
         form.communities.data = community.id
         form.notify_author.data = True
 
     return render_template('community/add_link_post.html', title=_('Add post to community'), form=form, community=community,
+                           markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
+                           moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.id),
+                           inoculation=inoculation[randint(0, len(inoculation) - 1)]
+    )
+
+
+@bp.route('/<actor>/submit_video', methods=['GET', 'POST'])
+@login_required
+@validation_required
+def add_video_post(actor):
+    if current_user.banned:
+        return show_ban_message()
+    community = actor_to_community(actor)
+
+    form = CreateVideoForm()
+
+    if g.site.enable_nsfl is False:
+        form.nsfl.render_kw = {'disabled': True}
+    if community.nsfw:
+        form.nsfw.data = True
+        form.nsfw.render_kw = {'disabled': True}
+    if community.nsfl:
+        form.nsfl.data = True
+        form.nsfw.render_kw = {'disabled': True}
+    if not(community.is_moderator() or community.is_owner() or current_user.is_admin()):
+        form.sticky.render_kw = {'disabled': True}
+
+    form.communities.choices = [(c.id, c.display_name()) for c in current_user.communities()]
+
+    if not can_create_post(current_user, community):
+        abort(401)
+
+    if form.validate_on_submit():
+        community = Community.query.get_or_404(form.communities.data)
+        if not can_create_post(current_user, community):
+            abort(401)
+        post = Post(user_id=current_user.id, community_id=form.communities.data, instance_id=1)
+        save_post(form, post, 'video')
+        community.post_count += 1
+        community.last_active = g.site.last_active = utcnow()
+        db.session.commit()
+        post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
+        db.session.commit()
+        if post.image_id and post.image.file_path is None:
+            make_image_sizes(post.image_id, 150, 512, 'posts')  # the 512 sized image is for masonry view
+
+        # Update list of cross posts
+        if post.url:
+            other_posts = Post.query.filter(Post.id != post.id, Post.url == post.url,
+                                    Post.posted_at > post.posted_at - timedelta(days=6)).all()
+            for op in other_posts:
+                if op.cross_posts is None:
+                    op.cross_posts = [post.id]
+                else:
+                    op.cross_posts.append(post.id)
+                if post.cross_posts is None:
+                    post.cross_posts = [op.id]
+                else:
+                    post.cross_posts.append(op.id)
+            db.session.commit()
+
+        notify_about_post(post)
+
+        if not community.local_only:
+            federate_post(community, post)
+
+        return redirect(f"/post/{post.id}")
+    else:
+        form.communities.data = community.id
+        form.notify_author.data = True
+
+    return render_template('community/add_video_post.html', title=_('Add post to community'), form=form, community=community,
                            markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.id),
@@ -697,7 +771,7 @@ def federate_post(community, post):
         "object": page,
         '@context': default_context()
     }
-    if post.type == POST_TYPE_LINK:
+    if post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO:
         page['attachment'] = [{'href': post.url, 'type': 'Link'}]
     elif post.image_id:
         if post.image.file_path:

@@ -12,7 +12,8 @@ from flask_babel import _
 from sqlalchemy import text, func
 from app import db, cache, constants, celery
 from app.models import User, Post, Community, BannedInstances, File, PostReply, AllowedInstances, Instance, utcnow, \
-    PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation
+    PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation, \
+    Language
 import time
 import base64
 import requests
@@ -27,7 +28,7 @@ import pytesseract
 from app.utils import get_request, allowlist_html, get_setting, ap_datetime, markdown_to_html, \
     is_image_url, domain_from_url, gibberish, ensure_directory_exists, markdown_to_text, head_request, post_ranking, \
     shorten_string, reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, remove_tracking_from_link, \
-    blocked_phrases, microblog_content_to_title
+    blocked_phrases, microblog_content_to_title, generate_image_from_video_url, is_video_url
 
 
 def public_key():
@@ -171,7 +172,7 @@ def post_to_activity(post: Post, community: Community):
         activity_data["object"]["object"]["updated"] = ap_datetime(post.edited_at)
     if post.language is not None:
         activity_data["object"]["object"]["language"] = {"identifier": post.language}
-    if post.type == POST_TYPE_LINK and post.url is not None:
+    if (post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO) and post.url is not None:
         activity_data["object"]["object"]["attachment"] = [{"href": post.url, "type": "Link"}]
     if post.image_id is not None:
         activity_data["object"]["object"]["image"] = {"url": post.image.view_url(), "type": "Image"}
@@ -208,7 +209,7 @@ def post_to_page(post: Post, community: Community):
         activity_data["updated"] = ap_datetime(post.edited_at)
     if post.language is not None:
         activity_data["language"] = {"identifier": post.language}
-    if post.type == POST_TYPE_LINK and post.url is not None:
+    if (post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO) and post.url is not None:
         activity_data["attachment"] = [{"href": post.url, "type": "Link"}]
     if post.image_id is not None:
         activity_data["image"] = {"url": post.image.view_url(), "type": "Image"}
@@ -340,6 +341,16 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                                     return None
                                 return actor_model
     return None
+
+
+def find_language_or_create(code: str, name: str) -> Language:
+    existing_language = Language.query.filter(Language.code == code).first()
+    if existing_language:
+        return existing_language
+    else:
+        new_language = Language(code=code, name=name)
+        db.session.add(new_language)
+        return new_language
 
 
 def extract_domain_and_actor(url_string: str):
@@ -637,6 +648,9 @@ def actor_json_to_model(activity_json, address, server):
             image = File(source_url=activity_json['image']['url'])
             community.image = image
             db.session.add(image)
+        if 'language' in activity_json and isinstance(activity_json['language'], list):
+            for ap_language in activity_json['language']:
+                community.languages.append(find_language_or_create(ap_language['identifier'], ap_language['name']))
         db.session.add(community)
         db.session.commit()
         if community.icon_id:
@@ -738,78 +752,117 @@ def make_image_sizes(file_id, thumbnail_width=50, medium_width=120, directory='p
 def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory):
     file = File.query.get(file_id)
     if file and file.source_url:
-        try:
-            source_image_response = get_request(file.source_url)
-        except:
-            pass
+        # Videos
+        if file.source_url.endswith('.mp4') or file.source_url.endswith('.webm'):
+            new_filename = gibberish(15)
+
+            # set up the storage directory
+            directory = f'app/static/media/{directory}/' + new_filename[0:2] + '/' + new_filename[2:4]
+            ensure_directory_exists(directory)
+
+            # file path and names to store the resized images on disk
+            final_place = os.path.join(directory, new_filename + '.jpg')
+            final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail.webp')
+
+            generate_image_from_video_url(file.source_url, final_place)
+
+            image = Image.open(final_place)
+            img_width = image.width
+
+            # Resize the image to medium
+            if medium_width:
+                if img_width > medium_width:
+                    image.thumbnail((medium_width, medium_width))
+                image.save(final_place)
+                file.file_path = final_place
+                file.width = image.width
+                file.height = image.height
+
+            # Resize the image to a thumbnail (webp)
+            if thumbnail_width:
+                if img_width > thumbnail_width:
+                    image.thumbnail((thumbnail_width, thumbnail_width))
+                image.save(final_place_thumbnail, format="WebP", quality=93)
+                file.thumbnail_path = final_place_thumbnail
+                file.thumbnail_width = image.width
+                file.thumbnail_height = image.height
+
+            db.session.commit()
+
+        # Images
         else:
-            if source_image_response.status_code == 200:
-                content_type = source_image_response.headers.get('content-type')
-                if content_type and content_type.startswith('image'):
-                    source_image = source_image_response.content
-                    source_image_response.close()
+            try:
+                source_image_response = get_request(file.source_url)
+            except:
+                pass
+            else:
+                if source_image_response.status_code == 200:
+                    content_type = source_image_response.headers.get('content-type')
+                    if content_type and content_type.startswith('image'):
+                        source_image = source_image_response.content
+                        source_image_response.close()
 
-                    file_ext = os.path.splitext(file.source_url)[1]
-                    # fall back to parsing the http content type if the url does not contain a file extension
-                    if file_ext == '':
-                        content_type_parts = content_type.split('/')
-                        if content_type_parts:
-                            file_ext = '.' + content_type_parts[-1]
-                    else:
-                        if '?' in file_ext:
-                            file_ext = file_ext.split('?')[0]
+                        file_ext = os.path.splitext(file.source_url)[1]
+                        # fall back to parsing the http content type if the url does not contain a file extension
+                        if file_ext == '':
+                            content_type_parts = content_type.split('/')
+                            if content_type_parts:
+                                file_ext = '.' + content_type_parts[-1]
+                        else:
+                            if '?' in file_ext:
+                                file_ext = file_ext.split('?')[0]
 
-                    new_filename = gibberish(15)
+                        new_filename = gibberish(15)
 
-                    # set up the storage directory
-                    directory = f'app/static/media/{directory}/' + new_filename[0:2] + '/' + new_filename[2:4]
-                    ensure_directory_exists(directory)
+                        # set up the storage directory
+                        directory = f'app/static/media/{directory}/' + new_filename[0:2] + '/' + new_filename[2:4]
+                        ensure_directory_exists(directory)
 
-                    # file path and names to store the resized images on disk
-                    final_place = os.path.join(directory, new_filename + file_ext)
-                    final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail.webp')
+                        # file path and names to store the resized images on disk
+                        final_place = os.path.join(directory, new_filename + file_ext)
+                        final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail.webp')
 
-                    # Load image data into Pillow
-                    Image.MAX_IMAGE_PIXELS = 89478485
-                    image = Image.open(BytesIO(source_image))
-                    image = ImageOps.exif_transpose(image)
-                    img_width = image.width
-                    img_height = image.height
+                        # Load image data into Pillow
+                        Image.MAX_IMAGE_PIXELS = 89478485
+                        image = Image.open(BytesIO(source_image))
+                        image = ImageOps.exif_transpose(image)
+                        img_width = image.width
+                        img_height = image.height
 
-                    # Resize the image to medium
-                    if medium_width:
-                        if img_width > medium_width:
-                            image.thumbnail((medium_width, medium_width))
-                        image.save(final_place)
-                        file.file_path = final_place
-                        file.width = image.width
-                        file.height = image.height
+                        # Resize the image to medium
+                        if medium_width:
+                            if img_width > medium_width:
+                                image.thumbnail((medium_width, medium_width))
+                            image.save(final_place)
+                            file.file_path = final_place
+                            file.width = image.width
+                            file.height = image.height
 
-                    # Resize the image to a thumbnail (webp)
-                    if thumbnail_width:
-                        if img_width > thumbnail_width:
-                            image.thumbnail((thumbnail_width, thumbnail_width))
-                        image.save(final_place_thumbnail, format="WebP", quality=93)
-                        file.thumbnail_path = final_place_thumbnail
-                        file.thumbnail_width = image.width
-                        file.thumbnail_height = image.height
+                        # Resize the image to a thumbnail (webp)
+                        if thumbnail_width:
+                            if img_width > thumbnail_width:
+                                image.thumbnail((thumbnail_width, thumbnail_width))
+                            image.save(final_place_thumbnail, format="WebP", quality=93)
+                            file.thumbnail_path = final_place_thumbnail
+                            file.thumbnail_width = image.width
+                            file.thumbnail_height = image.height
 
-                    db.session.commit()
+                        db.session.commit()
 
-                    # Alert regarding fascist meme content
-                    if img_width < 2000:    # images > 2000px tend to be real photos instead of 4chan screenshots.
-                        try:
-                            image_text = pytesseract.image_to_string(Image.open(BytesIO(source_image)).convert('L'), timeout=30)
-                        except FileNotFoundError as e:
-                            image_text = ''
-                        if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):   # chan posts usually contain the text 'Anonymous' and ' No.12345'
-                            post = Post.query.filter_by(image_id=file.id).first()
-                            notification = Notification(title='Review this',
-                                                        user_id=1,
-                                                        author_id=post.user_id,
-                                                        url=url_for('activitypub.post_ap', post_id=post.id))
-                            db.session.add(notification)
-                            db.session.commit()
+                        # Alert regarding fascist meme content
+                        if img_width < 2000:    # images > 2000px tend to be real photos instead of 4chan screenshots.
+                            try:
+                                image_text = pytesseract.image_to_string(Image.open(BytesIO(source_image)).convert('L'), timeout=30)
+                            except FileNotFoundError as e:
+                                image_text = ''
+                            if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):   # chan posts usually contain the text 'Anonymous' and ' No.12345'
+                                post = Post.query.filter_by(image_id=file.id).first()
+                                notification = Notification(title='Review this',
+                                                            user_id=1,
+                                                            author_id=post.user_id,
+                                                            url=url_for('activitypub.post_ap', post_id=post.id))
+                                db.session.add(notification)
+                                db.session.commit()
 
 
 # create a summary from markdown if present, otherwise use html if available
@@ -1039,9 +1092,9 @@ def downvote_post(post, user):
         post.down_votes += 1
         # Make 'hot' sort more spicy by amplifying the effect of early downvotes
         if post.up_votes + post.down_votes <= 30:
-            post.score -= 5.0
+            post.score -= current_app.config['SPICY_UNDER_30']
         elif post.up_votes + post.down_votes <= 60:
-            post.score -= 2.0
+            post.score -= current_app.config['SPICY_UNDER_60']
         else:
             post.score -= 1.0
         vote = PostVote(user_id=user.id, post_id=post.id, author_id=post.author.id,
@@ -1148,11 +1201,11 @@ def upvote_post(post, user):
     # Make 'hot' sort more spicy by amplifying the effect of early upvotes
     spicy_effect = effect
     if post.up_votes + post.down_votes <= 10:
-        spicy_effect = effect * 10
+        spicy_effect = effect * current_app.config['SPICY_UNDER_10']
     elif post.up_votes + post.down_votes <= 30:
-        spicy_effect = effect * 5
+        spicy_effect = effect * current_app.config['SPICY_UNDER_30']
     elif post.up_votes + post.down_votes <= 60:
-        spicy_effect = effect * 2
+        spicy_effect = effect * current_app.config['SPICY_UNDER_60']
     existing_vote = PostVote.query.filter_by(user_id=user.id, post_id=post.id).first()
     if not existing_vote:
         post.up_votes += 1
@@ -1387,6 +1440,11 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
                     image = File(source_url=post.url)
                 db.session.add(image)
                 post.image = image
+            elif is_video_url(post.url):
+                post.type = POST_TYPE_VIDEO
+                image = File(source_url=post.url)
+                db.session.add(image)
+                post.image = image
             else:
                 post.type = POST_TYPE_LINK
                 post.url = remove_tracking_from_link(post.url)
@@ -1413,6 +1471,9 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
             else:
                 post = None
                 activity_log.exception_message = domain.name + ' is blocked by admin'
+    if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
+        language = find_language_or_create(request_json['object']['language']['identifier'], request_json['object']['language']['name'])
+        post.language_id = language.id
     if post is not None:
         if 'image' in request_json['object'] and post.image is None:
             image = File(source_url=request_json['object']['image']['url'])
@@ -1497,6 +1558,11 @@ def update_post_from_activity(post: Post, request_json: dict):
             name += ' ' + microblog_content_to_title(post.body_html)
             nsfl_in_title = '[NSFL]' in name.upper() or '(NSFL)' in name.upper()
             post.title = name
+    # Language
+    if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
+        language = find_language_or_create(request_json['object']['language']['identifier'], request_json['object']['language']['name'])
+        post.language_id = language.id
+    # Links
     old_url = post.url
     old_image_id = post.image_id
     post.url = ''
@@ -1522,6 +1588,11 @@ def update_post_from_activity(post: Post, request_json: dict):
                 image = File(source_url=request_json['object']['image']['url'])
             else:
                 image = File(source_url=post.url)
+            db.session.add(image)
+            post.image = image
+        elif is_video_url(post.url):
+            post.type == POST_TYPE_VIDEO
+            image = File(source_url=post.url)
             db.session.add(image)
             post.image = image
         else:
@@ -1550,6 +1621,7 @@ def update_post_from_activity(post: Post, request_json: dict):
         else:
             post.url = old_url              # don't change if url changed from non-banned domain to banned domain
 
+        # Posts which link to the same url as other posts
         new_cross_posts = Post.query.filter(Post.id != post.id, Post.url == post.url,
                                     Post.posted_at > utcnow() - timedelta(days=6)).all()
         for ncp in new_cross_posts:

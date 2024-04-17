@@ -79,7 +79,7 @@ sudo apt install tesseract-ocr
 
 * Clone PyFedi            
 
-```basg
+```bash
 git clone https://codeberg.org/rimu/pyfedi.git
 ```
 
@@ -213,6 +213,13 @@ Once you have ngrok working, edit the `.env` file and change the `SERVER_NAME` v
 <div id="running-piefed-in-production"></div>
 
 ## Running PieFed in production
+
+Running PieFed in production relies on several additional packages that need to be installed.
+
+```bash
+source venv/bin/activate #if not already in virtual environment
+pip3 install gunicorn celery
+```
 
 Copy `celery_worker.default.py` to `celery_worker.py`. Edit `DATABASE_URL` and `SERVER_NAME` to have the same values as in `.env`.
 
