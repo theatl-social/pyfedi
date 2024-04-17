@@ -521,6 +521,8 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                     if can_create_post(user, community):
                                         try:
                                             post = create_post(activity_log, community, request_json, user)
+                                            if post:
+                                                announce_activity_to_followers(community, user, request_json)
                                         except TypeError as e:
                                             activity_log.exception_message = 'TypeError. See log file.'
                                             current_app.logger.error('TypeError: ' + str(request_json))
@@ -531,6 +533,8 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                     if can_create_post_reply(user, community):
                                         try:
                                             post = create_post_reply(activity_log, community, in_reply_to, request_json, user)
+                                            if post and community.is_local():
+                                                announce_activity_to_followers(community, user, request_json)
                                         except TypeError as e:
                                             activity_log.exception_message = 'TypeError. See log file.'
                                             current_app.logger.error('TypeError: ' + str(request_json))
@@ -614,9 +618,6 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                 activity_log.result = 'success'
                             else:
                                 activity_log.exception_message = 'Could not detect type of like'
-                            if activity_log.result == 'success':
-                                ...
-                                # todo: if vote was on content in local community, federate the vote out to followers
                         else:
                             activity_log.exception_message = 'Cannot upvote this'
                             activity_log.result = 'ignored'
@@ -648,7 +649,6 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                         downvote_post_reply(disliked, user)
                                     activity_log.result = 'success'
                                     # todo: recalculate 'hotness' of liked post/reply
-                                    # todo: if vote was on content in the local community, federate the vote out to followers
                                 else:
                                     activity_log.exception_message = 'Could not detect type of like'
                             else:
@@ -850,7 +850,9 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                         post = None
                         comment = None
                         target_ap_id = request_json['object']['object']
-                        post = undo_vote(activity_log, comment, post, target_ap_id, user)
+                        post_or_comment = undo_vote(activity_log, comment, post, target_ap_id, user)
+                        if post_or_comment:
+                            announce_activity_to_followers(post_or_comment.community, user, request_json)
                         activity_log.result = 'success'
                     elif request_json['object']['type'] == 'Dislike':  # Undoing a downvote - probably unused
                         activity_log.activity_type = request_json['object']['type']
@@ -859,7 +861,9 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                         post = None
                         comment = None
                         target_ap_id = request_json['object']['object']
-                        post = undo_downvote(activity_log, comment, post, target_ap_id, user)
+                        post_or_comment = undo_downvote(activity_log, comment, post, target_ap_id, user)
+                        if post_or_comment:
+                            announce_activity_to_followers(post_or_comment.community, user, request_json)
                         activity_log.result = 'success'
                 elif request_json['type'] == 'Update':
                     activity_log.activity_type = 'Update'
@@ -867,6 +871,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                         post = Post.query.filter_by(ap_id=request_json['object']['id']).first()
                         if post:
                             update_post_from_activity(post, request_json)
+                            announce_activity_to_followers(post.community, post.author, request_json)
                             activity_log.result = 'success'
                         else:
                             activity_log.exception_message = 'Post not found'
@@ -874,6 +879,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                         reply = PostReply.query.filter_by(ap_id=request_json['object']['id']).first()
                         if reply:
                             update_post_reply_from_activity(reply, request_json)
+                            announce_activity_to_followers(reply.community, reply.author, request_json)
                             activity_log.result = 'success'
                         else:
                             activity_log.exception_message = 'PostReply not found'
@@ -893,6 +899,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                     ocp.cross_posts.remove(post.id)
                         post.delete_dependencies()
                         post.community.post_count -= 1
+                        announce_activity_to_followers(post.community, post.author, request_json)
                         db.session.delete(post)
                         db.session.commit()
                         activity_log.result = 'success'
@@ -903,6 +910,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             reply.body_html = '<p><em>deleted</em></p>'
                             reply.body = 'deleted'
                             reply.post.reply_count -= 1
+                            announce_activity_to_followers(reply.community, reply.author, request_json)
                             db.session.commit()
                             activity_log.result = 'success'
                         else:
@@ -941,8 +949,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                         else:
                             activity_log.exception_message = 'Could not detect type of like'
                         if activity_log.result == 'success':
-                            ...
-                            # todo: if vote was on content in local community, federate the vote out to followers
+                            announce_activity_to_followers(liked.community, user, request_json)
                     else:
                         activity_log.exception_message = 'Cannot upvote this'
                         activity_log.result = 'ignored'
@@ -972,9 +979,10 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                 elif isinstance(disliked, PostReply):
                                     downvote_post_reply(disliked, user)
                                 activity_log.result = 'success'
-                                # todo: if vote was on content in the local community, federate the vote out to followers
                             else:
                                 activity_log.exception_message = 'Could not detect type of like'
+                            if activity_log.result == 'success':
+                                announce_activity_to_followers(disliked.community, user, request_json)
                         else:
                             activity_log.exception_message = 'Cannot downvote this'
                             activity_log.result = 'ignored'
@@ -986,6 +994,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                     reported = find_reported_object(target_ap_id)
                     if user and reported:
                         process_report(user, reported, request_json, activity_log)
+                        announce_activity_to_followers(reported.community, user, request_json)
                         activity_log.result = 'success'
                     else:
                         activity_log.exception_message = 'Report ignored due to missing user or content'
@@ -997,10 +1006,8 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                         user.instance.last_seen = utcnow()
                         # user.instance.ip_address = ip_address
                         user.instance.dormant = False
-                    if 'community' in vars() and community is not None:
-                        if community.is_local() and request_json['type'] not in ['Announce', 'Follow', 'Accept', 'Undo']:
-                            announce_activity_to_followers(community, user, request_json)
-                        # community.flush_cache()
+                if 'community' in vars() and community is not None:
+                    community.flush_cache()
                 if 'post' in vars() and post is not None:
                     post.flush_cache()
             else:
@@ -1067,6 +1074,7 @@ def announce_activity_to_followers(community, creator, activity):
             f"{community.profile_id()}/followers"
         ],
         "type": "Announce",
+        "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
     }
 
     for instance in community.following_instances(include_dormant=True):
@@ -1076,7 +1084,6 @@ def announce_activity_to_followers(community, creator, activity):
         # All good? Send!
         if instance and instance.online() and not instance_blocked(instance.inbox):
             if creator.instance_id != instance.id:    # don't send it to the instance that hosts the creator as presumably they already have the content
-                announce_activity['id'] = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
                 send_to_remote_instance(instance.id, community.id, announce_activity)
 
 
