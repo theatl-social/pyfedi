@@ -310,6 +310,7 @@ def save_post(form, post: Post, type: str):
                 post.image = file
                 db.session.add(file)
     elif type == 'video':
+        form.video_url.data = form.video_url.data.strip()
         post.title = form.video_title.data
         post.body = form.video_body.data
         post.body_html = markdown_to_html(post.body)
@@ -324,10 +325,23 @@ def save_post(form, post: Post, type: str):
             if post.image_id:
                 remove_old_file(post.image_id)
                 post.image_id = None
-
-            file = File(source_url=form.video_url.data)  # make_image_sizes() will take care of turning this into a still image
-            post.image = file
-            db.session.add(file)
+            if form.video_url.data.endswith('.mp4') or form.video_url.data.endswith('.webm'):
+                file = File(source_url=form.video_url.data)  # make_image_sizes() will take care of turning this into a still image
+                post.image = file
+                db.session.add(file)
+            else:
+                # check opengraph tags on the page and make a thumbnail if an image is available in the og:image meta tag
+                opengraph = opengraph_parse(form.video_url.data)
+                if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
+                    filename = opengraph.get('og:image') or opengraph.get('og:image:url')
+                    filename_for_extension = filename.split('?')[0] if '?' in filename else filename
+                    unused, file_extension = os.path.splitext(filename_for_extension)
+                    if file_extension.lower() in allowed_extensions and not filename.startswith('/'):
+                        file = url_to_thumbnail_file(filename)
+                        if file:
+                            file.alt_text = shorten_string(opengraph.get('og:title'), 295)
+                            post.image = file
+                            db.session.add(file)
 
     elif type == 'poll':
         ...

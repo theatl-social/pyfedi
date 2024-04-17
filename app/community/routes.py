@@ -500,7 +500,7 @@ def add_discussion_post(actor):
         if not community.local_only:
             federate_post(community, post)
 
-        return redirect(f"/c/{community.link()}")
+        return redirect(f"/post/{post.id}")
     else:
         form.communities.data = community.id
         form.notify_author.data = True
@@ -573,7 +573,7 @@ def add_image_post(actor):
         if not community.local_only:
             federate_post(community, post)
 
-        return redirect(f"/c/{community.link()}")
+        return redirect(f"/post/{post.id}")
     else:
         form.communities.data = community.id
         form.notify_author.data = True
@@ -646,7 +646,7 @@ def add_link_post(actor):
         if not community.local_only:
             federate_post(community, post)
 
-        return redirect(f"/c/{community.link()}")
+        return redirect(f"/post/{post.id}")
     else:
         form.communities.data = community.id
         form.notify_author.data = True
@@ -719,7 +719,7 @@ def add_video_post(actor):
         if not community.local_only:
             federate_post(community, post)
 
-        return redirect(f"/c/{community.link()}")
+        return redirect(f"/post/{post.id}")
     else:
         form.communities.data = community.id
         form.notify_author.data = True
