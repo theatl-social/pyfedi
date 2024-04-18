@@ -27,3 +27,7 @@ Disallow: /
 
 User-agent: SeznamBot
 Disallow: /
+
+User-agent: DataForSeoBot
+Disallow: /
+
