@@ -776,14 +776,15 @@ def federate_post(community, post):
     if post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO:
         page['attachment'] = [{'href': post.url, 'type': 'Link'}]
     elif post.image_id:
-        if post.image.file_path:
+        image_url = ''
+        if post.image.source_url:
+            image_url = post.image.source_url
+        elif post.image.file_path:
             image_url = post.image.file_path.replace('app/static/',
                                                      f"https://{current_app.config['SERVER_NAME']}/static/")
         elif post.image.thumbnail_path:
             image_url = post.image.thumbnail_path.replace('app/static/',
                                                           f"https://{current_app.config['SERVER_NAME']}/static/")
-        else:
-            image_url = post.image.source_url
         # NB image is a dict while attachment is a list of dicts (usually just one dict in the list)
         page['image'] = {'type': 'Image', 'url': image_url}
         if post.type == POST_TYPE_IMAGE:
