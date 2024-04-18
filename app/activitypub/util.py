@@ -2863,10 +2863,12 @@ def lemmy_site_data():
     for admin in Site.admins():
         person = {
             "id": admin.id,
-            "name": admin.display_name(),
+            "name": admin.user_name,
+            "display_name": admin.display_name(),
             "avatar": 'https://' + current_app.config['SERVER_NAME'] + admin.avatar_image(),
             "banned": admin.banned,
             "published": admin.created.isoformat(),
+            "updated": admin.created.isoformat(),
             "actor_id": admin.profile_id(),
             "local": True,
             "deleted": admin.deleted,
