@@ -1725,13 +1725,18 @@ def undo_vote(activity_log, comment, post, target_ap_id, user):
             comment.score -= existing_vote.effect
             db.session.delete(existing_vote)
             activity_log.result = 'success'
-    else:
-        if user is None or comment is None:
-            activity_log.exception_message = 'Blocked or unfound user or comment'
-        if user and user.is_local():
-            activity_log.exception_message = 'Activity about local content which is already present'
-            activity_log.result = 'ignored'
-    return post
+
+    if user is None or (post is None and comment is None):
+        activity_log.exception_message = 'Blocked or unfound user or comment'
+    if user and user.is_local():
+        activity_log.exception_message = 'Activity about local content which is already present'
+        activity_log.result = 'ignored'
+
+    if post:
+        return post
+    if comment:
+        return comment
+    return None
 
 
 def process_report(user, reported, request_json, activity_log):

@@ -537,6 +537,10 @@ class Community(db.Model):
         db.session.query(CommunityMember).filter(CommunityMember.community_id == self.id).delete()
         db.session.query(Report).filter(Report.suspect_community_id == self.id).delete()
 
+    def flush_cache(self):
+        cache.delete('/c/' + self.name + '_False')
+        cache.delete('/c/' + self.name + '_True')
+
 
 user_role = db.Table('user_role',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
