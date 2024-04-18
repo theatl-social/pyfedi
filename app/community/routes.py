@@ -504,6 +504,8 @@ def add_discussion_post(actor):
     else:
         form.communities.data = community.id
         form.notify_author.data = True
+        if community.posting_warning:
+            flash(community.posting_warning)
 
     return render_template('community/add_discussion_post.html', title=_('Add post to community'), form=form, community=community,
                            markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,

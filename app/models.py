@@ -65,6 +65,7 @@ class Instance(db.Model):
     gone_forever = db.Column(db.Boolean, default=False)     # True once this instance is considered offline forever - never start trying again
     ip_address = db.Column(db.String(50))
     trusted = db.Column(db.Boolean, default=False)
+    posting_warning = db.Column(db.String(512))
 
     posts = db.relationship('Post', backref='instance', lazy='dynamic')
     post_replies = db.relationship('PostReply', backref='instance', lazy='dynamic')
@@ -354,6 +355,7 @@ class Community(db.Model):
     content_retention = db.Column(db.Integer, default=-1)
     topic_id = db.Column(db.Integer, db.ForeignKey('topic.id'), index=True)
     default_layout = db.Column(db.String(15))
+    posting_warning = db.Column(db.String(512))
 
     ap_id = db.Column(db.String(255), index=True)
     ap_profile_id = db.Column(db.String(255), index=True)

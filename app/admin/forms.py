@@ -81,6 +81,7 @@ class EditCommunityForm(FlaskForm):
                ('masonry', _l('Masonry')),
                ('masonry_wide', _l('Wide masonry'))]
     default_layout = SelectField(_l('Layout'), coerce=str, choices=layouts, validators=[Optional()])
+    posting_warning = StringField(_('Posting warning'))
     submit = SubmitField(_l('Save'))
 
     def validate(self, extra_validators=None):
