@@ -23,3 +23,11 @@ REPORT_STATE_ESCALATED = 1
 REPORT_STATE_APPEALED = 2
 REPORT_STATE_RESOLVED = 3
 REPORT_STATE_DISCARDED = -1
+
+# different types of content notification that people can have. e.g. when a new post is made by a user or in a community.
+# see NotificationSubscription in models.py
+NOTIF_USER = 0
+NOTIF_COMMUNITY = 1
+NOTIF_TOPIC = 2
+NOTIF_POST = 3
+NOTIF_REPLY = 4

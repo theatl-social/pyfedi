@@ -1283,6 +1283,15 @@ class Report(db.Model):
         return self.source_instance_id == 1
 
 
+class NotificationSubscription(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(256))                        # to avoid needing to look up the thing subscribed to via entity_id
+    type = db.Column(db.Integer, default=0, index=True)     # see constants.py for possible values: NOTIF_*
+    entity_id = db.Column(db.Integer, index=True)           # ID of the user, post, community, etc being subscribed to
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)  # To whom this subscription belongs
+    created_at = db.Column(db.DateTime, default=utcnow)     # Perhaps very old subscriptions can be automatically deleted
+
+
 class IpBan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ip_address = db.Column(db.String(50), index=True)
