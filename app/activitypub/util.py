@@ -1342,9 +1342,10 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
                     return None
 
                 db.session.add(post_reply)
-                post.reply_count += 1
-                community.post_reply_count += 1
-                community.last_active = post.last_active = utcnow()
+                if not user.bot:
+                    post.reply_count += 1
+                    community.post_reply_count += 1
+                    community.last_active = post.last_active = utcnow()
                 activity_log.result = 'success'
                 post_reply.ranking = confidence(post_reply.up_votes, post_reply.down_votes)
                 db.session.commit()
