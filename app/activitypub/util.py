@@ -508,7 +508,7 @@ def refresh_community_profile_task(community_id):
             if 'language' in activity_json and isinstance(activity_json['language'], list):
                 for ap_language in activity_json['language']:
                     new_language = find_language_or_create(ap_language['identifier'], ap_language['name'])
-                    if new_language not in community.langauges:
+                    if new_language not in community.languages:
                         community.languages.append(new_language)
             db.session.commit()
             if community.icon_id and icon_changed:
