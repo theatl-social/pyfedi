@@ -1520,9 +1520,22 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
 
 
 def notify_about_post(post: Post):
+
+    # Send notifications based on subscriptions to the author
+    notifications_sent_to = set()
+    for notify_id in post.author.notification_subscribers():
+        new_notification = Notification(title=shorten_string(post.title, 50), url=f"/post/{post.id}",
+                                        user_id=notify_id, author_id=post.user_id)
+        db.session.add(new_notification)
+        user = User.query.get(notify_id)
+        user.unread_notifications += 1
+        db.session.commit()
+        notifications_sent_to.add(notify_id)
+
+    # Send notifications based on subscriptions to the community
     people_to_notify = CommunityMember.query.filter_by(community_id=post.community_id, notify_new_posts=True, is_banned=False)
     for person in people_to_notify:
-        if person.user_id != post.user_id:
+        if person.user_id != post.user_id and person.user_id not in notifications_sent_to:
             new_notification = Notification(title=shorten_string(post.title, 50), url=f"/post/{post.id}", user_id=person.user_id, author_id=post.user_id)
             db.session.add(new_notification)
             user = User.query.get(person.user_id)  # todo: make this more efficient by doing a join with CommunityMember at the start of the function

@@ -889,8 +889,8 @@ class User(UserMixin, db.Model):
 
     # ids of all the users who want to be notified when self makes a post
     def notification_subscribers(self):
-        return db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE entity_id = :user_id AND type = :type '),
-                                  {'user_id': self.id, 'type': NOTIF_USER}).scalars()
+        return list(db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE entity_id = :user_id AND type = :type '),
+                                  {'user_id': self.id, 'type': NOTIF_USER}).scalars())
 
 
 class ActivityLog(db.Model):
