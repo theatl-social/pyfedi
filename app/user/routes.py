@@ -9,10 +9,10 @@ from app import db, cache, celery
 from app.activitypub.signature import post_request
 from app.activitypub.util import default_context, find_actor_or_create
 from app.community.util import save_icon_file, save_banner_file, retrieve_mods_and_backfill
-from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_PENDING
+from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_PENDING, NOTIF_USER
 from app.models import Post, Community, CommunityMember, User, PostReply, PostVote, Notification, utcnow, File, Site, \
     Instance, Report, UserBlock, CommunityBan, CommunityJoinRequest, CommunityBlock, Filter, Domain, DomainBlock, \
-    InstanceBlock
+    InstanceBlock, NotificationSubscription
 from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, FilterEditForm
 from app.user.utils import purge_user_then_delete
@@ -220,6 +220,26 @@ def change_settings():
                            joined_communities=joined_communities(current_user.get_id())
                            )
 
+
+@bp.route('/user/<int:user_id>/notification', methods=['GET', 'POST'])
+@login_required
+def user_notification(user_id: int):
+    user = User.query.get_or_404(user_id)
+    existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == user.id,
+                                                                  NotificationSubscription.user_id == current_user.id,
+                                                                  NotificationSubscription.type == NOTIF_USER).first()
+    if existing_notification:
+        db.session.delete(existing_notification)
+        db.session.commit()
+    else:   # no subscription yet, so make one
+        if user.id != current_user.id and not user.has_blocked_user(current_user.id):
+            new_notification = NotificationSubscription(user_id=current_user.id, entity_id=user.id, type=NOTIF_USER)
+            db.session.add(new_notification)
+            db.session.commit()
+
+    return render_template('user/_notification_toggle.html', user=user)
+
+
 @bp.route('/u/<actor>/ban', methods=['GET'])
 @login_required
 def ban_profile(actor):
@@ -287,6 +307,8 @@ def block_profile(actor):
         if not existing_block:
             block = UserBlock(blocker_id=current_user.id, blocked_id=user.id)
             db.session.add(block)
+            db.session.execute(text('DELETE FROM "notification_subscription" WHERE entity_id = :current_user AND user_id = :user_id'),
+                               {'current_user': current_user.id, 'user_id': user.id})
             db.session.commit()
 
         if not user.is_local():

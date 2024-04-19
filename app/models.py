@@ -19,7 +19,7 @@ import jwt
 import os
 
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER, \
-    SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING
+    SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER
 
 
 # datetime.utcnow() is depreciated in Python 3.12 so it will need to be swapped out eventually
@@ -879,6 +879,18 @@ class User(UserMixin, db.Model):
             return '@' + self.user_name + '@' + current_app.config['SERVER_NAME']
         else:
             return '@' + self.user_name + '@' + self.ap_domain
+
+    # True if user_id wants to be notified about posts by self
+    def notify_new_posts(self, user_id):
+        existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == self.id,
+                                                                      NotificationSubscription.user_id == user_id,
+                                                                      NotificationSubscription.type == NOTIF_USER).first()
+        return existing_notification is not None
+
+    # ids of all the users who want to be notified when self makes a post
+    def notification_subscribers(self):
+        return db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE entity_id = :user_id AND type = :type '),
+                                  {'user_id': self.id, 'type': NOTIF_USER}).scalars()
 
 
 class ActivityLog(db.Model):
