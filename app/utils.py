@@ -918,7 +918,11 @@ def generate_image_from_video_url(video_url, output_path, length=2):
                 break
 
     # Generate thumbnail from the temporary file
-    clip = VideoFileClip(temp_file_path)
+    try:
+        clip = VideoFileClip(temp_file_path)
+    except Exception as e:
+        os.unlink(temp_file_path)
+        raise e
     thumbnail = clip.get_frame(0)
     clip.close()
 

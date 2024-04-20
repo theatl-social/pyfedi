@@ -768,31 +768,34 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory):
             # file path and names to store the resized images on disk
             final_place = os.path.join(directory, new_filename + '.jpg')
             final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail.webp')
+            try:
+                generate_image_from_video_url(file.source_url, final_place)
+            except Exception as e:
+                return
 
-            generate_image_from_video_url(file.source_url, final_place)
+            if final_place:
+                image = Image.open(final_place)
+                img_width = image.width
 
-            image = Image.open(final_place)
-            img_width = image.width
+                # Resize the image to medium
+                if medium_width:
+                    if img_width > medium_width:
+                        image.thumbnail((medium_width, medium_width))
+                    image.save(final_place)
+                    file.file_path = final_place
+                    file.width = image.width
+                    file.height = image.height
 
-            # Resize the image to medium
-            if medium_width:
-                if img_width > medium_width:
-                    image.thumbnail((medium_width, medium_width))
-                image.save(final_place)
-                file.file_path = final_place
-                file.width = image.width
-                file.height = image.height
+                # Resize the image to a thumbnail (webp)
+                if thumbnail_width:
+                    if img_width > thumbnail_width:
+                        image.thumbnail((thumbnail_width, thumbnail_width))
+                    image.save(final_place_thumbnail, format="WebP", quality=93)
+                    file.thumbnail_path = final_place_thumbnail
+                    file.thumbnail_width = image.width
+                    file.thumbnail_height = image.height
 
-            # Resize the image to a thumbnail (webp)
-            if thumbnail_width:
-                if img_width > thumbnail_width:
-                    image.thumbnail((thumbnail_width, thumbnail_width))
-                image.save(final_place_thumbnail, format="WebP", quality=93)
-                file.thumbnail_path = final_place_thumbnail
-                file.thumbnail_width = image.width
-                file.thumbnail_height = image.height
-
-            db.session.commit()
+                db.session.commit()
 
         # Images
         else:
