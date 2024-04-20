@@ -204,16 +204,21 @@ def user_profile(actor):
     """ Requests to this endpoint can be for a JSON representation of the user, or a HTML rendering of their profile.
     The two types of requests are differentiated by the header """
     actor = actor.strip()
+    # admins can view deleted accounts
     if current_user.is_authenticated and current_user.is_admin():
         if '@' in actor:
             user: User = User.query.filter_by(ap_id=actor).first()
         else:
             user: User = User.query.filter_by(user_name=actor, ap_id=None).first()
+            if user is None:
+                user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', deleted=False, ap_id=None).first()
     else:
         if '@' in actor:
             user: User = User.query.filter_by(ap_id=actor, deleted=False, banned=False).first()
         else:
             user: User = User.query.filter_by(user_name=actor, deleted=False, ap_id=None).first()
+            if user is None:
+                user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', deleted=False, ap_id=None).first()
 
     if user is not None:
         if request.method == 'HEAD':
