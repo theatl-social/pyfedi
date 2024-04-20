@@ -514,6 +514,11 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             db.session.commit()
                             return
                         community = find_actor_or_create(community_ap_id, community_only=True)
+                        if community and community.local_only:
+                            activity_log.exception_message = 'Remote Create in local_only community'
+                            activity_log.result = 'ignored'
+                            db.session.commit()
+                            return
                         user = find_actor_or_create(user_ap_id)
                         if (user and not user.is_local()) and community:
                             user.last_seen = community.last_active = site.last_active = utcnow()
