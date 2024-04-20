@@ -1475,10 +1475,12 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
             else:
                 post = None
                 activity_log.exception_message = domain.name + ' is blocked by admin'
-    if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
-        language = find_language_or_create(request_json['object']['language']['identifier'], request_json['object']['language']['name'])
-        post.language_id = language.id
+
     if post is not None:
+        if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
+            language = find_language_or_create(request_json['object']['language']['identifier'],
+                                               request_json['object']['language']['name'])
+            post.language_id = language.id
         if 'image' in request_json['object'] and post.image is None:
             image = File(source_url=request_json['object']['image']['url'])
             db.session.add(image)
