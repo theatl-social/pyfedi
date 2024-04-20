@@ -1255,3 +1255,17 @@ def activities_json(type, id):
         return resp
     else:
         abort(404)
+
+
+# Other instances can query the result of their POST to the inbox by using this endpoint. The ID of the activity they
+# sent (minus the https:// on the front) is the id parameter. e.g. https://piefed.ngrok.app/activity_result/piefed.ngrok.app/activities/announce/EfjyZ3BE5SzQK0C
+@bp.route('/activity_result/<path:id>')
+def activity_result(id):
+    activity = ActivityPubLog.query.filter_by(activity_id=f'https://{id}').first()
+    if activity:
+        if activity.result == 'success':
+            return jsonify('Ok')
+        else:
+            return jsonify({'error': activity.result, 'message': activity.exception_message})
+    else:
+        abort(404)
