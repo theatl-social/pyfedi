@@ -867,9 +867,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory):
                         if img_width < 2000:    # images > 2000px tend to be real photos instead of 4chan screenshots.
                             try:
                                 image_text = pytesseract.image_to_string(Image.open(BytesIO(source_image)).convert('L'), timeout=30)
-                            except FileNotFoundError as e:
-                                image_text = ''
-                            except TimeoutError as e:
+                            except Exception as e:
                                 image_text = ''
                             if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):   # chan posts usually contain the text 'Anonymous' and ' No.12345'
                                 post = Post.query.filter_by(image_id=file.id).first()
