@@ -401,7 +401,10 @@ def refresh_user_profile_task(user_id):
             actor_data = get_request(user.ap_profile_id, headers={'Accept': 'application/activity+json'})
         except requests.exceptions.ReadTimeout:
             time.sleep(randint(3, 10))
-            actor_data = get_request(user.ap_profile_id, headers={'Accept': 'application/activity+json'})
+            try:
+                actor_data = get_request(user.ap_profile_id, headers={'Accept': 'application/activity+json'})
+            except requests.exceptions.ReadTimeout:
+                return
         if actor_data.status_code == 200:
             activity_json = actor_data.json()
             actor_data.close()
@@ -456,7 +459,10 @@ def refresh_community_profile_task(community_id):
             actor_data = get_request(community.ap_profile_id, headers={'Accept': 'application/activity+json'})
         except requests.exceptions.ReadTimeout:
             time.sleep(randint(3, 10))
-            actor_data = get_request(community.ap_profile_id, headers={'Accept': 'application/activity+json'})
+            try:
+                actor_data = get_request(community.ap_profile_id, headers={'Accept': 'application/activity+json'})
+            except Exception as e:
+                return
         if actor_data.status_code == 200:
             activity_json = actor_data.json()
             actor_data.close()
