@@ -1166,6 +1166,8 @@ def post_delete(post_id: int):
                 ],
                 'object': post.ap_id,
             }
+            if post.user_id != current_user.id:
+                delete_json['summary'] = 'Deleted by mod'
 
             if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
                 success = post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
@@ -1588,6 +1590,8 @@ def post_reply_delete(post_id: int, comment_id: int):
                 ],
                 'object': post_reply.ap_id,
             }
+            if post_reply.user_id != current_user.id:
+                delete_json['summary'] = 'Deleted by mod'
 
             if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
                 success = post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
