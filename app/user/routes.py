@@ -136,7 +136,6 @@ def edit_profile(actor):
             file = save_banner_file(banner_file, 'users')
             if file:
                 current_user.cover = file
-        current_user.flush_cache()
 
         db.session.commit()
 

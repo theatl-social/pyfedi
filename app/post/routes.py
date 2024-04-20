@@ -114,8 +114,6 @@ def show_post(post_id: int):
         form.body.data = ''
         flash('Your comment has been added.')
 
-        post.flush_cache()
-
         # federation
         reply_json = {
             'type': 'Note',
@@ -389,7 +387,6 @@ def post_vote(post_id: int, vote_direction):
         db.session.commit()
         current_user.recalculate_attitude()
         db.session.commit()
-    post.flush_cache()
 
     recently_upvoted = []
     recently_downvoted = []
@@ -501,8 +498,6 @@ def comment_vote(comment_id, vote_direction):
     db.session.commit()
     current_user.recalculate_attitude()
     db.session.commit()
-
-    comment.post.flush_cache()
 
     recently_upvoted = []
     recently_downvoted = []
@@ -619,8 +614,6 @@ def add_reply(post_id: int, comment_id: int):
         db.session.commit()
         form.body.data = ''
         flash('Your comment has been added.')
-
-        post.flush_cache()
 
         # federation
         if not post.community.local_only:
@@ -793,7 +786,6 @@ def post_edit_discussion_post(post_id: int):
             post.edited_at = utcnow()
             db.session.commit()
 
-            post.flush_cache()
             flash(_('Your changes have been saved.'), 'success')
 
             # federate edit
@@ -874,7 +866,6 @@ def post_edit_image_post(post_id: int):
 
                 db.session.commit()
 
-            post.flush_cache()
             flash(_('Your changes have been saved.'), 'success')
             # federate edit
 
@@ -956,7 +947,6 @@ def post_edit_link_post(post_id: int):
 
                 db.session.commit()
 
-            post.flush_cache()
             flash(_('Your changes have been saved.'), 'success')
             # federate edit
 
@@ -1038,7 +1028,6 @@ def post_edit_video_post(post_id: int):
 
                 db.session.commit()
 
-            post.flush_cache()
             flash(_('Your changes have been saved.'), 'success')
             # federate edit
 
@@ -1159,7 +1148,6 @@ def post_delete(post_id: int):
                     if ocp.cross_posts is not None:
                         ocp.cross_posts.remove(post.id)
         post.delete_dependencies()
-        post.flush_cache()
         db.session.delete(post)
         g.site.last_active = community.last_active = utcnow()
         db.session.commit()
@@ -1457,7 +1445,6 @@ def post_reply_edit(post_id: int, comment_id: int):
             post.community.last_active = utcnow()
             post_reply.edited_at = utcnow()
             db.session.commit()
-            post.flush_cache()
             flash(_('Your changes have been saved.'), 'success')
 
             if post_reply.parent_id:
@@ -1586,7 +1573,6 @@ def post_reply_delete(post_id: int, comment_id: int):
             db.session.delete(post_reply)
         g.site.last_active = community.last_active = utcnow()
         db.session.commit()
-        post.flush_cache()
         flash(_('Comment deleted.'))
         # federate delete
         if not post.community.local_only:

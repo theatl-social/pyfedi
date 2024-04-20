@@ -1001,15 +1001,10 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
 
                     # Flush the caches of any major object that was created. To be sure.
                 if 'user' in vars() and user is not None:
-                    user.flush_cache()
                     if user.instance_id and user.instance_id != 1:
                         user.instance.last_seen = utcnow()
                         # user.instance.ip_address = ip_address
                         user.instance.dormant = False
-                if 'community' in vars() and community is not None:
-                    community.flush_cache()
-                if 'post' in vars() and post is not None:
-                    post.flush_cache()
             else:
                 activity_log.exception_message = 'Instance blocked'
 

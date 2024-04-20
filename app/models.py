@@ -537,9 +537,6 @@ class Community(db.Model):
         db.session.query(CommunityMember).filter(CommunityMember.community_id == self.id).delete()
         db.session.query(Report).filter(Report.suspect_community_id == self.id).delete()
 
-    def flush_cache(self):
-        cache.delete('/c/' + self.name + '_False')
-        cache.delete('/c/' + self.name + '_True')
 
 
 user_role = db.Table('user_role',
@@ -839,9 +836,6 @@ class User(UserMixin, db.Model):
             return
         return User.query.get(id)
 
-    def flush_cache(self):
-        cache.delete('/u/' + self.user_name + '_False')
-        cache.delete('/u/' + self.user_name + '_True')
 
     def delete_dependencies(self):
         if self.cover_id:
@@ -865,7 +859,6 @@ class User(UserMixin, db.Model):
         posts = Post.query.filter_by(user_id=self.id).all()
         for post in posts:
             post.delete_dependencies()
-            post.flush_cache()
             db.session.delete(post)
         db.session.commit()
         post_replies = PostReply.query.filter_by(user_id=self.id).all()
@@ -989,10 +982,6 @@ class Post(db.Model):
                     return name
         return False
 
-    def flush_cache(self):
-        cache.delete(f'/post/{self.id}_False')
-        cache.delete(f'/post/{self.id}_True')
-
 
 class PostReply(db.Model):
     query_class = FullTextSearchQuery
@@ -1109,7 +1098,6 @@ class Domain(db.Model):
         posts = Post.query.filter_by(domain_id=self.id).all()
         for post in posts:
             post.delete_dependencies()
-            post.flush_cache()
             db.session.delete(post)
         db.session.commit()
 

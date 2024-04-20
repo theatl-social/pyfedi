@@ -385,7 +385,6 @@ def delete_post_from_community_task(post_id):
     post = Post.query.get(post_id)
     community = post.community
     post.delete_dependencies()
-    post.flush_cache()
     db.session.delete(post)
     db.session.commit()
 
@@ -447,7 +446,7 @@ def delete_post_reply_from_community_task(post_reply_id):
             post_reply.delete_dependencies()
             db.session.delete(post_reply)
         db.session.commit()
-        post.flush_cache()
+
         # federate delete
         if not post.community.local_only:
             delete_json = {

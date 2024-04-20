@@ -569,7 +569,7 @@ def admin_user_edit(user_id):
             flash(_("Permissions are cached for 50 seconds so new admin roles won't take effect immediately."))
 
         db.session.commit()
-        user.flush_cache()
+
         flash(_('Saved'))
         return redirect(url_for('admin.admin_users', local_remote='local' if user.is_local() else 'remote'))
     else:
