@@ -890,6 +890,15 @@ div.navbar {
   .div.navbar {
     border-bottom: none;
   }
+
+  .limit_height {
+    overflow: visible !important;
+    max-height: initial;
+  }
+
+  .comment .show-more {
+    display: none;
+  }
 }
 
 /*# sourceMappingURL=styles.css.map */
