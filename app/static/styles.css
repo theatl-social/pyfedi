@@ -875,7 +875,7 @@ div.navbar {
     padding-bottom: 0;
   }
 
-  .comments > .comment {
+  .comments > .comment, .post_teaser {
     break-inside: avoid;
   }
 
