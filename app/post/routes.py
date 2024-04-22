@@ -84,6 +84,16 @@ def show_post(post_id: int):
             flash(_('This type of comment is not accepted, sorry.'), 'error')
             return redirect(url_for('activitypub.post_ap', post_id=post_id))
 
+        # respond to comments that are just variants of 'this'
+        if reply_is_stupid(form.body.data):
+            existing_vote = PostVote.query.filter_by(user_id=current_user.id, post_id=post.id).first()
+            if existing_vote is None:
+                flash(_('We have upvoted the post for you.'), 'warning')
+                post_vote(post.id, 'upvote')
+            else:
+                flash(_('You have already upvoted the post, you do not need to say "this" also.'), 'error')
+            return redirect(url_for('activitypub.post_ap', post_id=post_id))
+
         reply = PostReply(user_id=current_user.id, post_id=post.id, community_id=community.id, body=form.body.data,
                           body_html=markdown_to_html(form.body.data), body_html_safe=True,
                           from_bot=current_user.bot, nsfw=post.nsfw, nsfl=post.nsfl,
