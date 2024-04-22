@@ -1173,7 +1173,8 @@ def community_notification(community_id: int):
         db.session.commit()
     else:  # no subscription yet, so make one
         if not community.user_is_banned(current_user):
-            new_notification = NotificationSubscription(user_id=current_user.id, entity_id=community.id, type=NOTIF_COMMUNITY)
+            new_notification = NotificationSubscription(name=community.title, user_id=current_user.id, entity_id=community.id,
+                                                        type=NOTIF_COMMUNITY)
             db.session.add(new_notification)
             db.session.commit()
 

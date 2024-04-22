@@ -233,7 +233,8 @@ def user_notification(user_id: int):
         db.session.commit()
     else:   # no subscription yet, so make one
         if user.id != current_user.id and not user.has_blocked_user(current_user.id):
-            new_notification = NotificationSubscription(user_id=current_user.id, entity_id=user.id, type=NOTIF_USER)
+            new_notification = NotificationSubscription(name=user.display_name(), user_id=current_user.id,
+                                                        entity_id=user.id, type=NOTIF_USER)
             db.session.add(new_notification)
             db.session.commit()
 
