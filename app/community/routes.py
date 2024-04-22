@@ -21,10 +21,11 @@ from app.community.util import search_for_community, community_url_exists, actor
     delete_post_from_community, delete_post_reply_from_community
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
-    REPORT_STATE_DISCARDED, POST_TYPE_VIDEO
+    REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, \
-    File, PostVote, utcnow, Report, Notification, InstanceBlock, ActivityPubLog, Topic, Conversation, PostReply
+    File, PostVote, utcnow, Report, Notification, InstanceBlock, ActivityPubLog, Topic, Conversation, PostReply, \
+    NotificationSubscription
 from app.community import bp
 from app.user.utils import search_for_user
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
@@ -1092,7 +1093,7 @@ def community_ban_user(community_id: int, user_id: int):
 
         # todo: federate ban to post author instance
 
-        # notify banned person
+        # Notify banned person
         if user.is_local():
             cache.delete_memoized(communities_banned_from, user.id)
             cache.delete_memoized(joined_communities, user.id)
@@ -1106,6 +1107,11 @@ def community_ban_user(community_id: int, user_id: int):
         else:
             ...
             # todo: send chatmessage to remote user and federate it
+
+        # Remove their notification subscription,  if any
+        db.session.query(NotificationSubscription).filter(NotificationSubscription.entity_id == community.id,
+                                                          NotificationSubscription.user_id == user.id,
+                                                          NotificationSubscription.type == NOTIF_COMMUNITY).delete()
 
         return redirect(community.local_url())
     else:
@@ -1157,7 +1163,20 @@ def community_unban_user(community_id: int, user_id: int):
 @bp.route('/<int:community_id>/notification', methods=['GET', 'POST'])
 @login_required
 def community_notification(community_id: int):
+    # Toggle whether the current user is subscribed to notifications about this community's posts or not
     community = Community.query.get_or_404(community_id)
+    existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == community.id,
+                                                                  NotificationSubscription.user_id == current_user.id,
+                                                                  NotificationSubscription.type == NOTIF_COMMUNITY).first()
+    if existing_notification:
+        db.session.delete(existing_notification)
+        db.session.commit()
+    else:  # no subscription yet, so make one
+        if not community.user_is_banned(current_user):
+            new_notification = NotificationSubscription(user_id=current_user.id, entity_id=community.id, type=NOTIF_COMMUNITY)
+            db.session.add(new_notification)
+            db.session.commit()
+
     member_info = CommunityMember.query.filter(CommunityMember.community_id == community.id,
                                                CommunityMember.user_id == current_user.id).first()
     # existing community members get their notification flag toggled

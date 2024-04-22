@@ -19,7 +19,7 @@ import jwt
 import os
 
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER, \
-    SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER
+    SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER, NOTIF_COMMUNITY
 
 
 # datetime.utcnow() is depreciated in Python 3.12 so it will need to be swapped out eventually
@@ -503,12 +503,15 @@ class Community(db.Model):
             return f"https://{current_app.config['SERVER_NAME']}/c/{self.ap_id}"
 
     def notify_new_posts(self, user_id: int) -> bool:
-        member_info = CommunityMember.query.filter(CommunityMember.community_id == self.id,
-                                                   CommunityMember.is_banned == False,
-                                                   CommunityMember.user_id == user_id).first()
-        if not member_info:
-            return False
-        return member_info.notify_new_posts
+        existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == self.id,
+                                                                      NotificationSubscription.user_id == user_id,
+                                                                      NotificationSubscription.type == NOTIF_COMMUNITY).first()
+        return existing_notification is not None
+
+    # ids of all the users who want to be notified when there is a post in this community
+    def notification_subscribers(self):
+        return list(db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE entity_id = :community_id AND type = :type '),
+                                  {'community_id': self.id, 'type': NOTIF_COMMUNITY}).scalars())
 
     # instances that have users which are members of this community. (excluding the current instance)
     def following_instances(self, include_dormant=False) -> List[Instance]:
@@ -836,7 +839,6 @@ class User(UserMixin, db.Model):
             return
         return User.query.get(id)
 
-
     def delete_dependencies(self):
         if self.cover_id:
             file = File.query.get(self.cover_id)
@@ -850,6 +852,8 @@ class User(UserMixin, db.Model):
             db.session.delete(file)
         if self.waiting_for_approval():
             db.session.query(UserRegistration).filter(UserRegistration.user_id == self.id).delete()
+        db.session.query(NotificationSubscription).filter(NotificationSubscription.user_id == self.id).delete()
+        db.session.query(Notification).filter(Notification.user_id == self.id).delete()
 
     def purge_content(self):
         files = File.query.join(Post).filter(Post.user_id == self.id).all()

@@ -223,6 +223,7 @@ def change_settings():
 @bp.route('/user/<int:user_id>/notification', methods=['GET', 'POST'])
 @login_required
 def user_notification(user_id: int):
+    # Toggle whether the current user is subscribed to notifications about this user's posts or not
     user = User.query.get_or_404(user_id)
     existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == user.id,
                                                                   NotificationSubscription.user_id == current_user.id,

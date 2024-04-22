@@ -16,9 +16,10 @@ import os
 
 from app.activitypub.signature import RsaKeys
 from app.auth.util import random_token
+from app.constants import NOTIF_COMMUNITY
 from app.email import send_verification_email, send_email
 from app.models import Settings, BannedInstances, Interest, Role, User, RolePermission, Domain, ActivityPubLog, \
-    utcnow, Site, Instance, File, Notification, Post, CommunityMember
+    utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription
 from app.utils import file_get_contents, retrieve_block_list, blocked_domains, retrieve_peertube_block_list
 
 
@@ -304,6 +305,18 @@ def register(app):
         with app.app_context():
             db.session.query(ActivityPubLog).filter(ActivityPubLog.created_at < utcnow() - timedelta(days=3)).delete()
             db.session.commit()
+
+    @app.cli.command("migrate_community_notifs")
+    def migrate_community_notifs():
+        with app.app_context():
+            member_infos = CommunityMember.query.filter(CommunityMember.notify_new_posts == True,
+                                                       CommunityMember.is_banned == False).all()
+            for member_info in member_infos:
+                new_notification = NotificationSubscription(user_id=member_info.user_id, entity_id=member_info.community_id,
+                                                            type=NOTIF_COMMUNITY)
+                db.session.add(new_notification)
+            db.session.commit()
+            print('Done')
 
 
 def parse_communities(interests_source, segment):
