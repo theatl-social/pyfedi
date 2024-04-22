@@ -44,7 +44,8 @@ def admin_site():
         site = Site()
     if form.validate_on_submit():
         site.name = form.name.data
-        site.description = form.description.data
+        site.description = form.description.data #tagline
+        site.about = form.about.data
         site.sidebar = form.sidebar.data
         site.legal_information = form.legal_information.data
         site.updated = utcnow()
@@ -56,8 +57,10 @@ def admin_site():
     elif request.method == 'GET':
         form.name.data = site.name
         form.description.data = site.description
+        form.about.data = site.about
         form.sidebar.data = site.sidebar
         form.legal_information.data = site.legal_information
+        form.contact_email.data = site.contact_email
     return render_template('admin/site.html', title=_('Site profile'), form=form,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
