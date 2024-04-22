@@ -26,7 +26,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     request_etag_matches, ip_address, user_ip_banned, instance_banned, can_downvote, can_upvote, post_ranking, \
     reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, moderating_communities, joined_communities, \
     blocked_instances, blocked_domains, community_moderators, blocked_phrases, show_ban_message, recently_upvoted_posts, \
-    recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies
+    recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, reply_is_stupid
 
 
 def show_post(post_id: int):
@@ -576,6 +576,18 @@ def add_reply(post_id: int, comment_id: int):
             flash(_('This type of comment is not accepted, sorry.'), 'error')
             if in_reply_to.depth <= constants.THREAD_CUTOFF_DEPTH:
                 return redirect(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{in_reply_to.id}'))
+            else:
+                return redirect(url_for('post.continue_discussion', post_id=post_id, comment_id=in_reply_to.parent_id))
+
+        if reply_is_stupid(form.body.data):
+            existing_vote = PostReplyVote.query.filter_by(user_id=current_user.id, post_reply_id=in_reply_to.id).first()
+            if existing_vote is None:
+                flash(_('We have upvoted the comment for you.'), 'warning')
+                comment_vote(in_reply_to.id, 'upvote')
+            else:
+                flash(_('You have already upvoted the comment, you do not need to say "this" also.'), 'error')
+            if in_reply_to.depth <= constants.THREAD_CUTOFF_DEPTH:
+                return redirect(url_for('activitypub.post_ap', post_id=post_id))
             else:
                 return redirect(url_for('post.continue_discussion', post_id=post_id, comment_id=in_reply_to.parent_id))
 

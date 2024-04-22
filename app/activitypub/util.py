@@ -28,7 +28,7 @@ import pytesseract
 from app.utils import get_request, allowlist_html, get_setting, ap_datetime, markdown_to_html, \
     is_image_url, domain_from_url, gibberish, ensure_directory_exists, markdown_to_text, head_request, post_ranking, \
     shorten_string, reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, remove_tracking_from_link, \
-    blocked_phrases, microblog_content_to_title, generate_image_from_video_url, is_video_url
+    blocked_phrases, microblog_content_to_title, generate_image_from_video_url, is_video_url, reply_is_stupid
 
 
 def public_key():
@@ -1345,6 +1345,11 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
                 if reply_is_just_link_to_gif_reaction(post_reply.body):
                     user.reputation -= 1
                     activity_log.exception_message = 'gif comment ignored'
+                    activity_log.result = 'ignored'
+                    return None
+
+                if reply_is_stupid(post_reply.body):
+                    activity_log.exception_message = 'Stupid reply'
                     activity_log.result = 'ignored'
                     return None
 

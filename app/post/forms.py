@@ -1,13 +1,13 @@
 from flask_wtf import FlaskForm
 from wtforms import TextAreaField, SubmitField, BooleanField, StringField
-from wtforms.validators import DataRequired, Length
+from wtforms.validators import DataRequired, Length, ValidationError
 from flask_babel import _, lazy_gettext as _l
 
 from app.utils import MultiCheckboxField
 
 
 class NewReplyForm(FlaskForm):
-    body = TextAreaField(_l('Body'), render_kw={'placeholder': 'What are your thoughts?', 'rows': 5}, validators={DataRequired(), Length(min=3, max=5000)})
+    body = TextAreaField(_l('Body'), render_kw={'placeholder': 'What are your thoughts?', 'rows': 5}, validators={DataRequired(), Length(min=1, max=5000)})
     notify_author = BooleanField(_l('Notify about replies'))
     submit = SubmitField(_l('Comment'))
 
