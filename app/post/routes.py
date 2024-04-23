@@ -276,7 +276,7 @@ def show_post(post_id: int):
                            description=description, og_image=og_image, POST_TYPE_IMAGE=constants.POST_TYPE_IMAGE,
                            POST_TYPE_LINK=constants.POST_TYPE_LINK, POST_TYPE_ARTICLE=constants.POST_TYPE_ARTICLE,
                            POST_TYPE_VIDEO=constants.POST_TYPE_VIDEO, autoplay=request.args.get('autoplay', False),
-                           noindex=not post.author.indexable,
+                           noindex=not post.author.indexable, preconnect=post.url if post.url else None,
                            recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
                            recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies,
                            etag=f"{post.id}{sort}_{hash(post.last_active)}", markdown_editor=current_user.is_authenticated and current_user.markdown_editor,

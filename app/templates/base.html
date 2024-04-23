@@ -99,6 +99,9 @@
 
             setTheme(getPreferredTheme());
         </script>
+      {% if preconnect and not low_bandwidth %}
+        <link rel="preconnect" href='{{ preconnect }}'>
+      {% endif %}
     {% endblock %}
   </head>
   <body class="d-flex flex-column{{ ' low_bandwidth' if low_bandwidth }}">
