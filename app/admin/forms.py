@@ -10,14 +10,15 @@ from app.models import Community, User
 
 
 class SiteProfileForm(FlaskForm):
-    name = StringField(_l('Name'))
+    name = StringField(_l('Site Name'))
     description = StringField(_l('Tagline'))
     icon = FileField(_('Icon'), validators=[
         FileAllowed(['jpg', 'jpeg', 'png', 'webp'], 'Images only!')
     ])
     sidebar = TextAreaField(_l('Sidebar'))
+    about = TextAreaField(_l('About'))
     legal_information = TextAreaField(_l('Legal information'))
-    contact_email = EmailField(_l('General instance contact email address'), validators=[Email(), DataRequired(), Length(min=5, max=255)])
+    contact_email = EmailField(_l('General instance contact email address'), validators=[DataRequired(), Length(min=5, max=255)])
     submit = SubmitField(_l('Save'))
 
 
