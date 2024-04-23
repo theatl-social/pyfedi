@@ -84,6 +84,16 @@ def show_post(post_id: int):
             flash(_('This type of comment is not accepted, sorry.'), 'error')
             return redirect(url_for('activitypub.post_ap', post_id=post_id))
 
+        # respond to comments that are just variants of 'this'
+        if reply_is_stupid(form.body.data):
+            existing_vote = PostVote.query.filter_by(user_id=current_user.id, post_id=post.id).first()
+            if existing_vote is None:
+                flash(_('We have upvoted the post for you.'), 'warning')
+                post_vote(post.id, 'upvote')
+            else:
+                flash(_('You have already upvoted the post, you do not need to say "this" also.'), 'error')
+            return redirect(url_for('activitypub.post_ap', post_id=post_id))
+
         reply = PostReply(user_id=current_user.id, post_id=post.id, community_id=community.id, body=form.body.data,
                           body_html=markdown_to_html(form.body.data), body_html_safe=True,
                           from_bot=current_user.bot, nsfw=post.nsfw, nsfl=post.nsfl,
@@ -102,6 +112,15 @@ def show_post(post_id: int):
 
         db.session.add(reply)
         db.session.commit()
+
+        # upvote own reply
+        reply.score = 1
+        reply.up_votes = 1
+        reply.ranking = confidence(1, 0)
+        vote = PostReplyVote(user_id=current_user.id, post_reply_id=reply.id, author_id=current_user.id, effect=1)
+        db.session.add(vote)
+        cache.delete_memoized(recently_upvoted_post_replies, current_user.id)
+
         reply.ap_id = reply.profile_id()
         if current_user.reputation > 100:
             reply.up_votes += 1
@@ -612,8 +631,16 @@ def add_reply(post_id: int, comment_id: int):
             db.session.add(notification)
             in_reply_to.author.unread_notifications += 1
         db.session.commit()
+
+        # upvote own reply
+        reply.score = 1
+        reply.up_votes = 1
+        reply.ranking = confidence(1, 0)
+        vote = PostReplyVote(user_id=current_user.id, post_reply_id=reply.id, author_id=current_user.id, effect=1)
+        db.session.add(vote)
+        cache.delete_memoized(recently_upvoted_post_replies, current_user.id)
+
         reply.ap_id = reply.profile_id()
-        db.session.commit()
         if current_user.reputation > 100:
             reply.up_votes += 1
             reply.score += 1
@@ -726,6 +753,7 @@ def add_reply(post_id: int, comment_id: int):
             return redirect(url_for('post.continue_discussion', post_id=post_id, comment_id=reply.parent_id))
     else:
         form.notify_author.data = True
+
         return render_template('post/add_reply.html', title=_('Discussing %(title)s', title=post.title), post=post,
                                is_moderator=is_moderator, form=form, comment=in_reply_to, markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
                                moderating_communities=moderating_communities(current_user.get_id()), mods=mod_list,
