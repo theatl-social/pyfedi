@@ -207,18 +207,18 @@ def user_profile(actor):
     # admins can view deleted accounts
     if current_user.is_authenticated and current_user.is_admin():
         if '@' in actor:
-            user: User = User.query.filter_by(ap_id=actor).first()
+            user: User = User.query.filter_by(ap_id=actor.lower()).first()
         else:
             user: User = User.query.filter_by(user_name=actor, ap_id=None).first()
             if user is None:
                 user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', deleted=False, ap_id=None).first()
     else:
         if '@' in actor:
-            user: User = User.query.filter_by(ap_id=actor, deleted=False, banned=False).first()
+            user: User = User.query.filter_by(ap_id=actor.lower(), deleted=False, banned=False).first()
         else:
             user: User = User.query.filter_by(user_name=actor, deleted=False, ap_id=None).first()
             if user is None:
-                user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', deleted=False, ap_id=None).first()
+                user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor.lower()}', deleted=False, ap_id=None).first()
 
     if user is not None:
         if request.method == 'HEAD':
