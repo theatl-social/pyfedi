@@ -33,7 +33,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     request_etag_matches, return_304, instance_banned, can_create_post, can_upvote, can_downvote, user_filters_posts, \
     joined_communities, moderating_communities, blocked_domains, mimetype_from_url, blocked_instances, \
     community_moderators, communities_banned_from, show_ban_message, recently_upvoted_posts, recently_downvoted_posts, \
-    blocked_users
+    blocked_users, post_ranking
 from feedgen.feed import FeedGenerator
 from datetime import timezone, timedelta
 
@@ -496,6 +496,7 @@ def add_discussion_post(actor):
         post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
         db.session.commit()
 
+        upvote_own_post(post)
         notify_about_post(post)
 
         if not community.local_only:
@@ -571,6 +572,7 @@ def add_image_post(actor):
                     post.cross_posts.append(op.id)
             db.session.commit()
 
+        upvote_own_post(post)
         notify_about_post(post)
 
         if not community.local_only:
@@ -644,6 +646,7 @@ def add_link_post(actor):
                     post.cross_posts.append(op.id)
             db.session.commit()
 
+        upvote_own_post(post)
         notify_about_post(post)
 
         if not community.local_only:
@@ -717,6 +720,7 @@ def add_video_post(actor):
                     post.cross_posts.append(op.id)
             db.session.commit()
 
+        upvote_own_post(post)
         notify_about_post(post)
 
         if not community.local_only:
@@ -1406,3 +1410,11 @@ def lookup(community, domain):
                 return redirect('/')
 
 
+def upvote_own_post(post):
+        post.score = 1
+        post.up_votes = 1
+        post.ranking = post_ranking(post.score, utcnow())
+        vote = PostVote(user_id=current_user.id, post_id=post.id, author_id=current_user.id, effect=1)
+        db.session.add(vote)
+        db.session.commit()
+        cache.delete_memoized(recently_upvoted_posts, current_user.id)
