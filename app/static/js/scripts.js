@@ -14,6 +14,40 @@ document.addEventListener("DOMContentLoaded", function () {
     setupLightboxGallery();
 });
 
+function renderMasonry(masonry, htmlSnippets) {
+      const mainPane = document.querySelector('.main_pane');
+      const mainPaneWidth = mainPane.offsetWidth;
+      let numColumns;
+
+      if (mainPaneWidth < 600) {
+          numColumns = 2; // 2 columns for mobile
+      } else if (mainPaneWidth < 992) {
+          numColumns = 3; // 3 columns for phablet
+      } else if (mainPaneWidth < 1200) {
+          numColumns = 4; // 4 columns for tablet or laptop
+      } else {
+          numColumns = 5; // 5 columns for larger screens
+      }
+      const columns = [];
+
+      // Create and append column divs
+      for (let i = 0; i < numColumns; i++) {
+        const column = document.createElement('div');
+        column.classList.add('column');
+        masonry.appendChild(column);
+        columns.push(column);
+      }
+
+      // Distribute HTML snippets to columns
+      htmlSnippets.forEach(function(htmlSnippet, index) {
+        const columnIndex = index % numColumns;
+        const column = columns[columnIndex];
+        const item = document.createElement('div');
+        item.innerHTML = htmlSnippet;
+        column.appendChild(item);
+      });
+}
+
 function setupLightboxGallery() {
     // Check if there are elements with either "post_list_masonry_wide" or "post_list_masonry" class
     var widePosts = document.querySelectorAll('.post_list_masonry_wide');
