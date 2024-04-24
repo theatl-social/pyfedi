@@ -2013,3 +2013,29 @@ def lemmy_site_data():
         }
         data['admins'].append({'person': person, 'counts': counts})
     return data
+
+
+def ensure_domains_match(activity: dict) -> bool:
+    if 'id' in activity:
+        note_id = activity['id']
+    else:
+        note_id =  None
+
+    if 'actor' in activity:
+        note_actor = activity['actor']
+    elif 'attributedTo' in activity:
+        note_actor = activity['attributedTo']
+    else:
+        note_actor = None
+
+    if note_id and note_actor:
+        parsed_url = urlparse(note_id)
+        id_domain = parsed_url.netloc
+        parsed_url = urlparse(note_actor)
+        actor_domain = parsed_url.netloc
+
+        if id_domain == actor_domain:
+            return True
+
+    return False
+

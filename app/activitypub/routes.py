@@ -21,7 +21,7 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
     upvote_post, delete_post_or_comment, community_members, \
     user_removed_from_remote_server, create_post, create_post_reply, update_post_reply_from_activity, \
     update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection, find_reported_object, \
-    process_report
+    process_report, ensure_domains_match
 from app.utils import gibberish, get_setting, is_image_url, allowlist_html, render_template, \
     domain_from_url, markdown_to_html, community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
@@ -513,6 +513,12 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             activity_log.activity_type = 'exception'
                             db.session.commit()
                             return
+                        if 'object' in request_json:
+                            if not ensure_domains_match(request_json['object']):
+                                activity_log.result = 'failure'
+                                activity_log.exception_message = 'Domains do not match'
+                                db.session.commit()
+                                return
                         community = find_actor_or_create(community_ap_id, community_only=True)
                         if community and community.local_only:
                             activity_log.exception_message = 'Remote Create in local_only community'
@@ -567,6 +573,12 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                         activity_log.exception_message = 'invalid json?'
                     elif request_json['object']['type'] == 'Create':
                         activity_log.activity_type = request_json['object']['type']
+                        if 'object' in request_json and 'object' in request_json['object']:
+                            if not ensure_domains_match(request_json['object']['object']):
+                                activity_log.exception_message = 'Domains do not match'
+                                activity_log.result = 'failure'
+                                db.session.commit()
+                                return
                         user_ap_id = request_json['object']['object']['attributedTo']
                         try:
                             community_ap_id = request_json['object']['audience'] if 'audience' in request_json['object'] else request_json['actor']
