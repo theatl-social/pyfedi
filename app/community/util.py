@@ -38,9 +38,18 @@ def search_for_community(address: str):
             return already_exists
 
         # Look up the profile address of the community using WebFinger
-        # todo: try, except block around every get_request
-        webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
-                                     params={'resource': f"acct:{address[1:]}"})
+        try:
+            webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
+                                         params={'resource': f"acct:{address[1:]}"})
+        except requests.exceptions.ReadTimeout:
+            time.sleep(randint(3, 10))
+            try:
+                webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
+                                            params={'resource': f"acct:{address[1:]}"})
+            except requests.exceptions.RequestException:
+                return None
+        except requests.exceptions.RequestException:
+            return None
         if webfinger_data.status_code == 200:
             webfinger_json = webfinger_data.json()
             for links in webfinger_json['links']:
