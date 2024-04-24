@@ -29,13 +29,20 @@
         {% endif %}
         {% include "community/_community_nav.html" %}
         {% if post_layout == 'masonry' or post_layout == 'masonry_wide' %}
-            <div class="post_list_{{ post_layout }}">
-                {% for post in posts.items %}
-                    {% include 'post/_post_teaser_masonry.html' %}
-                {% else %}
-                    <p>{{ _('No posts in this topic yet.') }}</p>
-                {% endfor %}
+             <div class="masonry" id="masonry">
+              <!-- Masonry columns will be added here -->
             </div>
+            <script nonce="{{ session['nonce'] }}">
+              document.addEventListener("DOMContentLoaded", function() {
+                  const masonry = document.getElementById('masonry');
+                  const htmlSnippets = [
+                      {% for post in posts.items %}
+                        {% raw %}`{% endraw %}{% include 'post/_post_teaser_masonry.html' %}{% raw %}`{% endraw %},
+                      {% endfor %}
+                  ];
+                  renderMasonry(masonry, htmlSnippets);
+              });
+            </script>
         {% else %}
             <div class="post_list">
                 {% for post in posts.items %}
