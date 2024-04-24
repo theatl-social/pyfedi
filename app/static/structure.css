@@ -794,7 +794,7 @@ fieldset legend {
   height: auto;
   /* Ensure aspect ratio is maintained */
 }
-#masonry .item .masonry_thumb a {
+#masonry .item .masonry_thumb a, #masonry .item .masonry_thumb a:active {
   border: none;
 }
 #masonry .item .masonry_info {

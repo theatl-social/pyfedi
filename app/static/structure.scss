@@ -405,7 +405,7 @@ html {
       height: auto; /* Ensure aspect ratio is maintained */
     }
 
-    .masonry_thumb a {
+    .masonry_thumb a, .masonry_thumb a:active {
       border: none;
     }
 

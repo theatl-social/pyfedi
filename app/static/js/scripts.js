@@ -11,7 +11,6 @@ document.addEventListener("DOMContentLoaded", function () {
     setupTopicChooser();
     setupConversationChooser();
     setupMarkdownEditorEnabler();
-    setupLightboxGallery();
 });
 
 function renderMasonry(masonry, htmlSnippets) {
@@ -46,26 +45,17 @@ function renderMasonry(masonry, htmlSnippets) {
         item.innerHTML = htmlSnippet;
         column.appendChild(item);
       });
+
+      setupLightboxGallery();
 }
 
 function setupLightboxGallery() {
     // Check if there are elements with either "post_list_masonry_wide" or "post_list_masonry" class
-    var widePosts = document.querySelectorAll('.post_list_masonry_wide');
-    var regularPosts = document.querySelectorAll('.post_list_masonry');
+    var galleryPosts = document.querySelectorAll('.masonry');
 
     // Enable lightbox on masonry images
-    if (widePosts.length > 0) {
-        baguetteBox.run('.post_list_masonry_wide', {
-            fullScreen: false,
-            titleTag: true,
-            preload: 5,
-            captions: function(element) {
-                return element.getElementsByTagName('img')[0].title;
-            }
-        });
-    }
-    if (regularPosts.length > 0) {
-        baguetteBox.run('.post_list_masonry', {
+    if (galleryPosts.length > 0) {
+        baguetteBox.run('.masonry', {
             fullScreen: false,
             titleTag: true,
             preload: 5,
