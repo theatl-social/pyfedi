@@ -26,7 +26,7 @@ from app.utils import render_template, get_setting, gibberish, request_etag_matc
     ap_datetime, ip_address, retrieve_block_list, shorten_string, markdown_to_text, user_filters_home, \
     joined_communities, moderating_communities, parse_page, theme_list, get_request, markdown_to_html, allowlist_html, \
     blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
-    generate_image_from_video_url
+    generate_image_from_video_url, blocked_users
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Domain, Topic, File, Instance, \
     InstanceRole, Notification
 from PIL import Image
@@ -108,6 +108,10 @@ def home_page(type, sort):
         instance_ids = blocked_instances(current_user.id)
         if instance_ids:
             posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
+        # filter blocked users
+        blocked_accounts = blocked_users(current_user.id)
+        if blocked_accounts:
+            posts = posts.filter(Post.user_id.not_in(blocked_accounts))
         content_filters = user_filters_home(current_user.id)
 
     # Sorting
