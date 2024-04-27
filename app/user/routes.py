@@ -677,7 +677,7 @@ def import_settings_task(user_id, filename):
 @login_required
 def user_settings_filters():
     filters = Filter.query.filter_by(user_id=current_user.id).order_by(Filter.title).all()
-    blocked_users = User.query.join(UserBlock, UserBlock.blocked_id == User.id).\
+    blocked_users = User.query.filter_by(deleted=False).join(UserBlock, UserBlock.blocked_id == User.id).\
         filter(UserBlock.blocker_id == current_user.id).order_by(User.user_name).all()
     blocked_communities = Community.query.join(CommunityBlock, CommunityBlock.community_id == Community.id).\
         filter(CommunityBlock.user_id == current_user.id).order_by(Community.title).all()

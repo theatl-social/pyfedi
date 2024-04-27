@@ -10,7 +10,7 @@ from pillow_heif import register_heif_opener
 
 from app import db, cache, celery
 from app.activitypub.signature import post_request
-from app.activitypub.util import find_actor_or_create, actor_json_to_model, post_json_to_model, default_context
+from app.activitypub.util import find_actor_or_create, actor_json_to_model, post_json_to_model, default_context, ensure_domains_match
 from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO
 from app.models import Community, File, BannedInstances, PostReply, PostVote, Post, utcnow, CommunityMember, Site, \
     Instance, Notification, User, ActivityPubLog
@@ -38,9 +38,18 @@ def search_for_community(address: str):
             return already_exists
 
         # Look up the profile address of the community using WebFinger
-        # todo: try, except block around every get_request
-        webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
-                                     params={'resource': f"acct:{address[1:]}"})
+        try:
+            webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
+                                         params={'resource': f"acct:{address[1:]}"})
+        except requests.exceptions.ReadTimeout:
+            time.sleep(randint(3, 10))
+            try:
+                webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
+                                            params={'resource': f"acct:{address[1:]}"})
+            except requests.exceptions.RequestException:
+                return None
+        except requests.exceptions.RequestException:
+            return None
         if webfinger_data.status_code == 200:
             webfinger_json = webfinger_data.json()
             for links in webfinger_json['links']:
@@ -99,11 +108,16 @@ def retrieve_mods_and_backfill(community_id: int):
                 if 'type' in outbox_data and outbox_data['type'] == 'OrderedCollection' and 'orderedItems' in outbox_data:
                     activities_processed = 0
                     for activity in outbox_data['orderedItems']:
-                        user = find_actor_or_create(activity['object']['actor'])
                         activity_log = ActivityPubLog(direction='in', activity_id=activity['id'], activity_type='Announce', result='failure')
                         if site.log_activitypub_json:
                             activity_log.activity_json = json.dumps(activity)
                         db.session.add(activity_log)
+                        if 'object' in activity and 'object' in activity['object']:
+                            if not ensure_domains_match(activity['object']['object']):
+                                activity_log.exception_message = 'Domains do not match'
+                                db.session.commit()
+                                continue
+                        user = find_actor_or_create(activity['object']['actor'])
                         if user:
                             post = post_json_to_model(activity_log, activity['object']['object'], user, community)
                             if post:
