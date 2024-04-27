@@ -118,6 +118,10 @@ def retrieve_mods_and_backfill(community_id: int):
                                 db.session.commit()
                                 continue
                         user = find_actor_or_create(activity['object']['actor'])
+                        if user and user.is_local():
+                                activity_log.exception_message = 'Activity about local content which is already present'
+                                db.session.commit()
+                                continue
                         if user:
                             post = post_json_to_model(activity_log, activity['object']['object'], user, community)
                             if post:
