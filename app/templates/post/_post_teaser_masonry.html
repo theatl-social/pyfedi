@@ -1,8 +1,9 @@
-{# do not use any single quotes in the HTML produced by this template - javascript needs to load it as a string. See community.html #}
+{# do not use any back ticks in the HTML produced by this template - javascript needs to load it as a string. See community.html #}
 {% set content_blocked = post.blocked_by_content_filter(content_filters) %}
 {% if content_blocked and content_blocked == '-1' %}
     {# do nothing - blocked by keyword filter #}
 {% else %}
+    {% set post_title = post.title.replace('`', "'") %}
     <div class="item{{ ' reported' if post.reports > 0 and current_user.is_authenticated and post.community.is_moderator() }}{{ ' blocked' if content_blocked }}"
         {% if content_blocked %} title="{{ _('Filtered: ') }}{{ content_blocked }}"{% endif %}>
         {% if post.image_id %}
@@ -11,23 +12,23 @@
             {% elif post_layout == 'masonry_wide' %}
                 {% set thumbnail = post.image.view_url() %}
             {% endif %}
-            <div class="masonry_thumb" title="{{ post.title }}">
+            <div class="masonry_thumb" title="{{ post_title }}">
                 {% if post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO %}
                     {% if post.image.medium_url() %}
                         <a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="{{ _('View image') }}"><img src="{{ post.image.medium_url() }}"
-                           alt="{{ post.image.alt_text if post.image.alt_text else '' }}" title="{{ post.title }}"
+                           alt="{{ post.image.alt_text if post.image.alt_text else '' }}" title="{{ post_title }}"
                            loading="lazy" width="{{ post.image.width }}" height="{{ post.image.height }}" /></a>
                     {% elif post.image.source_url %}
                         <a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="{{ _('View image') }}"><img src="{{ post.image.source_url }}"
-                           alt="{{ post.title }}" title="{{ post.title }}" loading="{{ 'lazy' if low_bandwidth else 'eager' }}" /></a>
+                           alt="{{ post.title.replace('`', "'") }}" title="{{ post_title }}" loading="{{ 'lazy' if low_bandwidth else 'eager' }}" /></a>
                     {% else %}
                         <a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="{{ _('View image') }}"><img src="{{ post.url }}"
-                           alt="{{ post.title }}" title="{{ post.title }}"
+                           alt="{{ post_title }}" title="{{ post_title }}"
                            loading="{{ 'lazy' if low_bandwidth else 'eager' }}" /></a>
                     {% endif %}
                 {% elif post.type == POST_TYPE_IMAGE %}
                         <a href="{{ post.image.view_url() }}" rel="nofollow ugc" target="_blank"><img src="{{ post.image.medium_url() }}"
-                        alt="{{ post.image.alt_text if post.image.alt_text else '' }}" title="{{ post.title }}"
+                        alt="{{ post.image.alt_text if post.image.alt_text else '' }}" title="{{ post_title }}"
                         loading="lazy" width="{{ post.image.width }}" height="{{ post.image.height }}" /></a>
                 {% else %}
                     <a href="{{ url_for('activitypub.post_ap', post_id=post.id) }}"><img src="{{ post.image.thumbnail_url() }}"
@@ -42,7 +43,7 @@
                         </div>
                     </div>
                     <div class="col col-8">
-                        <p><a href="{{ url_for('activitypub.post_ap', post_id=post.id) }}" title="{{ post.title }}">{{ post.title }}</a></p>
+                        <p><a href="{{ url_for('activitypub.post_ap', post_id=post.id) }}" title="{{ post_title }}">{{ post_title }}</a></p>
                     </div>
                     <div class="col col-1 reply_col">
                         <a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None, _anchor='post_replies') }}" aria-label="{{ _('View comments') }}" aria-hidden="true"><span class="fe fe-reply"></span></a>
@@ -52,9 +53,9 @@
             </div>
         {% else %}
             {% if post.url and (post.url.endswith('.jpg') or post.url.endswith('.webp') or post.url.endswith('.png') or post.url.endswith('.gif') or post.url.endswith('.avif')  or post.url.endswith('.jpeg')) %}
-                <div class="masonry_thumb" title="{{ post.title }}">
+                <div class="masonry_thumb" title="{{ post_title }}">
                     <a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="{{ _('View image') }}"><img src="{{ post.url }}"
-                           alt="{{ post.title }}" title="{{ post.title }}"
+                           alt="{{ post_title }}" title="{{ post_title }}"
                            loading="{{ 'lazy' if low_bandwidth else 'eager' }}" /></a>
                 </div>
                 <div class="masonry_info">
@@ -63,7 +64,7 @@
                             {% include "post/_post_voting_buttons_masonry.html" %}
                         </div>
                         <div class="col col-8">
-                            <p><a href="{{ url_for('activitypub.post_ap', post_id=post.id) }}" title="{{ post.title }}">{{ post.title }}</a></p>
+                            <p><a href="{{ url_for('activitypub.post_ap', post_id=post.id) }}" title="{{ post_title }}">{{ post_title }}</a></p>
                         </div>
                         <div class="col col-2 reply_col">
                             <a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None, _anchor='post_replies') }}" aria-label="{{ _('View comments') }}" aria-hidden="true"><span class="fe fe-reply"></span></a>
@@ -74,7 +75,7 @@
                 </div>
             {% else %}
             <div class="masonry_info_no_image">
-                <p><a href="{{ url_for('activitypub.post_ap', post_id=post.id) }}">{{ post.title }}</a></p>
+                <p><a href="{{ url_for('activitypub.post_ap', post_id=post.id) }}">{{ post_title }}</a></p>
             </div>
             {% endif %}
         {% endif %}
