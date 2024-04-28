@@ -211,7 +211,7 @@ def user_profile(actor):
         else:
             user: User = User.query.filter_by(user_name=actor, ap_id=None).first()
             if user is None:
-                user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', deleted=False, ap_id=None).first()
+                user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor.lower()}', deleted=False, ap_id=None).first()
     else:
         if '@' in actor:
             user: User = User.query.filter_by(ap_id=actor.lower(), deleted=False, banned=False).first()
