@@ -1252,6 +1252,7 @@ def process_user_follow_request(request_json, activitypublog_id, remote_user_id)
         if not existing_follower:
             auto_accept = not local_user.ap_manually_approves_followers
             new_follower = UserFollower(local_user_id=local_user.id, remote_user_id=remote_user.id, is_accepted=auto_accept)
+            local_user.ap_followers_url = local_user.ap_public_url + '/followers'
             db.session.add(new_follower)
         accept = {
             "@context": default_context(),
@@ -1311,6 +1312,29 @@ def community_followers(actor):
             "type": "Collection",
             "totalItems": community_members(community.id),
             "items": []
+        }
+        resp = jsonify(result)
+        resp.content_type = 'application/activity+json'
+        return resp
+    else:
+        abort(404)
+
+
+@bp.route('/u/<actor>/followers', methods=['GET'])
+def user_followers(actor):
+    actor = actor.strip()
+    user = User.query.filter_by(user_name=actor, banned=False, ap_id=None).first()
+    if user is not None and user.ap_followers_url:
+        followers = User.query.join(UserFollower, User.id == UserFollower.remote_user_id).filter(UserFollower.local_user_id == user.id).all()
+        items = []
+        for f in followers:
+            items.append(f.ap_public_url)
+        result = {
+            "@context": default_context(),
+            "id": user.ap_followers_url,
+            "type": "Collection",
+            "totalItems": len(items),
+            "items": items
         }
         resp = jsonify(result)
         resp.content_type = 'application/activity+json'
