@@ -331,7 +331,7 @@ def community_membership(user: User, community: Community) -> int:
 
 
 @cache.memoize(timeout=86400)
-def communities_banned_from(user_id) -> List[int]:
+def communities_banned_from(user_id: int) -> List[int]:
     community_bans = CommunityBan.query.filter(CommunityBan.user_id == user_id).all()
     return [cb.community_id for cb in community_bans]
 
@@ -708,6 +708,11 @@ def finalize_user_setup(user, application_required=False):
     user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}/inbox"
     db.session.commit()
     send_welcome_email(user, application_required)
+
+
+def notification_subscribers(entity_id, entity_type) -> List[int]:
+    return list(db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE entity_id = :community_id AND type = :type '),
+                                  {'community_id': entity_id, 'type': entity_type}).scalars())
 
 
 # topics, in a tree

@@ -497,7 +497,8 @@ def add_discussion_post(actor):
         db.session.commit()
 
         upvote_own_post(post)
-        notify_about_post(post)
+        if not post.community.user_is_banned(current_user):
+            notify_about_post(post)
 
         if not community.local_only:
             federate_post(community, post)

@@ -28,7 +28,8 @@ import pytesseract
 from app.utils import get_request, allowlist_html, get_setting, ap_datetime, markdown_to_html, \
     is_image_url, domain_from_url, gibberish, ensure_directory_exists, markdown_to_text, head_request, post_ranking, \
     shorten_string, reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, remove_tracking_from_link, \
-    blocked_phrases, microblog_content_to_title, generate_image_from_video_url, is_video_url, reply_is_stupid
+    blocked_phrases, microblog_content_to_title, generate_image_from_video_url, is_video_url, reply_is_stupid, \
+    notification_subscribers, communities_banned_from
 
 
 def public_key():
@@ -1524,7 +1525,8 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
                     post.cross_posts.append(op.id)
             db.session.commit()
 
-        notify_about_post(post)
+        if post.community_id not in communities_banned_from(user.id):
+            notify_about_post(post)
 
         if user.reputation > 100:
             post.up_votes += 1
@@ -1537,20 +1539,12 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
 def notify_about_post(post: Post):
     # todo: eventually this function could trigger a lot of DB activity. This function will need to be a celery task.
 
-    # Send notifications based on subscriptions to the author
+    # Send notifications based on subscriptions
     notifications_sent_to = set()
-    for notify_id in post.author.notification_subscribers():
-        if notify_id != post.user_id:
-            new_notification = Notification(title=shorten_string(post.title, 50), url=f"/post/{post.id}",
-                                            user_id=notify_id, author_id=post.user_id)
-            db.session.add(new_notification)
-            user = User.query.get(notify_id)
-            user.unread_notifications += 1
-            db.session.commit()
-            notifications_sent_to.add(notify_id)
-
-    # Send notifications based on subscriptions to the community
-    for notify_id in post.community.notification_subscribers():
+    send_notifs_to = set(notification_subscribers(post.author_id, NOTIF_USER) +
+                         notification_subscribers(post.community_id, NOTIF_COMMUNITY) +
+                         notification_subscribers(post.community.topic_id, NOTIF_TOPIC))
+    for notify_id in send_notifs_to:
         if notify_id != post.user_id and notify_id not in notifications_sent_to:
             new_notification = Notification(title=shorten_string(post.title, 50), url=f"/post/{post.id}",
                                             user_id=notify_id, author_id=post.user_id)
@@ -1558,6 +1552,7 @@ def notify_about_post(post: Post):
             user = User.query.get(notify_id)
             user.unread_notifications += 1
             db.session.commit()
+            notifications_sent_to.add(notify_id)
 
 
 def update_post_reply_from_activity(reply: PostReply, request_json: dict):

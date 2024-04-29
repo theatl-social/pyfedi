@@ -19,7 +19,7 @@ import jwt
 import os
 
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER, \
-    SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER, NOTIF_COMMUNITY
+    SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER, NOTIF_COMMUNITY, NOTIF_TOPIC
 
 
 # datetime.utcnow() is depreciated in Python 3.12 so it will need to be swapped out eventually
@@ -327,6 +327,14 @@ class Topic(db.Model):
         return_value = list(reversed(return_value))
         return '/'.join(return_value)
 
+    def notify_new_posts(self, user_id: int) -> bool:
+        existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == self.id,
+                                                                      NotificationSubscription.user_id == user_id,
+                                                                      NotificationSubscription.type == NOTIF_TOPIC).first()
+        return existing_notification is not None
+
+
+
 
 class Community(db.Model):
     query_class = FullTextSearchQuery
@@ -476,14 +484,9 @@ class Community(db.Model):
             return False
 
     def user_is_banned(self, user):
-        membership = CommunityMember.query.filter(CommunityMember.community_id == self.id, CommunityMember.user_id == user.id).first()
-        if membership and membership.is_banned:
-            return True
-        banned = CommunityBan.query.filter(CommunityBan.community_id == self.id, CommunityBan.user_id == user.id).first()
-        if banned:
-            return True
-        return False
-
+        # use communities_banned_from() instead of this method, where possible. Redis caches the result of communities_banned_from()
+        community_bans = CommunityBan.query.filter(CommunityBan.user_id == user.id).all()
+        return self.id in [cb.community_id for cb in community_bans]
 
     def profile_id(self):
         retval = self.ap_profile_id if self.ap_profile_id else f"https://{current_app.config['SERVER_NAME']}/c/{self.name}"

@@ -18,6 +18,9 @@
           </ol>
         </nav>
         <h1 class="mt-2">{{ topic.name }}
+            {% if current_user.is_authenticated %}
+                {% include 'topic/_notification_toggle.html' %}
+            {% endif %}
         </h1>
         {% if sub_topics %}
         <h5 class="mb-0" id="sub-topics">{{ _('Sub-topics') }}</h5>

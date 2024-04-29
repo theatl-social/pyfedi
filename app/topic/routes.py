@@ -9,9 +9,11 @@ from flask_babel import _
 from sqlalchemy import text, desc, or_
 
 from app.activitypub.signature import post_request
-from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, POST_TYPE_LINK, POST_TYPE_VIDEO
+from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
+    POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_TOPIC
 from app.inoculation import inoculation
-from app.models import Topic, Community, Post, utcnow, CommunityMember, CommunityJoinRequest, User
+from app.models import Topic, Community, Post, utcnow, CommunityMember, CommunityJoinRequest, User, \
+    NotificationSubscription
 from app.topic import bp
 from app import db, celery, cache
 from app.topic.forms import ChooseTopicsForm
@@ -204,6 +206,26 @@ def topic_create_post(topic_name):
         return redirect(url_for('community.join_then_add', actor=community.link()))
     return render_template('topic/topic_create_post.html', communities=communities, topic=topic,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR)
+
+
+@bp.route('/topic/<int:topic_id>/notification', methods=['GET', 'POST'])
+@login_required
+def topic_notification(topic_id: int):
+    # Toggle whether the current user is subscribed to notifications about this community's posts or not
+    topic = Topic.query.get_or_404(topic_id)
+    existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == topic.id,
+                                                                  NotificationSubscription.user_id == current_user.id,
+                                                                  NotificationSubscription.type == NOTIF_TOPIC).first()
+    if existing_notification:
+        db.session.delete(existing_notification)
+        db.session.commit()
+    else:  # no subscription yet, so make one
+        new_notification = NotificationSubscription(name=topic.name, user_id=current_user.id, entity_id=topic.id,
+                                                    type=NOTIF_TOPIC)
+        db.session.add(new_notification)
+        db.session.commit()
+
+    return render_template('topic/_notification_toggle.html', topic=topic)
 
 
 def topics_for_form():
