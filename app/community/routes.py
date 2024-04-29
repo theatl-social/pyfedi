@@ -497,8 +497,8 @@ def add_discussion_post(actor):
         db.session.commit()
 
         upvote_own_post(post)
-        if not post.community.user_is_banned(current_user):
-            notify_about_post(post)
+
+        notify_about_post(post)
 
         if not community.local_only:
             federate_post(community, post)
@@ -1178,7 +1178,8 @@ def community_notification(community_id: int):
         db.session.commit()
     else:  # no subscription yet, so make one
         if community.id not in communities_banned_from(current_user.id):
-            new_notification = NotificationSubscription(name=community.title, user_id=current_user.id, entity_id=community.id,
+            new_notification = NotificationSubscription(name=shorten_string(_('New posts in %(community_name)s', community_name=community.title)),
+                                                        user_id=current_user.id, entity_id=community.id,
                                                         type=NOTIF_COMMUNITY)
             db.session.add(new_notification)
             db.session.commit()

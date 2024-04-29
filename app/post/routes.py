@@ -9,17 +9,18 @@ from sqlalchemy import or_, desc
 
 from app import db, constants, cache
 from app.activitypub.signature import HttpSignature, post_request
-from app.activitypub.util import default_context
+from app.activitypub.util import default_context, notify_about_post_reply
 from app.community.util import save_post, send_to_remote_instance
 from app.inoculation import inoculation
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm
 from app.community.forms import CreateLinkForm, CreateImageForm, CreateDiscussionForm, CreateVideoForm
 from app.post.util import post_replies, get_comment_branch, post_reply_count
-from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, POST_TYPE_IMAGE, \
-    POST_TYPE_ARTICLE, POST_TYPE_VIDEO
+from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
+    POST_TYPE_IMAGE, \
+    POST_TYPE_ARTICLE, POST_TYPE_VIDEO, NOTIF_REPLY, NOTIF_POST
 from app.models import Post, PostReply, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, InstanceBlock, Report, Site, Community, \
-    Topic, User, Instance
+    Topic, User, Instance, NotificationSubscription
 from app.post import bp
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
@@ -98,20 +99,24 @@ def show_post(post_id: int):
                           body_html=markdown_to_html(form.body.data), body_html_safe=True,
                           from_bot=current_user.bot, nsfw=post.nsfw, nsfl=post.nsfl,
                           notify_author=form.notify_author.data, instance_id=1)
-        if post.notify_author and current_user.id != post.user_id:
-            notification = Notification(title=shorten_string(_('Reply from %(name)s on %(post_title)s',
-                                                name=current_user.display_name(),
-                                                post_title=post.title), 50),
-                                        user_id=post.user_id,
-                                        author_id=current_user.id, url=url_for('activitypub.post_ap', post_id=post.id))
-            db.session.add(notification)
-            post.author.unread_notifications += 1
+
         post.last_active = community.last_active = utcnow()
         post.reply_count += 1
         community.post_reply_count += 1
 
         db.session.add(reply)
         db.session.commit()
+
+        notify_about_post_reply(None, reply)
+
+        # Subscribe to own comment
+        if form.notify_author.data:
+            new_notification = NotificationSubscription(name=shorten_string(_('Replies to my comment on %(post_title)s',
+                                                                              post_title=post.title), 50),
+                                                        user_id=current_user.id, entity_id=reply.id,
+                                                        type=NOTIF_REPLY)
+            db.session.add(new_notification)
+            db.session.commit()
 
         # upvote own reply
         reply.score = 1
@@ -622,15 +627,18 @@ def add_reply(post_id: int, comment_id: int):
                 if blocked_phrase in reply.body:
                     abort(401)
         db.session.add(reply)
-        if in_reply_to.notify_author and current_user.id != in_reply_to.user_id and in_reply_to.author.ap_id is None:    # todo: check if replier is blocked
-            notification = Notification(title=shorten_string(_('Reply from %(name)s on %(post_title)s',
-                                                name=current_user.display_name(),
-                                                post_title=post.title), 50),
-                                        user_id=in_reply_to.user_id,
-                                        author_id=current_user.id, url=url_for('activitypub.post_ap', post_id=post.id))
-            db.session.add(notification)
-            in_reply_to.author.unread_notifications += 1
         db.session.commit()
+
+        # Notify subscribers
+        notify_about_post_reply(in_reply_to, reply)
+
+        # Subscribe to own comment
+        if form.notify_author.data:
+            new_notification = NotificationSubscription(name=shorten_string(_('Replies to my comment on %(post_title)s',
+                                                                              post_title=post.title), 50),
+                                                        user_id=current_user.id, entity_id=reply.id,
+                                                        type=NOTIF_REPLY)
+            db.session.add(new_notification)
 
         # upvote own reply
         reply.score = 1
@@ -1663,20 +1671,43 @@ def post_reply_delete(post_id: int, comment_id: int):
 @bp.route('/post/<int:post_id>/notification', methods=['GET', 'POST'])
 @login_required
 def post_notification(post_id: int):
+    # Toggle whether the current user is subscribed to notifications about top-level replies to this post or not
     post = Post.query.get_or_404(post_id)
-    if post.user_id == current_user.id:
-        post.notify_author = not post.notify_author
+    existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == post.id,
+                                                                  NotificationSubscription.user_id == current_user.id,
+                                                                  NotificationSubscription.type == NOTIF_POST).first()
+    if existing_notification:
+        db.session.delete(existing_notification)
         db.session.commit()
+    else:  # no subscription yet, so make one
+        new_notification = NotificationSubscription(name=shorten_string(_('Replies to my post %(post_title)s',
+                                                                              post_title=post.title)),
+                                                    user_id=current_user.id, entity_id=post.id,
+                                                    type=NOTIF_POST)
+        db.session.add(new_notification)
+        db.session.commit()
+
     return render_template('post/_post_notification_toggle.html', post=post)
 
 
 @bp.route('/post_reply/<int:post_reply_id>/notification', methods=['GET', 'POST'])
 @login_required
 def post_reply_notification(post_reply_id: int):
+    # Toggle whether the current user is subscribed to notifications about replies to this reply or not
     post_reply = PostReply.query.get_or_404(post_reply_id)
-    if post_reply.user_id == current_user.id:
-        post_reply.notify_author = not post_reply.notify_author
+    existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == post_reply.id,
+                                                                  NotificationSubscription.user_id == current_user.id,
+                                                                  NotificationSubscription.type == NOTIF_REPLY).first()
+    if existing_notification:
+        db.session.delete(existing_notification)
         db.session.commit()
+    else:  # no subscription yet, so make one
+        new_notification = NotificationSubscription(name=shorten_string(_('Replies to my comment on %(post_title)s',
+                                                                              post_title=post_reply.post.title)), user_id=current_user.id, entity_id=post_reply.id,
+                                                    type=NOTIF_REPLY)
+        db.session.add(new_notification)
+        db.session.commit()
+
     return render_template('post/_reply_notification_toggle.html', comment={'comment': post_reply})
 
 

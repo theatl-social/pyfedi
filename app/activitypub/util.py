@@ -1364,17 +1364,10 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
                 db.session.commit()
 
                 # send notification to the post/comment being replied to
-                if notification_target.notify_author and post_reply.user_id != notification_target.user_id and notification_target.author.ap_id is None:
-                    anchor = f"comment_{post_reply.id}"
-                    notification = Notification(title=shorten_string(_('Reply from %(name)s on %(post_title)s',
-                                                                       name=post_reply.author.display_name(),
-                                                                       post_title=post.title), 50),
-                                                user_id=notification_target.user_id,
-                                                author_id=post_reply.user_id,
-                                                url=url_for('activitypub.post_ap', post_id=post.id, _anchor=anchor))
-                    db.session.add(notification)
-                    notification_target.author.unread_notifications += 1
-                db.session.commit()
+                if parent_comment_id:
+                    notify_about_post_reply(parent_comment, post_reply)
+                else:
+                    notify_about_post_reply(None, post_reply)
 
                 if user.reputation > 100:
                     post_reply.up_votes += 1
@@ -1553,6 +1546,35 @@ def notify_about_post(post: Post):
             user.unread_notifications += 1
             db.session.commit()
             notifications_sent_to.add(notify_id)
+
+
+def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: PostReply):
+
+    if parent_reply is None:  # This happens when a new_reply is a top-level comment, not a comment on a comment
+        send_notifs_to = notification_subscribers(new_reply.post.id, NOTIF_POST)
+        for notify_id in send_notifs_to:
+            if new_reply.user_id != notify_id:
+                new_notification = Notification(title=shorten_string(_('Reply to %(post_title)s',
+                                                                       post_title=new_reply.post.title), 50),
+                                                url=f"/post/{new_reply.post.id}#comment_{new_reply.id}",
+                                                user_id=notify_id, author_id=new_reply.user_id)
+                db.session.add(new_notification)
+                user = User.query.get(notify_id)
+                user.unread_notifications += 1
+                db.session.commit()
+    else:
+        # Send notifications based on subscriptions
+        send_notifs_to = set(notification_subscribers(parent_reply.id, NOTIF_REPLY))
+        for notify_id in send_notifs_to:
+            if new_reply.user_id != notify_id:
+                new_notification = Notification(title=shorten_string(_('Reply to comment on %(post_title)s',
+                                                                       post_title=parent_reply.post.title), 50),
+                                                url=f"/post/{parent_reply.post.id}#comment_{new_reply.id}",
+                                                user_id=notify_id, author_id=new_reply.user_id)
+                db.session.add(new_notification)
+                user = User.query.get(notify_id)
+                user.unread_notifications += 1
+                db.session.commit()
 
 
 def update_post_reply_from_activity(reply: PostReply, request_json: dict):

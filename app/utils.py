@@ -710,9 +710,9 @@ def finalize_user_setup(user, application_required=False):
     send_welcome_email(user, application_required)
 
 
-def notification_subscribers(entity_id, entity_type) -> List[int]:
-    return list(db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE entity_id = :community_id AND type = :type '),
-                                  {'community_id': entity_id, 'type': entity_type}).scalars())
+def notification_subscribers(entity_id: int, entity_type: int) -> List[int]:
+    return list(db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE entity_id = :entity_id AND type = :type '),
+                                  {'entity_id': entity_id, 'type': entity_type}).scalars())
 
 
 # topics, in a tree

@@ -699,6 +699,15 @@ div.navbar {
   text-decoration: none;
 }
 
+.notif_toggle {
+  display: block;
+  position: absolute;
+  top: 2px;
+  right: 30px;
+  width: 41px;
+  text-decoration: none;
+}
+
 .alert {
   width: 96%;
 }

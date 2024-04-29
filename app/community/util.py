@@ -11,9 +11,9 @@ from pillow_heif import register_heif_opener
 from app import db, cache, celery
 from app.activitypub.signature import post_request
 from app.activitypub.util import find_actor_or_create, actor_json_to_model, post_json_to_model, default_context, ensure_domains_match
-from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO
+from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO, NOTIF_POST
 from app.models import Community, File, BannedInstances, PostReply, PostVote, Post, utcnow, CommunityMember, Site, \
-    Instance, Notification, User, ActivityPubLog
+    Instance, Notification, User, ActivityPubLog, NotificationSubscription
 from app.utils import get_request, gibberish, markdown_to_html, domain_from_url, allowlist_html, \
     is_image_url, ensure_directory_exists, inbox_domain, post_ranking, shorten_string, parse_page, \
     remove_tracking_from_link, ap_datetime, instance_banned, blocked_phrases
@@ -387,8 +387,24 @@ def save_post(form, post: Post, type: str):
                     return
 
         db.session.add(post)
+        db.session.commit()
+
+    # Notify author about replies
+    # Remove any subscription that currently exists
+    existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == post.id,
+                                                                  NotificationSubscription.user_id == current_user.id,
+                                                                  NotificationSubscription.type == NOTIF_POST).first()
+    if existing_notification:
+        db.session.delete(existing_notification)
+
+    # Add subscription if necessary
+    if form.notify_author.data:
+        new_notification = NotificationSubscription(name=post.title, user_id=current_user.id, entity_id=post.id,
+                                                    type=NOTIF_POST)
+        db.session.add(new_notification)
 
     g.site.last_active = utcnow()
+    db.session.commit()
 
 
 def delete_post_from_community(post_id):

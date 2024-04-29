@@ -128,7 +128,7 @@
                                     <a href='#'><span class="fe fe-collapse"></span></a>
                                 {% endif %}
                             </div>
-                            {% if current_user.is_authenticated and current_user.verified and current_user.id == comment['comment'].author.id %}
+                            {% if current_user.is_authenticated and current_user.verified %}
                                 {% include "post/_reply_notification_toggle.html" %}
                             {% endif %}
                             <a href="{{ url_for('post.post_reply_options', post_id=post.id, comment_id=comment['comment'].id) }}" class="comment_actions_link" rel="nofollow noindex" aria-label="{{ _('Comment options') }}"><span class="fe fe-options" title="Options"> </span></a>

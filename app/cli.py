@@ -16,11 +16,12 @@ import os
 
 from app.activitypub.signature import RsaKeys
 from app.auth.util import random_token
-from app.constants import NOTIF_COMMUNITY
+from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY
 from app.email import send_verification_email, send_email
 from app.models import Settings, BannedInstances, Interest, Role, User, RolePermission, Domain, ActivityPubLog, \
-    utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription
-from app.utils import file_get_contents, retrieve_block_list, blocked_domains, retrieve_peertube_block_list
+    utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply
+from app.utils import file_get_contents, retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
+    shorten_string
 
 
 def register(app):
@@ -316,6 +317,29 @@ def register(app):
                                                             type=NOTIF_COMMUNITY)
                 db.session.add(new_notification)
             db.session.commit()
+            print('Done')
+
+    @app.cli.command("migrate_post_notifs")
+    def migrate_post_notifs():
+        with app.app_context():
+            posts = Post.query.filter(Post.notify_author == True).all()
+            for post in posts:
+                new_notification = NotificationSubscription(name=shorten_string(_('Replies to my post %(post_title)s',
+                                                                              post_title=post.title)),
+                                                            user_id=post.user_id, entity_id=post.id,
+                                                            type=NOTIF_POST)
+                db.session.add(new_notification)
+            db.session.commit()
+
+            post_replies = PostReply.query.filter(PostReply.notify_author == True).all()
+            for reply in post_replies:
+                new_notification = NotificationSubscription(name=shorten_string(_('Replies to my comment on %(post_title)s',
+                                                                              post_title=reply.post.title)),
+                                                            user_id=post.user_id, entity_id=reply.id,
+                                                            type=NOTIF_REPLY)
+                db.session.add(new_notification)
+            db.session.commit()
+
             print('Done')
 
 

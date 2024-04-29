@@ -19,7 +19,7 @@ import jwt
 import os
 
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER, \
-    SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER, NOTIF_COMMUNITY, NOTIF_TOPIC
+    SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER, NOTIF_COMMUNITY, NOTIF_TOPIC, NOTIF_POST, NOTIF_REPLY
 
 
 # datetime.utcnow() is depreciated in Python 3.12 so it will need to be swapped out eventually
@@ -990,6 +990,12 @@ class Post(db.Model):
                     return name
         return False
 
+    def notify_new_replies(self, user_id: int) -> bool:
+        existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == self.id,
+                                                                      NotificationSubscription.user_id == user_id,
+                                                                      NotificationSubscription.type == NOTIF_POST).first()
+        return existing_notification is not None
+
 
 class PostReply(db.Model):
     query_class = FullTextSearchQuery
@@ -1085,6 +1091,12 @@ class PostReply(db.Model):
                 if keyword in lowercase_body:
                     return name
         return False
+
+    def notify_new_replies(self, user_id: int) -> bool:
+        existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == self.id,
+                                                                      NotificationSubscription.user_id == user_id,
+                                                                      NotificationSubscription.type == NOTIF_REPLY).first()
+        return existing_notification is not None
 
 
 class Domain(db.Model):
