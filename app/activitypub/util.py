@@ -1534,7 +1534,7 @@ def notify_about_post(post: Post):
 
     # Send notifications based on subscriptions
     notifications_sent_to = set()
-    send_notifs_to = set(notification_subscribers(post.author_id, NOTIF_USER) +
+    send_notifs_to = set(notification_subscribers(post.user_id, NOTIF_USER) +
                          notification_subscribers(post.community_id, NOTIF_COMMUNITY) +
                          notification_subscribers(post.community.topic_id, NOTIF_TOPIC))
     for notify_id in send_notifs_to:
