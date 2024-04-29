@@ -1177,7 +1177,7 @@ def community_notification(community_id: int):
         db.session.delete(existing_notification)
         db.session.commit()
     else:  # no subscription yet, so make one
-        if not community.user_is_banned(current_user):
+        if community.id not in communities_banned_from(current_user.id):
             new_notification = NotificationSubscription(name=community.title, user_id=current_user.id, entity_id=community.id,
                                                         type=NOTIF_COMMUNITY)
             db.session.add(new_notification)
@@ -1190,7 +1190,7 @@ def community_notification(community_id: int):
         member_info.notify_new_posts = not member_info.notify_new_posts
         db.session.commit()
     else:   # people who are not yet members become members, with notify on.
-        if not community.user_is_banned(current_user):
+        if community.id not in communities_banned_from(current_user.id):
             new_member = CommunityMember(community_id=community.id, user_id=current_user.id, notify_new_posts=True)
             db.session.add(new_member)
             db.session.commit()

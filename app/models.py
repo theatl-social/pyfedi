@@ -485,6 +485,7 @@ class Community(db.Model):
 
     def user_is_banned(self, user):
         # use communities_banned_from() instead of this method, where possible. Redis caches the result of communities_banned_from()
+        # we cannot use communities_banned_from() in models.py because it causes a circular import
         community_bans = CommunityBan.query.filter(CommunityBan.user_id == user.id).all()
         return self.id in [cb.community_id for cb in community_bans]
 
