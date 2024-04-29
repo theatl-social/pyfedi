@@ -1144,6 +1144,14 @@ class CommunityMember(db.Model):
     created_at = db.Column(db.DateTime, default=utcnow)
 
 
+class UserFollower(db.Model):
+    local_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    remote_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    is_accepted = db.Column(db.Boolean, default=True)       # flip to ban remote user / reject follow
+    is_inward = db.Column(db.Boolean, default=True)         # true = remote user is following a local one
+    created_at = db.Column(db.DateTime, default=utcnow)
+
+
 # people banned from communities
 class CommunityBan(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)             # person who is banned, not the banner
