@@ -1217,7 +1217,13 @@ def user_inbox(actor):
                 else:
                     process_user_follow_request.delay(request_json, activity_log.id, actor.id)
                 return ''
-                # todo: undo/follow
+            if ('type' in request_json and request_json['type'] == 'Undo' and
+                'object' in request_json and request_json['object']['type'] == 'Follow'):
+                if current_app.debug:
+                    process_user_undo_follow_request(request_json, activity_log.id, actor.id)
+                else:
+                    process_user_undo_follow_request.delay(request_json, activity_log.id, actor.id)
+                return ''
         except VerificationError:
             activity_log.result = 'failure'
             activity_log.exception_message = 'Could not verify signature'
@@ -1239,7 +1245,7 @@ def process_user_follow_request(request_json, activitypublog_id, remote_user_id)
     activity_log = ActivityPubLog.query.get(activitypublog_id)
     local_user_ap_id = request_json['object']
     follow_id = request_json['id']
-    local_user = find_actor_or_create(local_user_ap_id,  create_if_not_found=False)
+    local_user = find_actor_or_create(local_user_ap_id, create_if_not_found=False)
     remote_user = User.query.get(remote_user_id)
     if local_user and local_user.is_local() and not remote_user.is_local():
         existing_follower = UserFollower.query.filter_by(local_user_id=local_user.id, remote_user_id=remote_user.id).first()
@@ -1269,6 +1275,17 @@ def process_user_follow_request(request_json, activitypublog_id, remote_user_id)
             activity_log.exception_message = 'Error sending Accept'
 
     db.session.commit()
+
+
+def process_user_undo_follow_request(request_json, activitypublog_id, remote_user_id):
+    activity_log = ActivityPubLog.query.get(activitypublog_id)
+    local_user_ap_id = request_json['object']['object']
+    local_user = find_actor_or_create(local_user_ap_id, create_if_not_found=False)
+    remote_user = User.query.get(remote_user_id)
+    if local_user:
+        db.session.query(UserFollower).filter_by(local_user_id=local_user.id, remote_user_id=remote_user.id).delete()
+        activity_log.result = 'success'
+        db.session.commit()
 
 
 @bp.route('/c/<actor>/inbox', methods=['GET', 'POST'])
