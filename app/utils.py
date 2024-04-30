@@ -245,12 +245,15 @@ def markdown_to_text(markdown_text) -> str:
 
 
 def microblog_content_to_title(html: str) -> str:
-    soup = BeautifulSoup(html, 'html.parser')
+    if '<p>' in html:
+        soup = BeautifulSoup(html, 'html.parser')
 
-    title = ''
-    for tag in soup.find_all('p'):
-        title = tag.get_text()
-        break
+        title = ''
+        for tag in soup.find_all('p'):
+            title = tag.get_text()
+            break
+    else:
+        title = shorten_string(html, 160)
 
     period_index = title.find('.')
     if period_index != -1:
