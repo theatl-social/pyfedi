@@ -167,11 +167,6 @@ def retrieve_mods_and_backfill(community_id: int):
                                     db.session.commit()
 
 
-def community_url_exists(url) -> bool:
-    community = Community.query.filter(Community.ap_profile_id == url.lower()).first()
-    return community is not None
-
-
 def actor_to_community(actor) -> Community:
     actor = actor.strip()
     if '@' in actor:

@@ -16,7 +16,7 @@ from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, Cre
     ReportCommunityForm, \
     DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm, \
     EscalateReportForm, ResolveReportForm, CreateVideoForm
-from app.community.util import search_for_community, community_url_exists, actor_to_community, \
+from app.community.util import search_for_community, actor_to_community, \
     opengraph_parse, url_to_thumbnail_file, save_post, save_icon_file, save_banner_file, send_to_remote_instance, \
     delete_post_from_community, delete_post_reply_from_community
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
@@ -43,16 +43,14 @@ from datetime import timezone, timedelta
 def add_local():
     if current_user.banned:
         return show_ban_message()
-    flash('PieFed is still being tested so hosting communities on piefed.social is not advised except for testing purposes.', 'warning')
     form = AddCommunityForm()
     if g.site.enable_nsfw is False:
         form.nsfw.render_kw = {'disabled': True}
 
-    if form.validate_on_submit() and not community_url_exists(form.url.data):
-        # todo: more intense data validation
+    if form.validate_on_submit():
         if form.url.data.strip().lower().startswith('/c/'):
             form.url.data = form.url.data[3:]
-        form.url.data = slugify(form.url.data.strip(), separator='_')
+        form.url.data = slugify(form.url.data.strip(), separator='_').lower()
         private_key, public_key = RsaKeys.generate_keypair()
         community = Community(title=form.community_name.data, name=form.url.data, description=form.description.data,
                               rules=form.rules.data, nsfw=form.nsfw.data, private_key=private_key,

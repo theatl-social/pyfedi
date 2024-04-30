@@ -18,8 +18,8 @@ class AddCommunityForm(FlaskForm):
     community_name = StringField(_l('Name'), validators=[DataRequired()])
     url = StringField(_l('Url'))
     description = TextAreaField(_l('Description'))
-    icon_file = FileField(_('Icon image'))
-    banner_file = FileField(_('Banner image'))
+    icon_file = FileField(_l('Icon image'))
+    banner_file = FileField(_l('Banner image'))
     rules = TextAreaField(_l('Rules'))
     nsfw = BooleanField('NSFW')
     local_only = BooleanField('Local only')
@@ -29,11 +29,15 @@ class AddCommunityForm(FlaskForm):
         if not super().validate():
             return False
         if self.url.data.strip() == '':
-            self.url.errors.append(_('Url is required.'))
+            self.url.errors.append(_l('Url is required.'))
             return False
         else:
             if '-' in self.url.data.strip():
-                self.url.errors.append(_('- cannot be in Url. Use _ instead?'))
+                self.url.errors.append(_l('- cannot be in Url. Use _ instead?'))
+                return False
+            community = Community.query.filter(Community.name == self.url.data.strip().lower(), Community.ap_id == None).first()
+            if community is not None:
+                self.url.errors.append(_l('A community with this url already exists.'))
                 return False
         return True
 
@@ -41,8 +45,8 @@ class AddCommunityForm(FlaskForm):
 class EditCommunityForm(FlaskForm):
     title = StringField(_l('Title'), validators=[DataRequired()])
     description = TextAreaField(_l('Description'))
-    icon_file = FileField(_('Icon image'))
-    banner_file = FileField(_('Banner image'))
+    icon_file = FileField(_l('Icon image'))
+    banner_file = FileField(_l('Banner image'))
     rules = TextAreaField(_l('Rules'))
     nsfw = BooleanField(_l('Porn community'))
     local_only = BooleanField(_l('Only accept posts from current instance'))
@@ -111,7 +115,7 @@ class CreateLinkForm(FlaskForm):
     def validate(self, extra_validators=None) -> bool:
         domain = domain_from_url(self.link_url.data, create=False)
         if domain and domain.banned:
-            self.link_url.errors.append(_("Links to %(domain)s are not allowed.", domain=domain.name))
+            self.link_url.errors.append(_l("Links to %(domain)s are not allowed.", domain=domain.name))
             return False
         return True
 
@@ -131,7 +135,7 @@ class CreateVideoForm(FlaskForm):
     def validate(self, extra_validators=None) -> bool:
         domain = domain_from_url(self.video_url.data, create=False)
         if domain and domain.banned:
-            self.video_url.errors.append(_("Videos from %(domain)s are not allowed.", domain=domain.name))
+            self.video_url.errors.append(_l("Videos from %(domain)s are not allowed.", domain=domain.name))
             return False
         return True
 
@@ -141,7 +145,7 @@ class CreateImageForm(FlaskForm):
     image_title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])
     image_alt_text = StringField(_l('Alt text'), validators=[Optional(), Length(min=3, max=255)])
     image_body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5})
-    image_file = FileField(_('Image'), validators=[DataRequired()])
+    image_file = FileField(_l('Image'), validators=[DataRequired()])
     sticky = BooleanField(_l('Sticky'))
     nsfw = BooleanField(_l('NSFW'))
     nsfl = BooleanField(_l('Gore/gross'))
@@ -167,7 +171,7 @@ class CreateImageForm(FlaskForm):
         if self.communities:
             community = Community.query.get(self.communities.data)
             if community.is_local() and g.site.allow_local_image_posts is False:
-                self.communities.errors.append(_('Images cannot be posted to local communities.'))
+                self.communities.errors.append(_l('Images cannot be posted to local communities.'))
 
         return True
 

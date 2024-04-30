@@ -12,7 +12,7 @@ from app.models import Community, User
 class SiteProfileForm(FlaskForm):
     name = StringField(_l('Site Name'))
     description = StringField(_l('Tagline'))
-    icon = FileField(_('Icon'), validators=[
+    icon = FileField(_l('Icon'), validators=[
         FileAllowed(['jpg', 'jpeg', 'png', 'webp'], 'Images only!')
     ])
     sidebar = TextAreaField(_l('Sidebar'))
@@ -52,8 +52,8 @@ class EditCommunityForm(FlaskForm):
     title = StringField(_l('Title'), validators=[DataRequired()])
     url = StringField(_l('Url'), validators=[DataRequired()])
     description = TextAreaField(_l('Description'))
-    icon_file = FileField(_('Icon image'))
-    banner_file = FileField(_('Banner image'))
+    icon_file = FileField(_l('Icon image'))
+    banner_file = FileField(_l('Banner image'))
     rules = TextAreaField(_l('Rules'))
     nsfw = BooleanField(_l('Porn community'))
     banned = BooleanField(_l('Banned - no new posts accepted'))
@@ -82,18 +82,18 @@ class EditCommunityForm(FlaskForm):
                ('masonry', _l('Masonry')),
                ('masonry_wide', _l('Wide masonry'))]
     default_layout = SelectField(_l('Layout'), coerce=str, choices=layouts, validators=[Optional()])
-    posting_warning = StringField(_('Posting warning'), validators=[Optional(), Length(min=3, max=512)])
+    posting_warning = StringField(_l('Posting warning'), validators=[Optional(), Length(min=3, max=512)])
     submit = SubmitField(_l('Save'))
 
     def validate(self, extra_validators=None):
         if not super().validate():
             return False
         if self.url.data.strip() == '':
-            self.url.errors.append(_('Url is required.'))
+            self.url.errors.append(_l('Url is required.'))
             return False
         else:
             if '-' in self.url.data.strip():
-                self.url.errors.append(_('- cannot be in Url. Use _ instead?'))
+                self.url.errors.append(_l('- cannot be in Url. Use _ instead?'))
                 return False
         return True
 

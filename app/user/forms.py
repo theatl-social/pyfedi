@@ -16,8 +16,8 @@ class ProfileForm(FlaskForm):
                                    render_kw={"autocomplete": 'new-password'})
     about = TextAreaField(_l('Bio'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5})
     matrixuserid = StringField(_l('Matrix User ID'), validators=[Optional(), Length(max=255)], render_kw={'autocomplete': 'off'})
-    profile_file = FileField(_('Avatar image'))
-    banner_file = FileField(_('Top banner image'))
+    profile_file = FileField(_l('Avatar image'))
+    banner_file = FileField(_l('Top banner image'))
     bot = BooleanField(_l('This profile is a bot'))
     submit = SubmitField(_l('Save profile'))
 
@@ -27,7 +27,7 @@ class ProfileForm(FlaskForm):
 
     def validate_matrix_user_id(self, matrix_user_id):
         if not matrix_user_id.data.strip().startswith('@'):
-            raise ValidationError(_('Matrix user ids start with @'))
+            raise ValidationError(_l('Matrix user ids start with @'))
 
 
 class SettingsForm(FlaskForm):
@@ -40,7 +40,7 @@ class SettingsForm(FlaskForm):
     searchable = BooleanField(_l('Show profile in user list'))
     indexable = BooleanField(_l('My posts appear in search results'))
     manually_approves_followers = BooleanField(_l('Manually approve followers'))
-    import_file = FileField(_('Import community subscriptions and user blocks from Lemmy'))
+    import_file = FileField(_l('Import community subscriptions and user blocks from Lemmy'))
     sorts = [('hot', _l('Hot')),
                       ('top', _l('Top')),
                       ('new', _l('New')),
