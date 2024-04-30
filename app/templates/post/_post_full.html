@@ -60,7 +60,7 @@
                 {% include "post/_post_voting_buttons.html" %}
             </div>
             <h1 class="mt-2 post_title">{{ post.title }}
-                {% if current_user.is_authenticated and post.user_id == current_user.id %}
+                {% if current_user.is_authenticated %}
                     {% include 'post/_post_notification_toggle.html' %}
                 {% endif %}
                 {% if post.nsfw %}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif %}
