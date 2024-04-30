@@ -247,28 +247,22 @@ def markdown_to_text(markdown_text) -> str:
 def microblog_content_to_title(html: str) -> str:
     soup = BeautifulSoup(html, 'html.parser')
 
-    title_found = False
-    for tag in soup.find_all():
-        if tag.name == 'p':
-            if not title_found:
-                title_found = True
-                continue
-            else:
-                tag = tag.extract()
-        else:
-            tag = tag.extract()
+    title = ''
+    for tag in soup.find_all('p'):
+        title = tag.get_text()
+        break
 
-    if title_found:
-        result = soup.text
-        if len(result) > 150:
-            for i in range(149, -1, -1):
-                if result[i] == ' ':
-                    break;
-            result = result[:i] + ' ...' if i > 0 else ''
-    else:
-        result = ''
+    period_index = title.find('.')
+    if period_index != -1:
+        title = title[:period_index]
 
-    return result
+    if len(title) > 150:
+        for i in range(149, -1, -1):
+            if title[i] == ' ':
+                break
+        title = title[:i] + ' ...' if i > 0 else ''
+
+    return title
 
 
 def community_link_to_href(link: str) -> str:
