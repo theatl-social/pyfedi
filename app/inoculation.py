@@ -32,7 +32,7 @@ inoculation = [
     },
     {
         'id': 'alt-right-pipeline',
-        'title': 'Alt-right pipeline',
+        'title': 'Avoiding the alt-right pipeline',
         'description': '',
         'links': [
             {
