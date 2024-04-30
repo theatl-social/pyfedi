@@ -1224,6 +1224,10 @@ def user_inbox(actor):
                 else:
                     process_user_undo_follow_request.delay(request_json, activity_log.id, actor.id)
                 return ''
+            if (('type' in request_json and request_json['type'] == 'Like') or
+                ('type' in request_json and request_json['type'] == 'Undo' and
+                'object' in request_json and request_json['object']['type'] == 'Like')):
+                return shared_inbox()
         except VerificationError:
             activity_log.result = 'failure'
             activity_log.exception_message = 'Could not verify signature'
