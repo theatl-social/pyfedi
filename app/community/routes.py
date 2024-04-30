@@ -25,7 +25,7 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LIN
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, \
     File, PostVote, utcnow, Report, Notification, InstanceBlock, ActivityPubLog, Topic, Conversation, PostReply, \
-    NotificationSubscription
+    NotificationSubscription, UserFollower, Instance
 from app.community import bp
 from app.user.utils import search_for_user
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
@@ -500,6 +500,7 @@ def add_discussion_post(actor):
 
         if not community.local_only:
             federate_post(community, post)
+        federate_post_to_user_followers(post)
 
         return redirect(f"/post/{post.id}")
     else:
@@ -576,6 +577,7 @@ def add_image_post(actor):
 
         if not community.local_only:
             federate_post(community, post)
+        federate_post_to_user_followers(post)
 
         return redirect(f"/post/{post.id}")
     else:
@@ -650,6 +652,7 @@ def add_link_post(actor):
 
         if not community.local_only:
             federate_post(community, post)
+        federate_post_to_user_followers(post)
 
         return redirect(f"/post/{post.id}")
     else:
@@ -724,6 +727,7 @@ def add_video_post(actor):
 
         if not community.local_only:
             federate_post(community, post)
+        federate_post_to_user_followers(post)
 
         return redirect(f"/post/{post.id}")
     else:
@@ -826,6 +830,65 @@ def federate_post(community, post):
             flash(_('Your post to %(name)s has been made.', name=community.title))
         else:
             flash(_('Your post to %(name)s has been made.', name=community.title))
+
+
+def federate_post_to_user_followers(post):
+    followers = UserFollower.query.filter_by(local_user_id=post.user_id)
+    if not followers:
+        return
+
+    note = {
+        'type': 'Note',
+        'id': post.ap_id,
+        'inReplyTo': None,
+        'attributedTo': current_user.ap_profile_id,
+        'to': [
+            'https://www.w3.org/ns/activitystreams#Public'
+        ],
+        'cc': [
+            current_user.ap_followers_url
+        ],
+        'content': '',
+        'mediaType': 'text/html',
+        'attachment': [],
+        'commentsEnabled': post.comments_enabled,
+        'sensitive': post.nsfw,
+        'nsfl': post.nsfl,
+        'stickied': post.sticky,
+        'published': ap_datetime(utcnow())
+    }
+    create = {
+        "id": f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}",
+        "actor": current_user.ap_profile_id,
+        "to": [
+            "https://www.w3.org/ns/activitystreams#Public"
+        ],
+        "cc": [
+            current_user.ap_followers_url
+        ],
+        "type": "Create",
+        "object": note,
+        '@context': default_context()
+    }
+    if post.type == POST_TYPE_ARTICLE:
+        note['content'] = '<p>' + post.title + '</p>'
+    elif post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO:
+        note['content'] = '<p><a href=' + post.url + '>' + post.title + '</a></p>'
+    elif post.type == POST_TYPE_IMAGE:
+        note['content'] = '<p>' + post.title + '</p>'
+        if post.image.id and post.image.source_url:
+            if post.image.alt_text:
+                note['attachment'] = [{'type': 'Document', 'url': post.image.source_url, 'name': post.image.alt_text}]
+            else:
+                note['attachment'] = [{'type': 'Document', 'url': post.image.source_url}]
+
+    if post.body_html:
+        note['content'] = note['content'] + '<p>' + post.body_html + '</p>'
+
+    instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower, UserFollower.remote_user_id == User.id)
+    instances = instances.filter(UserFollower.local_user_id == post.user_id)
+    for i in instances:
+        post_request(i.inbox, create, current_user.private_key, current_user.ap_profile_id + '#main-key')
 
 
 @bp.route('/community/<int:community_id>/report', methods=['GET', 'POST'])
