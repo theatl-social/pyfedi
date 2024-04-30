@@ -1283,7 +1283,7 @@ def process_user_undo_follow_request(request_json, activitypublog_id, remote_use
     local_user = find_actor_or_create(local_user_ap_id, create_if_not_found=False)
     remote_user = User.query.get(remote_user_id)
     if local_user:
-        db.session.query(UserFollower).filter_by(local_user_id=local_user.id, remote_user_id=remote_user.id).delete()
+        db.session.query(UserFollower).filter_by(local_user_id=local_user.id, remote_user_id=remote_user.id, is_accepted=True).delete()
         activity_log.result = 'success'
         db.session.commit()
 
