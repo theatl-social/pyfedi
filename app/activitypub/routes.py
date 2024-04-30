@@ -1273,6 +1273,9 @@ def process_user_follow_request(request_json, activitypublog_id, remote_user_id)
             activity_log.result = 'success'
         else:
             activity_log.exception_message = 'Error sending Accept'
+    else:
+        activity_log.exception_message = 'Could not find local user'
+        activity_log.result = 'failure'
 
     db.session.commit()
 
@@ -1285,7 +1288,11 @@ def process_user_undo_follow_request(request_json, activitypublog_id, remote_use
     if local_user:
         db.session.query(UserFollower).filter_by(local_user_id=local_user.id, remote_user_id=remote_user.id, is_accepted=True).delete()
         activity_log.result = 'success'
-        db.session.commit()
+    else:
+        activity_log.exception_message = 'Could not find local user'
+        activity_log.result = 'failure'
+
+    db.session.commit()
 
 
 @bp.route('/c/<actor>/inbox', methods=['GET', 'POST'])
