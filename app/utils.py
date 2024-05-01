@@ -263,6 +263,8 @@ def microblog_content_to_title(html: str) -> str:
                     question_index if question_index != -1 else float('inf'))
 
     if end_index != -1:
+        if question_index != -1:
+            end_index += 1  # Add the ? back on
         title = title[:end_index]
 
     if len(title) > 150:
