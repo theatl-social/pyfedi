@@ -256,8 +256,14 @@ def microblog_content_to_title(html: str) -> str:
         title = shorten_string(html, 160)
 
     period_index = title.find('.')
-    if period_index != -1:
-        title = title[:period_index]
+    question_index = title.find('?')
+
+    # Find the earliest occurrence of either '.' or '?'
+    end_index = min(period_index if period_index != -1 else float('inf'),
+                    question_index if question_index != -1 else float('inf'))
+
+    if end_index != -1:
+        title = title[:end_index]
 
     if len(title) > 150:
         for i in range(149, -1, -1):
