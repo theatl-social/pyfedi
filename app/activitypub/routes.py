@@ -6,7 +6,7 @@ from app import db, constants, cache, celery
 from app.activitypub import bp
 from flask import request, current_app, abort, jsonify, json, g, url_for, redirect, make_response
 
-from app.activitypub.signature import HttpSignature, post_request
+from app.activitypub.signature import HttpSignature, post_request, VerificationError
 from app.community.routes import show_community
 from app.community.util import send_to_remote_instance
 from app.post.routes import continue_discussion, show_post
@@ -14,7 +14,7 @@ from app.user.routes import show_profile
 from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, SUBSCRIPTION_MEMBER
 from app.models import User, Community, CommunityJoinRequest, CommunityMember, CommunityBan, ActivityPubLog, Post, \
     PostReply, Instance, PostVote, PostReplyVote, File, AllowedInstances, BannedInstances, utcnow, Site, Notification, \
-    ChatMessage, Conversation
+    ChatMessage, Conversation, UserFollower
 from app.activitypub.util import public_key, users_total, active_half_year, active_month, local_posts, local_comments, \
     post_to_activity, find_actor_or_create, default_context, instance_blocked, find_reply_parent, find_liked_object, \
     lemmy_site_data, instance_weight, is_activitypub_request, downvote_post_reply, downvote_post, upvote_post_reply, \
@@ -1186,11 +1186,118 @@ def community_moderators_route(actor):
         return jsonify(community_data)
 
 
-@bp.route('/u/<actor>/inbox', methods=['GET', 'POST'])
+@bp.route('/u/<actor>/inbox', methods=['POST'])
 def user_inbox(actor):
+    site = Site.query.get(1)
+    activity_log = ActivityPubLog(direction='in', result='failure')
+    activity_log.result = 'processing'
+    db.session.add(activity_log)
+    db.session.commit()
+
+    try:
+        request_json = request.get_json(force=True)
+    except werkzeug.exceptions.BadRequest as e:
+        activity_log.exception_message = 'Unable to parse json body: ' + e.description
+        activity_log.result = 'failure'
+        db.session.commit()
+        return '', 400
+
+    if 'id' in request_json:
+        activity_log.activity_id = request_json['id']
+    if site.log_activitypub_json:
+        activity_log.activity_json = json.dumps(request_json)
+
+    actor = find_actor_or_create(request_json['actor']) if 'actor' in request_json else None
+    if actor is not None:
+        try:
+            HttpSignature.verify_request(request, actor.public_key, skip_date=True)
+            if 'type' in request_json and request_json['type'] == 'Follow':
+                if current_app.debug:
+                    process_user_follow_request(request_json, activity_log.id, actor.id)
+                else:
+                    process_user_follow_request.delay(request_json, activity_log.id, actor.id)
+                return ''
+            if ('type' in request_json and request_json['type'] == 'Undo' and
+                'object' in request_json and request_json['object']['type'] == 'Follow'):
+                if current_app.debug:
+                    process_user_undo_follow_request(request_json, activity_log.id, actor.id)
+                else:
+                    process_user_undo_follow_request.delay(request_json, activity_log.id, actor.id)
+                return ''
+            if (('type' in request_json and request_json['type'] == 'Like') or
+                ('type' in request_json and request_json['type'] == 'Undo' and
+                'object' in request_json and request_json['object']['type'] == 'Like')):
+                return shared_inbox()
+        except VerificationError:
+            activity_log.result = 'failure'
+            activity_log.exception_message = 'Could not verify signature'
+            db.session.commit()
+            return '', 400
+    else:
+        actor_name = request_json['actor'] if 'actor' in request_json else ''
+        activity_log.exception_message = f'Actor could not be found: {actor_name}'
+
+    if activity_log.exception_message is not None:
+        activity_log.result = 'failure'
+        db.session.commit()
     resp = jsonify('ok')
     resp.content_type = 'application/activity+json'
     return resp
+
+
+def process_user_follow_request(request_json, activitypublog_id, remote_user_id):
+    activity_log = ActivityPubLog.query.get(activitypublog_id)
+    local_user_ap_id = request_json['object']
+    follow_id = request_json['id']
+    local_user = find_actor_or_create(local_user_ap_id, create_if_not_found=False)
+    remote_user = User.query.get(remote_user_id)
+    if local_user and local_user.is_local() and not remote_user.is_local():
+        existing_follower = UserFollower.query.filter_by(local_user_id=local_user.id, remote_user_id=remote_user.id).first()
+        if not existing_follower:
+            auto_accept = not local_user.ap_manually_approves_followers
+            new_follower = UserFollower(local_user_id=local_user.id, remote_user_id=remote_user.id, is_accepted=auto_accept)
+            local_user.ap_followers_url = local_user.ap_public_url + '/followers'
+            db.session.add(new_follower)
+        accept = {
+            "@context": default_context(),
+            "actor": local_user.ap_profile_id,
+            "to": [
+                remote_user.ap_profile_id
+            ],
+            "object": {
+                "actor": remote_user.ap_profile_id,
+                "to": None,
+                "object": local_user.ap_profile_id,
+                "type": "Follow",
+                "id": follow_id
+            },
+            "type": "Accept",
+            "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)
+        }
+        if post_request(remote_user.ap_inbox_url, accept, local_user.private_key, f"https://{current_app.config['SERVER_NAME']}/u/{local_user.user_name}#main-key"):
+            activity_log.result = 'success'
+        else:
+            activity_log.exception_message = 'Error sending Accept'
+    else:
+        activity_log.exception_message = 'Could not find local user'
+        activity_log.result = 'failure'
+
+    db.session.commit()
+
+
+def process_user_undo_follow_request(request_json, activitypublog_id, remote_user_id):
+    activity_log = ActivityPubLog.query.get(activitypublog_id)
+    local_user_ap_id = request_json['object']['object']
+    local_user = find_actor_or_create(local_user_ap_id, create_if_not_found=False)
+    remote_user = User.query.get(remote_user_id)
+    if local_user:
+        db.session.query(UserFollower).filter_by(local_user_id=local_user.id, remote_user_id=remote_user.id, is_accepted=True).delete()
+        activity_log.result = 'success'
+    else:
+        activity_log.exception_message = 'Could not find local user'
+        activity_log.result = 'failure'
+
+    db.session.commit()
 
 
 @bp.route('/c/<actor>/inbox', methods=['GET', 'POST'])
@@ -1209,6 +1316,29 @@ def community_followers(actor):
             "type": "Collection",
             "totalItems": community_members(community.id),
             "items": []
+        }
+        resp = jsonify(result)
+        resp.content_type = 'application/activity+json'
+        return resp
+    else:
+        abort(404)
+
+
+@bp.route('/u/<actor>/followers', methods=['GET'])
+def user_followers(actor):
+    actor = actor.strip()
+    user = User.query.filter_by(user_name=actor, banned=False, ap_id=None).first()
+    if user is not None and user.ap_followers_url:
+        followers = User.query.join(UserFollower, User.id == UserFollower.remote_user_id).filter(UserFollower.local_user_id == user.id).all()
+        items = []
+        for f in followers:
+            items.append(f.ap_public_url)
+        result = {
+            "@context": default_context(),
+            "id": user.ap_followers_url,
+            "type": "Collection",
+            "totalItems": len(items),
+            "items": items
         }
         resp = jsonify(result)
         resp.content_type = 'application/activity+json'
