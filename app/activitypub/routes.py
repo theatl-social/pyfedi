@@ -1245,6 +1245,7 @@ def user_inbox(actor):
     return resp
 
 
+@celery.task
 def process_user_follow_request(request_json, activitypublog_id, remote_user_id):
     activity_log = ActivityPubLog.query.get(activitypublog_id)
     local_user_ap_id = request_json['object']
@@ -1285,6 +1286,7 @@ def process_user_follow_request(request_json, activitypublog_id, remote_user_id)
     db.session.commit()
 
 
+@celery.task
 def process_user_undo_follow_request(request_json, activitypublog_id, remote_user_id):
     activity_log = ActivityPubLog.query.get(activitypublog_id)
     local_user_ap_id = request_json['object']['object']
