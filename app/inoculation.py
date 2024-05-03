@@ -101,7 +101,7 @@ inoculation = [
     },
     {
         'id': 'cognitive-biases',
-        'title': 'Cognitive biases',
+        'title': 'Cognitive biases & Fallacies',
         'description': '',
         'links': [
             {
@@ -112,6 +112,18 @@ inoculation = [
                 'title': 'Logical fallacies',
                 'href': 'https://rationalwiki.org/wiki/Logical_fallacy'
             },
+            {
+                'title': 'False Dichotomy',
+                'href': 'https://www.logical-fallacy.com/articles/false-dilemma/'
+            },
+            {
+                'title': 'Tautological fallacy',
+                'href': 'https://www.econlib.org/archives/2012/09/the_tautologica.html'
+            },
+            {
+                'title': 'Dicto Simpliciter fallacy',
+                'href': 'https://www.thoughtco.com/dicto-simpliciter-logical-fallacy-1690451'
+            }
         ]
     },
     {
