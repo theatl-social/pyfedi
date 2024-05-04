@@ -1231,6 +1231,10 @@ def user_inbox(actor):
 
     actor = find_actor_or_create(request_json['actor'], signed_get=True) if 'actor' in request_json else None
     if actor is not None:
+        if (('type' in request_json and request_json['type'] == 'Like') or
+                ('type' in request_json and request_json['type'] == 'Undo' and
+                'object' in request_json and request_json['object']['type'] == 'Like')):
+                return shared_inbox()
         try:
             HttpSignature.verify_request(request, actor.public_key, skip_date=True)
             if 'type' in request_json and request_json['type'] == 'Follow':
@@ -1246,10 +1250,6 @@ def user_inbox(actor):
                 else:
                     process_user_undo_follow_request.delay(request_json, activity_log.id, actor.id)
                 return ''
-            if (('type' in request_json and request_json['type'] == 'Like') or
-                ('type' in request_json and request_json['type'] == 'Undo' and
-                'object' in request_json and request_json['object']['type'] == 'Like')):
-                return shared_inbox()
         except VerificationError:
             activity_log.result = 'failure'
             activity_log.exception_message = 'Could not verify signature'
