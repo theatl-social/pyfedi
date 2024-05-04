@@ -1229,7 +1229,7 @@ def user_inbox(actor):
     if site.log_activitypub_json:
         activity_log.activity_json = json.dumps(request_json)
 
-    actor = find_actor_or_create(request_json['actor']) if 'actor' in request_json else None
+    actor = find_actor_or_create(request_json['actor'], signed_get=True) if 'actor' in request_json else None
     if actor is not None:
         try:
             HttpSignature.verify_request(request, actor.public_key, skip_date=True)
