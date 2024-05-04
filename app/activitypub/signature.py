@@ -45,7 +45,6 @@ from dateutil import parser
 from pyld import jsonld
 from email.utils import formatdate
 from app import db
-from app.activitypub.util import default_context
 from app.constants import DATETIME_MS_FORMAT
 from app.models import utcnow, ActivityPubLog
 
@@ -465,3 +464,33 @@ class LDSignature:
         digest = hashes.Hash(hashes.SHA256())
         digest.update(norm_form.encode("utf8"))
         return digest.finalize().hex().encode("ascii")
+
+
+def default_context():
+    context = [
+        "https://www.w3.org/ns/activitystreams",
+        "https://w3id.org/security/v1",
+    ]
+    if current_app.config['FULL_AP_CONTEXT']:
+        context.append({
+            "lemmy": "https://join-lemmy.org/ns#",
+            "litepub": "http://litepub.social/ns#",
+            "pt": "https://joinpeertube.org/ns#",
+            "sc": "http://schema.org/",
+            "ChatMessage": "litepub:ChatMessage",
+            "commentsEnabled": "pt:commentsEnabled",
+            "sensitive": "as:sensitive",
+            "matrixUserId": "lemmy:matrixUserId",
+            "postingRestrictedToMods": "lemmy:postingRestrictedToMods",
+            "removeData": "lemmy:removeData",
+            "stickied": "lemmy:stickied",
+            "moderators": {
+                "@type": "@id",
+                "@id": "lemmy:moderators"
+            },
+            "expires": "as:endTime",
+            "distinguished": "lemmy:distinguished",
+            "language": "sc:inLanguage",
+            "identifier": "sc:identifier"
+        })
+    return context

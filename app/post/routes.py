@@ -8,8 +8,8 @@ from flask_babel import _
 from sqlalchemy import or_, desc
 
 from app import db, constants, cache
-from app.activitypub.signature import HttpSignature, post_request
-from app.activitypub.util import default_context, notify_about_post_reply
+from app.activitypub.signature import HttpSignature, post_request, default_context
+from app.activitypub.util import notify_about_post_reply
 from app.community.util import save_post, send_to_remote_instance
 from app.inoculation import inoculation
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm

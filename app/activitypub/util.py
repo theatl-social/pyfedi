@@ -893,36 +893,6 @@ def parse_summary(user_json) -> str:
         return ''
 
 
-def default_context():
-    context = [
-        "https://www.w3.org/ns/activitystreams",
-        "https://w3id.org/security/v1",
-    ]
-    if current_app.config['FULL_AP_CONTEXT']:
-        context.append({
-            "lemmy": "https://join-lemmy.org/ns#",
-            "litepub": "http://litepub.social/ns#",
-            "pt": "https://joinpeertube.org/ns#",
-            "sc": "http://schema.org/",
-            "ChatMessage": "litepub:ChatMessage",
-            "commentsEnabled": "pt:commentsEnabled",
-            "sensitive": "as:sensitive",
-            "matrixUserId": "lemmy:matrixUserId",
-            "postingRestrictedToMods": "lemmy:postingRestrictedToMods",
-            "removeData": "lemmy:removeData",
-            "stickied": "lemmy:stickied",
-            "moderators": {
-                "@type": "@id",
-                "@id": "lemmy:moderators"
-            },
-            "expires": "as:endTime",
-            "distinguished": "lemmy:distinguished",
-            "language": "sc:inLanguage",
-            "identifier": "sc:identifier"
-        })
-    return context
-
-
 def find_reply_parent(in_reply_to: str) -> Tuple[int, int, int]:
     if 'comment' in in_reply_to:
         parent_comment = PostReply.get_by_ap_id(in_reply_to)

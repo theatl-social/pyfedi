@@ -9,8 +9,8 @@ from sqlalchemy import text, desc, or_
 
 from app import db, celery, cache
 from app.activitypub.routes import process_inbox_request, process_delete_request
-from app.activitypub.signature import post_request
-from app.activitypub.util import default_context, instance_allowed, instance_blocked
+from app.activitypub.signature import post_request, default_context
+from app.activitypub.util import instance_allowed, instance_blocked
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \

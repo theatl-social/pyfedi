@@ -6,7 +6,7 @@ from app import db, constants, cache, celery
 from app.activitypub import bp
 from flask import request, current_app, abort, jsonify, json, g, url_for, redirect, make_response
 
-from app.activitypub.signature import HttpSignature, post_request, VerificationError
+from app.activitypub.signature import HttpSignature, post_request, VerificationError, default_context
 from app.community.routes import show_community
 from app.community.util import send_to_remote_instance
 from app.post.routes import continue_discussion, show_post
@@ -16,7 +16,7 @@ from app.models import User, Community, CommunityJoinRequest, CommunityMember, C
     PostReply, Instance, PostVote, PostReplyVote, File, AllowedInstances, BannedInstances, utcnow, Site, Notification, \
     ChatMessage, Conversation, UserFollower
 from app.activitypub.util import public_key, users_total, active_half_year, active_month, local_posts, local_comments, \
-    post_to_activity, find_actor_or_create, default_context, instance_blocked, find_reply_parent, find_liked_object, \
+    post_to_activity, find_actor_or_create, instance_blocked, find_reply_parent, find_liked_object, \
     lemmy_site_data, instance_weight, is_activitypub_request, downvote_post_reply, downvote_post, upvote_post_reply, \
     upvote_post, delete_post_or_comment, community_members, \
     user_removed_from_remote_server, create_post, create_post_reply, update_post_reply_from_activity, \
