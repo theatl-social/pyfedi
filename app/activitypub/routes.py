@@ -51,6 +51,28 @@ def webfinger():
         else:
             return 'Webfinger regex failed to match'
 
+        # special case: instance actor
+        if actor == current_app.config['SERVER_NAME']:
+            webfinger_data = {
+              "subject": f"acct:{actor}@{current_app.config['SERVER_NAME']}",
+              "aliases": [f"https://{current_app.config['SERVER_NAME']}/actor"],
+              "links": [
+                {
+                    "rel": "http://webfinger.net/rel/profile-page",
+                    "type": "text/html",
+                    "href": f"https://{current_app.config['SERVER_NAME']}/about"
+                },
+                {
+                    "rel": "self",
+                    "type": "application/activity+json",
+                    "href": f"https://{current_app.config['SERVER_NAME']}/actor",
+                }
+              ]
+            }
+            resp = jsonify(webfinger_data)
+            resp.headers.add_header('Access-Control-Allow-Origin', '*')
+            return resp
+
         seperator = 'u'
         type = 'Person'
         user = User.query.filter_by(user_name=actor.strip(), deleted=False, banned=False, ap_id=None).first()

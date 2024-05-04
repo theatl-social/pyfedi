@@ -415,3 +415,30 @@ def activitypub_application():
     resp = jsonify(application_data)
     resp.content_type = 'application/activity+json'
     return resp
+
+
+# instance actor (literally uses the word 'actor' without the /u/)
+# required for interacting with instances using 'secure mode' (aka authorized fetch)
+@bp.route('/actor', methods=['GET'])
+def instance_actor():
+    application_data = {
+        '@context': default_context(),
+        'type': 'Application',
+        'id': f"https://{current_app.config['SERVER_NAME']}/actor",
+        'preferredUsername': f"{current_app.config['SERVER_NAME']}",
+        'url': f"https://{current_app.config['SERVER_NAME']}/about",
+        'manuallyApprovesFollowers': True,
+        'inbox': f"https://{current_app.config['SERVER_NAME']}/actor/inbox",
+        'outbox': f"https://{current_app.config['SERVER_NAME']}/actor/outbox",
+        'publicKey': {
+          'id': f"https://{current_app.config['SERVER_NAME']}/actor#main-key",
+          'owner': f"https://{current_app.config['SERVER_NAME']}/actor",
+          'publicKeyPem': g.site.public_key
+        },
+        'endpoints': {
+          'sharedInbox': f"https://{current_app.config['SERVER_NAME']}/site_inbox",
+        }
+    }
+    resp = jsonify(application_data)
+    resp.content_type = 'application/activity+json'
+    return resp
