@@ -47,7 +47,7 @@ def create_app(config_class=Config):
         import sentry_sdk
         sentry_sdk.init(
             dsn=app.config["SENTRY_DSN"],
-            enable_tracing=True
+            enable_tracing=False,
         )
 
     db.init_app(app)
