@@ -87,9 +87,9 @@
                     <p>
                         <video class="responsive-video" controls preload="{{ 'metadata' if low_bandwidth else 'auto' }}">
                         {% if post.url.endswith('.mp4') %}
-                            <source src="{{ post.url }}" media="video/mp4" />
+                            <source src="{{ post.url }}" type="video/mp4" />
                         {% elif post.url.endswith('.webm') %}
-                            <source src="{{ post.url }}" media="video/webm" />
+                            <source src="{{ post.url }}" type="video/webm" />
                         {% endif %}
                         </video></p>
                 {% elif post.url.startswith('https://streamable.com') %}
@@ -108,9 +108,9 @@
                     <p>
                         <video class="responsive-video" controls preload="{{ 'none' if low_bandwidth else 'auto' }}" {{ 'autoplay muted' if autoplay }}>
                         {% if post.url.endswith('.mp4') %}
-                            <source src="{{ post.url }}" media="video/mp4" />
+                            <source src="{{ post.url }}" type="video/mp4" />
                         {% elif post.url.endswith('.webm') %}
-                            <source src="{{ post.url }}" media="video/webm" />
+                            <source src="{{ post.url }}" type="video/webm" />
                         {% endif %}
                         </video></p>
                 {% elif post.url.startswith('https://streamable.com') %}
