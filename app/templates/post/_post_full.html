@@ -32,10 +32,10 @@
             <div class="post_image">
                 {% if post.image_id %}
                     {% if low_bandwidth %}
-                        <a href="{{ post.image.view_url() }}" rel="nofollow ugc"><img src="{{ post.image.medium_url() }}" alt="{{ post.image.alt_text if post.image.alt_text else post.title }}"
+                        <a href="{{ post.image.view_url(resize=True) }}" rel="nofollow ugc"><img src="{{ post.image.medium_url() }}" alt="{{ post.image.alt_text if post.image.alt_text else post.title }}"
                              width="{{ post.image.width }}" height="{{ post.image.height }}" /></a>
                     {% else %}
-                        <a href="{{ post.image.view_url() }}" rel="nofollow ugc"><img src="{{ post.image.view_url() }}" alt="{{ post.image.alt_text if post.image.alt_text else post.title }}"></a>
+                        <a href="{{ post.image.view_url() }}" rel="nofollow ugc"><img src="{{ post.image.view_url(resize=True) }}" alt="{{ post.image.alt_text if post.image.alt_text else post.title }}"></a>
                     {% endif %}
                 {% else %}
                     <a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="Go to image"><img src="{{ post.url }}" style="max-width: 100%; height: auto;"  /></a>

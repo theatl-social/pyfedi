@@ -204,9 +204,12 @@ class File(db.Model):
     thumbnail_width = db.Column(db.Integer)
     thumbnail_height = db.Column(db.Integer)
 
-    def view_url(self):
+    def view_url(self, resize=False):
         if self.source_url:
-            return self.source_url
+            if resize and '/pictrs/' in self.source_url and '?' not in self.source_url:
+                return f'{self.source_url}?thumbnail=1024'
+            else:
+                return self.source_url
         elif self.file_path:
             file_path = self.file_path[4:] if self.file_path.startswith('app/') else self.file_path
             return f"https://{current_app.config['SERVER_NAME']}/{file_path}"
