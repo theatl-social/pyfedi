@@ -44,7 +44,7 @@ from datetime import datetime
 from dateutil import parser
 from pyld import jsonld
 from email.utils import formatdate
-from app import db
+from app import db, celery
 from app.constants import DATETIME_MS_FORMAT
 from app.models import utcnow, ActivityPubLog
 
@@ -75,6 +75,16 @@ def parse_ld_date(value: str | None) -> datetime | None:
     return parser.isoparse(value).replace(microsecond=0)
 
 
+def post_request_in_background(uri: str, body: dict | None, private_key: str, key_id: str, content_type: str = "application/activity+json",
+        method: Literal["get", "post"] = "post", timeout: int = 5,):
+    if current_app.debug:
+        return post_request(uri=uri, body=body, private_key=private_key, key_id=key_id, content_type=content_type, method=method, timeout=timeout)
+    else:
+        post_request.delay(uri=uri, body=body, private_key=private_key, key_id=key_id, content_type=content_type, method=method, timeout=timeout)
+        return True
+
+
+@celery.task
 def post_request(uri: str, body: dict | None, private_key: str, key_id: str, content_type: str = "application/activity+json",
         method: Literal["get", "post"] = "post", timeout: int = 5,):
     if '@context' not in body:  # add a default json-ld context if necessary

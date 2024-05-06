@@ -8,7 +8,7 @@ from flask_babel import _
 from sqlalchemy import or_, desc
 
 from app import db, constants, cache
-from app.activitypub.signature import HttpSignature, post_request, default_context
+from app.activitypub.signature import HttpSignature, post_request, default_context, post_request_in_background
 from app.activitypub.util import notify_about_post_reply
 from app.community.util import save_post, send_to_remote_instance
 from app.inoculation import inoculation
@@ -399,7 +399,7 @@ def post_vote(post_id: int, vote_direction):
                 if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
                     send_to_remote_instance(instance.id, post.community.id, announce)
         else:
-            success = post_request(post.community.ap_inbox_url, action_json, current_user.private_key,
+            success = post_request_in_background(post.community.ap_inbox_url, action_json, current_user.private_key,
                                                             current_user.ap_profile_id + '#main-key')
             if not success:
                 flash('Failed to send vote', 'warning')
@@ -511,7 +511,7 @@ def comment_vote(comment_id, vote_direction):
                 if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
                     send_to_remote_instance(instance.id, comment.community.id, announce)
         else:
-            success = post_request(comment.community.ap_inbox_url, action_json, current_user.private_key,
+            success = post_request_in_background(comment.community.ap_inbox_url, action_json, current_user.private_key,
                                                             current_user.ap_profile_id + '#main-key')
             if not success:
                 flash('Failed to send vote', 'warning')
