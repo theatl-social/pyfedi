@@ -9,8 +9,8 @@ from flask_login import current_user
 from pillow_heif import register_heif_opener
 
 from app import db, cache, celery
-from app.activitypub.signature import post_request
-from app.activitypub.util import find_actor_or_create, actor_json_to_model, post_json_to_model, default_context, ensure_domains_match
+from app.activitypub.signature import post_request, default_context
+from app.activitypub.util import find_actor_or_create, actor_json_to_model, post_json_to_model, ensure_domains_match
 from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO, NOTIF_POST
 from app.models import Community, File, BannedInstances, PostReply, PostVote, Post, utcnow, CommunityMember, Site, \
     Instance, Notification, User, ActivityPubLog, NotificationSubscription
