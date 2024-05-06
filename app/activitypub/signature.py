@@ -45,7 +45,6 @@ from dateutil import parser
 from pyld import jsonld
 from email.utils import formatdate
 from app import db
-from app.activitypub.util import default_context
 from app.constants import DATETIME_MS_FORMAT
 from app.models import utcnow, ActivityPubLog
 
@@ -104,6 +103,16 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str, con
     db.session.commit()
 
     return log.result != 'failure'
+
+
+def signed_get_request(uri: str, private_key: str, key_id: str, content_type: str = "application/activity+json",
+        method: Literal["get", "post"] = "get", timeout: int = 5,):
+    try:
+        result = HttpSignature.signed_request(uri, None, private_key, key_id, content_type, method, timeout)
+    except Exception as e:
+        current_app.logger.error(f'Exception while sending post to {uri}')
+
+    return result
 
 
 class VerificationError(BaseException):
@@ -465,3 +474,33 @@ class LDSignature:
         digest = hashes.Hash(hashes.SHA256())
         digest.update(norm_form.encode("utf8"))
         return digest.finalize().hex().encode("ascii")
+
+
+def default_context():
+    context = [
+        "https://www.w3.org/ns/activitystreams",
+        "https://w3id.org/security/v1",
+    ]
+    if current_app.config['FULL_AP_CONTEXT']:
+        context.append({
+            "lemmy": "https://join-lemmy.org/ns#",
+            "litepub": "http://litepub.social/ns#",
+            "pt": "https://joinpeertube.org/ns#",
+            "sc": "http://schema.org/",
+            "ChatMessage": "litepub:ChatMessage",
+            "commentsEnabled": "pt:commentsEnabled",
+            "sensitive": "as:sensitive",
+            "matrixUserId": "lemmy:matrixUserId",
+            "postingRestrictedToMods": "lemmy:postingRestrictedToMods",
+            "removeData": "lemmy:removeData",
+            "stickied": "lemmy:stickied",
+            "moderators": {
+                "@type": "@id",
+                "@id": "lemmy:moderators"
+            },
+            "expires": "as:endTime",
+            "distinguished": "lemmy:distinguished",
+            "language": "sc:inLanguage",
+            "identifier": "sc:identifier"
+        })
+    return context

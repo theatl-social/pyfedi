@@ -14,6 +14,7 @@ from app import db, cache, constants, celery
 from app.models import User, Post, Community, BannedInstances, File, PostReply, AllowedInstances, Instance, utcnow, \
     PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation, \
     Language
+from app.activitypub.signature import signed_get_request
 import time
 import base64
 import requests
@@ -245,7 +246,7 @@ def instance_allowed(host: str) -> bool:
     return instance is not None
 
 
-def find_actor_or_create(actor: str, create_if_not_found=True, community_only=False) -> Union[User, Community, None]:
+def find_actor_or_create(actor: str, create_if_not_found=True, community_only=False, signed_get=False) -> Union[User, Community, None]:
     actor_url = actor.strip()
     actor = actor.strip().lower()
     user = None
@@ -295,23 +296,38 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
     else:   # User does not exist in the DB, it's going to need to be created from it's remote home instance
         if create_if_not_found:
             if actor.startswith('https://'):
-                try:
-                    actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
-                except requests.exceptions.ReadTimeout:
-                    time.sleep(randint(3, 10))
+                if not signed_get:
                     try:
                         actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
                     except requests.exceptions.ReadTimeout:
+                        time.sleep(randint(3, 10))
+                        try:
+                            actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
+                        except requests.exceptions.ReadTimeout:
+                            return None
+                    except requests.exceptions.ConnectionError:
                         return None
-                except requests.exceptions.ConnectionError:
-                    return None
-                if actor_data.status_code == 200:
-                    actor_json = actor_data.json()
-                    actor_data.close()
-                    actor_model = actor_json_to_model(actor_json, address, server)
-                    if community_only and not isinstance(actor_model, Community):
+                    if actor_data.status_code == 200:
+                        actor_json = actor_data.json()
+                        actor_data.close()
+                        actor_model = actor_json_to_model(actor_json, address, server)
+                        if community_only and not isinstance(actor_model, Community):
+                            return None
+                        return actor_model
+                else:
+                    try:
+                        site = Site.query.get(1)
+                        actor_data = signed_get_request(actor_url, site.private_key,
+                                        f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+                        if actor_data.status_code == 200:
+                            actor_json = actor_data.json()
+                            actor_data.close()
+                            actor_model = actor_json_to_model(actor_json, address, server)
+                            if community_only and not isinstance(actor_model, Community):
+                                return None
+                            return actor_model
+                    except Exception:
                         return None
-                    return actor_model
             else:
                 # retrieve user details via webfinger, etc
                 try:
@@ -405,6 +421,13 @@ def refresh_user_profile_task(user_id):
             try:
                 actor_data = get_request(user.ap_profile_id, headers={'Accept': 'application/activity+json'})
             except requests.exceptions.ReadTimeout:
+                return
+        except:
+            try:
+                site = Site.query.get(1)
+                actor_data = signed_get_request(user.ap_profile_id, site.private_key,
+                                f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+            except:
                 return
         if actor_data.status_code == 200:
             activity_json = actor_data.json()
@@ -891,36 +914,6 @@ def parse_summary(user_json) -> str:
         return allowlist_html(user_json['summary'])
     else:
         return ''
-
-
-def default_context():
-    context = [
-        "https://www.w3.org/ns/activitystreams",
-        "https://w3id.org/security/v1",
-    ]
-    if current_app.config['FULL_AP_CONTEXT']:
-        context.append({
-            "lemmy": "https://join-lemmy.org/ns#",
-            "litepub": "http://litepub.social/ns#",
-            "pt": "https://joinpeertube.org/ns#",
-            "sc": "http://schema.org/",
-            "ChatMessage": "litepub:ChatMessage",
-            "commentsEnabled": "pt:commentsEnabled",
-            "sensitive": "as:sensitive",
-            "matrixUserId": "lemmy:matrixUserId",
-            "postingRestrictedToMods": "lemmy:postingRestrictedToMods",
-            "removeData": "lemmy:removeData",
-            "stickied": "lemmy:stickied",
-            "moderators": {
-                "@type": "@id",
-                "@id": "lemmy:moderators"
-            },
-            "expires": "as:endTime",
-            "distinguished": "lemmy:distinguished",
-            "language": "sc:inLanguage",
-            "identifier": "sc:identifier"
-        })
-    return context
 
 
 def find_reply_parent(in_reply_to: str) -> Tuple[int, int, int]:

@@ -3,8 +3,8 @@ from time import sleep
 from flask import current_app, json
 
 from app import celery, db
-from app.activitypub.signature import post_request
-from app.activitypub.util import default_context, actor_json_to_model
+from app.activitypub.signature import post_request, default_context
+from app.activitypub.util import actor_json_to_model
 from app.community.util import send_to_remote_instance
 from app.models import User, CommunityMember, Community, Instance, Site, utcnow, ActivityPubLog, BannedInstances
 from app.utils import gibberish, ap_datetime, instance_banned, get_request

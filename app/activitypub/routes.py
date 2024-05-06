@@ -6,7 +6,7 @@ from app import db, constants, cache, celery
 from app.activitypub import bp
 from flask import request, current_app, abort, jsonify, json, g, url_for, redirect, make_response
 
-from app.activitypub.signature import HttpSignature, post_request, VerificationError
+from app.activitypub.signature import HttpSignature, post_request, VerificationError, default_context
 from app.community.routes import show_community
 from app.community.util import send_to_remote_instance
 from app.post.routes import continue_discussion, show_post
@@ -16,7 +16,7 @@ from app.models import User, Community, CommunityJoinRequest, CommunityMember, C
     PostReply, Instance, PostVote, PostReplyVote, File, AllowedInstances, BannedInstances, utcnow, Site, Notification, \
     ChatMessage, Conversation, UserFollower
 from app.activitypub.util import public_key, users_total, active_half_year, active_month, local_posts, local_comments, \
-    post_to_activity, find_actor_or_create, default_context, instance_blocked, find_reply_parent, find_liked_object, \
+    post_to_activity, find_actor_or_create, instance_blocked, find_reply_parent, find_liked_object, \
     lemmy_site_data, instance_weight, is_activitypub_request, downvote_post_reply, downvote_post, upvote_post_reply, \
     upvote_post, delete_post_or_comment, community_members, \
     user_removed_from_remote_server, create_post, create_post_reply, update_post_reply_from_activity, \
@@ -50,6 +50,28 @@ def webfinger():
             actor = query.split('/')[-1]
         else:
             return 'Webfinger regex failed to match'
+
+        # special case: instance actor
+        if actor == current_app.config['SERVER_NAME']:
+            webfinger_data = {
+              "subject": f"acct:{actor}@{current_app.config['SERVER_NAME']}",
+              "aliases": [f"https://{current_app.config['SERVER_NAME']}/actor"],
+              "links": [
+                {
+                    "rel": "http://webfinger.net/rel/profile-page",
+                    "type": "text/html",
+                    "href": f"https://{current_app.config['SERVER_NAME']}/about"
+                },
+                {
+                    "rel": "self",
+                    "type": "application/activity+json",
+                    "href": f"https://{current_app.config['SERVER_NAME']}/actor",
+                }
+              ]
+            }
+            resp = jsonify(webfinger_data)
+            resp.headers.add_header('Access-Control-Allow-Origin', '*')
+            return resp
 
         seperator = 'u'
         type = 'Person'
@@ -1207,8 +1229,12 @@ def user_inbox(actor):
     if site.log_activitypub_json:
         activity_log.activity_json = json.dumps(request_json)
 
-    actor = find_actor_or_create(request_json['actor']) if 'actor' in request_json else None
+    actor = find_actor_or_create(request_json['actor'], signed_get=True) if 'actor' in request_json else None
     if actor is not None:
+        if (('type' in request_json and request_json['type'] == 'Like') or
+                ('type' in request_json and request_json['type'] == 'Undo' and
+                'object' in request_json and request_json['object']['type'] == 'Like')):
+                return shared_inbox()
         try:
             HttpSignature.verify_request(request, actor.public_key, skip_date=True)
             if 'type' in request_json and request_json['type'] == 'Follow':
@@ -1224,10 +1250,6 @@ def user_inbox(actor):
                 else:
                     process_user_undo_follow_request.delay(request_json, activity_log.id, actor.id)
                 return ''
-            if (('type' in request_json and request_json['type'] == 'Like') or
-                ('type' in request_json and request_json['type'] == 'Undo' and
-                'object' in request_json and request_json['object']['type'] == 'Like')):
-                return shared_inbox()
         except VerificationError:
             activity_log.result = 'failure'
             activity_log.exception_message = 'Could not verify signature'
@@ -1257,7 +1279,8 @@ def process_user_follow_request(request_json, activitypublog_id, remote_user_id)
         if not existing_follower:
             auto_accept = not local_user.ap_manually_approves_followers
             new_follower = UserFollower(local_user_id=local_user.id, remote_user_id=remote_user.id, is_accepted=auto_accept)
-            local_user.ap_followers_url = local_user.ap_public_url + '/followers'
+            if not local_user.ap_followers_url:
+                local_user.ap_followers_url = local_user.ap_public_url + '/followers'
             db.session.add(new_follower)
         accept = {
             "@context": default_context(),

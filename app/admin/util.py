@@ -6,8 +6,7 @@ from sqlalchemy import text, desc
 from flask_babel import _
 
 from app import db, cache, celery
-from app.activitypub.signature import post_request
-from app.activitypub.util import default_context
+from app.activitypub.signature import post_request, default_context
 from app.models import User, Community, Instance, Site, ActivityPubLog, CommunityMember, Topic
 from app.utils import gibberish, topic_tree
 

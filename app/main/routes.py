@@ -9,8 +9,9 @@ import requests
 from sqlalchemy.sql.operators import or_, and_
 
 from app import db, cache
-from app.activitypub.util import default_context, make_image_sizes_async, refresh_user_profile, find_actor_or_create, \
+from app.activitypub.util import make_image_sizes_async, refresh_user_profile, find_actor_or_create, \
     refresh_community_profile_task, users_total, active_month, local_posts, local_communities, local_comments
+from app.activitypub.signature import default_context
 from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, POST_TYPE_IMAGE, POST_TYPE_LINK, \
     SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_VIDEO
 from app.email import send_email, send_welcome_email
@@ -410,6 +411,33 @@ def activitypub_application():
         'updated': ap_datetime(g.site.updated),
         'inbox': f"https://{current_app.config['SERVER_NAME']}/site_inbox",
         'outbox': f"https://{current_app.config['SERVER_NAME']}/site_outbox",
+    }
+    resp = jsonify(application_data)
+    resp.content_type = 'application/activity+json'
+    return resp
+
+
+# instance actor (literally uses the word 'actor' without the /u/)
+# required for interacting with instances using 'secure mode' (aka authorized fetch)
+@bp.route('/actor', methods=['GET'])
+def instance_actor():
+    application_data = {
+        '@context': default_context(),
+        'type': 'Application',
+        'id': f"https://{current_app.config['SERVER_NAME']}/actor",
+        'preferredUsername': f"{current_app.config['SERVER_NAME']}",
+        'url': f"https://{current_app.config['SERVER_NAME']}/about",
+        'manuallyApprovesFollowers': True,
+        'inbox': f"https://{current_app.config['SERVER_NAME']}/actor/inbox",
+        'outbox': f"https://{current_app.config['SERVER_NAME']}/actor/outbox",
+        'publicKey': {
+          'id': f"https://{current_app.config['SERVER_NAME']}/actor#main-key",
+          'owner': f"https://{current_app.config['SERVER_NAME']}/actor",
+          'publicKeyPem': g.site.public_key
+        },
+        'endpoints': {
+          'sharedInbox': f"https://{current_app.config['SERVER_NAME']}/site_inbox",
+        }
     }
     resp = jsonify(application_data)
     resp.content_type = 'application/activity+json'

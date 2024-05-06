@@ -6,8 +6,8 @@ from flask_login import login_user, logout_user, current_user, login_required
 from flask_babel import _
 
 from app import db, cache, celery
-from app.activitypub.signature import post_request
-from app.activitypub.util import default_context, find_actor_or_create
+from app.activitypub.signature import post_request, default_context
+from app.activitypub.util import find_actor_or_create
 from app.community.util import save_icon_file, save_banner_file, retrieve_mods_and_backfill
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_PENDING, NOTIF_USER
 from app.models import Post, Community, CommunityMember, User, PostReply, PostVote, Notification, utcnow, File, Site, \
