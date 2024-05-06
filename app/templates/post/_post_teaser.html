@@ -66,7 +66,7 @@
                             {% if post.sticky %}<span class="fe fe-sticky-right"></span>{% endif %}
                             </h3>
 
-                            <span class="author small">{% if show_post_community %}<strong><a href="/c/{{ post.community.link() }}" aria-label="{{ _('Go to community %(name)s', name=post.community.name) }}">c/{{ post.community.name }}</a></strong>{% endif %}
+                            <span class="author small">{% if show_post_community %}<a href="/c/{{ post.community.link() }}" aria-label="{{ _('Go to community %(name)s', name=post.community.name) }}">c/{{ post.community.name }}</a>{% endif %}
                                 by {{ render_username(post.author) }} {{ moment(post.last_active if sort == 'active' else post.posted_at).fromNow() }}</span>
                             <div class="post_utilities">
                                 <a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None, _anchor='post_replies') }}" aria-label="{{ _('View comments') }}"><span class="fe fe-reply"></span> <span aria-label="{{ _('Number of comments:') }}">{{ post.reply_count }}</span></a>
