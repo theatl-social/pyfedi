@@ -18,7 +18,7 @@ from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_
 from app.community.util import save_icon_file, save_banner_file
 from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
-    User, Instance, File, Report, Topic, UserRegistration, Role, Post
+    User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
     topic_tree
@@ -506,6 +506,41 @@ def admin_content_trash():
     prev_url = url_for('admin.admin_content_trash', page=posts.prev_num) if posts.has_prev and page != 1 else None
 
     return render_template('admin/posts.html', title=_('Bad posts'), next_url=next_url, prev_url=prev_url, posts=posts,
+                           moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.get_id()),
+                           site=g.site
+                           )
+
+
+@bp.route('/content/spam', methods=['GET'])
+@login_required
+@permission_required('administer all users')
+def admin_content_spam():
+    # Essentially the same as admin_content_trash() except only shows heavily downvoted posts by new users - who are usually spammers
+    page = request.args.get('page', 1, type=int)
+    replies_page = request.args.get('replies_page', 1, type=int)
+
+    posts = Post.query.join(User, User.id == Post.user_id).\
+        filter(User.created > utcnow() - timedelta(days=3)).\
+        filter(Post.posted_at > utcnow() - timedelta(days=3)).\
+        filter(Post.score <= 0).order_by(Post.score)
+    posts = posts.paginate(page=page, per_page=100, error_out=False)
+
+    post_replies = PostReply.query.join(User, User.id == PostReply.user_id). \
+        filter(User.created > utcnow() - timedelta(days=3)). \
+        filter(PostReply.posted_at > utcnow() - timedelta(days=3)). \
+        filter(PostReply.score <= 0).order_by(PostReply.score)
+    post_replies = post_replies.paginate(page=replies_page, per_page=100, error_out=False)
+
+    next_url = url_for('admin.admin_content_spam', page=posts.next_num) if posts.has_next else None
+    prev_url = url_for('admin.admin_content_spam', page=posts.prev_num) if posts.has_prev and page != 1 else None
+    next_url_replies = url_for('admin.admin_content_spam', replies_page=post_replies.next_num) if post_replies.has_next else None
+    prev_url_replies = url_for('admin.admin_content_spam', replies_page=post_replies.prev_num) if post_replies.has_prev and replies_page != 1 else None
+
+    return render_template('admin/spam_posts.html', title=_('Likely spam'),
+                           next_url=next_url, prev_url=prev_url,
+                           next_url_replies=next_url_replies, prev_url_replies=prev_url_replies,
+                           posts=posts, post_replies=post_replies,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            site=g.site
