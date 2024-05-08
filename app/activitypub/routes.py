@@ -14,7 +14,7 @@ from app.user.routes import show_profile
 from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, SUBSCRIPTION_MEMBER
 from app.models import User, Community, CommunityJoinRequest, CommunityMember, CommunityBan, ActivityPubLog, Post, \
     PostReply, Instance, PostVote, PostReplyVote, File, AllowedInstances, BannedInstances, utcnow, Site, Notification, \
-    ChatMessage, Conversation, UserFollower
+    ChatMessage, Conversation, UserFollower, UserBlock
 from app.activitypub.util import public_key, users_total, active_half_year, active_month, local_posts, local_comments, \
     post_to_activity, find_actor_or_create, instance_blocked, find_reply_parent, find_liked_object, \
     lemmy_site_data, instance_weight, is_activitypub_request, downvote_post_reply, downvote_post, upvote_post_reply, \
@@ -25,7 +25,7 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
 from app.utils import gibberish, get_setting, is_image_url, allowlist_html, render_template, \
     domain_from_url, markdown_to_html, community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
-    community_moderators
+    community_moderators, blocked_users
 import werkzeug.exceptions
 
 
@@ -1354,7 +1354,12 @@ def user_followers(actor):
     actor = actor.strip()
     user = User.query.filter_by(user_name=actor, banned=False, ap_id=None).first()
     if user is not None and user.ap_followers_url:
-        followers = User.query.join(UserFollower, User.id == UserFollower.remote_user_id).filter(UserFollower.local_user_id == user.id).all()
+        # Get all followers, except those that are blocked by user by doing an outer join
+        followers = User.query.join(UserFollower, User.id == UserFollower.remote_user_id)\
+            .outerjoin(UserBlock, (User.id == UserBlock.blocker_id) & (UserFollower.local_user_id == UserBlock.blocked_id))\
+            .filter((UserFollower.local_user_id == user.id) & (UserBlock.id == None))\
+            .all()
+
         items = []
         for f in followers:
             items.append(f.ap_public_url)
