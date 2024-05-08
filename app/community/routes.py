@@ -18,7 +18,7 @@ from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, Cre
     EscalateReportForm, ResolveReportForm, CreateVideoForm
 from app.community.util import search_for_community, actor_to_community, \
     opengraph_parse, url_to_thumbnail_file, save_post, save_icon_file, save_banner_file, send_to_remote_instance, \
-    delete_post_from_community, delete_post_reply_from_community
+    delete_post_from_community, delete_post_reply_from_community, community_in_list
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
     REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY
@@ -478,6 +478,8 @@ def add_discussion_post(actor):
         form.sticky.render_kw = {'disabled': True}
 
     form.communities.choices = [(c.id, c.display_name()) for c in current_user.communities()]
+    if not community_in_list(community.id, form.communities.choices):
+        form.communities.choices.append((community.id, community.display_name()))
 
     if not can_create_post(current_user, community):
         abort(401)
@@ -539,6 +541,8 @@ def add_image_post(actor):
         form.sticky.render_kw = {'disabled': True}
 
     form.communities.choices = [(c.id, c.display_name()) for c in current_user.communities()]
+    if not community_in_list(community.id, form.communities.choices):
+        form.communities.choices.append((community.id, community.display_name()))
 
     if not can_create_post(current_user, community):
         abort(401)
@@ -614,6 +618,8 @@ def add_link_post(actor):
         form.sticky.render_kw = {'disabled': True}
 
     form.communities.choices = [(c.id, c.display_name()) for c in current_user.communities()]
+    if not community_in_list(community.id, form.communities.choices):
+        form.communities.choices.append((community.id, community.display_name()))
 
     if not can_create_post(current_user, community):
         abort(401)
@@ -689,6 +695,8 @@ def add_video_post(actor):
         form.sticky.render_kw = {'disabled': True}
 
     form.communities.choices = [(c.id, c.display_name()) for c in current_user.communities()]
+    if not community_in_list(community.id, form.communities.choices):
+        form.communities.choices.append((community.id, community.display_name()))
 
     if not can_create_post(current_user, community):
         abort(401)

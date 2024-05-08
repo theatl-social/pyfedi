@@ -638,3 +638,9 @@ def send_to_remote_instance_task(instance_id: int, community_id: int, payload):
                 instance.dormant = True
         db.session.commit()
 
+
+def community_in_list(community_id, community_list):
+    for tup in community_list:
+        if community_id == tup[0]:
+            return True
+    return False
