@@ -394,6 +394,8 @@ class Community(db.Model):
     show_popular = db.Column(db.Boolean, default=True)
     show_all = db.Column(db.Boolean, default=True)
 
+    ignore_remote_language = db.Column(db.Boolean, default=False)
+
     search_vector = db.Column(TSVectorType('name', 'title', 'description', 'rules'))
 
     posts = db.relationship('Post', lazy='dynamic', cascade="all, delete-orphan")
@@ -401,6 +403,9 @@ class Community(db.Model):
     icon = db.relationship('File', foreign_keys=[icon_id], single_parent=True, backref='community', cascade="all, delete-orphan")
     image = db.relationship('File', foreign_keys=[image_id], single_parent=True, cascade="all, delete-orphan")
     languages = db.relationship('Language', lazy='dynamic', secondary=community_language, backref=db.backref('communities', lazy='dynamic'))
+
+    def language_ids(self):
+        return [language.id for language in self.languages.all()]
 
     @cache.memoize(timeout=500)
     def icon_image(self, size='default') -> str:

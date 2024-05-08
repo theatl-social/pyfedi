@@ -25,7 +25,7 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LIN
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, \
     File, PostVote, utcnow, Report, Notification, InstanceBlock, ActivityPubLog, Topic, Conversation, PostReply, \
-    NotificationSubscription, UserFollower, Instance
+    NotificationSubscription, UserFollower, Instance, Language
 from app.community import bp
 from app.user.utils import search_for_user
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
@@ -33,7 +33,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     request_etag_matches, return_304, instance_banned, can_create_post, can_upvote, can_downvote, user_filters_posts, \
     joined_communities, moderating_communities, blocked_domains, mimetype_from_url, blocked_instances, \
     community_moderators, communities_banned_from, show_ban_message, recently_upvoted_posts, recently_downvoted_posts, \
-    blocked_users, post_ranking
+    blocked_users, post_ranking, languages_for_form
 from feedgen.feed import FeedGenerator
 from datetime import timezone, timedelta
 
@@ -46,6 +46,8 @@ def add_local():
     form = AddCommunityForm()
     if g.site.enable_nsfw is False:
         form.nsfw.render_kw = {'disabled': True}
+
+    form.languages.choices = languages_for_form()
 
     if form.validate_on_submit():
         if form.url.data.strip().lower().startswith('/c/'):
@@ -76,6 +78,11 @@ def add_local():
         membership = CommunityMember(user_id=current_user.id, community_id=community.id, is_moderator=True,
                                      is_owner=True)
         db.session.add(membership)
+        # Languages of the community
+        for language_choice in form.languages.data:
+            community.languages.append(Language.query.get(language_choice))
+        # Always include the undetermined language, so posts with no language will be accepted
+        community.languages.append(Language.query.filter(Language.code == 'und').first())
         db.session.commit()
         flash(_('Your new community has been created.'))
         cache.delete_memoized(community_membership, current_user, community)
@@ -940,6 +947,7 @@ def community_edit(community_id: int):
     if community.is_owner() or current_user.is_admin():
         form = EditCommunityForm()
         form.topic.choices = topics_for_form(0)
+        form.languages.choices = languages_for_form()
         if form.validate_on_submit():
             community.title = form.title.data
             community.description = form.description.data
@@ -968,6 +976,14 @@ def community_edit(community_id: int):
                 if file:
                     community.image = file
 
+            # Languages of the community
+            db.session.execute(text('DELETE FROM "community_language" WHERE community_id = :community_id'),
+                               {'community_id': community_id})
+            for language_choice in form.languages.data:
+                community.languages.append(Language.query.get(language_choice))
+            # Always include the undetermined language, so posts with no language will be accepted
+            community.languages.append(Language.query.filter(Language.code == 'und').first())
+
             db.session.commit()
             if community.topic:
                 community.topic.num_communities = community.topic.communities.count()
@@ -983,6 +999,7 @@ def community_edit(community_id: int):
             form.new_mods_wanted.data = community.new_mods_wanted
             form.restricted_to_mods.data = community.restricted_to_mods
             form.topic.data = community.topic_id if community.topic_id else None
+            form.languages.data = community.language_ids()
             form.default_layout.data = community.default_layout
         return render_template('community/community_edit.html', title=_('Edit community'), form=form,
                                current_app=current_app, current="edit_settings",

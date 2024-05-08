@@ -18,10 +18,10 @@ from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_
 from app.community.util import save_icon_file, save_banner_file
 from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
-    User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply
+    User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
-    topic_tree
+    topic_tree, languages_for_form
 from app.admin import bp
 
 
@@ -236,6 +236,7 @@ def admin_community_edit(community_id):
     form = EditCommunityForm()
     community = Community.query.get_or_404(community_id)
     form.topic.choices = topics_for_form(0)
+    form.languages.choices = languages_for_form()
     if form.validate_on_submit():
         community.name = form.url.data
         community.title = form.title.data
@@ -256,6 +257,7 @@ def admin_community_edit(community_id):
         community.topic_id = form.topic.data if form.topic.data != 0 else None
         community.default_layout = form.default_layout.data
         community.posting_warning = form.posting_warning.data
+        community.ignore_remote_language = form.ignore_remote_language.data
 
         icon_file = request.files['icon_file']
         if icon_file and icon_file.filename != '':
@@ -271,6 +273,14 @@ def admin_community_edit(community_id):
             file = save_banner_file(banner_file)
             if file:
                 community.image = file
+
+        # Languages of the community
+        db.session.execute(text('DELETE FROM "community_language" WHERE community_id = :community_id'),
+                           {'community_id': community_id})
+        for language_choice in form.languages.data:
+            community.languages.append(Language.query.get(language_choice))
+        # Always include the undetermined language, so posts with no language will be accepted
+        community.languages.append(Language.query.filter(Language.code == 'und').first())
 
         db.session.commit()
         if community.topic_id:
@@ -298,6 +308,8 @@ def admin_community_edit(community_id):
         form.topic.data = community.topic_id if community.topic_id else None
         form.default_layout.data = community.default_layout
         form.posting_warning.data = community.posting_warning
+        form.languages.data = community.language_ids()
+        form.ignore_remote_language.data = community.ignore_remote_language
     return render_template('admin/edit_community.html', title=_('Edit community'), form=form, community=community,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),

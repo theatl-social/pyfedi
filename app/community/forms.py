@@ -3,6 +3,7 @@ from flask_login import current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, TextAreaField, BooleanField, HiddenField, SelectField, FileField, \
     DateField
+from wtforms.fields.choices import SelectMultipleField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Regexp, Optional
 from flask_babel import _, lazy_gettext as _l
 
@@ -23,6 +24,7 @@ class AddCommunityForm(FlaskForm):
     rules = TextAreaField(_l('Rules'))
     nsfw = BooleanField('NSFW')
     local_only = BooleanField('Local only')
+    languages = SelectMultipleField(_l('Languages'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Create'))
 
     def validate(self, extra_validators=None):
@@ -53,6 +55,7 @@ class EditCommunityForm(FlaskForm):
     restricted_to_mods = BooleanField(_l('Only moderators can post'))
     new_mods_wanted = BooleanField(_l('New moderators wanted'))
     topic = SelectField(_l('Topic'), coerce=int, validators=[Optional()])
+    languages = SelectMultipleField(_l('Languages'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
     layouts = [('', _l('List')),
                ('masonry', _l('Masonry')),
                ('masonry_wide', _l('Wide masonry'))]

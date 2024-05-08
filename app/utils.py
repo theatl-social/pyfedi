@@ -32,7 +32,7 @@ from PIL import Image
 
 from app.email import send_welcome_email
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, ActivityPubLog, IpBan, \
-    Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock
+    Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language
 
 
 # Flask's render_template function, with support for themes added
@@ -976,3 +976,11 @@ def recently_downvoted_post_replies(user_id) -> List[int]:
     reply_ids = db.session.execute(text('SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 1000'),
                                {'user_id': user_id}).scalars()
     return sorted(reply_ids)
+
+
+def languages_for_form():
+    result = []
+    for language in Language.query.order_by(Language.name).all():
+        if language.code != 'und':
+            result.append((language.id, language.name))
+    return result

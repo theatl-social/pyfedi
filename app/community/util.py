@@ -13,7 +13,7 @@ from app.activitypub.signature import post_request, default_context
 from app.activitypub.util import find_actor_or_create, actor_json_to_model, post_json_to_model, ensure_domains_match
 from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO, NOTIF_POST
 from app.models import Community, File, BannedInstances, PostReply, PostVote, Post, utcnow, CommunityMember, Site, \
-    Instance, Notification, User, ActivityPubLog, NotificationSubscription
+    Instance, Notification, User, ActivityPubLog, NotificationSubscription, Language
 from app.utils import get_request, gibberish, markdown_to_html, domain_from_url, allowlist_html, \
     is_image_url, ensure_directory_exists, inbox_domain, post_ranking, shorten_string, parse_page, \
     remove_tracking_from_link, ap_datetime, instance_banned, blocked_phrases

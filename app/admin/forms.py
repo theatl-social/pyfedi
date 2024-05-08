@@ -3,6 +3,7 @@ from flask_wtf.file import FileRequired, FileAllowed
 from sqlalchemy import func
 from wtforms import StringField, PasswordField, SubmitField, EmailField, HiddenField, BooleanField, TextAreaField, SelectField, \
     FileField, IntegerField
+from wtforms.fields.choices import SelectMultipleField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Optional
 from flask_babel import _, lazy_gettext as _l
 
@@ -83,6 +84,8 @@ class EditCommunityForm(FlaskForm):
                ('masonry_wide', _l('Wide masonry'))]
     default_layout = SelectField(_l('Layout'), coerce=str, choices=layouts, validators=[Optional()])
     posting_warning = StringField(_l('Posting warning'), validators=[Optional(), Length(min=3, max=512)])
+    languages = SelectMultipleField(_l('Languages'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
+    ignore_remote_language = BooleanField(_l('Override remote language setting'))
     submit = SubmitField(_l('Save'))
 
     def validate(self, extra_validators=None):

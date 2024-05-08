@@ -33,6 +33,7 @@
             {{ render_field(form.rules) }}
             {{ render_field(form.nsfw) }}
             {{ render_field(form.restricted_to_mods) }}
+            {{ render_field(form.languages) }}
             {% if not community.is_local() %}
             <fieldset class="border pl-2 pt-2 mb-4">
                 <legend>{{ _('Will not be overwritten by remote server') }}</legend>
@@ -48,6 +49,7 @@
                 {{ render_field(form.topic) }}
                 {{ render_field(form.default_layout) }}
                 {{ render_field(form.posting_warning) }}
+                {{ render_field(form.ignore_remote_language) }}
             {% if not community.is_local() %}
             </fieldset>
             {% endif %}

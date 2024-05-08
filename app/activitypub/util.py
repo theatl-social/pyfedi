@@ -535,7 +535,7 @@ def refresh_community_profile_task(community_id):
                 community.image = image
                 db.session.add(image)
                 cover_changed = True
-            if 'language' in activity_json and isinstance(activity_json['language'], list):
+            if 'language' in activity_json and isinstance(activity_json['language'], list) and not community.ignore_remote_language:
                 for ap_language in activity_json['language']:
                     new_language = find_language_or_create(ap_language['identifier'], ap_language['name'])
                     if new_language not in community.languages:
