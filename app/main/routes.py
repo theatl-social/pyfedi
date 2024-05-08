@@ -29,7 +29,7 @@ from app.utils import render_template, get_setting, gibberish, request_etag_matc
     blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
     generate_image_from_video_url, blocked_users
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Domain, Topic, File, Instance, \
-    InstanceRole, Notification
+    InstanceRole, Notification, Language, community_language
 from PIL import Image
 import pytesseract
 
@@ -185,19 +185,21 @@ def list_communities():
     verification_warning()
     search_param = request.args.get('search', '')
     topic_id = int(request.args.get('topic_id', 0))
+    language_id = int(request.args.get('language_id', 0))
     sort_by = text('community.' + request.args.get('sort_by') if request.args.get('sort_by') else 'community.post_reply_count desc')
     topics = Topic.query.order_by(Topic.name).all()
+    languages = Language.query.order_by(Language.name).all()
     communities = Community.query.filter_by(banned=False)
     if search_param == '':
         pass
     else:
         communities = communities.filter(or_(Community.title.ilike(f"%{search_param}%"), Community.ap_id.ilike(f"%{search_param}%")))
-        #query = search(select(Community), search_param, sort=True)  # todo: exclude banned communities from search
-        #communities = db.session.scalars(query).all()
-
 
     if topic_id != 0:
         communities = communities.filter_by(topic_id=topic_id)
+
+    if language_id != 0:
+        communities = communities.join(community_language).filter(community_language.c.language_id == language_id)
 
     if current_user.is_authenticated:
         banned_from = communities_banned_from(current_user.id)
@@ -207,7 +209,7 @@ def list_communities():
     return render_template('list_communities.html', communities=communities.order_by(sort_by).all(), search=search_param, title=_('Communities'),
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                           topics=topics, topic_id=topic_id, sort_by=sort_by,
+                           topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1', moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()))
 
