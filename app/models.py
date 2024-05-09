@@ -606,6 +606,8 @@ class User(UserMixin, db.Model):
     theme = db.Column(db.String(20), default='')
     referrer = db.Column(db.String(256))
     markdown_editor = db.Column(db.Boolean, default=False)
+    interface_language = db.Column(db.String(10))           # a locale that the translation system understands e.g. 'en' or 'en-us'. If empty, use browser default
+    language_id = db.Column(db.Integer, db.ForeignKey('language.id'))   # the default choice in the language dropdown when composing posts & comments
 
     avatar = db.relationship('File', lazy='joined', foreign_keys=[avatar_id], single_parent=True, cascade="all, delete-orphan")
     cover = db.relationship('File', lazy='joined', foreign_keys=[cover_id], single_parent=True, cascade="all, delete-orphan")

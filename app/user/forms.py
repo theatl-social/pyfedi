@@ -3,6 +3,7 @@ from flask_login import current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, PasswordField, BooleanField, EmailField, TextAreaField, FileField, \
     RadioField, DateField, SelectField
+from wtforms.fields.choices import SelectMultipleField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Optional
 from flask_babel import _, lazy_gettext as _l
 
@@ -31,6 +32,7 @@ class ProfileForm(FlaskForm):
 
 
 class SettingsForm(FlaskForm):
+    interface_language = SelectField(_l('Interface language'), coerce=str, validators=[Optional()], render_kw={'class': 'form-select'})
     newsletter = BooleanField(_l('Subscribe to email newsletter'))
     email_unread = BooleanField(_l('Receive email about missed notifications'))
     ignore_bots = BooleanField(_l('Hide posts by bots'))

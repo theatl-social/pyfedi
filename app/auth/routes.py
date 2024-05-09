@@ -56,6 +56,7 @@ def login():
         if user.waiting_for_approval():
             return redirect(url_for('auth.please_wait'))
         login_user(user, remember=True)
+        session['ui_language'] = user.interface_language
         current_user.last_seen = utcnow()
         current_user.ip_address = ip_address()
         db.session.commit()

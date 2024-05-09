@@ -4,7 +4,7 @@
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
-from flask import Flask, request, current_app
+from flask import Flask, request, current_app, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
@@ -20,10 +20,13 @@ from config import Config
 
 
 def get_locale():
-    try:
-        return request.accept_languages.best_match(current_app.config['LANGUAGES'])
-    except:
-        return 'en'
+    if session.get('ui_language', None):
+        return session['ui_language']
+    else:
+        try:
+            return request.accept_languages.best_match(current_app.config['LANGUAGES'])
+        except:
+            return 'en'
 
 
 db = SQLAlchemy()  # engine_options={'pool_size': 5, 'max_overflow': 10} # session_options={"autoflush": False}

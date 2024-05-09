@@ -3,7 +3,7 @@ from time import sleep
 
 from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, json
 from flask_login import login_user, logout_user, current_user, login_required
-from flask_babel import _
+from flask_babel import _, lazy_gettext as _l
 
 from app import db, cache, celery
 from app.activitypub.signature import post_request, default_context
@@ -164,6 +164,13 @@ def change_settings():
         abort(404)
     form = SettingsForm()
     form.theme.choices = theme_list()
+    form.interface_language.choices = [
+        ('', _l('Auto-detect')),
+        ('ca', _l('Catalan')),
+        ('en', _l('English')),
+        ('fr', _l('French')),
+        ('de', _l('German')),
+    ]
     if form.validate_on_submit():
         propagate_indexable = form.indexable.data != current_user.indexable
         current_user.newsletter = form.newsletter.data
@@ -176,6 +183,8 @@ def change_settings():
         current_user.theme = form.theme.data
         current_user.email_unread = form.email_unread.data
         current_user.markdown_editor = form.markdown_editor.data
+        current_user.interface_language = form.interface_language.data
+        session['ui_language'] = form.interface_language.data
         import_file = request.files['import_file']
         if propagate_indexable:
             db.session.execute(text('UPDATE "post" set indexable = :indexable WHERE user_id = :user_id'),
@@ -213,6 +222,7 @@ def change_settings():
         form.default_sort.data = current_user.default_sort
         form.theme.data = current_user.theme
         form.markdown_editor.data = current_user.markdown_editor
+        form.interface_language.data = current_user.interface_language
 
     return render_template('user/edit_settings.html', title=_('Edit profile'), form=form, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
