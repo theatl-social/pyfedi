@@ -229,7 +229,7 @@ def show_post(post_id: int):
     else:
         replies = post_replies(post.id, sort)
         form.notify_author.data = True
-        form.language_id.data = current_user.language_id if current_user.language_id else english_language_id()
+        form.language_id.data = current_user.language_id if current_user.is_authenticated and current_user.language_id else english_language_id()
 
     og_image = post.image.source_url if post.image_id else None
     description = shorten_string(markdown_to_text(post.body), 150) if post.body else None
@@ -771,7 +771,7 @@ def add_reply(post_id: int, comment_id: int):
             return redirect(url_for('post.continue_discussion', post_id=post_id, comment_id=reply.parent_id))
     else:
         form.notify_author.data = True
-        form.language_id.data = current_user.language_id if current_user.language_id else english_language_id()
+        form.language_id.data = current_user.language_id if current_user.is_authenticated and current_user.language_id else english_language_id()
 
         return render_template('post/add_reply.html', title=_('Discussing %(title)s', title=post.title), post=post,
                                is_moderator=is_moderator, form=form, comment=in_reply_to, markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
