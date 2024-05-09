@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from flask_babel import _
 from sqlalchemy import or_
 
-from app.models import Post
+from app.models import Post, Language, Community
 from app.search import bp
 from app.utils import moderating_communities, joined_communities, render_template, blocked_domains, blocked_instances, \
     communities_banned_from, recently_upvoted_posts, recently_downvoted_posts, blocked_users
@@ -11,9 +11,19 @@ from app.utils import moderating_communities, joined_communities, render_templat
 
 @bp.route('/search', methods=['GET', 'POST'])
 def run_search():
+    languages = Language.query.order_by(Language.name).all()
+    communities = Community.query.filter(Community.banned == False).order_by(Community.name)
+    if current_user.is_authenticated:
+        banned_from = communities_banned_from(current_user.id)
+        communities = communities.filter(Community.id.not_in(banned_from))
+    else:
+        banned_from = []
+
     if request.args.get('q') is not None:
         q = request.args.get('q')
         page = request.args.get('page', 1, type=int)
+        community_id = request.args.get('community', 0, type=int)
+        language_id = request.args.get('language', 0, type=int)
         low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
         posts = Post.query.search(q)
@@ -34,7 +44,6 @@ def run_search():
             blocked_accounts = blocked_users(current_user.id)
             if blocked_accounts:
                 posts = posts.filter(Post.user_id.not_in(blocked_accounts))
-            banned_from = communities_banned_from(current_user.id)
             if banned_from:
                 posts = posts.filter(Post.community_id.not_in(banned_from))
         else:
@@ -43,6 +52,10 @@ def run_search():
             posts = posts.filter(Post.nsfw == False)
 
         posts = posts.filter(Post.indexable == True)
+        if community_id:
+            posts = posts.filter(Post.community_id == community_id)
+        if language_id:
+            posts = posts.filter(Post.language_id == language_id)
 
         posts = posts.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50,
                                error_out=False)
@@ -59,6 +72,8 @@ def run_search():
             recently_downvoted = []
 
         return render_template('search/results.html', title=_('Search results for %(q)s', q=q), posts=posts, q=q,
+                               community_id=community_id, language_id=language_id, communities=communities.all(),
+                               languages=languages,
                                next_url=next_url, prev_url=prev_url, show_post_community=True,
                                recently_upvoted=recently_upvoted,
                                recently_downvoted=recently_downvoted,
@@ -67,7 +82,8 @@ def run_search():
                                site=g.site)
 
     else:
-        return render_template('search/start.html', title=_('Search'),
+        return render_template('search/start.html', title=_('Search'), communities=communities.all(),
+                               languages=languages,
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
                                site=g.site)

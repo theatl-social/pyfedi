@@ -52,9 +52,10 @@
                         </div>
                     {% endif %}
                 </div>
-                <!-- <form method="get">
-                    <input type="search" name="search" class="form-control mt-2" placeholder="{{ _('Search this community') }}" />
-                </form> -->
+                <form method="get" action="/search">
+                    <input type="search" name="q" class="form-control mt-2" placeholder="{{ _('Search this community') }}" />
+                    <input type="hidden" name="community" value="{{ post.community.id }}">
+                </form>
             </div>
         </div>
         <div class="card mt-3">
