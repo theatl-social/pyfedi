@@ -20,13 +20,16 @@ from config import Config
 
 
 def get_locale():
-    if session.get('ui_language', None):
-        return session['ui_language']
-    else:
-        try:
-            return request.accept_languages.best_match(current_app.config['LANGUAGES'])
-        except:
-            return 'en'
+    try:
+        if session.get('ui_language', None):
+            return session['ui_language']
+        else:
+            try:
+                return request.accept_languages.best_match(current_app.config['LANGUAGES'])
+            except:
+                return 'en'
+    except:
+        return 'en'
 
 
 db = SQLAlchemy()  # engine_options={'pool_size': 5, 'max_overflow': 10} # session_options={"autoflush": False}
