@@ -984,3 +984,8 @@ def languages_for_form():
         if language.code != 'und':
             result.append((language.id, language.name))
     return result
+
+
+def english_language_id():
+    english = Language.query.filter(Language.code == 'en').first()
+    return english.id if english else None

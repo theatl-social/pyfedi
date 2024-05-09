@@ -27,7 +27,8 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     request_etag_matches, ip_address, user_ip_banned, instance_banned, can_downvote, can_upvote, post_ranking, \
     reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, moderating_communities, joined_communities, \
     blocked_instances, blocked_domains, community_moderators, blocked_phrases, show_ban_message, recently_upvoted_posts, \
-    recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, reply_is_stupid
+    recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, reply_is_stupid, \
+    languages_for_form, english_language_id
 
 
 def show_post(post_id: int):
@@ -58,6 +59,7 @@ def show_post(post_id: int):
 
     # handle top-level comments/replies
     form = NewReplyForm()
+    form.language_id.choices = languages_for_form()
     if current_user.is_authenticated and current_user.verified and form.validate_on_submit():
 
         if not post.comments_enabled:
@@ -98,11 +100,12 @@ def show_post(post_id: int):
         reply = PostReply(user_id=current_user.id, post_id=post.id, community_id=community.id, body=form.body.data,
                           body_html=markdown_to_html(form.body.data), body_html_safe=True,
                           from_bot=current_user.bot, nsfw=post.nsfw, nsfl=post.nsfl,
-                          notify_author=form.notify_author.data, instance_id=1)
+                          notify_author=form.notify_author.data, language_id=form.language_id.data, instance_id=1)
 
         post.last_active = community.last_active = utcnow()
         post.reply_count += 1
         community.post_reply_count += 1
+        current_user.language_id = form.language_id.data
 
         db.session.add(reply)
         db.session.commit()
@@ -163,7 +166,11 @@ def show_post(post_id: int):
                 'href': post.author.public_url(),
                 'name': post.author.mention_tag(),
                 'type': 'Mention'
-            }]
+            }],
+            'language': {
+                'identifier': reply.language_code(),
+                'name': reply.language_name()
+            }
         }
         create_json = {
             'type': 'Create',
@@ -222,6 +229,7 @@ def show_post(post_id: int):
     else:
         replies = post_replies(post.id, sort)
         form.notify_author.data = True
+        form.language_id.data = current_user.language_id if current_user.language_id else english_language_id()
 
     og_image = post.image.source_url if post.image_id else None
     description = shorten_string(markdown_to_text(post.body), 150) if post.body else None
@@ -588,6 +596,7 @@ def add_reply(post_id: int, comment_id: int):
         return redirect(url_for('activitypub.post_ap', post_id=post_id))
 
     form = NewReplyForm()
+    form.language_id.choices = languages_for_form()
     if form.validate_on_submit():
         if reply_already_exists(user_id=current_user.id, post_id=post.id, parent_id=in_reply_to.id, body=form.body.data):
             if in_reply_to.depth <= constants.THREAD_CUTOFF_DEPTH:
@@ -617,11 +626,12 @@ def add_reply(post_id: int, comment_id: int):
 
         current_user.last_seen = utcnow()
         current_user.ip_address = ip_address()
+        current_user.language_id = form.language_id.data
         reply = PostReply(user_id=current_user.id, post_id=post.id, parent_id=in_reply_to.id, depth=in_reply_to.depth + 1,
                           community_id=post.community.id, body=form.body.data,
                           body_html=markdown_to_html(form.body.data), body_html_safe=True,
                           from_bot=current_user.bot, nsfw=post.nsfw, nsfl=post.nsfl,
-                          notify_author=form.notify_author.data, instance_id=1)
+                          notify_author=form.notify_author.data, instance_id=1, language_id=form.language_id.data)
         if reply.body:
             for blocked_phrase in blocked_phrases():
                 if blocked_phrase in reply.body:
@@ -761,6 +771,7 @@ def add_reply(post_id: int, comment_id: int):
             return redirect(url_for('post.continue_discussion', post_id=post_id, comment_id=reply.parent_id))
     else:
         form.notify_author.data = True
+        form.language_id.data = current_user.language_id if current_user.language_id else english_language_id()
 
         return render_template('post/add_reply.html', title=_('Discussing %(title)s', title=post.title), post=post,
                                is_moderator=is_moderator, form=form, comment=in_reply_to, markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
@@ -828,6 +839,8 @@ def post_edit_discussion_post(post_id: int):
             form.nsfl.data = True
             form.nsfw.render_kw = {'disabled': True}
 
+        form.language_id.choices = languages_for_form()
+
         if form.validate_on_submit():
             save_post(form, post, 'discussion')
             post.community.last_active = utcnow()
@@ -848,6 +861,7 @@ def post_edit_discussion_post(post_id: int):
             form.nsfw.data = post.nsfw
             form.nsfl.data = post.nsfl
             form.sticky.data = post.sticky
+            form.language_id.data = post.language_id
             if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
                 form.sticky.render_kw = {'disabled': True}
             return render_template('post/post_edit_discussion.html', title=_('Edit post'), form=form, post=post,
@@ -885,6 +899,8 @@ def post_edit_image_post(post_id: int):
             form.nsfw.render_kw = {'disabled': True}
 
         old_url = post.url
+
+        form.language_id.choices = languages_for_form()
 
         if form.validate_on_submit():
             save_post(form, post, 'image')
@@ -929,6 +945,7 @@ def post_edit_image_post(post_id: int):
             form.nsfw.data = post.nsfw
             form.nsfl.data = post.nsfl
             form.sticky.data = post.sticky
+            form.language_id.data = post.language_id
             if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
                 form.sticky.render_kw = {'disabled': True}
             return render_template('post/post_edit_image.html', title=_('Edit post'), form=form, post=post,
@@ -966,6 +983,8 @@ def post_edit_link_post(post_id: int):
             form.nsfw.render_kw = {'disabled': True}
 
         old_url = post.url
+
+        form.language_id.choices = languages_for_form()
 
         if form.validate_on_submit():
             save_post(form, post, 'link')
@@ -1010,6 +1029,7 @@ def post_edit_link_post(post_id: int):
             form.nsfw.data = post.nsfw
             form.nsfl.data = post.nsfl
             form.sticky.data = post.sticky
+            form.language_id.data = post.language_id
             if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
                 form.sticky.render_kw = {'disabled': True}
             return render_template('post/post_edit_link.html', title=_('Edit post'), form=form, post=post,
@@ -1047,6 +1067,8 @@ def post_edit_video_post(post_id: int):
             form.nsfw.render_kw = {'disabled': True}
 
         old_url = post.url
+
+        form.language_id.choices = languages_for_form()
 
         if form.validate_on_submit():
             save_post(form, post, 'video')
@@ -1091,6 +1113,7 @@ def post_edit_video_post(post_id: int):
             form.nsfw.data = post.nsfw
             form.nsfl.data = post.nsfl
             form.sticky.data = post.sticky
+            form.language_id.data = post.language_id
             if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
                 form.sticky.render_kw = {'disabled': True}
             return render_template('post/post_edit_video.html', title=_('Edit post'), form=form, post=post,
@@ -1126,7 +1149,11 @@ def federate_post_update(post):
         'stickied': post.sticky,
         'published': ap_datetime(post.posted_at),
         'updated': ap_datetime(post.edited_at),
-        'audience': post.community.ap_profile_id
+        'audience': post.community.ap_profile_id,
+        'language': {
+            'identifier': post.language_code(),
+            'name': post.language_name()
+        }
     }
     update_json = {
         'id': f"https://{current_app.config['SERVER_NAME']}/activities/update/{gibberish(15)}",
@@ -1487,6 +1514,7 @@ def post_reply_edit(post_id: int, comment_id: int):
     else:
         comment = None
     form = NewReplyForm()
+    form.language_id.choices = languages_for_form()
     if post_reply.user_id == current_user.id or post.community.is_moderator():
         if form.validate_on_submit():
             post_reply.body = form.body.data
@@ -1494,6 +1522,7 @@ def post_reply_edit(post_id: int, comment_id: int):
             post_reply.notify_author = form.notify_author.data
             post.community.last_active = utcnow()
             post_reply.edited_at = utcnow()
+            post_reply.language_id = form.language_id.data
             db.session.commit()
             flash(_('Your changes have been saved.'), 'success')
 
@@ -1528,6 +1557,10 @@ def post_reply_edit(post_id: int, comment_id: int):
                     'audience': post.community.public_url(),
                     'contentMap': {
                         'en': post_reply.body_html
+                    },
+                    'language': {
+                        'identifier': post_reply.language_code(),
+                        'name': post_reply.language_name()
                     }
                 }
                 update_json = {
@@ -1599,6 +1632,7 @@ def post_reply_edit(post_id: int, comment_id: int):
         else:
             form.body.data = post_reply.body
             form.notify_author.data = post_reply.notify_author
+            form.language_id.data = post_reply.language_id
             return render_template('post/post_reply_edit.html', title=_('Edit comment'), form=form, post=post, post_reply=post_reply,
                                    comment=comment, markdown_editor=current_user.markdown_editor, moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()), community=post.community,

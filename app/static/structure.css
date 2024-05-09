@@ -1376,4 +1376,22 @@ h1 .warning_badge {
   max-height: 90vh;
 }
 
+@media (min-width: 768px) {
+  .post_language_chooser label {
+    display: none;
+  }
+  .post_language_chooser select {
+    max-width: 150px;
+    float: right;
+    margin-top: -5px;
+  }
+}
+
+@media (min-width: 768px) {
+  .language-float-right {
+    max-width: 150px;
+    float: right;
+  }
+}
+
 /*# sourceMappingURL=structure.css.map */

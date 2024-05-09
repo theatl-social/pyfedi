@@ -944,10 +944,9 @@ class Post(db.Model):
     up_votes = db.Column(db.Integer, default=0)
     down_votes = db.Column(db.Integer, default=0)
     ranking = db.Column(db.Integer, default=0, index=True)                          # used for 'hot' ranking
-    language = db.Column(db.String(10))
     edited_at = db.Column(db.DateTime)
     reports = db.Column(db.Integer, default=0)                          # how many times this post has been reported. Set to -1 to ignore reports
-    language_id = db.Column(db.Integer, index=True)
+    language_id = db.Column(db.Integer, db.ForeignKey('language.id'), index=True)
     cross_posts = db.Column(MutableList.as_mutable(ARRAY(db.Integer)))
     tags = db.relationship('Tag', lazy='dynamic', secondary=post_tag, backref=db.backref('posts', lazy='dynamic'))
 
@@ -962,6 +961,7 @@ class Post(db.Model):
     author = db.relationship('User', lazy='joined', overlaps='posts', foreign_keys=[user_id])
     community = db.relationship('Community', lazy='joined', overlaps='posts', foreign_keys=[community_id])
     replies = db.relationship('PostReply', lazy='dynamic', backref='post')
+    language = db.relationship('Language', foreign_keys=[language_id])
 
     def is_local(self):
         return self.ap_id is None or self.ap_id.startswith('https://' + current_app.config['SERVER_NAME'])
@@ -1006,6 +1006,18 @@ class Post(db.Model):
                                                                       NotificationSubscription.type == NOTIF_POST).first()
         return existing_notification is not None
 
+    def language_code(self):
+        if self.language_id:
+            return self.language.code
+        else:
+            return 'en'
+
+    def language_name(self):
+        if self.language_id:
+            return self.language.name
+        else:
+            return 'English'
+
 
 class PostReply(db.Model):
     query_class = FullTextSearchQuery
@@ -1033,7 +1045,7 @@ class PostReply(db.Model):
     up_votes = db.Column(db.Integer, default=0)
     down_votes = db.Column(db.Integer, default=0)
     ranking = db.Column(db.Float, default=0.0, index=True)  # used for 'hot' sorting
-    language = db.Column(db.String(10))
+    language_id = db.Column(db.Integer, db.ForeignKey('language.id'), index=True)
     edited_at = db.Column(db.DateTime)
     reports = db.Column(db.Integer, default=0)  # how many times this post has been reported. Set to -1 to ignore reports
 
@@ -1045,6 +1057,19 @@ class PostReply(db.Model):
 
     author = db.relationship('User', lazy='joined', foreign_keys=[user_id], single_parent=True, overlaps="post_replies")
     community = db.relationship('Community', lazy='joined', overlaps='replies', foreign_keys=[community_id])
+    language = db.relationship('Language', foreign_keys=[language_id])
+
+    def language_code(self):
+        if self.language_id:
+            return self.language.code
+        else:
+            return 'en'
+
+    def language_name(self):
+        if self.language_id:
+            return self.language.name
+        else:
+            return 'English'
 
     def is_local(self):
         return self.ap_id is None or self.ap_id.startswith('https://' + current_app.config['SERVER_NAME'])

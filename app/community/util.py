@@ -216,6 +216,8 @@ def save_post(form, post: Post, type: str):
     post.nsfw = form.nsfw.data
     post.nsfl = form.nsfl.data
     post.notify_author = form.notify_author.data
+    post.language_id = form.language_id.data
+    current_user.language_id = form.language_id.data
     if type == '' or type == 'discussion':
         post.title = form.discussion_title.data
         post.body = form.discussion_body.data

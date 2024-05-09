@@ -100,6 +100,7 @@ class CreateDiscussionForm(FlaskForm):
     nsfw = BooleanField(_l('NSFW'))
     nsfl = BooleanField(_l('Gore/gross'))
     notify_author = BooleanField(_l('Notify about replies'))
+    language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Save'))
 
 
@@ -113,6 +114,7 @@ class CreateLinkForm(FlaskForm):
     nsfw = BooleanField(_l('NSFW'))
     nsfl = BooleanField(_l('Gore/gross'))
     notify_author = BooleanField(_l('Notify about replies'))
+    language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Save'))
 
     def validate(self, extra_validators=None) -> bool:
@@ -133,6 +135,7 @@ class CreateVideoForm(FlaskForm):
     nsfw = BooleanField(_l('NSFW'))
     nsfl = BooleanField(_l('Gore/gross'))
     notify_author = BooleanField(_l('Notify about replies'))
+    language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Save'))
 
     def validate(self, extra_validators=None) -> bool:
@@ -153,6 +156,7 @@ class CreateImageForm(FlaskForm):
     nsfw = BooleanField(_l('NSFW'))
     nsfl = BooleanField(_l('Gore/gross'))
     notify_author = BooleanField(_l('Notify about replies'))
+    language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Save'))
 
     def validate(self, extra_validators=None) -> bool:

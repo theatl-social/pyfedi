@@ -156,7 +156,11 @@ def post_to_activity(post: Post, community: Community):
                 "sensitive": post.nsfw or post.nsfl,
                 "published": ap_datetime(post.created_at),
                 "stickied": post.sticky,
-                "audience": f"https://{current_app.config['SERVER_NAME']}/c/{community.name}"
+                "audience": f"https://{current_app.config['SERVER_NAME']}/c/{community.name}",
+                'language': {
+                    'identifier': post.language_code(),
+                    'name': post.language_name()
+                }
             },
             "cc": [
                 f"https://{current_app.config['SERVER_NAME']}/c/{community.name}"
@@ -756,6 +760,11 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
                         domain.post_count += 1
                         post.domain = domain
 
+        if 'language' in post_json:
+            language = find_language_or_create(post_json['language']['identifier'], post_json['language']['name'])
+            if language:
+                post.language_id = language.id
+
         if post is not None:
             if 'image' in post_json and post.image is None:
                 image = File(source_url=post_json['image']['url'])
@@ -1312,6 +1321,11 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
         elif 'content' in request_json['object']:   # Kbin
             post_reply.body_html = allowlist_html(request_json['object']['content'])
             post_reply.body = ''
+        if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
+            language = find_language_or_create(request_json['object']['language']['identifier'],
+                                               request_json['object']['language']['name'])
+            post_reply.language_id = language.id
+
         if post_id is not None:
             # Discard post_reply if it contains certain phrases. Good for stopping spam floods.
             if post_reply.body:
@@ -1579,6 +1593,10 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
     elif 'content' in request_json['object']:
         reply.body_html = allowlist_html(request_json['object']['content'])
         reply.body = ''
+    # Language
+    if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
+        language = find_language_or_create(request_json['object']['language']['identifier'], request_json['object']['language']['name'])
+        reply.language_id = language.id
     reply.edited_at = utcnow()
     db.session.commit()
 
@@ -1636,7 +1654,7 @@ def update_post_from_activity(post: Post, request_json: dict):
             db.session.add(image)
             post.image = image
         elif is_video_url(post.url):
-            post.type == POST_TYPE_VIDEO
+            post.type = POST_TYPE_VIDEO
             image = File(source_url=post.url)
             db.session.add(image)
             post.image = image
@@ -2049,3 +2067,16 @@ def ensure_domains_match(activity: dict) -> bool:
 
     return False
 
+
+def can_edit(user_ap_id, post):
+    user = find_actor_or_create(user_ap_id, create_if_not_found=False)
+    if user:
+        if post.user_id == user.id:
+            return True
+        if post.community.is_moderator(user) or post.community.is_owner(user) or post.community.is_instance_admin(user):
+            return True
+    return False
+
+
+def can_delete(user_ap_id, post):
+    return can_edit(user_ap_id, post)

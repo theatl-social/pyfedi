@@ -21,11 +21,11 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
     upvote_post, delete_post_or_comment, community_members, \
     user_removed_from_remote_server, create_post, create_post_reply, update_post_reply_from_activity, \
     update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection, find_reported_object, \
-    process_report, ensure_domains_match
+    process_report, ensure_domains_match, can_edit, can_delete
 from app.utils import gibberish, get_setting, is_image_url, allowlist_html, render_template, \
     domain_from_url, markdown_to_html, community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
-    community_moderators, blocked_users
+    community_moderators
 import werkzeug.exceptions
 
 
@@ -933,17 +933,23 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                     if request_json['object']['type'] == 'Page':  # Editing a post
                         post = Post.query.filter_by(ap_id=request_json['object']['id']).first()
                         if post:
-                            update_post_from_activity(post, request_json)
-                            announce_activity_to_followers(post.community, post.author, request_json)
-                            activity_log.result = 'success'
+                            if can_edit(request_json['actor'], post):
+                                update_post_from_activity(post, request_json)
+                                announce_activity_to_followers(post.community, post.author, request_json)
+                                activity_log.result = 'success'
+                            else:
+                                activity_log.exception_message = 'Edit attempt denied'
                         else:
                             activity_log.exception_message = 'Post not found'
                     elif request_json['object']['type'] == 'Note':  # Editing a reply
                         reply = PostReply.query.filter_by(ap_id=request_json['object']['id']).first()
                         if reply:
-                            update_post_reply_from_activity(reply, request_json)
-                            announce_activity_to_followers(reply.community, reply.author, request_json)
-                            activity_log.result = 'success'
+                            if can_edit(request_json['actor'], reply):
+                                update_post_reply_from_activity(reply, request_json)
+                                announce_activity_to_followers(reply.community, reply.author, request_json)
+                                activity_log.result = 'success'
+                            else:
+                                activity_log.exception_message = 'Edit attempt denied'
                         else:
                             activity_log.exception_message = 'PostReply not found'
                 elif request_json['type'] == 'Delete':
@@ -954,28 +960,34 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                     post = Post.query.filter_by(ap_id=ap_id).first()
                     # Delete post
                     if post:
-                        if post.url and post.cross_posts is not None:
-                            old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
-                            post.cross_posts.clear()
-                            for ocp in old_cross_posts:
-                                if ocp.cross_posts is not None:
-                                    ocp.cross_posts.remove(post.id)
-                        post.delete_dependencies()
-                        post.community.post_count -= 1
-                        announce_activity_to_followers(post.community, post.author, request_json)
-                        db.session.delete(post)
-                        db.session.commit()
-                        activity_log.result = 'success'
+                        if can_delete(request_json['actor'], post):
+                            if post.url and post.cross_posts is not None:
+                                old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
+                                post.cross_posts.clear()
+                                for ocp in old_cross_posts:
+                                    if ocp.cross_posts is not None:
+                                        ocp.cross_posts.remove(post.id)
+                            post.delete_dependencies()
+                            post.community.post_count -= 1
+                            announce_activity_to_followers(post.community, post.author, request_json)
+                            db.session.delete(post)
+                            db.session.commit()
+                            activity_log.result = 'success'
+                        else:
+                            activity_log.exception_message = 'Delete attempt denied'
                     else:
                         # Delete PostReply
                         reply = PostReply.query.filter_by(ap_id=ap_id).first()
                         if reply:
-                            reply.body_html = '<p><em>deleted</em></p>'
-                            reply.body = 'deleted'
-                            reply.post.reply_count -= 1
-                            announce_activity_to_followers(reply.community, reply.author, request_json)
-                            db.session.commit()
-                            activity_log.result = 'success'
+                            if can_delete(request_json['actor'], reply):
+                                reply.body_html = '<p><em>deleted</em></p>'
+                                reply.body = 'deleted'
+                                reply.post.reply_count -= 1
+                                announce_activity_to_followers(reply.community, reply.author, request_json)
+                                db.session.commit()
+                                activity_log.result = 'success'
+                            else:
+                                activity_log.exception_message = 'Delete attempt denied'
                         else:
                             # Delete User
                             user = find_actor_or_create(ap_id, create_if_not_found=False)
@@ -1399,7 +1411,11 @@ def comment_ap(comment_id):
             'mediaType': 'text/html',
             'published': ap_datetime(reply.created_at),
             'distinguished': False,
-            'audience': reply.community.profile_id()
+            'audience': reply.community.profile_id(),
+            'language': {
+                'identifier': reply.language_code(),
+                'name': reply.language_name()
+            }
         }
         if reply.edited_at:
             reply_data['updated'] = ap_datetime(reply.edited_at)
