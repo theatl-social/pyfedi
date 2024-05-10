@@ -1296,22 +1296,22 @@ def post_delete(post_id: int):
         db.session.commit()
         flash(_('Post deleted.'))
 
-        if not community.local_only:
-            delete_json = {
-                'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
-                'type': 'Delete',
-                'actor': current_user.profile_id(),
-                'audience': post.community.profile_id(),
-                'to': [post.community.profile_id(), 'https://www.w3.org/ns/activitystreams#Public'],
-                'published': ap_datetime(utcnow()),
-                'cc': [
-                    current_user.followers_url()
-                ],
-                'object': post.ap_id,
-            }
-            if post.user_id != current_user.id:
-                delete_json['summary'] = 'Deleted by mod'
+        delete_json = {
+            'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+            'type': 'Delete',
+            'actor': current_user.profile_id(),
+            'audience': post.community.profile_id(),
+            'to': [post.community.profile_id(), 'https://www.w3.org/ns/activitystreams#Public'],
+            'published': ap_datetime(utcnow()),
+            'cc': [
+                current_user.followers_url()
+            ],
+            'object': post.ap_id,
+        }
+        if post.user_id != current_user.id:
+            delete_json['summary'] = 'Deleted by mod'
 
+        if not community.local_only:
             if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
                 success = post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
                                        current_user.ap_profile_id + '#main-key')
@@ -1336,6 +1336,13 @@ def post_delete(post_id: int):
                     if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(
                             instance.domain):
                         send_to_remote_instance(instance.id, post.community.id, announce)
+
+        followers = UserFollower.query.filter_by(local_user_id=post.user_id)
+        if followers:
+            instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower, UserFollower.remote_user_id == User.id)
+            instances = instances.filter(UserFollower.local_user_id == post.user_id)
+            for i in instances:
+                post_request(i.inbox, delete_json, current_user.private_key, current_user.ap_profile_id + '#main-key')
 
     return redirect(url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not None else community.name))
 
