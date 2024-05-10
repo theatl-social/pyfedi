@@ -20,7 +20,7 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_
     POST_TYPE_ARTICLE, POST_TYPE_VIDEO, NOTIF_REPLY, NOTIF_POST
 from app.models import Post, PostReply, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, InstanceBlock, Report, Site, Community, \
-    Topic, User, Instance, NotificationSubscription
+    Topic, User, Instance, NotificationSubscription, UserFollower
 from app.post import bp
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
@@ -852,6 +852,7 @@ def post_edit_discussion_post(post_id: int):
             # federate edit
             if not post.community.local_only:
                 federate_post_update(post)
+            federate_post_edit_to_user_followers(post)
 
             return redirect(url_for('activitypub.post_ap', post_id=post.id))
         else:
@@ -935,6 +936,7 @@ def post_edit_image_post(post_id: int):
 
             if not post.community.local_only:
                 federate_post_update(post)
+            federate_post_edit_to_user_followers(post)
 
             return redirect(url_for('activitypub.post_ap', post_id=post.id))
         else:
@@ -1019,6 +1021,7 @@ def post_edit_link_post(post_id: int):
 
             if not post.community.local_only:
                 federate_post_update(post)
+            federate_post_edit_to_user_followers(post)
 
             return redirect(url_for('activitypub.post_ap', post_id=post.id))
         else:
@@ -1103,6 +1106,7 @@ def post_edit_video_post(post_id: int):
 
             if not post.community.local_only:
                 federate_post_update(post)
+            federate_post_edit_to_user_followers(post)
 
             return redirect(url_for('activitypub.post_ap', post_id=post.id))
         else:
@@ -1207,6 +1211,70 @@ def federate_post_update(post):
             if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(
                     instance.domain):
                 send_to_remote_instance(instance.id, post.community.id, announce)
+
+
+def federate_post_edit_to_user_followers(post):
+    followers = UserFollower.query.filter_by(local_user_id=post.user_id)
+    if not followers:
+        return
+
+    note = {
+        'type': 'Note',
+        'id': post.ap_id,
+        'inReplyTo': None,
+        'attributedTo': current_user.ap_profile_id,
+        'to': [
+            'https://www.w3.org/ns/activitystreams#Public'
+        ],
+        'cc': [
+            current_user.ap_followers_url
+        ],
+        'content': '',
+        'mediaType': 'text/html',
+        'attachment': [],
+        'commentsEnabled': post.comments_enabled,
+        'sensitive': post.nsfw,
+        'nsfl': post.nsfl,
+        'stickied': post.sticky,
+        'published': ap_datetime(utcnow()),
+        'updated': ap_datetime(post.edited_at),
+        'language': {
+            'identifier': post.language_code(),
+            'name': post.language_name()
+        }
+    }
+    update = {
+        "id": f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}",
+        "actor": current_user.ap_profile_id,
+        "to": [
+            "https://www.w3.org/ns/activitystreams#Public"
+        ],
+        "cc": [
+            current_user.ap_followers_url
+        ],
+        "type": "Update",
+        "object": note,
+        '@context': default_context()
+    }
+    if post.type == POST_TYPE_ARTICLE:
+        note['content'] = '<p>' + post.title + '</p>'
+    elif post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO:
+        note['content'] = '<p><a href=' + post.url + '>' + post.title + '</a></p>'
+    elif post.type == POST_TYPE_IMAGE:
+        note['content'] = '<p>' + post.title + '</p>'
+        if post.image.id and post.image.source_url:
+            if post.image.alt_text:
+                note['attachment'] = [{'type': 'Document', 'url': post.image.source_url, 'name': post.image.alt_text}]
+            else:
+                note['attachment'] = [{'type': 'Document', 'url': post.image.source_url}]
+
+    if post.body_html:
+        note['content'] = note['content'] + '<p>' + post.body_html + '</p>'
+
+    instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower, UserFollower.remote_user_id == User.id)
+    instances = instances.filter(UserFollower.local_user_id == post.user_id)
+    for i in instances:
+        post_request(i.inbox, update, current_user.private_key, current_user.ap_profile_id + '#main-key')
 
 
 @bp.route('/post/<int:post_id>/delete', methods=['GET', 'POST'])
