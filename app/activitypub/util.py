@@ -1451,6 +1451,8 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
             post.url = request_json['object']['attachment'][0]['href']              # Lemmy
         if request_json['object']['attachment'][0]['type'] == 'Document':
             post.url = request_json['object']['attachment'][0]['url']               # Mastodon
+        if request_json['object']['attachment'][0]['type'] == 'Image':
+            post.url = request_json['object']['attachment'][0]['url']               # PixelFed
         if post.url:
             if is_image_url(post.url):
                 post.type = POST_TYPE_IMAGE
@@ -1636,6 +1638,8 @@ def update_post_from_activity(post: Post, request_json: dict):
             post.url = request_json['object']['attachment'][0]['href']              # Lemmy
         if request_json['object']['attachment'][0]['type'] == 'Document':
             post.url = request_json['object']['attachment'][0]['url']               # Mastodon
+        if request_json['object']['attachment'][0]['type'] == 'Image':
+            post.url = request_json['object']['attachment'][0]['url']               # PixelFed
     if post.url == '':
         post.type = POST_TYPE_ARTICLE
     if (post.url and post.url != old_url) or (post.url == '' and old_url != ''):
