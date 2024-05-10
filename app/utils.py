@@ -257,14 +257,18 @@ def microblog_content_to_title(html: str) -> str:
 
     period_index = title.find('.')
     question_index = title.find('?')
+    exclamation_index = title.find('!')
 
     # Find the earliest occurrence of either '.' or '?'
     end_index = min(period_index if period_index != -1 else float('inf'),
-                    question_index if question_index != -1 else float('inf'))
+                    question_index if question_index != -1 else float('inf'),
+                    exclamation_index if exclamation_index != -1 else float('inf'))
 
     if end_index != -1:
         if question_index != -1:
             end_index += 1  # Add the ? back on
+        if exclamation_index != -1:
+            end_index += 1  # Add the ! back on
         title = title[:end_index]
 
     if len(title) > 150:
