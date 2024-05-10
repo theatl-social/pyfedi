@@ -83,6 +83,7 @@ def local_posts():
 def local_comments():
     return db.session.execute(text('SELECT COUNT(id) as c FROM "post_reply" WHERE instance_id = 1')).scalar()
 
+
 def local_communities():
     return db.session.execute(text('SELECT COUNT(id) as c FROM "community" WHERE instance_id = 1')).scalar()
 
