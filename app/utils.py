@@ -259,10 +259,15 @@ def microblog_content_to_title(html: str) -> str:
     question_index = title.find('?')
     exclamation_index = title.find('!')
 
-    # Find the earliest occurrence of either '.' or '?'
+    # Find the earliest occurrence of either '.' or '?' or '!'
     end_index = min(period_index if period_index != -1 else float('inf'),
                     question_index if question_index != -1 else float('inf'),
                     exclamation_index if exclamation_index != -1 else float('inf'))
+
+    # give up if there's no recognised punctuation
+    if end_index == float('inf'):
+        title = '(content in post body)'
+        return title
 
     if end_index != -1:
         if question_index != -1:
