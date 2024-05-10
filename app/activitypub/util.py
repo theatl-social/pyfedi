@@ -659,7 +659,7 @@ def actor_json_to_model(activity_json, address, server):
                               ap_id=f"{address[1:].lower()}@{server.lower()}" if address.startswith('!') else f"{address}@{server}",
                               ap_public_url=activity_json['id'],
                               ap_profile_id=activity_json['id'].lower(),
-                              ap_followers_url=activity_json['followers'],
+                              ap_followers_url=activity_json['followers'] if 'followers' in activity_json else None,
                               ap_inbox_url=activity_json['endpoints']['sharedInbox'],
                               ap_outbox_url=activity_json['outbox'],
                               ap_featured_url=activity_json['featured'] if 'featured' in activity_json else '',
