@@ -15,7 +15,7 @@ from app.models import Post, Community, CommunityMember, User, PostReply, PostVo
     InstanceBlock, NotificationSubscription
 from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, FilterEditForm
-from app.user.utils import purge_user_then_delete
+from app.user.utils import purge_user_then_delete, unsubscribe_from_community
 from app.utils import get_setting, render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     is_image_url, ensure_directory_exists, gibberish, file_get_contents, community_membership, user_filters_home, \
     user_filters_posts, user_filters_replies, moderating_communities, joined_communities, theme_list, blocked_instances, \
@@ -471,7 +471,7 @@ def delete_account():
 
         # to verify the deletes, remote servers will GET /u/<actor> so we can't fully delete the account until the POSTs are done
         current_user.banned = True
-
+        current_user.email = f'deleted_{current_user.id}@deleted.com'
         db.session.commit()
 
         if current_app.debug:
@@ -495,7 +495,13 @@ def delete_account():
 def send_deletion_requests(user_id):
     user = User.query.get(user_id)
     if user:
-        instances = Instance.query.all()
+        # unsubscribe
+        communities = CommunityMember.query.filter_by(user_id=user_id).all()
+        for membership in communities:
+            community = Community.query.get(membership.community_id)
+            unsubscribe_from_community(community, user)
+
+        instances = Instance.query.filter(Instance.dormant == False).all()
         payload = {
             "@context": default_context(),
             "actor": user.profile_id(),

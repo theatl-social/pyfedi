@@ -1,3 +1,4 @@
+from time import sleep
 from typing import List, Tuple
 
 from flask import request, abort, g, current_app, json, flash, render_template
@@ -30,23 +31,24 @@ def unsubscribe_from_everything_then_delete_task(user_id):
 
         # federate deletion of account
         if user.is_local():
-            instances = Instance.query.all()
-            site = Site.query.get(1)
+            instances = Instance.query.filter(Instance.dormant == False).all()
             payload = {
                 "@context": default_context(),
-                "actor": user.ap_profile_id,
-                "id": f"{user.ap_profile_id}#delete",
-                "object": user.ap_profile_id,
+                "actor": user.profile_id(),
+                "id": f"{user.profile_id()}#delete",
+                "object": user.profile_id(),
                 "to": [
                     "https://www.w3.org/ns/activitystreams#Public"
                 ],
                 "type": "Delete"
             }
             for instance in instances:
-                if instance.inbox and instance.id != 1:
-                    post_request(instance.inbox, payload, site.private_key,
-                                 f"https://{current_app.config['SERVER_NAME']}#main-key")
+                if instance.inbox and instance.online() and instance.id != 1:  # instance id 1 is always the current instance
+                    post_request(instance.inbox, payload, user.private_key, f"{user.profile_id()}#main-key")
 
+        sleep(5)
+
+        user.banned = True
         user.deleted = True
         user.delete_dependencies()
         db.session.commit()

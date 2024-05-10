@@ -69,7 +69,6 @@ def purge_user_then_delete_task(user_id):
         # federate deletion of account
         if user.is_local():
             instances = Instance.query.all()
-            site = Site.query.get(1)
             payload = {
                 "@context": default_context(),
                 "actor": user.ap_profile_id,
