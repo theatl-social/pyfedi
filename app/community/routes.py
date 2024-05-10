@@ -1177,7 +1177,7 @@ def community_ban_user(community_id: int, user_id: int):
         if not existing:
             new_ban = CommunityBan(community_id=community_id, user_id=user.id, banned_by=current_user.id,
                                    reason=form.reason.data)
-            if form.ban_until.data is not None and form.ban_until.data < utcnow().date():
+            if form.ban_until.data is not None and form.ban_until.data > utcnow().date():
                 new_ban.ban_until = form.ban_until.data
             db.session.add(new_ban)
             db.session.commit()
