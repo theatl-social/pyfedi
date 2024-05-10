@@ -1268,7 +1268,7 @@ def community_unban_user(community_id: int, user_id: int):
         ...
         # todo: send chatmessage to remote user and federate it
 
-    return redirect(url_for('community.community_moderate_banned', actor=community.link()))
+    return redirect(url_for('community.community_moderate_subscribers', actor=community.link()))
 
 
 @bp.route('/<int:community_id>/notification', methods=['GET', 'POST'])
