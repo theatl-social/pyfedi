@@ -685,6 +685,7 @@ def admin_users_add():
 
         from app.activitypub.signature import RsaKeys
         user.verified = True
+        user.instance_id = 1
         user.last_seen = utcnow()
         private_key, public_key = RsaKeys.generate_keypair()
         user.private_key = private_key
