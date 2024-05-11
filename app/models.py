@@ -172,7 +172,8 @@ class ChatMessage(db.Model):
 
 class Tag(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(256))
+    name = db.Column(db.String(256), index=True)    # lowercase version of tag, e.g. solarstorm
+    display_as = db.Column(db.String(256))          # Version of tag with uppercase letters, e.g. SolarStorm
 
 
 class Language(db.Model):

@@ -13,7 +13,7 @@ from sqlalchemy import text, func
 from app import db, cache, constants, celery
 from app.models import User, Post, Community, BannedInstances, File, PostReply, AllowedInstances, Instance, utcnow, \
     PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation, \
-    Language
+    Language, Tag
 from app.activitypub.signature import signed_get_request
 import time
 import base64
@@ -372,6 +372,23 @@ def find_language_or_create(code: str, name: str) -> Language:
         new_language = Language(code=code, name=name)
         db.session.add(new_language)
         return new_language
+
+
+def find_hashtag_or_create(hashtag: str) -> Tag:
+    if hashtag is None or hashtag == '':
+        return None
+
+    hashtag = hashtag.strip()
+    if hashtag[0] == '#':
+        hashtag = hashtag[1:]
+
+    existing_tag = Tag.query.filter(Tag.name == hashtag.lower()).first()
+    if existing_tag:
+        return existing_tag
+    else:
+        new_tag = Tag(name=hashtag.lower(), display_as=hashtag)
+        db.session.add(new_tag)
+        return new_tag
 
 
 def extract_domain_and_actor(url_string: str):
@@ -764,6 +781,13 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
             language = find_language_or_create(post_json['language']['identifier'], post_json['language']['name'])
             if language:
                 post.language_id = language.id
+
+        if 'tag' in post_json:
+            for json_tag in post_json['tag']:
+                if json_tag['type'] == 'Hashtag':
+                    hashtag = find_hashtag_or_create(json_tag['name'])
+                    if hashtag:
+                        post.tags.append(hashtag)
 
         if post is not None:
             if 'image' in post_json and post.image is None:
@@ -1496,6 +1520,12 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
             language = find_language_or_create(request_json['object']['language']['identifier'],
                                                request_json['object']['language']['name'])
             post.language_id = language.id
+        if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
+            for json_tag in request_json['object']['tag']:
+                if json_tag['type'] == 'Hashtag':
+                    hashtag = find_hashtag_or_create(json_tag['name'])
+                    if hashtag:
+                        post.tags.append(hashtag)
         if 'image' in request_json['object'] and post.image is None:
             image = File(source_url=request_json['object']['image']['url'])
             db.session.add(image)
@@ -1721,6 +1751,13 @@ def update_post_from_activity(post: Post, request_json: dict):
         post.nsfl = True
     elif 'nsfl' in request_json['object']:
         post.nsfl = request_json['object']['nsfl']
+    if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
+        db.session.execute(text('DELETE FROM "post_tag" WHERE post_id = :post_id'), {'post_id': post.id})
+        for json_tag in request_json['object']['tag']:
+            if json_tag['type'] == 'Hashtag':
+                hashtag = find_hashtag_or_create(json_tag['name'])
+                if hashtag:
+                    post.tags.append(hashtag)
     post.comments_enabled = request_json['object']['commentsEnabled'] if 'commentsEnabled' in request_json['object'] else True
     post.edited_at = utcnow()
     db.session.commit()
