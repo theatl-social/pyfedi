@@ -55,7 +55,7 @@
         </form> -->
     </div>
 </div>
-{% if len(communities) > 0 %}
+{% if communities %}
     <div class="table-responsive-md mt-4">
         <table class="communities_table table table-striped table-hover w-100">
             <caption class="visually-hidden">{{ _('Communities') }}</caption>
@@ -85,7 +85,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for community in communities %}
+                {% for community in communities.items %}
                     <tr class="">
                         <td width="70">{% if current_user.is_authenticated %}
                                 {% if community_membership(current_user, community) in [SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER] %}
@@ -112,8 +112,20 @@
             </tbody>
         </table>
     </div>
+    <nav aria-label="Pagination" class="mt-4" role="navigation">
+            {% if prev_url %}
+                <a href="{{ prev_url }}" class="btn btn-primary" rel='nofollow'>
+                    <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
+                </a>
+            {% endif %}
+            {% if next_url %}
+                <a href="{{ next_url }}" class="btn btn-primary" rel='nofollow'>
+                    {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
+                </a>
+            {% endif %}
+    </nav>
 {% else %}
 <p>{{ _('There are no communities yet.') }}</p>
 {% endif %}
-<p><a href="/topics" class="btn btn-primary">{{ _('Browse topics') }}</a></p>
+<p class="mt-4"><a href="/topics" class="btn btn-primary">{{ _('Browse topics') }}</a></p>
 {% endblock %}
