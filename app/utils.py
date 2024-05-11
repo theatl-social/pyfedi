@@ -250,21 +250,31 @@ def microblog_content_to_title(html: str) -> str:
 
         title = ''
         for tag in soup.find_all('p'):
-            title = tag.get_text()
+            title = tag.get_text(separator=" ")
             break
     else:
+        html = html.replace('<', '.', 1)
         title = shorten_string(html, 160)
 
     period_index = title.find('.')
     question_index = title.find('?')
+    exclamation_index = title.find('!')
 
-    # Find the earliest occurrence of either '.' or '?'
+    # Find the earliest occurrence of either '.' or '?' or '!'
     end_index = min(period_index if period_index != -1 else float('inf'),
-                    question_index if question_index != -1 else float('inf'))
+                    question_index if question_index != -1 else float('inf'),
+                    exclamation_index if exclamation_index != -1 else float('inf'))
+
+    # give up if there's no recognised punctuation
+    if end_index == float('inf'):
+        title = '(content in post body)'
+        return title
 
     if end_index != -1:
-        if question_index != -1:
+        if question_index != -1 and question_index == end_index:
             end_index += 1  # Add the ? back on
+        if exclamation_index != -1 and exclamation_index == end_index:
+            end_index += 1  # Add the ! back on
         title = title[:end_index]
 
     if len(title) > 150:

@@ -83,6 +83,7 @@ def local_posts():
 def local_comments():
     return db.session.execute(text('SELECT COUNT(id) as c FROM "post_reply" WHERE instance_id = 1')).scalar()
 
+
 def local_communities():
     return db.session.execute(text('SELECT COUNT(id) as c FROM "community" WHERE instance_id = 1')).scalar()
 
@@ -176,8 +177,6 @@ def post_to_activity(post: Post, community: Community):
     }
     if post.edited_at is not None:
         activity_data["object"]["object"]["updated"] = ap_datetime(post.edited_at)
-    if post.language is not None:
-        activity_data["object"]["object"]["language"] = {"identifier": post.language}
     if (post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO) and post.url is not None:
         activity_data["object"]["object"]["attachment"] = [{"href": post.url, "type": "Link"}]
     if post.image_id is not None:
@@ -1474,6 +1473,8 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
             post.url = request_json['object']['attachment'][0]['href']              # Lemmy
         if request_json['object']['attachment'][0]['type'] == 'Document':
             post.url = request_json['object']['attachment'][0]['url']               # Mastodon
+        if request_json['object']['attachment'][0]['type'] == 'Image':
+            post.url = request_json['object']['attachment'][0]['url']               # PixelFed
         if post.url:
             if is_image_url(post.url):
                 post.type = POST_TYPE_IMAGE
@@ -1665,6 +1666,8 @@ def update_post_from_activity(post: Post, request_json: dict):
             post.url = request_json['object']['attachment'][0]['href']              # Lemmy
         if request_json['object']['attachment'][0]['type'] == 'Document':
             post.url = request_json['object']['attachment'][0]['url']               # Mastodon
+        if request_json['object']['attachment'][0]['type'] == 'Image':
+            post.url = request_json['object']['attachment'][0]['url']               # PixelFed
     if post.url == '':
         post.type = POST_TYPE_ARTICLE
     if (post.url and post.url != old_url) or (post.url == '' and old_url != ''):
