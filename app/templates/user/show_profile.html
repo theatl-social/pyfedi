@@ -64,8 +64,8 @@
                 {% endif %}
             </h1>
         {% endif %}
+        <div class="profile_action_buttons">
         {% if current_user.is_authenticated and current_user != user %}
-            <div class="profile_action_buttons">
                 <a class="btn btn-primary" href="{{ url_for('chat.new_message', to=user.id) }}" rel="nofollow" aria-label="{{ _('Send message') }}">{{ _('Send message') }}</a>
                 {% if user.matrix_user_id %}
                     <a class="btn btn-primary" href="https://matrix.to/#/{{ user.matrix_user_id }}" rel="nofollow" aria-label="{{ _('Send message with matrix chat') }}">{{ _('Send message using Matrix') }}</a>
@@ -76,8 +76,12 @@
                     <a class="btn btn-primary confirm_first" href="{{ url_for('user.block_profile', actor=user.link()) }}" rel="nofollow">{{ _('Block') }}</a>
                 {% endif %}
                 <a class="btn btn-primary" href="{{ url_for('user.report_profile', actor=user.link()) }}" rel="nofollow">{{ _('Report') }}</a>
-            </div>
         {% endif %}
+        {% if user.is_local() %}
+               <a class="btn btn-primary" href="{{ url_for('user.mastodon_redirect', actor=user.link()) }}" rel="nofollow">{{ _('Follow on Mastodon') }}</a>
+        {% endif %}
+
+        </div>
         <p class="small">{{ _('Joined') }}: {{ moment(user.created).fromNow(refresh=True) }}<br />
             {% if user.bot %}
                 {{ _('Bot Account') }}<br />

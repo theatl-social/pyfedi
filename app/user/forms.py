@@ -88,14 +88,20 @@ class ReportUserForm(FlaskForm):
 
 
 class FilterEditForm(FlaskForm):
-    title = StringField(_l('Name'), validators={DataRequired(), Length(min=3, max=50)})
+    title = StringField(_l('Name'), validators=[DataRequired(), Length(min=3, max=50)])
     filter_home = BooleanField(_l('Home feed'), default=True)
     filter_posts = BooleanField(_l('Posts in communities'))
     filter_replies = BooleanField(_l('Comments on posts'))
     hide_type_choices = [(0, _l('Make semi-transparent')), (1, _l('Hide completely'))]
     hide_type = RadioField(_l('Action to take'), choices=hide_type_choices, default=1, coerce=int)
     keywords = TextAreaField(_l('Keywords that trigger this filter'),
-                         render_kw={'placeholder': 'One keyword or phrase per line', 'rows': 3},
-                         validators={DataRequired(), Length(min=3, max=500)})
-    expire_after = DateField(_l('Expire after'), validators={Optional()})
+                            render_kw={'placeholder': 'One keyword or phrase per line', 'rows': 3},
+                            validators=[DataRequired(), Length(min=3, max=500)])
+    expire_after = DateField(_l('Expire after'), validators=[Optional()])
     submit = SubmitField(_l('Save'))
+
+
+class FollowOnMastodonForm(FlaskForm):
+    instance_url = StringField(_l('Your mastodon instance:'), validators=[DataRequired(), Length(min=3, max=50)],
+                               render_kw={'placeholder': 'e.g. mastodon.social'})
+    submit = SubmitField(_l('View profile in Mastodon'))
