@@ -545,6 +545,9 @@ class Community(db.Model):
                 return True
         return False
 
+    def loop_videos(self) -> bool:
+        return 'gifs' in self.name
+
     def delete_dependencies(self):
         for post in self.posts:
             post.delete_dependencies()

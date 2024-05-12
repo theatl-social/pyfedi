@@ -1321,6 +1321,24 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
         activity_log.result = 'ignored'
         return None
     post_id, parent_comment_id, root_id = find_reply_parent(in_reply_to)
+
+    # special case: add comment from auto-tldr bot to post body if body is empty
+    if post_id and not parent_comment_id and not root_id and user.ap_id == 'autotldr@lemmings.world':
+        post = Post.query.get(post_id)
+        if post and post.body_html == '':
+            if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
+                                                        'mediaType' in request_json['object']['source'] and \
+                                               request_json['object']['source']['mediaType'] == 'text/markdown':
+                body = request_json['object']['source']['content']
+                # sometimes the bot includes its content inside spoiler tags, sometimes not. This is an attempt to make things look consistent.
+                if not '::: spoiler' in body:
+                    post.body = "🤖 I'm a bot that provides automatic summaries for articles:\n::: spoiler Click here to see the summary\n" + body + '\n:::'
+                else:
+                    post.body = body
+                post.body_html = markdown_to_html(post.body) + '<small><span class="render_username">Generated using AI by: <a href="/u/autotldr@lemmings.world" title="AutoTL;DR">AutoTL;DR</a></span></small>'
+                db.session.commit()
+                return None
+
     if post_id or parent_comment_id or root_id:
         # set depth to +1 of the parent depth
         if parent_comment_id:
