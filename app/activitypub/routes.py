@@ -1080,6 +1080,8 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                         user.instance.last_seen = utcnow()
                         # user.instance.ip_address = ip_address
                         user.instance.dormant = False
+                        user.instance.gone_forever = False
+                        user.instance.failures = 0
             else:
                 activity_log.exception_message = 'Instance blocked'
 

@@ -656,7 +656,7 @@ def send_to_remote_instance_task(instance_id: int, community_id: int, payload):
             instance.failures += 1
             instance.most_recent_attempt = utcnow()
             instance.start_trying_again = utcnow() + timedelta(seconds=instance.failures ** 4)
-            if instance.failures > 2:
+            if instance.failures > 10:
                 instance.dormant = True
         db.session.commit()
 
