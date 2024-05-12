@@ -29,6 +29,13 @@
             </h1>
         {% elif user.avatar_image() != '' %}
             <div class="row">
+                <nav aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
+                  <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
+                    <li class="breadcrumb-item"><a href="/people">{{ _('People') }}</a></li>
+                    <li class="breadcrumb-item active">{{ user.display_name()|shorten }}</li>
+                  </ol>
+                </nav>
                 <div class="col-2">
                     {% if low_bandwidth %}
                         <img class="community_icon_big rounded-circle" src="{{ user.avatar_image() }}" alt="{{ _('Profile pic') }}" />
@@ -78,7 +85,7 @@
                 <a class="btn btn-primary" href="{{ url_for('user.report_profile', actor=user.link()) }}" rel="nofollow">{{ _('Report') }}</a>
         {% endif %}
         {% if user.is_local() %}
-               <a class="btn btn-primary" href="{{ url_for('user.mastodon_redirect', actor=user.link()) }}" rel="nofollow">{{ _('Follow on Mastodon') }}</a>
+               <a class="btn btn-primary" href="{{ url_for('user.mastodon_redirect', actor=user.link()) }}" rel="nofollow"><img src="/static/images/mastodon_white.png" width="25" height="25"> {{ _('Follow on Mastodon') }}</a>
         {% endif %}
 
         </div>
