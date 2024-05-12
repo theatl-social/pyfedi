@@ -810,7 +810,7 @@ def user_email_notifs_unsubscribe(user_id, token):
 @bp.route('/u/<actor>/mastodon_redirect', methods=['GET', 'POST'])
 def mastodon_redirect(actor):
     actor = actor.strip()
-    user = User.query.filter_by(user_name=actor, deleted=False).first()
+    user = User.query.filter_by(user_name=actor, deleted=False, ap_id=None).first()
     if user and user.is_local():
         form = FollowOnMastodonForm()
         if form.validate_on_submit():
