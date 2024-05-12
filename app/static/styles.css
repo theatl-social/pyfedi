@@ -774,6 +774,14 @@ div.navbar {
   border: dotted 2px transparent;
 }
 
+.post_tags {
+  list-style: none;
+  padding-left: 0;
+}
+.post_tags .post_tag {
+  display: inline-block;
+}
+
 /* high contrast */
 @media (prefers-contrast: more) {
   :root {

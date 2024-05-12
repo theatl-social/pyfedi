@@ -46,6 +46,8 @@
                         <a href="#" aria-hidden="true" class="markdown_editor_enabler create_post_markdown_editor_enabler" data-id="image_body">{{ _('Enable markdown editor') }}</a>
                   {% endif %}
               {% endif %}
+            {{ render_field(form.tags) }}
+            <small class="field_hint">{{ _('Separate each tag with a comma.') }}</small>
 
             <div class="row mt-4">
                 <div class="col-md-3">

@@ -10,14 +10,15 @@ from pillow_heif import register_heif_opener
 
 from app import db, cache, celery
 from app.activitypub.signature import post_request, default_context
-from app.activitypub.util import find_actor_or_create, actor_json_to_model, post_json_to_model, ensure_domains_match
+from app.activitypub.util import find_actor_or_create, actor_json_to_model, post_json_to_model, ensure_domains_match, \
+    find_hashtag_or_create
 from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO, NOTIF_POST
 from app.models import Community, File, BannedInstances, PostReply, PostVote, Post, utcnow, CommunityMember, Site, \
-    Instance, Notification, User, ActivityPubLog, NotificationSubscription, Language
+    Instance, Notification, User, ActivityPubLog, NotificationSubscription, Language, Tag
 from app.utils import get_request, gibberish, markdown_to_html, domain_from_url, allowlist_html, \
     is_image_url, ensure_directory_exists, inbox_domain, post_ranking, shorten_string, parse_page, \
     remove_tracking_from_link, ap_datetime, instance_banned, blocked_phrases
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, text
 import os
 
 
@@ -384,7 +385,10 @@ def save_post(form, post: Post, type: str):
                     return
 
         db.session.add(post)
-        db.session.commit()
+    else:
+        db.session.execute(text('DELETE FROM "post_tag" WHERE post_id = :post_id'), { 'post_id': post.id})
+    post.tags = tags_from_string(form.tags.data)
+    db.session.commit()
 
     # Notify author about replies
     # Remove any subscription that currently exists
@@ -402,6 +406,22 @@ def save_post(form, post: Post, type: str):
 
     g.site.last_active = utcnow()
     db.session.commit()
+
+
+def tags_from_string(tags: str) -> List[Tag]:
+    return_value = []
+    tags = tags.strip()
+    if tags == '':
+        return []
+    tag_list = tags.split(',')
+    tag_list = [tag.strip() for tag in tag_list]
+    for tag in tag_list:
+        if tag[0] == '#':
+            tag = tag[1:]
+        tag_to_append = find_hashtag_or_create(tag)
+        if tag_to_append:
+            return_value.append(tag_to_append)
+    return return_value
 
 
 def delete_post_from_community(post_id):

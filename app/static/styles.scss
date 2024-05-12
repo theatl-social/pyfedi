@@ -366,6 +366,15 @@ div.navbar {
   }
 }
 
+.post_tags {
+  list-style: none;
+  padding-left: 0;
+
+  .post_tag {
+    display: inline-block;
+  }
+}
+
 
 /* high contrast */
 @media (prefers-contrast: more) {

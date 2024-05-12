@@ -103,6 +103,9 @@ def create_app(config_class=Config):
     from app.search import bp as search_bp
     app.register_blueprint(search_bp)
 
+    from app.tag import bp as tag_bp
+    app.register_blueprint(tag_bp)
+
     # send error reports via email
     if app.config['MAIL_SERVER'] and app.config['MAIL_ERRORS']:
         auth = None

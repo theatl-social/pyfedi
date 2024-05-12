@@ -174,6 +174,8 @@ class Tag(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(256), index=True)    # lowercase version of tag, e.g. solarstorm
     display_as = db.Column(db.String(256))          # Version of tag with uppercase letters, e.g. SolarStorm
+    post_count = db.Column(db.Integer, default=0)
+    banned = db.Column(db.Boolean, default=False, index=True)
 
 
 class Language(db.Model):
@@ -1018,6 +1020,14 @@ class Post(db.Model):
             return self.language.name
         else:
             return 'English'
+
+    def tags_for_activitypub(self):
+        return_value = []
+        for tag in self.tags:
+            return_value.append({'type': 'Hashtag',
+                                 'href': f'https://{current_app.config["SERVER_NAME"]}/tag/{tag.name}',
+                                 'name': f'#{tag.name}'})
+        return return_value
 
 
 class PostReply(db.Model):

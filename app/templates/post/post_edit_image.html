@@ -29,6 +29,8 @@
                     });
                 </script>
               {% endif %}
+            {{ render_field(form.tags) }}
+            <small class="field_hint">{{ _('Separate each tag with a comma.') }}</small>
 
             <div class="row mt-4">
                 <div class="col-md-3">

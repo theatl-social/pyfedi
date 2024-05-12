@@ -796,7 +796,8 @@ def federate_post(community, post):
         'language': {
             'identifier': post.language_code(),
             'name': post.language_name()
-        }
+        },
+        'tag': post.tags_for_activitypub()
     }
     create = {
         "id": f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}",
@@ -890,7 +891,8 @@ def federate_post_to_user_followers(post):
         'language': {
             'identifier': post.language_code(),
             'name': post.language_name()
-        }
+        },
+        'tag': post.tags_for_activitypub()
     }
     create = {
         "id": f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}",

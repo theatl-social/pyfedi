@@ -93,9 +93,10 @@ class BanUserCommunityForm(FlaskForm):
 
 
 class CreateDiscussionForm(FlaskForm):
-    communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int)
+    communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
     discussion_title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])
     discussion_body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5})
+    tags = StringField(_l('Tags'), validators=[Optional(), Length(min=3, max=5000)])
     sticky = BooleanField(_l('Sticky'))
     nsfw = BooleanField(_l('NSFW'))
     nsfl = BooleanField(_l('Gore/gross'))
@@ -105,11 +106,12 @@ class CreateDiscussionForm(FlaskForm):
 
 
 class CreateLinkForm(FlaskForm):
-    communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int)
+    communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
     link_title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])
     link_body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5})
     link_url = StringField(_l('URL'), validators=[DataRequired(), Regexp(r'^https?://', message='Submitted links need to start with "http://"" or "https://"')],
                            render_kw={'placeholder': 'https://...'})
+    tags = StringField(_l('Tags'), validators=[Optional(), Length(min=3, max=5000)])
     sticky = BooleanField(_l('Sticky'))
     nsfw = BooleanField(_l('NSFW'))
     nsfl = BooleanField(_l('Gore/gross'))
@@ -126,11 +128,12 @@ class CreateLinkForm(FlaskForm):
 
 
 class CreateVideoForm(FlaskForm):
-    communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int)
+    communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
     video_title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])
     video_body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5})
     video_url = StringField(_l('URL'), validators=[DataRequired(), Regexp(r'^https?://', message='Submitted links need to start with "http://"" or "https://"')],
                            render_kw={'placeholder': 'https://...'})
+    tags = StringField(_l('Tags'), validators=[Optional(), Length(min=3, max=5000)])
     sticky = BooleanField(_l('Sticky'))
     nsfw = BooleanField(_l('NSFW'))
     nsfl = BooleanField(_l('Gore/gross'))
@@ -147,11 +150,12 @@ class CreateVideoForm(FlaskForm):
 
 
 class CreateImageForm(FlaskForm):
-    communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int)
+    communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
     image_title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])
     image_alt_text = StringField(_l('Alt text'), validators=[Optional(), Length(min=3, max=255)])
     image_body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5})
     image_file = FileField(_l('Image'), validators=[DataRequired()])
+    tags = StringField(_l('Tags'), validators=[Optional(), Length(min=3, max=5000)])
     sticky = BooleanField(_l('Sticky'))
     nsfw = BooleanField(_l('NSFW'))
     nsfl = BooleanField(_l('Gore/gross'))

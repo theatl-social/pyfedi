@@ -161,7 +161,8 @@ def post_to_activity(post: Post, community: Community):
                 'language': {
                     'identifier': post.language_code(),
                     'name': post.language_name()
-                }
+                },
+                'tag': post.tags_for_activitypub()
             },
             "cc": [
                 f"https://{current_app.config['SERVER_NAME']}/c/{community.name}"
@@ -208,7 +209,12 @@ def post_to_page(post: Post, community: Community):
         "sensitive": post.nsfw or post.nsfl,
         "published": ap_datetime(post.created_at),
         "stickied": post.sticky,
-        "audience": f"https://{current_app.config['SERVER_NAME']}/c/{community.name}"
+        "audience": f"https://{current_app.config['SERVER_NAME']}/c/{community.name}",
+        "tag": post.tags_for_activitypub(),
+        'language': {
+            'identifier': post.language_code(),
+            'name': post.language_name()
+        },
     }
     if post.edited_at is not None:
         activity_data["updated"] = ap_datetime(post.edited_at)
@@ -385,7 +391,7 @@ def find_hashtag_or_create(hashtag: str) -> Tag:
     if existing_tag:
         return existing_tag
     else:
-        new_tag = Tag(name=hashtag.lower(), display_as=hashtag)
+        new_tag = Tag(name=hashtag.lower(), display_as=hashtag, post_count=1)
         db.session.add(new_tag)
         return new_tag
 

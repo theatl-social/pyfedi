@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import flask
 from flask import json, current_app
 from flask_babel import _
-from sqlalchemy import or_, desc
+from sqlalchemy import or_, desc, text
 from sqlalchemy.orm import configure_mappers
 
 from app import db
@@ -19,7 +19,8 @@ from app.auth.util import random_token
 from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY
 from app.email import send_verification_email, send_email
 from app.models import Settings, BannedInstances, Interest, Role, User, RolePermission, Domain, ActivityPubLog, \
-    utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply, Language
+    utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply, Language, \
+    Tag
 from app.utils import file_get_contents, retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
     shorten_string
 
@@ -167,6 +168,12 @@ def register(app):
             """Remove activity older than 3 days"""
             db.session.query(ActivityPubLog).filter(ActivityPubLog.created_at < utcnow() - timedelta(days=3)).delete()
             db.session.commit()
+
+            for tag in Tag.query.all():
+                post_count = db.session.execute(text('SELECT COUNT(post_id) as c FROM "post_tag" WHERE tag_id = :tag_id'),
+                                                { 'tag_id': tag.id}).scalar()
+                tag.post_count = post_count
+                db.session.commit()
 
     @app.cli.command("spaceusage")
     def spaceusage():

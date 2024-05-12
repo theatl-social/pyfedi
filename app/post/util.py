@@ -4,7 +4,7 @@ from flask_login import current_user
 from sqlalchemy import desc, text, or_
 
 from app import db
-from app.models import PostReply
+from app.models import PostReply, Post
 from app.utils import blocked_instances, blocked_users
 
 
@@ -73,3 +73,8 @@ def get_comment_branch(post_id: int, comment_id: int, sort_by: str) -> List[Post
 def post_reply_count(post_id) -> int:
     return db.session.execute(text('SELECT COUNT(id) as c FROM "post_reply" WHERE post_id = :post_id'),
                               {'post_id': post_id}).scalar()
+
+
+def tags_to_string(post: Post) -> str:
+    if post.tags.count() > 0:
+        return ', '.join([tag.name for tag in post.tags])

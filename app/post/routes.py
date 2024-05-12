@@ -14,7 +14,7 @@ from app.community.util import save_post, send_to_remote_instance
 from app.inoculation import inoculation
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm
 from app.community.forms import CreateLinkForm, CreateImageForm, CreateDiscussionForm, CreateVideoForm
-from app.post.util import post_replies, get_comment_branch, post_reply_count
+from app.post.util import post_replies, get_comment_branch, post_reply_count, tags_to_string
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
     POST_TYPE_IMAGE, \
     POST_TYPE_ARTICLE, POST_TYPE_VIDEO, NOTIF_REPLY, NOTIF_POST
@@ -863,6 +863,7 @@ def post_edit_discussion_post(post_id: int):
             form.nsfl.data = post.nsfl
             form.sticky.data = post.sticky
             form.language_id.data = post.language_id
+            form.tags.data = tags_to_string(post)
             if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
                 form.sticky.render_kw = {'disabled': True}
             return render_template('post/post_edit_discussion.html', title=_('Edit post'), form=form, post=post,
@@ -948,6 +949,7 @@ def post_edit_image_post(post_id: int):
             form.nsfl.data = post.nsfl
             form.sticky.data = post.sticky
             form.language_id.data = post.language_id
+            form.tags.data = tags_to_string(post)
             if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
                 form.sticky.render_kw = {'disabled': True}
             return render_template('post/post_edit_image.html', title=_('Edit post'), form=form, post=post,
@@ -1033,6 +1035,7 @@ def post_edit_link_post(post_id: int):
             form.nsfl.data = post.nsfl
             form.sticky.data = post.sticky
             form.language_id.data = post.language_id
+            form.tags.data = tags_to_string(post)
             if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
                 form.sticky.render_kw = {'disabled': True}
             return render_template('post/post_edit_link.html', title=_('Edit post'), form=form, post=post,
@@ -1118,6 +1121,7 @@ def post_edit_video_post(post_id: int):
             form.nsfl.data = post.nsfl
             form.sticky.data = post.sticky
             form.language_id.data = post.language_id
+            form.tags.data = tags_to_string(post)
             if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
                 form.sticky.render_kw = {'disabled': True}
             return render_template('post/post_edit_video.html', title=_('Edit post'), form=form, post=post,
@@ -1157,7 +1161,8 @@ def federate_post_update(post):
         'language': {
             'identifier': post.language_code(),
             'name': post.language_name()
-        }
+        },
+        'tag': post.tags_for_activitypub()
     }
     update_json = {
         'id': f"https://{current_app.config['SERVER_NAME']}/activities/update/{gibberish(15)}",
@@ -1241,7 +1246,8 @@ def federate_post_edit_to_user_followers(post):
         'language': {
             'identifier': post.language_code(),
             'name': post.language_name()
-        }
+        },
+        'tag': post.tags_for_activitypub()
     }
     update = {
         "id": f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}",
