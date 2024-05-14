@@ -938,7 +938,7 @@ def parse_summary(user_json) -> str:
     if 'source' in user_json and user_json['source'].get('mediaType') == 'text/markdown':
         # Convert Markdown to HTML
         markdown_text = user_json['source']['content']
-        html_content = allowlist_html(lemmy_markdown_to_html(markdown_text))
+        html_content = lemmy_markdown_to_html(markdown_text)
         return html_content
     elif 'summary' in user_json:
         return allowlist_html(user_json['summary'])
@@ -1362,7 +1362,7 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
                     post.body = "🤖 I'm a bot that provides automatic summaries for articles:\n::: spoiler Click here to see the summary\n" + post_reply.body + '\n:::'
                 else:
                     post.body = post_reply.body
-                post.body_html = allowlist_html(lemmy_markdown_to_html(post.body) + '\n\n<small><span class="render_username">Generated using AI by: <a href="/u/autotldr@lemmings.world" title="AutoTL;DR">AutoTL;DR</a></span></small>')
+                post.body_html = lemmy_markdown_to_html(post.body) + '\n\n<small><span class="render_username">Generated using AI by: <a href="/u/autotldr@lemmings.world" title="AutoTL;DR">AutoTL;DR</a></span></small>'
                 db.session.commit()
                 return None
 

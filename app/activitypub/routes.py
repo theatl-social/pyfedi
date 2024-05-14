@@ -474,7 +474,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                 encrypted = request_json['object']['encrypted'] if 'encrypted' in request_json['object'] else None
                                 new_message = ChatMessage(sender_id=sender.id, recipient_id=recipient.id, conversation_id=existing_conversation.id,
                                                           body=request_json['object']['source']['content'],
-                                                          body_html=allowlist_html(lemmy_markdown_to_html(request_json['object']['source']['content'])),
+                                                          body_html=lemmy_markdown_to_html(request_json['object']['source']['content']),
                                                           encrypted=encrypted)
                                 db.session.add(new_message)
                                 existing_conversation.updated_at = utcnow()
