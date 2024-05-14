@@ -282,12 +282,8 @@ def user_profile(actor):
                     "type": "Image",
                     "url": f"https://{current_app.config['SERVER_NAME']}{user.cover_image()}"
                 }
-            if user.about:
-                actor_data['source'] = {
-                    "content": user.about,
-                    "mediaType": "text/markdown"
-                }
-                actor_data['summary'] = markdown_to_html(user.about)
+            if user.about_html:
+                actor_data['summary'] = user.about_html
             if user.matrix_user_id:
                 actor_data['matrixUserId'] = user.matrix_user_id
             resp = jsonify(actor_data)
@@ -332,7 +328,6 @@ def community_profile(actor):
                 "type": "Group",
                 "id": f"https://{server}/c/{actor}",
                 "name": community.title,
-                "summary": community.description,
                 "sensitive": True if community.nsfw or community.nsfl else False,
                 "preferredUsername": actor,
                 "inbox": f"https://{server}/c/{actor}/inbox",
@@ -356,6 +351,8 @@ def community_profile(actor):
                 "published": ap_datetime(community.created_at),
                 "updated": ap_datetime(community.last_active),
             }
+            if community.description_html:
+                actor_data["summary"] = community.description_html
             if community.icon_id is not None:
                 actor_data["icon"] = {
                     "type": "Image",
