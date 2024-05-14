@@ -148,10 +148,6 @@ def post_to_activity(post: Post, community: Community):
                 "cc": [],
                 "content": post.body_html if post.body_html else '',
                 "mediaType": "text/html",
-                "source": {
-                    "content": post.body if post.body else '',
-                    "mediaType": "text/markdown"
-                },
                 "attachment": [],
                 "commentsEnabled": post.comments_enabled,
                 "sensitive": post.nsfw or post.nsfl,
@@ -200,10 +196,6 @@ def post_to_page(post: Post, community: Community):
         "cc": [],
         "content": post.body_html if post.body_html else '',
         "mediaType": "text/html",
-        "source": {
-            "content": post.body if post.body else '',
-            "mediaType": "text/markdown"
-        },
         "attachment": [],
         "commentsEnabled": post.comments_enabled,
         "sensitive": post.nsfw or post.nsfl,
