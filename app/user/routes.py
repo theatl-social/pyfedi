@@ -108,7 +108,7 @@ def edit_profile(actor):
         if form.password_field.data.strip() != '':
             current_user.set_password(form.password_field.data)
         current_user.about = form.about.data
-        current_user.about_html = allowlist_html(markdown_to_html(form.about.data))
+        current_user.about_html = markdown_to_html(form.about.data)
         current_user.matrix_user_id = form.matrixuserid.data
         current_user.bot = form.bot.data
         profile_file = request.files['profile_file']

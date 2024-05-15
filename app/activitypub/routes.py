@@ -25,7 +25,7 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
 from app.utils import gibberish, get_setting, is_image_url, allowlist_html, render_template, \
     domain_from_url, markdown_to_html, community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
-    community_moderators
+    community_moderators, lemmy_markdown_to_html
 import werkzeug.exceptions
 
 
@@ -282,12 +282,8 @@ def user_profile(actor):
                     "type": "Image",
                     "url": f"https://{current_app.config['SERVER_NAME']}{user.cover_image()}"
                 }
-            if user.about:
-                actor_data['source'] = {
-                    "content": user.about,
-                    "mediaType": "text/markdown"
-                }
-                actor_data['summary'] = markdown_to_html(user.about)
+            if user.about_html:
+                actor_data['summary'] = user.about_html
             if user.matrix_user_id:
                 actor_data['matrixUserId'] = user.matrix_user_id
             resp = jsonify(actor_data)
@@ -332,7 +328,6 @@ def community_profile(actor):
                 "type": "Group",
                 "id": f"https://{server}/c/{actor}",
                 "name": community.title,
-                "summary": community.description,
                 "sensitive": True if community.nsfw or community.nsfl else False,
                 "preferredUsername": actor,
                 "inbox": f"https://{server}/c/{actor}/inbox",
@@ -356,6 +351,8 @@ def community_profile(actor):
                 "published": ap_datetime(community.created_at),
                 "updated": ap_datetime(community.last_active),
             }
+            if community.description_html:
+                actor_data["summary"] = community.description_html
             if community.icon_id is not None:
                 actor_data["icon"] = {
                     "type": "Image",
@@ -477,7 +474,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                 encrypted = request_json['object']['encrypted'] if 'encrypted' in request_json['object'] else None
                                 new_message = ChatMessage(sender_id=sender.id, recipient_id=recipient.id, conversation_id=existing_conversation.id,
                                                           body=request_json['object']['source']['content'],
-                                                          body_html=allowlist_html(markdown_to_html(request_json['object']['source']['content'])),
+                                                          body_html=lemmy_markdown_to_html(request_json['object']['source']['content']),
                                                           encrypted=encrypted)
                                 db.session.add(new_message)
                                 existing_conversation.updated_at = utcnow()

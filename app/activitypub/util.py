@@ -30,7 +30,7 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     is_image_url, domain_from_url, gibberish, ensure_directory_exists, markdown_to_text, head_request, post_ranking, \
     shorten_string, reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, remove_tracking_from_link, \
     blocked_phrases, microblog_content_to_title, generate_image_from_video_url, is_video_url, reply_is_stupid, \
-    notification_subscribers, communities_banned_from
+    notification_subscribers, communities_banned_from, lemmy_markdown_to_html
 
 
 def public_key():
@@ -148,10 +148,6 @@ def post_to_activity(post: Post, community: Community):
                 "cc": [],
                 "content": post.body_html if post.body_html else '',
                 "mediaType": "text/html",
-                "source": {
-                    "content": post.body if post.body else '',
-                    "mediaType": "text/markdown"
-                },
                 "attachment": [],
                 "commentsEnabled": post.comments_enabled,
                 "sensitive": post.nsfw or post.nsfl,
@@ -200,10 +196,6 @@ def post_to_page(post: Post, community: Community):
         "cc": [],
         "content": post.body_html if post.body_html else '',
         "mediaType": "text/html",
-        "source": {
-            "content": post.body if post.body else '',
-            "mediaType": "text/markdown"
-        },
         "attachment": [],
         "commentsEnabled": post.comments_enabled,
         "sensitive": post.nsfw or post.nsfl,
@@ -531,7 +523,7 @@ def refresh_community_profile_task(community_id):
             community.title = activity_json['name']
             community.description = activity_json['summary'] if 'summary' in activity_json else ''
             community.rules = activity_json['rules'] if 'rules' in activity_json else ''
-            community.rules_html = markdown_to_html(activity_json['rules'] if 'rules' in activity_json else '')
+            community.rules_html = lemmy_markdown_to_html(activity_json['rules'] if 'rules' in activity_json else '')
             community.restricted_to_mods = activity_json['postingRestrictedToMods']
             community.new_mods_wanted = activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False
             community.private_mods = activity_json['privateMods'] if 'privateMods' in activity_json else False
@@ -542,7 +534,7 @@ def refresh_community_profile_task(community_id):
             if 'source' in activity_json and \
                     activity_json['source']['mediaType'] == 'text/markdown':
                 community.description = activity_json['source']['content']
-                community.description_html = markdown_to_html(community.description)
+                community.description_html = lemmy_markdown_to_html(community.description)
             elif 'content' in activity_json:
                 community.description_html = allowlist_html(activity_json['content'])
                 community.description = ''
@@ -672,7 +664,7 @@ def actor_json_to_model(activity_json, address, server):
                               title=activity_json['name'],
                               description=activity_json['summary'] if 'summary' in activity_json else '',
                               rules=activity_json['rules'] if 'rules' in activity_json else '',
-                              rules_html=markdown_to_html(activity_json['rules'] if 'rules' in activity_json else ''),
+                              rules_html=lemmy_markdown_to_html(activity_json['rules'] if 'rules' in activity_json else ''),
                               nsfw=activity_json['sensitive'],
                               restricted_to_mods=activity_json['postingRestrictedToMods'],
                               new_mods_wanted=activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False,
@@ -698,7 +690,7 @@ def actor_json_to_model(activity_json, address, server):
         if 'source' in activity_json and \
                 activity_json['source']['mediaType'] == 'text/markdown':
             community.description = activity_json['source']['content']
-            community.description_html = markdown_to_html(community.description)
+            community.description_html = lemmy_markdown_to_html(community.description)
         elif 'content' in activity_json:
             community.description_html = allowlist_html(activity_json['content'])
             community.description = ''
@@ -741,7 +733,7 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
         if 'source' in post_json and \
                 post_json['source']['mediaType'] == 'text/markdown':
             post.body = post_json['source']['content']
-            post.body_html = markdown_to_html(post.body)
+            post.body_html = lemmy_markdown_to_html(post.body)
         elif 'content' in post_json:
             post.body_html = allowlist_html(post_json['content'])
             post.body = ''
@@ -947,7 +939,7 @@ def parse_summary(user_json) -> str:
     if 'source' in user_json and user_json['source'].get('mediaType') == 'text/markdown':
         # Convert Markdown to HTML
         markdown_text = user_json['source']['content']
-        html_content = allowlist_html(markdown_to_html(markdown_text))
+        html_content = lemmy_markdown_to_html(markdown_text)
         return html_content
     elif 'summary' in user_json:
         return allowlist_html(user_json['summary'])
@@ -1308,7 +1300,7 @@ def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id
                 to_delete.post.reply_count -= 1
                 if to_delete.has_replies():
                     to_delete.body = 'Deleted by author' if to_delete.author.id == deletor.id else 'Deleted by moderator'
-                    to_delete.body_html = markdown_to_html(to_delete.body)
+                    to_delete.body_html = lemmy_markdown_to_html(to_delete.body)
                 else:
                     to_delete.delete_dependencies()
                     db.session.delete(to_delete)
@@ -1348,7 +1340,7 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
                 'mediaType' in request_json['object']['source'] and \
                 request_json['object']['source']['mediaType'] == 'text/markdown':
             post_reply.body = request_json['object']['source']['content']
-            post_reply.body_html = markdown_to_html(post_reply.body)
+            post_reply.body_html = lemmy_markdown_to_html(post_reply.body)
         elif 'content' in request_json['object']:   # Kbin
             post_reply.body_html = allowlist_html(request_json['object']['content'])
             post_reply.body = ''
@@ -1371,7 +1363,7 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
                     post.body = "🤖 I'm a bot that provides automatic summaries for articles:\n::: spoiler Click here to see the summary\n" + post_reply.body + '\n:::'
                 else:
                     post.body = post_reply.body
-                post.body_html = allowlist_html(markdown_to_html(post.body) + '\n\n<small><span class="render_username">Generated using AI by: <a href="/u/autotldr@lemmings.world" title="AutoTL;DR">AutoTL;DR</a></span></small>')
+                post.body_html = lemmy_markdown_to_html(post.body) + '\n\n<small><span class="render_username">Generated using AI by: <a href="/u/autotldr@lemmings.world" title="AutoTL;DR">AutoTL;DR</a></span></small>'
                 db.session.commit()
                 return None
 
@@ -1468,7 +1460,7 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
     # Get post content. Lemmy and Kbin put this in different places.
     if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and request_json['object']['source']['mediaType'] == 'text/markdown': # Lemmy
         post.body = request_json['object']['source']['content']
-        post.body_html = markdown_to_html(post.body)
+        post.body_html = lemmy_markdown_to_html(post.body)
     elif 'content' in request_json['object'] and request_json['object']['content'] is not None: # Kbin
         post.body_html = allowlist_html(request_json['object']['content'])
         post.body = ''
@@ -1639,7 +1631,7 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
             isinstance(request_json['object']['source'], dict) and \
             request_json['object']['source']['mediaType'] == 'text/markdown':
         reply.body = request_json['object']['source']['content']
-        reply.body_html = markdown_to_html(reply.body)
+        reply.body_html = lemmy_markdown_to_html(reply.body)
     elif 'content' in request_json['object']:
         reply.body_html = allowlist_html(request_json['object']['content'])
         reply.body = ''
@@ -1663,7 +1655,7 @@ def update_post_from_activity(post: Post, request_json: dict):
             isinstance(request_json['object']['source'], dict) and \
             request_json['object']['source']['mediaType'] == 'text/markdown':
         post.body = request_json['object']['source']['content']
-        post.body_html = markdown_to_html(post.body)
+        post.body_html = lemmy_markdown_to_html(post.body)
     elif 'content' in request_json['object'] and request_json['object']['content'] is not None: # Kbin
         post.body_html = allowlist_html(request_json['object']['content'])
         post.body = ''

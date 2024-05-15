@@ -155,10 +155,6 @@ def show_post(post_id: int):
             'content': reply.body_html,
             'inReplyTo': post.profile_id(),
             'mediaType': 'text/html',
-            'source': {
-                'content': reply.body,
-                'mediaType': 'text/markdown'
-            },
             'published': ap_datetime(utcnow()),
             'distinguished': False,
             'audience': community.public_url(),
@@ -689,10 +685,6 @@ def add_reply(post_id: int, comment_id: int):
                 'inReplyTo': in_reply_to.profile_id(),
                 'url': reply.profile_id(),
                 'mediaType': 'text/html',
-                'source': {
-                    'content': reply.body,
-                    'mediaType': 'text/markdown'
-                },
                 'published': ap_datetime(utcnow()),
                 'distinguished': False,
                 'audience': post.community.public_url(),
@@ -1146,10 +1138,6 @@ def federate_post_update(post):
         'cc': [],
         'content': post.body_html if post.body_html else '',
         'mediaType': 'text/html',
-        'source': {
-            'content': post.body if post.body else '',
-            'mediaType': 'text/markdown'
-        },
         'attachment': [],
         'commentsEnabled': post.comments_enabled,
         'sensitive': post.nsfw,
@@ -1628,10 +1616,6 @@ def post_reply_edit(post_id: int, comment_id: int):
                     'inReplyTo': in_reply_to.profile_id(),
                     'url': post_reply.profile_id(),
                     'mediaType': 'text/html',
-                    'source': {
-                        'content': post_reply.body,
-                        'mediaType': 'text/markdown'
-                    },
                     'published': ap_datetime(post_reply.posted_at),
                     'updated': ap_datetime(post_reply.edited_at),
                     'distinguished': False,
