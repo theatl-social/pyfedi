@@ -142,6 +142,15 @@ div.navbar {
   border-color: $super-dark-grey;
 }
 
+[data-bs-theme=dark] .form-control {
+  background-color: $super-dark-grey;
+  color: $lightest-grey;
+  &:focus {
+    background-color: $super-dark-grey;
+    color: $lightest-grey;
+  }
+}
+
 .community_icon {
   width: 20vw;
   height: 20vw;

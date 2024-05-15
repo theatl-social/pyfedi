@@ -567,6 +567,15 @@ div.navbar {
   border-color: #424549;
 }
 
+[data-bs-theme=dark] .form-control {
+  background-color: #424549;
+  color: #eee;
+}
+[data-bs-theme=dark] .form-control:focus {
+  background-color: #424549;
+  color: #eee;
+}
+
 .community_icon {
   width: 20vw;
   height: 20vw;
