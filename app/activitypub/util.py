@@ -467,6 +467,7 @@ def refresh_user_profile_task(user_id):
                                     'indexable': new_indexable})
 
             user.user_name = activity_json['preferredUsername']
+            user.title = activity_json['name']
             user.about_html = parse_summary(activity_json)
             user.ap_fetched_at = utcnow()
             user.public_key = activity_json['publicKey']['publicKeyPem']
