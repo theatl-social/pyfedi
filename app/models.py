@@ -1372,6 +1372,7 @@ class NotificationSubscription(db.Model):
 class Poll(db.Model):
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), primary_key=True)
     end_poll = db.Column(db.DateTime)
+    mode = db.Column(db.String(10))     # 'single' or 'multiple' determines whether people can vote for one or multiple options
     local_only = db.Column(db.Boolean)
     latest_vote = db.Column(db.DateTime)
 

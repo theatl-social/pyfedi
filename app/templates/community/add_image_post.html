@@ -15,14 +15,7 @@
                 <label class="form-control-label" for="type_of_post">
                     {{ _('Type of post') }}
                 </label>
-                <div id="type_of_post" class="btn-group flex-wrap" role="navigation">
-                    <a href="{{ url_for('community.add_discussion_post', actor=actor) }}" class="btn btn-outline-secondary" aria-label="{{ _('Start a discussion') }}">{{ _('Discussion') }}</a>
-                    <a href="{{ url_for('community.add_link_post', actor=actor) }}" class="btn btn-outline-secondary" aria-label="{{ _('Share a link') }}">{{ _('Link') }}</a>
-                    <a href="{{ url_for('community.add_image_post', actor=actor) }}" class="btn btn-primary" aria-label="{{ _('Share an image') }}">{{ _('Image') }}</a>
-                    <a href="{{ url_for('community.add_video_post', actor=actor) }}" class="btn btn-outline-secondary" aria-label="{{ _('Share a video') }}">{{ _('Video') }}</a>
-                    <!-- <a href="#" class="btn" aria-label="{{ _('Create a poll') }}">{{ _('Poll') }}</a>
-                    <a href="#" class="btn" aria-label="{{ _('Create an event') }}">{{ _('Event') }}</a> -->
-                </div>
+                {% include 'community/_add_post_types.html' %}
             </div>
             {{ render_field(form.communities) }}
               {{ render_field(form.image_title) }}

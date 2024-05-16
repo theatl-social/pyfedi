@@ -15,7 +15,7 @@ from app.chat.util import send_message
 from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, CreateImageForm, CreateLinkForm, \
     ReportCommunityForm, \
     DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm, \
-    EscalateReportForm, ResolveReportForm, CreateVideoForm
+    EscalateReportForm, ResolveReportForm, CreateVideoForm, CreatePollForm
 from app.community.util import search_for_community, actor_to_community, \
     opengraph_parse, url_to_thumbnail_file, save_post, save_icon_file, save_banner_file, send_to_remote_instance, \
     delete_post_from_community, delete_post_reply_from_community, community_in_list
@@ -762,6 +762,73 @@ def add_video_post(actor):
         form.language_id.data = current_user.language_id if current_user.is_authenticated and current_user.language_id else english_language_id()
 
     return render_template('community/add_video_post.html', title=_('Add post to community'), form=form, community=community,
+                           markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
+                           moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.id),
+                           inoculation=inoculation[randint(0, len(inoculation) - 1)]
+    )
+
+
+@bp.route('/<actor>/submit_poll', methods=['GET', 'POST'])
+@login_required
+@validation_required
+def add_poll_post(actor):
+    if current_user.banned:
+        return show_ban_message()
+    community = actor_to_community(actor)
+
+    form = CreatePollForm()
+
+    if g.site.enable_nsfl is False:
+        form.nsfl.render_kw = {'disabled': True}
+    if community.nsfw:
+        form.nsfw.data = True
+        form.nsfw.render_kw = {'disabled': True}
+    if community.nsfl:
+        form.nsfl.data = True
+        form.nsfw.render_kw = {'disabled': True}
+    if not(community.is_moderator() or community.is_owner() or current_user.is_admin()):
+        form.sticky.render_kw = {'disabled': True}
+
+    form.communities.choices = [(c.id, c.display_name()) for c in current_user.communities()]
+    if not community_in_list(community.id, form.communities.choices):
+        form.communities.choices.append((community.id, community.display_name()))
+
+    form.language_id.choices = languages_for_form()
+
+    if not can_create_post(current_user, community):
+        abort(401)
+
+    if form.validate_on_submit():
+        community = Community.query.get_or_404(form.communities.data)
+        if not can_create_post(current_user, community):
+            abort(401)
+        post = Post(user_id=current_user.id, community_id=form.communities.data, instance_id=1)
+        save_post(form, post, 'poll')
+        community.post_count += 1
+        community.last_active = g.site.last_active = utcnow()
+        db.session.commit()
+        post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
+        db.session.commit()
+
+        upvote_own_post(post)
+
+        notify_about_post(post)
+
+        if not community.local_only:
+            federate_post(community, post)
+        federate_post_to_user_followers(post)
+
+        return redirect(f"/post/{post.id}")
+    else:
+        form.communities.data = community.id
+        form.notify_author.data = True
+        form.language_id.data = current_user.language_id if current_user.is_authenticated and current_user.language_id else english_language_id()
+        form.finish_in.data = '3d'
+        if community.posting_warning:
+            flash(community.posting_warning)
+
+    return render_template('community/add_poll_post.html', title=_('Add poll to community'), form=form, community=community,
                            markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.id),

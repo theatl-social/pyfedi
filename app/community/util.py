@@ -12,9 +12,10 @@ from app import db, cache, celery
 from app.activitypub.signature import post_request, default_context
 from app.activitypub.util import find_actor_or_create, actor_json_to_model, post_json_to_model, ensure_domains_match, \
     find_hashtag_or_create
-from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO, NOTIF_POST
+from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO, NOTIF_POST, \
+    POST_TYPE_POLL
 from app.models import Community, File, BannedInstances, PostReply, PostVote, Post, utcnow, CommunityMember, Site, \
-    Instance, Notification, User, ActivityPubLog, NotificationSubscription, Language, Tag
+    Instance, Notification, User, ActivityPubLog, NotificationSubscription, Language, Tag, PollChoice, Poll
 from app.utils import get_request, gibberish, markdown_to_html, domain_from_url, allowlist_html, \
     is_image_url, ensure_directory_exists, inbox_domain, post_ranking, shorten_string, parse_page, \
     remove_tracking_from_link, ap_datetime, instance_banned, blocked_phrases
@@ -360,7 +361,10 @@ def save_post(form, post: Post, type: str):
                             db.session.add(file)
 
     elif type == 'poll':
-        ...
+        post.title = form.poll_title.data
+        post.body = form.poll_body.data
+        post.body_html = markdown_to_html(post.body)
+        post.type = POST_TYPE_POLL
     else:
         raise Exception('invalid post type')
 
@@ -386,9 +390,28 @@ def save_post(form, post: Post, type: str):
 
         db.session.add(post)
     else:
-        db.session.execute(text('DELETE FROM "post_tag" WHERE post_id = :post_id'), { 'post_id': post.id})
+        db.session.execute(text('DELETE FROM "post_tag" WHERE post_id = :post_id'), {'post_id': post.id})
     post.tags = tags_from_string(form.tags.data)
     db.session.commit()
+
+    # Save poll choices. NB this will delete all votes whenever a poll is edited. Partially because it's easier to code but also to stop malicious alterations to polls after people have already voted
+    if type == 'poll':
+        db.session.execute(text('DELETE FROM "poll_choice_vote" WHERE post_id = :poll_id'), {'post_id': post.id})
+        db.session.execute(text('DELETE FROM "poll_choice" WHERE post_id = :poll_id'), {'post_id': post.id})
+        for i in range(1, 10):
+            choice_data = getattr(form, f"choice_{i}").data.strip()
+            if choice_data != '':
+                db.session.add(PollChoice(post_id=post.id, choice_text=choice_data, sort_order=i))
+
+        poll = Poll.query.filter_by(post_id=post.id).first()
+        if poll is None:
+            poll = Poll(post_id=post.id)
+            db.session.add(poll)
+        poll.mode = form.mode.data
+        poll.end_poll = end_poll_date(form.finish_in.data)
+        poll.local_only = form.local_only.data
+        poll.latest_vote = None
+        db.session.commit()
 
     # Notify author about replies
     # Remove any subscription that currently exists
@@ -406,6 +429,23 @@ def save_post(form, post: Post, type: str):
 
     g.site.last_active = utcnow()
     db.session.commit()
+
+
+def end_poll_date(end_choice):
+    delta_mapping = {
+        '30m': timedelta(minutes=30),
+        '1h': timedelta(hours=1),
+        '6h': timedelta(hours=6),
+        '12h': timedelta(hours=12),
+        '1d': timedelta(days=1),
+        '3d': timedelta(days=3),
+        '7d': timedelta(days=7)
+    }
+
+    if end_choice in delta_mapping:
+        return datetime.utcnow() + delta_mapping[end_choice]
+    else:
+        raise ValueError("Invalid choice")
 
 
 def tags_from_string(tags: str) -> List[Tag]:

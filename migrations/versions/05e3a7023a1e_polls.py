@@ -1,8 +1,8 @@
 """polls
 
-Revision ID: 92bdb39f6c72
+Revision ID: 05e3a7023a1e
 Revises: 9752fb47d7a6
-Create Date: 2024-05-16 20:42:05.491951
+Create Date: 2024-05-16 20:47:35.566151
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '92bdb39f6c72'
+revision = '05e3a7023a1e'
 down_revision = '9752fb47d7a6'
 branch_labels = None
 depends_on = None
@@ -21,6 +21,7 @@ def upgrade():
     op.create_table('poll',
     sa.Column('post_id', sa.Integer(), nullable=False),
     sa.Column('end_poll', sa.DateTime(), nullable=True),
+    sa.Column('mode', sa.String(length=10), nullable=True),
     sa.Column('local_only', sa.Boolean(), nullable=True),
     sa.Column('latest_vote', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['post_id'], ['post.id'], ),

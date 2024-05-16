@@ -187,6 +187,41 @@ class CreateImageForm(FlaskForm):
         return True
 
 
+class CreatePollForm(FlaskForm):
+    communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
+    poll_title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])
+    poll_body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5})
+    mode = SelectField(_('Mode'), validators=[DataRequired()], choices=[('single', _l('Single choice')), ('multiple', _l('Multiple choices'))])
+    finish_choices=[
+        ('30m', _l('30 minutes')),
+        ('1h', _l('1 hour')),
+        ('6h', _l('6 hours')),
+        ('12h', _l('12 hours')),
+        ('1d', _l('1 day')),
+        ('3d', _l('3 days')),
+        ('7d', _l('7 days')),
+    ]
+    finish_in = SelectField(_('End voting in'), validators=[DataRequired()], choices=finish_choices)
+    local_only = BooleanField(_l('Accept votes from this instance only'))
+    choice_1 = StringField('Choice')    # intentionally left out of internationalization (no _l()) as this label is not used
+    choice_2 = StringField('Choice')
+    choice_3 = StringField('Choice')
+    choice_4 = StringField('Choice')
+    choice_5 = StringField('Choice')
+    choice_6 = StringField('Choice')
+    choice_7 = StringField('Choice')
+    choice_8 = StringField('Choice')
+    choice_9 = StringField('Choice')
+    choice_10 = StringField('Choice')
+    tags = StringField(_l('Tags'), validators=[Optional(), Length(min=3, max=5000)])
+    sticky = BooleanField(_l('Sticky'))
+    nsfw = BooleanField(_l('NSFW'))
+    nsfl = BooleanField(_l('Gore/gross'))
+    notify_author = BooleanField(_l('Notify about replies'))
+    language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
+    submit = SubmitField(_l('Save'))
+
+
 class ReportCommunityForm(FlaskForm):
     reason_choices = [('1', _l('Breaks instance rules')),
                       ('2', _l('Abandoned by moderators')),
