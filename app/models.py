@@ -1369,6 +1369,28 @@ class NotificationSubscription(db.Model):
     created_at = db.Column(db.DateTime, default=utcnow)     # Perhaps very old subscriptions can be automatically deleted
 
 
+class Poll(db.Model):
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), primary_key=True)
+    end_poll = db.Column(db.DateTime)
+    local_only = db.Column(db.Boolean)
+    latest_vote = db.Column(db.DateTime)
+
+
+class PollChoice(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), index=True)
+    choice_text = db.Column(db.String(200))
+    sort_order = db.Column(db.Integer)
+    num_votes = db.Column(db.Integer, default=0)
+
+
+class PollChoiceVote(db.Model):
+    choice_id = db.Column(db.Integer, db.ForeignKey('poll_choice.id'), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), index=True)
+    created_at = db.Column(db.DateTime, default=utcnow)
+
+
 class IpBan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ip_address = db.Column(db.String(50), index=True)
