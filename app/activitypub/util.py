@@ -30,7 +30,7 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     is_image_url, domain_from_url, gibberish, ensure_directory_exists, markdown_to_text, head_request, post_ranking, \
     shorten_string, reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, remove_tracking_from_link, \
     blocked_phrases, microblog_content_to_title, generate_image_from_video_url, is_video_url, reply_is_stupid, \
-    notification_subscribers, communities_banned_from, lemmy_markdown_to_html
+    notification_subscribers, communities_banned_from, lemmy_markdown_to_html, actor_contains_blocked_words
 
 
 def public_key():
@@ -269,6 +269,8 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
         else:
             if instance_blocked(server):
                 return None
+        if actor_contains_blocked_words(actor):
+            return None
         user = User.query.filter(User.ap_profile_id == actor).first()  # finds users formatted like https://kbin.social/u/tables
         if (user and user.banned) or (user and user.deleted) :
             return None

@@ -142,7 +142,9 @@ def admin_federation():
                     db.session.add(BannedInstances(domain=banned.strip()))
                     cache.delete_memoized(instance_blocked, banned.strip())
         site.blocked_phrases = form.blocked_phrases.data
+        set_setting('actor_blocked_words', form.blocked_actors.data)
         cache.delete_memoized(blocked_phrases)
+        cache.delete_memoized(get_setting, 'actor_blocked_words')
         db.session.commit()
 
         flash(_('Admin settings saved'))
@@ -155,6 +157,7 @@ def admin_federation():
         instances = AllowedInstances.query.all()
         form.allowlist.data = '\n'.join([instance.domain for instance in instances])
         form.blocked_phrases.data = site.blocked_phrases
+        form.blocked_actors.data = get_setting('actor_blocked_words', '88')
 
     return render_template('admin/federation.html', title=_('Federation settings'), form=form,
                            moderating_communities=moderating_communities(current_user.get_id()),

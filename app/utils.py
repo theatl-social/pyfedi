@@ -1013,3 +1013,14 @@ def languages_for_form():
 def english_language_id():
     english = Language.query.filter(Language.code == 'en').first()
     return english.id if english else None
+
+
+def actor_contains_blocked_words(actor):
+    actor = actor.lower().strip()
+    blocked_words = get_setting('actor_blocked_words')
+    if blocked_words and blocked_words.strip() != '':
+        for blocked_word in blocked_words.split('\n'):
+            blocked_word = blocked_word.lower().strip()
+            if blocked_word in actor:
+                return True
+    return False

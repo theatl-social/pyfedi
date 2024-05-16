@@ -46,6 +46,7 @@ class FederationForm(FlaskForm):
     use_blocklist = BooleanField(_l('Blocklist instead of allowlist'))
     blocklist = TextAreaField(_l('Deny federation with these instances'))
     blocked_phrases = TextAreaField(_l('Discard all posts and comments with these phrases (one per line)'))
+    blocked_actors = TextAreaField(_l('Discard all posts and comments by users with these words in their name (one per line)'))
     submit = SubmitField(_l('Save'))
 
 
