@@ -32,11 +32,11 @@ class SiteMiscForm(FlaskForm):
     community_creation_admin_only = BooleanField(_l('Only admins can create new local communities'))
     reports_email_admins = BooleanField(_l('Notify admins about reports, not just moderators'))
     types = [('Open', _l('Open')), ('RequireApplication', _l('Require application')), ('Closed', _l('Closed'))]
-    registration_mode = SelectField(_l('Registration mode'), choices=types, default=1, coerce=str)
+    registration_mode = SelectField(_l('Registration mode'), choices=types, default=1, coerce=str, render_kw={'class': 'form-select'})
     application_question = TextAreaField(_l('Question to ask people applying for an account'))
     auto_decline_referrers = TextAreaField(_l('Block registrations from these referrers (one per line)'))
     log_activitypub_json = BooleanField(_l('Log ActivityPub JSON for debugging'))
-    default_theme = SelectField(_l('Default theme'), coerce=str)
+    default_theme = SelectField(_l('Default theme'), coerce=str, render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Save'))
 
 
@@ -78,12 +78,12 @@ class EditCommunityForm(FlaskForm):
                (1825, _l('5 years')),
                (3650, _l('10 years')),
              ]
-    content_retention = SelectField(_l('Retain content'), choices=options, default=1, coerce=int)
-    topic = SelectField(_l('Topic'), coerce=int, validators=[Optional()])
+    content_retention = SelectField(_l('Retain content'), choices=options, default=1, coerce=int, render_kw={'class': 'form-select'})
+    topic = SelectField(_l('Topic'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
     layouts = [('', _l('List')),
                ('masonry', _l('Masonry')),
                ('masonry_wide', _l('Wide masonry'))]
-    default_layout = SelectField(_l('Layout'), coerce=str, choices=layouts, validators=[Optional()])
+    default_layout = SelectField(_l('Layout'), coerce=str, choices=layouts, validators=[Optional()], render_kw={'class': 'form-select'})
     posting_warning = StringField(_l('Posting warning'), validators=[Optional(), Length(min=3, max=512)])
     languages = SelectMultipleField(_l('Languages'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
     ignore_remote_language = BooleanField(_l('Override remote language setting'))
@@ -105,7 +105,7 @@ class EditCommunityForm(FlaskForm):
 class EditTopicForm(FlaskForm):
     name = StringField(_l('Name'), validators=[DataRequired()])
     machine_name = StringField(_l('Url'), validators=[DataRequired()])
-    parent_id = SelectField(_l('Parent topic'), coerce=int, validators=[Optional()])
+    parent_id = SelectField(_l('Parent topic'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Save'))
 
 
@@ -131,7 +131,7 @@ class AddUserForm(FlaskForm):
                (3, _l('Staff')),
                (4, _l('Admin')),
                ]
-    role = SelectField(_l('Role'), choices=role_options, default=2, coerce=int)
+    role = SelectField(_l('Role'), choices=role_options, default=2, coerce=int, render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Save'))
 
     def validate_email(self, email):
@@ -181,7 +181,7 @@ class EditUserForm(FlaskForm):
                (3, _l('Staff')),
                (4, _l('Admin')),
                ]
-    role = SelectField(_l('Role'), choices=role_options, default=2, coerce=int)
+    role = SelectField(_l('Role'), choices=role_options, default=2, coerce=int, render_kw={'class': 'form-select'})
     remove_avatar = BooleanField(_l('Remove avatar'))
     remove_banner = BooleanField(_l('Remove banner'))
     submit = SubmitField(_l('Save'))

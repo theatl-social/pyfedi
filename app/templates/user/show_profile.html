@@ -85,7 +85,7 @@
                 <a class="btn btn-primary" href="{{ url_for('user.report_profile', actor=user.link()) }}" rel="nofollow">{{ _('Report') }}</a>
         {% endif %}
         {% if user.is_local() %}
-               <a class="btn btn-primary" href="{{ url_for('user.mastodon_redirect', actor=user.link()) }}" rel="nofollow"><img src="/static/images/mastodon_white.png" width="25" height="25"> {{ _('Follow on Mastodon') }}</a>
+               <a class="btn btn-primary" href="{{ url_for('user.fediverse_redirect', actor=user.link()) }}" rel="nofollow"><img src="/static/images/fediverse_logo.svg" width="25" height="25"> {{ _('Follow') }}</a>
         {% endif %}
 
         </div>

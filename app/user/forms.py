@@ -48,8 +48,8 @@ class SettingsForm(FlaskForm):
                       ('new', _l('New')),
                       ('active', _l('Active')),
                       ]
-    default_sort = SelectField(_l('By default, sort posts by'), choices=sorts, validators=[DataRequired()], coerce=str)
-    theme = SelectField(_l('Theme'), coerce=str)
+    default_sort = SelectField(_l('By default, sort posts by'), choices=sorts, validators=[DataRequired()], coerce=str, render_kw={'class': 'form-select'})
+    theme = SelectField(_l('Theme'), coerce=str, render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Save settings'))
 
 
@@ -101,7 +101,16 @@ class FilterEditForm(FlaskForm):
     submit = SubmitField(_l('Save'))
 
 
-class FollowOnMastodonForm(FlaskForm):
-    instance_url = StringField(_l('Your mastodon instance:'), validators=[DataRequired(), Length(min=3, max=50)],
+class RemoteFollowForm(FlaskForm):
+    instance_url = StringField(_l('Your remote instance:'), validators=[DataRequired(), Length(min=3, max=50)],
                                render_kw={'placeholder': 'e.g. mastodon.social'})
-    submit = SubmitField(_l('View profile in Mastodon'))
+    type_choices = [
+        ('mastodon', _l('Mastodon, Misskey, Akkoma, Iceshrimp and friends')),
+        ('friendica', _l('Friendica')),
+        ('hubzilla', _l('Hubzilla')),
+        ('lemmy', _l('Lemmy')),
+        ('pixelfed', _l('Pixelfed')),
+    ]
+
+    instance_type = SelectField(_l('Instance type'), choices=type_choices, render_kw={'class': 'form-select'})
+    submit = SubmitField(_l('View profile on remote instance'))

@@ -14,11 +14,11 @@
           <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
             <li class="breadcrumb-item"><a href="/u/{{ user.link() }}">{{ user.display_name() }}</a></li>
-            <li class="breadcrumb-item active">{{ _('Follow on Mastodon') }}</li>
+            <li class="breadcrumb-item active">{{ _('Follow on remote instance') }}</li>
           </ol>
         </nav>
-        <h1>{{ _('Follow on Mastodon') }}</h1>
-        <p>{{ _('We are about to send you to your mastodon instance where you will then need to click the "Follow" button.') }}</p>
+        <h1>{{ _('Follow on remote instance') }}</h1>
+        <p>{{ _('We are about to send you to your instance where you will then need to click the "Follow" button.') }}</p>
         {{ render_form(form) }}
 
         {% if send_to %}
@@ -26,7 +26,7 @@
         <script defer nonce="{{ session['nonce'] }}">
             window.addEventListener("load", function () {
                 var redirectTimeout;
-                var cookieName = "mastodon_instance_url";
+                var cookieName = "remote_instance_url";
                 var redirectURL = getCookie(cookieName);
 
                 if (redirectURL) {

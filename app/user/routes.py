@@ -15,7 +15,7 @@ from app.models import Post, Community, CommunityMember, User, PostReply, PostVo
     InstanceBlock, NotificationSubscription
 from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, FilterEditForm, \
-    FollowOnMastodonForm
+    RemoteFollowForm
 from app.user.utils import purge_user_then_delete, unsubscribe_from_community
 from app.utils import get_setting, render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     is_image_url, ensure_directory_exists, gibberish, file_get_contents, community_membership, user_filters_home, \
@@ -807,19 +807,32 @@ def user_email_notifs_unsubscribe(user_id, token):
     return render_template('user/email_notifs_unsubscribed.html')
 
 
-@bp.route('/u/<actor>/mastodon_redirect', methods=['GET', 'POST'])
-def mastodon_redirect(actor):
+@bp.route('/u/<actor>/fediverse_redirect', methods=['GET', 'POST'])
+def fediverse_redirect(actor):
     actor = actor.strip()
     user = User.query.filter_by(user_name=actor, deleted=False, ap_id=None).first()
     if user and user.is_local():
-        form = FollowOnMastodonForm()
+        form = RemoteFollowForm()
         if form.validate_on_submit():
-            resp = make_response(redirect(f'https://{form.instance_url.data}/@{user.user_name}@{current_app.config["SERVER_NAME"]}'))
-            resp.set_cookie('mastodon_instance_url', form.instance_url.data, expires=datetime(year=2099, month=12, day=30))
+            redirect_url = ''
+            if form.instance_type.data == 'mastodon':
+                redirect_url = f'https://{form.instance_url.data}/@{user.user_name}@{current_app.config["SERVER_NAME"]}'
+            elif form.instance_type.data == 'lemmy':
+                flash(_("Lemmy can't follow profiles, sorry"), 'error')
+                return render_template('user/fediverse_redirect.html', form=form, user=user, send_to='', current_app=current_app)
+            elif form.instance_type.data == 'friendica':
+                redirect_url = f'https://{form.instance_url.data}/search?q={user.user_name}@{current_app.config["SERVER_NAME"]}'
+            elif form.instance_type.data == 'hubzilla':
+                redirect_url = f'https://{form.instance_url.data}/search?q={user.user_name}@{current_app.config["SERVER_NAME"]}'
+            elif form.instance_type.data == 'pixelfed':
+                redirect_url = f'https://{form.instance_url.data}/i/results?q={user.user_name}@{current_app.config["SERVER_NAME"]}'
+
+            resp = make_response(redirect(redirect_url))
+            resp.set_cookie('remote_instance_url', form.instance_url.data, expires=datetime(year=2099, month=12, day=30))
             return resp
         else:
             send_to = ''
-            if request.cookies.get('mastodon_instance_url'):
-                send_to = request.cookies.get('mastodon_instance_url')
+            if request.cookies.get('remote_instance_url'):
+                send_to = request.cookies.get('remote_instance_url')
                 form.instance_url.data = send_to
-            return render_template('user/mastodon_redirect.html', form=form, user=user, send_to=send_to, current_app=current_app)
+            return render_template('user/fediverse_redirect.html', form=form, user=user, send_to=send_to, current_app=current_app)

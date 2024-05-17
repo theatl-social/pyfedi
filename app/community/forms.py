@@ -54,12 +54,12 @@ class EditCommunityForm(FlaskForm):
     local_only = BooleanField(_l('Only accept posts from current instance'))
     restricted_to_mods = BooleanField(_l('Only moderators can post'))
     new_mods_wanted = BooleanField(_l('New moderators wanted'))
-    topic = SelectField(_l('Topic'), coerce=int, validators=[Optional()])
+    topic = SelectField(_l('Topic'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
     languages = SelectMultipleField(_l('Languages'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
     layouts = [('', _l('List')),
                ('masonry', _l('Masonry')),
                ('masonry_wide', _l('Wide masonry'))]
-    default_layout = SelectField(_l('Layout'), coerce=str, choices=layouts, validators=[Optional()])
+    default_layout = SelectField(_l('Layout'), coerce=str, choices=layouts, validators=[Optional()], render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Save'))
 
 
@@ -191,7 +191,7 @@ class CreatePollForm(FlaskForm):
     communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
     poll_title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])
     poll_body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5})
-    mode = SelectField(_('Mode'), validators=[DataRequired()], choices=[('single', _l('Single choice')), ('multiple', _l('Multiple choices'))])
+    mode = SelectField(_('Mode'), validators=[DataRequired()], choices=[('single', _l('Single choice')), ('multiple', _l('Multiple choices'))], render_kw={'class': 'form-select'})
     finish_choices=[
         ('30m', _l('30 minutes')),
         ('1h', _l('1 hour')),
@@ -201,7 +201,7 @@ class CreatePollForm(FlaskForm):
         ('3d', _l('3 days')),
         ('7d', _l('7 days')),
     ]
-    finish_in = SelectField(_('End voting in'), validators=[DataRequired()], choices=finish_choices)
+    finish_in = SelectField(_('End voting in'), validators=[DataRequired()], choices=finish_choices, render_kw={'class': 'form-select'})
     local_only = BooleanField(_l('Accept votes from this instance only'))
     choice_1 = StringField('Choice')    # intentionally left out of internationalization (no _l()) as this label is not used
     choice_2 = StringField('Choice')
