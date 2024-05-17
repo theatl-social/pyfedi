@@ -810,62 +810,68 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                     follow_id = request_json['id']
                     user = find_actor_or_create(user_ap_id)
                     community = find_actor_or_create(community_ap_id, community_only=True)
-                    if community and community.local_only and user:
-                        activity_log.exception_message = 'Local only cannot be followed by remote users'
+                    if isinstance(community, Community):
+                        if community and community.local_only and user:
+                            activity_log.exception_message = 'Local only cannot be followed by remote users'
 
-                        # send reject message to deny the follow
-                        reject = {
-                            "@context": default_context(),
-                            "actor": community.ap_profile_id,
-                            "to": [
-                                user.ap_profile_id
-                            ],
-                            "object": {
-                                "actor": user.ap_profile_id,
-                                "to": None,
-                                "object": community.ap_profile_id,
-                                "type": "Follow",
-                                "id": follow_id
-                            },
-                                "type": "Reject",
-                                "id": f"https://{current_app.config['SERVER_NAME']}/activities/reject/" + gibberish(32)
-                        }
-                        # Lemmy doesn't yet understand Reject/Follow, so send without worrying about response for now.
-                        post_request(user.ap_inbox_url, reject, community.private_key, f"https://{current_app.config['SERVER_NAME']}/c/{community.name}#main-key")
-                    else:
-                        if user is not None and community is not None:
-                            # check if user is banned from this community
-                            banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
-                            if banned is None:
-                                user.last_seen = utcnow()
-                                if community_membership(user, community) != SUBSCRIPTION_MEMBER:
-                                    member = CommunityMember(user_id=user.id, community_id=community.id)
-                                    db.session.add(member)
-                                    db.session.commit()
-                                    cache.delete_memoized(community_membership, user, community)
-                                # send accept message to acknowledge the follow
-                                accept = {
-                                    "@context": default_context(),
-                                    "actor": community.ap_profile_id,
-                                    "to": [
-                                        user.ap_profile_id
-                                    ],
-                                    "object": {
-                                        "actor": user.ap_profile_id,
-                                        "to": None,
-                                        "object": community.ap_profile_id,
-                                        "type": "Follow",
-                                        "id": follow_id
-                                    },
-                                    "type": "Accept",
-                                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)
-                                }
-                                if post_request(user.ap_inbox_url, accept, community.private_key, f"https://{current_app.config['SERVER_NAME']}/c/{community.name}#main-key"):
-                                    activity_log.result = 'success'
+                            # send reject message to deny the follow
+                            reject = {
+                                "@context": default_context(),
+                                "actor": community.ap_profile_id,
+                                "to": [
+                                    user.ap_profile_id
+                                ],
+                                "object": {
+                                    "actor": user.ap_profile_id,
+                                    "to": None,
+                                    "object": community.ap_profile_id,
+                                    "type": "Follow",
+                                    "id": follow_id
+                                },
+                                    "type": "Reject",
+                                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/reject/" + gibberish(32)
+                            }
+                            # Lemmy doesn't yet understand Reject/Follow, so send without worrying about response for now.
+                            post_request(user.ap_inbox_url, reject, community.private_key, f"https://{current_app.config['SERVER_NAME']}/c/{community.name}#main-key")
+                        else:
+                            if user is not None and community is not None:
+                                # check if user is banned from this community
+                                banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
+                                if banned is None:
+                                    user.last_seen = utcnow()
+                                    if community_membership(user, community) != SUBSCRIPTION_MEMBER:
+                                        member = CommunityMember(user_id=user.id, community_id=community.id)
+                                        db.session.add(member)
+                                        db.session.commit()
+                                        cache.delete_memoized(community_membership, user, community)
+                                    # send accept message to acknowledge the follow
+                                    accept = {
+                                        "@context": default_context(),
+                                        "actor": community.ap_profile_id,
+                                        "to": [
+                                            user.ap_profile_id
+                                        ],
+                                        "object": {
+                                            "actor": user.ap_profile_id,
+                                            "to": None,
+                                            "object": community.ap_profile_id,
+                                            "type": "Follow",
+                                            "id": follow_id
+                                        },
+                                        "type": "Accept",
+                                        "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)
+                                    }
+                                    if post_request(user.ap_inbox_url, accept, community.private_key, f"https://{current_app.config['SERVER_NAME']}/c/{community.name}#main-key"):
+                                        activity_log.result = 'success'
+                                    else:
+                                        activity_log.exception_message = 'Error sending Accept'
                                 else:
-                                    activity_log.exception_message = 'Error sending Accept'
-                            else:
-                                activity_log.exception_message = 'user is banned from this community'
+                                    activity_log.exception_message = 'user is banned from this community'
+                    elif isinstance(community, User):   # Pixelfed sends follow requests to the shared inbox, not the user inbox...
+                        if current_app.debug:
+                            process_user_follow_request(request_json, activity_log.id, user.id)
+                        else:
+                            process_user_follow_request.delay(request_json, activity_log.id, user.id)
                 # Accept: remote server is accepting our previous follow request
                 elif request_json['type'] == 'Accept':
                     if request_json['object']['type'] == 'Follow':
