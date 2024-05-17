@@ -265,10 +265,11 @@ def microblog_content_to_title(html: str) -> str:
         title = ''
         for tag in soup.find_all('p'):
             title = tag.get_text(separator=" ")
-            break
+            if title and title.strip() != '' and len(title.strip()) >= 5:
+                break
     else:
-        html = html.replace('<', '.', 1)
-        title = shorten_string(html, 160)
+        soup = BeautifulSoup(html, 'html.parser')
+        title = soup.get_text()
 
     period_index = title.find('.')
     question_index = title.find('?')
@@ -279,9 +280,13 @@ def microblog_content_to_title(html: str) -> str:
                     question_index if question_index != -1 else float('inf'),
                     exclamation_index if exclamation_index != -1 else float('inf'))
 
-    # give up if there's no recognised punctuation
+    # there's no recognised punctuation
     if end_index == float('inf'):
-        title = '(content in post body)'
+        if len(title) >= 10:
+            title = title.replace(' @ ', '').replace(' # ', '')
+            title = shorten_string(title, 197)
+        else:
+            title = '(content in post body)'
         return title
 
     if end_index != -1:
