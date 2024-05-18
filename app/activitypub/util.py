@@ -1539,9 +1539,10 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
         if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
             for json_tag in request_json['object']['tag']:
                 if json_tag['type'] == 'Hashtag':
-                    hashtag = find_hashtag_or_create(json_tag['name'])
-                    if hashtag:
-                        post.tags.append(hashtag)
+                    if json_tag['name'][1:].lower() != post.community.name.lower():             # Lemmy adds the community slug as a hashtag on every post in the community, which we want to ignore
+                        hashtag = find_hashtag_or_create(json_tag['name'])
+                        if hashtag:
+                            post.tags.append(hashtag)
         if 'image' in request_json['object'] and post.image is None:
             image = File(source_url=request_json['object']['image']['url'])
             db.session.add(image)

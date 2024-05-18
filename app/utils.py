@@ -259,10 +259,9 @@ def markdown_to_text(markdown_text) -> str:
 
 
 def microblog_content_to_title(html: str) -> str:
+    title = ''
     if '<p>' in html:
         soup = BeautifulSoup(html, 'html.parser')
-
-        title = ''
         for tag in soup.find_all('p'):
             title = tag.get_text(separator=" ")
             if title and title.strip() != '' and len(title.strip()) >= 5:
