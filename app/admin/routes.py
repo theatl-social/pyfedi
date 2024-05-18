@@ -232,6 +232,28 @@ def admin_communities():
                            site=g.site)
 
 
+@bp.route('/communities/no-topic', methods=['GET'])
+@login_required
+@permission_required('administer all communities')
+def admin_communities_no_topic():
+
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '')
+
+    communities = Community.query.filter(Community.topic_id == None)
+    if search:
+        communities = communities.filter(Community.title.ilike(f"%{search}%"))
+    communities = communities.order_by(Community.title).paginate(page=page, per_page=1000, error_out=False)
+
+    next_url = url_for('admin.admin_communities_no_topic', page=communities.next_num) if communities.has_next else None
+    prev_url = url_for('admin.admin_communities_no_topic', page=communities.prev_num) if communities.has_prev and page != 1 else None
+
+    return render_template('admin/communities.html', title=_('Communities with no topic'), next_url=next_url, prev_url=prev_url,
+                           communities=communities, moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.get_id()),
+                           site=g.site)
+
+
 @bp.route('/community/<int:community_id>/edit', methods=['GET', 'POST'])
 @login_required
 @permission_required('administer all communities')
