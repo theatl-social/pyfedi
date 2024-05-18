@@ -243,7 +243,7 @@ def admin_communities_no_topic():
     communities = Community.query.filter(Community.topic_id == None)
     if search:
         communities = communities.filter(Community.title.ilike(f"%{search}%"))
-    communities = communities.order_by(Community.title).paginate(page=page, per_page=1000, error_out=False)
+    communities = communities.order_by(-Community.post_count).paginate(page=page, per_page=1000, error_out=False)
 
     next_url = url_for('admin.admin_communities_no_topic', page=communities.next_num) if communities.has_next else None
     prev_url = url_for('admin.admin_communities_no_topic', page=communities.prev_num) if communities.has_prev and page != 1 else None
