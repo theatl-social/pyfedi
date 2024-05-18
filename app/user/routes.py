@@ -9,7 +9,8 @@ from app import db, cache, celery
 from app.activitypub.signature import post_request, default_context
 from app.activitypub.util import find_actor_or_create
 from app.community.util import save_icon_file, save_banner_file, retrieve_mods_and_backfill
-from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_PENDING, NOTIF_USER
+from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_PENDING, NOTIF_USER, POST_TYPE_VIDEO, POST_TYPE_LINK, \
+    POST_TYPE_IMAGE, POST_TYPE_POLL
 from app.models import Post, Community, CommunityMember, User, PostReply, PostVote, Notification, utcnow, File, Site, \
     Instance, Report, UserBlock, CommunityBan, CommunityJoinRequest, CommunityBlock, Filter, Domain, DomainBlock, \
     InstanceBlock, NotificationSubscription
@@ -83,6 +84,8 @@ def show_profile(user):
     return render_template('user/show_profile.html', user=user, posts=posts, post_replies=post_replies,
                            moderates=moderates.all(), canonical=canonical, title=_('Posts by %(user_name)s',
                                                                                    user_name=user.user_name),
+                           POST_TYPE_IMAGE=POST_TYPE_IMAGE, POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_VIDEO=POST_TYPE_VIDEO,
+                           POST_TYPE_POLL=POST_TYPE_POLL,
                            description=description, subscribed=subscribed, upvoted=upvoted,
                            post_next_url=post_next_url, post_prev_url=post_prev_url,
                            replies_next_url=replies_next_url, replies_prev_url=replies_prev_url,
