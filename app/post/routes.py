@@ -14,7 +14,7 @@ from app.activitypub.util import notify_about_post_reply
 from app.community.util import save_post, send_to_remote_instance
 from app.inoculation import inoculation
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm
-from app.community.forms import CreateLinkForm, CreateImageForm, CreateDiscussionForm, CreateVideoForm
+from app.community.forms import CreateLinkForm, CreateImageForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm
 from app.post.util import post_replies, get_comment_branch, post_reply_count, tags_to_string
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
     POST_TYPE_IMAGE, \
@@ -839,6 +839,8 @@ def post_edit(post_id: int):
         return redirect(url_for('post.post_edit_image_post', post_id=post_id))
     elif post.type == POST_TYPE_VIDEO:
         return redirect(url_for('post.post_edit_video_post', post_id=post_id))
+    elif post.type == POST_TYPE_POLL:
+        return redirect(url_for('post.post_edit_poll_post', post_id=post_id))
     else:
         abort(404)
 
@@ -1161,6 +1163,76 @@ def post_edit_video_post(post_id: int):
     else:
         abort(401)
 
+
+@bp.route('/post/<int:post_id>/edit_poll', methods=['GET', 'POST'])
+@login_required
+def post_edit_poll_post(post_id: int):
+    post = Post.query.get_or_404(post_id)
+    poll = Poll.query.filter_by(post_id=post_id).first()
+    form = CreatePollForm()
+    del form.communities
+    del form.finish_in
+
+    mods = post.community.moderators()
+    if post.community.private_mods:
+        mod_list = []
+    else:
+        mod_user_ids = [mod.user_id for mod in mods]
+        mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
+
+    if post.user_id == current_user.id or post.community.is_moderator() or current_user.is_admin():
+        if g.site.enable_nsfl is False:
+            form.nsfl.render_kw = {'disabled': True}
+        if post.community.nsfw:
+            form.nsfw.data = True
+            form.nsfw.render_kw = {'disabled': True}
+        if post.community.nsfl:
+            form.nsfl.data = True
+            form.nsfw.render_kw = {'disabled': True}
+
+        form.language_id.choices = languages_for_form()
+
+        if form.validate_on_submit():
+            save_post(form, post, 'poll')
+            post.community.last_active = utcnow()
+            post.edited_at = utcnow()
+            db.session.commit()
+
+            flash(_('Your changes have been saved.'), 'success')
+
+            # federate edit
+            if not post.community.local_only and not poll.local_only:
+                federate_post_update(post)
+                federate_post_edit_to_user_followers(post)
+
+            return redirect(url_for('activitypub.post_ap', post_id=post.id))
+        else:
+            form.poll_title.data = post.title
+            form.poll_body.data = post.body
+            form.notify_author.data = post.notify_author
+            form.nsfw.data = post.nsfw
+            form.nsfl.data = post.nsfl
+            form.sticky.data = post.sticky
+            form.language_id.data = post.language_id
+            poll = Poll.query.filter_by(post_id=post.id).first()
+            form.mode.data = poll.mode
+            form.local_only.data = poll.local_only
+            i = 1
+            for choice in PollChoice.query.filter_by(post_id=post.id).order_by(PollChoice.sort_order).all():
+                form_field = getattr(form, f"choice_{i}")
+                form_field.data = choice.choice_text
+                i += 1
+            form.tags.data = tags_to_string(post)
+            if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
+                form.sticky.render_kw = {'disabled': True}
+            return render_template('post/post_edit_poll.html', title=_('Edit post'), form=form, post=post,
+                                   markdown_editor=current_user.markdown_editor, mods=mod_list,
+                                   moderating_communities=moderating_communities(current_user.get_id()),
+                                   joined_communities=joined_communities(current_user.get_id()),
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)]
+                                   )
+    else:
+        abort(401)
 def federate_post_update(post):
     page_json = {
         'type': 'Page',

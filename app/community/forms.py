@@ -191,7 +191,7 @@ class CreatePollForm(FlaskForm):
     communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
     poll_title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])
     poll_body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5})
-    mode = SelectField(_('Mode'), validators=[DataRequired()], choices=[('single', _l('People choose one option')), ('multiple', _l('People choose many options'))], render_kw={'class': 'form-select'})
+    mode = SelectField(_('Mode'), validators=[DataRequired()], choices=[('single', _l('Voters choose one option')), ('multiple', _l('Voters choose many options'))], render_kw={'class': 'form-select'})
     finish_choices=[
         ('30m', _l('30 minutes')),
         ('1h', _l('1 hour')),
