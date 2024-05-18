@@ -191,7 +191,7 @@ class CreatePollForm(FlaskForm):
     communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
     poll_title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])
     poll_body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5})
-    mode = SelectField(_('Mode'), validators=[DataRequired()], choices=[('single', _l('Single choice')), ('multiple', _l('Multiple choices'))], render_kw={'class': 'form-select'})
+    mode = SelectField(_('Mode'), validators=[DataRequired()], choices=[('single', _l('People choose one option')), ('multiple', _l('People choose many options'))], render_kw={'class': 'form-select'})
     finish_choices=[
         ('30m', _l('30 minutes')),
         ('1h', _l('1 hour')),
@@ -220,6 +220,21 @@ class CreatePollForm(FlaskForm):
     notify_author = BooleanField(_l('Notify about replies'))
     language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Save'))
+
+    def validate(self, extra_validators=None) -> bool:
+        choices_made = 0
+
+        for i in range(1, 10):
+            choice_data = getattr(self, f"choice_{i}").data.strip()
+            if choice_data != '':
+                choices_made += 1
+        if choices_made == 0:
+            self.choice_1.errors.append(_l('Polls need options for people to choose from'))
+            return False
+        elif choices_made <= 1:
+            self.choice_2.errors.append(_l('Provide at least two choices'))
+            return False
+        return True
 
 
 class ReportCommunityForm(FlaskForm):

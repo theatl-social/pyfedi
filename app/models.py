@@ -17,6 +17,7 @@ from sqlalchemy_searchable import SearchQueryMixin
 from app import db, login, cache, celery
 import jwt
 import os
+import math
 
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER, \
     SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER, NOTIF_COMMUNITY, NOTIF_TOPIC, NOTIF_POST, NOTIF_REPLY
@@ -874,6 +875,7 @@ class User(UserMixin, db.Model):
             db.session.query(UserRegistration).filter(UserRegistration.user_id == self.id).delete()
         db.session.query(NotificationSubscription).filter(NotificationSubscription.user_id == self.id).delete()
         db.session.query(Notification).filter(Notification.user_id == self.id).delete()
+        db.session.query(PollChoiceVote).filter(PollChoiceVote.user_id == self.id).delete()
 
     def purge_content(self):
         files = File.query.join(Post).filter(Post.user_id == self.id).all()
@@ -977,6 +979,9 @@ class Post(db.Model):
         return cls.query.filter_by(ap_id=ap_id).first()
 
     def delete_dependencies(self):
+        db.session.query(PollChoiceVote).filter(PollChoiceVote.post_id == self.id).delete()
+        db.session.query(PollChoice).filter(PollChoice.post_id == self.id).delete()
+        db.session.query(Poll).filter(Poll.post_id == self.id).delete()
         db.session.query(Report).filter(Report.suspect_post_id == self.id).delete()
         db.session.execute(text('DELETE FROM post_reply_vote WHERE post_reply_id IN (SELECT id FROM post_reply WHERE post_id = :post_id)'),
                            {'post_id': self.id})
@@ -1376,6 +1381,25 @@ class Poll(db.Model):
     local_only = db.Column(db.Boolean)
     latest_vote = db.Column(db.DateTime)
 
+    def has_voted(self, user_id):
+        existing_vote = PollChoiceVote.query.filter(PollChoiceVote.user_id == user_id, PollChoiceVote.post_id == self.post_id).first()
+        return existing_vote is not None
+
+    def vote_for_choice(self, choice_id, user_id):
+        existing_vote = PollChoiceVote.query.filter(PollChoiceVote.user_id == user_id,
+                                                    PollChoiceVote.choice_id == choice_id).first()
+        if not existing_vote:
+            new_vote = PollChoiceVote(choice_id=choice_id, user_id=user_id, post_id=self.post_id)
+            db.session.add(new_vote)
+            choice = PollChoice.query.get(choice_id)
+            choice.num_votes += 1
+            self.latest_vote = datetime.utcnow()
+            db.session.commit()
+
+    def total_votes(self):
+        return db.session.execute(text('SELECT SUM(num_votes) as s FROM "poll_choice" WHERE post_id = :post_id'),
+                           {'post_id': self.post_id}).scalar()
+
 
 class PollChoice(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -1383,6 +1407,9 @@ class PollChoice(db.Model):
     choice_text = db.Column(db.String(200))
     sort_order = db.Column(db.Integer)
     num_votes = db.Column(db.Integer, default=0)
+
+    def percentage(self, poll_total_votes):
+        return math.ceil(self.num_votes / poll_total_votes * 100)
 
 
 class PollChoiceVote(db.Model):

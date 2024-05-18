@@ -37,6 +37,40 @@
                         <a href="#" aria-hidden="true" class="markdown_editor_enabler create_post_markdown_editor_enabler" data-id="discussion_body">{{ _('Enable markdown editor') }}</a>
                   {% endif %}
             {% endif %}
+            <fieldset id="pollChoicesFieldset">
+                <legend>{{ _('Poll choices') }}</legend>
+                <div class="form-group">
+                    {{ form.choice_1(class_="form-control", **{"placeholder": "First choice"}) }}
+                </div>
+                <div class="form-group">
+                    {{ form.choice_2(class_="form-control", **{"placeholder": "Second choice"}) }}
+                </div>
+                <div class="form-group" style="display: none;">
+                    {{ form.choice_3(class_="form-control") }}
+                </div>
+                <div class="form-group" style="display: none;">
+                    {{ form.choice_4(class_="form-control") }}
+                </div>
+                <div class="form-group" style="display: none;">
+                    {{ form.choice_5(class_="form-control") }}
+                </div>
+                <div class="form-group" style="display: none;">
+                    {{ form.choice_6(class_="form-control") }}
+                </div>
+                <div class="form-group" style="display: none;">
+                    {{ form.choice_7(class_="form-control") }}
+                </div>
+                <div class="form-group" style="display: none;">
+                    {{ form.choice_8(class_="form-control") }}
+                </div>
+                <div class="form-group" style="display: none;">
+                    {{ form.choice_9(class_="form-control") }}
+                </div>
+                <div class="form-group" style="display: none;">
+                    {{ form.choice_10(class_="form-control") }}
+                </div>
+                <button id="addPollChoice" type="button" class="btn btn-primary">{{ _('Add choice') }}</button>
+            </fieldset>
             {{ render_field(form.mode) }}
             {{ render_field(form.finish_in) }}
             {{ render_field(form.local_only) }}

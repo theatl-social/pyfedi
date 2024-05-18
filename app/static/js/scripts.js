@@ -11,6 +11,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupTopicChooser();
     setupConversationChooser();
     setupMarkdownEditorEnabler();
+    setupAddPollChoice();
 });
 
 function renderMasonry(masonry, htmlSnippets) {
@@ -630,6 +631,24 @@ function setupMarkdownEditorEnabler() {
             }
         });
     });
+}
+
+function setupAddPollChoice() {
+    const addChoiceButton = document.getElementById('addPollChoice');
+    const pollChoicesFieldset = document.getElementById('pollChoicesFieldset');
+    const formGroups = pollChoicesFieldset.getElementsByClassName('form-group');
+
+    if(addChoiceButton) {
+        addChoiceButton.addEventListener('click', function(event) {
+            // Loop through the form groups and show the first hidden one
+            for (let i = 0; i < formGroups.length; i++) {
+                if (formGroups[i].style.display === 'none') {
+                    formGroups[i].style.display = 'block';
+                    break; // Stop once we've shown the next hidden form group
+                }
+            }
+        });
+    }
 }
 
 function getCookie(name) {

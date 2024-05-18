@@ -6,6 +6,7 @@ from flask import redirect, url_for, flash, current_app, abort, request, g, make
 from flask_login import login_user, logout_user, current_user, login_required
 from flask_babel import _
 from sqlalchemy import or_, desc
+from wtforms import SelectField, RadioField
 
 from app import db, constants, cache
 from app.activitypub.signature import HttpSignature, post_request, default_context, post_request_in_background
@@ -17,10 +18,10 @@ from app.community.forms import CreateLinkForm, CreateImageForm, CreateDiscussio
 from app.post.util import post_replies, get_comment_branch, post_reply_count, tags_to_string
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
     POST_TYPE_IMAGE, \
-    POST_TYPE_ARTICLE, POST_TYPE_VIDEO, NOTIF_REPLY, NOTIF_POST
+    POST_TYPE_ARTICLE, POST_TYPE_VIDEO, NOTIF_REPLY, NOTIF_POST, POST_TYPE_POLL
 from app.models import Post, PostReply, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, InstanceBlock, Report, Site, Community, \
-    Topic, User, Instance, NotificationSubscription, UserFollower
+    Topic, User, Instance, NotificationSubscription, UserFollower, Poll, PollChoice
 from app.post import bp
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
@@ -28,7 +29,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, moderating_communities, joined_communities, \
     blocked_instances, blocked_domains, community_moderators, blocked_phrases, show_ban_message, recently_upvoted_posts, \
     recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, reply_is_stupid, \
-    languages_for_form, english_language_id
+    languages_for_form, english_language_id, MultiCheckboxField
 
 
 def show_post(post_id: int):
@@ -279,12 +280,32 @@ def show_post(post_id: int):
         recently_upvoted_replies = []
         recently_downvoted_replies = []
 
+    # Polls
+    poll_form = False
+    poll_results = False
+    poll_choices = []
+    poll_data = None
+    poll_total_votes = 0
+    if post.type == POST_TYPE_POLL:
+        poll_data = Poll.query.get(post.id)
+        poll_choices = PollChoice.query.filter_by(post_id=post.id).order_by(PollChoice.sort_order).all()
+        poll_total_votes = poll_data.total_votes()
+        # Show poll results to everyone after the poll finishes, to the poll creator and to those who have voted
+        if (current_user.is_authenticated and (poll_data.has_voted(current_user.id))) \
+                or poll_data.end_poll < datetime.utcnow():
+
+            poll_results = True
+        else:
+            poll_form = True
+
     response = render_template('post/post.html', title=post.title, post=post, is_moderator=is_moderator, community=post.community,
                            breadcrumbs=breadcrumbs, related_communities=related_communities, mods=mod_list,
+                           poll_form=poll_form, poll_results=poll_results, poll_data=poll_data, poll_choices=poll_choices, poll_total_votes=poll_total_votes,
                            canonical=post.ap_id, form=form, replies=replies, THREAD_CUTOFF_DEPTH=constants.THREAD_CUTOFF_DEPTH,
                            description=description, og_image=og_image, POST_TYPE_IMAGE=constants.POST_TYPE_IMAGE,
                            POST_TYPE_LINK=constants.POST_TYPE_LINK, POST_TYPE_ARTICLE=constants.POST_TYPE_ARTICLE,
-                           POST_TYPE_VIDEO=constants.POST_TYPE_VIDEO, autoplay=request.args.get('autoplay', False),
+                           POST_TYPE_VIDEO=constants.POST_TYPE_VIDEO, POST_TYPE_POLL=constants.POST_TYPE_POLL,
+                           autoplay=request.args.get('autoplay', False),
                            noindex=not post.author.indexable, preconnect=post.url if post.url else None,
                            recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
                            recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies,
@@ -540,6 +561,21 @@ def comment_vote(comment_id, vote_direction):
                            recently_upvoted_replies=recently_upvoted,
                            recently_downvoted_replies=recently_downvoted,
                            community=comment.community)
+
+
+@bp.route('/poll/<int:post_id>/vote', methods=['POST'])
+@login_required
+@validation_required
+def poll_vote(post_id):
+    poll_data = Poll.query.get_or_404(post_id)
+    if poll_data.mode == 'single':
+        choice_id = int(request.form.get('poll_choice'))
+        poll_data.vote_for_choice(choice_id, current_user.id)
+    else:
+        for choice_id in request.form.getlist('poll_choice[]'):
+            poll_data.vote_for_choice(int(choice_id), current_user.id)
+    flash(_('Vote has been cast.'))
+    return redirect(url_for('activitypub.post_ap', post_id=post_id))
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>')

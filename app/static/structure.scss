@@ -1071,3 +1071,27 @@ h1 .warning_badge {
       float: right;
   }
 }
+
+#pollChoicesFieldset {
+  margin-bottom: 20px;
+}
+
+.post_poll {
+  ul {
+    list-style: none;
+    padding-left: 0;
+    li {
+      margin-bottom: 5px;
+
+      .vote_bar {
+        .vote_score {
+          background-color: $grey;
+          color: white;
+          text-align: right;
+          padding-right: 5px;
+          font-weight: bold;
+        }
+      }
+    }
+  }
+}

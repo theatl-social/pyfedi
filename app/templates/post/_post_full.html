@@ -136,6 +136,41 @@
             <div class="post_body">
                 {{ post.body_html|community_links|safe if post.body_html else '' }}
             </div>
+            {% if post.type == POST_TYPE_POLL %}
+                <div class="post_poll">
+                    {% if poll_results %}
+                        <ul>
+                        {% for choice in poll_choices %}
+                            <li>
+                                <div class="vote_bar">
+                                    <p class="mb-0 mt-3">{{ choice.choice_text }}</p>
+                                    <div class="vote_score" style="width: {{ choice.percentage(poll_total_votes) }}%">{{ choice.percentage(poll_total_votes) }}%</div>
+                                </div>
+                            </li>
+                        {% endfor %}
+                        </ul>
+                        <p>{{ _('Total votes: %(total_votes)d.', total_votes=poll_total_votes) }}</p>
+                        <p>{{ _('Poll closes') }} {{ moment(poll_data.end_poll).fromNow(refresh=True) }}.</p>
+                    {% elif poll_form %}
+                        <form action='/poll/{{ post.id }}/vote' method="post">
+                            <ul>
+                            {% for choice in poll_choices %}
+                                {% if poll_data.mode == 'single' %}
+                                    <li><label for="choice_{{ choice.id }}">
+                                        <input type="radio" name="poll_choice" id="choice_{{ choice.id }}" required value="{{ choice.id }}"> {{ choice.choice_text }}
+                                    </label></li>
+                                {% else %}
+                                    <li><label for="choice_{{ choice.id }}">
+                                        <input type="checkbox" name="poll_choice[]" id="choice_{{ choice.id }}" value="{{ choice.id }}"> {{ choice.choice_text }}
+                                    </label></li>
+                                {% endif %}
+                            {% endfor %}
+                            </ul>
+                            <input type="submit" class="btn btn-primary" value="Vote">
+                        </form>
+                    {% endif %}
+                </div>
+            {% endif %}
         </div>
     {% endif %}
 

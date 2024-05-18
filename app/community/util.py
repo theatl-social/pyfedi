@@ -396,8 +396,8 @@ def save_post(form, post: Post, type: str):
 
     # Save poll choices. NB this will delete all votes whenever a poll is edited. Partially because it's easier to code but also to stop malicious alterations to polls after people have already voted
     if type == 'poll':
-        db.session.execute(text('DELETE FROM "poll_choice_vote" WHERE post_id = :poll_id'), {'post_id': post.id})
-        db.session.execute(text('DELETE FROM "poll_choice" WHERE post_id = :poll_id'), {'post_id': post.id})
+        db.session.execute(text('DELETE FROM "poll_choice_vote" WHERE post_id = :post_id'), {'post_id': post.id})
+        db.session.execute(text('DELETE FROM "poll_choice" WHERE post_id = :post_id'), {'post_id': post.id})
         for i in range(1, 10):
             choice_data = getattr(form, f"choice_{i}").data.strip()
             if choice_data != '':
