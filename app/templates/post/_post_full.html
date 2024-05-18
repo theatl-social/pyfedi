@@ -152,7 +152,12 @@
                         <p>{{ _('Total votes: %(total_votes)d.', total_votes=poll_total_votes) }}</p>
                         <p>{{ _('Poll closes') }} {{ moment(poll_data.end_poll).fromNow(refresh=True) }}.</p>
                     {% elif poll_form %}
-                        <form action='/poll/{{ post.id }}/vote' method="post">
+                        {% if current_user.is_authenticated %}
+                            <form action='/poll/{{ post.id }}/vote' method="post">
+                        {% else %}
+                            <form action='/auth/login' method="get">
+                                <input type="hidden" name="next" value="/post/{{ post.id }}">
+                        {% endif %}
                             <ul>
                             {% for choice in poll_choices %}
                                 {% if poll_data.mode == 'single' %}
