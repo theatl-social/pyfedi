@@ -13,7 +13,7 @@ from sqlalchemy import text, func
 from app import db, cache, constants, celery
 from app.models import User, Post, Community, BannedInstances, File, PostReply, AllowedInstances, Instance, utcnow, \
     PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation, \
-    Language, Tag
+    Language, Tag, Poll, PollChoice
 from app.activitypub.signature import signed_get_request
 import time
 import base64
@@ -179,7 +179,25 @@ def post_to_activity(post: Post, community: Community):
     if post.image_id is not None:
         activity_data["object"]["object"]["image"] = {"url": post.image.view_url(), "type": "Image"}
         if post.image.alt_text:
-            activity_data["object"]["object"]["image"]['altText'] = post.image.alt_text
+            activity_data["object"]["object"]["image"]['name'] = post.image.alt_text
+    if post.type == POST_TYPE_POLL:
+        poll = Poll.query.filter_by(post_id=post.id).first()
+        activity_data["object"]["object"]['type'] = 'Question'
+        mode = 'oneOf' if poll.mode == 'single' else 'anyOf'
+        choices = []
+        for choice in PollChoice.query.filter_by(post_id=post.id).order_by(PollChoice.sort_order).all():
+            choices.append({
+                "type": "Note",
+                "name": choice.choice_text,
+                "replies": {
+                    "type": "Collection",
+                    "totalItems": choice.num_votes
+                }
+            })
+        activity_data["object"]["object"][mode] = choices
+        activity_data["object"]["object"]['endTime'] = ap_datetime(poll.end_poll)
+        activity_data["object"]["object"]['votersCount'] = poll.total_votes()
+
     return activity_data
 
 
@@ -1553,6 +1571,21 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
         community.last_active = utcnow()
         activity_log.result = 'success'
         db.session.commit()
+
+        # Polls need to be processed quite late because they need a post_id to refer to
+        if request_json['object']['type'] == 'Question':
+            post.type = POST_TYPE_POLL
+            mode = 'single'
+            if 'anyOf' in request_json['object']:
+                mode = 'multiple'
+            poll = Poll(post_id=post.id, end_poll=request_json['object']['endTime'], mode=mode, local_only=False)
+            db.session.add(poll)
+            i = 1
+            for choice_ap in request_json['object']['oneOf' if mode == 'single' else 'anyOf']:
+                new_choice = PollChoice(post_id=post.id, choice_text=choice_ap['name'], sort_order=i)
+                db.session.add(new_choice)
+                i += 1
+            db.session.commit()
 
         if post.image_id:
             make_image_sizes(post.image_id, 150, 512, 'posts')  # the 512 sized image is for masonry view

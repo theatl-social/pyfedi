@@ -1233,6 +1233,8 @@ def post_edit_poll_post(post_id: int):
                                    )
     else:
         abort(401)
+
+
 def federate_post_update(post):
     page_json = {
         'type': 'Page',
@@ -1288,6 +1290,23 @@ def federate_post_update(post):
         if post.type == POST_TYPE_IMAGE:
             page_json['attachment'] = [{'type': 'Link',
                                         'href': post.image.source_url}]  # source_url is always a https link, no need for .replace() as done above
+    if post.type == POST_TYPE_POLL:
+        poll = Poll.query.filter_by(post_id=post.id).first()
+        page_json['type'] = 'Question'
+        page_json['endTime'] = ap_datetime(poll.end_poll)
+        page_json['votersCount'] = 0
+        choices = []
+        for choice in PollChoice.query.filter_by(post_id=post.id).all():
+            choices.append({
+                "type": "Note",
+                "name": choice.choice_text,
+                "replies": {
+                  "type": "Collection",
+                  "totalItems": 0
+                }
+            })
+        page_json['oneOf' if poll.mode == 'single' else 'anyOf'] = choices
+
     if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
         success = post_request(post.community.ap_inbox_url, update_json, current_user.private_key,
                                current_user.ap_profile_id + '#main-key')
@@ -1369,6 +1388,22 @@ def federate_post_edit_to_user_followers(post):
                 note['attachment'] = [{'type': 'Document', 'url': post.image.source_url, 'name': post.image.alt_text}]
             else:
                 note['attachment'] = [{'type': 'Document', 'url': post.image.source_url}]
+    elif post.type == POST_TYPE_POLL:
+        poll = Poll.query.filter_by(post_id=post.id).first()
+        note['type'] = 'Question'
+        note['endTime'] = ap_datetime(poll.end_poll)
+        note['votersCount'] = 0
+        choices = []
+        for choice in PollChoice.query.filter_by(post_id=post.id).all():
+            choices.append({
+                "type": "Note",
+                "name": choice.choice_text,
+                "replies": {
+                    "type": "Collection",
+                    "totalItems": 0
+                }
+            })
+        note['oneOf' if poll.mode == 'single' else 'anyOf'] = choices
 
     if post.body_html:
         note['content'] = note['content'] + '<p>' + post.body_html + '</p>'

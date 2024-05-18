@@ -549,7 +549,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             user.last_seen = community.last_active = site.last_active = utcnow()
 
                             object_type = request_json['object']['type']
-                            new_content_types = ['Page', 'Article', 'Link', 'Note']
+                            new_content_types = ['Page', 'Article', 'Link', 'Note', 'Question']
                             if object_type in new_content_types:  # create a new post
                                 in_reply_to = request_json['object']['inReplyTo'] if 'inReplyTo' in request_json['object'] else None
                                 if not in_reply_to:

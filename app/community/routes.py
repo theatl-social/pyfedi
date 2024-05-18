@@ -21,11 +21,11 @@ from app.community.util import search_for_community, actor_to_community, \
     delete_post_from_community, delete_post_reply_from_community, community_in_list
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
-    REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY
+    REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, POST_TYPE_POLL
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, \
     File, PostVote, utcnow, Report, Notification, InstanceBlock, ActivityPubLog, Topic, Conversation, PostReply, \
-    NotificationSubscription, UserFollower, Instance, Language
+    NotificationSubscription, UserFollower, Instance, Language, Poll, PollChoice
 from app.community import bp
 from app.user.utils import search_for_user
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
@@ -805,6 +805,7 @@ def add_poll_post(actor):
             abort(401)
         post = Post(user_id=current_user.id, community_id=form.communities.data, instance_id=1)
         save_post(form, post, 'poll')
+        poll = Poll.query.filter_by(post_id=post.id).first()
         community.post_count += 1
         community.last_active = g.site.last_active = utcnow()
         db.session.commit()
@@ -815,9 +816,9 @@ def add_poll_post(actor):
 
         notify_about_post(post)
 
-        if not community.local_only:
+        if not community.local_only and not poll.local_only:
             federate_post(community, post)
-        federate_post_to_user_followers(post)
+            federate_post_to_user_followers(post)
 
         return redirect(f"/post/{post.id}")
     else:
@@ -897,6 +898,23 @@ def federate_post(community, post):
         if post.type == POST_TYPE_IMAGE:
             page['attachment'] = [{'type': 'Link',
                                    'href': post.image.source_url}]  # source_url is always a https link, no need for .replace() as done above
+
+    if post.type == POST_TYPE_POLL:
+        poll = Poll.query.filter_by(post_id=post.id).first()
+        page['type'] = 'Question'
+        page['endTime'] = ap_datetime(poll.end_poll)
+        page['votersCount'] = 0
+        choices = []
+        for choice in PollChoice.query.filter_by(post_id=post.id).all():
+            choices.append({
+                "type": "Note",
+                "name": choice.choice_text,
+                "replies": {
+                  "type": "Collection",
+                  "totalItems": 0
+                }
+            })
+        page['oneOf' if poll.mode == 'single' else 'anyOf'] = choices
     if not community.is_local():  # this is a remote community - send the post to the instance that hosts it
         success = post_request(community.ap_inbox_url, create, current_user.private_key,
                                current_user.ap_profile_id + '#main-key')
@@ -989,8 +1007,25 @@ def federate_post_to_user_followers(post):
     if post.body_html:
         note['content'] = note['content'] + '<p>' + post.body_html + '</p>'
 
+    if post.type == POST_TYPE_POLL:
+        poll = Poll.query.filter_by(post_id=post.id).first()
+        note['type'] = 'Question'
+        note['endTime'] = ap_datetime(poll.end_poll)
+        note['votersCount'] = 0
+        choices = []
+        for choice in PollChoice.query.filter_by(post_id=post.id).all():
+            choices.append({
+                "type": "Note",
+                "name": choice.choice_text,
+                "replies": {
+                  "type": "Collection",
+                  "totalItems": 0
+                }
+            })
+        note['oneOf' if poll.mode == 'single' else 'anyOf'] = choices
+
     instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower, UserFollower.remote_user_id == User.id)
-    instances = instances.filter(UserFollower.local_user_id == post.user_id)
+    instances = instances.filter(UserFollower.local_user_id == post.user_id).filter(Instance.gone_forever == False)
     for i in instances:
         post_request(i.inbox, create, current_user.private_key, current_user.ap_profile_id + '#main-key')
 
