@@ -1558,7 +1558,7 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
             post.language_id = language.id
         if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
             for json_tag in request_json['object']['tag']:
-                if json_tag['type'] == 'Hashtag':
+                if json_tag and json_tag['type'] == 'Hashtag':
                     if json_tag['name'][1:].lower() != post.community.name.lower():             # Lemmy adds the community slug as a hashtag on every post in the community, which we want to ignore
                         hashtag = find_hashtag_or_create(json_tag['name'])
                         if hashtag:
