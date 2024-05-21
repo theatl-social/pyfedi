@@ -1071,15 +1071,15 @@ def refresh_instance_profile_task(instance_id: int):
             if 'type' in instance_json and instance_json['type'] == 'Application':
                 # 'name' is unreliable as the admin can change it to anything. todo: find better way
                 if instance_json['name'].lower() == 'kbin':
-                    software = 'Kbin'
+                    software = 'kbin'
                 elif instance_json['name'].lower() == 'mbin':
-                    software = 'Mbin'
+                    software = 'mbin'
                 elif instance_json['name'].lower() == 'piefed':
-                    software = 'PieFed'
+                    software = 'piefed'
                 elif instance_json['name'].lower() == 'system account':
-                    software = 'Friendica'
+                    software = 'friendica'
                 else:
-                    software = 'Lemmy'
+                    software = 'lemmy'
                 instance.inbox = instance_json['inbox']
                 instance.outbox = instance_json['outbox']
                 instance.software = software

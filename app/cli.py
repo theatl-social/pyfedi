@@ -199,7 +199,7 @@ def register(app):
                                     if node.status_code == 200:
                                         node_json = node.json()
                                         if 'software' in node_json:
-                                            instance.software = node_json['software']['name']
+                                            instance.software = node_json['software']['name'].lower()
                                             instance.version = node_json['software']['version']
                                             instance.failures = 0
                                             instance.dormant = False
