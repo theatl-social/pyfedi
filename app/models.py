@@ -617,7 +617,7 @@ class User(UserMixin, db.Model):
     interface_language = db.Column(db.String(10))           # a locale that the translation system understands e.g. 'en' or 'en-us'. If empty, use browser default
     language_id = db.Column(db.Integer, db.ForeignKey('language.id'))   # the default choice in the language dropdown when composing posts & comments
     average_comment_length = db.Column(db.Integer)
-    comment_length_warning = db.Column(db.Integer, default=15)
+    comment_length_warning = db.Column(db.Integer, default=21)
 
     avatar = db.relationship('File', lazy='joined', foreign_keys=[avatar_id], single_parent=True, cascade="all, delete-orphan")
     cover = db.relationship('File', lazy='joined', foreign_keys=[cover_id], single_parent=True, cascade="all, delete-orphan")
