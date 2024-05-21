@@ -1234,7 +1234,7 @@ msgstr ""
 #: app/community/routes.py:1392
 #, fuzzy, python-format
 msgid "New posts in %(community_name)s"
-msgstr "\"%(recipient_name)s\" への新しいメッセージ"
+msgstr "%(community_name)s への新しいメッセージ"
 
 #: app/community/routes.py:1437 app/community/routes.py:1471
 #, python-format

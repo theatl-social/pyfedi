@@ -57,7 +57,7 @@ msgstr "Signaler \"%(post_title)s\""
 #: app/activitypub/util.py:1657
 #, fuzzy, python-format
 msgid "Reply to comment on %(post_title)s"
-msgstr "Réponse de %(name)s à %(post_title)s"
+msgstr "Réponse à %(post_title)s"
 
 #: app/activitypub/util.py:1926 app/post/routes.py:1506
 msgid "A post has been reported"

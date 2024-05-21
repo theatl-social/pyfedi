@@ -25,13 +25,13 @@ msgstr "[PieFed] Tens notificacions no llegides"
 #: app/cli.py:378 app/post/routes.py:1925
 #, fuzzy, python-format
 msgid "Replies to my post %(post_title)s"
-msgstr "Respondre des de %(name)s a %(post_title)s"
+msgstr "Respondre a %(post_title)s"
 
 #: app/cli.py:387 app/post/routes.py:118 app/post/routes.py:679
 #: app/post/routes.py:1947
 #, fuzzy, python-format
 msgid "Replies to my comment on %(post_title)s"
-msgstr "Respondre des de %(name)s a %(post_title)s"
+msgstr "Respondre a %(post_title)s"
 
 #: app/email.py:16
 msgid "[PieFed] Reset Your Password"
@@ -52,12 +52,12 @@ msgstr "Benvingut a PieFed"
 #: app/activitypub/util.py:1644
 #, fuzzy, python-format
 msgid "Reply to %(post_title)s"
-msgstr "Respondre des de %(name)s a %(post_title)s"
+msgstr "Respondre a %(post_title)s"
 
 #: app/activitypub/util.py:1657
 #, fuzzy, python-format
 msgid "Reply to comment on %(post_title)s"
-msgstr "Respondre des de %(name)s a %(post_title)s"
+msgstr "Respondre a %(post_title)s"
 
 #: app/activitypub/util.py:1926 app/post/routes.py:1506
 msgid "A post has been reported"
@@ -1241,7 +1241,7 @@ msgstr ""
 #: app/community/routes.py:1392
 #, fuzzy, python-format
 msgid "New posts in %(community_name)s"
-msgstr "Nou missatge de \"%(recipient_name)s\""
+msgstr "Nou missatge de \"%(community_name)s\""
 
 #: app/community/routes.py:1437 app/community/routes.py:1471
 #, python-format
