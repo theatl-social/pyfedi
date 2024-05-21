@@ -321,43 +321,6 @@ def list_files(directory):
 
 @bp.route('/test')
 def test():
-    # Check for dormant or dead instances
-    instances = Instance.query.filter(Instance.gone_forever == False, Instance.id != 1).all()
-    HEADERS = {'User-Agent': 'PieFed/1.0', 'Accept': 'application/activity+json'}
-    for instance in instances:
-        try:
-            nodeinfo = requests.get(f"https://{instance.domain}/.well-known/nodeinfo", headers=HEADERS,
-                                    timeout=5, allow_redirects=True)
-
-            if nodeinfo.status_code == 200:
-                nodeinfo_json = nodeinfo.json()
-                for links in nodeinfo_json['links']:
-                    if 'rel' in links and (links['rel'] == 'http://nodeinfo.diaspora.software/ns/schema/2.0' or
-                                           links['rel'] == 'https://nodeinfo.diaspora.software/ns/schema/2.0'):
-                        try:
-                            sleep(0.1)
-                            node = requests.get(links['href'], headers=HEADERS, timeout=5, allow_redirects=True)
-                            if node.status_code == 200:
-                                node_json = node.json()
-                                if 'software' in node_json:
-                                    instance.software = node_json['software']['name']
-                                    instance.version = node_json['software']['version']
-                                    instance.failures = 0
-                                    instance.dormant = False
-                            elif node.status_code >= 400:
-                                instance.failures += 1
-                        except:
-                            instance.failures += 1
-            elif nodeinfo.status_code >= 400:
-                instance.failures += 1
-        except:
-            instance.failures += 1
-        if instance.failures > 7 and instance.dormant == True:
-            instance.gone_forever = True
-        elif instance.failures > 2 and instance.dormant == False:
-            instance.dormant = True
-        db.session.commit()
-
 
     return 'done'
 
