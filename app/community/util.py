@@ -689,16 +689,17 @@ def send_to_remote_instance_task(instance_id: int, community_id: int, payload):
     community = Community.query.get(community_id)
     if community:
         instance = Instance.query.get(instance_id)
-        if post_request(instance.inbox, payload, community.private_key, community.ap_profile_id + '#main-key'):
-            instance.last_successful_send = utcnow()
-            instance.failures = 0
-        else:
-            instance.failures += 1
-            instance.most_recent_attempt = utcnow()
-            instance.start_trying_again = utcnow() + timedelta(seconds=instance.failures ** 4)
-            if instance.failures > 10:
-                instance.dormant = True
-        db.session.commit()
+        if instance.inbox:
+            if post_request(instance.inbox, payload, community.private_key, community.ap_profile_id + '#main-key'):
+                instance.last_successful_send = utcnow()
+                instance.failures = 0
+            else:
+                instance.failures += 1
+                instance.most_recent_attempt = utcnow()
+                instance.start_trying_again = utcnow() + timedelta(seconds=instance.failures ** 4)
+                if instance.failures > 10:
+                    instance.dormant = True
+            db.session.commit()
 
 
 def community_in_list(community_id, community_list):

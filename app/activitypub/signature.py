@@ -94,20 +94,25 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str, con
     log.activity_json=json.dumps(body)
     db.session.add(log)
     db.session.commit()
-    try:
-        result = HttpSignature.signed_request(uri, body, private_key, key_id, content_type, method, timeout)
-        if result.status_code != 200 and result.status_code != 202:
-            log.result = 'failure'
-            log.exception_message += f' Response status code was {result.status_code}'
-            current_app.logger.error('Response code for post attempt was ' +
-                                     str(result.status_code) + ' ' + result.text)
-        log.exception_message += uri
-        if result.status_code == 202:
-            log.exception_message += ' 202'
-    except Exception as e:
+
+    if uri is None or uri == '':
         log.result = 'failure'
-        log.exception_message='could not send:' + str(e)
-        current_app.logger.error(f'Exception while sending post to {uri}')
+        log.exception_message = 'empty uri'
+    else:
+        try:
+            result = HttpSignature.signed_request(uri, body, private_key, key_id, content_type, method, timeout)
+            if result.status_code != 200 and result.status_code != 202:
+                log.result = 'failure'
+                log.exception_message += f' Response status code was {result.status_code}'
+                current_app.logger.error('Response code for post attempt was ' +
+                                         str(result.status_code) + ' ' + result.text)
+            log.exception_message += uri
+            if result.status_code == 202:
+                log.exception_message += ' 202'
+        except Exception as e:
+            log.result = 'failure'
+            log.exception_message='could not send:' + str(e)
+            current_app.logger.error(f'Exception while sending post to {uri}')
     if log.result == 'processing':
         log.result = 'success'
     db.session.commit()
