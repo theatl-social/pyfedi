@@ -17,14 +17,15 @@ import click
 import os
 
 from app.activitypub.signature import RsaKeys
+from app.activitypub.util import find_actor_or_create
 from app.auth.util import random_token
 from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY
 from app.email import send_verification_email, send_email
 from app.models import Settings, BannedInstances, Interest, Role, User, RolePermission, Domain, ActivityPubLog, \
     utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply, Language, \
-    Tag
+    Tag, InstanceRole
 from app.utils import file_get_contents, retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
-    shorten_string
+    shorten_string, get_request
 
 
 def register(app):
@@ -216,6 +217,42 @@ def register(app):
                 elif instance.failures > 2 and instance.dormant == False:
                     instance.dormant = True
                 db.session.commit()
+
+                # retrieve list of Admins from /api/v3/site, update InstanceRole
+                if not instance.dormant and (instance.software == 'lemmy' or instance.software == 'piefed'):
+
+                    try:
+                        response = get_request(f'https://{instance.domain}/api/v3/site')
+                    except:
+                        response = None
+
+                    if response and response.status_code == 200:
+                        try:
+                            instance_data = response.json()
+                        except:
+                            instance_data = None
+                        finally:
+                            response.close()
+
+                        if instance_data:
+                            if 'admins' in instance_data:
+                                admin_profile_ids = []
+                                for admin in instance_data['admins']:
+                                    admin_profile_ids.append(admin['person']['actor_id'].lower())
+                                    user = find_actor_or_create(admin['person']['actor_id'])
+                                    if user and not instance.user_is_admin(user.id):
+                                        new_instance_role = InstanceRole(instance_id=instance.id, user_id=user.id,
+                                                                         role='admin')
+                                        db.session.add(new_instance_role)
+                                        db.session.commit()
+                                # remove any InstanceRoles that are no longer part of instance-data['admins']
+                                for instance_admin in InstanceRole.query.filter_by(instance_id=instance.id):
+                                    if instance_admin.user.profile_id() not in admin_profile_ids:
+                                        db.session.query(InstanceRole).filter(
+                                            InstanceRole.user_id == instance_admin.user.id,
+                                            InstanceRole.instance_id == instance.id,
+                                            InstanceRole.role == 'admin').delete()
+                                        db.session.commit()
 
     @app.cli.command("spaceusage")
     def spaceusage():

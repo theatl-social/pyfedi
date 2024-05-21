@@ -1123,7 +1123,7 @@ def refresh_instance_profile_task(instance_id: int):
                                     InstanceRole.role == 'admin').delete()
                                 db.session.commit()
         elif instance_data.status_code == 406:  # Mastodon does this
-            instance.software = 'Mastodon'
+            instance.software = 'mastodon'
             instance.inbox = f"https://{instance.domain}/inbox"
             instance.updated_at = utcnow()
             db.session.commit()
