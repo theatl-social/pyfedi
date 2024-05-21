@@ -258,6 +258,13 @@ def markdown_to_text(markdown_text) -> str:
     return markdown_text.replace("# ", '')
 
 
+def html_to_text(html) -> str:
+    if html is None or html == '':
+        return ''
+    soup = BeautifulSoup(html, 'html.parser')
+    return soup.get_text()
+
+
 def microblog_content_to_title(html: str) -> str:
     title = ''
     if '<p>' in html:
@@ -267,8 +274,7 @@ def microblog_content_to_title(html: str) -> str:
             if title and title.strip() != '' and len(title.strip()) >= 5:
                 break
     else:
-        soup = BeautifulSoup(html, 'html.parser')
-        title = soup.get_text()
+        title = html_to_text(html)
 
     period_index = title.find('.')
     question_index = title.find('?')

@@ -2,7 +2,7 @@ from flask import session
 from flask_login import current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, PasswordField, BooleanField, EmailField, TextAreaField, FileField, \
-    RadioField, DateField, SelectField
+    RadioField, DateField, SelectField, IntegerField
 from wtforms.fields.choices import SelectMultipleField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Optional
 from flask_babel import _, lazy_gettext as _l
@@ -50,6 +50,7 @@ class SettingsForm(FlaskForm):
                       ]
     default_sort = SelectField(_l('By default, sort posts by'), choices=sorts, validators=[DataRequired()], coerce=str, render_kw={'class': 'form-select'})
     theme = SelectField(_l('Theme'), coerce=str, render_kw={'class': 'form-select'})
+    comment_length_warning = IntegerField(_('Useless comment cutoff length'))
     submit = SubmitField(_l('Save settings'))
 
 

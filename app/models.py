@@ -3,9 +3,10 @@ from time import time
 from typing import List, Union
 
 import requests
+from bs4 import BeautifulSoup
 from flask import current_app, escape, url_for, render_template_string
 from flask_login import UserMixin, current_user
-from sqlalchemy import or_, text
+from sqlalchemy import or_, text, desc
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_babel import _, lazy_gettext as _l
 from sqlalchemy.orm import backref
@@ -615,6 +616,8 @@ class User(UserMixin, db.Model):
     markdown_editor = db.Column(db.Boolean, default=False)
     interface_language = db.Column(db.String(10))           # a locale that the translation system understands e.g. 'en' or 'en-us'. If empty, use browser default
     language_id = db.Column(db.Integer, db.ForeignKey('language.id'))   # the default choice in the language dropdown when composing posts & comments
+    average_comment_length = db.Column(db.Integer)
+    comment_length_warning = db.Column(db.Integer, default=15)
 
     avatar = db.relationship('File', lazy='joined', foreign_keys=[avatar_id], single_parent=True, cascade="all, delete-orphan")
     cover = db.relationship('File', lazy='joined', foreign_keys=[cover_id], single_parent=True, cascade="all, delete-orphan")
@@ -807,6 +810,19 @@ class User(UserMixin, db.Model):
             self.attitude = 1.0
         else:
             self.attitude = (total_upvotes - total_downvotes) / (total_upvotes + total_downvotes)
+
+    def recalculate_avg_comment_length(self):
+        replies = db.session.execute(text('SELECT body, body_html FROM "post_reply" WHERE user_id = :user_id ORDER BY created_at DESC LIMIT 30'),
+                                     {'user_id': self.id}).all()
+        lengths = []
+        for reply in replies:
+            if reply.body.strip() != '':
+                lengths.append(len(reply.body.strip()))
+            else:
+                soup = BeautifulSoup(reply.body_html, 'html.parser')
+                lengths.append(len(soup.get_text()))
+        if len(lengths) > 5:
+            self.average_comment_length = math.ceil(sum(lengths) / len(lengths))
 
     def subscribed(self, community_id: int) -> int:
         if community_id is None:

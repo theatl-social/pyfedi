@@ -8,6 +8,10 @@ nav, etc which are used site-wide */
   color: orangered;
 }
 
+.purple {
+  color: purple;
+}
+
 .pl-0 {
   padding-left: 0 !important;
 }

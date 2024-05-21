@@ -1426,6 +1426,8 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
                 post_reply.ranking = confidence(post_reply.up_votes, post_reply.down_votes)
                 db.session.commit()
 
+                user.recalculate_avg_comment_length()
+
                 # send notification to the post/comment being replied to
                 if parent_comment_id:
                     notify_about_post_reply(parent_comment, post_reply)

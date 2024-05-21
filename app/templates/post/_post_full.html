@@ -138,7 +138,9 @@
             </div>
             {% if post.type == POST_TYPE_POLL %}
                 <div class="post_poll">
-                    {% if poll_results %}
+                    {% if poll_results and poll_total_votes == 0 %}
+                        <p>{{ _('The poll has finished, yet no votes were cast.') }}</p>
+                    {% elif poll_results and poll_total_votes %}
                         <ul>
                         {% for choice in poll_choices %}
                             <li>
