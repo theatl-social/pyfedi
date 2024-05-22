@@ -439,6 +439,11 @@ def shared_inbox():
     return ''
 
 
+@bp.route('/site_inbox', methods=['GET', 'POST'])
+def site_inbox():
+    return shared_inbox()
+
+
 @celery.task
 def process_inbox_request(request_json, activitypublog_id, ip_address):
     with current_app.app_context():
