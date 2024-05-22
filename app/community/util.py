@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from threading import Thread
 from time import sleep
+from random import randint
 from typing import List
 import requests
 from PIL import Image, ImageOps
@@ -44,7 +45,7 @@ def search_for_community(address: str):
             webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
                                          params={'resource': f"acct:{address[1:]}"})
         except requests.exceptions.ReadTimeout:
-            time.sleep(randint(3, 10))
+            sleep(randint(3, 10))
             try:
                 webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
                                             params={'resource': f"acct:{address[1:]}"})
