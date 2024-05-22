@@ -1329,6 +1329,57 @@ def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id
                 db.session.commit()
 
 
+def remove_data_from_banned_user(deletor_ap_id, user_ap_id, target):
+    if current_app.debug:
+        remove_data_from_banned_user_task(deletor_ap_id, user_ap_id, target)
+    else:
+        remove_data_from_banned_user_task.delay(deletor_ap_id, user_ap_id, target)
+
+
+@celery.task
+def remove_data_from_banned_user_task(deletor_ap_id, user_ap_id, target):
+    deletor = find_actor_or_create(deletor_ap_id, create_if_not_found=False)
+    user = find_actor_or_create(user_ap_id, create_if_not_found=False)
+    community = Community.query.filter_by(ap_profile_id=target).first()
+
+    if not deletor and not user:
+        return
+
+    # site bans by admins
+    if deletor.instance.user_is_admin(deletor.id) and target == f"https://{deletor.instance.domain}/" and deletor.instance_id == user.instance_id:
+        post_replies = PostReply.query.filter_by(user_id=user.id)
+        posts = Post.query.filter_by(user_id=user.id)
+
+    # community bans by mods
+    elif community and community.is_moderator(deletor):
+        post_replies = PostReply.query.filter_by(user_id=user.id, community_id=community.id)
+        posts = Post.query.filter_by(user_id=user.id, community_id=community.id)
+
+    else:
+        return
+
+    for pr in post_replies:
+        pr.post.reply_count -= 1
+        if pr.has_replies():
+            pr.body = 'Banned'
+            pr.body_html = lemmy_markdown_to_html(pr.body)
+        else:
+            pr.delete_dependencies()
+            db.session.delete(pr)
+    db.session.commit()
+
+    for p in posts:
+        if p.cross_posts:
+            old_cross_posts = Post.query.filter(Post.id.in_(p.cross_posts)).all()
+            for ocp in old_cross_posts:
+                if ocp.cross_posts is not None:
+                    ocp.cross_posts.remove(p.id)
+        p.delete_dependencies()
+        db.session.delete(p)
+        p.community.post_count -= 1
+    db.session.commit()
+
+
 def create_post_reply(activity_log: ActivityPubLog, community: Community, in_reply_to, request_json: dict, user: User, announce_id=None) -> Union[Post, None]:
     if community.local_only:
         activity_log.exception_message = 'Community is local only, reply discarded'
