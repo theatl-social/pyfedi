@@ -429,6 +429,15 @@ def activitypub_application():
         'updated': ap_datetime(g.site.updated),
         'inbox': f"https://{current_app.config['SERVER_NAME']}/site_inbox",
         'outbox': f"https://{current_app.config['SERVER_NAME']}/site_outbox",
+        'icon': {
+          'type': 'Image',
+          'url': f"https://{current_app.config['SERVER_NAME']}/static/images/logo2.png"
+        },
+        'publicKey': {
+          'id': f"https://{current_app.config['SERVER_NAME']}/#main-key",
+          'owner': f"https://{current_app.config['SERVER_NAME']}/",
+          'publicKeyPem': g.site.public_key
+        }
     }
     resp = jsonify(application_data)
     resp.content_type = 'application/activity+json'

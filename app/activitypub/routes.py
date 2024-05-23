@@ -21,7 +21,7 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
     upvote_post, delete_post_or_comment, community_members, \
     user_removed_from_remote_server, create_post, create_post_reply, update_post_reply_from_activity, \
     update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection, find_reported_object, \
-    process_report, ensure_domains_match, can_edit, can_delete
+    process_report, ensure_domains_match, can_edit, can_delete, remove_data_from_banned_user
 from app.utils import gibberish, get_setting, is_image_url, allowlist_html, render_template, \
     domain_from_url, markdown_to_html, community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
@@ -439,6 +439,11 @@ def shared_inbox():
     return ''
 
 
+@bp.route('/site_inbox', methods=['GET', 'POST'])
+def site_inbox():
+    return shared_inbox()
+
+
 @celery.task
 def process_inbox_request(request_json, activitypublog_id, ip_address):
     with current_app.app_context():
@@ -800,6 +805,15 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                     if existing_membership:
                                         existing_membership.is_moderator = False
                                     activity_log.result = 'success'
+                    elif request_json['object']['type'] == 'Block' and 'target' in request_json['object']:
+                        activity_log.activity_type = 'Community Ban'
+                        mod_ap_id = request_json['object']['actor']
+                        user_ap_id = request_json['object']['object']
+                        target = request_json['object']['target']
+                        remove_data = request_json['object']['removeData']
+                        if target == request_json['actor'] and remove_data == True:
+                            remove_data_from_banned_user(mod_ap_id, user_ap_id, target)
+                        activity_log.result = 'success'
                     else:
                         activity_log.exception_message = 'Invalid type for Announce'
 
@@ -1076,6 +1090,15 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                         activity_log.result = 'success'
                     else:
                         activity_log.exception_message = 'Report ignored due to missing user or content'
+                elif request_json['type'] == 'Block':
+                    activity_log.activity_type = 'Site Ban'
+                    admin_ap_id = request_json['actor']
+                    user_ap_id = request_json['object']
+                    target = request_json['target']
+                    remove_data = request_json['removeData']
+                    if remove_data == True:
+                        remove_data_from_banned_user(admin_ap_id, user_ap_id, target)
+                    activity_log.result = 'success'
 
                     # Flush the caches of any major object that was created. To be sure.
                 if 'user' in vars() and user is not None:

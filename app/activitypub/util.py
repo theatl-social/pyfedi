@@ -1041,92 +1041,104 @@ def find_instance_id(server):
         db.session.commit()
 
         # Spawn background task to fill in more details
-        refresh_instance_profile(new_instance.id)
+        new_instance_profile(new_instance.id)
 
         return new_instance.id
 
 
-def refresh_instance_profile(instance_id: int):
+def new_instance_profile(instance_id: int):
     if instance_id:
         if current_app.debug:
-            refresh_instance_profile_task(instance_id)
+            new_instance_profile_task(instance_id)
         else:
-            refresh_instance_profile_task.apply_async(args=(instance_id,), countdown=randint(1, 10))
+            new_instance_profile_task.apply_async(args=(instance_id,), countdown=randint(1, 10))
 
 
 @celery.task
-def refresh_instance_profile_task(instance_id: int):
+def new_instance_profile_task(instance_id: int):
     instance = Instance.query.get(instance_id)
-    if instance.inbox is None or instance.updated_at < utcnow() - timedelta(days=7):
+    try:
+        instance_data = get_request(f"https://{instance.domain}", headers={'Accept': 'application/activity+json'})
+    except:
+        return
+    if instance_data.status_code == 200:
         try:
-            instance_data = get_request(f"https://{instance.domain}", headers={'Accept': 'application/activity+json'})
+            instance_json = instance_data.json()
+            instance_data.close()
+        except requests.exceptions.JSONDecodeError as ex:
+            instance_json = {}
+        if 'type' in instance_json and instance_json['type'] == 'Application':
+            instance.inbox = instance_json['inbox']
+            instance.outbox = instance_json['outbox']
+        else:   # it's pretty much always /inbox so just assume that it is for whatever this instance is running
+            instance.inbox = f"https://{instance.domain}/inbox"
+        instance.updated_at = utcnow()
+        db.session.commit()
+
+        # retrieve list of Admins from /api/v3/site, update InstanceRole
+        try:
+            response = get_request(f'https://{instance.domain}/api/v3/site')
         except:
-            return
-        if instance_data.status_code == 200:
-            try:
-                instance_json = instance_data.json()
-                instance_data.close()
-            except requests.exceptions.JSONDecodeError as ex:
-                instance_json = {}
-            if 'type' in instance_json and instance_json['type'] == 'Application':
-                # 'name' is unreliable as the admin can change it to anything. todo: find better way
-                if instance_json['name'].lower() == 'kbin':
-                    software = 'kbin'
-                elif instance_json['name'].lower() == 'mbin':
-                    software = 'mbin'
-                elif instance_json['name'].lower() == 'piefed':
-                    software = 'piefed'
-                elif instance_json['name'].lower() == 'system account':
-                    software = 'friendica'
-                else:
-                    software = 'lemmy'
-                instance.inbox = instance_json['inbox']
-                instance.outbox = instance_json['outbox']
-                instance.software = software
-                if instance.inbox.endswith('/site_inbox'):      # Lemmy provides a /site_inbox but it always returns 400 when trying to POST to it. wtf.
-                    instance.inbox = instance.inbox.replace('/site_inbox', '/inbox')
-            else:   # it's pretty much always /inbox so just assume that it is for whatever this instance is running (mostly likely Mastodon)
-                instance.inbox = f"https://{instance.domain}/inbox"
-            instance.updated_at = utcnow()
-            db.session.commit()
+            response = None
 
-            # retrieve list of Admins from /api/v3/site, update InstanceRole
+        if response and response.status_code == 200:
             try:
-                response = get_request(f'https://{instance.domain}/api/v3/site')
+                instance_data = response.json()
             except:
-                response = None
+                instance_data = None
+            finally:
+                response.close()
 
-            if response and response.status_code == 200:
-                try:
-                    instance_data = response.json()
-                except:
-                    instance_data = None
-                finally:
-                    response.close()
-
-                if instance_data:
-                    if 'admins' in instance_data:
-                        admin_profile_ids = []
-                        for admin in instance_data['admins']:
-                            admin_profile_ids.append(admin['person']['actor_id'].lower())
-                            user = find_actor_or_create(admin['person']['actor_id'])
-                            if user and not instance.user_is_admin(user.id):
-                                new_instance_role = InstanceRole(instance_id=instance.id, user_id=user.id, role='admin')
-                                db.session.add(new_instance_role)
-                                db.session.commit()
-                        # remove any InstanceRoles that are no longer part of instance-data['admins']
-                        for instance_admin in InstanceRole.query.filter_by(instance_id=instance.id):
-                            if instance_admin.user.profile_id() not in admin_profile_ids:
-                                db.session.query(InstanceRole).filter(
+            if instance_data:
+                if 'admins' in instance_data:
+                    admin_profile_ids = []
+                    for admin in instance_data['admins']:
+                        admin_profile_ids.append(admin['person']['actor_id'].lower())
+                        user = find_actor_or_create(admin['person']['actor_id'])
+                        if user and not instance.user_is_admin(user.id):
+                            new_instance_role = InstanceRole(instance_id=instance.id, user_id=user.id, role='admin')
+                            db.session.add(new_instance_role)
+                            db.session.commit()
+                    # remove any InstanceRoles that are no longer part of instance-data['admins']
+                    for instance_admin in InstanceRole.query.filter_by(instance_id=instance.id):
+                        if instance_admin.user.profile_id() not in admin_profile_ids:
+                            db.session.query(InstanceRole).filter(
                                     InstanceRole.user_id == instance_admin.user.id,
                                     InstanceRole.instance_id == instance.id,
                                     InstanceRole.role == 'admin').delete()
+                            db.session.commit()
+    elif instance_data.status_code == 406:  # Mastodon and PeerTube do this
+        instance.inbox = f"https://{instance.domain}/inbox"
+        instance.updated_at = utcnow()
+        db.session.commit()
+
+    HEADERS = {'User-Agent': 'PieFed/1.0', 'Accept': 'application/activity+json'}
+    try:
+        nodeinfo = requests.get(f"https://{instance.domain}/.well-known/nodeinfo", headers=HEADERS,
+                                                                    timeout=5, allow_redirects=True)
+
+        if nodeinfo.status_code == 200:
+            nodeinfo_json = nodeinfo.json()
+            for links in nodeinfo_json['links']:
+                if 'rel' in links and (
+                    links['rel'] == 'http://nodeinfo.diaspora.software/ns/schema/2.0' or
+                    links['rel'] == 'https://nodeinfo.diaspora.software/ns/schema/2.0'):
+                    try:
+                        time.sleep(0.1)
+                        node = requests.get(links['href'], headers=HEADERS, timeout=5,
+                                                                allow_redirects=True)
+                        if node.status_code == 200:
+                            node_json = node.json()
+                            if 'software' in node_json:
+                                instance.software = node_json['software']['name'].lower()
+                                instance.version = node_json['software']['version']
                                 db.session.commit()
-        elif instance_data.status_code == 406:  # Mastodon does this
-            instance.software = 'mastodon'
-            instance.inbox = f"https://{instance.domain}/inbox"
-            instance.updated_at = utcnow()
-            db.session.commit()
+                    except:
+                        # todo: update new field in Instance to indicate bad nodeinfo response
+                        return
+    except:
+        # todo: update new field in Instance to indicate bad nodeinfo response
+        return
 
 
 # alter the effect of upvotes based on their instance. Default to 1.0
@@ -1327,6 +1339,57 @@ def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id
                     db.session.delete(to_delete)
 
                 db.session.commit()
+
+
+def remove_data_from_banned_user(deletor_ap_id, user_ap_id, target):
+    if current_app.debug:
+        remove_data_from_banned_user_task(deletor_ap_id, user_ap_id, target)
+    else:
+        remove_data_from_banned_user_task.delay(deletor_ap_id, user_ap_id, target)
+
+
+@celery.task
+def remove_data_from_banned_user_task(deletor_ap_id, user_ap_id, target):
+    deletor = find_actor_or_create(deletor_ap_id, create_if_not_found=False)
+    user = find_actor_or_create(user_ap_id, create_if_not_found=False)
+    community = Community.query.filter_by(ap_profile_id=target).first()
+
+    if not deletor and not user:
+        return
+
+    # site bans by admins
+    if deletor.instance.user_is_admin(deletor.id) and target == f"https://{deletor.instance.domain}/" and deletor.instance_id == user.instance_id:
+        post_replies = PostReply.query.filter_by(user_id=user.id)
+        posts = Post.query.filter_by(user_id=user.id)
+
+    # community bans by mods
+    elif community and community.is_moderator(deletor):
+        post_replies = PostReply.query.filter_by(user_id=user.id, community_id=community.id)
+        posts = Post.query.filter_by(user_id=user.id, community_id=community.id)
+
+    else:
+        return
+
+    for pr in post_replies:
+        pr.post.reply_count -= 1
+        if pr.has_replies():
+            pr.body = 'Banned'
+            pr.body_html = lemmy_markdown_to_html(pr.body)
+        else:
+            pr.delete_dependencies()
+            db.session.delete(pr)
+    db.session.commit()
+
+    for p in posts:
+        if p.cross_posts:
+            old_cross_posts = Post.query.filter(Post.id.in_(p.cross_posts)).all()
+            for ocp in old_cross_posts:
+                if ocp.cross_posts is not None:
+                    ocp.cross_posts.remove(p.id)
+        p.delete_dependencies()
+        db.session.delete(p)
+        p.community.post_count -= 1
+    db.session.commit()
 
 
 def create_post_reply(activity_log: ActivityPubLog, community: Community, in_reply_to, request_json: dict, user: User, announce_id=None) -> Union[Post, None]:
