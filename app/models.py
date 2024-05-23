@@ -68,6 +68,7 @@ class Instance(db.Model):
     ip_address = db.Column(db.String(50))
     trusted = db.Column(db.Boolean, default=False)
     posting_warning = db.Column(db.String(512))
+    nodeinfo_href = db.Column(db.String(100))
 
     posts = db.relationship('Post', backref='instance', lazy='dynamic')
     post_replies = db.relationship('PostReply', backref='instance', lazy='dynamic')
