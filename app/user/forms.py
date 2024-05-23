@@ -50,7 +50,6 @@ class SettingsForm(FlaskForm):
                       ]
     default_sort = SelectField(_l('By default, sort posts by'), choices=sorts, validators=[DataRequired()], coerce=str, render_kw={'class': 'form-select'})
     theme = SelectField(_l('Theme'), coerce=str, render_kw={'class': 'form-select'})
-    comment_length_warning = IntegerField(_('Useless comment cutoff length'))
     submit = SubmitField(_l('Save settings'))
 
 

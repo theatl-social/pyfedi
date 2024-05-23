@@ -100,9 +100,6 @@
                                     {% elif comment['comment'].author.reputation < 0 %}
                                         <span class="fe fe-warning orangered" title="Low reputation."> </span>
                                     {% endif %}
-                                    {% if current_user.is_authenticated and current_user.comment_length_warning and comment['comment'].author.average_comment_length and comment['comment'].author.average_comment_length <= current_user.comment_length_warning %}
-                                        <span class="fe fe-warning purple" title="{{ _('Usually makes short and low effort comments.') }}"> </span>
-                                    {% endif %}
                                 {% endif %}
                                 {% if comment['comment'].author.id == post.author.id %}<span title="Submitter of original post" aria-label="{{ _('Post creator') }}" class="small">[OP]</span>{% endif %}
                                 <span class="text-muted small" aria_label="{{ _('When: ') }}">{{ moment(comment['comment'].posted_at).fromNow(refresh=True) }}{% if comment['comment'].edited_at %}, edited {{ moment(comment['comment'].edited_at).fromNow(refresh=True) }} {% endif %}</span>

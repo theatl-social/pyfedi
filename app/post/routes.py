@@ -111,8 +111,6 @@ def show_post(post_id: int):
         db.session.add(reply)
         db.session.commit()
 
-        current_user.recalculate_avg_comment_length()
-
         notify_about_post_reply(None, reply)
 
         # Subscribe to own comment
@@ -672,8 +670,6 @@ def add_reply(post_id: int, comment_id: int):
                     abort(401)
         db.session.add(reply)
         db.session.commit()
-
-        current_user.recalculate_avg_comment_length()
 
         # Notify subscribers
         notify_about_post_reply(in_reply_to, reply)
