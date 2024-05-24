@@ -718,10 +718,6 @@ def add_reply(post_id: int, comment_id: int):
                     in_reply_to.author.public_url()
                 ],
                 'content': reply.body_html,
-                'source': {
-                    'content': reply.body,
-                    'mediaType': 'text/markdown'
-                },
                 'inReplyTo': in_reply_to.profile_id(),
                 'url': reply.profile_id(),
                 'mediaType': 'text/html',
