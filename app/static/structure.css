@@ -554,7 +554,7 @@ fieldset legend {
 .topics_list {
   list-style-type: none;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(152px, 1fr));
 }
 .topics_list > li {
   padding-bottom: 20px;
