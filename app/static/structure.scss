@@ -123,6 +123,16 @@ html {
   }
 }
 
+.topics_list {
+  list-style-type: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(132px, 1fr));
+
+  > li {
+    padding-bottom: 20px;
+  }
+}
+
 .community_header {
   background-repeat: no-repeat;
   background-position: center center;
