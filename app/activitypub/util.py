@@ -1132,12 +1132,11 @@ def new_instance_profile_task(instance_id: int):
                             if 'software' in node_json:
                                 instance.software = node_json['software']['name'].lower()
                                 instance.version = node_json['software']['version']
+                                instance.nodeinfo_href = links['href']
                                 db.session.commit()
                     except:
-                        # todo: update new field in Instance to indicate bad nodeinfo response
                         return
     except:
-        # todo: update new field in Instance to indicate bad nodeinfo response
         return
 
 

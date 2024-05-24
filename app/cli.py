@@ -183,35 +183,47 @@ def register(app):
             instances = Instance.query.filter(Instance.gone_forever == False, Instance.id != 1).all()
             HEADERS = {'User-Agent': 'PieFed/1.0', 'Accept': 'application/activity+json'}
             for instance in instances:
-                try:
-                    nodeinfo = requests.get(f"https://{instance.domain}/.well-known/nodeinfo", headers=HEADERS,
-                                            timeout=5, allow_redirects=True)
+                if not instance.nodeinfo_href:
+                    try:
+                        nodeinfo = requests.get(f"https://{instance.domain}/.well-known/nodeinfo", headers=HEADERS,
+                                                timeout=5, allow_redirects=True)
 
-                    if nodeinfo.status_code == 200:
-                        nodeinfo_json = nodeinfo.json()
-                        for links in nodeinfo_json['links']:
-                            if 'rel' in links and (
-                                    links['rel'] == 'http://nodeinfo.diaspora.software/ns/schema/2.0' or
-                                    links['rel'] == 'https://nodeinfo.diaspora.software/ns/schema/2.0'):
-                                try:
+                        if nodeinfo.status_code == 200:
+                            nodeinfo_json = nodeinfo.json()
+                            for links in nodeinfo_json['links']:
+                                if 'rel' in links and (
+                                        links['rel'] == 'http://nodeinfo.diaspora.software/ns/schema/2.0' or
+                                        links['rel'] == 'https://nodeinfo.diaspora.software/ns/schema/2.0'):
+                                    instance.nodeinfo_href = links['href']
+                                    instance.failures = 0
+                                    instance.dormant = False
+                                    db.session.commit()
                                     sleep(0.1)
-                                    node = requests.get(links['href'], headers=HEADERS, timeout=5,
-                                                        allow_redirects=True)
-                                    if node.status_code == 200:
-                                        node_json = node.json()
-                                        if 'software' in node_json:
-                                            instance.software = node_json['software']['name'].lower()
-                                            instance.version = node_json['software']['version']
-                                            instance.failures = 0
-                                            instance.dormant = False
-                                    elif node.status_code >= 400:
-                                        instance.failures += 1
-                                except:
-                                    instance.failures += 1
-                    elif nodeinfo.status_code >= 400:
+                                    break
+                        elif node.status_code >= 400:
+                            current_app.logger.info(f"{instance.domain} has no well-known/nodeinfo response")
+                    except requests.exceptions.ReadTimeout:
                         instance.failures += 1
-                except:
-                    instance.failures += 1
+                    except requests.exceptions.ConnectionError:
+                        instance.failures += 1
+                    except requests.exceptions.RequestException:
+                        pass
+
+                if instance.nodeinfo_href:
+                    try:
+                        node = requests.get(instance.nodeinfo_href, headers=HEADERS, timeout=5,
+                                                            allow_redirects=True)
+                        if node.status_code == 200:
+                            node_json = node.json()
+                            if 'software' in node_json:
+                                instance.software = node_json['software']['name'].lower()
+                                instance.version = node_json['software']['version']
+                                instance.failures = 0
+                                instance.dormant = False
+                        elif node.status_code >= 400:
+                            instance.failures += 1
+                    except requests.exceptions.RequestException:
+                        instance.failures += 1
                 if instance.failures > 7 and instance.dormant == True:
                     instance.gone_forever = True
                 elif instance.failures > 2 and instance.dormant == False:
