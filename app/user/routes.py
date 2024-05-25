@@ -8,9 +8,11 @@ from flask_babel import _, lazy_gettext as _l
 from app import db, cache, celery
 from app.activitypub.signature import post_request, default_context
 from app.activitypub.util import find_actor_or_create
+from app.auth.util import random_token
 from app.community.util import save_icon_file, save_banner_file, retrieve_mods_and_backfill
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_PENDING, NOTIF_USER, POST_TYPE_VIDEO, POST_TYPE_LINK, \
     POST_TYPE_IMAGE, POST_TYPE_POLL
+from app.email import send_verification_email
 from app.models import Post, Community, CommunityMember, User, PostReply, PostVote, Notification, utcnow, File, Site, \
     Instance, Report, UserBlock, CommunityBan, CommunityJoinRequest, CommunityBlock, Filter, Domain, DomainBlock, \
     InstanceBlock, NotificationSubscription
@@ -107,7 +109,16 @@ def edit_profile(actor):
     form = ProfileForm()
     if form.validate_on_submit() and not current_user.banned:
         current_user.title = form.title.data
-        current_user.email = form.email.data
+        # Email address has changed - request verification of new address
+        if form.email.data.strip() != current_user.email:
+            current_user.verified = False
+            verification_token = random_token(16)
+            current_user.verification_token = verification_token
+            send_verification_email(user)
+            flash(
+                _('You have changed your email address so we need to verify it. Please check your email inbox for a verification link.'),
+                'warning')
+        current_user.email = form.email.data.strip()
         if form.password_field.data.strip() != '':
             current_user.set_password(form.password_field.data)
         current_user.about = form.about.data
