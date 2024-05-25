@@ -490,17 +490,19 @@ def refresh_user_profile_task(user_id):
             if 'icon' in activity_json:
                 if user.avatar_id and activity_json['icon']['url'] != user.avatar.source_url:
                     user.avatar.delete_from_disk()
-                avatar = File(source_url=activity_json['icon']['url'])
-                user.avatar = avatar
-                db.session.add(avatar)
-                avatar_changed = True
+                if not user.avatar_id or (user.avatar_id and activity_json['icon']['url'] != user.avatar.source_url):
+                    avatar = File(source_url=activity_json['icon']['url'])
+                    user.avatar = avatar
+                    db.session.add(avatar)
+                    avatar_changed = True
             if 'image' in activity_json:
                 if user.cover_id and activity_json['image']['url'] != user.cover.source_url:
                     user.cover.delete_from_disk()
-                cover = File(source_url=activity_json['image']['url'])
-                user.cover = cover
-                db.session.add(cover)
-                cover_changed = True
+                if not user.cover_id or (user.cover_id and activity_json['image']['url'] != user.cover.source_url):
+                    cover = File(source_url=activity_json['image']['url'])
+                    user.cover = cover
+                    db.session.add(cover)
+                    cover_changed = True
             db.session.commit()
             if user.avatar_id and avatar_changed:
                 make_image_sizes(user.avatar_id, 40, 250, 'users')
@@ -564,17 +566,19 @@ def refresh_community_profile_task(community_id):
             if 'icon' in activity_json:
                 if community.icon_id and activity_json['icon']['url'] != community.icon.source_url:
                     community.icon.delete_from_disk()
-                icon = File(source_url=activity_json['icon']['url'])
-                community.icon = icon
-                db.session.add(icon)
-                icon_changed = True
+                if not community.icon_id or (community.icon_id and activity_json['icon']['url'] != community.icon.source_url):
+                    icon = File(source_url=activity_json['icon']['url'])
+                    community.icon = icon
+                    db.session.add(icon)
+                    icon_changed = True
             if 'image' in activity_json:
                 if community.image_id and activity_json['image']['url'] != community.image.source_url:
                     community.image.delete_from_disk()
-                image = File(source_url=activity_json['image']['url'])
-                community.image = image
-                db.session.add(image)
-                cover_changed = True
+                if not community.image_id or (community.image_id and activity_json['image']['url'] != community.image.source_url):
+                    image = File(source_url=activity_json['image']['url'])
+                    community.image = image
+                    db.session.add(image)
+                    cover_changed = True
             if 'language' in activity_json and isinstance(activity_json['language'], list) and not community.ignore_remote_language:
                 for ap_language in activity_json['language']:
                     new_language = find_language_or_create(ap_language['identifier'], ap_language['name'])
