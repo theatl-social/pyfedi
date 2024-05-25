@@ -554,7 +554,7 @@ def refresh_community_profile_task(community_id):
             community.description = activity_json['summary'] if 'summary' in activity_json else ''
             community.rules = activity_json['rules'] if 'rules' in activity_json else ''
             community.rules_html = lemmy_markdown_to_html(activity_json['rules'] if 'rules' in activity_json else '')
-            community.restricted_to_mods = activity_json['postingRestrictedToMods']
+            community.restricted_to_mods = activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else True
             community.new_mods_wanted = activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False
             community.private_mods = activity_json['privateMods'] if 'privateMods' in activity_json else False
             community.ap_moderators_url = mods_url
@@ -719,7 +719,7 @@ def actor_json_to_model(activity_json, address, server):
                               rules=activity_json['rules'] if 'rules' in activity_json else '',
                               rules_html=lemmy_markdown_to_html(activity_json['rules'] if 'rules' in activity_json else ''),
                               nsfw=activity_json['sensitive'] if 'sensitive' in activity_json else False,
-                              restricted_to_mods=activity_json['postingRestrictedToMods'],
+                              restricted_to_mods=activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else True,
                               new_mods_wanted=activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False,
                               private_mods=activity_json['privateMods'] if 'privateMods' in activity_json else False,
                               created_at=activity_json['published'] if 'published' in activity_json else utcnow(),
