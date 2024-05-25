@@ -107,10 +107,12 @@ def edit_profile(actor):
     if current_user.id != user.id:
         abort(401)
     form = ProfileForm()
+    old_email = user.email
     if form.validate_on_submit() and not current_user.banned:
         current_user.title = form.title.data
+        current_user.email = form.email.data.strip()
         # Email address has changed - request verification of new address
-        if form.email.data.strip() != current_user.email:
+        if form.email.data.strip() != old_email:
             current_user.verified = False
             verification_token = random_token(16)
             current_user.verification_token = verification_token

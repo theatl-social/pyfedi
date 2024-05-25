@@ -210,15 +210,17 @@ def verify_email(token):
                 flash('You have been banned.', 'error')
                 return redirect(url_for('main.index'))
             if user.verified:   # guard against users double-clicking the link in the email
+                flash(_('Thank you for verifying your email address.'))
                 return redirect(url_for('main.index'))
             user.verified = True
             db.session.commit()
-            if not user.waiting_for_approval():
+            if not user.waiting_for_approval() and user.private_key is None:    # only finalize user set up if this is a brand new user. People can also end up doing this process when they change their email address in which case we DO NOT want to reset their keys, etc!
                 finalize_user_setup(user)
             else:
                 flash(_('Thank you for verifying your email address.'))
         else:
             flash(_('Email address validation failed.'), 'error')
+            return redirect(url_for('main.index'))
         if user.waiting_for_approval():
             return redirect(url_for('auth.please_wait'))
         else:
