@@ -114,10 +114,8 @@ def edit_profile(actor):
             current_user.verified = False
             verification_token = random_token(16)
             current_user.verification_token = verification_token
-            send_verification_email(user)
-            flash(
-                _('You have changed your email address so we need to verify it. Please check your email inbox for a verification link.'),
-                'warning')
+            send_verification_email(current_user)
+            flash(_('You have changed your email address so we need to verify it. Please check your email inbox for a verification link.'), 'warning')
         current_user.email = form.email.data.strip()
         if form.password_field.data.strip() != '':
             current_user.set_password(form.password_field.data)
