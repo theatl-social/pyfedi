@@ -488,13 +488,20 @@ def refresh_user_profile_task(user_id):
 
             avatar_changed = cover_changed = False
             if 'icon' in activity_json:
-                if user.avatar_id and activity_json['icon']['url'] != user.avatar.source_url:
-                    user.avatar.delete_from_disk()
-                if not user.avatar_id or (user.avatar_id and activity_json['icon']['url'] != user.avatar.source_url):
-                    avatar = File(source_url=activity_json['icon']['url'])
-                    user.avatar = avatar
-                    db.session.add(avatar)
-                    avatar_changed = True
+                if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
+                    icon_entry = activity_json['icon']['url']
+                elif isinstance(activity_json['icon'], list) and 'url' in activity_json['icon'][-1]:
+                    icon_entry = activity_json['icon'][-1]['url']
+                else:
+                    icon_entry = None
+                if icon_entry:
+                    if user.avatar_id and icon_entry != user.avatar.source_url:
+                        user.avatar.delete_from_disk()
+                    if not user.avatar_id or (user.avatar_id and icon_entry != user.avatar.source_url):
+                        avatar = File(source_url=icon_entry)
+                        user.avatar = avatar
+                        db.session.add(avatar)
+                        avatar_changed = True
             if 'image' in activity_json:
                 if user.cover_id and activity_json['image']['url'] != user.cover.source_url:
                     user.cover.delete_from_disk()
@@ -655,10 +662,17 @@ def actor_json_to_model(activity_json, address, server):
             current_app.logger.error(f'KeyError for {address}@{server} while parsing ' + str(activity_json))
             return None
 
-        if 'icon' in activity_json and activity_json['icon'] is not None and 'url' in activity_json['icon']:
-            avatar = File(source_url=activity_json['icon']['url'])
-            user.avatar = avatar
-            db.session.add(avatar)
+        if 'icon' in activity_json and activity_json['icon'] is not None:
+            if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
+                icon_entry = activity_json['icon']['url']
+            elif isinstance(activity_json['icon'], list) and 'url' in activity_json['icon'][-1]:
+                icon_entry = activity_json['icon'][-1]['url']
+            else:
+                icon_entry = None
+            if icon_entry:
+                avatar = File(source_url=icon_entry)
+                user.avatar = avatar
+                db.session.add(avatar)
         if 'image' in activity_json and activity_json['image'] is not None and 'url' in activity_json['image']:
             cover = File(source_url=activity_json['image']['url'])
             user.cover = cover
