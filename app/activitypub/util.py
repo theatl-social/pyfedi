@@ -552,6 +552,7 @@ def refresh_community_profile_task(community_id):
                 community.nsfl = activity_json['nsfl']
             community.title = activity_json['name']
             community.description = activity_json['summary'] if 'summary' in activity_json else ''
+            community.description_html = markdown_to_html(community.description)
             community.rules = activity_json['rules'] if 'rules' in activity_json else ''
             community.rules_html = lemmy_markdown_to_html(activity_json['rules'] if 'rules' in activity_json else '')
             community.restricted_to_mods = activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else True
@@ -739,6 +740,7 @@ def actor_json_to_model(activity_json, address, server):
                               instance_id=find_instance_id(server),
                               low_quality='memes' in activity_json['preferredUsername']
                               )
+        community.description_html = markdown_to_html(community.description)
         # parse markdown and overwrite html field with result
         if 'source' in activity_json and \
                 activity_json['source']['mediaType'] == 'text/markdown':
