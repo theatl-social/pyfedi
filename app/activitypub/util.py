@@ -804,8 +804,12 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
             post.body = post_json['source']['content']
             post.body_html = lemmy_markdown_to_html(post.body)
         elif 'content' in post_json:
-            post.body_html = allowlist_html(post_json['content'])
-            post.body = ''
+            if post_json['mediaType'] == 'text/html':
+                post.body_html = allowlist_html(post_json['content'])
+                post.body = ''
+            elif post_json['mediaType'] == 'text/markdown':
+                post.body = post_json['content']
+                post.body_html = markdown_to_html(post.body)
         if 'attachment' in post_json and len(post_json['attachment']) > 0 and 'type' in post_json['attachment'][0]:
             if post_json['attachment'][0]['type'] == 'Link':
                 post.url = post_json['attachment'][0]['href']
@@ -1600,8 +1604,12 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
         post.body = request_json['object']['source']['content']
         post.body_html = lemmy_markdown_to_html(post.body)
     elif 'content' in request_json['object'] and request_json['object']['content'] is not None: # Kbin
-        post.body_html = allowlist_html(request_json['object']['content'])
-        post.body = ''
+        if request_json['object']['mediaType'] == 'text/html':
+            post.body_html = allowlist_html(request_json['object']['content'])
+            post.body = ''
+        elif request_json['object']['mediaType'] == 'text/markdown':
+            post.body = request_json['object']['content']
+            post.body_html = markdown_to_html(post.body)
         if name == "[Microblog]":
             name += ' ' + microblog_content_to_title(post.body_html)
             if '[NSFL]' in name.upper() or '(NSFL)' in name.upper():
@@ -1811,8 +1819,12 @@ def update_post_from_activity(post: Post, request_json: dict):
         post.body = request_json['object']['source']['content']
         post.body_html = lemmy_markdown_to_html(post.body)
     elif 'content' in request_json['object'] and request_json['object']['content'] is not None: # Kbin
-        post.body_html = allowlist_html(request_json['object']['content'])
-        post.body = ''
+        if request_json['object']['mediaType'] == 'text/html':
+            post.body_html = allowlist_html(request_json['object']['content'])
+            post.body = ''
+        elif request_json['object']['mediaType'] == 'text/markdown':
+            post.body = request_json['object']['content']
+            post.body_html = markdown_to_html(post.body)
         if name == "[Microblog]":
             name += ' ' + microblog_content_to_title(post.body_html)
             nsfl_in_title = '[NSFL]' in name.upper() or '(NSFL)' in name.upper()
