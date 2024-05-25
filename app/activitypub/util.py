@@ -547,7 +547,7 @@ def refresh_community_profile_task(community_id):
             else:
                 mods_url = None
 
-            community.nsfw = activity_json['sensitive']
+            community.nsfw = activity_json['sensitive'] if 'sensitive' in activity_json else False
             if 'nsfl' in activity_json and activity_json['nsfl']:
                 community.nsfl = activity_json['nsfl']
             community.title = activity_json['name']
@@ -708,7 +708,7 @@ def actor_json_to_model(activity_json, address, server):
 
         # only allow nsfw communities if enabled for this instance
         site = Site.query.get(1)    # can't use g.site because actor_json_to_model can be called from celery
-        if activity_json['sensitive'] and not site.enable_nsfw:
+        if 'sensitive' in activity_json and activity_json['sensitive'] and not site.enable_nsfw:
             return None
         if 'nsfl' in activity_json and activity_json['nsfl'] and not site.enable_nsfl:
             return None
@@ -718,7 +718,7 @@ def actor_json_to_model(activity_json, address, server):
                               description=activity_json['summary'] if 'summary' in activity_json else '',
                               rules=activity_json['rules'] if 'rules' in activity_json else '',
                               rules_html=lemmy_markdown_to_html(activity_json['rules'] if 'rules' in activity_json else ''),
-                              nsfw=activity_json['sensitive'],
+                              nsfw=activity_json['sensitive'] if 'sensitive' in activity_json else False,
                               restricted_to_mods=activity_json['postingRestrictedToMods'],
                               new_mods_wanted=activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False,
                               private_mods=activity_json['privateMods'] if 'privateMods' in activity_json else False,
