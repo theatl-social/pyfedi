@@ -1274,7 +1274,9 @@ def user_inbox(actor):
         if (('type' in request_json and request_json['type'] == 'Like') or
                 ('type' in request_json and request_json['type'] == 'Undo' and
                 'object' in request_json and request_json['object']['type'] == 'Like')):
-                return shared_inbox()
+            return shared_inbox()
+        if 'type' in request_json and request_json['type'] == 'Accept':
+            return shared_inbox()
         try:
             HttpSignature.verify_request(request, actor.public_key, skip_date=True)
             if 'type' in request_json and request_json['type'] == 'Follow':
