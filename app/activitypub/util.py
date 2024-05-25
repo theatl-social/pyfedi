@@ -540,7 +540,7 @@ def refresh_community_profile_task(community_id):
             activity_json = actor_data.json()
             actor_data.close()
 
-            if 'attributedTo' in activity_json:  # lemmy and mbin
+            if 'attributedTo' in activity_json and isinstance(activity_json['attributedTo'], str):  # lemmy and mbin
                 mods_url = activity_json['attributedTo']
             elif 'moderators' in activity_json:  # kbin
                 mods_url = activity_json['moderators']
@@ -699,7 +699,7 @@ def actor_json_to_model(activity_json, address, server):
             make_image_sizes(user.cover_id, 878, None, 'users')
         return user
     elif activity_json['type'] == 'Group':
-        if 'attributedTo' in activity_json:  # lemmy and mbin
+        if 'attributedTo' in activity_json and isinstance(activity_json['attributedTo'], str):  # lemmy and mbin
             mods_url = activity_json['attributedTo']
         elif 'moderators' in activity_json:  # kbin
             mods_url = activity_json['moderators']
@@ -2252,12 +2252,16 @@ def ensure_domains_match(activity: dict) -> bool:
     else:
         note_id =  None
 
+    note_actor = None
     if 'actor' in activity:
         note_actor = activity['actor']
-    elif 'attributedTo' in activity:
+    elif 'attributedTo' in activity and isinstance(activity['attributedTo'], str):
         note_actor = activity['attributedTo']
-    else:
-        note_actor = None
+    elif 'attributedTo' in activity and isinstance(activity['attributedTo'], list):
+        for a in activity['attributedTo']:
+            if a['type'] == 'Person':
+                note_actor = a['id']
+                break
 
     if note_id and note_actor:
         parsed_url = urlparse(note_id)
