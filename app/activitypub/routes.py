@@ -412,6 +412,13 @@ def shared_inbox():
                 else:
                     process_delete_request.delay(request_json, activity_log.id, ip_address())
                 return ''
+            # Ignore PeerTube View activity
+            if 'type' in request_json and request_json['type'] == 'View':
+                activity_log.result = 'ignored'
+                activity_log.exception_message = 'PeerTube View activity'
+                db.session.add(activity_log)
+                db.session.commit()
+                return ''
         else:
             activity_log.activity_id = ''
             if g.site.log_activitypub_json:
