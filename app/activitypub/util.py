@@ -7,7 +7,7 @@ from random import randint
 from typing import Union, Tuple
 
 import redis
-from flask import current_app, request, g, url_for
+from flask import current_app, request, g, url_for, json
 from flask_babel import _
 from sqlalchemy import text, func
 from app import db, cache, constants, celery
@@ -2307,3 +2307,72 @@ def can_edit(user_ap_id, post):
 
 def can_delete(user_ap_id, post):
     return can_edit(user_ap_id, post)
+
+
+def resolve_remote_post(uri: str, community_id: int, announce_actor=None) -> Union[str, None]:
+    post = Post.query.filter_by(ap_id=uri).first()
+    if post:
+        return post.id
+
+    community = Community.query.get(community_id)
+    site = Site.query.get(1)
+
+    parsed_url = urlparse(uri)
+    uri_domain = parsed_url.netloc
+    if announce_actor:
+        parsed_url = urlparse(announce_actor)
+        announce_actor_domain = parsed_url.netloc
+        if announce_actor_domain != uri_domain:
+            return None
+    actor_domain = None
+    actor = None
+    post_request = get_request(uri, headers={'Accept': 'application/activity+json'})
+    if post_request.status_code == 200:
+        post_data = post_request.json()
+        post_request.close()
+        # check again that it doesn't already exist (can happen with different but equivilent URLs)
+        post = Post.query.filter_by(ap_id=post_data['id']).first()
+        if post:
+            return post.id
+        if 'attributedTo' in post_data:
+            if isinstance(post_data['attributedTo'], str):
+                actor = post_data['attributedTo']
+                parsed_url = urlparse(post_data['attributedTo'])
+                actor_domain = parsed_url.netloc
+            elif isinstance(post_data['attributedTo'], list):
+                for a in post_data['attributedTo']:
+                    if a['type'] == 'Person':
+                        actor = a['id']
+                        parsed_url = urlparse(a['id'])
+                        actor_domain = parsed_url.netloc
+                        break
+        if uri_domain != actor_domain:
+            return None
+
+        activity_log = ActivityPubLog(direction='in', activity_id=post_data['id'], activity_type='Resolve Post', result='failure')
+        if site.log_activitypub_json:
+            activity_log.activity_json = json.dumps(post_data)
+        db.session.add(activity_log)
+        user = find_actor_or_create(actor)
+        if user and community and post_data:
+            post = post_json_to_model(activity_log, post_data, user, community)
+            post.ranking = post_ranking(post.score, post.posted_at)
+            community.last_active = utcnow()
+            if post.url:
+                other_posts = Post.query.filter(Post.id != post.id, Post.url == post.url,
+                                                Post.posted_at > post.posted_at - timedelta(days=3),
+                                                Post.posted_at < post.posted_at + timedelta(days=3)).all()
+                for op in other_posts:
+                    if op.cross_posts is None:
+                        op.cross_posts = [post.id]
+                    else:
+                        op.cross_posts.append(post.id)
+                    if post.cross_posts is None:
+                        post.cross_posts = [op.id]
+                    else:
+                        post.cross_posts.append(op.id)
+            db.session.commit()
+            if post:
+                return post.id
+
+    return None

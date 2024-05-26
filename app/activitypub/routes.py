@@ -21,7 +21,7 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
     upvote_post, delete_post_or_comment, community_members, \
     user_removed_from_remote_server, create_post, create_post_reply, update_post_reply_from_activity, \
     update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection, find_reported_object, \
-    process_report, ensure_domains_match, can_edit, can_delete, remove_data_from_banned_user
+    process_report, ensure_domains_match, can_edit, can_delete, remove_data_from_banned_user, resolve_remote_post
 from app.utils import gibberish, get_setting, is_image_url, allowlist_html, render_template, \
     domain_from_url, markdown_to_html, community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
@@ -610,6 +610,10 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                     if isinstance(request_json['object'], str):
                         activity_log.activity_json = json.dumps(request_json)
                         activity_log.exception_message = 'invalid json?'
+                        if 'actor' in request_json:
+                            community = find_actor_or_create(request_json['actor'], community_only=True, create_if_not_found=False)
+                            if community:
+                                resolve_remote_post(request_json['object'], community.id, request_json['actor'])
                     elif request_json['object']['type'] == 'Create':
                         activity_log.activity_type = request_json['object']['type']
                         if 'object' in request_json and 'object' in request_json['object']:
