@@ -412,17 +412,10 @@ def shared_inbox():
                 else:
                     process_delete_request.delay(request_json, activity_log.id, ip_address())
                 return ''
-            # Ignore PeerTube View activity
-            if 'type' in request_json and request_json['type'] == 'View':
+            # Ignore unutilised PeerTube activity
+            if 'actor' in request_json and request_json['actor'].endswith('accounts/peertube'):
                 activity_log.result = 'ignored'
-                activity_log.exception_message = 'PeerTube View activity'
-                db.session.add(activity_log)
-                db.session.commit()
-                return ''
-            # Ignore PeerTube CacheFile activity
-            if 'object' in request_json and 'type' in request_json['object'] and request_json['object']['type'] == 'CacheFile':
-                activity_log.result = 'ignored'
-                activity_log.exception_message = 'PeerTube CacheFile activity'
+                activity_log.exception_message = 'PeerTube View or CacheFile activity'
                 db.session.add(activity_log)
                 db.session.commit()
                 return ''
