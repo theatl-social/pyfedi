@@ -138,6 +138,8 @@ def edit_profile(actor):
             file = save_icon_file(profile_file, 'users')
             if file:
                 current_user.avatar = file
+                cache.delete_memoized(User.avatar_image, current_user)
+                cache.delete_memoized(User.avatar_thumbnail, current_user)
         banner_file = request.files['banner_file']
         if banner_file and banner_file.filename != '':
             # remove old cover
@@ -151,6 +153,7 @@ def edit_profile(actor):
             file = save_banner_file(banner_file, 'users')
             if file:
                 current_user.cover = file
+                cache.delete_memoized(User.cover_image, current_user)
 
         db.session.commit()
 
@@ -169,6 +172,37 @@ def edit_profile(actor):
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id())
                            )
+
+
+@bp.route('/user/remove_avatar', methods=['GET', 'POST'])
+@login_required
+def remove_avatar():
+    if current_user.avatar_id:
+        current_user.avatar.delete_from_disk()
+        if current_user.avatar_id:
+            file = File.query.get(current_user.avatar_id)
+            file.delete_from_disk()
+            current_user.avatar_id = None
+            db.session.delete(file)
+            db.session.commit()
+            cache.delete_memoized(User.avatar_image, current_user)
+            cache.delete_memoized(User.avatar_thumbnail, current_user)
+    return _('Avatar removed!')
+
+
+@bp.route('/user/remove_cover', methods=['GET', 'POST'])
+@login_required
+def remove_cover():
+    if current_user.cover_id:
+        current_user.cover.delete_from_disk()
+        if current_user.cover_id:
+            file = File.query.get(current_user.cover_id)
+            file.delete_from_disk()
+            current_user.cover_id = None
+            db.session.delete(file)
+            db.session.commit()
+            cache.delete_memoized(User.cover_image, current_user)
+    return '<div> ' + _('Banner removed!') + '</div>'
 
 
 @bp.route('/user/settings', methods=['GET', 'POST'])

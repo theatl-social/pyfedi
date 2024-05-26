@@ -1099,6 +1099,7 @@ def community_edit(community_id: int):
                 file = save_icon_file(icon_file)
                 if file:
                     community.icon = file
+                    cache.delete_memoized(Community.icon_image, community)
             banner_file = request.files['banner_file']
             if banner_file and banner_file.filename != '':
                 if community.image_id:
@@ -1106,6 +1107,7 @@ def community_edit(community_id: int):
                 file = save_banner_file(banner_file)
                 if file:
                     community.image = file
+                    cache.delete_memoized(Community.header_image, community)
 
             # Languages of the community
             db.session.execute(text('DELETE FROM "community_language" WHERE community_id = :community_id'),
@@ -1138,6 +1140,38 @@ def community_edit(community_id: int):
                                joined_communities=joined_communities(current_user.get_id()))
     else:
         abort(401)
+
+
+@bp.route('/community/<int:community_id>/remove_icon', methods=['GET', 'POST'])
+@login_required
+def remove_icon(community_id):
+    community = Community.query.get_or_404(community_id)
+    if community.icon_id:
+        community.icon.delete_from_disk()
+        if community.icon_id:
+            file = File.query.get(community.icon_id)
+            file.delete_from_disk()
+            community.icon_id = None
+            db.session.delete(file)
+            db.session.commit()
+            cache.delete_memoized(Community.icon_image, community)
+    return _('Icon removed!')
+
+
+@bp.route('/community/<int:community_id>/remove_header', methods=['GET', 'POST'])
+@login_required
+def remove_header(community_id):
+    community = Community.query.get_or_404(community_id)
+    if community.image_id:
+        community.image.delete_from_disk()
+        if community.image_id:
+            file = File.query.get(community.image_id)
+            file.delete_from_disk()
+            community.image_id = None
+            db.session.delete(file)
+            db.session.commit()
+            cache.delete_memoized(Community.header_image, community)
+    return '<div> ' + _('Banner removed!') + '</div>'
 
 
 @bp.route('/community/<int:community_id>/delete', methods=['GET', 'POST'])

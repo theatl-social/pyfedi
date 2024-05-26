@@ -50,8 +50,25 @@
             <h5> Profile Images </h5>
             {{ render_field(form.profile_file) }}
             <small class="field_hint">Provide a square image that looks good when small.</small>
+            {% if user.avatar_id %}
+                <p><a href="{{ user.avatar_image() }}" class="btn btn-sm btn-primary showElement" data-id="avatar_image">{{ _('View image') }}</a>
+                   <a href="{{ url_for('user.remove_avatar') }}" class="btn btn-sm btn-primary"
+                      hx-post="{{ url_for('user.remove_avatar') }}"
+                      hx-target="#avatar_image"
+                      hx-swap="outerHTML">{{ _('Remove image') }}</a>
+                </p>
+                <p><img id="avatar_image" class="community_icon_big rounded-circle" loading="lazy" style="display: none;" src="{{ user.avatar_image() }}" alt="{{ _('Profile pic') }}" /></p>
+            {% endif %}
             {{ render_field(form.banner_file) }}
             <small class="field_hint">Provide a wide image - letterbox orientation.</small>
+            {% if user.cover_id %}
+                <p><a href="{{ user.cover_image() }}" class="btn btn-sm btn-primary showElement" data-id="cover_div">{{ _('View image') }}</a> |
+                   <a href="{{ url_for('user.remove_cover') }}" class="btn btn-sm btn-primary"
+                      hx-post="{{ url_for('user.remove_cover') }}"
+                      hx-target="#cover_div"
+                      hx-swap="outerHTML">{{ _('Remove image') }}</a></p>
+                <div id="cover_div" class="community_header mb-4" style="display: none; height: 240px; background-image: url({{ user.cover_image() }});"></div>
+            {% endif %}
             {{ render_field(form.submit) }}
         </form>
         <p class="mt-4 pt-4">

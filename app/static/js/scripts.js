@@ -12,7 +12,23 @@ document.addEventListener("DOMContentLoaded", function () {
     setupConversationChooser();
     setupMarkdownEditorEnabler();
     setupAddPollChoice();
+    setupShowElementLinks();
 });
+
+// All elements with the class "showElement" will show the DOM element referenced by the data-id attribute
+function setupShowElementLinks() {
+    var elements = document.querySelectorAll('.showElement');
+    elements.forEach(function(element) {
+        element.addEventListener('click', function(event) {
+            event.preventDefault();
+            var dataId = this.getAttribute('data-id');
+            var targetElement = document.getElementById(dataId);
+            if (targetElement) {
+                targetElement.style.display = 'inherit';
+            }
+        });
+    });
+}
 
 function renderMasonry(masonry, htmlSnippets) {
       const mainPane = document.querySelector('.main_pane');
@@ -636,9 +652,12 @@ function setupMarkdownEditorEnabler() {
 function setupAddPollChoice() {
     const addChoiceButton = document.getElementById('addPollChoice');
     const pollChoicesFieldset = document.getElementById('pollChoicesFieldset');
+    if(pollChoicesFieldset == null) {
+        return;
+    }
     const formGroups = pollChoicesFieldset.getElementsByClassName('form-group');
 
-    if(addChoiceButton) {
+    if(addChoiceButton && addChoiceButton) {
         addChoiceButton.addEventListener('click', function(event) {
             // Loop through the form groups and show the first hidden one
             for (let i = 0; i < formGroups.length; i++) {
