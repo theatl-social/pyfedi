@@ -814,6 +814,12 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
                         domain.post_count += 1
                         post.domain = domain
 
+        if post_json['type'] == 'Video':
+            if 'icon' in post_json and isinstance(post_json['icon'], list):
+                icon = File(source_url=post_json['icon'][-1]['url'])
+                db.session.add(icon)
+                post.image = icon
+
         if 'language' in post_json:
             language = find_language_or_create(post_json['language']['identifier'], post_json['language']['name'])
             if language:
