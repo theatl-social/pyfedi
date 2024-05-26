@@ -419,6 +419,14 @@ def shared_inbox():
                 db.session.add(activity_log)
                 db.session.commit()
                 return ''
+            # Ignore PeerTube CacheFile activity
+            if 'object' in request_json and 'type' in request_json['object'] and request_json['object']['type'] == 'CacheFile':
+                activity_log.result = 'ignored'
+                activity_log.exception_message = 'PeerTube CacheFile activity'
+                db.session.add(activity_log)
+                db.session.commit()
+                return ''
+
         else:
             activity_log.activity_id = ''
             if g.site.log_activitypub_json:
