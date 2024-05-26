@@ -849,6 +849,8 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
                         post.domain = domain
 
         if post_json['type'] == 'Video':
+            post.type = POST_TYPE_VIDEO
+            post.url = post_json['id']
             if 'icon' in post_json and isinstance(post_json['icon'], list):
                 icon = File(source_url=post_json['icon'][-1]['url'])
                 db.session.add(icon)
