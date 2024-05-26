@@ -571,21 +571,35 @@ def refresh_community_profile_task(community_id):
 
             icon_changed = cover_changed = False
             if 'icon' in activity_json:
-                if community.icon_id and activity_json['icon']['url'] != community.icon.source_url:
-                    community.icon.delete_from_disk()
-                if not community.icon_id or (community.icon_id and activity_json['icon']['url'] != community.icon.source_url):
-                    icon = File(source_url=activity_json['icon']['url'])
-                    community.icon = icon
-                    db.session.add(icon)
-                    icon_changed = True
+                if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
+                    icon_entry = activity_json['icon']['url']
+                elif isinstance(activity_json['icon'], list) and 'url' in activity_json['icon'][-1]:
+                    icon_entry = activity_json['icon'][-1]['url']
+                else:
+                    icon_entry = None
+                if icon_entry:
+                    if community.icon_id and icon_entry != community.icon.source_url:
+                        community.icon.delete_from_disk()
+                    if not community.icon_id or (community.icon_id and icon_entry != community.icon.source_url):
+                        icon = File(source_url=icon_entry)
+                        community.icon = icon
+                        db.session.add(icon)
+                        icon_changed = True
             if 'image' in activity_json:
-                if community.image_id and activity_json['image']['url'] != community.image.source_url:
-                    community.image.delete_from_disk()
-                if not community.image_id or (community.image_id and activity_json['image']['url'] != community.image.source_url):
-                    image = File(source_url=activity_json['image']['url'])
-                    community.image = image
-                    db.session.add(image)
-                    cover_changed = True
+                if isinstance(activity_json['image'], dict) and 'url' in activity_json['image']:
+                    image_entry = activity_json['image']['url']
+                elif isinstance(activity_json['image'], list) and 'url' in activity_json['image'][0]:
+                    image_entry = activity_json['image'][0]['url']
+                else:
+                    image_entry = None
+                if image_entry:
+                    if community.image_id and image_entry != community.image.source_url:
+                        community.image.delete_from_disk()
+                    if not community.image_id or (community.image_id and image_entry != community.image.source_url):
+                        image = File(source_url=image_entry)
+                        community.image = image
+                        db.session.add(image)
+                        cover_changed = True
             if 'language' in activity_json and isinstance(activity_json['language'], list) and not community.ignore_remote_language:
                 for ap_language in activity_json['language']:
                     new_language = find_language_or_create(ap_language['identifier'], ap_language['name'])
@@ -733,14 +747,28 @@ def actor_json_to_model(activity_json, address, server):
         elif 'content' in activity_json:
             community.description_html = allowlist_html(activity_json['content'])
             community.description = ''
-        if 'icon' in activity_json and activity_json['icon'] is not None and 'url' in activity_json['icon']:
-            icon = File(source_url=activity_json['icon']['url'])
-            community.icon = icon
-            db.session.add(icon)
-        if 'image' in activity_json and activity_json['image'] is not None and 'url' in activity_json['image']:
-            image = File(source_url=activity_json['image']['url'])
-            community.image = image
-            db.session.add(image)
+        if 'icon' in activity_json and activity_json['icon'] is not None:
+            if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
+                icon_entry = activity_json['icon']['url']
+            elif isinstance(activity_json['icon'], list) and 'url' in activity_json['icon'][-1]:
+                icon_entry = activity_json['icon'][-1]['url']
+            else:
+                icon_entry = None
+            if icon_entry:
+                icon = File(source_url=icon_entry)
+                community.icon = icon
+                db.session.add(icon)
+        if 'image' in activity_json and activity_json['image'] is not None:
+            if isinstance(activity_json['image'], dict) and 'url' in activity_json['image']:
+                image_entry = activity_json['image']['url']
+            elif isinstance(activity_json['image'], list) and 'url' in activity_json['image'][0]:
+                image_entry = activity_json['image'][0]['url']
+            else:
+                image_entry = None
+            if image_entry:
+                image = File(source_url=image_entry)
+                community.image = image
+                db.session.add(image)
         if 'language' in activity_json and isinstance(activity_json['language'], list):
             for ap_language in activity_json['language']:
                 community.languages.append(find_language_or_create(ap_language['identifier'], ap_language['name']))
