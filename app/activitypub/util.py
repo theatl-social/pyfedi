@@ -7,7 +7,7 @@ from random import randint
 from typing import Union, Tuple
 
 import redis
-from flask import current_app, request, g, url_for
+from flask import current_app, request, g, url_for, json
 from flask_babel import _
 from sqlalchemy import text, func
 from app import db, cache, constants, celery
@@ -488,13 +488,20 @@ def refresh_user_profile_task(user_id):
 
             avatar_changed = cover_changed = False
             if 'icon' in activity_json:
-                if user.avatar_id and activity_json['icon']['url'] != user.avatar.source_url:
-                    user.avatar.delete_from_disk()
-                if not user.avatar_id or (user.avatar_id and activity_json['icon']['url'] != user.avatar.source_url):
-                    avatar = File(source_url=activity_json['icon']['url'])
-                    user.avatar = avatar
-                    db.session.add(avatar)
-                    avatar_changed = True
+                if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
+                    icon_entry = activity_json['icon']['url']
+                elif isinstance(activity_json['icon'], list) and 'url' in activity_json['icon'][-1]:
+                    icon_entry = activity_json['icon'][-1]['url']
+                else:
+                    icon_entry = None
+                if icon_entry:
+                    if user.avatar_id and icon_entry != user.avatar.source_url:
+                        user.avatar.delete_from_disk()
+                    if not user.avatar_id or (user.avatar_id and icon_entry != user.avatar.source_url):
+                        avatar = File(source_url=icon_entry)
+                        user.avatar = avatar
+                        db.session.add(avatar)
+                        avatar_changed = True
             if 'image' in activity_json:
                 if user.cover_id and activity_json['image']['url'] != user.cover.source_url:
                     user.cover.delete_from_disk()
@@ -536,21 +543,22 @@ def refresh_community_profile_task(community_id):
             activity_json = actor_data.json()
             actor_data.close()
 
-            if 'attributedTo' in activity_json:  # lemmy and mbin
+            if 'attributedTo' in activity_json and isinstance(activity_json['attributedTo'], str):  # lemmy and mbin
                 mods_url = activity_json['attributedTo']
             elif 'moderators' in activity_json:  # kbin
                 mods_url = activity_json['moderators']
             else:
                 mods_url = None
 
-            community.nsfw = activity_json['sensitive']
+            community.nsfw = activity_json['sensitive'] if 'sensitive' in activity_json else False
             if 'nsfl' in activity_json and activity_json['nsfl']:
                 community.nsfl = activity_json['nsfl']
             community.title = activity_json['name']
             community.description = activity_json['summary'] if 'summary' in activity_json else ''
+            community.description_html = markdown_to_html(community.description)
             community.rules = activity_json['rules'] if 'rules' in activity_json else ''
             community.rules_html = lemmy_markdown_to_html(activity_json['rules'] if 'rules' in activity_json else '')
-            community.restricted_to_mods = activity_json['postingRestrictedToMods']
+            community.restricted_to_mods = activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else True
             community.new_mods_wanted = activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False
             community.private_mods = activity_json['privateMods'] if 'privateMods' in activity_json else False
             community.ap_moderators_url = mods_url
@@ -567,21 +575,35 @@ def refresh_community_profile_task(community_id):
 
             icon_changed = cover_changed = False
             if 'icon' in activity_json:
-                if community.icon_id and activity_json['icon']['url'] != community.icon.source_url:
-                    community.icon.delete_from_disk()
-                if not community.icon_id or (community.icon_id and activity_json['icon']['url'] != community.icon.source_url):
-                    icon = File(source_url=activity_json['icon']['url'])
-                    community.icon = icon
-                    db.session.add(icon)
-                    icon_changed = True
+                if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
+                    icon_entry = activity_json['icon']['url']
+                elif isinstance(activity_json['icon'], list) and 'url' in activity_json['icon'][-1]:
+                    icon_entry = activity_json['icon'][-1]['url']
+                else:
+                    icon_entry = None
+                if icon_entry:
+                    if community.icon_id and icon_entry != community.icon.source_url:
+                        community.icon.delete_from_disk()
+                    if not community.icon_id or (community.icon_id and icon_entry != community.icon.source_url):
+                        icon = File(source_url=icon_entry)
+                        community.icon = icon
+                        db.session.add(icon)
+                        icon_changed = True
             if 'image' in activity_json:
-                if community.image_id and activity_json['image']['url'] != community.image.source_url:
-                    community.image.delete_from_disk()
-                if not community.image_id or (community.image_id and activity_json['image']['url'] != community.image.source_url):
-                    image = File(source_url=activity_json['image']['url'])
-                    community.image = image
-                    db.session.add(image)
-                    cover_changed = True
+                if isinstance(activity_json['image'], dict) and 'url' in activity_json['image']:
+                    image_entry = activity_json['image']['url']
+                elif isinstance(activity_json['image'], list) and 'url' in activity_json['image'][0]:
+                    image_entry = activity_json['image'][0]['url']
+                else:
+                    image_entry = None
+                if image_entry:
+                    if community.image_id and image_entry != community.image.source_url:
+                        community.image.delete_from_disk()
+                    if not community.image_id or (community.image_id and image_entry != community.image.source_url):
+                        image = File(source_url=image_entry)
+                        community.image = image
+                        db.session.add(image)
+                        cover_changed = True
             if 'language' in activity_json and isinstance(activity_json['language'], list) and not community.ignore_remote_language:
                 for ap_language in activity_json['language']:
                     new_language = find_language_or_create(ap_language['identifier'], ap_language['name'])
@@ -658,10 +680,17 @@ def actor_json_to_model(activity_json, address, server):
             current_app.logger.error(f'KeyError for {address}@{server} while parsing ' + str(activity_json))
             return None
 
-        if 'icon' in activity_json and activity_json['icon'] is not None and 'url' in activity_json['icon']:
-            avatar = File(source_url=activity_json['icon']['url'])
-            user.avatar = avatar
-            db.session.add(avatar)
+        if 'icon' in activity_json and activity_json['icon'] is not None:
+            if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
+                icon_entry = activity_json['icon']['url']
+            elif isinstance(activity_json['icon'], list) and 'url' in activity_json['icon'][-1]:
+                icon_entry = activity_json['icon'][-1]['url']
+            else:
+                icon_entry = None
+            if icon_entry:
+                avatar = File(source_url=icon_entry)
+                user.avatar = avatar
+                db.session.add(avatar)
         if 'image' in activity_json and activity_json['image'] is not None and 'url' in activity_json['image']:
             cover = File(source_url=activity_json['image']['url'])
             user.cover = cover
@@ -674,7 +703,7 @@ def actor_json_to_model(activity_json, address, server):
             make_image_sizes(user.cover_id, 878, None, 'users')
         return user
     elif activity_json['type'] == 'Group':
-        if 'attributedTo' in activity_json:  # lemmy and mbin
+        if 'attributedTo' in activity_json and isinstance(activity_json['attributedTo'], str):  # lemmy and mbin
             mods_url = activity_json['attributedTo']
         elif 'moderators' in activity_json:  # kbin
             mods_url = activity_json['moderators']
@@ -683,7 +712,7 @@ def actor_json_to_model(activity_json, address, server):
 
         # only allow nsfw communities if enabled for this instance
         site = Site.query.get(1)    # can't use g.site because actor_json_to_model can be called from celery
-        if activity_json['sensitive'] and not site.enable_nsfw:
+        if 'sensitive' in activity_json and activity_json['sensitive'] and not site.enable_nsfw:
             return None
         if 'nsfl' in activity_json and activity_json['nsfl'] and not site.enable_nsfl:
             return None
@@ -693,8 +722,8 @@ def actor_json_to_model(activity_json, address, server):
                               description=activity_json['summary'] if 'summary' in activity_json else '',
                               rules=activity_json['rules'] if 'rules' in activity_json else '',
                               rules_html=lemmy_markdown_to_html(activity_json['rules'] if 'rules' in activity_json else ''),
-                              nsfw=activity_json['sensitive'],
-                              restricted_to_mods=activity_json['postingRestrictedToMods'],
+                              nsfw=activity_json['sensitive'] if 'sensitive' in activity_json else False,
+                              restricted_to_mods=activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else True,
                               new_mods_wanted=activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False,
                               private_mods=activity_json['privateMods'] if 'privateMods' in activity_json else False,
                               created_at=activity_json['published'] if 'published' in activity_json else utcnow(),
@@ -714,6 +743,7 @@ def actor_json_to_model(activity_json, address, server):
                               instance_id=find_instance_id(server),
                               low_quality='memes' in activity_json['preferredUsername']
                               )
+        community.description_html = markdown_to_html(community.description)
         # parse markdown and overwrite html field with result
         if 'source' in activity_json and \
                 activity_json['source']['mediaType'] == 'text/markdown':
@@ -722,14 +752,28 @@ def actor_json_to_model(activity_json, address, server):
         elif 'content' in activity_json:
             community.description_html = allowlist_html(activity_json['content'])
             community.description = ''
-        if 'icon' in activity_json and activity_json['icon'] is not None and 'url' in activity_json['icon']:
-            icon = File(source_url=activity_json['icon']['url'])
-            community.icon = icon
-            db.session.add(icon)
-        if 'image' in activity_json and activity_json['image'] is not None and 'url' in activity_json['image']:
-            image = File(source_url=activity_json['image']['url'])
-            community.image = image
-            db.session.add(image)
+        if 'icon' in activity_json and activity_json['icon'] is not None:
+            if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
+                icon_entry = activity_json['icon']['url']
+            elif isinstance(activity_json['icon'], list) and 'url' in activity_json['icon'][-1]:
+                icon_entry = activity_json['icon'][-1]['url']
+            else:
+                icon_entry = None
+            if icon_entry:
+                icon = File(source_url=icon_entry)
+                community.icon = icon
+                db.session.add(icon)
+        if 'image' in activity_json and activity_json['image'] is not None:
+            if isinstance(activity_json['image'], dict) and 'url' in activity_json['image']:
+                image_entry = activity_json['image']['url']
+            elif isinstance(activity_json['image'], list) and 'url' in activity_json['image'][0]:
+                image_entry = activity_json['image'][0]['url']
+            else:
+                image_entry = None
+            if image_entry:
+                image = File(source_url=image_entry)
+                community.image = image
+                db.session.add(image)
         if 'language' in activity_json and isinstance(activity_json['language'], list):
             for ap_language in activity_json['language']:
                 community.languages.append(find_language_or_create(ap_language['identifier'], ap_language['name']))
@@ -763,8 +807,12 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
             post.body = post_json['source']['content']
             post.body_html = lemmy_markdown_to_html(post.body)
         elif 'content' in post_json:
-            post.body_html = allowlist_html(post_json['content'])
-            post.body = ''
+            if post_json['mediaType'] == 'text/html':
+                post.body_html = allowlist_html(post_json['content'])
+                post.body = ''
+            elif post_json['mediaType'] == 'text/markdown':
+                post.body = post_json['content']
+                post.body_html = markdown_to_html(post.body)
         if 'attachment' in post_json and len(post_json['attachment']) > 0 and 'type' in post_json['attachment'][0]:
             if post_json['attachment'][0]['type'] == 'Link':
                 post.url = post_json['attachment'][0]['href']
@@ -802,6 +850,14 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
                     if not domain.banned:
                         domain.post_count += 1
                         post.domain = domain
+
+        if post_json['type'] == 'Video':
+            post.type = POST_TYPE_VIDEO
+            post.url = post_json['id']
+            if 'icon' in post_json and isinstance(post_json['icon'], list):
+                icon = File(source_url=post_json['icon'][-1]['url'])
+                db.session.add(icon)
+                post.image = icon
 
         if 'language' in post_json:
             language = find_language_or_create(post_json['language']['identifier'], post_json['language']['name'])
@@ -1553,8 +1609,12 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
         post.body = request_json['object']['source']['content']
         post.body_html = lemmy_markdown_to_html(post.body)
     elif 'content' in request_json['object'] and request_json['object']['content'] is not None: # Kbin
-        post.body_html = allowlist_html(request_json['object']['content'])
-        post.body = ''
+        if request_json['object']['mediaType'] == 'text/html':
+            post.body_html = allowlist_html(request_json['object']['content'])
+            post.body = ''
+        elif request_json['object']['mediaType'] == 'text/markdown':
+            post.body = request_json['object']['content']
+            post.body_html = markdown_to_html(post.body)
         if name == "[Microblog]":
             name += ' ' + microblog_content_to_title(post.body_html)
             if '[NSFL]' in name.upper() or '(NSFL)' in name.upper():
@@ -1764,8 +1824,12 @@ def update_post_from_activity(post: Post, request_json: dict):
         post.body = request_json['object']['source']['content']
         post.body_html = lemmy_markdown_to_html(post.body)
     elif 'content' in request_json['object'] and request_json['object']['content'] is not None: # Kbin
-        post.body_html = allowlist_html(request_json['object']['content'])
-        post.body = ''
+        if request_json['object']['mediaType'] == 'text/html':
+            post.body_html = allowlist_html(request_json['object']['content'])
+            post.body = ''
+        elif request_json['object']['mediaType'] == 'text/markdown':
+            post.body = request_json['object']['content']
+            post.body_html = markdown_to_html(post.body)
         if name == "[Microblog]":
             name += ' ' + microblog_content_to_title(post.body_html)
             nsfl_in_title = '[NSFL]' in name.upper() or '(NSFL)' in name.upper()
@@ -1778,6 +1842,10 @@ def update_post_from_activity(post: Post, request_json: dict):
     old_url = post.url
     old_image_id = post.image_id
     post.url = ''
+    if request_json['object']['type'] == 'Video':
+        post.type = POST_TYPE_VIDEO
+        # PeerTube URL isn't going to change, so set to old_url to prevent this function changing type or icon
+        post.url = old_url
     if 'attachment' in request_json['object'] and len(request_json['object']['attachment']) > 0 and \
             'type' in request_json['object']['attachment'][0]:
         if request_json['object']['attachment'][0]['type'] == 'Link':
@@ -2207,12 +2275,16 @@ def ensure_domains_match(activity: dict) -> bool:
     else:
         note_id =  None
 
+    note_actor = None
     if 'actor' in activity:
         note_actor = activity['actor']
-    elif 'attributedTo' in activity:
+    elif 'attributedTo' in activity and isinstance(activity['attributedTo'], str):
         note_actor = activity['attributedTo']
-    else:
-        note_actor = None
+    elif 'attributedTo' in activity and isinstance(activity['attributedTo'], list):
+        for a in activity['attributedTo']:
+            if a['type'] == 'Person':
+                note_actor = a['id']
+                break
 
     if note_id and note_actor:
         parsed_url = urlparse(note_id)
@@ -2238,3 +2310,72 @@ def can_edit(user_ap_id, post):
 
 def can_delete(user_ap_id, post):
     return can_edit(user_ap_id, post)
+
+
+def resolve_remote_post(uri: str, community_id: int, announce_actor=None) -> Union[str, None]:
+    post = Post.query.filter_by(ap_id=uri).first()
+    if post:
+        return post.id
+
+    community = Community.query.get(community_id)
+    site = Site.query.get(1)
+
+    parsed_url = urlparse(uri)
+    uri_domain = parsed_url.netloc
+    if announce_actor:
+        parsed_url = urlparse(announce_actor)
+        announce_actor_domain = parsed_url.netloc
+        if announce_actor_domain != uri_domain:
+            return None
+    actor_domain = None
+    actor = None
+    post_request = get_request(uri, headers={'Accept': 'application/activity+json'})
+    if post_request.status_code == 200:
+        post_data = post_request.json()
+        post_request.close()
+        # check again that it doesn't already exist (can happen with different but equivilent URLs)
+        post = Post.query.filter_by(ap_id=post_data['id']).first()
+        if post:
+            return post.id
+        if 'attributedTo' in post_data:
+            if isinstance(post_data['attributedTo'], str):
+                actor = post_data['attributedTo']
+                parsed_url = urlparse(post_data['attributedTo'])
+                actor_domain = parsed_url.netloc
+            elif isinstance(post_data['attributedTo'], list):
+                for a in post_data['attributedTo']:
+                    if a['type'] == 'Person':
+                        actor = a['id']
+                        parsed_url = urlparse(a['id'])
+                        actor_domain = parsed_url.netloc
+                        break
+        if uri_domain != actor_domain:
+            return None
+
+        activity_log = ActivityPubLog(direction='in', activity_id=post_data['id'], activity_type='Resolve Post', result='failure')
+        if site.log_activitypub_json:
+            activity_log.activity_json = json.dumps(post_data)
+        db.session.add(activity_log)
+        user = find_actor_or_create(actor)
+        if user and community and post_data:
+            post = post_json_to_model(activity_log, post_data, user, community)
+            post.ranking = post_ranking(post.score, post.posted_at)
+            community.last_active = utcnow()
+            if post.url:
+                other_posts = Post.query.filter(Post.id != post.id, Post.url == post.url,
+                                                Post.posted_at > post.posted_at - timedelta(days=3),
+                                                Post.posted_at < post.posted_at + timedelta(days=3)).all()
+                for op in other_posts:
+                    if op.cross_posts is None:
+                        op.cross_posts = [post.id]
+                    else:
+                        op.cross_posts.append(post.id)
+                    if post.cross_posts is None:
+                        post.cross_posts = [op.id]
+                    else:
+                        post.cross_posts.append(op.id)
+            db.session.commit()
+            if post:
+                return post.id
+
+    return None
