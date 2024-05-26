@@ -155,10 +155,14 @@ def show_community(community: Community):
 
     mods = community_moderators(community.id)
 
-    is_moderator = current_user.is_authenticated and any(mod.user_id == current_user.id for mod in mods)
-    is_owner = current_user.is_authenticated and any(
-        mod.user_id == current_user.id and mod.is_owner == True for mod in mods)
-    is_admin = current_user.is_authenticated and current_user.is_admin()
+    if current_user.is_authenticated and community.id not in communities_banned_from(current_user.id):
+        is_moderator = any(mod.user_id == current_user.id for mod in mods)
+        is_owner = any(mod.user_id == current_user.id and mod.is_owner == True for mod in mods)
+        is_admin = current_user.is_admin()
+    else:
+        is_moderator = False
+        is_owner = False
+        is_admin = False
 
     if community.private_mods:
         mod_list = []
@@ -344,6 +348,8 @@ def subscribe(actor):
         community = Community.query.filter_by(name=actor, banned=False, ap_id=None).first()
 
     if community is not None:
+        if community.id in communities_banned_from(current_user.id):
+            abort(401)
         if community_membership(current_user, community) != SUBSCRIPTION_MEMBER and community_membership(current_user, community) != SUBSCRIPTION_PENDING:
             banned = CommunityBan.query.filter_by(user_id=current_user.id, community_id=community.id).first()
             if banned:
