@@ -969,6 +969,16 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                 activity_log.exception_message = 'Edit attempt denied'
                         else:
                             activity_log.exception_message = 'PostReply not found'
+                    elif request_json['object']['type'] == 'Video':  # PeerTube: editing a video (PT doesn't seem to Announce these)
+                        post = Post.query.filter_by(ap_id=request_json['object']['id']).first()
+                        if post:
+                            if can_edit(request_json['actor'], post):
+                                update_post_from_activity(post, request_json)
+                                activity_log.result = 'success'
+                            else:
+                                activity_log.exception_message = 'Edit attempt denied'
+                        else:
+                            activity_log.exception_message = 'Post not found'
                 elif request_json['type'] == 'Delete':
                     if isinstance(request_json['object'], str):
                         ap_id = request_json['object']  # lemmy

@@ -1839,6 +1839,10 @@ def update_post_from_activity(post: Post, request_json: dict):
     old_url = post.url
     old_image_id = post.image_id
     post.url = ''
+    if request_json['object']['type'] == 'Video':
+        post.type = POST_TYPE_VIDEO
+        # PeerTube URL isn't going to change, so set to old_url to prevent this function changing type or icon
+        post.url = old_url
     if 'attachment' in request_json['object'] and len(request_json['object']['attachment']) > 0 and \
             'type' in request_json['object']['attachment'][0]:
         if request_json['object']['attachment'][0]['type'] == 'Link':
