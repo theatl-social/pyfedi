@@ -172,6 +172,17 @@ class RsaKeys:
         return private_key_serialized, public_key_serialized
 
 
+# Signatures
+def signature_part(signature, key):
+    parts = signature.split(',')
+    for part in parts:
+        part_parts = part.split('=')
+        part_parts[0] = part_parts[0].strip()
+        if part_parts[0] == key:
+            return part_parts[1].strip().replace('"', '')
+    return ''
+
+
 class HttpSignature:
     """
     Allows for calculation and verification of HTTP signatures
@@ -198,6 +209,10 @@ class HttpSignature:
         for header_name in header_names:
             if header_name == "(request-target)":
                 value = f"{request.method.lower()} {request.path}"
+            elif header_name == '(created)':
+                value = signature_part(request.headers.get('Signature'), 'created')  # Don't use parse_signature because changing HttpSignatureDetails changes everything & I don't have the spoons for that ATM.
+            elif header_name == '(expires)':
+                value = signature_part(request.headers.get('Signature'), 'expires')
             elif header_name == "content-type":
                 value = request.headers.get("Content-Type", "")
             elif header_name == "content-length":
