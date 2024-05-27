@@ -1682,6 +1682,14 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
                 activity_log.exception_message = domain.name + ' is blocked by admin'
 
     if post is not None:
+        if request_json['object']['type'] == 'Video':
+            post.type = POST_TYPE_VIDEO
+            post.url = request_json['object']['id']
+            if 'icon' in request_json['object'] and isinstance(request_json['object']['icon'], list):
+                icon = File(source_url=request_json['object']['icon'][-1]['url'])
+                db.session.add(icon)
+                post.image = icon
+
         if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
             language = find_language_or_create(request_json['object']['language']['identifier'],
                                                request_json['object']['language']['name'])
@@ -2364,23 +2372,11 @@ def resolve_remote_post(uri: str, community_id: int, announce_actor=None) -> Uni
         db.session.add(activity_log)
         user = find_actor_or_create(actor)
         if user and community and post_data:
-            post = post_json_to_model(activity_log, post_data, user, community)
-            post.ranking = post_ranking(post.score, post.posted_at)
-            community.last_active = utcnow()
-            if post.url:
-                other_posts = Post.query.filter(Post.id != post.id, Post.url == post.url,
-                                                Post.posted_at > post.posted_at - timedelta(days=3),
-                                                Post.posted_at < post.posted_at + timedelta(days=3)).all()
-                for op in other_posts:
-                    if op.cross_posts is None:
-                        op.cross_posts = [post.id]
-                    else:
-                        op.cross_posts.append(post.id)
-                    if post.cross_posts is None:
-                        post.cross_posts = [op.id]
-                    else:
-                        post.cross_posts.append(op.id)
-            db.session.commit()
+            request_json = {
+              'id': f"https://{uri_domain}/activities/create/gibberish(15)",
+              'object': post_data
+            }
+            post = create_post(activity_log, community, request_json, user)
             if post:
                 return post.id
 
