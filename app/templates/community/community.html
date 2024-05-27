@@ -151,6 +151,9 @@
                     <p>
                        <a href="{{ community.profile_id() }}">View community on original server</a>
                     </p>
+                    <p>
+                       <a href="/community/retrieve_remote_post/{{ community.id }}">Retrieve a post from the original server</a>
+                    </p>
                 {% endif %}
                 {% if community.local_only %}
                 <p>{{ _('Only people on %(instance_name)s can post or reply in this community.', instance_name=current_app.config['SERVER_NAME']) }}</p>

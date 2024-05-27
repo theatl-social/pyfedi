@@ -262,3 +262,8 @@ class ReportCommunityForm(FlaskForm):
 
 class DeleteCommunityForm(FlaskForm):
     submit = SubmitField(_l('Delete community'))
+
+
+class RetrieveRemotePost(FlaskForm):
+    address = StringField(_l('Full URL'), render_kw={'placeholder': 'e.g. https://lemmy.world/post/123', 'autofocus': True}, validators=[DataRequired()])
+    submit = SubmitField(_l('Retrieve'))

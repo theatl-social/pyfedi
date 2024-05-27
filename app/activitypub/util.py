@@ -2326,10 +2326,10 @@ def can_delete(user_ap_id, post):
     return can_edit(user_ap_id, post)
 
 
-def resolve_remote_post(uri: str, community_id: int, announce_actor=None) -> Union[str, None]:
+def resolve_remote_post(uri: str, community_id: int, announce_actor=None) -> Union[Post, None]:
     post = Post.query.filter_by(ap_id=uri).first()
     if post:
-        return post.id
+        return post
 
     community = Community.query.get(community_id)
     site = Site.query.get(1)
@@ -2350,7 +2350,7 @@ def resolve_remote_post(uri: str, community_id: int, announce_actor=None) -> Uni
         # check again that it doesn't already exist (can happen with different but equivilent URLs)
         post = Post.query.filter_by(ap_id=post_data['id']).first()
         if post:
-            return post.id
+            return post
         if 'attributedTo' in post_data:
             if isinstance(post_data['attributedTo'], str):
                 actor = post_data['attributedTo']
@@ -2366,6 +2366,46 @@ def resolve_remote_post(uri: str, community_id: int, announce_actor=None) -> Uni
         if uri_domain != actor_domain:
             return None
 
+        if not announce_actor:
+            # make sure that the post actually belongs in the community a user says it does
+            remote_community = None
+            if post_data['type'] == 'Page':                                          # lemmy
+                remote_community = post_data['audience'] if 'audience' in post_data else None
+                if remote_community and remote_community.lower() != community.ap_profile_id:
+                    return None
+            elif post_data['type'] == 'Video':                                       # peertube
+                if 'attributedTo' in post_data and isinstance(post_data['attributedTo'], list):
+                    for a in post_data['attributedTo']:
+                        if a['type'] == 'Group':
+                            remote_community = a['id']
+                            break
+                if remote_community and remote_community.lower() != community.ap_profile_id:
+                    return None
+            else:                                                                   # mastodon, etc
+                if 'inReplyTo' not in post_data or post_data['inReplyTo'] != None:
+                    return None
+                community_found = False
+                if not community_found and 'to' in post_data and isinstance(post_data['to'], str):
+                    remote_community = post_data['to']
+                    if remote_community.lower() == community.ap_profile_id:
+                        community_found = True
+                if not community_found and 'cc' in post_data and isinstance(post_data['cc'], str):
+                    remote_community = post_data['cc']
+                    if remote_community.lower() == community.ap_profile_id:
+                        community_found = True
+                if not community_found and 'to' in post_data and isinstance(post_data['to'], list):
+                    for t in post_data['to']:
+                        if t.lower() == community.ap_profile_id:
+                            community_found = True
+                            break
+                if not community_found and 'cc' in post_data and isinstance(post_data['cc'], list):
+                    for c in post_data['cc']:
+                        if c.lower() == community.ap_profile_id:
+                            community_found = True
+                            break
+                if not community_found:
+                    return None
+
         activity_log = ActivityPubLog(direction='in', activity_id=post_data['id'], activity_type='Resolve Post', result='failure')
         if site.log_activitypub_json:
             activity_log.activity_json = json.dumps(post_data)
@@ -2378,6 +2418,10 @@ def resolve_remote_post(uri: str, community_id: int, announce_actor=None) -> Uni
             }
             post = create_post(activity_log, community, request_json, user)
             if post:
-                return post.id
+                if 'published' in post_data:
+                    post.posted_at=post_data['published']
+                    post.last_active=post_data['published']
+                    db.session.commit()
+                return post
 
     return None
