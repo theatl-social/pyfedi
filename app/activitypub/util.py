@@ -266,6 +266,8 @@ def instance_allowed(host: str) -> bool:
 
 
 def find_actor_or_create(actor: str, create_if_not_found=True, community_only=False, signed_get=False) -> Union[User, Community, None]:
+    if isinstance(actor, dict):     # Discourse does this
+        actor = actor['id']
     actor_url = actor.strip()
     actor = actor.strip().lower()
     user = None
@@ -683,7 +685,7 @@ def actor_json_to_model(activity_json, address, server):
 
         # only allow nsfw communities if enabled for this instance
         site = Site.query.get(1)    # can't use g.site because actor_json_to_model can be called from celery
-        if activity_json['sensitive'] and not site.enable_nsfw:
+        if 'sensitive' in activity_json and activity_json['sensitive'] and not site.enable_nsfw:
             return None
         if 'nsfl' in activity_json and activity_json['nsfl'] and not site.enable_nsfl:
             return None
@@ -693,8 +695,8 @@ def actor_json_to_model(activity_json, address, server):
                               description=activity_json['summary'] if 'summary' in activity_json else '',
                               rules=activity_json['rules'] if 'rules' in activity_json else '',
                               rules_html=lemmy_markdown_to_html(activity_json['rules'] if 'rules' in activity_json else ''),
-                              nsfw=activity_json['sensitive'],
-                              restricted_to_mods=activity_json['postingRestrictedToMods'],
+                              nsfw=activity_json['sensitive'] if 'sensitive' in activity_json else False,
+                              restricted_to_mods=activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else False,
                               new_mods_wanted=activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False,
                               private_mods=activity_json['privateMods'] if 'privateMods' in activity_json else False,
                               created_at=activity_json['published'] if 'published' in activity_json else utcnow(),
@@ -703,7 +705,7 @@ def actor_json_to_model(activity_json, address, server):
                               ap_public_url=activity_json['id'],
                               ap_profile_id=activity_json['id'].lower(),
                               ap_followers_url=activity_json['followers'] if 'followers' in activity_json else None,
-                              ap_inbox_url=activity_json['endpoints']['sharedInbox'],
+                              ap_inbox_url=activity_json['endpoints']['sharedInbox'] if 'endpoints' in activity_json else activity_json['inbox'],
                               ap_outbox_url=activity_json['outbox'],
                               ap_featured_url=activity_json['featured'] if 'featured' in activity_json else '',
                               ap_moderators_url=mods_url,
