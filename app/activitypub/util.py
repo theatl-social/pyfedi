@@ -560,7 +560,7 @@ def refresh_community_profile_task(community_id):
             community.description_html = markdown_to_html(community.description)
             community.rules = activity_json['rules'] if 'rules' in activity_json else ''
             community.rules_html = lemmy_markdown_to_html(activity_json['rules'] if 'rules' in activity_json else '')
-            community.restricted_to_mods = activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else True
+            community.restricted_to_mods = activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else False
             community.new_mods_wanted = activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False
             community.private_mods = activity_json['privateMods'] if 'privateMods' in activity_json else False
             community.ap_moderators_url = mods_url
