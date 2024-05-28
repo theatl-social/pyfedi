@@ -94,6 +94,7 @@ def retrieve_peertube_mods_and_backfill(community_id: int, mods: list):
             else:
                 new_membership = CommunityMember(community_id=community.id, user_id=user.id, is_moderator=True)
                 db.session.add(new_membership)
+    community.restricted_to_mods = True
     db.session.commit()
 
     if community.ap_public_url:

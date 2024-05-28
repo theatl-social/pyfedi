@@ -611,6 +611,9 @@ def refresh_community_profile_task(community_id):
                     new_language = find_language_or_create(ap_language['identifier'], ap_language['name'])
                     if new_language not in community.languages:
                         community.languages.append(new_language)
+            instance = Instance.query.get(community.instance_id)
+            if instance and instance.software == 'peertube':
+                community.restricted_to_mods = True
             db.session.commit()
             if community.icon_id and icon_changed:
                 make_image_sizes(community.icon_id, 60, 250, 'communities')
