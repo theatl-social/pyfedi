@@ -101,7 +101,7 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str, con
     else:
         try:
             result = HttpSignature.signed_request(uri, body, private_key, key_id, content_type, method, timeout)
-            if result.status_code != 200 and result.status_code != 202:
+            if result.status_code != 200 and result.status_code != 202 and result.status_code != 204:
                 log.result = 'failure'
                 log.exception_message += f' Response status code was {result.status_code}'
                 current_app.logger.error('Response code for post attempt was ' +
@@ -109,6 +109,8 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str, con
             log.exception_message += uri
             if result.status_code == 202:
                 log.exception_message += ' 202'
+            if result.status_code == 204:
+                log.exception_message += ' 204'
         except Exception as e:
             log.result = 'failure'
             log.exception_message='could not send:' + str(e)

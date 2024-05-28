@@ -67,12 +67,74 @@ def search_for_community(address: str):
                         if community_json['type'] == 'Group':
                             community = actor_json_to_model(community_json, name, server)
                             if community:
+                                if community.ap_profile_id == f"https://{server}/video-channels/{name}":
+                                    if current_app.debug:
+                                        retrieve_peertube_mods_and_backfill(community.id, community_json['attributedTo'])
+                                    else:
+                                        retrieve_peertube_mods_and_backfill.delay(community.id, community_json['attributedTo'])
+                                    return community
                                 if current_app.debug:
                                     retrieve_mods_and_backfill(community.id)
                                 else:
                                     retrieve_mods_and_backfill.delay(community.id)
                             return community
         return None
+
+
+@celery.task
+def retrieve_peertube_mods_and_backfill(community_id: int, mods: list):
+    community = Community.query.get(community_id)
+    site = Site.query.get(1)
+    for m in mods:
+        user = find_actor_or_create(m['id'])
+        if user:
+            existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=user.id).first()
+            if existing_membership:
+                existing_membership.is_moderator = True
+            else:
+                new_membership = CommunityMember(community_id=community.id, user_id=user.id, is_moderator=True)
+                db.session.add(new_membership)
+    db.session.commit()
+
+    if community.ap_public_url:
+        outbox_request = get_request(community.ap_outbox_url, headers={'Accept': 'application/activity+json'})
+        if outbox_request.status_code == 200:
+            outbox_data = outbox_request.json()
+            outbox_request.close()
+            if 'totalItems' in outbox_data and outbox_data['totalItems'] > 0:
+                page1_request = get_request(outbox_data['first'], headers={'Accept': 'application/activity+json'})
+                if page1_request.status_code == 200:
+                    page1_data = page1_request.json()
+                    page1_request.close()
+                    if 'type' in page1_data and page1_data['type'] == 'OrderedCollectionPage' and 'orderedItems' in page1_data:
+                        # only 10 posts per page for PeerTube
+                        for activity in page1_data['orderedItems']:
+                            video_request = get_request(activity['object'], headers={'Accept': 'application/activity+json'})
+                            if video_request.status_code == 200:
+                                video_data = video_request.json()
+                                video_request.close()
+                                activity_log = ActivityPubLog(direction='in', activity_id=video_data['id'], activity_type='Video', result='failure')
+                                if site.log_activitypub_json:
+                                    activity_log.activity_json = json.dumps(video_data)
+                                db.session.add(activity_log)
+                                if not ensure_domains_match(video_data):
+                                    activity_log.exception_message = 'Domains do not match'
+                                    db.session.commit()
+                                    continue
+                                if user and user.is_local():
+                                    activity_log.exception_message = 'Activity about local content which is already present'
+                                    db.session.commit()
+                                    continue
+                                if user:
+                                    post = post_json_to_model(activity_log, video_data, user, community)
+                                    post.ap_announce_id = activity['id']
+                                    post.ranking = post_ranking(post.score, post.posted_at)
+                                else:
+                                    activity_log.exception_message = 'Could not find or create actor'
+                                    db.session.commit()
+                        if community.post_count > 0:
+                            community.last_active = Post.query.filter(Post.community_id == community_id).order_by(desc(Post.posted_at)).first().posted_at
+                        db.session.commit()
 
 
 @celery.task

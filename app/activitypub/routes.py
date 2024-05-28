@@ -21,7 +21,7 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
     upvote_post, delete_post_or_comment, community_members, \
     user_removed_from_remote_server, create_post, create_post_reply, update_post_reply_from_activity, \
     update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection, find_reported_object, \
-    process_report, ensure_domains_match, can_edit, can_delete, remove_data_from_banned_user
+    process_report, ensure_domains_match, can_edit, can_delete, remove_data_from_banned_user, resolve_remote_post
 from app.utils import gibberish, get_setting, is_image_url, allowlist_html, render_template, \
     domain_from_url, markdown_to_html, community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
@@ -412,6 +412,14 @@ def shared_inbox():
                 else:
                     process_delete_request.delay(request_json, activity_log.id, ip_address())
                 return ''
+            # Ignore unutilised PeerTube activity
+            if 'actor' in request_json and request_json['actor'].endswith('accounts/peertube'):
+                activity_log.result = 'ignored'
+                activity_log.exception_message = 'PeerTube View or CacheFile activity'
+                db.session.add(activity_log)
+                db.session.commit()
+                return ''
+
         else:
             activity_log.activity_id = ''
             if g.site.log_activitypub_json:
@@ -595,6 +603,10 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                     if isinstance(request_json['object'], str):
                         activity_log.activity_json = json.dumps(request_json)
                         activity_log.exception_message = 'invalid json?'
+                        if 'actor' in request_json:
+                            community = find_actor_or_create(request_json['actor'], community_only=True, create_if_not_found=False)
+                            if community:
+                                resolve_remote_post(request_json['object'], community.id, request_json['actor'])
                     elif request_json['object']['type'] == 'Create':
                         activity_log.activity_type = request_json['object']['type']
                         if 'object' in request_json and 'object' in request_json['object']:
@@ -969,6 +981,16 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                 activity_log.exception_message = 'Edit attempt denied'
                         else:
                             activity_log.exception_message = 'PostReply not found'
+                    elif request_json['object']['type'] == 'Video':  # PeerTube: editing a video (PT doesn't seem to Announce these)
+                        post = Post.query.filter_by(ap_id=request_json['object']['id']).first()
+                        if post:
+                            if can_edit(request_json['actor'], post):
+                                update_post_from_activity(post, request_json)
+                                activity_log.result = 'success'
+                            else:
+                                activity_log.exception_message = 'Edit attempt denied'
+                        else:
+                            activity_log.exception_message = 'Post not found'
                 elif request_json['type'] == 'Delete':
                     if isinstance(request_json['object'], str):
                         ap_id = request_json['object']  # lemmy
@@ -1274,7 +1296,9 @@ def user_inbox(actor):
         if (('type' in request_json and request_json['type'] == 'Like') or
                 ('type' in request_json and request_json['type'] == 'Undo' and
                 'object' in request_json and request_json['object']['type'] == 'Like')):
-                return shared_inbox()
+            return shared_inbox()
+        if 'type' in request_json and request_json['type'] == 'Accept':
+            return shared_inbox()
         try:
             HttpSignature.verify_request(request, actor.public_key, skip_date=True)
             if 'type' in request_json:

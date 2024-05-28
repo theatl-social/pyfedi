@@ -229,27 +229,96 @@ def list_communities():
 @bp.route('/communities/local', methods=['GET'])
 def list_local_communities():
     verification_warning()
-    sort_by = text('community.' + request.args.get('sort_by') if request.args.get('sort_by') else 'community.post_reply_count desc')
+    search_param = request.args.get('search', '')
+    topic_id = int(request.args.get('topic_id', 0))
+    language_id = int(request.args.get('language_id', 0))
+    page = request.args.get('page', 1, type=int)
+    low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+    sort_by = request.args.get('sort_by', 'post_reply_count desc')
+    topics = Topic.query.order_by(Topic.name).all()
+    languages = Language.query.order_by(Language.name).all()
     communities = Community.query.filter_by(ap_id=None, banned=False)
-    return render_template('list_communities.html', communities=communities.order_by(sort_by).all(), title=_('Local communities'), sort_by=sort_by,
+    if search_param == '':
+        pass
+    else:
+        communities = communities.filter(or_(Community.title.ilike(f"%{search_param}%"), Community.ap_id.ilike(f"%{search_param}%")))
+
+    if topic_id != 0:
+        communities = communities.filter_by(topic_id=topic_id)
+
+    if language_id != 0:
+        communities = communities.join(community_language).filter(community_language.c.language_id == language_id)
+
+    if current_user.is_authenticated:
+        banned_from = communities_banned_from(current_user.id)
+        if banned_from:
+            communities = communities.filter(Community.id.not_in(banned_from))
+
+    communities = communities.order_by(text('community.' + sort_by))
+
+    # Pagination
+    communities = communities.paginate(page=page, per_page=250 if current_user.is_authenticated and not low_bandwidth else 50,
+                           error_out=False)
+    next_url = url_for('main.list_communities', page=communities.next_num, sort_by=sort_by, language_id=language_id) if communities.has_next else None
+    prev_url = url_for('main.list_communities', page=communities.prev_num, sort_by=sort_by, language_id=language_id) if communities.has_prev and page != 1 else None
+
+    return render_template('list_communities.html', communities=communities, search=search_param, title=_('Local Communities'),
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                           low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1', moderating_communities=moderating_communities(current_user.get_id()),
+                           next_url=next_url, prev_url=prev_url,
+                           topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
+                           low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()))
 
 
 @bp.route('/communities/subscribed', methods=['GET'])
 def list_subscribed_communities():
     verification_warning()
-    sort_by = text('community.' + request.args.get('sort_by') if request.args.get('sort_by') else 'community.post_reply_count desc')
+    search_param = request.args.get('search', '')
+    topic_id = int(request.args.get('topic_id', 0))
+    language_id = int(request.args.get('language_id', 0))
+    page = request.args.get('page', 1, type=int)
+    low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+    sort_by = request.args.get('sort_by', 'post_reply_count desc')
+    topics = Topic.query.order_by(Topic.name).all()
+    languages = Language.query.order_by(Language.name).all()
     if current_user.is_authenticated:
-        communities = Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == current_user.id).order_by(sort_by).all()
+        communities = Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == current_user.id)
+
+        if search_param == '':
+            pass
+        else:
+            communities = communities.filter(or_(Community.title.ilike(f"%{search_param}%"), Community.ap_id.ilike(f"%{search_param}%")))
+
+        if topic_id != 0:
+            communities = communities.filter_by(topic_id=topic_id)
+
+        if language_id != 0:
+            communities = communities.join(community_language).filter(community_language.c.language_id == language_id)
+
+        banned_from = communities_banned_from(current_user.id)
+        if banned_from:
+            communities = communities.filter(Community.id.not_in(banned_from))
+
+        communities = communities.order_by(text('community.' + sort_by))
+
+        # Pagination
+        communities = communities.paginate(page=page, per_page=250 if current_user.is_authenticated and not low_bandwidth else 50,
+                           error_out=False)
+        next_url = url_for('main.list_communities', page=communities.next_num, sort_by=sort_by, language_id=language_id) if communities.has_next else None
+        prev_url = url_for('main.list_communities', page=communities.prev_num, sort_by=sort_by, language_id=language_id) if communities.has_prev and page != 1 else None
+
     else:
         communities = []
-    return render_template('list_communities.html', communities=communities, title=_('Joined communities'),
-                           SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER, sort_by=sort_by,
+        next_url = None
+        prev_url = None
+
+    return render_template('list_communities.html', communities=communities, search=search_param, title=_('Joined Communities'),
+                           SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                           low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1', moderating_communities=moderating_communities(current_user.get_id()),
+                           next_url=next_url, prev_url=prev_url,
+                           topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
+                           low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()))
 
 

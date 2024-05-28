@@ -1000,6 +1000,10 @@ class Post(db.Model):
             if vpos != -1:
                 return self.url[vpos + 2:vpos + 13]
 
+    def peertube_embed(self):
+        if self.url:
+            return self.url.replace('watch', 'embed')
+
     def profile_id(self):
         if self.ap_id:
             return self.ap_id

@@ -10,12 +10,12 @@ from sqlalchemy import or_, desc, text
 
 from app import db, constants, cache
 from app.activitypub.signature import RsaKeys, post_request, default_context
-from app.activitypub.util import notify_about_post, make_image_sizes
+from app.activitypub.util import notify_about_post, make_image_sizes, resolve_remote_post
 from app.chat.util import send_message
 from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, CreateImageForm, CreateLinkForm, \
     ReportCommunityForm, \
     DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm, \
-    EscalateReportForm, ResolveReportForm, CreateVideoForm, CreatePollForm
+    EscalateReportForm, ResolveReportForm, CreateVideoForm, CreatePollForm, RetrieveRemotePost
 from app.community.util import search_for_community, actor_to_community, \
     opengraph_parse, url_to_thumbnail_file, save_post, save_icon_file, save_banner_file, send_to_remote_instance, \
     delete_post_from_community, delete_post_reply_from_community, community_in_list
@@ -127,6 +127,24 @@ def add_remote():
                            title=_('Add remote community'), form=form, new_community=new_community,
                            subscribed=community_membership(current_user, new_community) >= SUBSCRIPTION_MEMBER, moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()))
+
+
+@bp.route('/retrieve_remote_post/<int:community_id>', methods=['GET', 'POST'])
+@login_required
+def retrieve_remote_post(community_id: int):
+    if current_user.banned:
+        return show_ban_message()
+    form = RetrieveRemotePost()
+    new_post = None
+    community = Community.query.get_or_404(community_id)
+    if form.validate_on_submit():
+        address = form.address.data.strip()
+        new_post =  resolve_remote_post(address, community_id)
+        if new_post is None:
+            flash(_('Post not found.'), 'warning')
+
+    return render_template('community/retrieve_remote_post.html',
+                           title=_('Retrieve Remote Post'), form=form, new_post=new_post, community=community)
 
 
 # @bp.route('/c/<actor>', methods=['GET']) - defined in activitypub/routes.py, which calls this function for user requests. A bit weird.
