@@ -148,12 +148,10 @@
                     </ul>
                 {% endif %}
                 {% if not community.is_local() %}
-                    <p>
-                       <a href="{{ community.profile_id() }}">View community on original server</a>
-                    </p>
-                    <p>
-                       <a href="/community/retrieve_remote_post/{{ community.id }}">Retrieve a post from the original server</a>
-                    </p>
+                    <ul>
+                        <li><p><a href="{{ community.profile_id() }}">{{ _('View community on original server') }}</a></p></li>
+                        <li><p><a href="{{ url_for('community.retrieve_remote_post', community_id=community.id) }}">{{ _('Retrieve a post from the original server') }}</a></p></li>
+                    </ul>
                 {% endif %}
                 {% if community.local_only %}
                 <p>{{ _('Only people on %(instance_name)s can post or reply in this community.', instance_name=current_app.config['SERVER_NAME']) }}</p>

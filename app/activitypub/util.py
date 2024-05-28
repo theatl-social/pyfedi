@@ -2349,7 +2349,7 @@ def resolve_remote_post(uri: str, community_id: int, announce_actor=None) -> Uni
     if post_request.status_code == 200:
         post_data = post_request.json()
         post_request.close()
-        # check again that it doesn't already exist (can happen with different but equivilent URLs)
+        # check again that it doesn't already exist (can happen with different but equivalent URLs)
         post = Post.query.filter_by(ap_id=post_data['id']).first()
         if post:
             return post

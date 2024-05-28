@@ -52,7 +52,10 @@
                                 <td><p>{{ _('Results will have exactly that phrase in them.') }}</p></td>
                             </tr>
                         </table>
-
+                        <h6 class="mt-5">{{ _('Trying to add a communitiy or post from another instance?') }} </h6>
+                        <p>{{ _('In many types of federated platforms you can put a URL of a post or community into the search in order to add it to your local instance. In PieFed the search is just for searching.') }}</p>
+                        <p><a href="{{ url_for('community.add_remote') }}" class="btn btn-primary">{{ _('Add remote community') }}</a></p>
+                        <p>{{ _('To add a post from a remote instance, find the community in PieFed then look for the "Retrieve a post from the original server" link.') }}</p>
                     </div>
                 </div>
             </div>

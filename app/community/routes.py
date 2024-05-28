@@ -139,7 +139,7 @@ def retrieve_remote_post(community_id: int):
     community = Community.query.get_or_404(community_id)
     if form.validate_on_submit():
         address = form.address.data.strip()
-        new_post =  resolve_remote_post(address, community_id)
+        new_post = resolve_remote_post(address, community_id)
         if new_post is None:
             flash(_('Post not found.'), 'warning')
 
