@@ -1277,19 +1277,27 @@ def user_inbox(actor):
                 return shared_inbox()
         try:
             HttpSignature.verify_request(request, actor.public_key, skip_date=True)
-            if 'type' in request_json and request_json['type'] == 'Follow':
-                if current_app.debug:
-                    process_user_follow_request(request_json, activity_log.id, actor.id)
-                else:
-                    process_user_follow_request.delay(request_json, activity_log.id, actor.id)
-                return ''
-            if ('type' in request_json and request_json['type'] == 'Undo' and
-                'object' in request_json and request_json['object']['type'] == 'Follow'):
-                if current_app.debug:
-                    process_user_undo_follow_request(request_json, activity_log.id, actor.id)
-                else:
-                    process_user_undo_follow_request.delay(request_json, activity_log.id, actor.id)
-                return ''
+            if 'type' in request_json:
+                if request_json['type'] == 'Follow':
+                    if current_app.debug:
+                        process_user_follow_request(request_json, activity_log.id, actor.id)
+                    else:
+                        process_user_follow_request.delay(request_json, activity_log.id, actor.id)
+                elif request_json['type'] == 'Undo' and 'object' in request_json and request_json['object']['type'] == 'Follow':
+                    local_user_ap_id = request_json['object']['object']
+                    local_user = find_actor_or_create(local_user_ap_id, create_if_not_found=False)
+                    remote_user = User.query.get(actor.id)
+                    if local_user:
+                        db.session.query(UserFollower).filter_by(local_user_id=local_user.id, remote_user_id=remote_user.id, is_accepted=True).delete()
+                        activity_log.result = 'success'
+                    else:
+                        activity_log.exception_message = 'Could not find local user'
+                        activity_log.result = 'failure'
+                    db.session.commit()
+                elif request_json['type'] == 'Accept' or request_json['type'] == 'Reject':
+                    if request_json['object']['type'] == 'Follow':
+                        return shared_inbox()
+
         except VerificationError:
             activity_log.result = 'failure'
             activity_log.exception_message = 'Could not verify signature'
@@ -1342,22 +1350,6 @@ def process_user_follow_request(request_json, activitypublog_id, remote_user_id)
             activity_log.result = 'success'
         else:
             activity_log.exception_message = 'Error sending Accept'
-    else:
-        activity_log.exception_message = 'Could not find local user'
-        activity_log.result = 'failure'
-
-    db.session.commit()
-
-
-@celery.task
-def process_user_undo_follow_request(request_json, activitypublog_id, remote_user_id):
-    activity_log = ActivityPubLog.query.get(activitypublog_id)
-    local_user_ap_id = request_json['object']['object']
-    local_user = find_actor_or_create(local_user_ap_id, create_if_not_found=False)
-    remote_user = User.query.get(remote_user_id)
-    if local_user:
-        db.session.query(UserFollower).filter_by(local_user_id=local_user.id, remote_user_id=remote_user.id, is_accepted=True).delete()
-        activity_log.result = 'success'
     else:
         activity_log.exception_message = 'Could not find local user'
         activity_log.result = 'failure'

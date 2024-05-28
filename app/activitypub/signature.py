@@ -172,7 +172,7 @@ class RsaKeys:
         return private_key_serialized, public_key_serialized
 
 
-# Signatures
+# Get a piece of the signature string. Similar to parse_signature except unencumbered by needing to return a HttpSignatureDetails
 def signature_part(signature, key):
     parts = signature.split(',')
     for part in parts:
