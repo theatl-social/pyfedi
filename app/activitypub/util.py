@@ -725,8 +725,6 @@ def actor_json_to_model(activity_json, address, server):
                               rules=activity_json['rules'] if 'rules' in activity_json else '',
                               rules_html=lemmy_markdown_to_html(activity_json['rules'] if 'rules' in activity_json else ''),
                               nsfw=activity_json['sensitive'] if 'sensitive' in activity_json else False,
-                              restricted_to_mods=activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else True,
-                              nsfw=activity_json['sensitive'] if 'sensitive' in activity_json else False,
                               restricted_to_mods=activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else False,
                               new_mods_wanted=activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False,
                               private_mods=activity_json['privateMods'] if 'privateMods' in activity_json else False,
