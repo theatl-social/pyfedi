@@ -540,9 +540,9 @@ def add_discussion_post(actor):
 
         notify_about_post(post)
 
+        federate_post_to_user_followers(post)
         if not community.local_only:
             federate_post(community, post)
-        federate_post_to_user_followers(post)
 
         return redirect(f"/post/{post.id}")
     else:
@@ -623,9 +623,9 @@ def add_image_post(actor):
         upvote_own_post(post)
         notify_about_post(post)
 
+        federate_post_to_user_followers(post)
         if not community.local_only:
             federate_post(community, post)
-        federate_post_to_user_followers(post)
 
         return redirect(f"/post/{post.id}")
     else:
@@ -704,9 +704,9 @@ def add_link_post(actor):
         upvote_own_post(post)
         notify_about_post(post)
 
+        federate_post_to_user_followers(post)
         if not community.local_only:
             federate_post(community, post)
-        federate_post_to_user_followers(post)
 
         return redirect(f"/post/{post.id}")
     else:
@@ -785,9 +785,9 @@ def add_video_post(actor):
         upvote_own_post(post)
         notify_about_post(post)
 
+        federate_post_to_user_followers(post)
         if not community.local_only:
             federate_post(community, post)
-        federate_post_to_user_followers(post)
 
         return redirect(f"/post/{post.id}")
     else:
@@ -851,9 +851,10 @@ def add_poll_post(actor):
 
         notify_about_post(post)
 
+        if not poll.local_only:
+            federate_post_to_user_followers(post)
         if not community.local_only and not poll.local_only:
             federate_post(community, post)
-            federate_post_to_user_followers(post)
 
         return redirect(f"/post/{post.id}")
     else:
