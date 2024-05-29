@@ -973,12 +973,17 @@ def federate_post(community, post):
             '@context': default_context(),
             'object': create
         }
+        microblog_announce = announce
+        microblog_announce['object'] = post.ap_id
 
         sent_to = 0
         for instance in community.following_instances():
             if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(
                     instance.domain):
-                send_to_remote_instance(instance.id, community.id, announce)
+                if instance.software == "mastodon":
+                    send_to_remote_instance(instance.id, community.id, microblog_announce)
+                else:
+                    send_to_remote_instance(instance.id, community.id, announce)
                 sent_to += 1
         if sent_to:
             flash(_('Your post to %(name)s has been made.', name=community.title))
