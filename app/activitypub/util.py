@@ -30,7 +30,8 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     is_image_url, domain_from_url, gibberish, ensure_directory_exists, markdown_to_text, head_request, post_ranking, \
     shorten_string, reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, remove_tracking_from_link, \
     blocked_phrases, microblog_content_to_title, generate_image_from_video_url, is_video_url, reply_is_stupid, \
-    notification_subscribers, communities_banned_from, lemmy_markdown_to_html, actor_contains_blocked_words
+    notification_subscribers, communities_banned_from, lemmy_markdown_to_html, actor_contains_blocked_words, \
+    html_to_text
 
 
 def public_key():
@@ -811,7 +812,7 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
         elif 'content' in post_json:
             if post_json['mediaType'] == 'text/html':
                 post.body_html = allowlist_html(post_json['content'])
-                post.body = ''
+                post.body = html_to_text(post.body_html)
             elif post_json['mediaType'] == 'text/markdown':
                 post.body = post_json['content']
                 post.body_html = markdown_to_html(post.body)
@@ -1613,13 +1614,13 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
     elif 'content' in request_json['object'] and request_json['object']['content'] is not None: # Kbin
         if 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/html':
             post.body_html = allowlist_html(request_json['object']['content'])
-            post.body = ''
+            post.body = html_to_text(post.body_html)
         elif 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/markdown':
             post.body = request_json['object']['content']
             post.body_html = markdown_to_html(post.body)
         else:
             post.body_html = allowlist_html(request_json['object']['content'])
-            post.body = ''
+            post.body = html_to_text(post.body_html)
         if name == "[Microblog]":
             name += ' ' + microblog_content_to_title(post.body_html)
             if '[NSFL]' in name.upper() or '(NSFL)' in name.upper():
@@ -1839,13 +1840,13 @@ def update_post_from_activity(post: Post, request_json: dict):
     elif 'content' in request_json['object'] and request_json['object']['content'] is not None: # Kbin
         if 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/html':
             post.body_html = allowlist_html(request_json['object']['content'])
-            post.body = ''
+            post.body = html_to_text(post.body_html)
         elif 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/markdown':
             post.body = request_json['object']['content']
             post.body_html = markdown_to_html(post.body)
         else:
             post.body_html = allowlist_html(request_json['object']['content'])
-            post.body = ''
+            post.body = html_to_text(post.body_html)
         if name == "[Microblog]":
             name += ' ' + microblog_content_to_title(post.body_html)
             nsfl_in_title = '[NSFL]' in name.upper() or '(NSFL)' in name.upper()

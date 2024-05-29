@@ -25,7 +25,7 @@ from app.models import Settings, BannedInstances, Interest, Role, User, RolePerm
     utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply, Language, \
     Tag, InstanceRole
 from app.utils import file_get_contents, retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
-    shorten_string, get_request
+    shorten_string, get_request, html_to_text
 
 
 def register(app):
@@ -273,6 +273,14 @@ def register(app):
                 num_content = user.num_content()
                 if filesize > 0 and num_content > 0:
                     print(f'{user.id},"{user.ap_id}",{filesize},{num_content}')
+
+    @app.cli.command("repair-search")
+    def repair_search():
+        with app.app_context():
+            for post in Post.query.filter(Post.body == '', Post.body_html != ''):
+                post.body = html_to_text(post.body_html)
+                db.session.commit()
+        print('Done')
 
     def list_files(directory):
         for root, dirs, files in os.walk(directory):
