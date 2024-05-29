@@ -7,6 +7,8 @@ from app.models import Post, Language, Community
 from app.search import bp
 from app.utils import moderating_communities, joined_communities, render_template, blocked_domains, blocked_instances, \
     communities_banned_from, recently_upvoted_posts, recently_downvoted_posts, blocked_users
+from app.community.forms import RetrieveRemotePost
+from app.activitypub.util import resolve_remote_post_from_search
 
 
 @bp.route('/search', methods=['GET', 'POST'])
@@ -87,3 +89,20 @@ def run_search():
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
                                site=g.site)
+
+
+@bp.route('/retrieve_remote_post', methods=['GET', 'POST'])
+@login_required
+def retrieve_remote_post():
+    if current_user.banned:
+        return show_ban_message()
+    form = RetrieveRemotePost()
+    new_post = None
+    if form.validate_on_submit():
+        address = form.address.data.strip()
+        new_post = resolve_remote_post_from_search(address)
+        if new_post is None:
+            flash(_('Post not found.'), 'warning')
+
+    return render_template('community/retrieve_remote_post.html',
+                           title=_('Retrieve Remote Post'), form=form, new_post=new_post)
