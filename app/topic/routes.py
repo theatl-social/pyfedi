@@ -203,7 +203,8 @@ def topic_create_post(topic_name):
     if not topic:
         abort(404)
     communities = Community.query.filter_by(topic_id=topic.id, banned=False).order_by(Community.title).all()
-    sub_communities = Community.query.filter_by(banned=False).join(Topic, Topic.parent_id == topic.id).order_by(Community.title).all()
+    child_topics = [topic.id for topic in Topic.query.filter(Topic.parent_id == topic.id).all()]
+    sub_communities = Community.query.filter_by(banned=False).filter(Community.topic_id.in_(child_topics)).order_by(Community.title).all()
     if request.form.get('community_id', '') != '':
         community = Community.query.get_or_404(int(request.form.get('community_id')))
         return redirect(url_for('community.join_then_add', actor=community.link()))
