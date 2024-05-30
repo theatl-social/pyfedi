@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from time import sleep
 
-from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, json
+from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, json, g
 from flask_login import login_user, logout_user, current_user, login_required
 from flask_babel import _, lazy_gettext as _l
 
@@ -23,7 +23,7 @@ from app.user.utils import purge_user_then_delete, unsubscribe_from_community
 from app.utils import get_setting, render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     is_image_url, ensure_directory_exists, gibberish, file_get_contents, community_membership, user_filters_home, \
     user_filters_posts, user_filters_replies, moderating_communities, joined_communities, theme_list, blocked_instances, \
-    allowlist_html, recently_upvoted_posts, recently_downvoted_posts, blocked_users
+    allowlist_html, recently_upvoted_posts, recently_downvoted_posts, blocked_users, menu_topics
 from sqlalchemy import desc, or_, text
 import os
 
@@ -36,7 +36,9 @@ def show_people():
     else:
         people = User.query.filter_by(ap_id=None, deleted=False, banned=False, searchable=True).all()
     return render_template('user/people.html', people=people, moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()), title=_('People'))
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site,
+                           title=_('People'))
 
 
 @bp.route('/user/<int:user_id>', methods=['GET'])
@@ -93,7 +95,8 @@ def show_profile(user):
                            replies_next_url=replies_next_url, replies_prev_url=replies_prev_url,
                            noindex=not user.indexable, show_post_community=True, hide_vote_buttons=True,
                            moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id())
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site
                            )
 
 
@@ -170,7 +173,8 @@ def edit_profile(actor):
     return render_template('user/edit_profile.html', title=_('Edit profile'), form=form, user=current_user,
                            markdown_editor=current_user.markdown_editor,
                            moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id())
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site
                            )
 
 
@@ -275,7 +279,8 @@ def change_settings():
 
     return render_template('user/edit_settings.html', title=_('Edit profile'), form=form, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id())
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site
                            )
 
 
@@ -457,7 +462,8 @@ def report_profile(actor):
 
     return render_template('user/user_report.html', title=_('Report user'), form=form, user=user,
                            moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id())
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics = menu_topics(), site=g.site
                            )
 
 
@@ -536,7 +542,8 @@ def delete_account():
 
     return render_template('user/delete_account.html', title=_('Delete my account'), form=form, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id())
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site
                            )
 
 
@@ -626,7 +633,8 @@ def notifications():
 
     return render_template('user/notifications.html', title=_('Notifications'), notifications=notification_list, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id())
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site
                            )
 
 
@@ -754,7 +762,8 @@ def user_settings_filters():
                            blocked_users=blocked_users, blocked_communities=blocked_communities,
                            blocked_domains=blocked_domains, blocked_instances=blocked_instances,
                            moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id())
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site
                            )
 
 
@@ -778,7 +787,8 @@ def user_settings_filters_add():
 
     return render_template('user/edit_filters.html', title=_('Add filter'), form=form, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id())
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site
                            )
 
 
@@ -818,7 +828,8 @@ def user_settings_filters_edit(filter_id):
 
     return render_template('user/edit_filters.html', title=_('Edit filter'), form=form, content_filter=content_filter, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id())
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site
                            )
 
 

@@ -1,37 +1,37 @@
-{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
-    {% extends 'themes/' + theme() + '/base.html' %}
-{% else %}
-    {% extends "base.html" %}
-{% endif %} %}
-{% from 'bootstrap5/form.html' import render_form %}
-{% set active_child = 'list_topics' %}
+{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%} -%}
+{% from 'bootstrap5/form.html' import render_form -%}
+{% set active_child = 'list_topics' -%}
 
-{% block app_content %}
-{% if len(topics) > 0 %}
-    {% macro render_topic(topic, depth) %}
+{% block app_content -%}
+{% if len(topics) > 0 -%}
+    {% macro render_topic(topic, depth) -%}
         <li>
-            {% if depth == 0 %}<strong>{% endif %}
+            {% if depth == 0 -%}<strong>{% endif -%}
                 <a href="/topic/{{ topic['topic'].path() }}">{{ topic['topic'].name }}</a>
-            {% if depth == 0 %}</strong>{% endif %}
-            {% if topic['children'] %}
+            {% if depth == 0 -%}</strong>{% endif -%}
+            {% if topic['children'] -%}
                 <ul>
-                {% for topic in topic['children'] %}
+                {% for topic in topic['children'] -%}
                     {{ render_topic(topic, depth + 1)|safe }}
-                {% endfor %}
+                {% endfor -%}
                 </ul>
-            {% endif %}
+            {% endif -%}
         </li>
-    {% endmacro %}
+    {% endmacro -%}
     <h1>{{ _('Choose a topic') }}</h1>
     <div class="table-responsive-md mt-4">
         <ul class="topics_list">
-            {% for topic in topics %}
+            {% for topic in topics -%}
                 {{ render_topic(topic, 0)|safe }}
-            {% endfor %}
+            {% endfor -%}
         </ul>
     </div>
-{% else %}
+{% else -%}
 <p>{{ _('There are no communities yet.') }}</p>
-{% endif %}
+{% endif -%}
 <p><a href="/communities" class="btn btn-primary">{{ _('Explore communities') }}</a></p>
-{% endblock %}
+{% endblock -%}

@@ -33,7 +33,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     request_etag_matches, return_304, instance_banned, can_create_post, can_upvote, can_downvote, user_filters_posts, \
     joined_communities, moderating_communities, blocked_domains, mimetype_from_url, blocked_instances, \
     community_moderators, communities_banned_from, show_ban_message, recently_upvoted_posts, recently_downvoted_posts, \
-    blocked_users, post_ranking, languages_for_form, english_language_id
+    blocked_users, post_ranking, languages_for_form, english_language_id, menu_topics
 from feedgen.feed import FeedGenerator
 from datetime import timezone, timedelta
 
@@ -91,7 +91,10 @@ def add_local():
         return redirect('/c/' + community.name)
 
     return render_template('community/add_local.html', title=_('Create community'), form=form, moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()), current_app=current_app)
+                           joined_communities=joined_communities(current_user.get_id()),
+                           current_app=current_app,
+                           menu_topics=menu_topics(),
+                           site=g.site)
 
 
 @bp.route('/add_remote', methods=['GET', 'POST'])
@@ -126,7 +129,9 @@ def add_remote():
     return render_template('community/add_remote.html',
                            title=_('Add remote community'), form=form, new_community=new_community,
                            subscribed=community_membership(current_user, new_community) >= SUBSCRIPTION_MEMBER, moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()))
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
+                           site=g.site)
 
 
 @bp.route('/retrieve_remote_post/<int:community_id>', methods=['GET', 'POST'])
@@ -294,7 +299,8 @@ def show_community(community: Community):
                            recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
                            rss_feed=f"https://{current_app.config['SERVER_NAME']}/community/{community.link()}/feed", rss_feed_name=f"{community.title} on PieFed",
                            content_filters=content_filters, moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()), sort=sort,
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site, sort=sort,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)], post_layout=post_layout, current_app=current_app)
 
 
@@ -550,6 +556,7 @@ def add_discussion_post(actor):
                            markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.id),
+                           menu_topics=menu_topics(), site=g.site,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)]
     )
 
@@ -630,6 +637,7 @@ def add_image_post(actor):
                            markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.id),
+                           menu_topics=menu_topics(), site=g.site,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)]
     )
 
@@ -710,6 +718,7 @@ def add_link_post(actor):
                            markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.id),
+                           menu_topics=menu_topics(), site=g.site,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)]
     )
 
@@ -790,6 +799,7 @@ def add_video_post(actor):
                            markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.id),
+                           menu_topics=menu_topics(), site=g.site,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)]
     )
 
@@ -858,6 +868,7 @@ def add_poll_post(actor):
                            markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.id),
+                           menu_topics=menu_topics(), site=g.site,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)]
     )
 
@@ -1155,7 +1166,8 @@ def community_edit(community_id: int):
         return render_template('community/community_edit.html', title=_('Edit community'), form=form,
                                current_app=current_app, current="edit_settings",
                                community=community, moderating_communities=moderating_communities(current_user.get_id()),
-                               joined_communities=joined_communities(current_user.get_id()))
+                               joined_communities=joined_communities(current_user.get_id()),
+                               menu_topics=menu_topics(), site=g.site)
     else:
         abort(401)
 
@@ -1212,7 +1224,8 @@ def community_delete(community_id: int):
 
         return render_template('community/community_delete.html', title=_('Delete community'), form=form,
                                community=community, moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()))
+                               joined_communities=joined_communities(current_user.get_id()),
+                               menu_topics=menu_topics(), site=g.site)
     else:
         abort(401)
 
@@ -1231,7 +1244,8 @@ def community_mod_list(community_id: int):
         return render_template('community/community_mod_list.html', title=_('Moderators for %(community)s', community=community.display_name()),
                         moderators=moderators, community=community, current="moderators",
                         moderating_communities=moderating_communities(current_user.get_id()),
-                        joined_communities=joined_communities(current_user.get_id())
+                        joined_communities=joined_communities(current_user.get_id()),
+                        menu_topics=menu_topics(), site=g.site
                         )
 
 
@@ -1287,7 +1301,8 @@ def community_add_moderator(community_id: int):
         return render_template('community/community_add_moderator.html', title=_('Add moderator to %(community)s', community=community.display_name()),
                         community=community, form=form,
                         moderating_communities=moderating_communities(current_user.get_id()),
-                        joined_communities=joined_communities(current_user.get_id())
+                        joined_communities=joined_communities(current_user.get_id()),
+                        menu_topics=menu_topics(), site=g.site
                         )
 
 
@@ -1393,6 +1408,7 @@ def community_ban_user(community_id: int, user_id: int):
                                user=user,
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
+                               menu_topics=menu_topics(), site=g.site,
                                inoculation=inoculation[randint(0, len(inoculation) - 1)]
                                )
 
@@ -1497,6 +1513,7 @@ def community_moderate(actor):
                                    next_url=next_url, prev_url=prev_url,
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
+                                   menu_topics=menu_topics(), site=g.site,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)]
                                    )
         else:
@@ -1531,6 +1548,7 @@ def community_moderate_subscribers(actor):
                                    next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth,
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
+                                   menu_topics=menu_topics(), site=g.site,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)]
                                    )
         else:

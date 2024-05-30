@@ -725,6 +725,11 @@ def joined_communities(user_id):
         filter(CommunityMember.user_id == user_id).order_by(Community.title).all()
 
 
+@cache.memoize(timeout=3000)
+def menu_topics():
+    return Topic.query.filter(Topic.parent_id == None).order_by(Topic.name).all()
+
+
 @cache.memoize(timeout=300)
 def community_moderators(community_id):
     return CommunityMember.query.filter((CommunityMember.community_id == community_id) &

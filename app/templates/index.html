@@ -11,12 +11,12 @@
     <div class="col-12 col-md-8 position-relative main_pane">
         {% include "_home_nav.html" %}
         <div class="post_list">
-            {% for post in posts.items %}
+            {% for post in posts.items -%}
                 {% include 'post/_post_teaser.html' %}
-            {% else %}
+            {% else -%}
                 <p>{{ _('No posts yet. Join some communities to see more.') }}</p>
                 <p><a class="btn btn-primary" href="/communities">{{ _('Explore communities') }}</a></p>
-            {% endfor %}
+            {% endfor -%}
         </div>
 
         <nav aria-label="Pagination" class="mt-4" role="navigation">

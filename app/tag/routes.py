@@ -9,7 +9,7 @@ from app.inoculation import inoculation
 from app.models import Post, Community, Tag, post_tag
 from app.tag import bp
 from app.utils import render_template, permission_required, joined_communities, moderating_communities, \
-    user_filters_posts, blocked_instances, blocked_users, blocked_domains
+    user_filters_posts, blocked_instances, blocked_users, blocked_domains, menu_topics
 from sqlalchemy import desc, or_
 
 
@@ -56,6 +56,7 @@ def show_tag(tag):
                                content_filters=content_filters,
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
+                               menu_topics=menu_topics(),
                                inoculation=inoculation[randint(0, len(inoculation) - 1)]
                                )
     else:

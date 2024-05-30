@@ -29,7 +29,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, moderating_communities, joined_communities, \
     blocked_instances, blocked_domains, community_moderators, blocked_phrases, show_ban_message, recently_upvoted_posts, \
     recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, reply_is_stupid, \
-    languages_for_form, english_language_id, MultiCheckboxField
+    languages_for_form, english_language_id, MultiCheckboxField, menu_topics
 
 
 def show_post(post_id: int):
@@ -314,6 +314,7 @@ def show_post(post_id: int):
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)]
                            )
     response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
@@ -596,7 +597,9 @@ def continue_discussion(post_id, comment_id):
     response = render_template('post/continue_discussion.html', title=_('Discussing %(title)s', title=post.title), post=post, mods=mod_list,
                            is_moderator=is_moderator, comment=comment, replies=replies, markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
                            moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()), community=post.community,
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site,
+                           community=post.community,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)])
     response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
@@ -814,7 +817,8 @@ def post_options(post_id: int):
     post = Post.query.get_or_404(post_id)
     return render_template('post/post_options.html', post=post,
                            moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()))
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site)
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/options', methods=['GET'])
@@ -823,7 +827,8 @@ def post_reply_options(post_id: int, comment_id: int):
     post_reply = PostReply.query.get_or_404(comment_id)
     return render_template('post/post_reply_options.html', post=post, post_reply=post_reply,
                            moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id())
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site
                            )
 
 
@@ -900,6 +905,7 @@ def post_edit_discussion_post(post_id: int):
                                    markdown_editor=current_user.markdown_editor, mods=mod_list,
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
+                                   menu_topics=menu_topics(), site=g.site,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)]
                                    )
     else:
@@ -986,6 +992,7 @@ def post_edit_image_post(post_id: int):
                                    markdown_editor=current_user.markdown_editor, mods=mod_list,
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
+                                   menu_topics=menu_topics(), site=g.site,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)]
                                    )
     else:
@@ -1072,6 +1079,7 @@ def post_edit_link_post(post_id: int):
                                    markdown_editor=current_user.markdown_editor, mods=mod_list,
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
+                                   menu_topics=menu_topics(), site=g.site,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)]
                                    )
     else:
@@ -1158,6 +1166,7 @@ def post_edit_video_post(post_id: int):
                                    markdown_editor=current_user.markdown_editor, mods=mod_list,
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
+                                   menu_topics=menu_topics(), site=g.site,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)]
                                    )
     else:
@@ -1229,6 +1238,7 @@ def post_edit_poll_post(post_id: int):
                                    markdown_editor=current_user.markdown_editor, mods=mod_list,
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
+                                   menu_topics=menu_topics(), site=g.site,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)]
                                    )
     else:
@@ -1548,7 +1558,8 @@ def post_report(post_id: int):
 
     return render_template('post/post_report.html', title=_('Report post'), form=form, post=post,
                            moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id())
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site
                            )
 
 
@@ -1608,7 +1619,8 @@ def post_mea_culpa(post_id: int):
 
     return render_template('post/post_mea_culpa.html', title=_('I changed my mind'), form=form, post=post,
                            moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id())
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site
                            )
 
 
@@ -1683,7 +1695,8 @@ def post_reply_report(post_id: int, comment_id: int):
 
     return render_template('post/post_reply_report.html', title=_('Report comment'), form=form, post=post, post_reply=post_reply,
                            moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id())
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site
                            )
 
 
@@ -1843,7 +1856,8 @@ def post_reply_edit(post_id: int, comment_id: int):
             form.language_id.data = post_reply.language_id
             return render_template('post/post_reply_edit.html', title=_('Edit comment'), form=form, post=post, post_reply=post_reply,
                                    comment=comment, markdown_editor=current_user.markdown_editor, moderating_communities=moderating_communities(current_user.get_id()),
-                                   joined_communities=joined_communities(current_user.get_id()), community=post.community,
+                                   joined_communities=joined_communities(current_user.get_id()), menu_topics=menu_topics(),
+                                   community=post.community, site=g.site,
                                    SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)])
     else:

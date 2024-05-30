@@ -1,6 +1,6 @@
 from random import randint
 
-from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort
+from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, g
 from flask_login import login_user, logout_user, current_user, login_required
 from flask_babel import _
 
@@ -9,7 +9,7 @@ from app.inoculation import inoculation
 from app.models import Post, Domain, Community, DomainBlock
 from app.domain import bp
 from app.utils import render_template, permission_required, joined_communities, moderating_communities, \
-    user_filters_posts, blocked_domains, blocked_instances
+    user_filters_posts, blocked_domains, blocked_instances, menu_topics
 from sqlalchemy import desc, or_
 
 
@@ -49,6 +49,7 @@ def show_domain(domain_id):
                                content_filters=content_filters,
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
+                               menu_topics=menu_topics(), site=g.site,
                                inoculation=inoculation[randint(0, len(inoculation) - 1)]
                                )
     else:

@@ -19,7 +19,7 @@ from app import db, celery, cache
 from app.topic.forms import ChooseTopicsForm
 from app.utils import render_template, user_filters_posts, moderating_communities, joined_communities, \
     community_membership, blocked_domains, validation_required, mimetype_from_url, blocked_instances, \
-    communities_banned_from, blocked_users
+    communities_banned_from, blocked_users, menu_topics
 
 
 @bp.route('/topic/<path:topic_path>', methods=['GET'])
@@ -118,6 +118,7 @@ def show_topic(topic_path):
                                rss_feed_name=f"{current_topic.name} on {g.site.name}",
                                show_post_community=True, moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
+                               menu_topics=menu_topics(),
                                inoculation=inoculation[randint(0, len(inoculation) - 1)],
                                POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
                                POST_TYPE_VIDEO=POST_TYPE_VIDEO,
@@ -190,6 +191,7 @@ def choose_topics():
         return render_template('topic/choose_topics.html', form=form,
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
+                               menu_topics=menu_topics(), site=g.site,
                                )
 
 

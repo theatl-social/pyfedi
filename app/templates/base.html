@@ -1,32 +1,32 @@
-{% macro render_username(user) %}
+{% macro render_username(user) -%}
 <span class="render_username">
-    {% if user.deleted %}
+    {% if user.deleted -%}
         [deleted]
-    {% else %}
-        {% if user.avatar_id and not low_bandwidth %}
+    {% else -%}
+        {% if user.avatar_id and not low_bandwidth -%}
             <a href="/u/{{ user.link() }}" title="{{ user.ap_id if user.ap_id != none else user.user_name }}">
                 <img src="{{ user.avatar_thumbnail() }}" alt="" loading="lazy" /></a>
-        {% endif %}
+        {% endif -%}
         <a href="/u/{{ user.link() }}" title="{{ user.ap_id if user.ap_id != none else user.user_name }}">{{ user.display_name() }}</a>
-        {% if user.created_recently() %}
+        {% if user.created_recently() -%}
             <span class="fe fe-new-account" title="New account"> </span>
-        {% endif %}
-        {% if user.bot %}
+        {% endif -%}
+        {% if user.bot -%}
             <span class="fe fe-bot-account" title="Bot account"> </span>
-        {% endif %}
-        {% if user.reputation < -10 %}
+        {% endif -%}
+        {% if user.reputation < -10 -%}
             <span class="fe fe-warning red" title="Very low reputation. Beware."> </span>
             <span class="fe fe-warning red" title="Very low reputation. Beware!"> </span>
-        {% elif user.reputation < 0 %}
+        {% elif user.reputation < 0 -%}
             <span class="fe fe-warning orangered" title="Low reputation."> </span>
-        {% endif %}
-    {% endif %}
+        {% endif -%}
+    {% endif -%}
 </span>
-{% endmacro %}
+{% endmacro -%}
 <!doctype html>
 <html lang="en">
   <head>
-    {% block head %}
+    {% block head -%}
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1, shrink-to-fit=no">
         <meta http-equiv="Content-Language" content="en" />
@@ -39,19 +39,19 @@
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="HandheldFriendly" content="True">
         <meta name="MobileOptimized" content="320">
-        {% block styles %}
+        {% block styles -%}
             <link href="{{ url_for('static', filename='bootstrap.css') }}" type="text/css" rel="stylesheet" />
             <link href="{{ url_for('static', filename='structure.css', changed=getmtime('structure.css')) }}" type="text/css" rel="stylesheet" />
             <link href="{{ url_for('static', filename='styles.css', changed=getmtime('styles.css')) }}" type="text/css" rel="stylesheet" />
             <link href="{{ url_for('static', filename='themes/high_contrast/styles.css') }}" type="text/css" rel="alternate stylesheet" title="High contrast" />
-            {% if not low_bandwidth %}
+            {% if not low_bandwidth -%}
                 <link href="{{ url_for('static', filename='js/markdown/downarea.css') }}" type="text/css" rel="stylesheet" />
                 <link href="{{ url_for('static', filename='js/lightbox/baguetteBox.css') }}" type="text/css" rel="stylesheet" />
-            {% endif %}
-            {% if theme() and file_exists('app/templates/themes/' + theme() + '/styles.css') %}
+            {% endif -%}
+            {% if theme() and file_exists('app/templates/themes/' + theme() + '/styles.css') -%}
                 <link href="{{ url_for('static', filename='themes/' + theme() + '/styles.css') }}" type="text/css" rel="stylesheet" />
-            {% endif %}
-        {% endblock %}
+            {% endif -%}
+        {% endblock -%}
         <title>{% if title %}{{ title }}{% else %}{{ _('PieFed') }}{% endif %}</title>
         <link rel="apple-touch-icon" sizes="152x152" href="/static/images/apple-touch-icon.png">
         <link rel="icon" type="image/png" sizes="32x32" href="/static/images/favicon-32x32.png">
@@ -62,21 +62,21 @@
         <meta name="msapplication-TileColor" content="#da532c">
         <meta name="msapplication-config" content="/static/browserconfig.xml">
         <meta name="theme-color" content="#ffffff">
-        {% if canonical %}
+        {% if canonical -%}
             <link rel="canonical" href="{{ canonical }}" />
-        {% endif %}
-        {% if description %}
+        {% endif -%}
+        {% if description -%}
             <meta name="description" content="{{ description }}" />
-        {% endif %}
-        {% if og_image %}
+        {% endif -%}
+        {% if og_image -%}
             <meta property="og:image" content="{{ og_image }}" />
-        {% endif %}
-        {% if rss_feed %}
+        {% endif -%}
+        {% if rss_feed -%}
             <link rel="alternate" type="application/rss+xml" title="{{ rss_feed_name }}" href="{{ rss_feed }}" />
-        {% endif %}
-        {% if noindex %}
+        {% endif -%}
+        {% if noindex -%}
             <meta name="robots" content="noindex">
-        {% endif %}
+        {% endif -%}
         <script nonce="{{ session['nonce']}}">
             const getStoredTheme = () => localStorage.getItem('theme')
             const setStoredTheme = theme => localStorage.setItem('theme', theme)
@@ -99,28 +99,28 @@
 
             setTheme(getPreferredTheme());
         </script>
-      {% if preconnect and not low_bandwidth %}
+      {% if preconnect and not low_bandwidth -%}
         <link rel="preconnect" href='{{ preconnect }}'>
-      {% endif %}
-    {% endblock %}
+      {% endif -%}
+    {% endblock -%}
   </head>
   <body class="d-flex flex-column{{ ' low_bandwidth' if low_bandwidth }}">
     <a href="#outer_container" class="skip-link" role="navigation" aria-label="Skip main navigation" tabindex="">Skip to main content</a>
     <a href="#side_pane" class="skip-link" role="navigation" aria-label="Go to side pane" tabindex="">Go to side pane</a>
     <!-- Page content -->
-    {% block navbar %}
+    {% block navbar -%}
     <div class="navbar navbar-expand-lg sticky-md-top">
         <div class="{{ 'container-lg' if post_layout != 'masonry_wide' else 'container-fluid' }}" role="banner">
             <a class="navbar-brand" href="/">{% if not low_bandwidth %}<img src="/static/images/logo2.png" alt="Logo" width="50" height="50" />{% endif %}{{ g.site.name }}</a>
-            {% if current_user.is_authenticated %}
+            {% if current_user.is_authenticated -%}
                 <a class="nav-link d-lg-none" href="/notifications" aria-label="{{ _('Notifications') }}">
-                    {% if current_user.unread_notifications %}
+                    {% if current_user.unread_notifications -%}
                     <span class="fe fe-bell red"></span> <span class="red">{{ current_user.unread_notifications }}</span>
-                    {% else %}
+                    {% else -%}
                         <span class="fe fe-bell"></span>
-                    {% endif %}
+                    {% endif -%}
                 </a>
-            {% endif %}
+            {% endif -%}
 
             <button id="navbar-toggler" class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="true" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
@@ -139,7 +139,14 @@
                             <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %}">
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/topics" aria-haspopup="true" aria-expanded="false">{{ _('Topics') }}</a>
                                 <ul class="dropdown-menu">
-                                  <li><a class="dropdown-item{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('Browse by topic') }}</a></li>
+                                  {% if menu_topics %}
+                                       {% for topic_menu_item in menu_topics -%}
+                                            <li><a class="dropdown-item{% if topic and topic.id == topic_menu_item.id%} active{% endif %}" href="/topic/{{ topic_menu_item.path() }}">{{ topic_menu_item.name }}</a></li>
+                                       {% endfor -%}
+                                       <li><a class="dropdown-item{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('More topics') }}</a></li>
+                                  {% else %}
+                                    <li><a class="dropdown-item{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('Browse by topic') }}</a></li>
+                                  {% endif %}
                                   <li><a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a></li>
                                 </ul>
                             </li>
@@ -157,21 +164,28 @@
                             <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %}">
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/topics"  aria-haspopup="true" aria-expanded="false">{{ _('Topics') }}</a>
                                 <ul class="dropdown-menu">
-                                  <li><a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/topics">{{ _('Browse by topic') }}</a></li>
-                                  <li><a class="dropdown-item{% if active_child == 'list_topics' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a></li>
+                                  {% if menu_topics -%}
+                                       {% for topic_menu_item in menu_topics -%}
+                                            <li><a class="dropdown-item{% if topic and topic.id == topic_menu_item.id%} active{% endif %}" href="/topic/{{ topic_menu_item.path() }}">{{ topic_menu_item.name }}</a></li>
+                                       {% endfor -%}
+                                       <li><a class="dropdown-item{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('More topics') }}</a></li>
+                                  {% else -%}
+                                    <li><a class="dropdown-item{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('Browse by topic') }}</a></li>
+                                  {% endif -%}
+                                  <li><a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a></li>
                                   {% if moderating_communities %}
                                     <li><hr class="dropdown-divider"></li>
                                     <li><h6 class="dropdown-header">{{ _('Moderating') }}</h6></li>
-                                    {% for community_menu_item in moderating_communities %}
+                                    {% for community_menu_item in moderating_communities -%}
                                         <li class="pl-2"><a class="dropdown-item{% if community and community.id == community_menu_item.id%} active{% endif %}" href="/c/{{ community_menu_item.link() }}">{{ community_menu_item.title }}</a></li>
-                                    {% endfor %}
+                                    {% endfor -%}
                                   {% endif %}
                                   {% if joined_communities %}
                                     <li><hr class="dropdown-divider"></li>
                                     <li><h6 class="dropdown-header">{{ _('Joined communities') }}</h6></li>
-                                    {% for community_menu_item in joined_communities %}
+                                    {% for community_menu_item in joined_communities -%}
                                         <li class="pl-2"><a class="dropdown-item{% if community and community.id == community_menu_item.id%} active{% endif %}" href="/c/{{ community_menu_item.link() }}">{{ community_menu_item.title }}</a></li>
-                                    {% endfor %}
+                                    {% endfor -%}
                                   {% endif %}
                                 </ul>
                             </li>
@@ -255,31 +269,31 @@
             <p class="text-center"><a href="https://codeberg.org/rimu/pyfedi">PieFed is free and open source</a>.<br />Please <a href="https://codeberg.org/rimu/pyfedi/issues">report bugs</a> or <a href="https://join.piefed.social/get-involved/">get involved</a>.</p>
             <p class="text-center"><a href="/privacy">Privacy policy</a></p>
         </footer>
-    {% endblock %}
+    {% endblock -%}
 
-    {% block scripts %}
-    {% if not low_bandwidth %}
+    {% block scripts -%}
+    {% if not low_bandwidth -%}
         {{ str(moment.include_moment()).replace('<script>', '<script nonce="' + session['nonce'] + '">')|safe }}
         {{ str(moment.lang(g.locale)).replace('<script>', '<script nonce="' + session['nonce'] + '">')|safe }}
-    {% endif %}
-    {% endblock %}
-    {% if not low_bandwidth %}
+    {% endif -%}
+    {% endblock -%}
+    {% if not low_bandwidth -%}
         {{ str(bootstrap.load_js()).replace('<script ', '<script nonce="' + session['nonce'] + '" ')|safe }}
         <script src="{{ url_for('static', filename='js/lightbox/baguetteBox.js') }}" nonce="{{ session['nonce'] }}"></script>
-    {% endif %}
+    {% endif -%}
     <script type="text/javascript" src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/scripts.js', changed=getmtime('js/scripts.js')) }}"></script>
-    {% if not low_bandwidth %}
-        {% if post_layout == 'masonry' or post_layout == 'masonry_wide' %}
+    {% if not low_bandwidth -%}
+        {% if post_layout == 'masonry' or post_layout == 'masonry_wide' -%}
             <!-- -->
-        {% endif %}
+        {% endif -%}
         <script type="text/javascript" src="{{ url_for('static', filename='js/markdown/downarea.js', changed=getmtime('js/markdown/downarea.js')) }}"></script>
-    {% endif %}
-    {% if theme() and file_exists('app/templates/themes/' + theme() + '/scripts.js') %}
+    {% endif -%}
+    {% if theme() and file_exists('app/templates/themes/' + theme() + '/scripts.js') -%}
         <script src="{{ url_for('static', filename='themes/' + theme() + '/scripts.js') }}"></script>
-    {% endif %}
-    {% block end_scripts %}
+    {% endif -%}
+    {% block end_scripts -%}
 
-    {% endblock %}
+    {% endblock -%}
   </body>
 </html>

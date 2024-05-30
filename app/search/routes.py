@@ -6,7 +6,7 @@ from sqlalchemy import or_
 from app.models import Post, Language, Community
 from app.search import bp
 from app.utils import moderating_communities, joined_communities, render_template, blocked_domains, blocked_instances, \
-    communities_banned_from, recently_upvoted_posts, recently_downvoted_posts, blocked_users
+    communities_banned_from, recently_upvoted_posts, recently_downvoted_posts, blocked_users, menu_topics
 from app.community.forms import RetrieveRemotePost
 from app.activitypub.util import resolve_remote_post_from_search
 
@@ -81,6 +81,7 @@ def run_search():
                                recently_downvoted=recently_downvoted,
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
+                               menu_topics=menu_topics(),
                                site=g.site)
 
     else:
@@ -88,6 +89,7 @@ def run_search():
                                languages=languages,
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
+                               menu_topics=menu_topics(),
                                site=g.site)
 
 

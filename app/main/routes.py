@@ -28,7 +28,7 @@ from app.utils import render_template, get_setting, gibberish, request_etag_matc
     ap_datetime, ip_address, retrieve_block_list, shorten_string, markdown_to_text, user_filters_home, \
     joined_communities, moderating_communities, parse_page, theme_list, get_request, markdown_to_html, allowlist_html, \
     blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
-    generate_image_from_video_url, blocked_users, microblog_content_to_title
+    generate_image_from_video_url, blocked_users, microblog_content_to_title, menu_topics
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Domain, Topic, File, Instance, \
     InstanceRole, Notification, Language, community_language
 from PIL import Image
@@ -167,6 +167,7 @@ def home_page(type, sort):
                            content_filters=content_filters, type=type, sort=sort,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)])
 
 
@@ -178,7 +179,8 @@ def list_topics():
     return render_template('list_topics.html', topics=topics, title=_('Browse by topic'),
                            low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
                            moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()))
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site)
 
 
 @bp.route('/communities', methods=['GET'])
@@ -223,7 +225,8 @@ def list_communities():
                            next_url=next_url, prev_url=prev_url,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()))
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site)
 
 
 @bp.route('/communities/local', methods=['GET'])
@@ -268,7 +271,8 @@ def list_local_communities():
                            next_url=next_url, prev_url=prev_url,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()))
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site)
 
 
 @bp.route('/communities/subscribed', methods=['GET'])
@@ -319,7 +323,8 @@ def list_subscribed_communities():
                            next_url=next_url, prev_url=prev_url,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()))
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site)
 
 
 @bp.route('/donate')

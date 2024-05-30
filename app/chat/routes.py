@@ -8,7 +8,7 @@ from app.chat.forms import AddReply, ReportConversationForm
 from app.chat.util import send_message
 from app.models import Site, User, Report, ChatMessage, Notification, InstanceBlock, Conversation, conversation_member
 from app.user.forms import ReportUserForm
-from app.utils import render_template, moderating_communities, joined_communities
+from app.utils import render_template, moderating_communities, joined_communities, menu_topics
 from app.chat import bp
 
 
@@ -51,6 +51,7 @@ def chat_home(conversation_id=None):
                                    current_conversation=conversation_id, conversation=conversation,
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
+                                   menu_topics=menu_topics(),
                                    site=g.site)
 
 
@@ -80,6 +81,7 @@ def new_message(to):
                                recipient=recipient,
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
+                               menu_topics=menu_topics(),
                                site=g.site)
 
 
@@ -109,6 +111,7 @@ def chat_options(conversation_id):
         return render_template('chat/chat_options.html', conversation=conversation,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
                            site=g.site
                            )
 
@@ -169,5 +172,7 @@ def chat_report(conversation_id):
 
         return render_template('chat/report.html', title=_('Report conversation'), form=form, conversation=conversation,
                                moderating_communities=moderating_communities(current_user.get_id()),
-                               joined_communities=joined_communities(current_user.get_id())
+                               joined_communities=joined_communities(current_user.get_id()),
+                               menu_topics=menu_topics(),
+                               site=g.site
                                )

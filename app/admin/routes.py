@@ -21,7 +21,7 @@ from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow
     User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
-    topic_tree, languages_for_form
+    topic_tree, languages_for_form, menu_topics
 from app.admin import bp
 
 
@@ -31,6 +31,7 @@ from app.admin import bp
 def admin_home():
     return render_template('admin/home.html', title=_('Admin'), moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
                            site=g.site)
 
 
@@ -64,6 +65,7 @@ def admin_site():
     return render_template('admin/site.html', title=_('Site profile'), form=form,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
                            site=g.site
                            )
 
@@ -112,6 +114,7 @@ def admin_misc():
     return render_template('admin/misc.html', title=_('Misc settings'), form=form,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
                            site=g.site
                            )
 
@@ -162,6 +165,7 @@ def admin_federation():
     return render_template('admin/federation.html', title=_('Federation settings'), form=form,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
                            site=g.site
                            )
 
@@ -229,6 +233,7 @@ def admin_communities():
     return render_template('admin/communities.html', title=_('Communities'), next_url=next_url, prev_url=prev_url,
                            communities=communities, moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
                            site=g.site)
 
 
@@ -251,6 +256,7 @@ def admin_communities_no_topic():
     return render_template('admin/communities.html', title=_('Communities with no topic'), next_url=next_url, prev_url=prev_url,
                            communities=communities, moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
                            site=g.site)
 
 
@@ -338,6 +344,7 @@ def admin_community_edit(community_id):
     return render_template('admin/edit_community.html', title=_('Edit community'), form=form, community=community,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
                            site=g.site
                            )
 
@@ -391,6 +398,7 @@ def admin_topics():
     return render_template('admin/topics.html', title=_('Topics'), topics=topics,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
                            site=g.site
                            )
 
@@ -416,6 +424,7 @@ def admin_topic_add():
     return render_template('admin/edit_topic.html', title=_('Add topic'), form=form,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
                            site=g.site
                            )
 
@@ -444,6 +453,7 @@ def admin_topic_edit(topic_id):
     return render_template('admin/edit_topic.html', title=_('Edit topic'), form=form, topic=topic,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
                            site=g.site
                            )
 
@@ -489,6 +499,7 @@ def admin_users():
                            local_remote=local_remote, search=search,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
                            site=g.site
                            )
 
@@ -525,6 +536,7 @@ def admin_users_trash():
                            local_remote=local_remote, search=search, type=type,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
                            site=g.site
                            )
 
@@ -545,6 +557,7 @@ def admin_content_trash():
     return render_template('admin/posts.html', title=_('Bad posts'), next_url=next_url, prev_url=prev_url, posts=posts,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
                            site=g.site
                            )
 
@@ -580,6 +593,7 @@ def admin_content_spam():
                            posts=posts, post_replies=post_replies,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
                            site=g.site
                            )
 
@@ -659,6 +673,7 @@ def admin_user_edit(user_id):
     return render_template('admin/edit_user.html', title=_('Edit user'), form=form, user=user,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
                            site=g.site
                            )
 
@@ -728,6 +743,7 @@ def admin_users_add():
     return render_template('admin/add_user.html', title=_('Add user'), form=form, user=user,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
                            site=g.site
                            )
 
@@ -776,6 +792,7 @@ def admin_reports():
                            local_remote=local_remote, search=search,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
                            site=g.site
                            )
 
@@ -793,5 +810,6 @@ def newsletter():
     return render_template("admin/newsletter.html", form=form, title=_('Send newsletter'),
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
                            site=g.site
                            )

@@ -1,33 +1,33 @@
-{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
-    {% extends 'themes/' + theme() + '/base.html' %}
-{% else %}
-    {% extends "base.html" %}
-{% endif %} %}
-{% from 'bootstrap/form.html' import render_form %}
+{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%} -%}
+{% from 'bootstrap/form.html' import render_form -%}
 
-{% block app_content %}
+{% block app_content -%}
 <script type="text/javascript" nonce="{{ session['nonce'] }}">
     var toBeHidden = Array();   // this list of comment IDs will be iterated over in setupHideButtons() and the 'hide' button clicked
 </script>
 <div class="row">
     <div class="col-12 col-md-8 position-relative main_pane">
-        {% include 'post/_post_full.html' %}
-        {% if post.comments_enabled %}
-            {% if current_user.is_authenticated %}
-                {% if current_user.verified %}
+        {% include 'post/_post_full.html' -%}
+        {% if post.comments_enabled -%}
+            {% if current_user.is_authenticated -%}
+                {% if current_user.verified -%}
                     <div class="row post_reply_form">
                         <hr class="mt-1" />
                         <div class="col">
                             <div class="reply_form_inner position-relative">
-                                {% if post.community.ap_id and '@beehaw.org' in post.community.ap_id %}
+                                {% if post.community.ap_id and '@beehaw.org' in post.community.ap_id -%}
                                     <p>{{ _('This post is hosted on beehaw.org which has <a href="https://docs.beehaw.org/docs/core-principles/what-is-beehaw/" target="_blank" rel="nofollow">higher standards of behaviour than most places. Be nice</a>.') }}</p>
-                                {% endif %}
-                                {% if post.community.posting_warning %}
+                                {% endif -%}
+                                {% if post.community.posting_warning -%}
                                     <p align="center">{{ post.community.posting_warning|safe }}</p>
-                                {% endif %}
+                                {% endif -%}
                                 {{ render_form(form) }}
-                                {% if not low_bandwidth %}
-                                    {% if markdown_editor %}
+                                {% if not low_bandwidth -%}
+                                    {% if markdown_editor -%}
                                         <script nonce="{{ session['nonce'] }}">
                                             window.addEventListener("load", function () {
                                                 var downarea = new DownArea({
@@ -38,26 +38,26 @@
                                                 setupAutoResize('body');
                                             });
                                         </script>
-                                    {% else %}
+                                    {% else -%}
                                         <!-- <a href="#" aria-hidden="true" id="post_reply_markdown_editor_enabler" class="markdown_editor_enabler" data-id="body">{{ _('Enable markdown editor') }}</a> -->
-                                    {% endif %}
-                                {% endif %}
+                                    {% endif -%}
+                                {% endif -%}
                             </div>
                         </div>
-                        {% if replies %}
+                        {% if replies -%}
                         <hr class="mt-4" />
-                        {% endif %}
+                        {% endif -%}
                     </div>
-                {% else %}
+                {% else -%}
                     <p><a href="{{ url_for('auth.validation_required') }}">{{ _('Verify your email address to comment') }}</a></p>
-                {% endif %}
-            {% else %}
+                {% endif -%}
+            {% else -%}
                 <p><a href="{{ url_for('auth.login', next='/post/' + str(post.id)) }}">{{ _('Log in to comment') }}</a></p>
-            {% endif %}
-        {% else %}
+            {% endif -%}
+        {% else -%}
             <p>{{ _('Comments are disabled.') }}</p>
-        {% endif %}
-        {% if replies %}
+        {% endif -%}
+        {% if replies -%}
         <h2 class="visually-hidden">{{ post.reply_count }} {{ _('Comments') }}</h2>
         <div id="post_replies" class="row">
             <div class="col">
@@ -72,114 +72,114 @@
                         {{ _('New') }}
                     </a>
                 </div>
-                {% macro render_comment(comment) %}
-                    <div id="comment_{{ comment['comment'].id }}" class="comment {% if comment['comment'].score <= -10 %}low_score{% endif %}
-                        {% if comment['comment'].author.id == post.author.id %}original_poster{% endif %}" aria-level="{{ comment['comment'].depth + 1 }}" role="treeitem" aria-expanded="true" tabindex="0">
-                        <div class="limit_height">{% if not comment['comment'].author.indexable %}<!--googleoff: all-->{% endif %}
+                {% macro render_comment(comment) -%}
+                    <div id="comment_{{ comment['comment'].id }}" class="comment {% if comment['comment'].score <= -10 -%}low_score{% endif -%}
+                        {% if comment['comment'].author.id == post.author.id -%}original_poster{% endif -%}" aria-level="{{ comment['comment'].depth + 1 }}" role="treeitem" aria-expanded="true" tabindex="0">
+                        <div class="limit_height">{% if not comment['comment'].author.indexable -%}<!--googleoff: all-->{% endif -%}
                             <div class="comment_author">
-                                {% if comment['comment'].author.deleted %}
+                                {% if comment['comment'].author.deleted -%}
                                     [deleted]
-                                {% else %}
-                                    {% if comment['comment'].author.avatar_id and comment['comment'].score > -10 and not low_bandwidth %}
+                                {% else -%}
+                                    {% if comment['comment'].author.avatar_id and comment['comment'].score > -10 and not low_bandwidth -%}
                                     <a href="/u/{{ comment['comment'].author.link() }}" title="{{ comment['comment'].author.ap_id }}">
                                         <img src="{{ comment['comment'].author.avatar_thumbnail() }}" alt="" loading="lazy" /></a>
-                                    {% endif %}
+                                    {% endif -%}
                                     <a href="/u/{{ comment['comment'].author.link() }}" title="{{ comment['comment'].author.link() }}" aria-label="{{ _('Author') }}">
                                             {{ comment['comment'].author.display_name() }}</a>
-                                {% endif %}
-                                {% if comment['comment'].author.created_recently() %}
+                                {% endif -%}
+                                {% if comment['comment'].author.created_recently() -%}
                                     <span class="fe fe-new-account small" title="New account"> </span>
-                                {% endif %}
-                                {% if comment['comment'].author.bot %}
+                                {% endif -%}
+                                {% if comment['comment'].author.bot -%}
                                     <span class="fe fe-bot-account small" title="Bot account"> </span>
-                                {% endif %}
-                                {% if comment['comment'].author.id != current_user.id %}
-                                    {% if comment['comment'].author.reputation < -10 %}
+                                {% endif -%}
+                                {% if comment['comment'].author.id != current_user.id -%}
+                                    {% if comment['comment'].author.reputation < -10 -%}
                                         <span class="fe fe-warning red" title="Very low reputation. Beware."> </span>
                                         <span class="fe fe-warning red" title="Very low reputation. Beware!"> </span>
-                                    {% elif comment['comment'].author.reputation < 0 %}
+                                    {% elif comment['comment'].author.reputation < 0 -%}
                                         <span class="fe fe-warning orangered" title="Low reputation."> </span>
-                                    {% endif %}
-                                {% endif %}
-                                {% if comment['comment'].author.id == post.author.id %}<span title="Submitter of original post" aria-label="{{ _('Post creator') }}" class="small">[OP]</span>{% endif %}
-                                <span class="text-muted small" aria_label="{{ _('When: ') }}">{{ moment(comment['comment'].posted_at).fromNow(refresh=True) }}{% if comment['comment'].edited_at %}, edited {{ moment(comment['comment'].edited_at).fromNow(refresh=True) }} {% endif %}</span>
+                                    {% endif -%}
+                                {% endif -%}
+                                {% if comment['comment'].author.id == post.author.id -%}<span title="Submitter of original post" aria-label="{{ _('Post creator') }}" class="small">[OP]</span>{% endif -%}
+                                <span class="text-muted small" aria_label="{{ _('When: ') }}">{{ moment(comment['comment'].posted_at).fromNow(refresh=True) }}{% if comment['comment'].edited_at -%}, edited {{ moment(comment['comment'].edited_at).fromNow(refresh=True) }} {% endif -%}</span>
                                 <a class="unhide" href="#"><span class="fe fe-expand"></span></a>
                                 {% if comment['comment'].reports and current_user.is_authenticated and post.community.is_moderator(current_user)%}
                                     <span class="red fe fe-report" title="{{ _('Reported. Check comment for issues.') }}"></span>
-                                {% endif %}
+                                {% endif -%}
                             </div>
-                            <div class="comment_body hidable {% if comment['comment'].reports and current_user.is_authenticated and post.community.is_moderator(current_user) %}reported{% endif %}">
+                            <div class="comment_body hidable {% if comment['comment'].reports and current_user.is_authenticated and post.community.is_moderator(current_user) -%}reported{% endif -%}">
                                 {{ comment['comment'].body_html | community_links | safe }}
-                            </div>{% if not comment['comment'].author.indexable %}<!--googleon: all-->{% endif %}
+                            </div>{% if not comment['comment'].author.indexable -%}<!--googleon: all-->{% endif -%}
                         </div>
                         <div class="comment_actions hidable">
-                            {% if post.comments_enabled %}
+                            {% if post.comments_enabled -%}
                                 <a href="{{ url_for('post.add_reply', post_id=post.id, comment_id=comment['comment'].id) }}" rel="nofollow noindex"><span class="fe fe-reply"></span> reply</a>
-                            {% endif %}
+                            {% endif -%}
                             <div class="voting_buttons_new">
-                            {% with comment=comment['comment'] %}
-                                {% include "post/_comment_voting_buttons.html" %}
-                            {% endwith %}
+                            {% with comment=comment['comment'] -%}
+                                {% include "post/_comment_voting_buttons.html" -%}
+                            {% endwith -%}
                             </div>
                             <div class="hide_button">
-                                {% if comment['comment'].score <= -10 %}
+                                {% if comment['comment'].score <= -10 -%}
                                     <a href='#'><span class="fe fe-expand"></span></a>
-                                {% else %}
+                                {% else -%}
                                     <a href='#'><span class="fe fe-collapse"></span></a>
-                                {% endif %}
+                                {% endif -%}
                             </div>
-                            {% if current_user.is_authenticated and current_user.verified %}
-                                {% include "post/_reply_notification_toggle.html" %}
-                            {% endif %}
+                            {% if current_user.is_authenticated and current_user.verified -%}
+                                {% include "post/_reply_notification_toggle.html" -%}
+                            {% endif -%}
                             <a href="{{ url_for('post.post_reply_options', post_id=post.id, comment_id=comment['comment'].id) }}" class="comment_actions_link" rel="nofollow noindex" aria-label="{{ _('Comment options') }}"><span class="fe fe-options" title="Options"> </span></a>
                         </div>
-                        {% if comment['replies'] %}
-                            {% if comment['comment'].depth <= THREAD_CUTOFF_DEPTH %}
+                        {% if comment['replies'] -%}
+                            {% if comment['comment'].depth <= THREAD_CUTOFF_DEPTH -%}
                                 <div class="replies hidable" role="group">
-                                    {% for reply in comment['replies'] %}
+                                    {% for reply in comment['replies'] -%}
                                       {{ render_comment(reply) | safe }}
-                                    {% endfor %}
+                                    {% endfor -%}
                                 </div>
-                            {% else %}
+                            {% else -%}
                                 <div class="continue_thread hidable">
                                     <a href="{{ url_for('post.continue_discussion', post_id=post.id, comment_id=comment['comment'].id, _anchor='replies') }}">
                                         Continue thread</a>
                                 </div>
-                            {% endif %}
-                        {% endif %}
+                            {% endif -%}
+                        {% endif -%}
                     </div>
-                    {% if comment['comment'].score <= -10 %}
+                    {% if comment['comment'].score <= -10 -%}
                         <script nonce="{{ session['nonce'] }}" type="text/javascript">
                             toBeHidden.push({{ comment['comment'].id }});
                         </script>
-                    {% endif %}
-                {% endmacro %}
+                    {% endif -%}
+                {% endmacro -%}
 
                 <div id="replies" class="comments" role="tree" aria-label="{{ _('Comments') }}" aria-expanded="true">
-                    {% for reply in replies %}
+                    {% for reply in replies -%}
                       {{ render_comment(reply) | safe }}
-                    {% endfor %}
+                    {% endfor -%}
                 </div>
             </div>
         </div>
-        {% endif %}
+        {% endif -%}
     </div>
 
     <aside id="side_pane" class="col-12 col-md-4 side_pane" role="complementary">
         <div class="card">
             <div class="card-body">
                 <div class="row">
-                    {% if not community.restricted_to_mods or (community.restricted_to_mods and current_user.is_authenticated and community_membership(current_user, community) in [SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER]) %}
+                    {% if not community.restricted_to_mods or (community.restricted_to_mods and current_user.is_authenticated and community_membership(current_user, community) in [SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER]) -%}
                         <div class="col-6">
                             <a class="w-100 btn btn-primary" href="/community/{{ post.community.link() }}/submit">{{ _('Create post') }}</a>
                         </div>
-                    {% endif %}
+                    {% endif -%}
                     <div class="col-6">
-                        {% if current_user.is_authenticated and community_membership(current_user, post.community) >= SUBSCRIPTION_MEMBER %}
+                        {% if current_user.is_authenticated and community_membership(current_user, post.community) >= SUBSCRIPTION_MEMBER -%}
                             <a class="w-100 btn btn-primary" href="/community/{{ post.community.link() }}/unsubscribe" rel="nofollow">{{ _('Leave') }}</a>
-                        {% else %}
+                        {% else -%}
                             <a class="w-100 btn btn-primary" href="/community/{{ post.community.link() }}/subscribe" rel="nofollow">{{ _('Join') }}</a>
-                        {% endif %}
+                        {% endif -%}
                     </div>
                 </div>
                 <form method="get" action="/search">
@@ -195,54 +195,54 @@
             <div class="card-body">
                 <p>{{ post.community.description_html|safe if post.community.description_html else '' }}</p>
                 <p>{{ post.community.rules_html|safe if post.community.rules_html else '' }}</p>
-                {% if len(mods) > 0 and not post.community.private_mods %}
+                {% if len(mods) > 0 and not post.community.private_mods -%}
                     <h3>Moderators</h3>
                     <ul class="moderator_list">
-                        {% for mod in mods %}
+                        {% for mod in mods -%}
                             <li><a href="/u/{{ mod.link() }}">{{ mod.display_name() }}</a></li>
-                        {% endfor %}
+                        {% endfor -%}
                     </ul>
-                {% endif %}
+                {% endif -%}
             </div>
         </div>
-        {% if related_communities %}
+        {% if related_communities -%}
         <div class="card mt-3">
             <div class="card-header">
                  <h2>{{ _('Related communities') }}</h2>
             </div>
             <div class="card-body">
                 <ul class="list-group list-group-flush">
-                    {% for community in related_communities %}
+                    {% for community in related_communities -%}
                         <li class="list-group-item">
                             <a href="/c/{{ community.link() }}" aria-label="{{ _('Go to community') }}"><img src="{{ community.icon_image() }}" class="community_icon rounded-circle" loading="lazy" alt="" />
                                 {{ community.display_name() }}
                             </a>
                         </li>
-                    {% endfor %}
+                    {% endfor -%}
                 </ul>
                 <p class="mt-4"><a class="btn btn-primary" href="/communities">{{ _('Explore communities') }}</a></p>
             </div>
         </div>
-        {% endif %}
-        {% if is_moderator %}
+        {% endif -%}
+        {% if is_moderator -%}
         <div class="card mt-3">
             <div class="card-header">
                  <h2>{{ _('Community Settings') }}</h2>
             </div>
             <div class="card-body">
-                {% if is_moderator or is_owner or is_admin %}
+                {% if is_moderator or is_owner or is_admin -%}
                 <p><a href="/community/{{ community.link() }}/moderate" class="btn btn-primary">{{ _('Moderate') }}</a></p>
-                {% endif %}
-                {% if is_owner or is_admin %}
+                {% endif -%}
+                {% if is_owner or is_admin -%}
                     <p><a href="{{ url_for('community.community_edit', community_id=community.id) }}" class="btn btn-primary">{{ _('Settings') }}</a></p>
-                {% endif %}
-                {% if community.is_local() and (community.is_owner() or current_user.is_admin()) %}
+                {% endif -%}
+                {% if community.is_local() and (community.is_owner() or current_user.is_admin()) -%}
                     <p><a class="btn btn-primary btn-warning" href="{{ url_for('community.community_delete', community_id=community.id) }}" rel="nofollow">Delete community</a></p>
-                {% endif %}
+                {% endif -%}
             </div>
         </div>
-        {% endif %}
-        {% include "_inoculation_links.html" %}
+        {% endif -%}
+        {% include "_inoculation_links.html" -%}
     </aside>
 </div>
 <script nonce="{{ session['nonce'] }}">
@@ -250,4 +250,4 @@
         currentPost = document.querySelector('.post_col');  // set the current post, so A and Z voting keys work when viewing a post page
     });
 </script>
-{% endblock %}
+{% endblock -%}

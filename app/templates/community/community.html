@@ -1,39 +1,39 @@
-{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
-    {% extends 'themes/' + theme() + '/base.html' %}
-{% else %}
-    {% extends "base.html" %}
-{% endif %} %}
-{% from 'bootstrap/form.html' import render_form %}
+{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%} -%}
+{% from 'bootstrap/form.html' import render_form -%}
 
-{% block app_content %}
+{% block app_content -%}
 <div class="row">
     <div class="col-12 col-md-8 position-relative main_pane">
-        {% if community.header_image() != '' and not low_bandwidth %}
+        {% if community.header_image() != '' and not low_bandwidth -%}
             <div class="community_header" style="background-image: url({{ community.header_image() }});">
                 <nav aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
                   <ol class="breadcrumb">
-                    {% for breadcrumb in breadcrumbs %}
-                      <li class="breadcrumb-item">{% if breadcrumb.url %}<a href="{{ breadcrumb.url }}">{% endif %}{{ breadcrumb.text }}{% if breadcrumb.url %}</a>{% endif %}</li>
-                    {% endfor %}
+                    {% for breadcrumb in breadcrumbs -%}
+                      <li class="breadcrumb-item">{% if breadcrumb.url -%}<a href="{{ breadcrumb.url }}">{% endif -%}{{ breadcrumb.text }}{% if breadcrumb.url -%}</a>{% endif -%}</li>
+                    {% endfor -%}
                     <li class="breadcrumb-item active">{{ (community.title + '@' + community.ap_domain)|shorten }}</li>
                   </ol>
                 </nav>
             </div>
             <img class="community_icon_big bump_up rounded-circle" src="{{ community.icon_image() }}" alt="Community icon" />
             <h1 class="mt-2"  aria-live="assertive">{{ community.title }}
-                {% if current_user.is_authenticated %}
-                    {% include 'community/_notification_toggle.html' %}
-                {% endif %}
-                {% if community.nsfw %}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif %}
-                {% if community.nsfl %}<span class="warning_badge nsfl" title="{{ _('Not safe for life') }}">nsfl</span>{% endif %}
+                {% if current_user.is_authenticated -%}
+                    {% include 'community/_notification_toggle.html' -%}
+                {% endif -%}
+                {% if community.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif -%}
+                {% if community.nsfl -%}<span class="warning_badge nsfl" title="{{ _('Not safe for life') }}">nsfl</span>{% endif -%}
             </h1>
-        {% elif community.icon_id and not low_bandwidth %}
+        {% elif community.icon_id and not low_bandwidth -%}
             <div class="row">
                 <nav aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
                   <ol class="breadcrumb">
-                    {% for breadcrumb in breadcrumbs %}
-                      <li class="breadcrumb-item">{% if breadcrumb.url %}<a href="{{ breadcrumb.url }}">{% endif %}{{ breadcrumb.text }}{% if breadcrumb.url %}</a>{% endif %}</li>
-                    {% endfor %}
+                    {% for breadcrumb in breadcrumbs -%}
+                      <li class="breadcrumb-item">{% if breadcrumb.url -%}<a href="{{ breadcrumb.url }}">{% endif -%}{{ breadcrumb.text }}{% if breadcrumb.url -%}</a>{% endif -%}</li>
+                    {% endfor -%}
                     <li class="breadcrumb-item active">{{ (community.title + '@' + community.ap_domain)|shorten }}</li>
                   </ol>
                 </nav>
@@ -42,33 +42,33 @@
                 </div>
                 <div class="col-10">
                     <h1 class="mt-3">{{ community.title }}
-                        {% if current_user.is_authenticated %}
-                            {% include 'community/_notification_toggle.html' %}
-                        {% endif %}
-                        {% if community.nsfw %}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif %}
-                        {% if community.nsfl %}<span class="warning_badge nsfl" title="{{ _('Not safe for life') }}">nsfl</span>{% endif %}
+                        {% if current_user.is_authenticated -%}
+                            {% include 'community/_notification_toggle.html' -%}
+                        {% endif -%}
+                        {% if community.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif -%}
+                        {% if community.nsfl -%}<span class="warning_badge nsfl" title="{{ _('Not safe for life') }}">nsfl</span>{% endif -%}
                     </h1>
                 </div>
             </div>
-        {% else %}
+        {% else -%}
             <nav aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
               <ol class="breadcrumb">
-                {% for breadcrumb in breadcrumbs %}
-                  <li class="breadcrumb-item">{% if breadcrumb.url %}<a href="{{ breadcrumb.url }}">{% endif %}{{ breadcrumb.text }}{% if breadcrumb.url %}</a>{% endif %}</li>
-                {% endfor %}
+                {% for breadcrumb in breadcrumbs -%}
+                  <li class="breadcrumb-item">{% if breadcrumb.url -%}<a href="{{ breadcrumb.url }}">{% endif -%}{{ breadcrumb.text }}{% if breadcrumb.url -%}</a>{% endif -%}</li>
+                {% endfor -%}
                 <li class="breadcrumb-item active">{{ (community.title + '@' + community.ap_domain)|shorten }}</li>
               </ol>
             </nav>
             <h1 class="mt-2">{{ community.title }}
-                {% if current_user.is_authenticated %}
-                    {% include 'community/_notification_toggle.html' %}
-                {% endif %}
-                {% if community.nsfw %}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif %}
-                {% if community.nsfl %}<span class="warning_badge nsfl" title="{{ _('Not safe for life') }}">nsfl</span>{% endif %}
+                {% if current_user.is_authenticated -%}
+                    {% include 'community/_notification_toggle.html' -%}
+                {% endif -%}
+                {% if community.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif -%}
+                {% if community.nsfl -%}<span class="warning_badge nsfl" title="{{ _('Not safe for life') }}">nsfl</span>{% endif -%}
             </h1>
-        {% endif %}
-        {% include "community/_community_nav.html" %}
-        {% if post_layout == 'masonry' or post_layout == 'masonry_wide' %}
+        {% endif -%}
+        {% include "community/_community_nav.html" -%}
+        {% if post_layout == 'masonry' or post_layout == 'masonry_wide' -%}
             <div class="masonry" id="masonry">
               <!-- Masonry columns will be added here -->
             </div>
@@ -76,34 +76,34 @@
               document.addEventListener("DOMContentLoaded", function() {
                   const masonry = document.getElementById('masonry');
                   const htmlSnippets = [
-                      {% for post in posts.items %}
-                        {% raw %}`{% endraw %}{% include 'post/_post_teaser_masonry.html' %}{% raw %}`{% endraw %},
-                      {% endfor %}
+                      {% for post in posts.items -%}
+                        {% raw -%}`{% endraw -%}{% include 'post/_post_teaser_masonry.html' -%}{% raw -%}`{% endraw -%},
+                      {% endfor -%}
                   ];
                   renderMasonry(masonry, htmlSnippets);
               });
             </script>
-        {% else %}
+        {% else -%}
             <div class="post_list">
-                {% for post in posts.items %}
-                    {% include 'post/_post_teaser.html' %}
-                {% else %}
+                {% for post in posts.items -%}
+                    {% include 'post/_post_teaser.html' -%}
+                {% else -%}
                     <p>{{ _('No posts in this community yet.') }}</p>
-                {% endfor %}
+                {% endfor -%}
             </div>
-        {% endif %}
+        {% endif -%}
 
         <nav aria-label="Pagination" class="mt-4" role="navigation">
-                {% if prev_url %}
+                {% if prev_url -%}
                     <a href="{{ prev_url }}" class="btn btn-primary" rel='nofollow'>
                         <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
                     </a>
-                {% endif %}
-                {% if next_url %}
+                {% endif -%}
+                {% if next_url -%}
                     <a href="{{ next_url }}" class="btn btn-primary" rel='nofollow'>
                         {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
                     </a>
-                {% endif %}
+                {% endif -%}
         </nav>
     </div>
 
@@ -111,19 +111,19 @@
         <div class="card">
             <div class="card-body">
                 <div class="row">
-                    {% if not community.restricted_to_mods or (community.restricted_to_mods and current_user.is_authenticated and community_membership(current_user, community) in [SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER]) %}
+                    {% if not community.restricted_to_mods or (community.restricted_to_mods and current_user.is_authenticated and community_membership(current_user, community) in [SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER]) -%}
                         <div class="col-6">
                             <a class="w-100 btn btn-primary" href="/community/{{ community.link() }}/submit" rel="nofollow">{{ _('Create post') }}</a>
                         </div>
-                    {% endif %}
+                    {% endif -%}
                     <div class="col-6">
-                        {% if current_user.is_authenticated and community_membership(current_user, community) in [SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER] %}
+                        {% if current_user.is_authenticated and community_membership(current_user, community) in [SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER] -%}
                             <a class="w-100 btn btn-primary" href="/community/{{ community.link() }}/unsubscribe" rel="nofollow">{{ _('Leave') }}</a>
-                        {% elif current_user.is_authenticated and community_membership(current_user, community) == SUBSCRIPTION_PENDING %}
+                        {% elif current_user.is_authenticated and community_membership(current_user, community) == SUBSCRIPTION_PENDING -%}
                             <a class="w-100 btn btn-outline-secondary" href="/community/{{ community.link() }}/unsubscribe" rel="nofollow">{{ _('Pending') }}</a>
-                        {% else %}
+                        {% else -%}
                             <a class="w-100 btn btn-primary" href="/community/{{ community.link() }}/subscribe" rel="nofollow">{{ _('Join') }}</a>
-                        {% endif %}
+                        {% endif -%}
                     </div>
                 </div>
                 <form method="get" action="/search">
@@ -139,66 +139,66 @@
             <div class="card-body">
                 <p>{{ community.description_html|safe if community.description_html else '' }}</p>
                 <p>{{ community.rules_html|safe if community.rules_html else '' }}</p>
-                {% if len(mods) > 0 and not community.private_mods %}
+                {% if len(mods) > 0 and not community.private_mods -%}
                     <h3>Moderators</h3>
                     <ul class="moderator_list">
-                        {% for mod in mods %}
+                        {% for mod in mods -%}
                             <li>{{ render_username(mod) }}</li>
-                        {% endfor %}
+                        {% endfor -%}
                     </ul>
-                {% endif %}
-                {% if not community.is_local() %}
+                {% endif -%}
+                {% if not community.is_local() -%}
                     <ul>
                         <li><p><a href="{{ community.profile_id() }}">{{ _('View community on original server') }}</a></p></li>
                         <li><p><a href="{{ url_for('community.retrieve_remote_post', community_id=community.id) }}">{{ _('Retrieve a post from the original server') }}</a></p></li>
                     </ul>
-                {% endif %}
-                {% if community.local_only %}
+                {% endif -%}
+                {% if community.local_only -%}
                 <p>{{ _('Only people on %(instance_name)s can post or reply in this community.', instance_name=current_app.config['SERVER_NAME']) }}</p>
-                {% endif %}
+                {% endif -%}
                 <p>
                     <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> </a><a href="{{ rss_feed }}" rel="nofollow">RSS feed</a>
                 </p>
             </div>
         </div>
-        {% if related_communities %}
+        {% if related_communities -%}
         <div class="card mt-3">
             <div class="card-header">
                  <h2>{{ _('Related communities') }}</h2>
             </div>
             <div class="card-body">
                 <ul class="list-group list-group-flush">
-                    {% for community in related_communities %}
+                    {% for community in related_communities -%}
                         <li class="list-group-item">
                             <a href="/c/{{ community.link() }}" aria-label="{{ _('Go to community') }}"><img src="{{ community.icon_image() }}" class="community_icon rounded-circle" loading="lazy" alt="" />
                                 {{ community.display_name() }}
                             </a>
                         </li>
-                    {% endfor %}
+                    {% endfor -%}
                 </ul>
                 <p class="mt-4"><a class="btn btn-primary" href="/communities">{{ _('Explore communities') }}</a></p>
             </div>
         </div>
-        {% endif %}
-        {% if is_moderator or is_admin %}
+        {% endif -%}
+        {% if is_moderator or is_admin -%}
         <div class="card mt-3">
             <div class="card-header">
                  <h2>{{ _('Community Settings') }}</h2>
             </div>
             <div class="card-body">
-                {% if is_owner or is_admin %}
+                {% if is_owner or is_admin -%}
                 <p><a href="{{ url_for('community.community_edit', community_id=community.id) }}" class="btn btn-primary">{{ _('Settings & Moderation') }}</a></p>
-                {% elif is_moderator %}
+                {% elif is_moderator -%}
                 <p><a href="/community/{{ community.link() }}/moderate" class="btn btn-primary">{{ _('Moderation') }}</a></p>
-                {% endif %}
+                {% endif -%}
             </div>
         </div>
-        {% endif %}
-        {% include "_inoculation_links.html" %}
+        {% endif -%}
+        {% include "_inoculation_links.html" -%}
     </aside>
 </div>
 <div class="row">
 
 
 </div>
-{% endblock %}
+{% endblock -%}
