@@ -21,7 +21,7 @@ from app.community.util import search_for_community, actor_to_community, \
     delete_post_from_community, delete_post_reply_from_community, community_in_list
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
-    REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, POST_TYPE_POLL
+    REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, POST_TYPE_POLL, MICROBLOG_APPS
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, \
     File, PostVote, utcnow, Report, Notification, InstanceBlock, ActivityPubLog, Topic, Conversation, PostReply, \
@@ -980,7 +980,7 @@ def federate_post(community, post):
         for instance in community.following_instances():
             if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(
                     instance.domain):
-                if instance.software == "mastodon":
+                if instance.software in MICROBLOG_APPS:
                     send_to_remote_instance(instance.id, community.id, microblog_announce)
                 else:
                     send_to_remote_instance(instance.id, community.id, announce)

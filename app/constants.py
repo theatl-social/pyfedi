@@ -31,3 +31,5 @@ NOTIF_COMMUNITY = 1
 NOTIF_TOPIC = 2
 NOTIF_POST = 3
 NOTIF_REPLY = 4
+
+MICROBLOG_APPS = ["mastodon", "misskey", "akkoma", "iceshrimp", "pleroma"]
