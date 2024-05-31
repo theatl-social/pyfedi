@@ -1244,7 +1244,7 @@ def community_featured(actor):
         }
 
         for post in posts:
-            community_data['orderedItems'].append(post_to_page(post, community))
+            community_data['orderedItems'].append(post_to_page(post))
 
         return jsonify(community_data)
 

@@ -202,13 +202,13 @@ def post_to_activity(post: Post, community: Community):
     return activity_data
 
 
-def post_to_page(post: Post, community: Community):
+def post_to_page(post: Post):
     activity_data = {
         "type": "Page",
         "id": post.ap_id,
         "attributedTo": post.author.ap_public_url,
         "to": [
-            f"https://{current_app.config['SERVER_NAME']}/c/{community.name}",
+            f"https://{current_app.config['SERVER_NAME']}/c/{post.community.name}",
             "https://www.w3.org/ns/activitystreams#Public"
         ],
         "name": post.title,
@@ -220,7 +220,7 @@ def post_to_page(post: Post, community: Community):
         "sensitive": post.nsfw or post.nsfl,
         "published": ap_datetime(post.created_at),
         "stickied": post.sticky,
-        "audience": f"https://{current_app.config['SERVER_NAME']}/c/{community.name}",
+        "audience": f"https://{current_app.config['SERVER_NAME']}/c/{post.community.name}",
         "tag": post.tags_for_activitypub(),
         'language': {
             'identifier': post.language_code(),
