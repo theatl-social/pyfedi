@@ -10,7 +10,7 @@ from wtforms import SelectField, RadioField
 
 from app import db, constants, cache
 from app.activitypub.signature import HttpSignature, post_request, default_context, post_request_in_background
-from app.activitypub.util import notify_about_post_reply
+from app.activitypub.util import notify_about_post_reply, inform_followers_of_post_update
 from app.community.util import save_post, send_to_remote_instance
 from app.inoculation import inoculation
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm
@@ -21,7 +21,7 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_
     POST_TYPE_ARTICLE, POST_TYPE_VIDEO, NOTIF_REPLY, NOTIF_POST, POST_TYPE_POLL
 from app.models import Post, PostReply, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, InstanceBlock, Report, Site, Community, \
-    Topic, User, Instance, NotificationSubscription, UserFollower, Poll, PollChoice
+    Topic, User, Instance, NotificationSubscription, UserFollower, Poll, PollChoice, PollChoiceVote
 from app.post import bp
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
@@ -576,6 +576,35 @@ def poll_vote(post_id):
         for choice_id in request.form.getlist('poll_choice[]'):
             poll_data.vote_for_choice(int(choice_id), current_user.id)
     flash(_('Vote has been cast.'))
+
+    post = Post.query.get(post_id)
+    if post:
+        poll_votes = PollChoice.query.join(PollChoiceVote, PollChoiceVote.choice_id == PollChoice.id).filter(PollChoiceVote.post_id == post.id, PollChoiceVote.user_id == current_user.id).all()
+        for pv in poll_votes:
+            if post.author.is_local():
+                inform_followers_of_post_update(post, 1)
+            else:
+                pollvote_json = {
+                  '@context': default_context(),
+                  'actor': current_user.public_url(),
+                  'id': f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}",
+                  'object': {
+                    'attributedTo': current_user.public_url(),
+                    'id': f"https://{current_app.config['SERVER_NAME']}/activities/vote/{gibberish(15)}",
+                    'inReplyTo': post.profile_id(),
+                    'name': pv.choice_text,
+                    'to': post.author.public_url(),
+                    'type': 'Note'
+                  },
+                  'to': post.author.public_url(),
+                  'type': 'Create'
+                }
+                try:
+                    post_request(post.author.ap_inbox_url, pollvote_json, current_user.private_key,
+                                                          current_user.ap_profile_id + '#main-key')
+                except Exception:
+                    pass
+
     return redirect(url_for('activitypub.post_ap', post_id=post_id))
 
 
