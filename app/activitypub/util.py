@@ -235,6 +235,23 @@ def post_to_page(post: Post):
         activity_data["image"] = {"url": post.image.view_url(), "type": "Image"}
         if post.image.alt_text:
             activity_data["image"]['altText'] = post.image.alt_text
+    if post.type == POST_TYPE_POLL:
+        poll = Poll.query.filter_by(post_id=post.id).first()
+        activity_data['type'] = 'Question'
+        mode = 'oneOf' if poll.mode == 'single' else 'anyOf'
+        choices = []
+        for choice in PollChoice.query.filter_by(post_id=post.id).order_by(PollChoice.sort_order).all():
+            choices.append({
+                "type": "Note",
+                "name": choice.choice_text,
+                "replies": {
+                    "type": "Collection",
+                    "totalItems": choice.num_votes
+                }
+            })
+        activity_data[mode] = choices
+        activity_data['endTime'] = ap_datetime(poll.end_poll)
+        activity_data['votersCount'] = poll.total_votes()
     return activity_data
 
 
