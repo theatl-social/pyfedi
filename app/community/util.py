@@ -426,7 +426,7 @@ def save_post(form, post: Post, type: str):
 
     elif type == 'poll':
         post.title = form.poll_title.data
-        post.body = form.poll_title.data + '\n' + form.poll_body.data
+        post.body = form.poll_title.data + '\n' + form.poll_body.data if post.title not in form.poll_body.data else form.poll_body.data
         post.body_html = markdown_to_html(post.body)
         post.type = POST_TYPE_POLL
     else:
