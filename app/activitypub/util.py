@@ -229,8 +229,6 @@ def post_to_page(post: Post):
     }
     if post.edited_at is not None:
         activity_data["updated"] = ap_datetime(post.edited_at)
-    if post.language is not None:
-        activity_data["language"] = {"identifier": post.language}
     if (post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO) and post.url is not None:
         activity_data["attachment"] = [{"href": post.url, "type": "Link"}]
     if post.image_id is not None:
