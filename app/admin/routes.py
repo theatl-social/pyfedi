@@ -417,6 +417,7 @@ def admin_topic_add():
             topic.parent_id = None
         db.session.add(topic)
         db.session.commit()
+        cache.delete_memoized(menu_topics)
 
         flash(_('Saved'))
         return redirect(url_for('admin.admin_topics'))
@@ -444,6 +445,7 @@ def admin_topic_edit(topic_id):
         else:
             topic.parent_id = None
         db.session.commit()
+        cache.delete_memoized(menu_topics)
         flash(_('Saved'))
         return redirect(url_for('admin.admin_topics'))
     else:
@@ -470,6 +472,8 @@ def admin_topic_delete(topic_id):
     else:
         flash(_('Cannot delete topic with communities assigned to it.', 'error'))
     db.session.commit()
+
+    cache.delete_memoized(menu_topics)
 
     return redirect(url_for('admin.admin_topics'))
 
