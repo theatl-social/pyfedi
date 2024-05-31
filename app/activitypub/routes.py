@@ -14,7 +14,7 @@ from app.user.routes import show_profile
 from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, SUBSCRIPTION_MEMBER
 from app.models import User, Community, CommunityJoinRequest, CommunityMember, CommunityBan, ActivityPubLog, Post, \
     PostReply, Instance, PostVote, PostReplyVote, File, AllowedInstances, BannedInstances, utcnow, Site, Notification, \
-    ChatMessage, Conversation, UserFollower, UserBlock
+    ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice
 from app.activitypub.util import public_key, users_total, active_half_year, active_month, local_posts, local_comments, \
     post_to_activity, find_actor_or_create, instance_blocked, find_reply_parent, find_liked_object, \
     lemmy_site_data, instance_weight, is_activitypub_request, downvote_post_reply, downvote_post, upvote_post_reply, \
@@ -1318,9 +1318,27 @@ def user_inbox(actor):
                         activity_log.exception_message = 'Could not find local user'
                         activity_log.result = 'failure'
                     db.session.commit()
-                elif request_json['type'] == 'Accept' or request_json['type'] == 'Reject':
-                    if request_json['object']['type'] == 'Follow':
-                        return shared_inbox()
+                elif ('type' in request_json and request_json['type'] == 'Create' and
+                    'object' in request_json and request_json['object']['type'] == 'Note' and
+                    'name' in request_json['object']):                                              # poll votes
+                    in_reply_to = request_json['object']['inReplyTo'] if 'inReplyTo' in request_json['object'] else None
+                    if in_reply_to:
+                        post_being_replied_to = Post.query.filter_by(ap_id=request_json['object']['inReplyTo']).first()
+                        if post_being_replied_to:
+                            community_ap_id = post_being_replied_to.community.ap_profile_id
+                            community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False)
+                            user_ap_id = request_json['object']['attributedTo']
+                            user = find_actor_or_create(user_ap_id, create_if_not_found=False)
+                            if can_create_post_reply(user, community):
+                                poll_data = Poll.query.get(post_being_replied_to.id)
+                                choice = PollChoice.query.filter_by(post_id=post_being_replied_to.id, choice_text=request_json['object']['name']).first()
+                                if poll_data and choice:
+                                    poll_data.vote_for_choice(choice.id, user.id)
+                                    activity_log.activity_type = 'Poll Vote'
+                                    activity_log.result = 'success'
+                                    db.session.commit()
+                                    if post_being_replied_to.author.is_local():
+                                        inform_followers_of_post_update(post_being_replied_to, user.instance_id)
 
         except VerificationError:
             activity_log.result = 'failure'
