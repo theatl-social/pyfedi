@@ -472,7 +472,8 @@ def save_post(form, post: Post, type: str):
             poll = Poll(post_id=post.id)
             db.session.add(poll)
         poll.mode = form.mode.data
-        poll.end_poll = end_poll_date(form.finish_in.data)
+        if form.finish_in:
+            poll.end_poll = end_poll_date(form.finish_in.data)
         poll.local_only = form.local_only.data
         poll.latest_vote = None
         db.session.commit()
