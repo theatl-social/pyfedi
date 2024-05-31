@@ -113,6 +113,7 @@ def register(app):
             if block_list:
                 for domain in block_list.split('\n'):
                     db.session.add(Domain(name=domain.strip(), banned=True))
+                    db.session.add(BannedInstances(domain=domain.strip()))
                 print("Added 'Peertube Isolation' blocklist, see https://peertube_isolation.frama.io/")
 
             # Initial roles
