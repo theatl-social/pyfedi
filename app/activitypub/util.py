@@ -13,8 +13,8 @@ from sqlalchemy import text, func
 from app import db, cache, constants, celery
 from app.models import User, Post, Community, BannedInstances, File, PostReply, AllowedInstances, Instance, utcnow, \
     PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation, \
-    Language, Tag, Poll, PollChoice
-from app.activitypub.signature import signed_get_request
+    Language, Tag, Poll, PollChoice, UserFollower
+from app.activitypub.signature import signed_get_request, post_request
 import time
 import base64
 import requests
@@ -2549,3 +2549,57 @@ def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
                 return post
 
     return None
+
+
+# This is for followers on microblog apps
+# Used to let them know a Poll has been updated with a new vote
+# The plan is to also use it for activities on local user's posts that aren't understood by being Announced (anything beyond the initial Create)
+# This would need for posts to have things like a 'Replies' collection and a 'Likes' collection, so these can be downloaded when the post updates
+# Using collecions like this (as PeerTube does) circumvents the problem of not having a remote user's private key.
+# The problem of what to do for remote user's activity on a remote user's post in a local community still exists (can't Announce it, can't inform of post update)
+def inform_followers_of_post_update(post: Post, sending_instance_id: int):
+    if current_app.debug:
+        inform_followers_of_post_update_task(post, sending_instance_id)
+    else:
+        inform_followers_of_post_update_task.delay(post, sending_instance_id)
+
+
+@celery.task
+def inform_followers_of_post_update_task(post: Post, sending_instance_id: int):
+    page_json = post_to_page(post)
+    page_json['updated'] = ap_datetime(utcnow())
+    update_json = {
+        'id': f"https://{current_app.config['SERVER_NAME']}/activities/update/{gibberish(15)}",
+        'type': 'Update',
+        'actor': post.author.profile_id(),
+        'audience': post.community.profile_id(),
+        'to': ['https://www.w3.org/ns/activitystreams#Public'],
+        'published': ap_datetime(utcnow()),
+        'cc': [
+            post.author.followers_url(), post.community.ap_followers_url
+        ],
+        'object': page_json,
+    }
+
+    # inform user followers first
+    followers = UserFollower.query.filter_by(local_user_id=post.user_id)
+    if followers:
+        instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower, UserFollower.remote_user_id == User.id)
+        instances = instances.filter(UserFollower.local_user_id == post.user_id, Instance.software.in_(MICROBLOG_APPS))
+        for i in instances:
+            if sending_instance_id != i.id:
+                try:
+                    post_request(i.inbox, update_json, post.author.private_key, post.author.profile_id() + '#main-key')
+                except Exception:
+                    pass
+
+    # then community followers
+    instances = Instance.query.join(User, User.instance_id == Instance.id).join(CommunityMember, CommunityMember.user_id == User.id)
+    instances = instances.filter(CommunityMember.community_id == post.community.id, CommunityMember.is_banned == False)
+    instances = instances.filter(Instance.software.in_(MICROBLOG_APPS))
+    for i in instances:
+        if sending_instance_id != i.id:
+            try:
+                post_request(i.inbox, update_json, post.author.private_key, post.author.profile_id() + '#main-key')
+            except Exception:
+                pass
