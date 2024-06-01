@@ -2557,15 +2557,16 @@ def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
 # This would need for posts to have things like a 'Replies' collection and a 'Likes' collection, so these can be downloaded when the post updates
 # Using collecions like this (as PeerTube does) circumvents the problem of not having a remote user's private key.
 # The problem of what to do for remote user's activity on a remote user's post in a local community still exists (can't Announce it, can't inform of post update)
-def inform_followers_of_post_update(post: Post, sending_instance_id: int):
+def inform_followers_of_post_update(post_id: int, sending_instance_id: int):
     if current_app.debug:
-        inform_followers_of_post_update_task(post, sending_instance_id)
+        inform_followers_of_post_update_task(post_id, sending_instance_id)
     else:
-        inform_followers_of_post_update_task.delay(post, sending_instance_id)
+        inform_followers_of_post_update_task.delay(post_id, sending_instance_id)
 
 
 @celery.task
-def inform_followers_of_post_update_task(post: Post, sending_instance_id: int):
+def inform_followers_of_post_update_task(post_id: int, sending_instance_id: int):
+    post = Post.query.get(post_id)
     page_json = post_to_page(post)
     page_json['updated'] = ap_datetime(utcnow())
     update_json = {

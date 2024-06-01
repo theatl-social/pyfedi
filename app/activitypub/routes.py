@@ -1339,7 +1339,7 @@ def user_inbox(actor):
                                     activity_log.result = 'success'
                                     db.session.commit()
                                     if post_being_replied_to.author.is_local():
-                                        inform_followers_of_post_update(post_being_replied_to, user.instance_id)
+                                        inform_followers_of_post_update(post_being_replied_to.id, user.instance_id)
 
         except VerificationError:
             activity_log.result = 'failure'

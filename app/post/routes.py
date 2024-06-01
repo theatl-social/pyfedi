@@ -582,7 +582,7 @@ def poll_vote(post_id):
         poll_votes = PollChoice.query.join(PollChoiceVote, PollChoiceVote.choice_id == PollChoice.id).filter(PollChoiceVote.post_id == post.id, PollChoiceVote.user_id == current_user.id).all()
         for pv in poll_votes:
             if post.author.is_local():
-                inform_followers_of_post_update(post, 1)
+                inform_followers_of_post_update(post.id, 1)
             else:
                 pollvote_json = {
                   '@context': default_context(),
