@@ -1483,6 +1483,7 @@ def post_delete(post_id: int):
                 current_user.followers_url()
             ],
             'object': post.ap_id,
+            'uri': post.ap_id
         }
         if post.user_id != current_user.id:
             delete_json['summary'] = 'Deleted by mod'
