@@ -33,3 +33,6 @@ Disallow: /
 
 User-agent: MJ12bot
 Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
