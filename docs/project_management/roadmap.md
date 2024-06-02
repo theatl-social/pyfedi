@@ -24,7 +24,7 @@ The following are the goals for a 1.0 release, good enough for production use. I
 ### Search
 
 - ✅ content & users
-- hashtags
+- ✅ hashtags
 - ✅ privacy controls
 
 ### Moderation
