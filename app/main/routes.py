@@ -85,17 +85,17 @@ def home_page(type, sort):
     else:
         if type == 'home':
             posts = Post.query.join(CommunityMember, Post.community_id == CommunityMember.community_id).filter(
-                CommunityMember.is_banned == False)
+                CommunityMember.is_banned == False, Post.deleted == False)
             # posts = posts.join(User, CommunityMember.user_id == User.id).filter(User.id == current_user.id)
             posts = posts.filter(CommunityMember.user_id == current_user.id)
         elif type == 'popular':
             posts = Post.query.filter(Post.from_bot == False)
             posts = posts.join(Community, Community.id == Post.community_id)
-            posts = posts.filter(Community.show_popular == True, Post.score > 100)
+            posts = posts.filter(Community.show_popular == True, Post.score > 100, Post.deleted == False)
         elif type == 'all':
             posts = Post.query
             posts = posts.join(Community, Community.id == Post.community_id)
-            posts = posts.filter(Community.show_all == True)
+            posts = posts.filter(Community.show_all == True, Post.deleted == False)
 
         if current_user.ignore_bots:
             posts = posts.filter(Post.from_bot == False)
