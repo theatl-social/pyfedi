@@ -36,7 +36,7 @@ def show_post(post_id: int):
     post = Post.query.get_or_404(post_id)
     community: Community = post.community
 
-    if community.banned:
+    if community.banned or post.deleted:
         abort(404)
 
     sort = request.args.get('sort', 'hot')
@@ -231,6 +231,7 @@ def show_post(post_id: int):
     og_image = post.image.source_url if post.image_id else None
     description = shorten_string(markdown_to_text(post.body), 150) if post.body else None
 
+    # Breadcrumbs
     breadcrumbs = []
     breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
     breadcrumb.text = _('Home')
@@ -288,15 +289,15 @@ def show_post(post_id: int):
     poll_total_votes = 0
     if post.type == POST_TYPE_POLL:
         poll_data = Poll.query.get(post.id)
-        poll_choices = PollChoice.query.filter_by(post_id=post.id).order_by(PollChoice.sort_order).all()
-        poll_total_votes = poll_data.total_votes()
-        # Show poll results to everyone after the poll finishes, to the poll creator and to those who have voted
-        if (current_user.is_authenticated and (poll_data.has_voted(current_user.id))) \
-                or poll_data.end_poll < datetime.utcnow():
-
-            poll_results = True
-        else:
-            poll_form = True
+        if poll_data:
+            poll_choices = PollChoice.query.filter_by(post_id=post.id).order_by(PollChoice.sort_order).all()
+            poll_total_votes = poll_data.total_votes()
+            # Show poll results to everyone after the poll finishes, to the poll creator and to those who have voted
+            if (current_user.is_authenticated and (poll_data.has_voted(current_user.id))) \
+                    or poll_data.end_poll < datetime.utcnow():
+                poll_results = True
+            else:
+                poll_form = True
 
     response = render_template('post/post.html', title=post.title, post=post, is_moderator=is_moderator, community=post.community,
                            breadcrumbs=breadcrumbs, related_communities=related_communities, mods=mod_list,
@@ -612,7 +613,7 @@ def poll_vote(post_id):
 def continue_discussion(post_id, comment_id):
     post = Post.query.get_or_404(post_id)
     comment = PostReply.query.get_or_404(comment_id)
-    if post.community.banned:
+    if post.community.banned or post.deleted or comment.deleted:
         abort(404)
     mods = post.community.moderators()
     is_moderator = current_user.is_authenticated and any(mod.user_id == current_user.id for mod in mods)
@@ -844,6 +845,10 @@ def add_reply(post_id: int, comment_id: int):
 @bp.route('/post/<int:post_id>/options', methods=['GET'])
 def post_options(post_id: int):
     post = Post.query.get_or_404(post_id)
+    if current_user.is_anonymous or not current_user.is_admin():
+        if post.deleted:
+            abort(404)
+    
     return render_template('post/post_options.html', post=post,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
@@ -854,6 +859,9 @@ def post_options(post_id: int):
 def post_reply_options(post_id: int, comment_id: int):
     post = Post.query.get_or_404(post_id)
     post_reply = PostReply.query.get_or_404(comment_id)
+    if current_user.is_anonymous or not current_user.is_admin():
+        if post.deleted or post_reply.deleted:
+            abort(404)
     return render_template('post/post_reply_options.html', post=post, post_reply=post_reply,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
@@ -1467,7 +1475,7 @@ def post_delete(post_id: int):
                     if ocp.cross_posts is not None:
                         ocp.cross_posts.remove(post.id)
         post.delete_dependencies()
-        db.session.delete(post)
+        post.deleted = True
         g.site.last_active = community.last_active = utcnow()
         db.session.commit()
         flash(_('Post deleted.'))
@@ -1522,6 +1530,61 @@ def post_delete(post_id: int):
                 post_request(i.inbox, delete_json, current_user.private_key, current_user.ap_profile_id + '#main-key')
 
     return redirect(url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not None else community.name))
+
+
+@bp.route('/post/<int:post_id>/restore', methods=['GET', 'POST'])
+@login_required
+def post_restore(post_id: int):
+    post = Post.query.get_or_404(post_id)
+    if post.community.is_moderator() or post.community.is_owner() or current_user.is_admin():
+        post.deleted = False
+        db.session.commit()
+
+        # Federate un-delete
+        if post.is_local():
+            delete_json = {
+              "actor": current_user.profile_id(),
+              "to": ["https://www.w3.org/ns/activitystreams#Public"],
+              "object": {
+                  'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+                  'type': 'Delete',
+                  'actor': current_user.profile_id(),
+                  'audience': post.community.profile_id(),
+                  'to': [post.community.profile_id(), 'https://www.w3.org/ns/activitystreams#Public'],
+                  'published': ap_datetime(utcnow()),
+                  'cc': [
+                      current_user.followers_url()
+                  ],
+                  'object': post.ap_id,
+                  'uri': post.ap_id,
+                  "summary": "bad post",
+              },
+              "cc": [post.community.profile_id()],
+              "audience": post.author.profile_id(),
+              "type": "Undo",
+              "id": f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}"
+            }
+
+            announce = {
+                "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+                "type": 'Announce',
+                "to": [
+                    "https://www.w3.org/ns/activitystreams#Public"
+                ],
+                "actor": post.community.ap_profile_id,
+                "cc": [
+                    post.community.ap_followers_url
+                ],
+                '@context': default_context(),
+                'object': delete_json
+            }
+
+            for instance in post.community.following_instances():
+                if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
+                    send_to_remote_instance(instance.id, post.community.id, announce)
+
+        flash(_('Post has been restored.'))
+    return redirect(url_for('activitypub.post_ap', post_id=post.id))
 
 
 @bp.route('/post/<int:post_id>/report', methods=['GET', 'POST'])
@@ -1906,7 +1969,7 @@ def post_reply_delete(post_id: int, comment_id: int):
             post_reply.body_html = markdown_to_html(post_reply.body)
         else:
             post_reply.delete_dependencies()
-            db.session.delete(post_reply)
+            post_reply.deleted = True
         g.site.last_active = community.last_active = utcnow()
         db.session.commit()
         flash(_('Comment deleted.'))

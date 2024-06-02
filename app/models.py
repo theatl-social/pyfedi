@@ -880,7 +880,7 @@ class User(UserMixin, db.Model):
         db.session.query(Notification).filter(Notification.user_id == self.id).delete()
         db.session.query(PollChoiceVote).filter(PollChoiceVote.user_id == self.id).delete()
 
-    def purge_content(self):
+    def purge_content(self, soft=True):
         files = File.query.join(Post).filter(Post.user_id == self.id).all()
         for file in files:
             file.delete_from_disk()
@@ -888,12 +888,18 @@ class User(UserMixin, db.Model):
         posts = Post.query.filter_by(user_id=self.id).all()
         for post in posts:
             post.delete_dependencies()
-            db.session.delete(post)
+            if soft:
+                post.deleted = True
+            else:
+                db.session.delete(post)
         db.session.commit()
         post_replies = PostReply.query.filter_by(user_id=self.id).all()
         for reply in post_replies:
             reply.delete_dependencies()
-            db.session.delete(reply)
+            if soft:
+                reply.deleted = True
+            else:
+                db.session.delete(reply)
         db.session.commit()
 
     def mention_tag(self):
@@ -938,6 +944,7 @@ class Post(db.Model):
     body_html = db.Column(db.Text)
     type = db.Column(db.Integer)
     comments_enabled = db.Column(db.Boolean, default=True)
+    deleted = db.Column(db.Boolean, default=False, index=True)
     mea_culpa = db.Column(db.Boolean, default=False)
     has_embed = db.Column(db.Boolean, default=False)
     reply_count = db.Column(db.Integer, default=0)
@@ -1066,6 +1073,7 @@ class PostReply(db.Model):
     notify_author = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, index=True, default=utcnow)
     posted_at = db.Column(db.DateTime, index=True, default=utcnow)
+    deleted = db.Column(db.Boolean, default=False, index=True)
     ip = db.Column(db.String(50))
     from_bot = db.Column(db.Boolean, default=False)
     up_votes = db.Column(db.Integer, default=0)
@@ -1142,7 +1150,7 @@ class PostReply(db.Model):
         return PostReply.query.filter_by(parent_id=self.id).all()
 
     def has_replies(self):
-        reply = PostReply.query.filter_by(parent_id=self.id).first()
+        reply = PostReply.query.filter_by(parent_id=self.id).filter(PostReply.deleted == False).first()
         return reply is not None
 
     def blocked_by_content_filter(self, content_filters):

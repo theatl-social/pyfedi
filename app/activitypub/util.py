@@ -78,11 +78,11 @@ def active_day():
 
 
 def local_posts():
-    return db.session.execute(text('SELECT COUNT(id) as c FROM "post" WHERE instance_id = 1')).scalar()
+    return db.session.execute(text('SELECT COUNT(id) as c FROM "post" WHERE instance_id = 1 AND deleted is false')).scalar()
 
 
 def local_comments():
-    return db.session.execute(text('SELECT COUNT(id) as c FROM "post_reply" WHERE instance_id = 1')).scalar()
+    return db.session.execute(text('SELECT COUNT(id) as c FROM "post_reply" WHERE instance_id = 1 and deleted is false')).scalar()
 
 
 def local_communities():
@@ -1409,7 +1409,7 @@ def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id
         if deletor.is_admin() or community.is_moderator(deletor) or community.is_instance_admin(deletor) or to_delete.author.id == deletor.id:
             if isinstance(to_delete, Post):
                 to_delete.delete_dependencies()
-                db.session.delete(to_delete)
+                to_delete.deleted = True
                 community.post_count -= 1
                 db.session.commit()
             elif isinstance(to_delete, PostReply):
@@ -1419,7 +1419,7 @@ def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id
                     to_delete.body_html = lemmy_markdown_to_html(to_delete.body)
                 else:
                     to_delete.delete_dependencies()
-                    db.session.delete(to_delete)
+                    to_delete.deleted = True
 
                 db.session.commit()
 
@@ -1447,31 +1447,30 @@ def remove_data_from_banned_user_task(deletor_ap_id, user_ap_id, target):
 
     # community bans by mods
     elif community and community.is_moderator(deletor):
-        post_replies = PostReply.query.filter_by(user_id=user.id, community_id=community.id)
-        posts = Post.query.filter_by(user_id=user.id, community_id=community.id)
-
+        post_replies = PostReply.query.filter_by(user_id=user.id, community_id=community.id, deleted=False)
+        posts = Post.query.filter_by(user_id=user.id, community_id=community.id, deleted=False)
     else:
         return
 
-    for pr in post_replies:
-        pr.post.reply_count -= 1
-        if pr.has_replies():
-            pr.body = 'Banned'
-            pr.body_html = lemmy_markdown_to_html(pr.body)
+    for post_reply in post_replies:
+        post_reply.post.reply_count -= 1
+        if post_reply.has_replies():
+            post_reply.body = 'Banned'
+            post_reply.body_html = lemmy_markdown_to_html(post_reply.body)
         else:
-            pr.delete_dependencies()
-            db.session.delete(pr)
+            post_reply.delete_dependencies()
+            post_reply.deleted = True
     db.session.commit()
 
-    for p in posts:
-        if p.cross_posts:
-            old_cross_posts = Post.query.filter(Post.id.in_(p.cross_posts)).all()
+    for post in posts:
+        if post.cross_posts:
+            old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
             for ocp in old_cross_posts:
                 if ocp.cross_posts is not None:
-                    ocp.cross_posts.remove(p.id)
-        p.delete_dependencies()
-        db.session.delete(p)
-        p.community.post_count -= 1
+                    ocp.cross_posts.remove(post.id)
+        post.delete_dependencies()
+        post.deleted = True
+        post.community.post_count -= 1
     db.session.commit()
 
 

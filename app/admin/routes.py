@@ -552,7 +552,7 @@ def admin_content_trash():
 
     page = request.args.get('page', 1, type=int)
 
-    posts = Post.query.filter(Post.posted_at > utcnow() - timedelta(days=3)).order_by(Post.score)
+    posts = Post.query.filter(Post.posted_at > utcnow() - timedelta(days=3), Post.deleted == False).order_by(Post.score)
     posts = posts.paginate(page=page, per_page=100, error_out=False)
 
     next_url = url_for('admin.admin_content_trash', page=posts.next_num) if posts.has_next else None
@@ -577,12 +577,14 @@ def admin_content_spam():
     posts = Post.query.join(User, User.id == Post.user_id).\
         filter(User.created > utcnow() - timedelta(days=3)).\
         filter(Post.posted_at > utcnow() - timedelta(days=3)).\
+        filter(Post.deleted == False).\
         filter(Post.score <= 0).order_by(Post.score)
     posts = posts.paginate(page=page, per_page=100, error_out=False)
 
     post_replies = PostReply.query.join(User, User.id == PostReply.user_id). \
         filter(User.created > utcnow() - timedelta(days=3)). \
         filter(PostReply.posted_at > utcnow() - timedelta(days=3)). \
+        filter(PostReply.deleted == False). \
         filter(PostReply.score <= 0).order_by(PostReply.score)
     post_replies = post_replies.paginate(page=replies_page, per_page=100, error_out=False)
 
@@ -592,6 +594,40 @@ def admin_content_spam():
     prev_url_replies = url_for('admin.admin_content_spam', replies_page=post_replies.prev_num) if post_replies.has_prev and replies_page != 1 else None
 
     return render_template('admin/spam_posts.html', title=_('Likely spam'),
+                           next_url=next_url, prev_url=prev_url,
+                           next_url_replies=next_url_replies, prev_url_replies=prev_url_replies,
+                           posts=posts, post_replies=post_replies,
+                           moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
+                           site=g.site
+                           )
+
+
+@bp.route('/content/deleted', methods=['GET'])
+@login_required
+@permission_required('administer all users')
+def admin_content_deleted():
+    # Shows all soft deleted posts
+    page = request.args.get('page', 1, type=int)
+    replies_page = request.args.get('replies_page', 1, type=int)
+
+    posts = Post.query.\
+        filter(Post.deleted == True).\
+        order_by(Post.posted_at)
+    posts = posts.paginate(page=page, per_page=100, error_out=False)
+
+    post_replies = PostReply.query. \
+        filter(PostReply.deleted == True). \
+        order_by(PostReply.posted_at)
+    post_replies = post_replies.paginate(page=replies_page, per_page=100, error_out=False)
+
+    next_url = url_for('admin.admin_content_deleted', page=posts.next_num) if posts.has_next else None
+    prev_url = url_for('admin.admin_content_deleted', page=posts.prev_num) if posts.has_prev and page != 1 else None
+    next_url_replies = url_for('admin.admin_content_deleted', replies_page=post_replies.next_num) if post_replies.has_next else None
+    prev_url_replies = url_for('admin.admin_content_deleted', replies_page=post_replies.prev_num) if post_replies.has_prev and replies_page != 1 else None
+
+    return render_template('admin/deleted_posts.html', title=_('Deleted content'),
                            next_url=next_url, prev_url=prev_url,
                            next_url_replies=next_url_replies, prev_url_replies=prev_url_replies,
                            posts=posts, post_replies=post_replies,

@@ -54,7 +54,7 @@ def show_topic(topic_path):
 
         # filter out nsfw and nsfl if desired
         if current_user.is_anonymous:
-            posts = posts.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False)
+            posts = posts.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
             content_filters = {}
         else:
             if current_user.ignore_bots:
@@ -63,6 +63,7 @@ def show_topic(topic_path):
                 posts = posts.filter(Post.nsfl == False)
             if current_user.show_nsfw is False:
                 posts = posts.filter(Post.nsfw == False)
+            posts = posts.filter(Post.deleted == False)
             content_filters = user_filters_posts(current_user.id)
 
             # filter blocked domains and instances
@@ -138,7 +139,7 @@ def show_topic_rss(topic_path):
     if topic:
         posts = Post.query.join(Community, Post.community_id == Community.id).filter(Community.topic_id == topic.id,
                                                                                      Community.banned == False)
-        posts = posts.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False)
+        posts = posts.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
         posts = posts.order_by(desc(Post.created_at)).limit(100).all()
 
         fg = FeedGenerator()

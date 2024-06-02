@@ -30,7 +30,7 @@ from app.utils import render_template, get_setting, gibberish, request_etag_matc
     blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
     generate_image_from_video_url, blocked_users, microblog_content_to_title, menu_topics
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Domain, Topic, File, Instance, \
-    InstanceRole, Notification, Language, community_language
+    InstanceRole, Notification, Language, community_language, PostReply
 from PIL import Image
 import pytesseract
 
@@ -73,7 +73,7 @@ def home_page(type, sort):
 
     if current_user.is_anonymous:
         flash(_('Create an account to tailor this feed to your interests.'))
-        posts = Post.query.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False)
+        posts = Post.query.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
         posts = posts.join(Community, Community.id == Post.community_id)
         if type == 'home':
             posts = posts.filter(Community.show_home == True)
@@ -368,7 +368,7 @@ def robots():
 @bp.route('/sitemap.xml')
 @cache.cached(timeout=6000)
 def sitemap():
-    posts = Post.query.filter(Post.from_bot == False)
+    posts = Post.query.filter(Post.from_bot == False, Post.deleted == False)
     posts = posts.join(Community, Community.id == Post.community_id)
     posts = posts.filter(Community.show_all == True, Community.ap_id == None)   # sitemap.xml only includes local posts
     if not g.site.enable_nsfw:
@@ -395,6 +395,10 @@ def list_files(directory):
 
 @bp.route('/test')
 def test():
+
+    #for community in Community.query.filter(Community.content_retention != -1):
+    #    for post in community.posts.filter(Post.posted_at < utcnow() - timedelta(days=Community.content_retention)):
+    #        post.delete_dependencies()
 
     return 'done'
 

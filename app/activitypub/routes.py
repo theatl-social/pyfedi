@@ -1010,7 +1010,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             post.delete_dependencies()
                             post.community.post_count -= 1
                             announce_activity_to_followers(post.community, post.author, request_json)
-                            db.session.delete(post)
+                            post.deleted = True
                             db.session.commit()
                             activity_log.result = 'success'
                         else:
@@ -1023,6 +1023,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                 reply.body_html = '<p><em>deleted</em></p>'
                                 reply.body = 'deleted'
                                 reply.post.reply_count -= 1
+                                reply.deleted = True
                                 announce_activity_to_followers(reply.community, reply.author, request_json)
                                 db.session.commit()
                                 activity_log.result = 'success'
@@ -1213,7 +1214,7 @@ def community_outbox(actor):
     actor = actor.strip()
     community = Community.query.filter_by(name=actor, banned=False, ap_id=None).first()
     if community is not None:
-        posts = community.posts.limit(50).all()
+        posts = community.posts.filter(Post.deleted == False).limit(50).all()
 
         community_data = {
             "@context": default_context(),
@@ -1234,7 +1235,7 @@ def community_featured(actor):
     actor = actor.strip()
     community = Community.query.filter_by(name=actor, banned=False, ap_id=None).first()
     if community is not None:
-        posts = Post.query.filter_by(community_id=community.id, sticky=True).all()
+        posts = Post.query.filter_by(community_id=community.id, sticky=True, deleted=False).all()
 
         community_data = {
             "@context": default_context(),

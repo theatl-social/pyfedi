@@ -541,7 +541,7 @@ def delete_post_from_community_task(post_id):
     post = Post.query.get(post_id)
     community = post.community
     post.delete_dependencies()
-    db.session.delete(post)
+    post.deleted = True
     db.session.commit()
 
     if not community.local_only:
@@ -600,7 +600,7 @@ def delete_post_reply_from_community_task(post_reply_id):
             post_reply.body_html = markdown_to_html(post_reply.body)
         else:
             post_reply.delete_dependencies()
-            db.session.delete(post_reply)
+            post_reply.deleted = True
         db.session.commit()
 
         # federate delete

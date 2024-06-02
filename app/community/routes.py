@@ -197,7 +197,7 @@ def show_community(community: Community):
 
     # filter out nsfw and nsfl if desired
     if current_user.is_anonymous:
-        posts = posts.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False)
+        posts = posts.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
         content_filters = {}
     else:
         if current_user.ignore_bots:
@@ -207,6 +207,7 @@ def show_community(community: Community):
         if current_user.show_nsfw is False:
             posts = posts.filter(Post.nsfw == False)
         content_filters = user_filters_posts(current_user.id)
+        posts = posts.filter(Post.deleted == False)
 
         # filter domains and instances
         domains_ids = blocked_domains(current_user.id)
@@ -319,7 +320,7 @@ def show_community_rss(actor):
         if request_etag_matches(current_etag):
             return return_304(current_etag, 'application/rss+xml')
 
-        posts = community.posts.filter(Post.from_bot == False).order_by(desc(Post.created_at)).limit(100).all()
+        posts = community.posts.filter(Post.from_bot == False, Post.deleted == False).order_by(desc(Post.created_at)).limit(100).all()
         description = shorten_string(community.description, 150) if community.description else None
         og_image = community.image.source_url if community.image_id else None
         fg = FeedGenerator()

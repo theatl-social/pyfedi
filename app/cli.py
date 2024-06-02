@@ -266,6 +266,15 @@ def register(app):
                                             InstanceRole.role == 'admin').delete()
                                         db.session.commit()
 
+            # Delete soft-deleted content after 7 days
+            for post_reply in PostReply.query.filter(PostReply.deleted == True, PostReply.posted_at < utcnow() - timedelta(days=7)).all():
+                db.session.delete(post_reply)
+
+            for post in Post.query.filter(Post.deleted == True, Post.posted_at < utcnow() - timedelta(days=7)).all():
+                db.session.delete(post)
+
+            db.session.commit()
+
     @app.cli.command("spaceusage")
     def spaceusage():
         with app.app_context():

@@ -213,6 +213,7 @@
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_users_trash' }}" href="{{ url_for('admin.admin_users_trash', local_remote='local') }}">{{ _('Monitoring - users') }}</a></li>
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_content_trash' }}" href="{{ url_for('admin.admin_content_trash') }}">{{ _('Monitoring - content') }}</a></li>
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_content_spam' }}" href="{{ url_for('admin.admin_content_spam') }}">{{ _('Monitoring - spammy content') }}</a></li>
+                                      <li><a class="dropdown-item{{ ' active' if active_child == 'admin_content_deleted' }}" href="{{ url_for('admin.admin_content_deleted') }}">{{ _('Deleted content') }}</a></li>
                                         {% if g.site.registration_mode == 'RequireApplication' %}
                                             <li><a class="dropdown-item{{ ' active' if active_child == 'admin_approve_registrations' }}" href="{{ url_for('admin.admin_approve_registrations') }}">{{ _('Registration applications') }}</a></li>
                                         {% endif %}
