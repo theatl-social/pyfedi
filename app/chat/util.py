@@ -38,10 +38,6 @@ def send_message(message: str, conversation_id: int) -> ChatMessage:
                         "id": f"https://{current_app.config['SERVER_NAME']}/private_message/{reply.id}",
                         "mediaType": "text/html",
                         "published": utcnow().isoformat() + 'Z',  # Lemmy is inconsistent with the date format they use
-                        "source": {
-                            "content": reply.body,
-                            "mediaType": "text/markdown"
-                        },
                         "to": [
                             recipient.profile_id()
                         ],
