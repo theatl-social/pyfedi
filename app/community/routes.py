@@ -888,10 +888,6 @@ def federate_post(community, post):
         'cc': [],
         'content': post.body_html if post.body_html else '',
         'mediaType': 'text/html',
-        'source': {
-            'content': post.body if post.body else '',
-            'mediaType': 'text/markdown'
-        },
         'attachment': [],
         'commentsEnabled': post.comments_enabled,
         'sensitive': post.nsfw,
