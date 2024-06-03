@@ -255,7 +255,7 @@ def user_profile(actor):
             server = current_app.config['SERVER_NAME']
             actor_data = {  "@context": default_context(),
                             "type": "Person" if not user.bot else "Service",
-                            "id": f"https://{server}/u/{actor.lower()}",
+                            "id": user.profile_id(),
                             "preferredUsername": actor.lower(),
                             "name": user.title if user.title else user.user_name,
                             "inbox": f"https://{server}/u/{actor.lower()}/inbox",
