@@ -952,7 +952,7 @@ def federate_post(community, post):
         page['oneOf' if poll.mode == 'single' else 'anyOf'] = choices
     if not community.is_local():  # this is a remote community - send the post to the instance that hosts it
         success = post_request(community.ap_inbox_url, create, current_user.private_key,
-                               current_user.ap_profile_id + '#main-key')
+                               current_user.profile_id() + '#main-key')
         if success:
             flash(_('Your post to %(name)s has been made.', name=community.title))
         else:
@@ -1067,7 +1067,7 @@ def federate_post_to_user_followers(post):
     instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower, UserFollower.remote_user_id == User.id)
     instances = instances.filter(UserFollower.local_user_id == post.user_id).filter(Instance.gone_forever == False)
     for i in instances:
-        post_request(i.inbox, create, current_user.private_key, current_user.ap_profile_id + '#main-key')
+        post_request(i.inbox, create, current_user.private_key, current_user.profile_id() + '#main-key')
 
 
 @bp.route('/community/<int:community_id>/report', methods=['GET', 'POST'])

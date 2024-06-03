@@ -560,7 +560,7 @@ def delete_post_from_community_task(post_id):
 
         if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
             success = post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
-                                   current_user.ap_profile_id + '#main-key')
+                                   current_user.profile_id() + '#main-key')
         else:  # local community - send it to followers on remote instances
             announce = {
                 "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
@@ -620,7 +620,7 @@ def delete_post_reply_from_community_task(post_reply_id):
 
             if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
                 success = post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
-                                       current_user.ap_profile_id + '#main-key')
+                                       current_user.profile_id() + '#main-key')
 
             else:  # local community - send it to followers on remote instances
                 announce = {

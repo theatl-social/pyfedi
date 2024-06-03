@@ -189,7 +189,7 @@ def show_post(post_id: int):
         }
         if not community.is_local():    # this is a remote community, send it to the instance that hosts it
             success = post_request(community.ap_inbox_url, create_json, current_user.private_key,
-                                                       current_user.ap_profile_id + '#main-key')
+                                                       current_user.profile_id() + '#main-key')
             if not success:
                 flash('Failed to send to remote instance', 'error')
         else:                       # local community - send it to followers on remote instances
@@ -215,12 +215,12 @@ def show_post(post_id: int):
         if not post.author.is_local() and post.author.ap_domain != community.ap_domain:
             if not community.is_local() or (community.is_local and not community.has_followers_from_domain(post.author.ap_domain)):
                 success = post_request(post.author.ap_inbox_url, create_json, current_user.private_key,
-                                                       current_user.ap_profile_id + '#main-key')
+                                                       current_user.profile_id() + '#main-key')
                 if not success:
                     # sending to shared inbox is good enough for Mastodon, but Lemmy will reject it the local community has no followers
                     personal_inbox = post.author.public_url() + '/inbox'
                     post_request(personal_inbox, create_json, current_user.private_key,
-                                                       current_user.ap_profile_id + '#main-key')
+                                                       current_user.profile_id() + '#main-key')
 
         return redirect(url_for('activitypub.post_ap', post_id=post_id))  # redirect to current page to avoid refresh resubmitting the form
     else:
@@ -427,7 +427,7 @@ def post_vote(post_id: int, vote_direction):
                     send_to_remote_instance(instance.id, post.community.id, announce)
         else:
             success = post_request_in_background(post.community.ap_inbox_url, action_json, current_user.private_key,
-                                                            current_user.ap_profile_id + '#main-key')
+                                                            current_user.profile_id() + '#main-key')
             if not success:
                 flash('Failed to send vote', 'warning')
 
@@ -539,7 +539,7 @@ def comment_vote(comment_id, vote_direction):
                     send_to_remote_instance(instance.id, comment.community.id, announce)
         else:
             success = post_request_in_background(comment.community.ap_inbox_url, action_json, current_user.private_key,
-                                                            current_user.ap_profile_id + '#main-key')
+                                                            current_user.profile_id() + '#main-key')
             if not success:
                 flash('Failed to send vote', 'warning')
 
@@ -602,7 +602,7 @@ def poll_vote(post_id):
                 }
                 try:
                     post_request(post.author.ap_inbox_url, pollvote_json, current_user.private_key,
-                                                          current_user.ap_profile_id + '#main-key')
+                                                          current_user.profile_id() + '#main-key')
                 except Exception:
                     pass
 
@@ -793,7 +793,7 @@ def add_reply(post_id: int, comment_id: int):
                 ]
             if not post.community.is_local():    # this is a remote community, send it to the instance that hosts it
                 success = post_request(post.community.ap_inbox_url, create_json, current_user.private_key,
-                                                           current_user.ap_profile_id + '#main-key')
+                                                           current_user.profile_id() + '#main-key')
                 if not success:
                     flash('Failed to send reply', 'error')
             else:                       # local community - send it to followers on remote instances
@@ -819,12 +819,12 @@ def add_reply(post_id: int, comment_id: int):
             if not in_reply_to.author.is_local() and in_reply_to.author.ap_domain != reply.community.ap_domain:
                 if not post.community.is_local() or (post.community.is_local and not post.community.has_followers_from_domain(in_reply_to.author.ap_domain)):
                     success = post_request(in_reply_to.author.ap_inbox_url, create_json, current_user.private_key,
-                                                           current_user.ap_profile_id + '#main-key')
+                                                           current_user.profile_id() + '#main-key')
                     if not success:
                         # sending to shared inbox is good enough for Mastodon, but Lemmy will reject it the local community has no followers
                         personal_inbox = in_reply_to.author.public_url() + '/inbox'
                         post_request(personal_inbox, create_json, current_user.private_key,
-                                                       current_user.ap_profile_id + '#main-key')
+                                                       current_user.profile_id() + '#main-key')
 
         if reply.depth <= constants.THREAD_CUTOFF_DEPTH:
             return redirect(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{reply.id}'))
@@ -1356,7 +1356,7 @@ def federate_post_update(post):
 
     if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
         success = post_request(post.community.ap_inbox_url, update_json, current_user.private_key,
-                               current_user.ap_profile_id + '#main-key')
+                               current_user.profile_id() + '#main-key')
         if not success:
             flash('Failed to send edit to remote server', 'error')
     else:  # local community - send it to followers on remote instances
@@ -1458,7 +1458,7 @@ def federate_post_edit_to_user_followers(post):
     instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower, UserFollower.remote_user_id == User.id)
     instances = instances.filter(UserFollower.local_user_id == post.user_id)
     for i in instances:
-        post_request(i.inbox, update, current_user.private_key, current_user.ap_profile_id + '#main-key')
+        post_request(i.inbox, update, current_user.private_key, current_user.profile_id() + '#main-key')
 
 
 @bp.route('/post/<int:post_id>/delete', methods=['GET', 'POST'])
@@ -1499,7 +1499,7 @@ def post_delete(post_id: int):
         if not community.local_only:
             if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
                 success = post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
-                                       current_user.ap_profile_id + '#main-key')
+                                       current_user.profile_id() + '#main-key')
                 if not success:
                     flash('Failed to send delete to remote server', 'error')
             else:  # local community - send it to followers on remote instances
@@ -1527,7 +1527,7 @@ def post_delete(post_id: int):
             instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower, UserFollower.remote_user_id == User.id)
             instances = instances.filter(UserFollower.local_user_id == post.user_id)
             for i in instances:
-                post_request(i.inbox, delete_json, current_user.private_key, current_user.ap_profile_id + '#main-key')
+                post_request(i.inbox, delete_json, current_user.private_key, current_user.profile_id() + '#main-key')
 
     return redirect(url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not None else community.name))
 
@@ -1640,7 +1640,7 @@ def post_report(post_id: int):
             instance = Instance.query.get(post.community.instance_id)
             if post.community.ap_inbox_url and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
                 success = post_request(post.community.ap_inbox_url, report_json, current_user.private_key,
-                                       current_user.ap_profile_id + '#main-key')
+                                       current_user.profile_id() + '#main-key')
                 if not success:
                     flash('Failed to send report to remote server', 'error')
 
@@ -1777,7 +1777,7 @@ def post_reply_report(post_id: int, comment_id: int):
             if post.community.ap_inbox_url and not current_user.has_blocked_instance(
                     instance.id) and not instance_banned(instance.domain):
                 success = post_request(post.community.ap_inbox_url, report_json, current_user.private_key,
-                                       current_user.ap_profile_id + '#main-key')
+                                       current_user.profile_id() + '#main-key')
                 if not success:
                     flash('Failed to send report to remote server', 'error')
 
@@ -1909,7 +1909,7 @@ def post_reply_edit(post_id: int, comment_id: int):
                     ]
                 if not post.community.is_local():    # this is a remote community, send it to the instance that hosts it
                     success = post_request(post.community.ap_inbox_url, update_json, current_user.private_key,
-                                                               current_user.ap_profile_id + '#main-key')
+                                                               current_user.profile_id() + '#main-key')
                     if not success:
                         flash('Failed to send send edit to remote server', 'error')
                 else:                       # local community - send it to followers on remote instances
@@ -1935,12 +1935,12 @@ def post_reply_edit(post_id: int, comment_id: int):
                 if not in_reply_to.author.is_local() and in_reply_to.author.ap_domain != post_reply.community.ap_domain:
                     if not post.community.is_local() or (post.community.is_local and not post.community.has_followers_from_domain(in_reply_to.author.ap_domain)):
                         success = post_request(in_reply_to.author.ap_inbox_url, update_json, current_user.private_key,
-                                                               current_user.ap_profile_id + '#main-key')
+                                                               current_user.profile_id() + '#main-key')
                         if not success:
                             # sending to shared inbox is good enough for Mastodon, but Lemmy will reject it the local community has no followers
                             personal_inbox = in_reply_to.author.public_url() + '/inbox'
                             post_request(personal_inbox, update_json, current_user.private_key,
-                                                           current_user.ap_profile_id + '#main-key')
+                                                           current_user.profile_id() + '#main-key')
 
             return redirect(url_for('activitypub.post_ap', post_id=post.id))
         else:
@@ -1992,7 +1992,7 @@ def post_reply_delete(post_id: int, comment_id: int):
 
             if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
                 success = post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
-                                       current_user.ap_profile_id + '#main-key')
+                                       current_user.profile_id() + '#main-key')
                 if not success:
                     flash('Failed to send delete to remote server', 'error')
             else:  # local community - send it to followers on remote instances

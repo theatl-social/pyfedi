@@ -39,7 +39,7 @@ def purge_user_then_delete_task(user_id):
 
                 if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
                     success = post_request(post.community.ap_inbox_url, delete_json, user.private_key,
-                                           user.ap_profile_id + '#main-key')
+                                           user.profile_id() + '#main-key')
 
                 else:  # local community - send it to followers on remote instances, using Announce
                     announce = {
@@ -81,7 +81,7 @@ def purge_user_then_delete_task(user_id):
             }
             for instance in instances:
                 if instance.inbox and instance.id != 1:
-                    post_request(instance.inbox, payload, user.private_key, user.ap_profile_id + '#main-key')
+                    post_request(instance.inbox, payload, user.private_key, user.profile_id() + '#main-key')
 
         sleep(100)                                  # wait a while for any related activitypub traffic to die down.
         user.deleted = True
