@@ -133,14 +133,15 @@ def post_to_activity(post: Post, community: Community):
         ],
         "object": {
             "id": create_id,
-            "actor": post.author.ap_public_url,
+            "actor": post.author.profile_id(),
             "to": [
                 "https://www.w3.org/ns/activitystreams#Public"
             ],
             "object": {
                 "type": "Page",
                 "id": post.ap_id,
-                "attributedTo": post.author.ap_public_url,
+                "attributedTo": post.author.profile_id(),
+                "actor": post.author.profile_id(),
                 "to": [
                     f"https://{current_app.config['SERVER_NAME']}/c/{community.name}",
                     "https://www.w3.org/ns/activitystreams#Public"
