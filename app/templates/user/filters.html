@@ -72,7 +72,7 @@
                     </tr>
                 {% for user in blocked_users %}
                     <tr>
-                        <td><a href="{{ url_for('activitypub.user_profile', actor=user.ap_id if user.ap_id is not none else user.user_name) }}">{{ user.display_name() }}</a></td>
+                        <td><a href="{{ url_for('activitypub.user_profile', actor=user.ap_id if user.ap_id is not none else user.user_name.lower()) }}">{{ user.display_name() }}</a></td>
                         <td><a class="no-underline confirm_first" href="{{ url_for('user.unblock_profile', actor=user.link()) }}" rel="nofollow"><span class="fe fe-delete"> {{ _('Unblock') }}</span></a></td>
                     </tr>
                 {% endfor %}

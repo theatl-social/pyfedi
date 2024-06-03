@@ -158,9 +158,9 @@ def register(app):
             admin_user.roles.append(admin_role)
             admin_user.verified = True
             admin_user.last_seen = utcnow()
-            admin_user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name}"
+            admin_user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name.lower()}"
             admin_user.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name}"
-            admin_user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name}/inbox"
+            admin_user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name.lower()}/inbox"
             db.session.add(admin_user)
 
             db.session.commit()

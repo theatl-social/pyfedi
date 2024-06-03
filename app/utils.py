@@ -753,7 +753,7 @@ def finalize_user_setup(user, application_required=False):
     user.public_key = public_key
     user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}".lower()
     user.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}"
-    user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}/inbox"
+    user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name.lower()}/inbox"
     db.session.commit()
     send_welcome_email(user, application_required)
 

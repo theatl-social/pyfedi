@@ -836,7 +836,7 @@ class User(UserMixin, db.Model):
             join(CommunityMember).filter(CommunityMember.is_banned == False, CommunityMember.user_id == self.id).all()
 
     def profile_id(self):
-        result = self.ap_profile_id if self.ap_profile_id else f"https://{current_app.config['SERVER_NAME']}/u/{self.user_name}"
+        result = self.ap_profile_id if self.ap_profile_id else f"https://{current_app.config['SERVER_NAME']}/u/{self.user_name.lower()}"
         return result
 
     def public_url(self):

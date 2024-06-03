@@ -255,17 +255,17 @@ def user_profile(actor):
             server = current_app.config['SERVER_NAME']
             actor_data = {  "@context": default_context(),
                             "type": "Person" if not user.bot else "Service",
-                            "id": f"https://{server}/u/{actor}",
-                            "preferredUsername": actor,
+                            "id": f"https://{server}/u/{actor.lower()}",
+                            "preferredUsername": actor.lower(),
                             "name": user.title if user.title else user.user_name,
-                            "inbox": f"https://{server}/u/{actor}/inbox",
-                            "outbox": f"https://{server}/u/{actor}/outbox",
+                            "inbox": f"https://{server}/u/{actor.lower()}/inbox",
+                            "outbox": f"https://{server}/u/{actor.lower()}/outbox",
                             "discoverable": user.searchable,
                             "indexable": user.indexable,
                             "manuallyApprovesFollowers": False if not user.ap_manually_approves_followers else user.ap_manually_approves_followers,
                             "publicKey": {
-                                "id": f"https://{server}/u/{actor}#main-key",
-                                "owner": f"https://{server}/u/{actor}",
+                                "id": f"https://{server}/u/{actor.lower()}#main-key",
+                                "owner": f"https://{server}/u/{actor.lower()}",
                                 "publicKeyPem": user.public_key      # .replace("\n", "\\n")    #LOOKSWRONG
                             },
                             "endpoints": {
@@ -1390,7 +1390,7 @@ def process_user_follow_request(request_json, activitypublog_id, remote_user_id)
             "type": "Accept",
             "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)
         }
-        if post_request(remote_user.ap_inbox_url, accept, local_user.private_key, f"https://{current_app.config['SERVER_NAME']}/u/{local_user.user_name}#main-key"):
+        if post_request(remote_user.ap_inbox_url, accept, local_user.private_key, f"{local_user.profile_id()}#main-key"):
             activity_log.result = 'success'
         else:
             activity_log.exception_message = 'Error sending Accept'

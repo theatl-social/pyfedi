@@ -273,7 +273,7 @@ def send_community_follow(community_id, join_request_id, user_id):
         user = User.query.get(user_id)
         community = Community.query.get(community_id)
         follow = {
-            "actor": f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}",
+            "actor": current_user.profile_id(),
             "to": [community.ap_profile_id],
             "object": community.ap_profile_id,
             "type": "Follow",

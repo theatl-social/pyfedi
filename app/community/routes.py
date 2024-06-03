@@ -386,7 +386,7 @@ def subscribe(actor):
                 db.session.add(join_request)
                 db.session.commit()
                 follow = {
-                    "actor": f"https://{current_app.config['SERVER_NAME']}/u/{current_user.user_name}",
+                    "actor": current_user.profile_id(),
                     "to": [community.ap_profile_id],
                     "object": community.ap_profile_id,
                     "type": "Follow",
@@ -426,7 +426,7 @@ def unsubscribe(actor):
                 if '@' in actor:    # this is a remote community, so activitypub is needed
                     undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
                     follow = {
-                        "actor": f"https://{current_app.config['SERVER_NAME']}/u/{current_user.user_name}",
+                        "actor": current_user.profile_id(),
                         "to": [community.ap_profile_id],
                         "object": community.ap_profile_id,
                         "type": "Follow",
@@ -478,7 +478,7 @@ def join_then_add(actor):
             db.session.add(join_request)
             db.session.commit()
             follow = {
-                "actor": f"https://{current_app.config['SERVER_NAME']}/u/{current_user.user_name}",
+                "actor": current_user.profile_id(),
                 "to": [community.ap_profile_id],
                 "object": community.ap_profile_id,
                 "type": "Follow",

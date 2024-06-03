@@ -726,6 +726,7 @@ def admin_users_add():
     user = User()
     if form.validate_on_submit():
         user.user_name = form.user_name.data
+        user.title = form.user_name.data
         user.set_password(form.password.data)
         user.about = form.about.data
         user.email = form.email.data

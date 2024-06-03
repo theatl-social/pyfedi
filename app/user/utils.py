@@ -93,7 +93,7 @@ def purge_user_then_delete_task(user_id):
 def unsubscribe_from_community(community, user):
     undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
     follow = {
-        "actor": f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}",
+        "actor": user.profile_id(),
         "to": [community.ap_profile_id],
         "object": community.ap_profile_id,
         "type": "Follow",
