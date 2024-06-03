@@ -140,7 +140,7 @@ def post_to_activity(post: Post, community: Community):
             "object": {
                 "type": "Page",
                 "id": post.ap_id,
-                "attributedTo": post.author.profile_id(),
+                "attributedTo": post.author.profile_id() if post.author.is_local() else post.author.ap_public_url,
                 "to": [
                     f"https://{current_app.config['SERVER_NAME']}/c/{community.name}",
                     "https://www.w3.org/ns/activitystreams#Public"
