@@ -36,6 +36,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     blocked_users, post_ranking, languages_for_form, english_language_id, menu_topics
 from feedgen.feed import FeedGenerator
 from datetime import timezone, timedelta
+from copy import copy
 
 
 @bp.route('/add_local', methods=['GET', 'POST'])
@@ -970,7 +971,7 @@ def federate_post(community, post):
             '@context': default_context(),
             'object': create
         }
-        microblog_announce = announce
+        microblog_announce = copy(announce)
         microblog_announce['object'] = post.ap_id
 
         sent_to = 0
