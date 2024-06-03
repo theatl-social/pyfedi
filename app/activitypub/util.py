@@ -141,7 +141,6 @@ def post_to_activity(post: Post, community: Community):
                 "type": "Page",
                 "id": post.ap_id,
                 "attributedTo": post.author.profile_id(),
-                "actor": post.author.profile_id(),
                 "to": [
                     f"https://{current_app.config['SERVER_NAME']}/c/{community.name}",
                     "https://www.w3.org/ns/activitystreams#Public"
