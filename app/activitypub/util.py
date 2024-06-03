@@ -133,7 +133,7 @@ def post_to_activity(post: Post, community: Community):
         ],
         "object": {
             "id": create_id,
-            "actor": post.author.profile_id(),
+            "actor": post.author.profile_id() if post.author.is_local() else post.author.ap_public_url,
             "to": [
                 "https://www.w3.org/ns/activitystreams#Public"
             ],
