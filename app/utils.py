@@ -191,9 +191,12 @@ def allowlist_html(html: str) -> str:
         url = False
         for t in re_url.split(tag.string):
             if re_url.match(t):
-                a = soup.new_tag("a", href=t)
-                a.string = t
+                href = t[:-1] if t[-1] in ['.', ',', ')', '!', ':', ';', '?'] else t
+                a = soup.new_tag("a", href=href)
+                a.string = href
                 tags.append(a)
+                if href != t:
+                    tags.append(t[-1])
                 url = True
             else:
                 tags.append(t)
