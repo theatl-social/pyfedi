@@ -560,9 +560,9 @@ def send_deletion_requests(user_id):
         instances = Instance.query.filter(Instance.dormant == False).all()
         payload = {
             "@context": default_context(),
-            "actor": user.profile_id(),
-            "id": f"{user.profile_id()}#delete",
-            "object": user.profile_id(),
+            "actor": user.public_url(),
+            "id": f"{user.public_url()}#delete",
+            "object": user.public_url(),
             "to": [
                 "https://www.w3.org/ns/activitystreams#Public"
             ],
@@ -570,7 +570,7 @@ def send_deletion_requests(user_id):
         }
         for instance in instances:
             if instance.inbox and instance.online() and instance.id != 1: # instance id 1 is always the current instance
-                post_request(instance.inbox, payload, user.private_key, f"{user.profile_id()}#main-key")
+                post_request(instance.inbox, payload, user.private_key, f"{user.public_url()}#main-key")
 
         sleep(5)
 
@@ -704,14 +704,14 @@ def import_settings_task(user_id, filename):
                     db.session.add(join_request)
                     db.session.commit()
                     follow = {
-                        "actor": current_user.profile_id(),
-                        "to": [community.ap_profile_id],
-                        "object": community.ap_profile_id,
+                        "actor": current_user.public_url(),
+                        "to": [community.public_url()],
+                        "object": community.public_url(),
                         "type": "Follow",
                         "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
                     }
                     success = post_request(community.ap_inbox_url, follow, user.private_key,
-                                           user.profile_id() + '#main-key')
+                                           user.public_url() + '#main-key')
                     if not success:
                         sleep(5)    # give them a rest
                 else:  # for local communities, joining is instant

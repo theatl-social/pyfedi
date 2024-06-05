@@ -30,26 +30,26 @@ def send_message(message: str, conversation_id: int) -> ChatMessage:
             else:
                 # Federate reply
                 reply_json = {
-                    "actor": current_user.profile_id(),
+                    "actor": current_user.public_url(),
                     "id": f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}",
                     "object": {
-                        "attributedTo": current_user.profile_id(),
+                        "attributedTo": current_user.public_url(),
                         "content": reply.body_html,
                         "id": f"https://{current_app.config['SERVER_NAME']}/private_message/{reply.id}",
                         "mediaType": "text/html",
                         "published": utcnow().isoformat() + 'Z',  # Lemmy is inconsistent with the date format they use
                         "to": [
-                            recipient.profile_id()
+                            recipient.public_url()
                         ],
                         "type": "ChatMessage"
                     },
                     "to": [
-                        recipient.profile_id()
+                        recipient.public_url()
                     ],
                     "type": "Create"
                 }
                 success = post_request(recipient.ap_inbox_url, reply_json, current_user.private_key,
-                                       current_user.profile_id() + '#main-key')
+                                       current_user.public_url() + '#main-key')
                 if not success:
                     flash(_('Message failed to send to %(name)s.', name=recipient.link()), 'error')
 

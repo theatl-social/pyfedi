@@ -386,14 +386,14 @@ def subscribe(actor):
                 db.session.add(join_request)
                 db.session.commit()
                 follow = {
-                    "actor": current_user.profile_id(),
-                    "to": [community.ap_profile_id],
-                    "object": community.ap_profile_id,
+                    "actor": current_user.public_url(),
+                    "to": [community.public_url()],
+                    "object": community.public_url(),
                     "type": "Follow",
                     "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
                 }
                 success = post_request(community.ap_inbox_url, follow, current_user.private_key,
-                                                           current_user.profile_id() + '#main-key')
+                                                           current_user.public_url() + '#main-key')
                 if not success:
                     flash(_("There was a problem while trying to communicate with remote server. If other people have already joined this community it won't matter."), 'error')
             # for local communities, joining is instant
@@ -426,21 +426,21 @@ def unsubscribe(actor):
                 if '@' in actor:    # this is a remote community, so activitypub is needed
                     undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
                     follow = {
-                        "actor": current_user.profile_id(),
-                        "to": [community.ap_profile_id],
-                        "object": community.ap_profile_id,
+                        "actor": current_user.public_url(),
+                        "to": [community.public_url()],
+                        "object": community.public_url(),
                         "type": "Follow",
                         "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
                     }
                     undo = {
-                        'actor': current_user.profile_id(),
-                        'to': [community.ap_profile_id],
+                        'actor': current_user.public_url(),
+                        'to': [community.public_url()],
                         'type': 'Undo',
                         'id': undo_id,
                         'object': follow
                     }
                     success = post_request(community.ap_inbox_url, undo, current_user.private_key,
-                                                               current_user.profile_id() + '#main-key')
+                                                               current_user.public_url() + '#main-key')
                     if not success:
                         flash('There was a problem while trying to unsubscribe', 'error')
 
@@ -478,14 +478,14 @@ def join_then_add(actor):
             db.session.add(join_request)
             db.session.commit()
             follow = {
-                "actor": current_user.profile_id(),
-                "to": [community.ap_profile_id],
-                "object": community.ap_profile_id,
+                "actor": current_user.public_url(),
+                "to": [community.public_url()],
+                "object": community.public_url(),
                 "type": "Follow",
                 "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
             }
             success = post_request(community.ap_inbox_url, follow, current_user.private_key,
-                                   current_user.profile_id() + '#main-key')
+                                   current_user.public_url() + '#main-key')
         member = CommunityMember(user_id=current_user.id, community_id=community.id)
         db.session.add(member)
         db.session.commit()
@@ -952,7 +952,7 @@ def federate_post(community, post):
         page['oneOf' if poll.mode == 'single' else 'anyOf'] = choices
     if not community.is_local():  # this is a remote community - send the post to the instance that hosts it
         success = post_request(community.ap_inbox_url, create, current_user.private_key,
-                               current_user.profile_id() + '#main-key')
+                               current_user.public_url() + '#main-key')
         if success:
             flash(_('Your post to %(name)s has been made.', name=community.title))
         else:
@@ -1067,7 +1067,7 @@ def federate_post_to_user_followers(post):
     instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower, UserFollower.remote_user_id == User.id)
     instances = instances.filter(UserFollower.local_user_id == post.user_id).filter(Instance.gone_forever == False)
     for i in instances:
-        post_request(i.inbox, create, current_user.private_key, current_user.profile_id() + '#main-key')
+        post_request(i.inbox, create, current_user.private_key, current_user.public_url() + '#main-key')
 
 
 @bp.route('/community/<int:community_id>/report', methods=['GET', 'POST'])

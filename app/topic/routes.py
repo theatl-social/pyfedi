@@ -273,11 +273,11 @@ def send_community_follow(community_id, join_request_id, user_id):
         user = User.query.get(user_id)
         community = Community.query.get(community_id)
         follow = {
-            "actor": current_user.profile_id(),
-            "to": [community.ap_profile_id],
-            "object": community.ap_profile_id,
+            "actor": current_user.public_url(),
+            "to": [community.public_url()],
+            "object": community.public_url(),
             "type": "Follow",
             "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request_id}"
         }
         success = post_request(community.ap_inbox_url, follow, user.private_key,
-                               user.profile_id() + '#main-key')
+                               user.public_url() + '#main-key')

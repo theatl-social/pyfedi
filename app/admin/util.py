@@ -34,9 +34,9 @@ def unsubscribe_from_everything_then_delete_task(user_id):
             instances = Instance.query.filter(Instance.dormant == False).all()
             payload = {
                 "@context": default_context(),
-                "actor": user.profile_id(),
-                "id": f"{user.profile_id()}#delete",
-                "object": user.profile_id(),
+                "actor": user.public_url(),
+                "id": f"{user.public_url()}#delete",
+                "object": user.public_url(),
                 "to": [
                     "https://www.w3.org/ns/activitystreams#Public"
                 ],
@@ -44,7 +44,7 @@ def unsubscribe_from_everything_then_delete_task(user_id):
             }
             for instance in instances:
                 if instance.inbox and instance.online() and instance.id != 1:  # instance id 1 is always the current instance
-                    post_request(instance.inbox, payload, user.private_key, f"{user.profile_id()}#main-key")
+                    post_request(instance.inbox, payload, user.private_key, f"{user.public_url()}#main-key")
 
         sleep(5)
 
@@ -57,15 +57,15 @@ def unsubscribe_from_everything_then_delete_task(user_id):
 def unsubscribe_from_community(community, user):
     undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
     follow = {
-        "actor": f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}",
-        "to": [community.ap_profile_id],
-        "object": community.ap_profile_id,
+        "actor": user.public_url(),
+        "to": [community.public_url()],
+        "object": community.public_url(),
         "type": "Follow",
         "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
     }
     undo = {
-        'actor': user.profile_id(),
-        'to': [community.ap_profile_id],
+        'actor': user.public_url(),
+        'to': [community.public_url()],
         'type': 'Undo',
         'id': undo_id,
         'object': follow
@@ -74,7 +74,7 @@ def unsubscribe_from_community(community, user):
                               activity_json=json.dumps(undo), result='processing')
     db.session.add(activity)
     db.session.commit()
-    post_request(community.ap_inbox_url, undo, user.private_key, user.profile_id() + '#main-key')
+    post_request(community.ap_inbox_url, undo, user.private_key, user.public_url() + '#main-key')
     activity.result = 'success'
     db.session.commit()
 

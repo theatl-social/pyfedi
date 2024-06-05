@@ -756,7 +756,7 @@ class User(UserMixin, db.Model):
         if self.ap_followers_url:
             return self.ap_followers_url
         else:
-            return self.profile_id() + '/followers'
+            return self.public_url() + '/followers'
 
     def get_reset_password_token(self, expires_in=600):
         return jwt.encode(
@@ -1118,6 +1118,9 @@ class PostReply(db.Model):
         else:
             return f"https://{current_app.config['SERVER_NAME']}/comment/{self.id}"
 
+    def public_url(self):
+        return self.profile_id()
+
     # the ap_id of the parent object, whether it's another PostReply or a Post
     def in_reply_to(self):
         if self.parent_id is None:
@@ -1129,10 +1132,10 @@ class PostReply(db.Model):
     # the AP profile of the person who wrote the parent object, which could be another PostReply or a Post
     def to(self):
         if self.parent_id is None:
-            return self.post.author.profile_id()
+            return self.post.author.public_url()
         else:
             parent = PostReply.query.get(self.parent_id)
-            return parent.author.profile_id()
+            return parent.author.public_url()
 
     def delete_dependencies(self):
         for child_reply in self.child_replies():

@@ -133,14 +133,14 @@ def post_to_activity(post: Post, community: Community):
         ],
         "object": {
             "id": create_id,
-            "actor": post.author.profile_id() if post.author.is_local() else post.author.ap_public_url,
+            "actor": post.author.public_url(),
             "to": [
                 "https://www.w3.org/ns/activitystreams#Public"
             ],
             "object": {
                 "type": "Page",
                 "id": post.ap_id,
-                "attributedTo": post.author.profile_id() if post.author.is_local() else post.author.ap_public_url,
+                "attributedTo": post.author.public_url(),
                 "to": [
                     f"https://{current_app.config['SERVER_NAME']}/c/{community.name}",
                     "https://www.w3.org/ns/activitystreams#Public"
@@ -2283,7 +2283,7 @@ def lemmy_site_data():
             "banned": admin.banned,
             "published": admin.created.isoformat() + 'Z',
             "updated": admin.created.isoformat() + 'Z',
-            "actor_id": admin.profile_id(),
+            "actor_id": admin.public_url(),
             "local": True,
             "deleted": admin.deleted,
             "matrix_user_id": admin.matrix_user_id,
@@ -2571,8 +2571,8 @@ def inform_followers_of_post_update_task(post_id: int, sending_instance_id: int)
     update_json = {
         'id': f"https://{current_app.config['SERVER_NAME']}/activities/update/{gibberish(15)}",
         'type': 'Update',
-        'actor': post.author.profile_id(),
-        'audience': post.community.profile_id(),
+        'actor': post.author.public_url(),
+        'audience': post.community.public_url(),
         'to': ['https://www.w3.org/ns/activitystreams#Public'],
         'published': ap_datetime(utcnow()),
         'cc': [
@@ -2589,7 +2589,7 @@ def inform_followers_of_post_update_task(post_id: int, sending_instance_id: int)
         for i in instances:
             if sending_instance_id != i.id:
                 try:
-                    post_request(i.inbox, update_json, post.author.private_key, post.author.profile_id() + '#main-key')
+                    post_request(i.inbox, update_json, post.author.private_key, post.author.public_url() + '#main-key')
                 except Exception:
                     pass
 
@@ -2600,6 +2600,6 @@ def inform_followers_of_post_update_task(post_id: int, sending_instance_id: int)
     for i in instances:
         if sending_instance_id != i.id:
             try:
-                post_request(i.inbox, update_json, post.author.private_key, post.author.profile_id() + '#main-key')
+                post_request(i.inbox, update_json, post.author.private_key, post.author.public_url() + '#main-key')
             except Exception:
                 pass

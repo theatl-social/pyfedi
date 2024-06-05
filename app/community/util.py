@@ -548,9 +548,9 @@ def delete_post_from_community_task(post_id):
         delete_json = {
             'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
             'type': 'Delete',
-            'actor': current_user.profile_id(),
-            'audience': post.community.profile_id(),
-            'to': [post.community.profile_id(), 'https://www.w3.org/ns/activitystreams#Public'],
+            'actor': current_user.public_url(),
+            'audience': post.community.public_url(),
+            'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
             'published': ap_datetime(utcnow()),
             'cc': [
                 current_user.followers_url()
@@ -560,7 +560,7 @@ def delete_post_from_community_task(post_id):
 
         if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
             success = post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
-                                   current_user.profile_id() + '#main-key')
+                                   current_user.public_url() + '#main-key')
         else:  # local community - send it to followers on remote instances
             announce = {
                 "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
@@ -608,9 +608,9 @@ def delete_post_reply_from_community_task(post_reply_id):
             delete_json = {
                 'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
                 'type': 'Delete',
-                'actor': current_user.profile_id(),
-                'audience': post.community.profile_id(),
-                'to': [post.community.profile_id(), 'https://www.w3.org/ns/activitystreams#Public'],
+                'actor': current_user.public_url(),
+                'audience': post.community.public_url(),
+                'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
                 'published': ap_datetime(utcnow()),
                 'cc': [
                     current_user.followers_url()
@@ -620,7 +620,7 @@ def delete_post_reply_from_community_task(post_reply_id):
 
             if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
                 success = post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
-                                       current_user.profile_id() + '#main-key')
+                                       current_user.public_url() + '#main-key')
 
             else:  # local community - send it to followers on remote instances
                 announce = {

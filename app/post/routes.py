@@ -145,7 +145,7 @@ def show_post(post_id: int):
         # federation
         reply_json = {
             'type': 'Note',
-            'id': reply.profile_id(),
+            'id': reply.public_url(),
             'attributedTo': current_user.public_url(),
             'to': [
                 'https://www.w3.org/ns/activitystreams#Public'
@@ -154,7 +154,7 @@ def show_post(post_id: int):
                 community.public_url(), post.author.public_url()
             ],
             'content': reply.body_html,
-            'inReplyTo': post.profile_id(),
+            'inReplyTo': post.public_url(),
             'mediaType': 'text/html',
             'published': ap_datetime(utcnow()),
             'distinguished': False,
@@ -189,7 +189,7 @@ def show_post(post_id: int):
         }
         if not community.is_local():    # this is a remote community, send it to the instance that hosts it
             success = post_request(community.ap_inbox_url, create_json, current_user.private_key,
-                                                       current_user.profile_id() + '#main-key')
+                                                       current_user.public_url() + '#main-key')
             if not success:
                 flash('Failed to send to remote instance', 'error')
         else:                       # local community - send it to followers on remote instances
@@ -215,12 +215,12 @@ def show_post(post_id: int):
         if not post.author.is_local() and post.author.ap_domain != community.ap_domain:
             if not community.is_local() or (community.is_local and not community.has_followers_from_domain(post.author.ap_domain)):
                 success = post_request(post.author.ap_inbox_url, create_json, current_user.private_key,
-                                                       current_user.profile_id() + '#main-key')
+                                                       current_user.public_url() + '#main-key')
                 if not success:
                     # sending to shared inbox is good enough for Mastodon, but Lemmy will reject it the local community has no followers
                     personal_inbox = post.author.public_url() + '/inbox'
                     post_request(personal_inbox, create_json, current_user.private_key,
-                                                       current_user.profile_id() + '#main-key')
+                                                       current_user.public_url() + '#main-key')
 
         return redirect(url_for('activitypub.post_ap', post_id=post_id))  # redirect to current page to avoid refresh resubmitting the form
     else:
@@ -387,26 +387,26 @@ def post_vote(post_id: int, vote_direction):
     if not post.community.local_only:
         if undo:
             action_json = {
-                'actor': current_user.profile_id(),
+                'actor': current_user.public_url(),
                 'type': 'Undo',
                 'id': f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}",
-                'audience': post.community.profile_id(),
+                'audience': post.community.public_url(),
                 'object': {
-                    'actor': current_user.profile_id(),
-                    'object': post.profile_id(),
+                    'actor': current_user.public_url(),
+                    'object': post.public_url(),
                     'type': undo,
                     'id': f"https://{current_app.config['SERVER_NAME']}/activities/{undo.lower()}/{gibberish(15)}",
-                    'audience': post.community.profile_id()
+                    'audience': post.community.public_url()
                 }
             }
         else:
             action_type = 'Like' if vote_direction == 'upvote' else 'Dislike'
             action_json = {
-                'actor': current_user.profile_id(),
-                'object': post.profile_id(),
+                'actor': current_user.public_url(),
+                'object': post.public_url(),
                 'type': action_type,
                 'id': f"https://{current_app.config['SERVER_NAME']}/activities/{action_type.lower()}/{gibberish(15)}",
-                'audience': post.community.profile_id()
+                'audience': post.community.public_url()
             }
         if post.community.is_local():
             announce = {
@@ -415,7 +415,7 @@ def post_vote(post_id: int, vote_direction):
                     "to": [
                         "https://www.w3.org/ns/activitystreams#Public"
                     ],
-                    "actor": post.community.ap_profile_id,
+                    "actor": post.community.public_url(),
                     "cc": [
                         post.community.ap_followers_url
                     ],
@@ -427,7 +427,7 @@ def post_vote(post_id: int, vote_direction):
                     send_to_remote_instance(instance.id, post.community.id, announce)
         else:
             success = post_request_in_background(post.community.ap_inbox_url, action_json, current_user.private_key,
-                                                            current_user.profile_id() + '#main-key')
+                                                            current_user.public_url() + '#main-key')
             if not success:
                 flash('Failed to send vote', 'warning')
 
@@ -499,26 +499,26 @@ def comment_vote(comment_id, vote_direction):
     if not comment.community.local_only:
         if undo:
             action_json = {
-                'actor': current_user.profile_id(),
+                'actor': current_user.public_url(),
                 'type': 'Undo',
                 'id': f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}",
-                'audience': comment.community.profile_id(),
+                'audience': comment.community.public_url(),
                 'object': {
-                    'actor': current_user.profile_id(),
-                    'object': comment.profile_id(),
+                    'actor': current_user.public_url(),
+                    'object': comment.public_url(),
                     'type': undo,
                     'id': f"https://{current_app.config['SERVER_NAME']}/activities/{undo.lower()}/{gibberish(15)}",
-                    'audience': comment.community.profile_id()
+                    'audience': comment.community.public_url()
                 }
             }
         else:
             action_type = 'Like' if vote_direction == 'upvote' else 'Dislike'
             action_json = {
-                'actor': current_user.profile_id(),
-                'object': comment.profile_id(),
+                'actor': current_user.public_url(),
+                'object': comment.public_url(),
                 'type': action_type,
                 'id': f"https://{current_app.config['SERVER_NAME']}/activities/{action_type.lower()}/{gibberish(15)}",
-                'audience': comment.community.profile_id()
+                'audience': comment.community.public_url()
             }
         if comment.community.is_local():
             announce = {
@@ -539,7 +539,7 @@ def comment_vote(comment_id, vote_direction):
                     send_to_remote_instance(instance.id, comment.community.id, announce)
         else:
             success = post_request_in_background(comment.community.ap_inbox_url, action_json, current_user.private_key,
-                                                            current_user.profile_id() + '#main-key')
+                                                            current_user.public_url() + '#main-key')
             if not success:
                 flash('Failed to send vote', 'warning')
 
@@ -592,7 +592,7 @@ def poll_vote(post_id):
                   'object': {
                     'attributedTo': current_user.public_url(),
                     'id': f"https://{current_app.config['SERVER_NAME']}/activities/vote/{gibberish(15)}",
-                    'inReplyTo': post.profile_id(),
+                    'inReplyTo': post.public_url(),
                     'name': pv.choice_text,
                     'to': post.author.public_url(),
                     'type': 'Note'
@@ -602,7 +602,7 @@ def poll_vote(post_id):
                 }
                 try:
                     post_request(post.author.ap_inbox_url, pollvote_json, current_user.private_key,
-                                                          current_user.profile_id() + '#main-key')
+                                                          current_user.public_url() + '#main-key')
                 except Exception:
                     pass
 
@@ -741,7 +741,7 @@ def add_reply(post_id: int, comment_id: int):
         if not post.community.local_only:
             reply_json = {
                 'type': 'Note',
-                'id': reply.profile_id(),
+                'id': reply.public_url(),
                 'attributedTo': current_user.public_url(),
                 'to': [
                     'https://www.w3.org/ns/activitystreams#Public'
@@ -751,8 +751,8 @@ def add_reply(post_id: int, comment_id: int):
                     in_reply_to.author.public_url()
                 ],
                 'content': reply.body_html,
-                'inReplyTo': in_reply_to.profile_id(),
-                'url': reply.profile_id(),
+                'inReplyTo': in_reply_to.public_url(),
+                'url': reply.public_url(),
                 'mediaType': 'text/html',
                 'published': ap_datetime(utcnow()),
                 'distinguished': False,
@@ -793,7 +793,7 @@ def add_reply(post_id: int, comment_id: int):
                 ]
             if not post.community.is_local():    # this is a remote community, send it to the instance that hosts it
                 success = post_request(post.community.ap_inbox_url, create_json, current_user.private_key,
-                                                           current_user.profile_id() + '#main-key')
+                                                           current_user.public_url() + '#main-key')
                 if not success:
                     flash('Failed to send reply', 'error')
             else:                       # local community - send it to followers on remote instances
@@ -819,12 +819,12 @@ def add_reply(post_id: int, comment_id: int):
             if not in_reply_to.author.is_local() and in_reply_to.author.ap_domain != reply.community.ap_domain:
                 if not post.community.is_local() or (post.community.is_local and not post.community.has_followers_from_domain(in_reply_to.author.ap_domain)):
                     success = post_request(in_reply_to.author.ap_inbox_url, create_json, current_user.private_key,
-                                                           current_user.profile_id() + '#main-key')
+                                                           current_user.public_url() + '#main-key')
                     if not success:
                         # sending to shared inbox is good enough for Mastodon, but Lemmy will reject it the local community has no followers
                         personal_inbox = in_reply_to.author.public_url() + '/inbox'
                         post_request(personal_inbox, create_json, current_user.private_key,
-                                                       current_user.profile_id() + '#main-key')
+                                                       current_user.public_url() + '#main-key')
 
         if reply.depth <= constants.THREAD_CUTOFF_DEPTH:
             return redirect(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{reply.id}'))
@@ -1312,9 +1312,9 @@ def federate_post_update(post):
     update_json = {
         'id': f"https://{current_app.config['SERVER_NAME']}/activities/update/{gibberish(15)}",
         'type': 'Update',
-        'actor': current_user.profile_id(),
-        'audience': post.community.profile_id(),
-        'to': [post.community.profile_id(), 'https://www.w3.org/ns/activitystreams#Public'],
+        'actor': current_user.public_url(),
+        'audience': post.community.public_url(),
+        'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
         'published': ap_datetime(utcnow()),
         'cc': [
             current_user.followers_url()
@@ -1356,7 +1356,7 @@ def federate_post_update(post):
 
     if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
         success = post_request(post.community.ap_inbox_url, update_json, current_user.private_key,
-                               current_user.profile_id() + '#main-key')
+                               current_user.public_url() + '#main-key')
         if not success:
             flash('Failed to send edit to remote server', 'error')
     else:  # local community - send it to followers on remote instances
@@ -1458,7 +1458,7 @@ def federate_post_edit_to_user_followers(post):
     instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower, UserFollower.remote_user_id == User.id)
     instances = instances.filter(UserFollower.local_user_id == post.user_id)
     for i in instances:
-        post_request(i.inbox, update, current_user.private_key, current_user.profile_id() + '#main-key')
+        post_request(i.inbox, update, current_user.private_key, current_user.public_url() + '#main-key')
 
 
 @bp.route('/post/<int:post_id>/delete', methods=['GET', 'POST'])
@@ -1483,9 +1483,9 @@ def post_delete(post_id: int):
         delete_json = {
             'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
             'type': 'Delete',
-            'actor': current_user.profile_id(),
-            'audience': post.community.profile_id(),
-            'to': [post.community.profile_id(), 'https://www.w3.org/ns/activitystreams#Public'],
+            'actor': current_user.public_url(),
+            'audience': post.community.public_url(),
+            'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
             'published': ap_datetime(utcnow()),
             'cc': [
                 current_user.followers_url()
@@ -1499,7 +1499,7 @@ def post_delete(post_id: int):
         if not community.local_only:
             if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
                 success = post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
-                                       current_user.profile_id() + '#main-key')
+                                       current_user.public_url() + '#main-key')
                 if not success:
                     flash('Failed to send delete to remote server', 'error')
             else:  # local community - send it to followers on remote instances
@@ -1527,7 +1527,7 @@ def post_delete(post_id: int):
             instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower, UserFollower.remote_user_id == User.id)
             instances = instances.filter(UserFollower.local_user_id == post.user_id)
             for i in instances:
-                post_request(i.inbox, delete_json, current_user.private_key, current_user.profile_id() + '#main-key')
+                post_request(i.inbox, delete_json, current_user.private_key, current_user.public_url() + '#main-key')
 
     return redirect(url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not None else community.name))
 
@@ -1543,14 +1543,14 @@ def post_restore(post_id: int):
         # Federate un-delete
         if post.is_local():
             delete_json = {
-              "actor": current_user.profile_id(),
+              "actor": current_user.public_url(),
               "to": ["https://www.w3.org/ns/activitystreams#Public"],
               "object": {
                   'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
                   'type': 'Delete',
-                  'actor': current_user.profile_id(),
-                  'audience': post.community.profile_id(),
-                  'to': [post.community.profile_id(), 'https://www.w3.org/ns/activitystreams#Public'],
+                  'actor': current_user.public_url(),
+                  'audience': post.community.public_url(),
+                  'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
                   'published': ap_datetime(utcnow()),
                   'cc': [
                       current_user.followers_url()
@@ -1559,8 +1559,8 @@ def post_restore(post_id: int):
                   'uri': post.ap_id,
                   "summary": "bad post",
               },
-              "cc": [post.community.profile_id()],
-              "audience": post.author.profile_id(),
+              "cc": [post.community.public_url()],
+              "audience": post.author.public_url(),
               "type": "Undo",
               "id": f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}"
             }
@@ -1571,7 +1571,7 @@ def post_restore(post_id: int):
                 "to": [
                     "https://www.w3.org/ns/activitystreams#Public"
                 ],
-                "actor": post.community.ap_profile_id,
+                "actor": post.community.public_url(),
                 "cc": [
                     post.community.ap_followers_url
                 ],
@@ -1626,21 +1626,21 @@ def post_report(post_id: int):
             if form.description.data:
                 summary += ' - ' + form.description.data
             report_json = {
-              "actor": current_user.profile_id(),
-              "audience": post.community.profile_id(),
+              "actor": current_user.public_url(),
+              "audience": post.community.public_url(),
               "content": None,
               "id": f"https://{current_app.config['SERVER_NAME']}/activities/flag/{gibberish(15)}",
               "object": post.ap_id,
               "summary": summary,
               "to": [
-                post.community.profile_id()
+                post.community.public_url()
               ],
               "type": "Flag"
             }
             instance = Instance.query.get(post.community.instance_id)
             if post.community.ap_inbox_url and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
                 success = post_request(post.community.ap_inbox_url, report_json, current_user.private_key,
-                                       current_user.profile_id() + '#main-key')
+                                       current_user.public_url() + '#main-key')
                 if not success:
                     flash('Failed to send report to remote server', 'error')
 
@@ -1762,14 +1762,14 @@ def post_reply_report(post_id: int, comment_id: int):
             if form.description.data:
                 summary += ' - ' + form.description.data
             report_json = {
-                "actor": current_user.profile_id(),
-                "audience": post.community.profile_id(),
+                "actor": current_user.public_url(),
+                "audience": post.community.public_url(),
                 "content": None,
                 "id": f"https://{current_app.config['SERVER_NAME']}/activities/flag/{gibberish(15)}",
                 "object": post_reply.ap_id,
                 "summary": summary,
                 "to": [
-                    post.community.profile_id()
+                    post.community.public_url()
                 ],
                 "type": "Flag"
             }
@@ -1777,7 +1777,7 @@ def post_reply_report(post_id: int, comment_id: int):
             if post.community.ap_inbox_url and not current_user.has_blocked_instance(
                     instance.id) and not instance_banned(instance.domain):
                 success = post_request(post.community.ap_inbox_url, report_json, current_user.private_key,
-                                       current_user.profile_id() + '#main-key')
+                                       current_user.public_url() + '#main-key')
                 if not success:
                     flash('Failed to send report to remote server', 'error')
 
@@ -1852,7 +1852,7 @@ def post_reply_edit(post_id: int, comment_id: int):
             if not post.community.local_only:
                 reply_json = {
                     'type': 'Note',
-                    'id': post_reply.profile_id(),
+                    'id': post_reply.public_url(),
                     'attributedTo': current_user.public_url(),
                     'to': [
                         'https://www.w3.org/ns/activitystreams#Public'
@@ -1862,8 +1862,8 @@ def post_reply_edit(post_id: int, comment_id: int):
                         in_reply_to.author.public_url()
                     ],
                     'content': post_reply.body_html,
-                    'inReplyTo': in_reply_to.profile_id(),
-                    'url': post_reply.profile_id(),
+                    'inReplyTo': in_reply_to.public_url(),
+                    'url': post_reply.public_url(),
                     'mediaType': 'text/html',
                     'published': ap_datetime(post_reply.posted_at),
                     'updated': ap_datetime(post_reply.edited_at),
@@ -1909,7 +1909,7 @@ def post_reply_edit(post_id: int, comment_id: int):
                     ]
                 if not post.community.is_local():    # this is a remote community, send it to the instance that hosts it
                     success = post_request(post.community.ap_inbox_url, update_json, current_user.private_key,
-                                                               current_user.profile_id() + '#main-key')
+                                                               current_user.public_url() + '#main-key')
                     if not success:
                         flash('Failed to send send edit to remote server', 'error')
                 else:                       # local community - send it to followers on remote instances
@@ -1935,12 +1935,12 @@ def post_reply_edit(post_id: int, comment_id: int):
                 if not in_reply_to.author.is_local() and in_reply_to.author.ap_domain != post_reply.community.ap_domain:
                     if not post.community.is_local() or (post.community.is_local and not post.community.has_followers_from_domain(in_reply_to.author.ap_domain)):
                         success = post_request(in_reply_to.author.ap_inbox_url, update_json, current_user.private_key,
-                                                               current_user.profile_id() + '#main-key')
+                                                               current_user.public_url() + '#main-key')
                         if not success:
                             # sending to shared inbox is good enough for Mastodon, but Lemmy will reject it the local community has no followers
                             personal_inbox = in_reply_to.author.public_url() + '/inbox'
                             post_request(personal_inbox, update_json, current_user.private_key,
-                                                           current_user.profile_id() + '#main-key')
+                                                           current_user.public_url() + '#main-key')
 
             return redirect(url_for('activitypub.post_ap', post_id=post.id))
         else:
@@ -1978,9 +1978,9 @@ def post_reply_delete(post_id: int, comment_id: int):
             delete_json = {
                 'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
                 'type': 'Delete',
-                'actor': current_user.profile_id(),
-                'audience': post.community.profile_id(),
-                'to': [post.community.profile_id(), 'https://www.w3.org/ns/activitystreams#Public'],
+                'actor': current_user.public_url(),
+                'audience': post.community.public_url(),
+                'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
                 'published': ap_datetime(utcnow()),
                 'cc': [
                     current_user.followers_url()
@@ -1992,7 +1992,7 @@ def post_reply_delete(post_id: int, comment_id: int):
 
             if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
                 success = post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
-                                       current_user.profile_id() + '#main-key')
+                                       current_user.public_url() + '#main-key')
                 if not success:
                     flash('Failed to send delete to remote server', 'error')
             else:  # local community - send it to followers on remote instances

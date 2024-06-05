@@ -27,9 +27,9 @@ def purge_user_then_delete_task(user_id):
                 delete_json = {
                     'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
                     'type': 'Delete',
-                    'actor': user.profile_id(),
-                    'audience': post.community.profile_id(),
-                    'to': [post.community.profile_id(), 'https://www.w3.org/ns/activitystreams#Public'],
+                    'actor': user.public_url(),
+                    'audience': post.community.public_url(),
+                    'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
                     'published': ap_datetime(utcnow()),
                     'cc': [
                         user.followers_url()
@@ -39,7 +39,7 @@ def purge_user_then_delete_task(user_id):
 
                 if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
                     success = post_request(post.community.ap_inbox_url, delete_json, user.private_key,
-                                           user.profile_id() + '#main-key')
+                                           user.public_url() + '#main-key')
 
                 else:  # local community - send it to followers on remote instances, using Announce
                     announce = {
@@ -81,7 +81,7 @@ def purge_user_then_delete_task(user_id):
             }
             for instance in instances:
                 if instance.inbox and instance.id != 1:
-                    post_request(instance.inbox, payload, user.private_key, user.profile_id() + '#main-key')
+                    post_request(instance.inbox, payload, user.private_key, user.public_url() + '#main-key')
 
         sleep(100)                                  # wait a while for any related activitypub traffic to die down.
         user.deleted = True
@@ -93,15 +93,15 @@ def purge_user_then_delete_task(user_id):
 def unsubscribe_from_community(community, user):
     undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
     follow = {
-        "actor": user.profile_id(),
-        "to": [community.ap_profile_id],
-        "object": community.ap_profile_id,
+        "actor": user.public_url(),
+        "to": [community.public_url()],
+        "object": community.public_url(),
         "type": "Follow",
         "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
     }
     undo = {
-        'actor': user.profile_id(),
-        'to': [community.ap_profile_id],
+        'actor': user.public_url(),
+        'to': [community.public_url()],
         'type': 'Undo',
         'id': undo_id,
         'object': follow
@@ -110,7 +110,7 @@ def unsubscribe_from_community(community, user):
                               activity_json=json.dumps(undo), result='processing')
     db.session.add(activity)
     db.session.commit()
-    post_request(community.ap_inbox_url, undo, user.private_key, user.profile_id() + '#main-key')
+    post_request(community.ap_inbox_url, undo, user.private_key, user.public_url() + '#main-key')
     activity.result = 'success'
     db.session.commit()
 

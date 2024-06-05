@@ -255,7 +255,7 @@ def user_profile(actor):
             server = current_app.config['SERVER_NAME']
             actor_data = {  "@context": default_context(),
                             "type": "Person" if not user.bot else "Service",
-                            "id": user.profile_id(),
+                            "id": user.public_url(),
                             "preferredUsername": actor.lower(),
                             "name": user.title if user.title else user.user_name,
                             "inbox": f"https://{server}/u/{actor.lower()}/inbox",
@@ -264,8 +264,8 @@ def user_profile(actor):
                             "indexable": user.indexable,
                             "manuallyApprovesFollowers": False if not user.ap_manually_approves_followers else user.ap_manually_approves_followers,
                             "publicKey": {
-                                "id": f"https://{server}/u/{actor.lower()}#main-key",
-                                "owner": f"https://{server}/u/{actor.lower()}",
+                                "id": f"{user.public_url()}#main-key",
+                                "owner": user.public_url(),
                                 "publicKeyPem": user.public_key      # .replace("\n", "\\n")    #LOOKSWRONG
                             },
                             "endpoints": {
@@ -1187,13 +1187,13 @@ def announce_activity_to_followers(community, creator, activity):
 
     announce_activity = {
         '@context': default_context(),
-        "actor": community.profile_id(),
+        "actor": community.public_url(),
         "to": [
             "https://www.w3.org/ns/activitystreams#Public"
         ],
         "object": activity,
         "cc": [
-            f"{community.profile_id()}/followers"
+            f"{community.public_url()}/followers"
         ],
         "type": "Announce",
         "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
@@ -1390,7 +1390,7 @@ def process_user_follow_request(request_json, activitypublog_id, remote_user_id)
             "type": "Accept",
             "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)
         }
-        if post_request(remote_user.ap_inbox_url, accept, local_user.private_key, f"{local_user.profile_id()}#main-key"):
+        if post_request(remote_user.ap_inbox_url, accept, local_user.private_key, f"{local_user.public_url()}#main-key"):
             activity_log.result = 'success'
         else:
             activity_log.exception_message = 'Error sending Accept'
@@ -1461,21 +1461,21 @@ def comment_ap(comment_id):
             "@context": default_context(),
             "type": "Note",
             "id": reply.ap_id,
-            "attributedTo": reply.author.profile_id(),
+            "attributedTo": reply.author.public_url(),
             "inReplyTo": reply.in_reply_to(),
             "to": [
                 "https://www.w3.org/ns/activitystreams#Public",
                 reply.to()
             ],
             "cc": [
-                reply.community.profile_id(),
+                reply.community.public_url(),
                 reply.author.followers_url()
             ],
             'content': reply.body_html,
             'mediaType': 'text/html',
             'published': ap_datetime(reply.created_at),
             'distinguished': False,
-            'audience': reply.community.profile_id(),
+            'audience': reply.community.public_url(),
             'language': {
                 'identifier': reply.language_code(),
                 'name': reply.language_name()
