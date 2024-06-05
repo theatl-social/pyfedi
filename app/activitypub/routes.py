@@ -1476,8 +1476,7 @@ def post_ap2(post_id):
 def post_ap(post_id):
     if request.method == 'GET' and is_activitypub_request():
         post = Post.query.get_or_404(post_id)
-        post_data = post_to_activity(post, post.community)
-        post_data = post_data['object']['object']
+        post_data = post_to_page(post)
         post_data['@context'] = default_context()
         resp = jsonify(post_data)
         resp.content_type = 'application/activity+json'

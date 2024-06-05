@@ -137,31 +137,7 @@ def post_to_activity(post: Post, community: Community):
             "to": [
                 "https://www.w3.org/ns/activitystreams#Public"
             ],
-            "object": {
-                "type": "Page",
-                "id": post.ap_id,
-                "attributedTo": post.author.public_url(),
-                "to": [
-                    community.public_url(),
-                    "https://www.w3.org/ns/activitystreams#Public"
-                ],
-                "name": post.title,
-                "cc": [],
-                "content": post.body_html if post.body_html else '',
-                "mediaType": "text/html",
-                "attachment": [],
-                "commentsEnabled": post.comments_enabled,
-                "sensitive": post.nsfw or post.nsfl,
-                "published": ap_datetime(post.created_at),
-                "stickied": post.sticky,
-                "audience": community.public_url(),
-                'language': {
-                    'identifier': post.language_code(),
-                    'name': post.language_name()
-                },
-                'tag': post.tags_for_activitypub(),
-                'replies': post_replies_for_ap(post.id)
-            },
+            "object": post_to_page(post),
             "cc": [
                 community.public_url()
             ],
@@ -174,31 +150,6 @@ def post_to_activity(post: Post, community: Community):
         "type": "Announce",
         "id": announce_id
     }
-    if post.edited_at is not None:
-        activity_data["object"]["object"]["updated"] = ap_datetime(post.edited_at)
-    if (post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO) and post.url is not None:
-        activity_data["object"]["object"]["attachment"] = [{"href": post.url, "type": "Link"}]
-    if post.image_id is not None:
-        activity_data["object"]["object"]["image"] = {"url": post.image.view_url(), "type": "Image"}
-        if post.image.alt_text:
-            activity_data["object"]["object"]["image"]['name'] = post.image.alt_text
-    if post.type == POST_TYPE_POLL:
-        poll = Poll.query.filter_by(post_id=post.id).first()
-        activity_data["object"]["object"]['type'] = 'Question'
-        mode = 'oneOf' if poll.mode == 'single' else 'anyOf'
-        choices = []
-        for choice in PollChoice.query.filter_by(post_id=post.id).order_by(PollChoice.sort_order).all():
-            choices.append({
-                "type": "Note",
-                "name": choice.choice_text,
-                "replies": {
-                    "type": "Collection",
-                    "totalItems": choice.num_votes
-                }
-            })
-        activity_data["object"]["object"][mode] = choices
-        activity_data["object"]["object"]['endTime'] = ap_datetime(poll.end_poll)
-        activity_data["object"]["object"]['votersCount'] = poll.total_votes()
 
     return activity_data
 
@@ -209,7 +160,7 @@ def post_to_page(post: Post):
         "id": post.ap_id,
         "attributedTo": post.author.ap_public_url,
         "to": [
-            f"https://{current_app.config['SERVER_NAME']}/c/{post.community.name}",
+            post.community.public_url(),
             "https://www.w3.org/ns/activitystreams#Public"
         ],
         "name": post.title,
@@ -221,11 +172,12 @@ def post_to_page(post: Post):
         "sensitive": post.nsfw or post.nsfl,
         "published": ap_datetime(post.created_at),
         "stickied": post.sticky,
-        "audience": f"https://{current_app.config['SERVER_NAME']}/c/{post.community.name}",
+        "audience": post.community.public_url(),
         "tag": post.tags_for_activitypub(),
-        'language': {
-            'identifier': post.language_code(),
-            'name': post.language_name()
+        "replies": post_replies_for_ap(post.id),
+        "language": {
+            "identifier": post.language_code(),
+            "name": post.language_name()
         },
     }
     if post.edited_at is not None:
