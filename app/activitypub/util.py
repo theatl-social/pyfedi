@@ -294,7 +294,7 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
         return Community.query.filter(Community.ap_profile_id == actor).first()  # finds communities formatted like https://localhost/c/*
 
     if current_app.config['SERVER_NAME'] + '/u/' in actor:
-        user = User.query.filter(func.lower(User.user_name) == actor.split('/')[-1]).filter_by(ap_id=None, banned=False).first()  # finds local users
+        user = User.query.filter(User.ap_profile_id == actor).filter_by(ap_id=None, banned=False).first()  # finds local users
         if user is None:
             return None
     elif actor.startswith('https://'):
