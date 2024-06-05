@@ -706,6 +706,8 @@ def actor_json_to_model(activity_json, address, server):
                 icon_entry = activity_json['icon']['url']
             elif isinstance(activity_json['icon'], list) and 'url' in activity_json['icon'][-1]:
                 icon_entry = activity_json['icon'][-1]['url']
+            elif isinstance(activity_json['icon'], str):
+                icon_entry = activity_json['icon']
             else:
                 icon_entry = None
             if icon_entry:
@@ -778,6 +780,8 @@ def actor_json_to_model(activity_json, address, server):
                 icon_entry = activity_json['icon']['url']
             elif isinstance(activity_json['icon'], list) and 'url' in activity_json['icon'][-1]:
                 icon_entry = activity_json['icon'][-1]['url']
+            elif isinstance(activity_json['icon'], str):
+                icon_entry = activity_json['icon']
             else:
                 icon_entry = None
             if icon_entry:
