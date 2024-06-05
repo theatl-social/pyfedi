@@ -490,7 +490,7 @@ def refresh_user_profile_task(user_id):
                                    {'user_id': user.id,
                                     'indexable': new_indexable})
 
-            user.user_name = activity_json['preferredUsername'].lower()
+            user.user_name = activity_json['preferredUsername']
             if 'name' in activity_json:
                 user.title = activity_json['name']
             user.about_html = parse_summary(activity_json)
