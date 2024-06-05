@@ -1017,6 +1017,9 @@ class Post(db.Model):
         else:
             return f"https://{current_app.config['SERVER_NAME']}/post/{self.id}"
 
+    def public_url(self):
+        return self.profile_id()
+
     def blocked_by_content_filter(self, content_filters):
         lowercase_title = self.title.lower()
         for name, keywords in content_filters.items() if content_filters else {}:

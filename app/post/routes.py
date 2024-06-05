@@ -154,7 +154,7 @@ def show_post(post_id: int):
                 community.public_url(), post.author.public_url()
             ],
             'content': reply.body_html,
-            'inReplyTo': post.public_url(),
+            'inReplyTo': post.profile_id(),
             'mediaType': 'text/html',
             'published': ap_datetime(utcnow()),
             'distinguished': False,
@@ -403,7 +403,7 @@ def post_vote(post_id: int, vote_direction):
             action_type = 'Like' if vote_direction == 'upvote' else 'Dislike'
             action_json = {
                 'actor': current_user.public_url(),
-                'object': post.public_url(),
+                'object': post.profile_id(),
                 'type': action_type,
                 'id': f"https://{current_app.config['SERVER_NAME']}/activities/{action_type.lower()}/{gibberish(15)}",
                 'audience': post.community.public_url()
@@ -592,7 +592,7 @@ def poll_vote(post_id):
                   'object': {
                     'attributedTo': current_user.public_url(),
                     'id': f"https://{current_app.config['SERVER_NAME']}/activities/vote/{gibberish(15)}",
-                    'inReplyTo': post.public_url(),
+                    'inReplyTo': post.profile_id(),
                     'name': pv.choice_text,
                     'to': post.author.public_url(),
                     'type': 'Note'
@@ -751,8 +751,8 @@ def add_reply(post_id: int, comment_id: int):
                     in_reply_to.author.public_url()
                 ],
                 'content': reply.body_html,
-                'inReplyTo': in_reply_to.public_url(),
-                'url': reply.public_url(),
+                'inReplyTo': in_reply_to.profile_id(),
+                'url': reply.profile_id(),
                 'mediaType': 'text/html',
                 'published': ap_datetime(utcnow()),
                 'distinguished': False,
@@ -1862,7 +1862,7 @@ def post_reply_edit(post_id: int, comment_id: int):
                         in_reply_to.author.public_url()
                     ],
                     'content': post_reply.body_html,
-                    'inReplyTo': in_reply_to.public_url(),
+                    'inReplyTo': in_reply_to.profile_id(),
                     'url': post_reply.public_url(),
                     'mediaType': 'text/html',
                     'published': ap_datetime(post_reply.posted_at),

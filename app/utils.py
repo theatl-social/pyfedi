@@ -606,11 +606,11 @@ def can_create_post_reply(user, content: Community) -> bool:
 def reply_already_exists(user_id, post_id, parent_id, body) -> bool:
     if parent_id is None:
         num_matching_replies = db.session.execute(text(
-            'SELECT COUNT(id) as c FROM "post_reply" WHERE user_id = :user_id AND post_id = :post_id AND parent_id is null AND body = :body'),
+            'SELECT COUNT(id) as c FROM "post_reply" WHERE deleted is false and user_id = :user_id AND post_id = :post_id AND parent_id is null AND body = :body'),
             {'user_id': user_id, 'post_id': post_id, 'body': body}).scalar()
     else:
         num_matching_replies = db.session.execute(text(
-            'SELECT COUNT(id) as c FROM "post_reply" WHERE user_id = :user_id AND post_id = :post_id AND parent_id = :parent_id AND body = :body'),
+            'SELECT COUNT(id) as c FROM "post_reply" WHERE deleted is false and user_id = :user_id AND post_id = :post_id AND parent_id = :parent_id AND body = :body'),
             {'user_id': user_id, 'post_id': post_id, 'parent_id': parent_id, 'body': body}).scalar()
     return num_matching_replies != 0
 
