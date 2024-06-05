@@ -4,12 +4,12 @@ import html
 import os
 from datetime import timedelta
 from random import randint
-from typing import Union, Tuple
+from typing import Union, Tuple, List
 
 import redis
 from flask import current_app, request, g, url_for, json
 from flask_babel import _
-from sqlalchemy import text, func
+from sqlalchemy import text, func, desc
 from app import db, cache, constants, celery
 from app.models import User, Post, Community, BannedInstances, File, PostReply, AllowedInstances, Instance, utcnow, \
     PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation, \
@@ -127,7 +127,7 @@ def post_to_activity(post: Post, community: Community):
     create_id = post.ap_create_id if post.ap_create_id else f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}"
     announce_id = post.ap_announce_id if post.ap_announce_id else f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
     activity_data = {
-        "actor": f"https://{current_app.config['SERVER_NAME']}/c/{community.name}",
+        "actor": community.public_url(),
         "to": [
             "https://www.w3.org/ns/activitystreams#Public"
         ],
@@ -142,7 +142,7 @@ def post_to_activity(post: Post, community: Community):
                 "id": post.ap_id,
                 "attributedTo": post.author.public_url(),
                 "to": [
-                    f"https://{current_app.config['SERVER_NAME']}/c/{community.name}",
+                    community.public_url(),
                     "https://www.w3.org/ns/activitystreams#Public"
                 ],
                 "name": post.title,
@@ -154,21 +154,22 @@ def post_to_activity(post: Post, community: Community):
                 "sensitive": post.nsfw or post.nsfl,
                 "published": ap_datetime(post.created_at),
                 "stickied": post.sticky,
-                "audience": f"https://{current_app.config['SERVER_NAME']}/c/{community.name}",
+                "audience": community.public_url(),
                 'language': {
                     'identifier': post.language_code(),
                     'name': post.language_name()
                 },
-                'tag': post.tags_for_activitypub()
+                'tag': post.tags_for_activitypub(),
+                'replies': post_replies_for_ap(post.id)
             },
             "cc": [
-                f"https://{current_app.config['SERVER_NAME']}/c/{community.name}"
+                community.public_url()
             ],
             "type": "Create",
-            "audience": f"https://{current_app.config['SERVER_NAME']}/c/{community.name}"
+            "audience": community.public_url()
         },
         "cc": [
-            f"https://{current_app.config['SERVER_NAME']}/c/{community.name}/followers"
+            f"{community.public_url()}/followers"
         ],
         "type": "Announce",
         "id": announce_id
@@ -253,6 +254,52 @@ def post_to_page(post: Post):
         activity_data['endTime'] = ap_datetime(poll.end_poll)
         activity_data['votersCount'] = poll.total_votes()
     return activity_data
+
+
+def post_replies_for_ap(post_id: int) -> List[dict]:
+    replies = PostReply.query.\
+        filter_by(post_id=post_id, deleted=False).\
+        order_by(desc(PostReply.posted_at)).\
+        limit(2000)
+    return [comment_model_to_json(reply) for reply in replies]
+
+
+def comment_model_to_json(reply: PostReply) -> dict:
+    reply_data = {
+        "@context": [
+            "https://www.w3.org/ns/activitystreams",
+            "https://w3id.org/security/v1",
+        ],
+        "type": "Note",
+        "id": reply.ap_id,
+        "attributedTo": reply.author.public_url(),
+        "inReplyTo": reply.in_reply_to(),
+        "to": [
+            "https://www.w3.org/ns/activitystreams#Public",
+            reply.to()
+        ],
+        "cc": [
+            reply.community.public_url(),
+            reply.author.followers_url()
+        ],
+        'content': reply.body_html,
+        'mediaType': 'text/html',
+        'published': ap_datetime(reply.created_at),
+        'distinguished': False,
+        'audience': reply.community.public_url(),
+        'language': {
+            'identifier': reply.language_code(),
+            'name': reply.language_name()
+        }
+    }
+    if reply.edited_at:
+        reply_data['updated'] = ap_datetime(reply.edited_at)
+    if reply.body.strip():
+        reply_data['source'] = {
+            'content': reply.body,
+            'mediaType': 'text/markdown'
+        }
+    return reply
 
 
 def banned_user_agents():

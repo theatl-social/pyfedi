@@ -17,6 +17,9 @@ from functools import wraps
 import flask
 from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
 import warnings
+
+from app.activitypub.signature import default_context
+
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 import requests
 import os

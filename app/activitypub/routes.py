@@ -22,7 +22,7 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
     user_removed_from_remote_server, create_post, create_post_reply, update_post_reply_from_activity, \
     update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection, find_reported_object, \
     process_report, ensure_domains_match, can_edit, can_delete, remove_data_from_banned_user, resolve_remote_post, \
-    inform_followers_of_post_update
+    inform_followers_of_post_update, comment_model_to_json
 from app.utils import gibberish, get_setting, is_image_url, allowlist_html, render_template, \
     domain_from_url, markdown_to_html, community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
@@ -859,7 +859,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                     "id": f"https://{current_app.config['SERVER_NAME']}/activities/reject/" + gibberish(32)
                             }
                             # Lemmy doesn't yet understand Reject/Follow, so send without worrying about response for now.
-                            post_request(user.ap_inbox_url, reject, community.private_key, f"https://{current_app.config['SERVER_NAME']}/c/{community.name}#main-key")
+                            post_request(user.ap_inbox_url, reject, community.private_key, f"{community.public_url()}#main-key")
                         else:
                             if user is not None and community is not None:
                                 # check if user is banned from this community
@@ -888,7 +888,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                         "type": "Accept",
                                         "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)
                                     }
-                                    if post_request(user.ap_inbox_url, accept, community.private_key, f"https://{current_app.config['SERVER_NAME']}/c/{community.name}#main-key"):
+                                    if post_request(user.ap_inbox_url, accept, community.private_key, f"{community.public_url()}#main-key"):
                                         activity_log.result = 'success'
                                     else:
                                         activity_log.exception_message = 'Error sending Accept'
@@ -1457,37 +1457,7 @@ def user_followers(actor):
 def comment_ap(comment_id):
     if is_activitypub_request():
         reply = PostReply.query.get_or_404(comment_id)
-        reply_data = {
-            "@context": default_context(),
-            "type": "Note",
-            "id": reply.ap_id,
-            "attributedTo": reply.author.public_url(),
-            "inReplyTo": reply.in_reply_to(),
-            "to": [
-                "https://www.w3.org/ns/activitystreams#Public",
-                reply.to()
-            ],
-            "cc": [
-                reply.community.public_url(),
-                reply.author.followers_url()
-            ],
-            'content': reply.body_html,
-            'mediaType': 'text/html',
-            'published': ap_datetime(reply.created_at),
-            'distinguished': False,
-            'audience': reply.community.public_url(),
-            'language': {
-                'identifier': reply.language_code(),
-                'name': reply.language_name()
-            }
-        }
-        if reply.edited_at:
-            reply_data['updated'] = ap_datetime(reply.edited_at)
-        if reply.body.strip():
-            reply_data['source'] = {
-                'content': reply.body,
-                'mediaType': 'text/markdown'
-            }
+        reply_data = comment_model_to_json(reply)
         resp = jsonify(reply_data)
         resp.content_type = 'application/activity+json'
         resp.headers.set('Vary', 'Accept')

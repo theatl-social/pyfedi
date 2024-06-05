@@ -3,7 +3,6 @@ from time import time
 from typing import List, Union
 
 import requests
-from bs4 import BeautifulSoup
 from flask import current_app, escape, url_for, render_template_string
 from flask_login import UserMixin, current_user
 from sqlalchemy import or_, text, desc
