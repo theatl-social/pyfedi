@@ -471,17 +471,17 @@ def refresh_user_profile_task(user_id):
     user = User.query.get(user_id)
     if user:
         try:
-            actor_data = get_request(user.ap_profile_id, headers={'Accept': 'application/activity+json'})
+            actor_data = get_request(user.ap_public_url, headers={'Accept': 'application/activity+json'})
         except requests.exceptions.ReadTimeout:
             time.sleep(randint(3, 10))
             try:
-                actor_data = get_request(user.ap_profile_id, headers={'Accept': 'application/activity+json'})
+                actor_data = get_request(user.ap_public_url, headers={'Accept': 'application/activity+json'})
             except requests.exceptions.ReadTimeout:
                 return
         except:
             try:
                 site = Site.query.get(1)
-                actor_data = signed_get_request(user.ap_profile_id, site.private_key,
+                actor_data = signed_get_request(user.ap_public_url, site.private_key,
                                 f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
             except:
                 return
@@ -550,11 +550,11 @@ def refresh_community_profile_task(community_id):
     community = Community.query.get(community_id)
     if community and not community.is_local():
         try:
-            actor_data = get_request(community.ap_profile_id, headers={'Accept': 'application/activity+json'})
+            actor_data = get_request(community.ap_public_url, headers={'Accept': 'application/activity+json'})
         except requests.exceptions.ReadTimeout:
             time.sleep(randint(3, 10))
             try:
-                actor_data = get_request(community.ap_profile_id, headers={'Accept': 'application/activity+json'})
+                actor_data = get_request(community.ap_public_url, headers={'Accept': 'application/activity+json'})
             except Exception as e:
                 return
         if actor_data.status_code == 200:
