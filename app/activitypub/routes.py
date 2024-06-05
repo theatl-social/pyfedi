@@ -844,14 +844,14 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             # send reject message to deny the follow
                             reject = {
                                 "@context": default_context(),
-                                "actor": community.ap_profile_id,
+                                "actor": community.public_url(),
                                 "to": [
-                                    user.ap_profile_id
+                                    user.public_url()
                                 ],
                                 "object": {
-                                    "actor": user.ap_profile_id,
+                                    "actor": user.public_url(),
                                     "to": None,
-                                    "object": community.ap_profile_id,
+                                    "object": community.public_url(),
                                     "type": "Follow",
                                     "id": follow_id
                                 },
@@ -874,14 +874,14 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                     # send accept message to acknowledge the follow
                                     accept = {
                                         "@context": default_context(),
-                                        "actor": community.ap_profile_id,
+                                        "actor": community.public_url(),
                                         "to": [
-                                            user.ap_profile_id
+                                            user.public_url()
                                         ],
                                         "object": {
-                                            "actor": user.ap_profile_id,
+                                            "actor": user.public_url(),
                                             "to": None,
-                                            "object": community.ap_profile_id,
+                                            "object": community.public_url(),
                                             "type": "Follow",
                                             "id": follow_id
                                         },
