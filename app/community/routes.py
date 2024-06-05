@@ -880,9 +880,9 @@ def federate_post(community, post):
     page = {
         'type': 'Page',
         'id': post.ap_id,
-        'attributedTo': current_user.ap_profile_id,
+        'attributedTo': current_user.public_url(),
         'to': [
-            community.ap_profile_id,
+            community.public_url(),
             'https://www.w3.org/ns/activitystreams#Public'
         ],
         'name': post.title,
@@ -895,7 +895,7 @@ def federate_post(community, post):
         'nsfl': post.nsfl,
         'stickied': post.sticky,
         'published': ap_datetime(utcnow()),
-        'audience': community.ap_profile_id,
+        'audience': community.public_url(),
         'language': {
             'identifier': post.language_code(),
             'name': post.language_name()
@@ -904,15 +904,15 @@ def federate_post(community, post):
     }
     create = {
         "id": f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}",
-        "actor": current_user.ap_profile_id,
+        "actor": current_user.public_url(),
         "to": [
             "https://www.w3.org/ns/activitystreams#Public"
         ],
         "cc": [
-            community.ap_profile_id
+            community.public_url()
         ],
         "type": "Create",
-        "audience": community.ap_profile_id,
+        "audience": community.public_url(),
         "object": page,
         '@context': default_context()
     }
@@ -964,7 +964,7 @@ def federate_post(community, post):
             "to": [
                 "https://www.w3.org/ns/activitystreams#Public"
             ],
-            "actor": community.ap_profile_id,
+            "actor": community.public_url(),
             "cc": [
                 community.ap_followers_url
             ],
