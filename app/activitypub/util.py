@@ -299,7 +299,7 @@ def comment_model_to_json(reply: PostReply) -> dict:
             'content': reply.body,
             'mediaType': 'text/markdown'
         }
-    return reply
+    return reply_data
 
 
 def banned_user_agents():
