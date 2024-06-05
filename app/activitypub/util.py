@@ -246,11 +246,6 @@ def comment_model_to_json(reply: PostReply) -> dict:
     }
     if reply.edited_at:
         reply_data['updated'] = ap_datetime(reply.edited_at)
-    if reply.body.strip():
-        reply_data['source'] = {
-            'content': reply.body,
-            'mediaType': 'text/markdown'
-        }
     return reply_data
 
 
