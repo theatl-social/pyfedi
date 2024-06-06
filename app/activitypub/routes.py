@@ -256,10 +256,10 @@ def user_profile(actor):
             actor_data = {  "@context": default_context(),
                             "type": "Person" if not user.bot else "Service",
                             "id": user.public_url(),
-                            "preferredUsername": actor.lower(),
+                            "preferredUsername": actor,
                             "name": user.title if user.title else user.user_name,
-                            "inbox": f"https://{server}/u/{actor.lower()}/inbox",
-                            "outbox": f"https://{server}/u/{actor.lower()}/outbox",
+                            "inbox": f"{user.public_url()}/inbox",
+                            "outbox": f"{user.public_url()}/outbox",
                             "discoverable": user.searchable,
                             "indexable": user.indexable,
                             "manuallyApprovesFollowers": False if not user.ap_manually_approves_followers else user.ap_manually_approves_followers,
@@ -844,14 +844,14 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             # send reject message to deny the follow
                             reject = {
                                 "@context": default_context(),
-                                "actor": community.ap_profile_id,
+                                "actor": community.public_url(),
                                 "to": [
-                                    user.ap_profile_id
+                                    user.public_url()
                                 ],
                                 "object": {
-                                    "actor": user.ap_profile_id,
+                                    "actor": user.public_url(),
                                     "to": None,
-                                    "object": community.ap_profile_id,
+                                    "object": community.public_url(),
                                     "type": "Follow",
                                     "id": follow_id
                                 },
@@ -874,14 +874,14 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                     # send accept message to acknowledge the follow
                                     accept = {
                                         "@context": default_context(),
-                                        "actor": community.ap_profile_id,
+                                        "actor": community.public_url(),
                                         "to": [
-                                            user.ap_profile_id
+                                            user.public_url()
                                         ],
                                         "object": {
-                                            "actor": user.ap_profile_id,
+                                            "actor": user.public_url(),
                                             "to": None,
-                                            "object": community.ap_profile_id,
+                                            "object": community.public_url(),
                                             "type": "Follow",
                                             "id": follow_id
                                         },
@@ -1476,8 +1476,7 @@ def post_ap2(post_id):
 def post_ap(post_id):
     if request.method == 'GET' and is_activitypub_request():
         post = Post.query.get_or_404(post_id)
-        post_data = post_to_activity(post, post.community)
-        post_data = post_data['object']['object']
+        post_data = post_to_page(post)
         post_data['@context'] = default_context()
         resp = jsonify(post_data)
         resp.content_type = 'application/activity+json'
