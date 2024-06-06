@@ -104,7 +104,7 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str, con
             if result.status_code != 200 and result.status_code != 202 and result.status_code != 204:
                 log.result = 'failure'
                 log.exception_message += f' Response status code was {result.status_code}'
-                current_app.logger.error('Response code for post attempt was ' +
+                current_app.logger.error(f'Response code for post attempt to {uri} was ' +
                                          str(result.status_code) + ' ' + result.text)
             log.exception_message += uri
             if result.status_code == 202:
