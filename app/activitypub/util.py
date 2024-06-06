@@ -1435,7 +1435,7 @@ def remove_data_from_banned_user_task(deletor_ap_id, user_ap_id, target):
     user = find_actor_or_create(user_ap_id, create_if_not_found=False)
     community = Community.query.filter_by(ap_profile_id=target).first()
 
-    if not deletor and not user:
+    if not deletor or not user:
         return
 
     # site bans by admins
