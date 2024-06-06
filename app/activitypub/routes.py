@@ -727,7 +727,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                 old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
                                 post.cross_posts.clear()
                                 for ocp in old_cross_posts:
-                                    if ocp.cross_posts is not None:
+                                    if ocp.cross_posts is not None and post.id in ocp.cross_posts:
                                         ocp.cross_posts.remove(post.id)
                             delete_post_or_comment(user_ap_id, community_ap_id, to_be_deleted_ap_id)
                             activity_log.result = 'success'
