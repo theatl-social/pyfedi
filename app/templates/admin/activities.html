@@ -10,6 +10,12 @@
 <div class="row">
     <div class="col">
         <h1>{{ _('Activities') }}</h1>
+        Result Filter: 
+        <a href="{{ url_for('admin.admin_activities') }}">All</a> | 
+        <a href="{{ url_for('admin.admin_activities', result='failure') }}">Failure</a> | 
+        <a href="{{ url_for('admin.admin_activities', result='success') }}">Success</a> | 
+        <a href="{{ url_for('admin.admin_activities', result='ignored') }}">Ignored</a> | 
+        <a href="{{ url_for('admin.admin_activities', result='processing') }}">Processing</a>
         <table class="table">
             <tr>
                <th>When</th>
