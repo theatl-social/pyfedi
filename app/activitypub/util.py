@@ -1976,9 +1976,10 @@ def update_post_from_activity(post: Post, request_json: dict):
         db.session.execute(text('DELETE FROM "post_tag" WHERE post_id = :post_id'), {'post_id': post.id})
         for json_tag in request_json['object']['tag']:
             if json_tag['type'] == 'Hashtag':
-                hashtag = find_hashtag_or_create(json_tag['name'])
-                if hashtag:
-                    post.tags.append(hashtag)
+                if json_tag['name'][1:].lower() != post.community.name.lower():             # Lemmy adds the community slug as a hashtag on every post in the community, which we want to ignore
+                    hashtag = find_hashtag_or_create(json_tag['name'])
+                    if hashtag:
+                        post.tags.append(hashtag)
     post.comments_enabled = request_json['object']['commentsEnabled'] if 'commentsEnabled' in request_json['object'] else True
     post.edited_at = utcnow()
     db.session.commit()

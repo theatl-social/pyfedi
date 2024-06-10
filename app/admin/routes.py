@@ -179,11 +179,15 @@ def admin_activities():
     db.session.commit()
 
     page = request.args.get('page', 1, type=int)
+    result_filter = request.args.get('result', type=str)
 
-    activities = ActivityPubLog.query.order_by(desc(ActivityPubLog.created_at)).paginate(page=page, per_page=1000, error_out=False)
+    if result_filter:
+        activities = ActivityPubLog.query.order_by(desc(ActivityPubLog.created_at)).filter(ActivityPubLog.result == result_filter).paginate(page=page, per_page=1000, error_out=False)
+    else:
+        activities = ActivityPubLog.query.order_by(desc(ActivityPubLog.created_at)).paginate(page=page, per_page=1000, error_out=False)
 
-    next_url = url_for('admin.admin_activities', page=activities.next_num) if activities.has_next else None
-    prev_url = url_for('admin.admin_activities', page=activities.prev_num) if activities.has_prev and page != 1 else None
+    next_url = url_for('admin.admin_activities', page=activities.next_num, result=result_filter) if activities.has_next else None
+    prev_url = url_for('admin.admin_activities', page=activities.prev_num, result=result_filter) if activities.has_prev and page != 1 else None
 
     return render_template('admin/activities.html', title=_('ActivityPub Log'), next_url=next_url, prev_url=prev_url,
                            activities=activities,
