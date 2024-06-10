@@ -165,6 +165,7 @@ def home_page(type, sort):
                            title=f"{g.site.name} - {g.site.description}",
                            description=shorten_string(markdown_to_text(g.site.sidebar), 150),
                            content_filters=content_filters, type=type, sort=sort,
+                           announcement=allowlist_html(get_setting('announcement', '')),
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,

@@ -384,6 +384,21 @@ div.navbar {
   }
 }
 
+#home_announcement {
+  padding: 0.5rem 1rem;
+  color: var(--bs-card-cap-color);
+  background-color: rgba(var(--bs-body-color-rgb), 0.03);
+  border-bottom: var(--bs-border-width) solid var(--bs-border-color-translucent);
+  margin-top: -8px;
+  margin-bottom: 8px;
+  margin-right: calc(var(--bs-gutter-x) * -.5);
+  margin-left: calc(var(--bs-gutter-x) * -.5);
+
+  p {
+    margin-bottom: 0;
+  }
+}
+
 
 /* high contrast */
 @media (prefers-contrast: more) {

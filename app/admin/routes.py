@@ -54,6 +54,7 @@ def admin_site():
         if site.id is None:
             db.session.add(site)
         db.session.commit()
+        set_setting('announcement', form.announcement.data)
         flash('Settings saved.')
     elif request.method == 'GET':
         form.name.data = site.name
@@ -62,6 +63,7 @@ def admin_site():
         form.sidebar.data = site.sidebar
         form.legal_information.data = site.legal_information
         form.contact_email.data = site.contact_email
+        form.announcement.data = get_setting('announcement', '')
     return render_template('admin/site.html', title=_('Site profile'), form=form,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
