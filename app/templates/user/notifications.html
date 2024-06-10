@@ -32,13 +32,13 @@
                         </td>
                         <td>{{ moment(notification.created_at).fromNow(refresh=True) }}</td>
                         <td>
-                            <a href="{{ url_for('user.notification_delete', notification_id=notification.id) }}" class="no-underline"><span class="fe fe-delete"> Delete</span></a>
+                            <a href="{{ url_for('user.notification_delete', notification_id=notification.id) }}" class="no-underline"><span class="fe fe-delete"></span> {{ _('Delete') }}</a>
                         </td>
                     </tr>
                 {% endfor %}
             </table>
         {% else %}
-            <p>No notifications to show.</p>
+            <p>{{ _('No notifications to show.') }}</p>
         {% endif %}
     </div>
 
