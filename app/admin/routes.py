@@ -537,10 +537,10 @@ def admin_users_trash():
         users = users.order_by(User.reputation).paginate(page=page, per_page=1000, error_out=False)
     elif type == 'bad_attitude':
         users = users.filter(User.attitude < 0.0)
-        users = users.order_by(-User.attitude).paginate(page=page, per_page=1000, error_out=False)
+        users = users.order_by(User.attitude).paginate(page=page, per_page=1000, error_out=False)
 
-    next_url = url_for('admin.admin_users_trash', page=users.next_num) if users.has_next else None
-    prev_url = url_for('admin.admin_users_trash', page=users.prev_num) if users.has_prev and page != 1 else None
+    next_url = url_for('admin.admin_users_trash', page=users.next_num, search=search, local_remote=local_remote, type=type) if users.has_next else None
+    prev_url = url_for('admin.admin_users_trash', page=users.prev_num, search=search, local_remote=local_remote, type=type) if users.has_prev and page != 1 else None
 
     return render_template('admin/users.html', title=_('Problematic users'), next_url=next_url, prev_url=prev_url, users=users,
                            local_remote=local_remote, search=search, type=type,
