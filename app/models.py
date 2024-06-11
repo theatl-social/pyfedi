@@ -808,7 +808,10 @@ class User(UserMixin, db.Model):
         if total_downvotes == 0:    # guard against division by zero
             self.attitude = 1.0
         else:
-            self.attitude = (total_upvotes - total_downvotes) / (total_upvotes + total_downvotes)
+            if total_upvotes + total_downvotes > 2:  # Only calculate attitude if they've done 3 or more votes as anything less than this could be an outlier and not representative of their overall attitude
+                self.attitude = (total_upvotes - total_downvotes) / (total_upvotes + total_downvotes)
+            else:
+                self.attitude = 1.0
 
     def subscribed(self, community_id: int) -> int:
         if community_id is None:

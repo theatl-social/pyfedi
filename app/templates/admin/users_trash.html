@@ -15,6 +15,8 @@
             <input type="search" name="search" value="{{ search }}">
             <input type="radio" name="local_remote" value="local" id="local_remote_local" {{ 'checked' if local_remote == 'local' }}><label for="local_remote_local"> Local</label>
             <input type="radio" name="local_remote" value="remote" id="local_remote_remote" {{ 'checked' if local_remote == 'remote' }}><label for="local_remote_remote"> Remote</label>
+            <input type="radio" name="type" value="bad_rep" id="type_bad_rep" {{ 'checked' if type == 'bad_rep' }}><label for="type_bad_rep"> Bad rep</label>
+            <input type="radio" name="type" value="bad_attitude" id="type_bad_attitude" {{ 'checked' if type == 'bad_attitude' }}><label for="type_bad_attitude"> Bad attitude</label>
             <input type="submit" name="submit" value="Search" class="btn btn-primary">
         </form>
         <table class="table table-striped mt-1">
