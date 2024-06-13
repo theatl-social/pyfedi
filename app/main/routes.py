@@ -454,10 +454,14 @@ def test():
 
 @bp.route('/test_email')
 def test_email():
-    send_email('This is a test email', f'{g.site.name} <{current_app.config["MAIL_FROM"]}>', [current_user.email],
+    if current_user.is_anonymous:
+        email = request.args.get('email')
+    else:
+        email = current_user.email
+    send_email('This is a test email', f'{g.site.name} <{current_app.config["MAIL_FROM"]}>', [email],
                'This is a test email. If you received this, email sending is working!',
                '<p>This is a test email. If you received this, email sending is working!</p>')
-    return f'Email sent to {current_user.email}.'
+    return f'Email sent to {email}.'
 
 
 @bp.route('/find_voters')
