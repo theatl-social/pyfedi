@@ -453,7 +453,6 @@ def test():
 
 
 @bp.route('/test_email')
-@login_required
 def test_email():
     send_email('This is a test email', f'{g.site.name} <{current_app.config["MAIL_FROM"]}>', [current_user.email],
                'This is a test email. If you received this, email sending is working!',
