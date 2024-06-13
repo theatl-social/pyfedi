@@ -255,6 +255,8 @@ def register(app):
                             if 'admins' in instance_data:
                                 admin_profile_ids = []
                                 for admin in instance_data['admins']:
+                                    if admin['person']['actor_id'].startswith('http://'):
+                                        continue # suppo.fi has rogue entry in its v3/site
                                     admin_profile_ids.append(admin['person']['actor_id'].lower())
                                     user = find_actor_or_create(admin['person']['actor_id'])
                                     if user and not instance.user_is_admin(user.id):
