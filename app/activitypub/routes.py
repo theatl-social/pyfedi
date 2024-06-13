@@ -976,7 +976,8 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                         if reply:
                             if can_edit(request_json['actor'], reply):
                                 update_post_reply_from_activity(reply, request_json)
-                                announce_activity_to_followers(reply.community, reply.author, request_json)
+                                if reply.community.is_local():
+                                    announce_activity_to_followers(reply.community, reply.author, request_json)
                                 activity_log.result = 'success'
                             else:
                                 activity_log.exception_message = 'Edit attempt denied'
