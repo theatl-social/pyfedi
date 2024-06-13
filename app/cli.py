@@ -184,7 +184,11 @@ def register(app):
             instances = Instance.query.filter(Instance.gone_forever == False, Instance.id != 1).all()
             HEADERS = {'User-Agent': 'PieFed/1.0', 'Accept': 'application/activity+json'}
             for instance in instances:
-                if not instance.nodeinfo_href:
+                nodeinfo_href = instance.nodeinfo_href
+                if instance.software == 'lemmy' and instance.version == '0.19.4' and instance.nodeinfo_href.endswith('nodeinfo/2.0.json'):
+                    nodeinfo_href = None # Lemmy v0.19.4 no longer provides .well-known/nodeinfo response for 2.0, and
+                                         # 'solves' this by redirecting calls for nodeinfo/2.0.json to nodeinfo/2.1
+                if not nodeinfo_href:
                     try:
                         nodeinfo = requests.get(f"https://{instance.domain}/.well-known/nodeinfo", headers=HEADERS,
                                                 timeout=5, allow_redirects=True)
@@ -194,7 +198,8 @@ def register(app):
                             for links in nodeinfo_json['links']:
                                 if 'rel' in links and (
                                         links['rel'] == 'http://nodeinfo.diaspora.software/ns/schema/2.0' or
-                                        links['rel'] == 'https://nodeinfo.diaspora.software/ns/schema/2.0'):
+                                        links['rel'] == 'https://nodeinfo.diaspora.software/ns/schema/2.0' or
+                                        links['rel'] == 'http://nodeinfo.diaspora.software/ns/schema/2.1'):
                                     instance.nodeinfo_href = links['href']
                                     instance.failures = 0
                                     instance.dormant = False
