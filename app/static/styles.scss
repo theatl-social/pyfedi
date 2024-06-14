@@ -490,4 +490,8 @@ div.navbar {
   }
 }
 
+[data-bs-theme="dark"] .dropdown-header {
+  color: white;
+}
+
 @import "scss/print";
