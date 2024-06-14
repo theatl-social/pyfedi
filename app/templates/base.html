@@ -53,12 +53,12 @@
             {% endif -%}
         {% endblock -%}
         <title>{% if title %}{{ title }}{% else %}{{ _('PieFed') }}{% endif %}</title>
-        <link rel="apple-touch-icon" sizes="152x152" href="/static/images/apple-touch-icon.png">
-        <link rel="icon" type="image/png" sizes="32x32" href="/static/images/favicon-32x32.png">
-        <link rel="icon" type="image/png" sizes="16x16" href="/static/images/favicon-16x16.png">
+        <link rel="apple-touch-icon" sizes="152x152" href="{{ g.site.logo_152 if g.site.logo_152 else '/static/images/apple-touch-icon.png' }}">
+        <link rel="icon" type="image/png" sizes="32x32" href="{{ g.site.logo_32 if g.site.logo_32 else '/static/images/favicon-32x32.png' }}">
+        <link rel="icon" type="image/png" sizes="16x16" href="{{ g.site.logo_16 if g.site.logo_16 else '/static/images/favicon-16x16.png' }}">
         <link rel="manifest" href="/static/manifest.json">
-        <link rel="shortcut icon" type="image/png" href="/static/images/favicon-32x32.png">
-        <link href='/static/images/favicon.ico' rel='icon' type='image/x-icon'>
+        <link rel="shortcut icon" type="image/png" href="{{ g.site.logo_32 if g.site.logo_32 else '/static/images/favicon-32x32.png' }}">
+        <link href="{{ g.site.logo_16 if g.site.logo_16 else '/static/images/favicon.ico' }}" rel='icon' type='image/x-icon'>
         <meta name="msapplication-TileColor" content="#da532c">
         <meta name="msapplication-config" content="/static/browserconfig.xml">
         <meta name="theme-color" content="#ffffff">
@@ -111,7 +111,7 @@
     {% block navbar -%}
     <div class="navbar navbar-expand-lg sticky-md-top">
         <div class="{{ 'container-lg' if post_layout != 'masonry_wide' else 'container-fluid' }}" role="banner">
-            <a class="navbar-brand" href="/">{% if not low_bandwidth %}<img src="/static/images/logo2.png" alt="Logo" width="50" height="50" />{% endif %}{{ g.site.name }}</a>
+            <a class="navbar-brand" href="/">{% if not low_bandwidth %}<img src="{{ g.site.logo if g.site.logo else '/static/images/logo2.png' }}" alt="Logo" width="50" height="50" />{% endif %}{{ g.site.name }}</a>
             {% if current_user.is_authenticated -%}
                 <a class="nav-link d-lg-none" href="/notifications" aria-label="{{ _('Notifications') }}">
                     {% if current_user.unread_notifications -%}

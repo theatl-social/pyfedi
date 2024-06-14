@@ -2183,6 +2183,7 @@ def parse_redis_socket_string(connection_string: str):
 
 def lemmy_site_data():
     site = g.site
+    logo = site.logo if site.logo else '/static/images/logo2.png'
     data = {
       "site_view": {
         "site": {
@@ -2191,7 +2192,7 @@ def lemmy_site_data():
           "sidebar": site.sidebar,
           "published": site.created_at.isoformat(),
           "updated": site.updated.isoformat(),
-          "icon": f"https://{current_app.config['SERVER_NAME']}/static/images/logo2.png",
+          "icon": f"https://{current_app.config['SERVER_NAME']}{logo}",
           "banner": "",
           "description": site.description,
           "actor_id": f"https://{current_app.config['SERVER_NAME']}/",

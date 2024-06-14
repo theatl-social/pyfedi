@@ -1479,6 +1479,10 @@ class Site(db.Model):
     default_theme = db.Column(db.String(20), default='')
     contact_email = db.Column(db.String(255), default='')
     about = db.Column(db.Text, default='')
+    logo = db.Column(db.String(40), default='')
+    logo_152 = db.Column(db.String(40), default='')
+    logo_32 = db.Column(db.String(40), default='')
+    logo_16 = db.Column(db.String(40), default='')
 
     @staticmethod
     def admins() -> List[User]:
