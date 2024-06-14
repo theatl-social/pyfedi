@@ -754,6 +754,11 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                 activity_log.result = 'success'
                             else:
                                 activity_log.exception_message = 'Post not found'
+                                # Lemmy can send Announce/Update without ever sending an Announce/Create
+                                # presumably happens with quick edits after creation (e.g. https://midwest.social/post/13348959)
+                                # Pretend this activity was the Create, and try again.
+                                request_json['object']['type'] = 'Create'
+                                process_inbox_request(request_json, activitypublog_id, ip_address)
                         elif request_json['object']['object']['type'] == 'Note':
                             reply = PostReply.query.filter_by(ap_id=request_json['object']['object']['id']).first()
                             if reply:
@@ -766,6 +771,9 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                 activity_log.result = 'success'
                             else:
                                 activity_log.exception_message = 'PostReply not found'
+                                # As with Update/Page, pretend this activity was the Create, and try again.
+                                request_json['object']['type'] = 'Create'
+                                process_inbox_request(request_json, activitypublog_id, ip_address)
                     elif request_json['object']['type'] == 'Undo':
                         if request_json['object']['object']['type'] == 'Like' or request_json['object']['object']['type'] == 'Dislike':
                             activity_log.activity_type = request_json['object']['object']['type']
