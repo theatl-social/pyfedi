@@ -273,7 +273,7 @@ def send_community_follow(community_id, join_request_id, user_id):
         user = User.query.get(user_id)
         community = Community.query.get(community_id)
         follow = {
-            "actor": current_user.public_url(),
+            "actor": user.public_url(),
             "to": [community.public_url()],
             "object": community.public_url(),
             "type": "Follow",
