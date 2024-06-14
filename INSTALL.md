@@ -323,7 +323,7 @@ CELERYD_LOG_LEVEL=INFO
 
 # Path to celery binary, that is in your virtual environment
 CELERY_BIN=/home/rimu/pyfedi/venv/bin/celery
-CELERYD_OPTS="--autoscale=5,1"
+CELERYD_OPTS="--autoscale=5,1 --max-tasks-per-child=1000"
 ```
 
 #### Enable and start background services
