@@ -1,18 +1,22 @@
-
 msgid ""
 msgstr ""
-"Project-Id-Version:  piefed\n"
+"Project-Id-Version: piefed\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2024-05-21 19:51+1200\n"
-"PO-Revision-Date: 2024-05-21 07:43+0000\n"
+"PO-Revision-Date: 2024-06-13 23:59\n"
 "Last-Translator: \n"
 "Language: ja\n"
 "Language-Team: Japanese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.12.1\n"
+"X-Crowdin-Project: piefed\n"
+"X-Crowdin-Project-ID: 657446\n"
+"X-Crowdin-Language: ja\n"
+"X-Crowdin-File: messages.po\n"
+"X-Crowdin-File-ID: 2\n"
 
 #: app/__init__.py:39
 msgid "Please log in to access this page."
@@ -52,12 +56,12 @@ msgstr "PieFedへようこそ！"
 #: app/activitypub/util.py:1644
 #, python-format
 msgid "Reply to %(post_title)s"
-msgstr ""
+msgstr "%(post_title)s に返信"
 
 #: app/activitypub/util.py:1657
 #, python-format
 msgid "Reply to comment on %(post_title)s"
-msgstr ""
+msgstr "%(post_title)s のコメントに返信"
 
 #: app/activitypub/util.py:1926 app/post/routes.py:1506
 msgid "A post has been reported"
@@ -68,9 +72,8 @@ msgid "A comment has been reported"
 msgstr "コメントを通報しました"
 
 #: app/admin/forms.py:14
-#, fuzzy
 msgid "Site Name"
-msgstr "ユーザー名"
+msgstr "サイト名"
 
 #: app/admin/forms.py:15
 msgid "Tagline"
@@ -85,9 +88,8 @@ msgid "Sidebar"
 msgstr "サイドバー"
 
 #: app/admin/forms.py:20 app/templates/base.html:253
-#, fuzzy
 msgid "About"
-msgstr "レイアウト"
+msgstr "概要"
 
 #: app/admin/forms.py:21
 msgid "Legal information"
@@ -186,9 +188,7 @@ msgid "Discard all posts and comments with these phrases (one per line)"
 msgstr ""
 
 #: app/admin/forms.py:49
-msgid ""
-"Discard all posts and comments by users with these words in their name "
-"(one per line)"
+msgid "Discard all posts and comments by users with these words in their name (one per line)"
 msgstr ""
 
 #: app/admin/forms.py:54 app/community/forms.py:48 app/community/forms.py:97
@@ -219,7 +219,7 @@ msgstr "ルール"
 
 #: app/admin/forms.py:60 app/community/forms.py:53
 msgid "Porn community"
-msgstr ""
+msgstr "ポルノコミュニティ"
 
 #: app/admin/forms.py:61
 msgid "Banned - no new posts accepted"
@@ -255,7 +255,7 @@ msgstr ""
 
 #: app/admin/forms.py:69
 msgid "Forever"
-msgstr ""
+msgstr "無期限"
 
 #: app/admin/forms.py:70
 msgid "1 week"
@@ -328,7 +328,7 @@ msgstr ""
 
 #: app/admin/forms.py:88 app/community/forms.py:27 app/community/forms.py:58
 msgid "Languages"
-msgstr ""
+msgstr "言語"
 
 #: app/admin/forms.py:89
 msgid "Override remote language setting"
@@ -443,15 +443,15 @@ msgstr "ユーザー名に @ を含めることはできません。"
 
 #: app/admin/forms.py:148 app/auth/forms.py:40
 msgid "This username was used in the past and cannot be reused."
-msgstr "このユーザ名は既に使用されているため使えません。"
+msgstr "このユーザー名は既に使用されているため使えません。"
 
 #: app/admin/forms.py:150 app/auth/forms.py:42
 msgid "An account with this user name already exists."
-msgstr "このユーザ名は既に使用されています。"
+msgstr "このユーザー名は既に使用されています。"
 
 #: app/admin/forms.py:153 app/auth/forms.py:45
 msgid "A community with this name exists so it cannot be used for a user."
-msgstr ""
+msgstr "このコミュニティ名は既に使用されています。"
 
 #: app/admin/forms.py:160 app/admin/forms.py:173 app/auth/forms.py:52
 #: app/auth/forms.py:65
@@ -460,15 +460,15 @@ msgstr ""
 
 #: app/admin/forms.py:170 app/auth/forms.py:62
 msgid "This password is not secure."
-msgstr ""
+msgstr "このパスワードは安全ではありません。"
 
 #: app/admin/forms.py:185
 msgid "Remove avatar"
-msgstr ""
+msgstr "アバターを削除"
 
 #: app/admin/forms.py:186
 msgid "Remove banner"
-msgstr ""
+msgstr "バナーを削除"
 
 #: app/admin/forms.py:191
 msgid "Subject"
@@ -514,7 +514,7 @@ msgstr "ActivityPub ログ"
 
 #: app/admin/routes.py:194 app/templates/admin/activity_json.html:13
 msgid "Activity JSON"
-msgstr ""
+msgstr "Activity JSON"
 
 #: app/admin/routes.py:229 app/community/routes.py:245 app/main/routes.py:220
 #: app/post/routes.py:267 app/templates/admin/_nav.html:6
@@ -525,9 +525,8 @@ msgid "Communities"
 msgstr "コミュニティ"
 
 #: app/admin/routes.py:251
-#, fuzzy
 msgid "Communities with no topic"
-msgstr "コミュニティ"
+msgstr "トピックに所属していないコミュニティ"
 
 #: app/admin/routes.py:314 app/admin/routes.py:413 app/admin/routes.py:438
 #: app/admin/routes.py:648 app/community/routes.py:1116
@@ -535,9 +534,7 @@ msgid "Saved"
 msgstr "保存しました"
 
 #: app/admin/routes.py:318
-msgid ""
-"This is a remote community - most settings here will be regularly "
-"overwritten with data from the original server."
+msgid "This is a remote community - most settings here will be regularly overwritten with data from the original server."
 msgstr "これはリモートのコミュニティです - ほとんどの設定は定期的に元のサーバーからのデータで上書きされます。"
 
 #: app/admin/routes.py:338 app/community/routes.py:1129
@@ -569,7 +566,7 @@ msgstr "トピックを削除しました"
 
 #: app/admin/routes.py:461
 msgid "Cannot delete topic with communities assigned to it."
-msgstr ""
+msgstr "トピックに割り当てられているコミュニティは削除できません。"
 
 #: app/admin/routes.py:488 app/templates/admin/_nav.html:8
 #: app/templates/admin/users.html:12 app/templates/base.html:196
@@ -578,43 +575,39 @@ msgstr "ユーザー"
 
 #: app/admin/routes.py:524
 msgid "Problematic users"
-msgstr ""
+msgstr "問題のあるユーザー"
 
 #: app/admin/routes.py:545
 msgid "Bad posts"
-msgstr ""
+msgstr "不正な投稿"
 
 #: app/admin/routes.py:577
 msgid "Likely spam"
-msgstr ""
+msgstr "スパムの可能性が高い"
 
 #: app/admin/routes.py:613
 msgid "Registration approved."
-msgstr ""
+msgstr "ユーザー登録が承認されました。"
 
 #: app/admin/routes.py:644
-msgid ""
-"Permissions are cached for 50 seconds so new admin roles won't take "
-"effect immediately."
+msgid "Permissions are cached for 50 seconds so new admin roles won't take effect immediately."
 msgstr ""
 
 #: app/admin/routes.py:652
-msgid ""
-"This is a remote user - most settings here will be regularly overwritten "
-"with data from the original server."
+msgid "This is a remote user - most settings here will be regularly overwritten with data from the original server."
 msgstr "これはリモートユーザーです - ほとんどの設定は定期的に元のサーバーからのデータで上書きされます。"
 
 #: app/admin/routes.py:659
 msgid "Edit user"
-msgstr "ユーザの編集"
+msgstr "ユーザーの編集"
 
 #: app/admin/routes.py:725
 msgid "User added"
-msgstr ""
+msgstr "ユーザーを追加しました"
 
 #: app/admin/routes.py:728
 msgid "Add user"
-msgstr "ユーザを追加"
+msgstr "ユーザーを追加"
 
 #: app/admin/routes.py:752
 msgid "User deleted"
@@ -624,7 +617,7 @@ msgstr "ユーザーを削除しました"
 #: app/templates/community/_community_moderation_nav.html:11
 #: app/templates/community/community_moderate.html:21
 msgid "Reports"
-msgstr ""
+msgstr "通報"
 
 #: app/admin/util.py:111
 msgid "None"
@@ -644,7 +637,7 @@ msgstr "メール"
 
 #: app/auth/forms.py:24
 msgid "Why would you like to join this site?"
-msgstr "なぜこのサイトに登録したいと思いましたか？"
+msgstr "このサイトに登録したいと思った理由を教えて下さい。"
 
 #: app/auth/forms.py:27 app/auth/routes.py:154 app/templates/base.html:147
 msgid "Register"
@@ -656,16 +649,14 @@ msgstr "パスワードリセットのリクエスト"
 
 #: app/auth/forms.py:78
 msgid "Set password"
-msgstr ""
+msgstr "パスワードを設定"
 
 #: app/auth/routes.py:29 app/auth/routes.py:32
 msgid "No account exists with that user name."
-msgstr ""
+msgstr "そのユーザー名のアカウントは存在しません。"
 
 #: app/auth/routes.py:36
-msgid ""
-"Invalid password. Please <a href=\"/auth/reset_password_request\">reset "
-"your password</a>."
+msgid "Invalid password. Please <a href=\"/auth/reset_password_request\">reset your password</a>."
 msgstr "無効なパスワードです、<a href=\"/auth/reset_password_request\">パスワードをリセット</a>してください。"
 
 #: app/auth/routes.py:39
@@ -699,15 +690,15 @@ msgstr ""
 
 #: app/auth/routes.py:164 app/templates/auth/check_email.html:8
 msgid "Check your email"
-msgstr ""
+msgstr "メールをご確認ください"
 
 #: app/auth/routes.py:175
 msgid "Sorry, you cannot use that email address."
-msgstr ""
+msgstr "申し訳ありませんが、そのメールアドレスは使用できません。"
 
 #: app/auth/routes.py:180
 msgid "Check your email for a link to reset your password."
-msgstr ""
+msgstr "パスワードをリセットするためのリンクをメールで確認してください。"
 
 #: app/auth/routes.py:183
 msgid "No account with that email address exists"
@@ -719,10 +710,8 @@ msgstr "パスワードリセット"
 
 #: app/auth/routes.py:199
 #, python-format
-msgid ""
-"Your password has been reset. Please use it to log in with user name of "
-"%(name)s."
-msgstr ""
+msgid "Your password has been reset. Please use it to log in with user name of %(name)s."
+msgstr "パスワードがリセットされました。 ユーザ名 %(name)s でログインしてください。"
 
 #: app/auth/routes.py:219
 msgid "Thank you for verifying your email address."
@@ -778,19 +767,19 @@ msgstr ""
 
 #: app/chat/forms.py:26 app/post/forms.py:25 app/user/forms.py:72
 msgid "Impersonation"
-msgstr ""
+msgstr "なりすまし"
 
 #: app/chat/forms.py:27 app/post/forms.py:26 app/user/forms.py:73
 msgid "Copyright violation"
-msgstr ""
+msgstr "著作権の侵害"
 
 #: app/chat/forms.py:27 app/post/forms.py:26 app/user/forms.py:73
 msgid "Trademark violation"
-msgstr ""
+msgstr "商標の違反"
 
 #: app/chat/forms.py:28 app/post/forms.py:27 app/user/forms.py:74
 msgid "Self-harm or suicide"
-msgstr ""
+msgstr "自傷行為または自殺"
 
 #: app/chat/forms.py:29 app/community/forms.py:247 app/post/forms.py:28
 #: app/user/forms.py:75
@@ -828,37 +817,36 @@ msgstr "\"%(recipient_name)s\" への新しいメッセージ"
 
 #: app/chat/routes.py:124
 msgid "Conversation deleted"
-msgstr ""
+msgstr "会話を削除しました"
 
 #: app/chat/routes.py:135
 msgid "Instance blocked."
-msgstr ""
+msgstr "インスタンスがブロックされました。"
 
 #: app/chat/routes.py:165
 msgid "This conversation has been reported, thank you!"
-msgstr ""
+msgstr "この会話は報告されました。ありがとうございます！"
 
 #: app/chat/routes.py:170
 msgid "Report conversation"
-msgstr ""
+msgstr "会話に関する報告"
 
 #: app/chat/util.py:58
 #, python-format
 msgid "Message failed to send to %(name)s."
-msgstr ""
+msgstr "メッセージを %(name)s に送信できませんでした。"
 
 #: app/chat/util.py:60
 msgid "Message sent."
-msgstr ""
+msgstr "メッセージを送信"
 
 #: app/community/forms.py:28
 msgid "Create"
 msgstr "作成"
 
 #: app/community/forms.py:42
-#, fuzzy
 msgid "A community with this url already exists."
-msgstr "このユーザ名は既に使用されています。"
+msgstr "このURLのコミュニティは既に存在します。"
 
 #: app/community/forms.py:68
 msgid "Add"
@@ -883,7 +871,7 @@ msgstr ""
 #: app/community/forms.py:79
 #: app/templates/community/community_moderate_report_resolve.html:13
 msgid "Resolve report"
-msgstr ""
+msgstr "解決済みの通報"
 
 #: app/community/forms.py:83
 msgid "Community address"
@@ -937,13 +925,13 @@ msgstr "本文"
 #: app/templates/tag/tags_blocked.html:12
 #: app/templates/tag/tags_blocked.html:21
 msgid "Tags"
-msgstr ""
+msgstr "タグ"
 
 #: app/community/forms.py:100 app/community/forms.py:115
 #: app/community/forms.py:137 app/community/forms.py:159
 #: app/community/forms.py:217
 msgid "Sticky"
-msgstr ""
+msgstr "告知"
 
 #: app/community/forms.py:101 app/community/forms.py:116
 #: app/community/forms.py:138 app/community/forms.py:160
@@ -963,14 +951,14 @@ msgstr ""
 #: app/templates/post/_post_notification_toggle.html:5
 #: app/templates/post/_reply_notification_toggle.html:4
 msgid "Notify about replies"
-msgstr ""
+msgstr "返信を通知する"
 
 #: app/community/forms.py:104 app/community/forms.py:119
 #: app/community/forms.py:141 app/community/forms.py:163
 #: app/community/forms.py:221 app/post/forms.py:13
 #: app/templates/search/start.html:26
 msgid "Language"
-msgstr ""
+msgstr "言語"
 
 #: app/community/forms.py:112 app/community/forms.py:134
 msgid "URL"
@@ -992,62 +980,59 @@ msgstr "代替テキスト"
 
 #: app/community/forms.py:157 app/templates/community/_add_post_types.html:4
 msgid "Image"
-msgstr ""
+msgstr "画像"
 
 #: app/community/forms.py:185
 msgid "Images cannot be posted to local communities."
 msgstr ""
 
 #: app/community/forms.py:194
-#, fuzzy
 msgid "Mode"
-msgstr "テストモード"
+msgstr "モード"
 
 #: app/community/forms.py:194
 msgid "Voters choose one option"
-msgstr ""
+msgstr "1つの選択肢にのみ投票できます"
 
 #: app/community/forms.py:194
-#, fuzzy
 msgid "Voters choose many options"
-msgstr "トピックを選択"
+msgstr "複数の選択肢に投票できます"
 
 #: app/community/forms.py:196
-#, fuzzy
 msgid "30 minutes"
-msgstr "3ヶ月"
+msgstr "30 分"
 
 #: app/community/forms.py:197
 msgid "1 hour"
-msgstr ""
+msgstr "1 時間"
 
 #: app/community/forms.py:198
 msgid "6 hours"
-msgstr ""
+msgstr "6 時間"
 
 #: app/community/forms.py:199
 msgid "12 hours"
-msgstr ""
+msgstr "12 時間"
 
 #: app/community/forms.py:200
 msgid "1 day"
-msgstr ""
+msgstr "1 日"
 
 #: app/community/forms.py:201
 msgid "3 days"
-msgstr ""
+msgstr "3 日"
 
 #: app/community/forms.py:202
 msgid "7 days"
-msgstr ""
+msgstr "7 日"
 
 #: app/community/forms.py:204
 msgid "End voting in"
-msgstr ""
+msgstr "投票期限"
 
 #: app/community/forms.py:205
 msgid "Accept votes from this instance only"
-msgstr ""
+msgstr "このサーバーからのみ投票を受け付ける"
 
 #: app/community/forms.py:232
 msgid "Polls need options for people to choose from"
@@ -1099,9 +1084,7 @@ msgid "Community not found."
 msgstr "コミュニティが見つかりません。"
 
 #: app/community/routes.py:121 app/community/routes.py:1609
-msgid ""
-"Community not found. If you are searching for a nsfw community it is "
-"blocked by this instance."
+msgid "Community not found. If you are searching for a nsfw community it is blocked by this instance."
 msgstr ""
 
 #: app/community/routes.py:124 app/community/routes.py:1612
@@ -1140,20 +1123,17 @@ msgid "You cannot join this community"
 msgstr "このコミュニティに参加することはできません"
 
 #: app/community/routes.py:366
-msgid ""
-"There was a problem while trying to communicate with remote server. If "
-"other people have already joined this community it won't matter."
+msgid "There was a problem while trying to communicate with remote server. If other people have already joined this community it won't matter."
 msgstr ""
 
 #: app/community/routes.py:525 app/community/routes.py:605
 #: app/community/routes.py:685 app/community/routes.py:765
 msgid "Add post to community"
-msgstr ""
+msgstr "コミュニティに投稿"
 
 #: app/community/routes.py:833
-#, fuzzy
 msgid "Add poll to community"
-msgstr "リモートコミュニティを追加"
+msgstr "投票をコミュニティに追加"
 
 #: app/community/routes.py:923 app/community/routes.py:948
 #: app/community/routes.py:950
@@ -1171,7 +1151,7 @@ msgstr ""
 
 #: app/community/routes.py:1062
 msgid "Report community"
-msgstr ""
+msgstr "コミュニティを報告"
 
 #: app/community/routes.py:1173
 #: app/templates/community/community_mod_list.html:22
@@ -1181,7 +1161,7 @@ msgstr ""
 
 #: app/community/routes.py:1198
 msgid "Moderator added"
-msgstr ""
+msgstr "モデレーターが追加されました"
 
 #: app/community/routes.py:1202
 #, python-format
@@ -1190,13 +1170,13 @@ msgstr ""
 
 #: app/community/routes.py:1227
 msgid "Account not found"
-msgstr ""
+msgstr "アカウントが見つかりません"
 
 #: app/community/routes.py:1229
 #: app/templates/community/community_add_moderator.html:13
 #, python-format
 msgid "Add moderator to %(community)s"
-msgstr ""
+msgstr "モデレーターを %(community)sに追加"
 
 #: app/community/routes.py:1249
 msgid "Moderator removed"
@@ -1232,9 +1212,8 @@ msgid "%(name)s has been unbanned."
 msgstr ""
 
 #: app/community/routes.py:1392
-#, fuzzy, python-format
 msgid "New posts in %(community_name)s"
-msgstr "%(community_name)s への新しいメッセージ"
+msgstr ""
 
 #: app/community/routes.py:1437 app/community/routes.py:1471
 #, python-format
@@ -1279,7 +1258,7 @@ msgstr ""
 
 #: app/main/routes.py:75
 msgid "Create an account to tailor this feed to your interests."
-msgstr ""
+msgstr "アカウントを作成することで、このフィードを興味の合わせてカスタマイズすることができます。"
 
 #: app/main/routes.py:178 app/templates/base.html:142
 #: app/templates/base.html:160
@@ -1301,7 +1280,7 @@ msgstr ""
 
 #: app/post/forms.py:14
 msgid "Comment"
-msgstr ""
+msgstr "コメント"
 
 #: app/post/forms.py:18 app/user/forms.py:61
 msgid "Breaks community rules"
@@ -1339,9 +1318,8 @@ msgid "You have already upvoted the post, you do not need to say \"this\" also."
 msgstr ""
 
 #: app/post/routes.py:577
-#, fuzzy
 msgid "Vote has been cast."
-msgstr "投稿を通報しました"
+msgstr ""
 
 #: app/post/routes.py:596 app/post/routes.py:804
 #, python-format
@@ -1353,9 +1331,7 @@ msgid "We have upvoted the comment for you."
 msgstr ""
 
 #: app/post/routes.py:653
-msgid ""
-"You have already upvoted the comment, you do not need to say \"this\" "
-"also."
+msgid "You have already upvoted the comment, you do not need to say \"this\" also."
 msgstr ""
 
 #: app/post/routes.py:880 app/post/routes.py:965 app/post/routes.py:1051
@@ -1363,7 +1339,7 @@ msgstr ""
 #: app/user/routes.py:146 app/user/routes.py:216 app/user/routes.py:731
 #: app/user/routes.py:762
 msgid "Your changes have been saved."
-msgstr ""
+msgstr "変更が保存されました。"
 
 #: app/post/routes.py:899 app/post/routes.py:985 app/post/routes.py:1071
 #: app/post/routes.py:1157 app/post/routes.py:1228
@@ -1373,16 +1349,14 @@ msgstr ""
 #: app/templates/post/post_edit_poll.html:11
 #: app/templates/post/post_edit_video.html:11
 msgid "Edit post"
-msgstr ""
+msgstr "投稿の編集"
 
 #: app/post/routes.py:1434
 msgid "Post deleted."
-msgstr ""
+msgstr "投稿を削除しました。"
 
 #: app/post/routes.py:1493
-msgid ""
-"Moderators have already assessed reports regarding this post, no further "
-"reports are necessary."
+msgid "Moderators have already assessed reports regarding this post, no further reports are necessary."
 msgstr ""
 
 #: app/post/routes.py:1496
@@ -1395,7 +1369,7 @@ msgstr ""
 
 #: app/post/routes.py:1549
 msgid "Report post"
-msgstr ""
+msgstr "投稿を報告"
 
 #: app/post/routes.py:1563 app/post/routes.py:1699
 #, python-format
@@ -1408,9 +1382,7 @@ msgid "Posts linking to %(name)s will be hidden."
 msgstr ""
 
 #: app/post/routes.py:1623
-msgid ""
-"Moderators have already assessed reports regarding this comment, no "
-"further reports are necessary."
+msgid "Moderators have already assessed reports regarding this comment, no further reports are necessary."
 msgstr ""
 
 #: app/post/routes.py:1628
@@ -1423,20 +1395,20 @@ msgstr ""
 
 #: app/post/routes.py:1684
 msgid "Report comment"
-msgstr ""
+msgstr "コメントを通報する"
 
 #: app/post/routes.py:1844
 msgid "Edit comment"
-msgstr ""
+msgstr "コメントを編集"
 
 #: app/post/routes.py:1868
 msgid "Comment deleted."
-msgstr ""
+msgstr "コメントを削除しました。"
 
 #: app/search/routes.py:74
 #, python-format
 msgid "Search results for %(q)s"
-msgstr ""
+msgstr "%(q)s の検索結果"
 
 #: app/templates/_home_nav.html:3
 #: app/templates/community/_community_nav.html:10
@@ -1448,7 +1420,7 @@ msgstr "人気"
 #: app/templates/community/_community_nav.html:13
 #: app/templates/post/post.html:69 app/user/forms.py:47
 msgid "Top"
-msgstr ""
+msgstr "上位"
 
 #: app/templates/_home_nav.html:9
 #: app/templates/community/_community_nav.html:16
@@ -1471,16 +1443,16 @@ msgstr ""
 #: app/templates/search/results.html:68
 #, python-format
 msgid "About %(site_name)s"
-msgstr ""
+msgstr "%(site_name)s について"
 
 #: app/templates/base.html:55
 msgid "PieFed"
-msgstr ""
+msgstr "PieFed"
 
 #: app/templates/base.html:116 app/templates/base.html:213
 #: app/templates/user/notifications.html:18 app/user/routes.py:582
 msgid "Notifications"
-msgstr ""
+msgstr "通知"
 
 #: app/templates/base.html:136 app/templates/base.html:154
 msgid "Popular"
@@ -1493,24 +1465,24 @@ msgstr "全ての投稿"
 #: app/templates/base.html:143 app/templates/base.html:161
 #: app/templates/list_communities.html:13
 msgid "All communities"
-msgstr ""
+msgstr "すべてのコミュニティ"
 
 #: app/templates/auth/login.html:13 app/templates/base.html:146
 msgid "Log in"
-msgstr ""
+msgstr "ログイン"
 
 #: app/templates/base.html:148 app/templates/base.html:186
 #: app/templates/donate.html:10
 msgid "Donate"
-msgstr ""
+msgstr "寄付"
 
 #: app/templates/base.html:164
 msgid "Moderating"
-msgstr ""
+msgstr "管理"
 
 #: app/templates/base.html:179
 msgid "Account"
-msgstr ""
+msgstr "アカウント"
 
 #: app/templates/base.html:181
 msgid "View profile"
@@ -1518,58 +1490,57 @@ msgstr "プロフィールの表示"
 
 #: app/templates/base.html:182
 msgid "Edit profile & settings"
-msgstr "プロファイルと設定の編集"
+msgstr "プロフィールと設定の編集"
 
 #: app/templates/base.html:183
 msgid "Chats"
-msgstr ""
+msgstr "チャット"
 
 #: app/templates/base.html:194
-#, fuzzy
 msgid "Communities - no topic"
-msgstr "コミュニティ"
+msgstr "コミュニティ - トピック無所属"
 
 #: app/templates/base.html:197
 msgid "Monitoring - users"
-msgstr ""
+msgstr "モニタリング - ユーザー"
 
 #: app/templates/base.html:198
 msgid "Monitoring - content"
-msgstr ""
+msgstr "モニタリング - コンテキスト"
 
 #: app/templates/base.html:199
 msgid "Monitoring - spammy content"
-msgstr ""
+msgstr "モニタリング - スパムコンテキスト"
 
 #: app/templates/admin/_nav.html:11 app/templates/base.html:201
 msgid "Registration applications"
-msgstr ""
+msgstr "登録済みアプリケーション"
 
 #: app/templates/admin/_nav.html:13 app/templates/base.html:203
 #: app/templates/community/community.html:191
 #: app/templates/community/community_moderate.html:15
 #: app/templates/community/community_moderate_subscribers.html:15
 msgid "Moderation"
-msgstr ""
+msgstr "モデレーション"
 
 #: app/templates/admin/_nav.html:14 app/templates/admin/federation.html:13
 #: app/templates/base.html:204
 msgid "Federation"
-msgstr ""
+msgstr "連合"
 
 #: app/templates/admin/_nav.html:15 app/templates/admin/newsletter.html:9
 #: app/templates/base.html:205
 msgid "Newsletter"
-msgstr ""
+msgstr "ニュースレター"
 
 #: app/templates/admin/_nav.html:16 app/templates/admin/activities.html:12
 #: app/templates/base.html:206
 msgid "Activities"
-msgstr ""
+msgstr "活動"
 
 #: app/templates/base.html:211
 msgid "Log out"
-msgstr ""
+msgstr "ログアウト"
 
 #: app/templates/base.html:213
 #, python-format
@@ -1578,11 +1549,11 @@ msgstr ""
 
 #: app/templates/base.html:223
 msgid "Light mode"
-msgstr ""
+msgstr "ライトモード"
 
 #: app/templates/base.html:224
 msgid "Dark mode"
-msgstr ""
+msgstr "ダークモード"
 
 #: app/templates/base.html:254 app/templates/keyboard_shortcuts.html:10
 msgid "Keyboard shortcuts"
@@ -1590,14 +1561,14 @@ msgstr "キーボードショートカット"
 
 #: app/templates/index.html:17
 msgid "No posts yet. Join some communities to see more."
-msgstr ""
+msgstr "投稿はまだありません。投稿は他のコミュニティで見ることができるかもしれません。"
 
 #: app/templates/community/community.html:178 app/templates/index.html:18
 #: app/templates/index.html:59 app/templates/list_topics.html:38
 #: app/templates/post/post.html:223 app/templates/search/results.html:60
 #: app/templates/topic/show_topic.html:101
 msgid "Explore communities"
-msgstr ""
+msgstr "コミュニティを探索"
 
 #: app/templates/admin/activities.html:50
 #: app/templates/admin/communities.html:47 app/templates/admin/posts.html:21
@@ -1614,7 +1585,7 @@ msgstr ""
 #: app/templates/user/show_profile.html:108
 #: app/templates/user/show_profile.html:131
 msgid "Previous page"
-msgstr ""
+msgstr "前のページ"
 
 #: app/templates/admin/activities.html:55
 #: app/templates/admin/communities.html:52 app/templates/admin/posts.html:26
@@ -1631,16 +1602,16 @@ msgstr ""
 #: app/templates/user/show_profile.html:113
 #: app/templates/user/show_profile.html:136
 msgid "Next page"
-msgstr ""
+msgstr "次のページ"
 
 #: app/templates/index.html:47 app/templates/search/results.html:48
 msgid "Active communities"
-msgstr "話題のコミュニティ"
+msgstr "活発なコミュニティ"
 
 #: app/templates/index.html:60 app/templates/list_communities.html:130
 #: app/templates/search/results.html:61
 msgid "Browse topics"
-msgstr ""
+msgstr "トピックを見る"
 
 #: app/templates/keyboard_shortcuts.html:11
 msgid "Most shortcuts are the same as what reddit has."
@@ -1648,32 +1619,29 @@ msgstr ""
 
 #: app/templates/keyboard_shortcuts.html:14
 msgid "Navigation"
-msgstr ""
+msgstr "ナビゲーション"
 
 #: app/templates/community/community_mod_list.html:33
 #: app/templates/keyboard_shortcuts.html:43 app/templates/user/filters.html:31
 msgid "Action"
-msgstr ""
+msgstr "アクション"
 
 #: app/templates/keyboard_shortcuts.html:46
 msgid "Upvote"
-msgstr ""
+msgstr "賛成"
 
 #: app/templates/keyboard_shortcuts.html:50
 msgid "Downvote"
-msgstr ""
+msgstr "反対"
 
 #: app/templates/keyboard_shortcuts.html:55
-msgid ""
-"When viewing a list of posts actions like voting or going to a post "
-"depend on which is the current post. The current post is determined by "
-"hovering with the mouse or the J and K keys."
+msgid "When viewing a list of posts actions like voting or going to a post depend on which is the current post. The current post is determined by hovering with the mouse or the J and K keys."
 msgstr ""
 
 #: app/templates/list_communities.html:14 app/templates/search/start.html:20
 #: app/templates/search/start.html:28
 msgid "All"
-msgstr ""
+msgstr "全て"
 
 #: app/templates/list_communities.html:16
 msgid "Communities on this server"
@@ -1714,24 +1682,24 @@ msgstr "リモートを追加"
 
 #: app/templates/list_communities.html:66
 msgid "Sort by name"
-msgstr ""
+msgstr "名前でソート"
 
 #: app/templates/list_communities.html:71
 msgid "Sort by post count"
-msgstr ""
+msgstr "投稿数でソート"
 
 #: app/templates/list_communities.html:71
 msgid "Posts"
-msgstr ""
+msgstr "投稿"
 
 #: app/templates/list_communities.html:76
 msgid "Sort by reply count"
-msgstr ""
+msgstr "返信数でソート"
 
 #: app/templates/list_communities.html:76 app/templates/post/post.html:61
 #: app/templates/post/post.html:158
 msgid "Comments"
-msgstr ""
+msgstr "コメント"
 
 #: app/templates/list_communities.html:81
 msgid "Sort by recent activity"
@@ -1740,7 +1708,7 @@ msgstr ""
 #: app/templates/list_communities.html:92
 #, python-format
 msgid "Leave %(name)s"
-msgstr ""
+msgstr "%(name)s から退出する"
 
 #: app/templates/community/add_remote.html:32
 #: app/templates/community/community.html:121
@@ -1749,18 +1717,18 @@ msgstr ""
 #: app/templates/post/continue_discussion.html:99
 #: app/templates/post/post.html:179 app/templates/post/post_reply_edit.html:44
 msgid "Leave"
-msgstr ""
+msgstr "退出"
 
 #: app/templates/community/community.html:123
 #: app/templates/list_communities.html:94
 msgid "Pending"
-msgstr ""
+msgstr "保留中"
 
 #: app/templates/list_communities.html:96
 #: app/templates/list_communities.html:99
 #, python-format
 msgid "Join %(name)s"
-msgstr ""
+msgstr "%(name)s に参加"
 
 #: app/templates/community/add_remote.html:34
 #: app/templates/community/community.html:125
@@ -1770,16 +1738,16 @@ msgstr ""
 #: app/templates/post/continue_discussion.html:101
 #: app/templates/post/post.html:181 app/templates/post/post_reply_edit.html:46
 msgid "Join"
-msgstr ""
+msgstr "参加する"
 
 #: app/templates/list_communities.html:106
 #, python-format
 msgid "Browse %(name)s"
-msgstr ""
+msgstr "%(name)s を見る"
 
 #: app/templates/list_communities.html:128 app/templates/list_topics.html:36
 msgid "There are no communities yet."
-msgstr ""
+msgstr "コミュニティはまだありません。"
 
 #: app/templates/list_topics.html:25
 msgid "Choose a topic"
@@ -1787,7 +1755,7 @@ msgstr "トピックを選択"
 
 #: app/templates/privacy.html:10
 msgid "Privacy"
-msgstr ""
+msgstr "プライバシー"
 
 #: app/templates/admin/_nav.html:2
 msgid "Admin navigation"
@@ -1795,7 +1763,7 @@ msgstr ""
 
 #: app/templates/admin/_nav.html:3
 msgid "Admin home"
-msgstr ""
+msgstr "管理画面"
 
 #: app/templates/admin/_nav.html:9
 msgid "Watch"
@@ -1803,12 +1771,11 @@ msgstr ""
 
 #: app/templates/admin/add_user.html:12
 msgid "Add new user"
-msgstr ""
+msgstr "新しいユーザーを追加する"
 
 #: app/templates/admin/approve_registrations.html:12
-#, fuzzy
 msgid "Registrations"
-msgstr "新規登録モード"
+msgstr ""
 
 #: app/templates/admin/approve_registrations.html:14
 #, python-format
@@ -1817,7 +1784,7 @@ msgstr ""
 
 #: app/templates/admin/approve_registrations.html:39
 msgid "Approve"
-msgstr ""
+msgstr "承認"
 
 #: app/templates/admin/approve_registrations.html:40
 msgid "View"
@@ -1828,7 +1795,7 @@ msgstr ""
 #: app/templates/post/post_reply_options.html:22
 #: app/templates/user/show_profile.html:212
 msgid "Delete"
-msgstr ""
+msgstr "削除"
 
 #: app/templates/admin/approve_registrations.html:47
 msgid "No one is waiting to be approved."
@@ -1858,10 +1825,7 @@ msgid "Most downvoted posts in the last 3 days"
 msgstr ""
 
 #: app/templates/admin/site.html:16
-msgid ""
-"Configure the flair the instance, by giving it a name, ashort slogan, "
-"basic info for the sidebar and a logo. This information appears in link "
-"previews in social media."
+msgid "Configure the flair the instance, by giving it a name, ashort slogan, basic info for the sidebar and a logo. This information appears in link previews in social media."
 msgstr ""
 
 #: app/templates/admin/site.html:23
@@ -1869,42 +1833,38 @@ msgid "About this instance"
 msgstr ""
 
 #: app/templates/admin/site.html:24
-msgid ""
-"Provide a more extensive description of the instance, set a contact "
-"address and provide legal information. This information appears on the <a"
-" href=\"/about\">about</a> page."
+msgid "Provide a more extensive description of the instance, set a contact address and provide legal information. This information appears on the <a href=\"/about\">about</a> page."
 msgstr ""
 
 #: app/templates/admin/spam_posts.html:26
 #: app/templates/user/show_profile.html:141
 msgid "No comments yet."
-msgstr ""
+msgstr "コメントはありません"
 
 #: app/templates/admin/users.html:13
 msgid "Add local user"
 msgstr "ローカルユーザーを追加"
 
 #: app/templates/auth/check_email.html:9
-msgid ""
-"We sent you an email containing a link that you need to click to enable "
-"your account."
-msgstr ""
+msgid "We sent you an email containing a link that you need to click to enable your account."
+msgstr "登録したメールアドレスへリンクを送りました。\n"
+"クリックしてアカウントを有効にすることができます。"
 
 #: app/templates/auth/login.html:18
 msgid "New User?"
-msgstr ""
+msgstr "新しいユーザーですか？"
 
 #: app/templates/auth/login.html:18
 msgid "Register new account"
-msgstr ""
+msgstr "新規アカウント登録"
 
 #: app/templates/auth/login.html:20
 msgid "Forgot Your Password?"
-msgstr ""
+msgstr "パスワードをお忘れですか？"
 
 #: app/templates/auth/login.html:21
 msgid "Reset it"
-msgstr ""
+msgstr "今すぐリセット"
 
 #: app/templates/auth/permission_denied.html:8
 #: app/templates/chat/blocked.html:13 app/templates/chat/denied.html:14
@@ -1917,17 +1877,15 @@ msgstr ""
 
 #: app/templates/auth/please_wait.html:8
 msgid "Thanks for registering"
-msgstr ""
+msgstr "ご登録ありがとうございます。"
 
 #: app/templates/auth/please_wait.html:9
-msgid ""
-"We are reviewing your application and will email you once it has been "
-"accepted."
+msgid "We are reviewing your application and will email you once it has been accepted."
 msgstr ""
 
 #: app/templates/auth/register.html:19
 msgid "Create new account"
-msgstr ""
+msgstr "新しいアカウントの作成"
 
 #: app/templates/auth/register.html:22
 msgid "Registration is closed. Only admins can create accounts."
@@ -1936,17 +1894,14 @@ msgstr ""
 #: app/templates/auth/reset_password.html:13
 #: app/templates/auth/reset_password_request.html:13
 msgid "Reset your password"
-msgstr ""
+msgstr "パスワードをリセット"
 
 #: app/templates/auth/validation_required.html:8
 msgid "Please check your email inbox"
-msgstr ""
+msgstr "メールをご確認ください"
 
 #: app/templates/auth/validation_required.html:12
-msgid ""
-"To keep spam and bots to a managable level, we send every new account an "
-"email with a link in it that needs to be clicked to fully enable the "
-"account."
+msgid "To keep spam and bots to a managable level, we send every new account an email with a link in it that needs to be clicked to fully enable the account."
 msgstr ""
 
 #: app/templates/chat/blocked.html:15
@@ -1960,12 +1915,12 @@ msgstr ""
 
 #: app/templates/chat/chat_options.html:17
 msgid "Delete conversation"
-msgstr ""
+msgstr "会話を削除"
 
 #: app/templates/chat/chat_options.html:21
 #, python-format
 msgid "Block @%(author_name)s"
-msgstr ""
+msgstr "@%(author_name)s をブロック"
 
 #: app/templates/chat/chat_options.html:26
 #, python-format
@@ -1976,17 +1931,15 @@ msgstr ""
 #: app/templates/post/post_options.html:50
 #: app/templates/post/post_reply_options.html:34
 msgid "Report to moderators"
-msgstr ""
+msgstr "モデレーターへ報告"
 
 #: app/templates/chat/chat_options.html:31
-msgid ""
-"If you are reporting abuse then do not delete the conversation - "
-"moderators will not be able to read it if you delete it."
+msgid "If you are reporting abuse then do not delete the conversation - moderators will not be able to read it if you delete it."
 msgstr ""
 
 #: app/templates/chat/conversation.html:37
 msgid "Chat"
-msgstr ""
+msgstr "チャット"
 
 #: app/templates/chat/conversation.html:42 app/templates/user/filters.html:56
 #: app/templates/user/notifications.html:14 app/templates/user/people.html:14
@@ -1994,7 +1947,7 @@ msgstr ""
 #: app/templates/user/show_profile.html:35
 #: app/templates/user/show_profile.html:64 app/user/routes.py:37
 msgid "People"
-msgstr ""
+msgstr "ユーザー"
 
 #: app/templates/chat/conversation.html:59
 #, python-format
@@ -2003,27 +1956,23 @@ msgstr "%(name)s とのメッセージ"
 
 #: app/templates/chat/conversation.html:60
 msgid "Messages with: "
-msgstr ""
+msgstr "メッセージ： "
 
 #: app/templates/chat/conversation.html:75
 #: app/templates/post/_post_teaser.html:81
 msgid "Options"
-msgstr ""
+msgstr "オプション"
 
 #: app/templates/chat/denied.html:16
-msgid ""
-"You have not been using PieFed long enough to be allowed to send messages"
-" to people."
+msgid "You have not been using PieFed long enough to be allowed to send messages to people."
 msgstr ""
 
 #: app/templates/chat/empty.html:13
 msgid "No chats"
-msgstr ""
+msgstr "チャットがありません"
 
 #: app/templates/chat/empty.html:15
-msgid ""
-"There are no chats involving you, yet. Start a conversation using the "
-"\"Send message\" button on someone's profile."
+msgid "There are no chats involving you, yet. Start a conversation using the \"Send message\" button on someone's profile."
 msgstr ""
 
 #: app/templates/chat/report.html:14
@@ -2037,15 +1986,15 @@ msgstr ""
 
 #: app/templates/community/_add_post_types.html:2
 msgid "Discussion"
-msgstr ""
+msgstr "ディスカッション"
 
 #: app/templates/community/_add_post_types.html:3
 msgid "Share a link"
-msgstr ""
+msgstr "リンクを共有する"
 
 #: app/templates/community/_add_post_types.html:3
 msgid "Link"
-msgstr ""
+msgstr "リンク"
 
 #: app/templates/community/_add_post_types.html:4
 msgid "Share an image"
@@ -2057,23 +2006,23 @@ msgstr ""
 
 #: app/templates/community/_add_post_types.html:5
 msgid "Video"
-msgstr ""
+msgstr "動画"
 
 #: app/templates/community/_add_post_types.html:6
 msgid "Create a poll"
-msgstr ""
+msgstr "投票を作成"
 
 #: app/templates/community/_add_post_types.html:6
 msgid "Poll"
-msgstr ""
+msgstr "投票"
 
 #: app/templates/community/_add_post_types.html:8
 msgid "Create an event"
-msgstr ""
+msgstr "イベントを作成"
 
 #: app/templates/community/_add_post_types.html:8
 msgid "Event"
-msgstr ""
+msgstr "イベント"
 
 #: app/templates/community/_community_moderation_nav.html:4
 #: app/templates/community/community_edit.html:15
@@ -2089,17 +2038,17 @@ msgstr "設定"
 #: app/templates/community/_community_moderation_nav.html:7
 #: app/templates/community/community_mod_list.html:16
 msgid "Moderators"
-msgstr ""
+msgstr "モデレーター"
 
 #: app/templates/community/_community_moderation_nav.html:10
 #: app/templates/community/_community_nav.html:9
 msgid "Sort by hot"
-msgstr ""
+msgstr "人気順に並び替え"
 
 #: app/templates/community/_community_moderation_nav.html:14
 #: app/templates/community/community_moderate_subscribers.html:21
 msgid "Subscribers"
-msgstr ""
+msgstr "参加者"
 
 #: app/templates/community/_community_moderation_nav.html:17
 msgid "Appeals"
@@ -2107,7 +2056,7 @@ msgstr ""
 
 #: app/templates/community/_community_moderation_nav.html:20
 msgid "Mod log"
-msgstr ""
+msgstr "モデレーションログ"
 
 #: app/templates/community/_community_nav.html:4
 #: app/templates/community/add_discussion_post.html:11
@@ -2121,27 +2070,27 @@ msgstr ""
 #: app/templates/post/post.html:174 app/templates/post/post_reply_edit.html:51
 #: app/templates/topic/show_topic.html:78
 msgid "Create post"
-msgstr ""
+msgstr "投稿を作成"
 
 #: app/templates/community/_community_nav.html:12
 msgid "Sort by top"
-msgstr ""
+msgstr "トップ順に並べ替え"
 
 #: app/templates/community/_community_nav.html:15
 msgid "Sort by new"
-msgstr ""
+msgstr "新しい順に並べ替え"
 
 #: app/templates/community/_community_nav.html:18
 msgid "Sort by active"
-msgstr ""
+msgstr "活発な順に並び替え"
 
 #: app/templates/community/_community_nav.html:28
 msgid "Tile"
-msgstr ""
+msgstr "タイル"
 
 #: app/templates/community/_community_nav.html:31
 msgid "Wide tile"
-msgstr ""
+msgstr "ワイドタイル"
 
 #: app/templates/community/_notification_toggle.html:5
 msgid "Notify about every new post. Not advisable in high traffic communities!"
@@ -2153,7 +2102,7 @@ msgstr ""
 #: app/templates/community/add_poll_post.html:16
 #: app/templates/community/add_video_post.html:16
 msgid "Type of post"
-msgstr ""
+msgstr "投稿の種類"
 
 #: app/templates/community/add_discussion_post.html:37
 #: app/templates/community/add_image_post.html:39
@@ -2163,7 +2112,7 @@ msgstr ""
 #: app/templates/post/add_reply.html:37 app/templates/post/post.html:42
 #: app/templates/user/edit_profile.html:44
 msgid "Enable markdown editor"
-msgstr ""
+msgstr "Markdownエディターを有効にする"
 
 #: app/templates/community/add_discussion_post.html:41
 #: app/templates/community/add_image_post.html:43
@@ -2176,12 +2125,12 @@ msgstr ""
 #: app/templates/post/post_edit_poll.html:66
 #: app/templates/post/post_edit_video.html:31
 msgid "Separate each tag with a comma."
-msgstr ""
+msgstr "タグはコンマで区切ることができます。"
 
 #: app/templates/community/add_image_post.html:24
 #: app/templates/post/post_edit_image.html:17
 msgid "Describe the image, to help visually impaired people."
-msgstr ""
+msgstr "視覚的に閲覧が難しいユーザーのために説明を追加してください。"
 
 #: app/templates/community/add_local.html:31
 #, python-format
@@ -2191,22 +2140,21 @@ msgstr ""
 #: app/templates/community/add_poll_post.html:41
 #: app/templates/post/post_edit_poll.html:30
 msgid "Poll choices"
-msgstr ""
+msgstr "選択肢"
 
 #: app/templates/community/add_poll_post.html:72
 #: app/templates/post/post_edit_poll.html:61
-#, fuzzy
 msgid "Add choice"
-msgstr "トピックを追加"
+msgstr "選択肢を追加"
 
 #: app/templates/community/add_remote.html:25
 #: app/templates/community/lookup_remote.html:14
 msgid "Found a community:"
-msgstr ""
+msgstr "コミュニティを探す："
 
 #: app/templates/community/add_video_post.html:24
 msgid "Provide a URL ending with .mp4 or .webm."
-msgstr ""
+msgstr ".mp4 または .webm で終わるURLを指定してください。"
 
 #: app/templates/community/community.html:27
 #: app/templates/community/community.html:48
@@ -2231,14 +2179,14 @@ msgstr ""
 #: app/templates/post/continue_discussion.html:111
 #: app/templates/post/post.html:186 app/templates/post/post_reply_edit.html:56
 msgid "Search this community"
-msgstr ""
+msgstr "コミュニティ内で検索"
 
 #: app/templates/community/community.html:137
 #: app/templates/post/add_reply.html:67
 #: app/templates/post/continue_discussion.html:118
 #: app/templates/post/post.html:193 app/templates/post/post_reply_edit.html:63
 msgid "About community"
-msgstr ""
+msgstr "コミュニティについて"
 
 #: app/templates/community/community.html:156
 #, python-format
@@ -2278,7 +2226,7 @@ msgstr ""
 #: app/templates/community/community_edit.html:23
 #, python-format
 msgid "Edit %(community)s"
-msgstr ""
+msgstr "%(community)s を編集"
 
 #: app/templates/community/community_edit.html:28
 msgid "Edit and configure this community"
@@ -2286,17 +2234,17 @@ msgstr ""
 
 #: app/templates/community/community_mod_list.html:24
 msgid "See and change who moderates this community"
-msgstr ""
+msgstr "コミュニティモデレーターの変更と表示"
 
 #: app/templates/community/community_mod_list.html:26
 #: app/templates/community/community_moderate.html:24
 #: app/templates/community/community_moderate_subscribers.html:24
 msgid "Add moderator"
-msgstr ""
+msgstr "モデレーターを追加"
 
 #: app/templates/community/community_mod_list.html:43
 msgid "Remove"
-msgstr ""
+msgstr "削除"
 
 #: app/templates/community/community_moderate.html:27
 #, python-format
@@ -2313,34 +2261,32 @@ msgstr ""
 
 #: app/templates/community/community_moderate.html:70
 msgid "Ignore"
-msgstr ""
+msgstr "無視"
 
 #: app/templates/community/community_moderate.html:90
 msgid "No reports yet"
-msgstr ""
+msgstr "まだレポートはありません"
 
 #: app/templates/community/community_moderate_report_escalate.html:13
 msgid "Escalate report to admins"
-msgstr ""
+msgstr "管理者に通報をエスカレーション"
 
 #: app/templates/community/community_moderate_report_escalate.html:14
-msgid ""
-"For reports that could potentially involve legal issues or where you are "
-"unsure how to respond, you may prefer to let admins handle it."
+msgid "For reports that could potentially involve legal issues or where you are unsure how to respond, you may prefer to let admins handle it."
 msgstr ""
 
 #: app/templates/community/community_moderate_subscribers.html:27
 #, python-format
 msgid "See who is subscribed to %(community)s"
-msgstr ""
+msgstr "%(community)s の参加者を見る"
 
 #: app/templates/community/community_moderate_subscribers.html:77
 msgid "This community has no subscribers"
-msgstr ""
+msgstr "このコミュニティには参加者はいません。"
 
 #: app/templates/community/community_moderate_subscribers.html:79
 msgid "Banned People"
-msgstr ""
+msgstr "BANされたユーザー"
 
 #: app/templates/community/community_moderate_subscribers.html:80
 #, python-format
@@ -2352,26 +2298,26 @@ msgstr ""
 #: app/templates/domain/domains_blocked.html:46 app/templates/tag/tag.html:52
 #: app/templates/user/show_profile.html:202
 msgid "Unban"
-msgstr ""
+msgstr "BANを解除"
 
 #: app/templates/community/community_moderate_subscribers.html:125
 msgid "No banned people yet"
-msgstr ""
+msgstr "BANされた人はいません"
 
 #: app/templates/domain/domain.html:14 app/templates/domain/domains.html:12
 #: app/templates/domain/domains.html:21
 #: app/templates/domain/domains_blocked.html:21
 #: app/templates/user/filters.html:60
 msgid "Domains"
-msgstr ""
+msgstr "ドメイン"
 
 #: app/templates/domain/domain.html:23
 msgid "No posts in this domain yet."
-msgstr ""
+msgstr "このドメインにはまだ投稿がありません。"
 
 #: app/templates/domain/domain.html:45
 msgid "Domain management"
-msgstr ""
+msgstr "ドメイン管理"
 
 #: app/templates/domain/domain.html:51 app/templates/user/filters.html:71
 #: app/templates/user/filters.html:76 app/templates/user/filters.html:89
@@ -2379,11 +2325,11 @@ msgstr ""
 #: app/templates/user/filters.html:112 app/templates/user/filters.html:125
 #: app/templates/user/filters.html:130 app/templates/user/show_profile.html:81
 msgid "Unblock"
-msgstr ""
+msgstr "ブロック解除"
 
 #: app/templates/domain/domain.html:55 app/templates/user/show_profile.html:83
 msgid "Block"
-msgstr ""
+msgstr "ブロック"
 
 #: app/templates/domain/domain.html:65 app/templates/tag/tag.html:56
 msgid "Ban instance-wide"
@@ -2405,7 +2351,7 @@ msgstr ""
 
 #: app/templates/domain/domains_blocked.html:12
 msgid "Blocked domains"
-msgstr ""
+msgstr "ブロックしたドメイン"
 
 #: app/templates/domain/domains_blocked.html:14
 #, python-format
@@ -2417,9 +2363,7 @@ msgid "Unbanning this domain allows future posts linking to that domain."
 msgstr ""
 
 #: app/templates/domain/domains_blocked.html:48
-msgid ""
-"Banning this domain will delete all posts linking to this domain and "
-"prevent future posts linking to that domain."
+msgid "Banning this domain will delete all posts linking to this domain and prevent future posts linking to that domain."
 msgstr ""
 
 #: app/templates/errors/404.html:12
@@ -2428,7 +2372,7 @@ msgstr ""
 
 #: app/templates/errors/404.html:15
 msgid "The page your browser tried to load could not be found."
-msgstr ""
+msgstr "ページが見つかりませんでした"
 
 #: app/templates/errors/404.html:16 app/templates/errors/500.html:16
 msgid "Back"
@@ -2439,9 +2383,7 @@ msgid "An unexpected error has occurred"
 msgstr ""
 
 #: app/templates/errors/500.html:15
-msgid ""
-"Sorry for the inconvenience! Please let us know about this, so we can "
-"repair it and make PieFed better for everyone."
+msgid "Sorry for the inconvenience! Please let us know about this, so we can repair it and make PieFed better for everyone."
 msgstr ""
 
 #: app/templates/post/_comment_voting_buttons.html:3
@@ -2481,13 +2423,12 @@ msgid "Total votes: %(total_votes)d."
 msgstr ""
 
 #: app/templates/post/_post_full.html:153
-#, fuzzy
 msgid "Poll closes"
-msgstr "全ての投稿"
+msgstr ""
 
 #: app/templates/post/_post_full.html:185
 msgid "Hashtags"
-msgstr ""
+msgstr "ハッシュタグ"
 
 #: app/templates/post/_post_full.html:195
 #: app/templates/post/_post_full.html:196
@@ -2500,7 +2441,7 @@ msgstr ""
 
 #: app/templates/post/_post_reply_teaser.html:3
 msgid "View context"
-msgstr ""
+msgstr "詳細の表示"
 
 #: app/templates/post/_post_teaser.html:6
 #: app/templates/post/_post_teaser_masonry.html:8
@@ -2520,7 +2461,7 @@ msgstr ""
 #: app/templates/post/_post_teaser_masonry.html:20
 #: app/templates/post/_post_teaser_masonry.html:52
 msgid "View image"
-msgstr ""
+msgstr "画像を表示"
 
 #: app/templates/post/_post_teaser.html:24
 #: app/templates/post/_post_teaser.html:39
@@ -2548,11 +2489,11 @@ msgstr ""
 #: app/templates/post/_post_teaser_masonry.html:65
 #: app/templates/post/_post_teaser_masonry.html:66
 msgid "View comments"
-msgstr ""
+msgstr "コメントを見る"
 
 #: app/templates/post/_post_teaser.html:73
 msgid "Number of comments:"
-msgstr ""
+msgstr "コメント数:"
 
 #: app/templates/post/_post_voting_buttons.html:3
 #, python-format
@@ -2566,25 +2507,21 @@ msgstr ""
 
 #: app/templates/post/_post_voting_buttons_masonry.html:3
 msgid "UpVote"
-msgstr ""
+msgstr "賛成"
 
 #: app/templates/post/_post_voting_buttons_masonry.html:10
 msgid "DownVote"
-msgstr ""
+msgstr "反対"
 
 #: app/templates/post/add_reply.html:21 app/templates/post/post.html:23
-msgid ""
-"This post is hosted on beehaw.org which has <a "
-"href=\"https://docs.beehaw.org/docs/core-principles/what-is-beehaw/\" "
-"target=\"_blank\" rel=\"nofollow\">higher standards of behaviour than "
-"most places. Be nice</a>."
+msgid "This post is hosted on beehaw.org which has <a href=\"https://docs.beehaw.org/docs/core-principles/what-is-beehaw/\" target=\"_blank\" rel=\"nofollow\">higher standards of behaviour than most places. Be nice</a>."
 msgstr ""
 
 #: app/templates/post/add_reply.html:89
 #: app/templates/post/continue_discussion.html:140
 #: app/templates/post/post.html:234 app/templates/post/post_reply_edit.html:85
 msgid "Moderate"
-msgstr ""
+msgstr "管理"
 
 #: app/templates/post/continue_discussion.html:47
 #: app/templates/post/post.html:108
@@ -2597,11 +2534,11 @@ msgstr ""
 
 #: app/templates/post/post.html:55
 msgid "Log in to comment"
-msgstr ""
+msgstr "ログインしてコメントする"
 
 #: app/templates/post/post.html:58
 msgid "Comments are disabled."
-msgstr ""
+msgstr "コメントは無効です。"
 
 #: app/templates/post/post.html:65
 msgid "Sort by magic"
@@ -2609,7 +2546,7 @@ msgstr ""
 
 #: app/templates/post/post.html:68
 msgid "Comments with the most upvotes"
-msgstr ""
+msgstr "最も賛成票の多いコメント"
 
 #: app/templates/post/post.html:71
 msgid "Show newest first"
@@ -2617,7 +2554,7 @@ msgstr ""
 
 #: app/templates/post/post.html:87
 msgid "Author"
-msgstr ""
+msgstr "作成者"
 
 #: app/templates/post/post.html:104
 msgid "Post creator"
@@ -2641,15 +2578,11 @@ msgid "Posts to the same url have also been created in the following communities
 msgstr ""
 
 #: app/templates/post/post_mea_culpa.html:15
-msgid ""
-"If you wish to de-escalate the discussion on your post and now feel like "
-"it was a mistake, click the button below."
+msgid "If you wish to de-escalate the discussion on your post and now feel like it was a mistake, click the button below."
 msgstr ""
 
 #: app/templates/post/post_mea_culpa.html:16
-msgid ""
-"No further comments will be posted and a message saying you made a "
-"mistake in this post will be displayed."
+msgid "No further comments will be posted and a message saying you made a mistake in this post will be displayed."
 msgstr ""
 
 #: app/templates/post/post_mea_culpa.html:17
@@ -2664,7 +2597,7 @@ msgstr ""
 #: app/templates/post/post_options.html:18
 #: app/templates/post/post_reply_options.html:18
 msgid "Edit"
-msgstr ""
+msgstr "編集"
 
 #: app/templates/post/post_options.html:26
 msgid "I made a mistake with this post and have changed my mind about the topic"
@@ -2694,14 +2627,11 @@ msgstr ""
 #: app/templates/post/post_options.html:47
 #, python-format
 msgid "View original on %(domain)s"
-msgstr ""
+msgstr "%(domain)s でオリジナルを表示"
 
 #: app/templates/post/post_options.html:52
 #: app/templates/post/post_reply_options.html:36
-msgid ""
-"If you want to perform more than one of these (e.g. block and report), "
-"hold down Ctrl and click, then complete the operation in the new tabs "
-"that open."
+msgid "If you want to perform more than one of these (e.g. block and report), hold down Ctrl and click, then complete the operation in the new tabs that open."
 msgstr ""
 
 #: app/templates/post/post_reply_options.html:13
@@ -2734,34 +2664,30 @@ msgstr ""
 
 #: app/templates/search/start.html:13
 msgid "Search for posts"
-msgstr ""
+msgstr "投稿を検索"
 
 #: app/templates/search/start.html:15
 msgid "Keyword"
-msgstr ""
+msgstr "キーワード"
 
 #: app/templates/search/start.html:36
 msgid "Example searches:"
-msgstr ""
+msgstr "検索の例:"
 
 #: app/templates/search/start.html:39
 msgid "star wars"
 msgstr ""
 
 #: app/templates/search/start.html:40
-msgid ""
-"There is an implied \"and\" here. Results will have both words somewhere "
-"in them."
-msgstr ""
+msgid "There is an implied \"and\" here. Results will have both words somewhere in them."
+msgstr "スペースで区切ることで両方の単語が含まれる検索になります。"
 
 #: app/templates/search/start.html:43
 msgid "star or wars"
 msgstr ""
 
 #: app/templates/search/start.html:44
-msgid ""
-"This will broaden the search to include results that contain any of the "
-"words."
+msgid "This will broaden the search to include results that contain any of the words."
 msgstr ""
 
 #: app/templates/search/start.html:47
@@ -2769,9 +2695,7 @@ msgid "star -wars"
 msgstr ""
 
 #: app/templates/search/start.html:48
-msgid ""
-"To search for things containing \"star\" but not \"wars\" you can put a -"
-" before the word you want to exclude."
+msgid "To search for things containing \"star\" but not \"wars\" you can put a - before the word you want to exclude."
 msgstr ""
 
 #: app/templates/search/start.html:51
@@ -2793,20 +2717,19 @@ msgstr ""
 #: app/templates/tag/tags.html:14 app/templates/tag/tags_blocked.html:14
 #, python-format
 msgid "Tags containing \"%(search)s\""
-msgstr ""
+msgstr "\"%(search)s \"を含むタグ"
 
 #: app/templates/tag/tags.html:24 app/templates/tag/tags_blocked.html:24
-#, fuzzy
 msgid "Banned tags"
-msgstr "バナー画像"
+msgstr "禁止されたタグ"
 
 #: app/templates/tag/tags.html:38 app/templates/tag/tags_blocked.html:38
 msgid "How many times has something using this tag been posted"
-msgstr ""
+msgstr "このタグを使って投稿された回数"
 
 #: app/templates/topic/_notification_toggle.html:5
 msgid "Notify about every new post. Not advisable in high traffic topics!"
-msgstr ""
+msgstr "新しい投稿を通知します。投稿数の多いトピックではお勧めできません！"
 
 #: app/templates/topic/choose_topics.html:9
 msgid "Please choose at least 3 topics that interest you."
@@ -2814,11 +2737,11 @@ msgstr "興味のあるトピックを3つ以上選択してください。"
 
 #: app/templates/topic/show_topic.html:26
 msgid "Sub-topics"
-msgstr ""
+msgstr "サブトピック"
 
 #: app/templates/topic/show_topic.html:54
 msgid "No posts in this topic yet."
-msgstr ""
+msgstr "このトピックにはまだ投稿がありません。"
 
 #: app/templates/topic/show_topic.html:89
 msgid "Topic communities"
@@ -2835,9 +2758,8 @@ msgid "Post in %(name)s"
 msgstr ""
 
 #: app/templates/topic/topic_create_post.html:23
-#, fuzzy, python-format
 msgid "View %(name)s"
-msgstr "%(name)s とチャット"
+msgstr ""
 
 #: app/templates/user/_notification_toggle.html:5
 msgid "Notify about every new post by this person."
@@ -2861,51 +2783,40 @@ msgstr "設定の変更"
 #: app/templates/user/delete_account.html:18
 #, python-format
 msgid "Delete %(username)s"
-msgstr ""
+msgstr "%(username)s を削除"
 
 #: app/templates/user/delete_account.html:20
 #, python-format
-msgid ""
-"You are about to permanently delete the account with the username "
-"\"<strong>%(username)s</strong>.\" This means your profile will "
-"disappear, pictures will be deleted. Text-based posts will stay but look "
-"like they are from someone named \"deleted.\""
+msgid "You are about to permanently delete the account with the username \"<strong>%(username)s</strong>.\" This means your profile will disappear, pictures will be deleted. Text-based posts will stay but look like they are from someone named \"deleted.\""
 msgstr ""
 
 #: app/templates/user/delete_account.html:21
 #, python-format
-msgid ""
-"Once you hit delete, nobody can use \"%(username)s\" as a username again."
-" We are doing this so nobody pretends to be you."
+msgid "Once you hit delete, nobody can use \"%(username)s\" as a username again. We are doing this so nobody pretends to be you."
 msgstr ""
 
 #: app/templates/user/delete_account.html:22
-msgid ""
-"We will tell other websites (fediverse instances) that your account is "
-"gone. But it's up to them to decide what to do with any copies they have "
-"of your stuff. Some websites work differently than ours."
+msgid "We will tell other websites (fediverse instances) that your account is gone. But it's up to them to decide what to do with any copies they have of your stuff. Some websites work differently than ours."
 msgstr ""
 
 #: app/templates/user/delete_account.html:23
-msgid ""
-"Remember, once you do this, there's no going back. Are you sure you want "
-"to continue?"
+msgid "Remember, once you do this, there's no going back. Are you sure you want to continue?"
 msgstr ""
 
 #: app/templates/user/edit_filters.html:16 app/templates/user/filters.html:16
 #: app/templates/user/filters.html:19
 msgid "Filters"
-msgstr ""
+msgstr "フィルター"
 
 #: app/templates/user/edit_filters.html:18 app/user/routes.py:774
 msgid "Edit filter"
-msgstr ""
+msgstr "フィルターの編集"
 
 #: app/templates/user/edit_filters.html:20
 #: app/templates/user/edit_filters.html:27 app/templates/user/filters.html:22
 #: app/user/routes.py:734
 msgid "Add filter"
-msgstr ""
+msgstr "フィルターを追加"
 
 #: app/templates/user/edit_filters.html:25
 #, python-format
@@ -2932,12 +2843,12 @@ msgstr "プロフィールの編集"
 #: app/templates/user/edit_profile.html:19
 #, python-format
 msgid "Edit profile of %(name)s"
-msgstr ""
+msgstr "%(name)s のプロフィールを編集"
 
 #: app/templates/user/edit_profile.html:58
 #: app/templates/user/edit_settings.html:43
 msgid "Delete account"
-msgstr ""
+msgstr "アカウントの削除"
 
 #: app/templates/user/email_notifs_unsubscribed.html:9
 #: app/templates/user/newsletter_unsubscribed.html:9
@@ -2945,9 +2856,7 @@ msgid "Unsubscribed"
 msgstr ""
 
 #: app/templates/user/email_notifs_unsubscribed.html:10
-msgid ""
-"You have unsubscribed from emails about unread notifications. We might "
-"email you for other reasons, though."
+msgid "You have unsubscribed from emails about unread notifications. We might email you for other reasons, though."
 msgstr ""
 
 #: app/templates/user/email_notifs_unsubscribed.html:11
@@ -2961,20 +2870,16 @@ msgid "Follow on remote instance"
 msgstr ""
 
 #: app/templates/user/fediverse_redirect.html:21
-msgid ""
-"We are about to send you to your instance where you will then need to "
-"click the \"Follow\" button."
+msgid "We are about to send you to your instance where you will then need to click the \"Follow\" button."
 msgstr ""
 
 #: app/templates/user/filters.html:25
-msgid ""
-"Filters can hide posts that contain keywords you specify, either by "
-"making them less noticeable or invisible."
+msgid "Filters can hide posts that contain keywords you specify, either by making them less noticeable or invisible."
 msgstr "フィルターは、指定したキーワードを含む投稿を非表示にすることができます。"
 
 #: app/templates/user/filters.html:30
 msgid "Keywords"
-msgstr ""
+msgstr "キーワード"
 
 #: app/templates/user/filters.html:32
 msgid "Expires"
@@ -2982,7 +2887,7 @@ msgstr ""
 
 #: app/templates/user/filters.html:39
 msgid "Invisible"
-msgstr ""
+msgstr "非表示"
 
 #: app/templates/user/filters.html:39
 msgid "Semi-transparent"
@@ -2994,11 +2899,11 @@ msgstr "フィルターはまだ定義されていません。"
 
 #: app/templates/user/filters.html:62
 msgid "Instances"
-msgstr ""
+msgstr "インスタンス"
 
 #: app/templates/user/filters.html:81
 msgid "No blocked people"
-msgstr ""
+msgstr "ブロックされた人はいません"
 
 #: app/templates/user/filters.html:99
 msgid "No blocked communities"
@@ -3013,9 +2918,7 @@ msgid "No blocked instances"
 msgstr ""
 
 #: app/templates/user/newsletter_unsubscribed.html:10
-msgid ""
-"You have unsubscribed from the email newsletter. We might email you for "
-"other reasons, though."
+msgid "You have unsubscribed from the email newsletter. We might email you for other reasons, though."
 msgstr ""
 
 #: app/templates/user/notifications.html:25
@@ -3025,12 +2928,12 @@ msgstr ""
 #: app/templates/user/notifications.html:49
 #: app/templates/user/show_profile.html:149
 msgid "Manage"
-msgstr ""
+msgstr "管理する"
 
 #: app/templates/user/notifications.html:95
 #: app/templates/user/show_profile.html:225
 msgid "Upvoted"
-msgstr ""
+msgstr "賛成済み"
 
 #: app/templates/user/people.html:32
 msgid "No people to show"
@@ -3040,31 +2943,31 @@ msgstr ""
 #: app/templates/user/show_profile.html:41
 #: app/templates/user/show_profile.html:48
 msgid "Profile pic"
-msgstr ""
+msgstr "プロフィール画像"
 
 #: app/templates/user/show_profile.html:76
 msgid "Send message"
-msgstr ""
+msgstr "メッセージを送信"
 
 #: app/templates/user/show_profile.html:78
 msgid "Send message with matrix chat"
-msgstr ""
+msgstr "Matrix chatでメッセージを送信"
 
 #: app/templates/user/show_profile.html:78
 msgid "Send message using Matrix"
-msgstr ""
+msgstr "Matrixでメッセージを送る"
 
 #: app/templates/user/show_profile.html:88
 msgid "Follow"
-msgstr ""
+msgstr "フォロー"
 
 #: app/templates/user/show_profile.html:94
 msgid "Bot Account"
-msgstr ""
+msgstr "Botアカウント"
 
 #: app/templates/user/show_profile.html:96
 msgid "Attitude"
-msgstr ""
+msgstr "態度ステータス"
 
 #: app/templates/user/show_profile.html:96
 msgid "Ratio of upvotes cast to downvotes cast. Higher is more positive."
@@ -3076,7 +2979,7 @@ msgstr ""
 
 #: app/templates/user/show_profile.html:118
 msgid "No posts yet."
-msgstr ""
+msgstr "投稿はまだありません。"
 
 #: app/templates/user/show_profile.html:128
 msgid "Comment pagination"
@@ -3084,15 +2987,15 @@ msgstr ""
 
 #: app/templates/user/show_profile.html:170
 msgid "Member of"
-msgstr ""
+msgstr "メンバー"
 
 #: app/templates/user/show_profile.html:195
 msgid "Moderate user"
-msgstr ""
+msgstr "ユーザー管理"
 
 #: app/templates/user/show_profile.html:215
 msgid "Ban + Purge"
-msgstr ""
+msgstr "Ban + パージ"
 
 #: app/templates/user/user_report.html:13
 #, python-format
@@ -3108,16 +3011,12 @@ msgid "Choose"
 msgstr "選択"
 
 #: app/topic/routes.py:183
-msgid ""
-"You have joined some communities relating to those interests. Find them "
-"on the Topics menu or browse the home page."
+msgid "You have joined some communities relating to those interests. Find them on the Topics menu or browse the home page."
 msgstr ""
 
 #: app/topic/routes.py:187
-msgid ""
-"You did not choose any topics. Would you like to choose individual "
-"communities instead?"
-msgstr ""
+msgid "You did not choose any topics. Would you like to choose individual communities instead?"
+msgstr "トピックを選択していません。代わりにコミュニティを選択しますか？"
 
 #: app/user/forms.py:14
 msgid "Display name"
@@ -3129,7 +3028,7 @@ msgstr "新しいパスワードを設定"
 
 #: app/user/forms.py:23
 msgid "Save profile"
-msgstr ""
+msgstr "プロフィールを保存"
 
 #: app/user/forms.py:27
 msgid "That email address is already in use by another account"
@@ -3197,7 +3096,7 @@ msgstr ""
 
 #: app/user/forms.py:94
 msgid "Comments on posts"
-msgstr ""
+msgstr "投稿にコメント"
 
 #: app/user/forms.py:95
 msgid "Make semi-transparent"
@@ -3225,31 +3124,31 @@ msgstr ""
 
 #: app/user/forms.py:108
 msgid "Mastodon, Misskey, Akkoma, Iceshrimp and friends"
-msgstr ""
+msgstr "Mastodon, Misskey, Akkoma, Iceshrimp, 及び friends"
 
 #: app/user/forms.py:109
 msgid "Friendica"
-msgstr ""
+msgstr "Friendica"
 
 #: app/user/forms.py:110
 msgid "Hubzilla"
-msgstr ""
+msgstr "Hubzilla"
 
 #: app/user/forms.py:111
 msgid "Lemmy"
-msgstr ""
+msgstr "Lemmy"
 
 #: app/user/forms.py:112
 msgid "Pixelfed"
-msgstr ""
+msgstr "Pixelfed"
 
 #: app/user/forms.py:115
 msgid "Instance type"
-msgstr ""
+msgstr "インスタンスタイプ"
 
 #: app/user/forms.py:116
 msgid "View profile on remote instance"
-msgstr ""
+msgstr "リモートインスタンスでプロフィールを表示"
 
 #: app/user/routes.py:51
 msgid "This user has been banned."
@@ -3270,24 +3169,22 @@ msgstr ""
 
 #: app/user/routes.py:173
 msgid "Catalan"
-msgstr ""
+msgstr "Catalan"
 
 #: app/user/routes.py:174
 msgid "English"
-msgstr ""
+msgstr "English"
 
 #: app/user/routes.py:175
 msgid "French"
-msgstr ""
+msgstr "French"
 
 #: app/user/routes.py:176
 msgid "German"
-msgstr ""
+msgstr "German"
 
 #: app/user/routes.py:212
-msgid ""
-"Your subscriptions and blocks are being imported. If you have many it "
-"could take a few minutes."
+msgid "Your subscriptions and blocks are being imported. If you have many it could take a few minutes."
 msgstr "登録情報とユーザブロックがインポートされています。数分かかる場合があります。"
 
 #: app/user/routes.py:270
@@ -3307,9 +3204,7 @@ msgid "You cannot unblock yourself."
 msgstr ""
 
 #: app/user/routes.py:379
-msgid ""
-"Moderators have already assessed reports regarding this person, no "
-"further reports are necessary."
+msgid "Moderators have already assessed reports regarding this person, no further reports are necessary."
 msgstr ""
 
 #: app/user/routes.py:385
@@ -3324,11 +3219,11 @@ msgstr ""
 
 #: app/user/routes.py:413
 msgid "Report user"
-msgstr ""
+msgstr "ユーザーを通報する"
 
 #: app/user/routes.py:430
 msgid "You cannot delete yourself."
-msgstr ""
+msgstr "自分自身を削除することはできません。"
 
 #: app/user/routes.py:487
 msgid "Account deletion in progress. Give it a few minutes."
@@ -3336,7 +3231,7 @@ msgstr ""
 
 #: app/user/routes.py:492
 msgid "Delete my account"
-msgstr ""
+msgstr "アカウントの削除"
 
 #: app/user/routes.py:543
 msgid "You cannot purge yourself."
@@ -3348,11 +3243,11 @@ msgstr ""
 
 #: app/user/routes.py:791
 msgid "Filter deleted."
-msgstr ""
+msgstr "フィルターを削除しました。"
 
 #: app/user/routes.py:824
 msgid "Lemmy can't follow profiles, sorry"
-msgstr ""
+msgstr "Lemmyはユーザーをフォローすることはできません。"
 
 #~ msgid "Allow search engines to index this profile"
 #~ msgstr "Suchmaschinen erlauben, dieses Profil zu indizieren"
