@@ -1,4 +1,4 @@
-from flask import current_app, render_template, escape
+from flask import current_app, render_template, escape, g
 from app import db, celery
 from flask_babel import _, lazy_gettext as _l  # todo: set the locale based on account_id so that _() works
 import boto3
@@ -33,7 +33,7 @@ def send_verification_email(user):
 def send_welcome_email(user, application_required):
     subject = _('Your application has been approved - welcome to PieFed') if application_required else _('Welcome to PieFed')
     send_email(subject,
-               sender=f'PieFed <noreply@{current_app.config["SERVER_NAME"]}>',
+               sender=f'PieFed <{g.site.contact_email}>',
                recipients=[user.email],
                text_body=render_template('email/welcome.txt', user=user, application_required=application_required),
                html_body=render_template('email/welcome.html', user=user, application_required=application_required))
