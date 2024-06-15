@@ -82,9 +82,9 @@ def show_tag_rss(tag):
         description = None
         og_image = None
         fg = FeedGenerator()
-        fg.id(f"https://{current_app.config['SERVER_NAME']}/tag/{tag}")
-        fg.title(f'#{Tag.display_as} on {g.site.name}')
-        fg.link(href=f"https://{current_app.config['SERVER_NAME']}/tag/{tag}", rel='alternate')
+        fg.id(f"https://{current_app.config['SERVER_NAME']}/tag/{tag.name}")
+        fg.title(f'#{tag.display_as} on {g.site.name}')
+        fg.link(href=f"https://{current_app.config['SERVER_NAME']}/tag/{tag.name}", rel='alternate')
         if og_image:
             fg.logo(og_image)
         else:
@@ -93,7 +93,7 @@ def show_tag_rss(tag):
             fg.subtitle(description)
         else:
             fg.subtitle(' ')
-        fg.link(href=f"https://{current_app.config['SERVER_NAME']}/tag/{tag}/feed", rel='self')
+        fg.link(href=f"https://{current_app.config['SERVER_NAME']}/tag/{tag.name}/feed", rel='self')
         fg.language('en')
 
         for post in posts:
