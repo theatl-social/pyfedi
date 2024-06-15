@@ -299,7 +299,7 @@ def show_community(community: Community):
                            etag=f"{community.id}{sort}{post_layout}_{hash(community.last_active)}", related_communities=related_communities,
                            next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth,
                            recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
-                           rss_feed=f"https://{current_app.config['SERVER_NAME']}/community/{community.link()}/feed", rss_feed_name=f"{community.title} on PieFed",
+                           rss_feed=f"https://{current_app.config['SERVER_NAME']}/community/{community.link()}/feed", rss_feed_name=f"{community.title} on {g.site.name}",
                            content_filters=content_filters, moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site, sort=sort,

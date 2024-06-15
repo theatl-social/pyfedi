@@ -1,6 +1,8 @@
+from datetime import timezone
 from random import randint
 
-from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort
+from feedgen.feed import FeedGenerator
+from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, g
 from flask_login import login_user, logout_user, current_user, login_required
 from flask_babel import _
 
@@ -9,7 +11,7 @@ from app.inoculation import inoculation
 from app.models import Post, Community, Tag, post_tag
 from app.tag import bp
 from app.utils import render_template, permission_required, joined_communities, moderating_communities, \
-    user_filters_posts, blocked_instances, blocked_users, blocked_domains, menu_topics
+    user_filters_posts, blocked_instances, blocked_users, blocked_domains, menu_topics, mimetype_from_url
 from sqlalchemy import desc, or_
 
 
@@ -54,11 +56,62 @@ def show_tag(tag):
                                POST_TYPE_VIDEO=constants.POST_TYPE_VIDEO,
                                next_url=next_url, prev_url=prev_url,
                                content_filters=content_filters,
+                               rss_feed=f"https://{current_app.config['SERVER_NAME']}/tag/{tag.name}/feed",
+                               rss_feed_name=f"#{tag.display_as} on {g.site.name}",
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
                                menu_topics=menu_topics(),
                                inoculation=inoculation[randint(0, len(inoculation) - 1)]
                                )
+    else:
+        abort(404)
+
+
+@bp.route('/tag/<tag>/feed', methods=['GET'])
+def show_tag_rss(tag):
+    tag = Tag.query.filter(Tag.name == tag.lower()).first()
+    if tag:
+        posts = Post.query.join(Community, Community.id == Post.community_id). \
+            join(post_tag, post_tag.c.post_id == Post.id).filter(post_tag.c.tag_id == tag.id). \
+            filter(Community.banned == False, Post.deleted == False)
+
+        if current_user.is_anonymous or current_user.ignore_bots:
+            posts = posts.filter(Post.from_bot == False)
+        posts = posts.order_by(desc(Post.posted_at)).limit(100).all()
+
+        description = None
+        og_image = None
+        fg = FeedGenerator()
+        fg.id(f"https://{current_app.config['SERVER_NAME']}/tag/{tag}")
+        fg.title(f'#{Tag.display_as} on {g.site.name}')
+        fg.link(href=f"https://{current_app.config['SERVER_NAME']}/tag/{tag}", rel='alternate')
+        if og_image:
+            fg.logo(og_image)
+        else:
+            fg.logo(f"https://{current_app.config['SERVER_NAME']}{g.site.logo_152 if g.site.logo_152 else '/static/images/apple-touch-icon.png'}")
+        if description:
+            fg.subtitle(description)
+        else:
+            fg.subtitle(' ')
+        fg.link(href=f"https://{current_app.config['SERVER_NAME']}/tag/{tag}/feed", rel='self')
+        fg.language('en')
+
+        for post in posts:
+            fe = fg.add_entry()
+            fe.title(post.title)
+            fe.link(href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}")
+            if post.url:
+                type = mimetype_from_url(post.url)
+                if type and not type.startswith('text/'):
+                    fe.enclosure(post.url, type=type)
+            fe.description(post.body_html)
+            fe.guid(post.profile_id(), permalink=True)
+            fe.author(name=post.author.user_name)
+            fe.pubDate(post.created_at.replace(tzinfo=timezone.utc))
+
+        response = make_response(fg.rss_str())
+        response.headers.set('Content-Type', 'application/rss+xml')
+        return response
     else:
         abort(404)
 
