@@ -16,7 +16,7 @@ from app.inoculation import inoculation
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm
 from app.community.forms import CreateLinkForm, CreateImageForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm
 from app.post.util import post_replies, get_comment_branch, post_reply_count, tags_to_string, url_has_paywall, \
-    generate_paywall_bypass_link
+    generate_paywall_bypass_link, body_has_no_paywall_link
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
     POST_TYPE_IMAGE, \
     POST_TYPE_ARTICLE, POST_TYPE_VIDEO, NOTIF_REPLY, NOTIF_POST, POST_TYPE_POLL
@@ -302,7 +302,7 @@ def show_post(post_id: int):
 
     # Bypass paywalls link
     bypass_paywall_link = None
-    if post.type == POST_TYPE_LINK and 'https://archive.' not in post.body_html and url_has_paywall(post.url):
+    if post.type == POST_TYPE_LINK and body_has_no_paywall_link(post.body_html) and url_has_paywall(post.url):
         bypass_paywall_link = generate_paywall_bypass_link(post.url)
 
     response = render_template('post/post.html', title=post.title, post=post, is_moderator=is_moderator, community=post.community,
