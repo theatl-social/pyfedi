@@ -82,7 +82,10 @@ def tags_to_string(post: Post) -> str:
 
 
 def body_has_no_paywall_link(body):
-    return 'https://archive.' not in body and 'https://12ft.io' not in body
+    if body:
+        return 'https://archive.' not in body and 'https://12ft.io' not in body
+    else:
+        return True
 
 
 def url_has_paywall(url) -> bool:
