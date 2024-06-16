@@ -1,4 +1,5 @@
 from typing import List
+from urllib.parse import urlparse
 
 from flask_login import current_user
 from sqlalchemy import desc, text, or_
@@ -78,3 +79,22 @@ def post_reply_count(post_id) -> int:
 def tags_to_string(post: Post) -> str:
     if post.tags.count() > 0:
         return ', '.join([tag.name for tag in post.tags])
+
+
+def url_has_paywall(url) -> bool:
+    paywalled_sites = ['washingtonpost.com', 'wapo.st', 'nytimes.com', 'wsj.com', 'economist.com', 'ft.com', 'telegraph.co.uk',
+                       'bild.de', 'theatlantic.com', 'lemonde.fr']
+    if url:
+        try:
+            parsed_url = urlparse(url.replace('www.', ''))
+            hostname = parsed_url.hostname.lower()
+        except:
+            return False
+        return hostname in paywalled_sites
+    else:
+        return False
+
+
+def generate_paywall_bypass_link(url) -> bool:
+    url_without_protocol = url.replace('https://', '').replace('http://', '')
+    return 'https://archive.ph/' + url
