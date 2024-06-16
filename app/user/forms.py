@@ -17,8 +17,8 @@ class ProfileForm(FlaskForm):
                                    render_kw={"autocomplete": 'new-password'})
     about = TextAreaField(_l('Bio'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5})
     matrixuserid = StringField(_l('Matrix User ID'), validators=[Optional(), Length(max=255)], render_kw={'autocomplete': 'off'})
-    profile_file = FileField(_l('Avatar image'))
-    banner_file = FileField(_l('Top banner image'))
+    profile_file = FileField(_l('Avatar image'), render_kw={'accept': 'image/*'})
+    banner_file = FileField(_l('Top banner image'), render_kw={'accept': 'image/*'})
     bot = BooleanField(_l('This profile is a bot'))
     submit = SubmitField(_l('Save profile'))
 

@@ -15,7 +15,7 @@ class SiteProfileForm(FlaskForm):
     description = StringField(_l('Tagline'))
     icon = FileField(_l('Icon'), validators=[
         FileAllowed(['jpg', 'jpeg', 'png', 'webp'], 'Images only!')
-    ])
+    ], render_kw={'accept': 'image/*'})
     sidebar = TextAreaField(_l('Sidebar'))
     about = TextAreaField(_l('About'))
     announcement = TextAreaField(_l('Announcement at top of home page'))

@@ -1489,6 +1489,15 @@ class Site(db.Model):
         return User.query.filter_by(deleted=False, banned=False).join(user_role).filter(user_role.c.role_id == 4).all()
 
 
+#class IngressQueue(db.Model):
+#    id = db.Column(db.Integer, primary_key=True)
+#    waiting_for = db.Column(db.String(255), index=True)         # The AP ID of the object we're waiting to be created before this Activity can be ingested
+#    activity_pub_log_id = db.Column(db.Integer, db.ForeignKey('activity_pub_log.id')) # The original Activity that failed because some target object does not exist
+#    ap_date_published = db.Column(db.DateTime, default=utcnow)  # The value of the datePublished field on the Activity
+#    created_at = db.Column(db.DateTime, default=utcnow)
+#    expires = db.Column(db.DateTime, default=utcnow)            # When to give up waiting and delete this row
+#
+#
 @login.user_loader
 def load_user(id):
     return User.query.get(int(id))
