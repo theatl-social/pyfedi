@@ -86,7 +86,7 @@ def body_has_no_paywall_link(body):
 
 
 def url_has_paywall(url) -> bool:
-    paywalled_sites = ['washingtonpost.com', 'wapo.st', 'nytimes.com', 'wsj.com', 'economist.com', 'ft.com', 'telegraph.co.uk',
+    paywalled_sites = ['washingtonpost.com', 'nytimes.com', 'wsj.com', 'economist.com', 'ft.com', 'telegraph.co.uk',
                        'bild.de', 'theatlantic.com', 'lemonde.fr', 'nzherald.co.nz']
     if url:
         try:
