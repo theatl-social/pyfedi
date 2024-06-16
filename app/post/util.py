@@ -81,14 +81,14 @@ def tags_to_string(post: Post) -> str:
         return ', '.join([tag.name for tag in post.tags])
 
 
-def body_has_no_paywall_link(body):
+def body_has_no_archive_link(body):
     if body:
         return 'https://archive.' not in body and 'https://12ft.io' not in body
     else:
         return True
 
 
-def url_has_paywall(url) -> bool:
+def url_needs_archive(url) -> bool:
     paywalled_sites = ['washingtonpost.com', 'nytimes.com', 'wsj.com', 'economist.com', 'ft.com', 'telegraph.co.uk',
                        'bild.de', 'theatlantic.com', 'lemonde.fr', 'nzherald.co.nz']
     if url:
@@ -102,5 +102,5 @@ def url_has_paywall(url) -> bool:
         return False
 
 
-def generate_paywall_bypass_link(url) -> bool:
+def generate_archive_link(url) -> bool:
     return 'https://archive.ph/' + url

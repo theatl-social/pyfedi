@@ -144,8 +144,8 @@
             {% endif -%}
             <div class="post_body">
                 {{ post.body_html|community_links|safe if post.body_html else '' }}
-                {% if bypass_paywall_link -%}
-                    <p><a href="{{ bypass_paywall_link }}">{{ _('Bypass paywall') }}</a></p>
+                {% if archive_link -%}
+                    <p><a href="{{ archive_link }}">{{ _('Archive.ph link') }}</a></p>
                 {% endif -%}
             </div>
             {% if post.type == POST_TYPE_POLL -%}
