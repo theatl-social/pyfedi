@@ -145,7 +145,7 @@
             <div class="post_body">
                 {{ post.body_html|community_links|safe if post.body_html else '' }}
                 {% if archive_link -%}
-                    <p><a href="{{ archive_link }}">{{ _('Archive.ph link') }}</a></p>
+                    <p><a href="{{ archive_link }}" rel="nofollow ucg noindex" target="_blank">{{ _('Archive.ph link') }} <span class="fe fe-external"></span></a></p>
                 {% endif -%}
             </div>
             {% if post.type == POST_TYPE_POLL -%}
