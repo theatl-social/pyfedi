@@ -490,7 +490,7 @@ function setupKeyboardShortcuts() {
                     didSomething = true;
                 }
             } else if (event.key === 'l') {
-                if(currentPost) {
+                if (currentPost) {
                     currentPost.querySelector('.post_link').click();
                     didSomething = true;
                 }
@@ -544,6 +544,16 @@ function setupKeyboardShortcuts() {
             }
             if(didSomething) {
                 event.preventDefault();
+            }
+        }
+
+        // While typing a post or reply, Ctrl + Enter submits the form
+        if(document.activeElement.tagName === 'TEXTAREA') {
+            if (event.ctrlKey && event.key === 'Enter') {
+                var form = document.activeElement.closest('form');
+                if (form) {
+                    form.submit.click();
+                }
             }
         }
     });
