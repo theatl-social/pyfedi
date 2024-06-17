@@ -1105,3 +1105,7 @@ h1 .warning_badge {
     }
   }
 }
+
+.post_body, .comment_body {
+  word-wrap: break-word;
+}
