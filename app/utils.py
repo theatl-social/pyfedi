@@ -188,7 +188,7 @@ def allowlist_html(html: str) -> str:
     soup = BeautifulSoup(html, 'html.parser')
 
     # Find all plain text links, convert to <a> tags
-    re_url = re.compile(r'(http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)')
+    re_url = re.compile(r'(http[s]?://[!-~]+)')   # http(s):// followed by chars in ASCII range 33 to 126
     for tag in soup.find_all(text=True):
         tags = []
         url = False
