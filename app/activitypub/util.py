@@ -1414,7 +1414,8 @@ def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id
                 community.post_count -= 1
                 db.session.commit()
             elif isinstance(to_delete, PostReply):
-                to_delete.post.reply_count -= 1
+                if not to_delete.author.bot:
+                    to_delete.post.reply_count -= 1
                 if to_delete.has_replies():
                     to_delete.body = 'Deleted by author' if to_delete.author.id == deletor.id else 'Deleted by moderator'
                     to_delete.body_html = lemmy_markdown_to_html(to_delete.body)
@@ -1454,7 +1455,8 @@ def remove_data_from_banned_user_task(deletor_ap_id, user_ap_id, target):
         return
 
     for post_reply in post_replies:
-        post_reply.post.reply_count -= 1
+        if not user.bot:
+            post_reply.post.reply_count -= 1
         if post_reply.has_replies():
             post_reply.body = 'Banned'
             post_reply.body_html = lemmy_markdown_to_html(post_reply.body)

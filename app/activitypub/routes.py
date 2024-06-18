@@ -1030,7 +1030,8 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             if can_delete(request_json['actor'], reply):
                                 reply.body_html = '<p><em>deleted</em></p>'
                                 reply.body = 'deleted'
-                                reply.post.reply_count -= 1
+                                if not reply.author.bot:
+                                    reply.post.reply_count -= 1
                                 reply.deleted = True
                                 announce_activity_to_followers(reply.community, reply.author, request_json)
                                 db.session.commit()
