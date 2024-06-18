@@ -974,13 +974,13 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory):
                         source_image = source_image_response.content
                         source_image_response.close()
 
-                        file_ext = os.path.splitext(file.source_url)[1]
-                        # fall back to parsing the http content type if the url does not contain a file extension
-                        if file_ext == '':
-                            content_type_parts = content_type.split('/')
-                            if content_type_parts:
-                                file_ext = '.' + content_type_parts[-1]
+                        content_type_parts = content_type.split('/')
+                        if content_type_parts:
+                            file_ext = '.' + content_type_parts[-1]
+                            if file_ext == '.jpeg':
+                                file_ext = '.jpg'
                         else:
+                            file_ext = os.path.splitext(file.source_url)[1]
                             file_ext = file_ext.replace('%3f', '?')  # sometimes urls are not decoded properly
                             if '?' in file_ext:
                                 file_ext = file_ext.split('?')[0]
