@@ -577,6 +577,9 @@ def refresh_community_profile_task(community_id):
             community.ap_fetched_at = utcnow()
             community.public_key=activity_json['publicKey']['publicKeyPem']
 
+            if community.description.startswith('<p>'):
+                community.description_html = allowlist_html(community.description)
+
             if 'source' in activity_json and \
                     activity_json['source']['mediaType'] == 'text/markdown':
                 community.description = activity_json['source']['content']
