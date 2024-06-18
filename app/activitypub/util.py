@@ -760,7 +760,10 @@ def actor_json_to_model(activity_json, address, server):
                               instance_id=find_instance_id(server),
                               low_quality='memes' in activity_json['preferredUsername']
                               )
-        community.description_html = markdown_to_html(community.description)
+        if community.description.startswith('<p>'):
+            community.description_html = allowlist_html(community.description)
+        else:
+            community.description_html = markdown_to_html(community.description)
         # parse markdown and overwrite html field with result
         if 'source' in activity_json and \
                 activity_json['source']['mediaType'] == 'text/markdown':
