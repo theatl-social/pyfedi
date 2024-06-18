@@ -582,7 +582,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                     if can_create_post_reply(user, community):
                                         try:
                                             post = create_post_reply(activity_log, community, in_reply_to, request_json, user)
-                                            if post and community.is_local():
+                                            if post:
                                                 announce_activity_to_followers(community, user, request_json)
                                         except TypeError as e:
                                             activity_log.exception_message = 'TypeError. See log file.'
@@ -984,8 +984,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                         if reply:
                             if can_edit(request_json['actor'], reply):
                                 update_post_reply_from_activity(reply, request_json)
-                                if reply.community.is_local():
-                                    announce_activity_to_followers(reply.community, reply.author, request_json)
+                                announce_activity_to_followers(reply.community, reply.author, request_json)
                                 activity_log.result = 'success'
                             else:
                                 activity_log.exception_message = 'Edit attempt denied'
@@ -1191,6 +1190,10 @@ def process_delete_request(request_json, activitypublog_id, ip_address):
 
 
 def announce_activity_to_followers(community, creator, activity):
+    # avoid announcing activity sent to local users unless it is also in a local community
+    if not community.is_local():
+        return
+
     # remove context from what will be inner object
     del activity["@context"]
 
