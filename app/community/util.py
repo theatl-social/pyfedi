@@ -253,27 +253,39 @@ def opengraph_parse(url):
 
 
 def url_to_thumbnail_file(filename) -> File:
-    filename_for_extension = filename.split('?')[0] if '?' in filename else filename
-    unused, file_extension = os.path.splitext(filename_for_extension)
     response = requests.get(filename, timeout=5)
     if response.status_code == 200:
-        new_filename = gibberish(15)
-        directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
-        ensure_directory_exists(directory)
-        final_place = os.path.join(directory, new_filename + file_extension)
-        with open(final_place, 'wb') as f:
-            f.write(response.content)
-        response.close()
-        Image.MAX_IMAGE_PIXELS = 89478485
-        with Image.open(final_place) as img:
-            img = ImageOps.exif_transpose(img)
-            img.thumbnail((150, 150))
-            img.save(final_place)
-            thumbnail_width = img.width
-            thumbnail_height = img.height
-        return File(file_name=new_filename + file_extension, thumbnail_width=thumbnail_width,
-                    thumbnail_height=thumbnail_height, thumbnail_path=final_place,
-                    source_url=filename)
+        content_type = response.headers.get('content-type')
+        if content_type and content_type.startswith('image'):
+            # Generate file extension from mime type
+            content_type_parts = content_type.split('/')
+            if content_type_parts:
+                file_extension = '.' + content_type_parts[-1]
+                if file_extension == '.jpeg':
+                    file_extension = '.jpg'
+            else:
+                file_extension = os.path.splitext(filename)[1]
+                file_extension = file_extension.replace('%3f', '?')  # sometimes urls are not decoded properly
+                if '?' in file_extension:
+                    file_extension = file_extension.split('?')[0]
+
+            new_filename = gibberish(15)
+            directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
+            ensure_directory_exists(directory)
+            final_place = os.path.join(directory, new_filename + file_extension)
+            with open(final_place, 'wb') as f:
+                f.write(response.content)
+            response.close()
+            Image.MAX_IMAGE_PIXELS = 89478485
+            with Image.open(final_place) as img:
+                img = ImageOps.exif_transpose(img)
+                img.thumbnail((150, 150))
+                img.save(final_place)
+                thumbnail_width = img.width
+                thumbnail_height = img.height
+            return File(file_name=new_filename + file_extension, thumbnail_width=thumbnail_width,
+                        thumbnail_height=thumbnail_height, thumbnail_path=final_place,
+                        source_url=filename)
 
 
 def save_post(form, post: Post, type: str):
@@ -322,9 +334,7 @@ def save_post(form, post: Post, type: str):
                     opengraph = opengraph_parse(form.link_url.data)
                     if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
                         filename = opengraph.get('og:image') or opengraph.get('og:image:url')
-                        filename_for_extension = filename.split('?')[0] if '?' in filename else filename
-                        unused, file_extension = os.path.splitext(filename_for_extension)
-                        if file_extension.lower() in allowed_extensions and not filename.startswith('/'):
+                        if not filename.startswith('/'):
                             file = url_to_thumbnail_file(filename)
                             if file:
                                 file.alt_text = shorten_string(opengraph.get('og:title'), 295)
@@ -415,9 +425,7 @@ def save_post(form, post: Post, type: str):
                 opengraph = opengraph_parse(form.video_url.data)
                 if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
                     filename = opengraph.get('og:image') or opengraph.get('og:image:url')
-                    filename_for_extension = filename.split('?')[0] if '?' in filename else filename
-                    unused, file_extension = os.path.splitext(filename_for_extension)
-                    if file_extension.lower() in allowed_extensions and not filename.startswith('/'):
+                    if not filename.startswith('/'):
                         file = url_to_thumbnail_file(filename)
                         if file:
                             file.alt_text = shorten_string(opengraph.get('og:title'), 295)

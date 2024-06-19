@@ -165,17 +165,42 @@ def gibberish(length: int = 10) -> str:
 
 
 def is_image_url(url):
-    parsed_url = urlparse(url)
-    path = parsed_url.path.lower()
     common_image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp']
-    return any(path.endswith(extension) for extension in common_image_extensions)
+    mime_type = mime_type_using_head(url)
+    if mime_type:
+        mime_type_parts = mime_type.split('/')
+        return f'.{mime_type_parts[1]}' in common_image_extensions
+    else:
+        parsed_url = urlparse(url)
+        path = parsed_url.path.lower()
+        return any(path.endswith(extension) for extension in common_image_extensions)
 
 
 def is_video_url(url):
-    parsed_url = urlparse(url)
-    path = parsed_url.path.lower()
     common_video_extensions = ['.mp4', '.webm']
-    return any(path.endswith(extension) for extension in common_video_extensions)
+    mime_type = mime_type_using_head(url)
+    if mime_type:
+        mime_type_parts = mime_type.split('/')
+        return f'.{mime_type_parts[1]}' in common_video_extensions
+    else:
+        parsed_url = urlparse(url)
+        path = parsed_url.path.lower()
+        return any(path.endswith(extension) for extension in common_video_extensions)
+
+
+@cache.memoize(timeout=10)
+def mime_type_using_head(url):
+    # Find the mime type of a url by doing a HEAD request - this is the same as GET except only the HTTP headers are transferred
+    try:
+        response = requests.head(url)
+        response.raise_for_status()  # Raise an exception for HTTP errors
+        content_type = response.headers.get('Content-Type')
+        if content_type:
+            return content_type
+        else:
+            return ''
+    except requests.exceptions.RequestException as e:
+        return ''
 
 
 # sanitise HTML using an allow list
