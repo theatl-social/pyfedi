@@ -461,10 +461,10 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
         if 'type' in request_json:
             activity_log.activity_type = request_json['type']
             if not instance_blocked(request_json['id']):
-                # Create is new content
-                if request_json['type'] == 'Create':
+                # Create is new content. Update is often an edit, but Updates from Lemmy can also be new content
+                if request_json['type'] == 'Create' or request_json['type'] == 'Update':
                     activity_log.activity_type = 'Create'
-                    user_ap_id = request_json['object']['attributedTo']
+                    user_ap_id = request_json['object']['attributedTo'] if isinstance(request_json['object']['attributedTo'], str) else None
                     if request_json['object']['type'] == 'ChatMessage':
                         activity_log.activity_type = 'Create ChatMessage'
                         sender = find_actor_or_create(user_ap_id)
@@ -537,6 +537,13 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                     comment_being_replied_to = PostReply.query.filter_by(ap_id=request_json['object']['inReplyTo']).first()
                                     if comment_being_replied_to:
                                         community_ap_id = comment_being_replied_to.community.ap_profile_id
+                            if not community_ap_id and 'object' in request_json and request_json['object']['type'] == 'Video': # PeerTube
+                                if 'attributedTo' in request_json['object'] and isinstance(request_json['object']['attributedTo'], list):
+                                    for a in request_json['object']['attributedTo']:
+                                        if a['type'] == 'Group':
+                                            community_ap_id = a['id']
+                                        if a['type'] == 'Person':
+                                            user_ap_id = a['id']
                             if not community_ap_id:
                                 activity_log.result = 'failure'
                                 activity_log.exception_message = 'Unable to extract community'
@@ -564,32 +571,69 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
 
                             object_type = request_json['object']['type']
                             new_content_types = ['Page', 'Article', 'Link', 'Note', 'Question']
-                            if object_type in new_content_types:  # create a new post
+                            if object_type in new_content_types:  # create or update a post
                                 in_reply_to = request_json['object']['inReplyTo'] if 'inReplyTo' in request_json['object'] else None
                                 if not in_reply_to:
-                                    if can_create_post(user, community):
-                                        try:
-                                            post = create_post(activity_log, community, request_json, user)
-                                            if post:
-                                                announce_activity_to_followers(community, user, request_json)
-                                        except TypeError as e:
-                                            activity_log.exception_message = 'TypeError. See log file.'
-                                            current_app.logger.error('TypeError: ' + str(request_json))
-                                            post = None
-                                    else:
+                                    if request_json['type'] == 'Create':
                                         post = None
+                                    else:
+                                        post = Post.query.filter_by(ap_id=request_json['object']['id']).first()
+                                    if post:
+                                        activity_log.activity_type = 'Update'
+                                        if can_edit(request_json['actor'], post):
+                                            update_post_from_activity(post, request_json)
+                                            announce_activity_to_followers(post.community, post.author, request_json)
+                                            activity_log.result = 'success'
+                                        else:
+                                            activity_log.exception_message = 'Edit attempt denied'
+                                    else:
+                                        if can_create_post(user, community):
+                                            try:
+                                                post = create_post(activity_log, community, request_json, user)
+                                                if post:
+                                                    announce_activity_to_followers(community, user, request_json)
+                                            except TypeError as e:
+                                                activity_log.exception_message = 'TypeError. See log file.'
+                                                current_app.logger.error('TypeError: ' + str(request_json))
+                                                post = None
+                                        else:
+                                            post = None
                                 else:
-                                    if can_create_post_reply(user, community):
-                                        try:
-                                            post = create_post_reply(activity_log, community, in_reply_to, request_json, user)
-                                            if post:
-                                                announce_activity_to_followers(community, user, request_json)
-                                        except TypeError as e:
-                                            activity_log.exception_message = 'TypeError. See log file.'
-                                            current_app.logger.error('TypeError: ' + str(request_json))
-                                            post = None
+                                    if request_json['type'] == 'Create':
+                                        reply = None
                                     else:
-                                        post = None
+                                        reply = PostReply.query.filter_by(ap_id=request_json['object']['id']).first()
+                                    if reply:
+                                        activity_log.activity_type = 'Update'
+                                        if can_edit(request_json['actor'], reply):
+                                            update_post_reply_from_activity(reply, request_json)
+                                            announce_activity_to_followers(reply.community, reply.author, request_json)
+                                            activity_log.result = 'success'
+                                        else:
+                                            activity_log.exception_message = 'Edit attempt denied'
+                                    else:
+                                        if can_create_post_reply(user, community):
+                                            try:
+                                                post = create_post_reply(activity_log, community, in_reply_to, request_json, user)
+                                                if post:
+                                                    announce_activity_to_followers(community, user, request_json)
+                                            except TypeError as e:
+                                                activity_log.exception_message = 'TypeError. See log file.'
+                                                current_app.logger.error('TypeError: ' + str(request_json))
+                                                post = None
+                                        else:
+                                            post = None
+                            elif object_type == 'Video':  # PeerTube: editing a video (PT doesn't seem to Announce these)
+                                post = Post.query.filter_by(ap_id=request_json['object']['id']).first()
+                                activity_log.activity_type = 'Update'
+                                if post:
+                                    if can_edit(request_json['actor'], post):
+                                        update_post_from_activity(post, request_json)
+                                        activity_log.result = 'success'
+                                    else:
+                                        activity_log.exception_message = 'Edit attempt denied'
+                                else:
+                                    activity_log.exception_message = 'Post not found'
                             else:
                                 activity_log.exception_message = 'Unacceptable type (create): ' + object_type
                         else:
@@ -608,7 +652,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             community = find_actor_or_create(request_json['actor'], community_only=True, create_if_not_found=False)
                             if community:
                                 resolve_remote_post(request_json['object'], community.id, request_json['actor'])
-                    elif request_json['object']['type'] == 'Create':
+                    elif request_json['object']['type'] == 'Create' or request_json['object']['type'] == 'Update':
                         activity_log.activity_type = request_json['object']['type']
                         if 'object' in request_json and 'object' in request_json['object']:
                             if not ensure_domains_match(request_json['object']['object']):
@@ -633,15 +677,41 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                 in_reply_to = request_json['object']['object']['inReplyTo'] if 'inReplyTo' in \
                                                                                                request_json['object']['object'] else None
                                 if not in_reply_to:
-                                    if can_create_post(user, community):
-                                        post = create_post(activity_log, community, request_json['object'], user, announce_id=request_json['id'])
-                                    else:
+                                    if request_json['object']['type'] == 'Create':
                                         post = None
+                                    else:
+                                        post = Post.query.filter_by(ap_id=request_json['object']['object']['id']).first()
+                                    if post:
+                                        try:
+                                            update_post_from_activity(post, request_json['object'])
+                                        except KeyError:
+                                            activity_log.result = 'exception'
+                                            db.session.commit()
+                                            return
+                                        activity_log.result = 'success'
+                                    else: # activity was a Create, or an Update sent instead of a Create
+                                        if can_create_post(user, community):
+                                            post = create_post(activity_log, community, request_json['object'], user, announce_id=request_json['id'])
+                                        else:
+                                            post = None
                                 else:
-                                    if can_create_post_reply(user, community):
-                                        post = create_post_reply(activity_log, community, in_reply_to, request_json['object'], user, announce_id=request_json['id'])
+                                    if request_json['object']['type'] == 'Create':
+                                        reply = None
                                     else:
-                                        post = None
+                                        reply = PostReply.query.filter_by(ap_id=request_json['object']['object']['id']).first()
+                                    if reply:
+                                        try:
+                                            update_post_reply_from_activity(reply, request_json['object'])
+                                        except KeyError:
+                                            activity_log.result = 'exception'
+                                            db.session.commit()
+                                            return
+                                        activity_log.result = 'success'
+                                    else: # activity was a Create, or an Update sent instead of a Create
+                                        if can_create_post_reply(user, community):
+                                            post = create_post_reply(activity_log, community, in_reply_to, request_json['object'], user, announce_id=request_json['id'])
+                                        else:
+                                            post = None
                             else:
                                 activity_log.exception_message = 'Unacceptable type: ' + object_type
                         else:
@@ -741,39 +811,6 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                         activity_log.exception_message = 'Intended for Mastodon'
                         db.session.add(activity_log)
                         db.session.commit()
-                    elif request_json['object']['type'] == 'Update':    # Editing a post or comment
-                        if request_json['object']['object']['type'] == 'Page':
-                            post = Post.query.filter_by(ap_id=request_json['object']['object']['id']).first()
-                            if post:
-                                try:
-                                    update_post_from_activity(post, request_json['object'])
-                                except KeyError:
-                                    activity_log.result = 'exception'
-                                    db.session.commit()
-                                    return
-                                activity_log.result = 'success'
-                            else:
-                                activity_log.exception_message = 'Post not found'
-                                # Lemmy can send Announce/Update without ever sending an Announce/Create
-                                # presumably happens with quick edits after creation (e.g. https://midwest.social/post/13348959)
-                                # Pretend this activity was the Create, and try again.
-                                #request_json['object']['type'] = 'Create'
-                                #process_inbox_request(request_json, activitypublog_id, ip_address)
-                        elif request_json['object']['object']['type'] == 'Note':
-                            reply = PostReply.query.filter_by(ap_id=request_json['object']['object']['id']).first()
-                            if reply:
-                                try:
-                                    update_post_reply_from_activity(reply, request_json['object'])
-                                except KeyError:
-                                    activity_log.result = 'exception'
-                                    db.session.commit()
-                                    return
-                                activity_log.result = 'success'
-                            else:
-                                activity_log.exception_message = 'PostReply not found'
-                                # As with Update/Page, pretend this activity was the Create, and try again.
-                                #request_json['object']['type'] = 'Create'
-                                #process_inbox_request(request_json, activitypublog_id, ip_address)
                     elif request_json['object']['type'] == 'Undo':
                         if request_json['object']['object']['type'] == 'Like' or request_json['object']['object']['type'] == 'Dislike':
                             activity_log.activity_type = request_json['object']['object']['type']
@@ -966,40 +1003,6 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                         if post_or_comment:
                             announce_activity_to_followers(post_or_comment.community, user, request_json)
                         activity_log.result = 'success'
-                elif request_json['type'] == 'Update':
-                    activity_log.activity_type = 'Update'
-                    if request_json['object']['type'] == 'Page':  # Editing a post
-                        post = Post.query.filter_by(ap_id=request_json['object']['id']).first()
-                        if post:
-                            if can_edit(request_json['actor'], post):
-                                update_post_from_activity(post, request_json)
-                                announce_activity_to_followers(post.community, post.author, request_json)
-                                activity_log.result = 'success'
-                            else:
-                                activity_log.exception_message = 'Edit attempt denied'
-                        else:
-                            activity_log.exception_message = 'Post not found'
-                    elif request_json['object']['type'] == 'Note':  # Editing a reply
-                        reply = PostReply.query.filter_by(ap_id=request_json['object']['id']).first()
-                        if reply:
-                            if can_edit(request_json['actor'], reply):
-                                update_post_reply_from_activity(reply, request_json)
-                                announce_activity_to_followers(reply.community, reply.author, request_json)
-                                activity_log.result = 'success'
-                            else:
-                                activity_log.exception_message = 'Edit attempt denied'
-                        else:
-                            activity_log.exception_message = 'PostReply not found'
-                    elif request_json['object']['type'] == 'Video':  # PeerTube: editing a video (PT doesn't seem to Announce these)
-                        post = Post.query.filter_by(ap_id=request_json['object']['id']).first()
-                        if post:
-                            if can_edit(request_json['actor'], post):
-                                update_post_from_activity(post, request_json)
-                                activity_log.result = 'success'
-                            else:
-                                activity_log.exception_message = 'Edit attempt denied'
-                        else:
-                            activity_log.exception_message = 'Post not found'
                 elif request_json['type'] == 'Delete':
                     if isinstance(request_json['object'], str):
                         ap_id = request_json['object']  # lemmy
