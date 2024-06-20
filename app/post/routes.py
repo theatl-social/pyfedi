@@ -22,7 +22,8 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_
     POST_TYPE_ARTICLE, POST_TYPE_VIDEO, NOTIF_REPLY, NOTIF_POST, POST_TYPE_POLL
 from app.models import Post, PostReply, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, InstanceBlock, Report, Site, Community, \
-    Topic, User, Instance, NotificationSubscription, UserFollower, Poll, PollChoice, PollChoiceVote
+    Topic, User, Instance, NotificationSubscription, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
+    PostReplyBookmark
 from app.post import bp
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
@@ -1591,6 +1592,22 @@ def post_restore(post_id: int):
     return redirect(url_for('activitypub.post_ap', post_id=post.id))
 
 
+@bp.route('/post/<int:post_id>/bookmark', methods=['GET', 'POST'])
+@login_required
+def post_bookmark(post_id: int):
+    post = Post.query.get_or_404(post_id)
+    if post.deleted:
+        abort(404)
+    existing_bookmark = PostBookmark.query.filter(PostBookmark.post_id == post_id, PostBookmark.user_id == current_user.id).first()
+    if not existing_bookmark:
+        db.session.add(PostBookmark(post_id=post_id, user_id=current_user.id))
+        db.session.commit()
+        flash(_('Bookmark added.'))
+    else:
+        flash(_('This post has already been bookmarked.'))
+    return redirect(url_for('activitypub.post_ap', post_id=post.id))
+
+
 @bp.route('/post/<int:post_id>/report', methods=['GET', 'POST'])
 @login_required
 def post_report(post_id: int):
@@ -1786,7 +1803,7 @@ def post_reply_report(post_id: int, comment_id: int):
                     flash('Failed to send report to remote server', 'error')
 
         flash(_('Comment has been reported, thank you!'))
-        return redirect(post.community.local_url())
+        return redirect(url_for('activitypub.post_ap', post_id=post.id))
     elif request.method == 'GET':
         form.report_remote.data = True
 
@@ -1795,6 +1812,25 @@ def post_reply_report(post_id: int, comment_id: int):
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site
                            )
+
+
+@bp.route('/post/<int:post_id>/comment/<int:comment_id>/bookmark', methods=['GET'])
+@login_required
+def post_reply_bookmark(post_id: int, comment_id: int):
+    post = Post.query.get_or_404(post_id)
+    post_reply = PostReply.query.get_or_404(comment_id)
+
+    if post.deleted or post_reply.deleted:
+        abort(404)
+    existing_bookmark = PostReplyBookmark.query.filter(PostReplyBookmark.post_reply_id == comment_id,
+                                                       PostReplyBookmark.user_id == current_user.id).first()
+    if not existing_bookmark:
+        db.session.add(PostReplyBookmark(post_reply_id=comment_id, user_id=current_user.id))
+        db.session.commit()
+        flash(_('Bookmark added.'))
+    else:
+        flash(_('This comment has already been bookmarked.'))
+    return redirect(url_for('activitypub.post_ap', post_id=post.id, _anchor=f'comment_{comment_id}'))
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/block_user', methods=['GET', 'POST'])

@@ -1442,6 +1442,20 @@ class PollChoiceVote(db.Model):
     created_at = db.Column(db.DateTime, default=utcnow)
 
 
+class PostBookmark(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), index=True)
+    created_at = db.Column(db.DateTime, default=utcnow)
+
+
+class PostReplyBookmark(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    post_reply_id = db.Column(db.Integer, db.ForeignKey('post_reply.id'), index=True)
+    created_at = db.Column(db.DateTime, default=utcnow)
+
+
 class IpBan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ip_address = db.Column(db.String(50), index=True)

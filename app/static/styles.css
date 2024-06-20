@@ -274,6 +274,10 @@
   content: "\e995";
 }
 
+.fe-bookmark::before {
+  content: "\e924";
+}
+
 .fe-expand::before {
   content: "\e98e";
 }
@@ -686,6 +690,10 @@ div.navbar {
 }
 .option_list li {
   margin-bottom: 15px;
+}
+.option_list li .fe {
+  position: relative;
+  top: 1px;
 }
 
 .field_hint {

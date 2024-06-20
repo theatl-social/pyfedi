@@ -26,6 +26,8 @@
                                         {{ _('Delete') }}</a></li>
                                 {% endif -%}
                             {% endif -%}
+                            <li><a href="{{ url_for('post.post_reply_bookmark', post_id=post.id, comment_id=post_reply.id) }}" class="no-underline" rel="nofollow"><span class="fe fe-bookmark"></span>
+                                        {{ _('Bookmark') }}</a></li>
                             {% if post_reply.user_id != current_user.id -%}
                                 <li><a href="{{ url_for('post.post_reply_block_user', post_id=post.id, comment_id=post_reply.id) }}" class="no-underline"><span class="fe fe-block"></span>
                                     {{ _('Block author @%(author_name)s', author_name=post_reply.author.user_name) }}</a></li>

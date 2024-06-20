@@ -26,6 +26,8 @@
                                         {{ _('Delete') }}</a></li>
                                 {% endif -%}
                             {% endif -%}
+                            <li><a href="{{ url_for('post.post_bookmark', post_id=post.id) }}" class="no-underline" rel="nofollow"><span class="fe fe-bookmark"></span>
+                                        {{ _('Bookmark') }}</a></li>
                             {% if post.user_id == current_user.id and not post.mea_culpa -%}
                                 <li><a href="{{ url_for('post.post_mea_culpa', post_id=post.id) }}" class="no-underline"><span class="fe fe-mea-culpa"></span>
                                     {{ _("I made a mistake with this post and have changed my mind about the topic") }}</a></li>
