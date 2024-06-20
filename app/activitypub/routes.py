@@ -27,6 +27,7 @@ from app.utils import gibberish, get_setting, is_image_url, allowlist_html, rend
     domain_from_url, markdown_to_html, community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
     community_moderators, lemmy_markdown_to_html
+from sqlalchemy import desc
 import werkzeug.exceptions
 
 
@@ -1230,7 +1231,10 @@ def community_outbox(actor):
     actor = actor.strip()
     community = Community.query.filter_by(name=actor, banned=False, ap_id=None).first()
     if community is not None:
-        posts = community.posts.filter(Post.deleted == False).limit(50).all()
+        sticky_posts = community.posts.filter(Post.sticky == True, Post.deleted == False).order_by(desc(Post.posted_at)).limit(50).all()
+        remaining_limit = 50 - len(sticky_posts)
+        remaining_posts = community.posts.filter(Post.sticky == False, Post.deleted == False).order_by(desc(Post.posted_at)).limit(remaining_limit).all()
+        posts = sticky_posts + remaining_posts
 
         community_data = {
             "@context": default_context(),
