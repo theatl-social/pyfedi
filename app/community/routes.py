@@ -550,7 +550,6 @@ def add_discussion_post(actor):
     else:
         form.communities.data = community.id
         form.notify_author.data = True
-        form.language_id.data = current_user.language_id if current_user.is_authenticated and current_user.language_id else english_language_id()
         if community.posting_warning:
             flash(community.posting_warning)
 
@@ -633,7 +632,6 @@ def add_image_post(actor):
     else:
         form.communities.data = community.id
         form.notify_author.data = True
-        form.language_id.data = current_user.language_id if current_user.is_authenticated and current_user.language_id else english_language_id()
 
     return render_template('community/add_image_post.html', title=_('Add post to community'), form=form, community=community,
                            markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
@@ -714,7 +712,6 @@ def add_link_post(actor):
     else:
         form.communities.data = community.id
         form.notify_author.data = True
-        form.language_id.data = current_user.language_id if current_user.is_authenticated and current_user.language_id else english_language_id()
 
     return render_template('community/add_link_post.html', title=_('Add post to community'), form=form, community=community,
                            markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
@@ -795,7 +792,6 @@ def add_video_post(actor):
     else:
         form.communities.data = community.id
         form.notify_author.data = True
-        form.language_id.data = current_user.language_id if current_user.is_authenticated and current_user.language_id else english_language_id()
 
     return render_template('community/add_video_post.html', title=_('Add post to community'), form=form, community=community,
                            markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
@@ -862,7 +858,6 @@ def add_poll_post(actor):
     else:
         form.communities.data = community.id
         form.notify_author.data = True
-        form.language_id.data = current_user.language_id if current_user.is_authenticated and current_user.language_id else english_language_id()
         form.finish_in.data = '3d'
         if community.posting_warning:
             flash(community.posting_warning)

@@ -28,7 +28,7 @@ from app.utils import render_template, get_setting, gibberish, request_etag_matc
     ap_datetime, ip_address, retrieve_block_list, shorten_string, markdown_to_text, user_filters_home, \
     joined_communities, moderating_communities, parse_page, theme_list, get_request, markdown_to_html, allowlist_html, \
     blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
-    generate_image_from_video_url, blocked_users, microblog_content_to_title, menu_topics
+    generate_image_from_video_url, blocked_users, microblog_content_to_title, menu_topics, languages_for_form
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Domain, Topic, File, Instance, \
     InstanceRole, Notification, Language, community_language, PostReply
 from PIL import Image
@@ -396,6 +396,8 @@ def list_files(directory):
 
 @bp.route('/test')
 def test():
+
+    x = languages_for_form()
 
     #for community in Community.query.filter(Community.content_retention != -1):
     #    for post in community.posts.filter(Post.posted_at < utcnow() - timedelta(days=Community.content_retention)):

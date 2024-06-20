@@ -1049,9 +1049,30 @@ def recently_downvoted_post_replies(user_id) -> List[int]:
 
 def languages_for_form():
     result = []
-    for language in Language.query.order_by(Language.name).all():
-        if language.code != 'und':
+    used_languages = []
+    if current_user.is_authenticated:
+        recently_used_post_languages = db.session.execute(text("""SELECT language_id 
+                                                                FROM (
+                                                                    SELECT language_id, posted_at 
+                                                                    FROM "post" 
+                                                                    WHERE user_id = :user_id 
+                                                                    UNION ALL
+                                                                    SELECT language_id, posted_at 
+                                                                    FROM "post_reply" 
+                                                                    WHERE user_id = :user_id 
+                                                                ) AS subquery
+                                                                GROUP BY language_id
+                                                                ORDER BY MAX(posted_at) DESC
+                                                                LIMIT 4"""),
+                                                          {'user_id': current_user.id}).scalars()
+        for language in Language.query.filter(Language.id.in_(recently_used_post_languages)).all():
             result.append((language.id, language.name))
+            used_languages.append(language.id)
+
+    for language in Language.query.order_by(Language.name).all():
+        if language.code != 'und' and language.id not in used_languages:
+            result.append((language.id, language.name))
+
     return result
 
 
