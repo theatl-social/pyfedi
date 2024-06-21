@@ -853,8 +853,12 @@ def post_options(post_id: int):
     if current_user.is_anonymous or not current_user.is_admin():
         if post.deleted:
             abort(404)
+
+    existing_bookmark = []
+    if current_user.is_authenticated:
+        existing_bookmark = PostBookmark.query.filter(PostBookmark.post_id == post_id, PostBookmark.user_id == current_user.id).first()
     
-    return render_template('post/post_options.html', post=post,
+    return render_template('post/post_options.html', post=post, existing_bookmark=existing_bookmark,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site)
@@ -867,7 +871,14 @@ def post_reply_options(post_id: int, comment_id: int):
     if current_user.is_anonymous or not current_user.is_admin():
         if post.deleted or post_reply.deleted:
             abort(404)
+
+    existing_bookmark = []
+    if current_user.is_authenticated:
+        existing_bookmark = PostReplyBookmark.query.filter(PostReplyBookmark.post_reply_id == comment_id,
+                                                      PostReplyBookmark.user_id == current_user.id).first()
+
     return render_template('post/post_reply_options.html', post=post, post_reply=post_reply,
+                           existing_bookmark=existing_bookmark,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site
@@ -1605,6 +1616,36 @@ def post_bookmark(post_id: int):
         flash(_('Bookmark added.'))
     else:
         flash(_('This post has already been bookmarked.'))
+    return redirect(url_for('activitypub.post_ap', post_id=post.id))
+
+
+@bp.route('/post/<int:post_id>/remove_bookmark', methods=['GET', 'POST'])
+@login_required
+def post_remove_bookmark(post_id: int):
+    post = Post.query.get_or_404(post_id)
+    if post.deleted:
+        abort(404)
+    existing_bookmark = PostBookmark.query.filter(PostBookmark.post_id == post_id, PostBookmark.user_id == current_user.id).first()
+    if existing_bookmark:
+        db.session.delete(existing_bookmark)
+        db.session.commit()
+        flash(_('Bookmark has been removed.'))
+    return redirect(url_for('activitypub.post_ap', post_id=post.id))
+
+
+@bp.route('/post/<int:post_id>/comment/<int:comment_id>/remove_bookmark', methods=['GET', 'POST'])
+@login_required
+def post_reply_remove_bookmark(post_id: int, comment_id: int):
+    post = Post.query.get_or_404(post_id)
+    post_reply = PostReply.query.get_or_404(comment_id)
+
+    if post.deleted or post_reply.deleted:
+        abort(404)
+    existing_bookmark = PostReplyBookmark.query.filter(PostReplyBookmark.post_reply_id == comment_id, PostReplyBookmark.user_id == current_user.id).first()
+    if existing_bookmark:
+        db.session.delete(existing_bookmark)
+        db.session.commit()
+        flash(_('Bookmark has been removed.'))
     return redirect(url_for('activitypub.post_ap', post_id=post.id))
 
 

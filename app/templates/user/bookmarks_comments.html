@@ -15,13 +15,14 @@
             <li class="breadcrumb-item active">{{ _('Bookmarks') }}</li>
           </ol>
         </nav>
-        <h1>{{ _('Bookmarks') }}</h1>
+        <h1>{{ _('Bookmarks of comments') }}</h1>
         {% include 'user/_bookmarks_nav.html' %}
+
         <div class="post_list">
-            {% for post in posts.items -%}
-                {% include 'post/_post_teaser.html' %}
+            {% for post_reply in post_replies.items %}
+                {% include 'post/_post_reply_teaser.html' %}
             {% else -%}
-                <p>{{ _('No posts have been bookmarked. Use the three dots on each post to find the bookmark function.') }}</p>
+                <p>{{ _('No comments have been bookmarked. Use the three dots on each comment to find the bookmark function.') }}</p>
             {% endfor -%}
         </div>
 

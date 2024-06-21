@@ -15,7 +15,7 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_PENDING, NOTIF_USER,
 from app.email import send_verification_email
 from app.models import Post, Community, CommunityMember, User, PostReply, PostVote, Notification, utcnow, File, Site, \
     Instance, Report, UserBlock, CommunityBan, CommunityJoinRequest, CommunityBlock, Filter, Domain, DomainBlock, \
-    InstanceBlock, NotificationSubscription, PostBookmark
+    InstanceBlock, NotificationSubscription, PostBookmark, PostReplyBookmark
 from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, FilterEditForm, \
     RemoteFollowForm
@@ -881,7 +881,29 @@ def user_bookmarks():
     prev_url = url_for('user.user_bookmarks', page=posts.prev_num) if posts.has_prev and page != 1 else None
 
     return render_template('user/bookmarks.html', title=_('Bookmarks'), posts=posts, show_post_community=True,
-                           low_bandwidth=low_bandwidth,
+                           low_bandwidth=low_bandwidth, user=current_user,
+                           moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site,
+                           next_url=next_url, prev_url=prev_url)
+
+
+@bp.route('/bookmarks/comments')
+@login_required
+def user_bookmarks_comments():
+    page = request.args.get('page', 1, type=int)
+    low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+
+    post_replies = PostReply.query.filter(PostReply.deleted == False).join(PostReplyBookmark, PostReplyBookmark.post_reply_id == PostReply.id).\
+        filter(PostReplyBookmark.user_id == current_user.id).order_by(desc(PostReplyBookmark.created_at))
+
+    post_replies = post_replies.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50,
+                           error_out=False)
+    next_url = url_for('user.user_bookmarks_comments', page=post_replies.next_num) if post_replies.has_next else None
+    prev_url = url_for('user.user_bookmarks_comments', page=post_replies.prev_num) if post_replies.has_prev and page != 1 else None
+
+    return render_template('user/bookmarks_comments.html', title=_('Comment bookmarks'), post_replies=post_replies, show_post_community=True,
+                           low_bandwidth=low_bandwidth, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
