@@ -881,6 +881,8 @@ class User(UserMixin, db.Model):
         db.session.query(NotificationSubscription).filter(NotificationSubscription.user_id == self.id).delete()
         db.session.query(Notification).filter(Notification.user_id == self.id).delete()
         db.session.query(PollChoiceVote).filter(PollChoiceVote.user_id == self.id).delete()
+        db.session.query(PostBookmark).filter(PostBookmark.user_id == self.id).delete()
+        db.session.query(PostReplyBookmark).filter(PostReplyBookmark.user_id == self.id).delete()
 
     def purge_content(self, soft=True):
         files = File.query.join(Post).filter(Post.user_id == self.id).all()
@@ -991,6 +993,7 @@ class Post(db.Model):
         return cls.query.filter_by(ap_id=ap_id).first()
 
     def delete_dependencies(self):
+        db.session.query(PostBookmark).filter(PostBookmark.post_id == self.id).delete()
         db.session.query(PollChoiceVote).filter(PollChoiceVote.post_id == self.id).delete()
         db.session.query(PollChoice).filter(PollChoice.post_id == self.id).delete()
         db.session.query(Poll).filter(Poll.post_id == self.id).delete()
@@ -1147,6 +1150,7 @@ class PostReply(db.Model):
             child_reply.delete_dependencies()
             db.session.delete(child_reply)
 
+        db.session.query(PostReplyBookmark).filter(PostReplyBookmark.post_reply_id == self.id).delete()
         db.session.query(Report).filter(Report.suspect_post_reply_id == self.id).delete()
         db.session.execute(text('DELETE FROM post_reply_vote WHERE post_reply_id = :post_reply_id'),
                            {'post_reply_id': self.id})
