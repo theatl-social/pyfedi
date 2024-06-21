@@ -1063,7 +1063,7 @@ def languages_for_form():
                                                                 ) AS subquery
                                                                 GROUP BY language_id
                                                                 ORDER BY MAX(posted_at) DESC
-                                                                LIMIT 4"""),
+                                                                LIMIT 10"""),
                                                           {'user_id': current_user.id}).scalars()
         for language in Language.query.filter(Language.id.in_(recently_used_post_languages)).all():
             result.append((language.id, language.name))
