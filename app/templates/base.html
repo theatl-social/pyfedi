@@ -197,6 +197,7 @@
                                   <li><a class="dropdown-item{% if active_child == 'view_profile' %} active{% endif %}" href="/u/{{ current_user.user_name.lower() }}">{{ _('View profile') }}</a></li>
                                   <li><a class="dropdown-item{% if active_child == 'edit_profile' %} active{% endif %}" href="/user/settings">{{ _('Edit profile & settings') }}</a></li>
                                   <li><a class="dropdown-item{% if active_child == 'chats' %} active{% endif %}" href="/chat">{{ _('Chats') }}</a></li>
+                                  <li><a class="dropdown-item{% if active_child == 'bookmarks' %} active{% endif %}" href="/bookmarks">{{ _('Bookmarks') }}</a></li>
                                 </ul>
                             </li>
                             <li class="nav-item"><a class="nav-link" href="/donate">{{ _('Donate') }}</a></li>

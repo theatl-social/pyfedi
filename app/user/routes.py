@@ -15,7 +15,7 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_PENDING, NOTIF_USER,
 from app.email import send_verification_email
 from app.models import Post, Community, CommunityMember, User, PostReply, PostVote, Notification, utcnow, File, Site, \
     Instance, Report, UserBlock, CommunityBan, CommunityJoinRequest, CommunityBlock, Filter, Domain, DomainBlock, \
-    InstanceBlock, NotificationSubscription
+    InstanceBlock, NotificationSubscription, PostBookmark
 from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, FilterEditForm, \
     RemoteFollowForm
@@ -864,6 +864,28 @@ def user_email_notifs_unsubscribe(user_id, token):
         user.email_unread = False
         db.session.commit()
     return render_template('user/email_notifs_unsubscribed.html')
+
+
+@bp.route('/bookmarks')
+@login_required
+def user_bookmarks():
+    page = request.args.get('page', 1, type=int)
+    low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+
+    posts = Post.query.filter(Post.deleted == False).join(PostBookmark, PostBookmark.post_id == Post.id).\
+        filter(PostBookmark.user_id == current_user.id).order_by(desc(PostBookmark.created_at))
+
+    posts = posts.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50,
+                           error_out=False)
+    next_url = url_for('user.user_bookmarks', page=posts.next_num) if posts.has_next else None
+    prev_url = url_for('user.user_bookmarks', page=posts.prev_num) if posts.has_prev and page != 1 else None
+
+    return render_template('user/bookmarks.html', title=_('Bookmarks'), posts=posts, show_post_community=True,
+                           low_bandwidth=low_bandwidth,
+                           moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site,
+                           next_url=next_url, prev_url=prev_url)
 
 
 @bp.route('/u/<actor>/fediverse_redirect', methods=['GET', 'POST'])
