@@ -982,7 +982,15 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory):
 
                         content_type_parts = content_type.split('/')
                         if content_type_parts:
-                            file_ext = '.' + content_type_parts[-1]
+                            # content type headers often are just 'image/jpeg' but sometimes 'image/jpeg;charset=utf8'
+
+                            # Remove ;charset=whatever
+                            main_part = content_type.split(';')[0]
+
+                            # Split the main part on the '/' character and take the second part
+                            file_ext = '.' + main_part.split('/')[1]
+                            file_ext = file_ext.strip() # just to be sure
+
                             if file_ext == '.jpeg':
                                 file_ext = '.jpg'
                         else:
