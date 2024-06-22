@@ -910,7 +910,8 @@ def current_theme():
                 site = Site.query.get(1)
             return site.default_theme if site.default_theme is not None else ''
     else:
-        return ''
+        site = Site.query.get(1)
+        return site.default_theme if site.default_theme is not None else ''
 
 
 def theme_list():
