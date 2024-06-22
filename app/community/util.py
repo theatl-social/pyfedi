@@ -19,7 +19,7 @@ from app.models import Community, File, BannedInstances, PostReply, PostVote, Po
     Instance, Notification, User, ActivityPubLog, NotificationSubscription, Language, Tag, PollChoice, Poll
 from app.utils import get_request, gibberish, markdown_to_html, domain_from_url, allowlist_html, \
     is_image_url, ensure_directory_exists, inbox_domain, post_ranking, shorten_string, parse_page, \
-    remove_tracking_from_link, ap_datetime, instance_banned, blocked_phrases
+    remove_tracking_from_link, ap_datetime, instance_banned, blocked_phrases, url_to_thumbnail_file, opengraph_parse
 from sqlalchemy import func, desc, text
 import os
 
@@ -242,52 +242,6 @@ def actor_to_community(actor) -> Community:
     return community
 
 
-def opengraph_parse(url):
-    if '?' in url:
-        url = url.split('?')
-        url = url[0]
-    try:
-        return parse_page(url)
-    except Exception as ex:
-        return None
-
-
-def url_to_thumbnail_file(filename) -> File:
-    response = requests.get(filename, timeout=5)
-    if response.status_code == 200:
-        content_type = response.headers.get('content-type')
-        if content_type and content_type.startswith('image'):
-            # Generate file extension from mime type
-            content_type_parts = content_type.split('/')
-            if content_type_parts:
-                file_extension = '.' + content_type_parts[-1]
-                if file_extension == '.jpeg':
-                    file_extension = '.jpg'
-            else:
-                file_extension = os.path.splitext(filename)[1]
-                file_extension = file_extension.replace('%3f', '?')  # sometimes urls are not decoded properly
-                if '?' in file_extension:
-                    file_extension = file_extension.split('?')[0]
-
-            new_filename = gibberish(15)
-            directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
-            ensure_directory_exists(directory)
-            final_place = os.path.join(directory, new_filename + file_extension)
-            with open(final_place, 'wb') as f:
-                f.write(response.content)
-            response.close()
-            Image.MAX_IMAGE_PIXELS = 89478485
-            with Image.open(final_place) as img:
-                img = ImageOps.exif_transpose(img)
-                img.thumbnail((150, 150))
-                img.save(final_place)
-                thumbnail_width = img.width
-                thumbnail_height = img.height
-            return File(file_name=new_filename + file_extension, thumbnail_width=thumbnail_width,
-                        thumbnail_height=thumbnail_height, thumbnail_path=final_place,
-                        source_url=filename)
-
-
 def save_post(form, post: Post, type: str):
     post.indexable = current_user.indexable
     post.sticky = form.sticky.data
@@ -318,6 +272,7 @@ def save_post(form, post: Post, type: str):
                 post.image_id = None
 
             if post.url.endswith('.mp4') or post.url.endswith('.webm'):
+                post.type = POST_TYPE_VIDEO
                 file = File(source_url=form.link_url.data)  # make_image_sizes() will take care of turning this into a still image
                 post.image = file
                 db.session.add(file)
@@ -331,15 +286,16 @@ def save_post(form, post: Post, type: str):
                     post.type = POST_TYPE_IMAGE
                 else:
                     # check opengraph tags on the page and make a thumbnail if an image is available in the og:image meta tag
-                    opengraph = opengraph_parse(form.link_url.data)
-                    if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
-                        filename = opengraph.get('og:image') or opengraph.get('og:image:url')
-                        if not filename.startswith('/'):
-                            file = url_to_thumbnail_file(filename)
-                            if file:
-                                file.alt_text = shorten_string(opengraph.get('og:title'), 295)
-                                post.image = file
-                                db.session.add(file)
+                    if not post.type == POST_TYPE_VIDEO:
+                        opengraph = opengraph_parse(form.link_url.data)
+                        if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
+                            filename = opengraph.get('og:image') or opengraph.get('og:image:url')
+                            if not filename.startswith('/'):
+                                file = url_to_thumbnail_file(filename)
+                                if file:
+                                    file.alt_text = shorten_string(opengraph.get('og:title'), 295)
+                                    post.image = file
+                                    db.session.add(file)
 
     elif type == 'image':
         post.title = form.image_title.data

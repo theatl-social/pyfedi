@@ -31,11 +31,12 @@ from wtforms.widgets import Select, html_params, ListWidget, CheckboxInput
 from app import db, cache
 import re
 from moviepy.editor import VideoFileClip
-from PIL import Image
+from PIL import Image, ImageOps
 
 from app.email import send_welcome_email
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, ActivityPubLog, IpBan, \
-    Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language
+    Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
+    File
 
 
 # Flask's render_template function, with support for themes added
@@ -89,7 +90,8 @@ def get_request(uri, params=None, headers=None) -> requests.Response:
     else:
         payload_str = urllib.parse.urlencode(params) if params else None
     try:
-        response = requests.get(uri, params=payload_str, headers=headers, timeout=5, allow_redirects=True)
+        timeout = 15 if 'washingtonpost.com' in uri else 5  # Washington Post is really slow on og:image for some reason
+        response = requests.get(uri, params=payload_str, headers=headers, timeout=timeout, allow_redirects=True)
     except requests.exceptions.SSLError as invalid_cert:
         # Not our problem if the other end doesn't have proper SSL
         current_app.logger.info(f"{uri} {invalid_cert}")
@@ -851,6 +853,56 @@ def confidence(ups, downs) -> float:
         return _confidence(ups, downs)
 
 
+def opengraph_parse(url):
+    if '?' in url:
+        url = url.split('?')
+        url = url[0]
+    try:
+        return parse_page(url)
+    except Exception as ex:
+        return None
+
+
+def url_to_thumbnail_file(filename) -> File:
+    try:
+        timeout = 15 if 'washingtonpost.com' in filename else 5 # Washington Post is really slow for some reason
+        response = requests.get(filename, timeout=timeout)
+    except:
+        return None
+    if response.status_code == 200:
+        content_type = response.headers.get('content-type')
+        if content_type and content_type.startswith('image'):
+            # Generate file extension from mime type
+            content_type_parts = content_type.split('/')
+            if content_type_parts:
+                file_extension = '.' + content_type_parts[-1]
+                if file_extension == '.jpeg':
+                    file_extension = '.jpg'
+            else:
+                file_extension = os.path.splitext(filename)[1]
+                file_extension = file_extension.replace('%3f', '?')  # sometimes urls are not decoded properly
+                if '?' in file_extension:
+                    file_extension = file_extension.split('?')[0]
+
+            new_filename = gibberish(15)
+            directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
+            ensure_directory_exists(directory)
+            final_place = os.path.join(directory, new_filename + file_extension)
+            with open(final_place, 'wb') as f:
+                f.write(response.content)
+            response.close()
+            Image.MAX_IMAGE_PIXELS = 89478485
+            with Image.open(final_place) as img:
+                img = ImageOps.exif_transpose(img)
+                img.thumbnail((150, 150))
+                img.save(final_place)
+                thumbnail_width = img.width
+                thumbnail_height = img.height
+            return File(file_name=new_filename + file_extension, thumbnail_width=thumbnail_width,
+                        thumbnail_height=thumbnail_height, thumbnail_path=final_place,
+                        source_url=filename)
+
+
 # By no means is this a complete list, but it is very easy to search for the ones you need later.
 KNOWN_OPENGRAPH_TAGS = [
     "og:site_name",
@@ -980,7 +1032,7 @@ def in_sorted_list(arr, target):
 # Makes a still image from a video url, without downloading the whole video file
 def generate_image_from_video_url(video_url, output_path, length=2):
 
-    response = requests.get(video_url, stream=True)
+    response = requests.get(video_url, stream=True, headers={'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0'})  # Imgur requires a user agent
     content_type = response.headers.get('Content-Type')
     if content_type:
         if 'video/mp4' in content_type:

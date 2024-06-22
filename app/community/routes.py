@@ -17,7 +17,7 @@ from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, Cre
     DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm, \
     EscalateReportForm, ResolveReportForm, CreateVideoForm, CreatePollForm, RetrieveRemotePost
 from app.community.util import search_for_community, actor_to_community, \
-    opengraph_parse, url_to_thumbnail_file, save_post, save_icon_file, save_banner_file, send_to_remote_instance, \
+    save_post, save_icon_file, save_banner_file, send_to_remote_instance, \
     delete_post_from_community, delete_post_reply_from_community, community_in_list
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \

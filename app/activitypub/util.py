@@ -31,7 +31,7 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     shorten_string, reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, remove_tracking_from_link, \
     blocked_phrases, microblog_content_to_title, generate_image_from_video_url, is_video_url, reply_is_stupid, \
     notification_subscribers, communities_banned_from, lemmy_markdown_to_html, actor_contains_blocked_words, \
-    html_to_text
+    html_to_text, opengraph_parse, url_to_thumbnail_file
 
 
 def public_key():
@@ -1734,6 +1734,16 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
             image = File(source_url=request_json['object']['image']['url'])
             db.session.add(image)
             post.image = image
+        if post.image is None and post.type == POST_TYPE_LINK: # This is a link post but the source instance has not provided a thumbnail image
+            # Let's see if we can do better than the source instance did!
+            opengraph = opengraph_parse(post.url)
+            if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
+                filename = opengraph.get('og:image') or opengraph.get('og:image:url')
+                if not filename.startswith('/'):
+                    file = File(source_url=filename, alt_text=shorten_string(opengraph.get('og:title'), 295))
+                    post.image = file
+                    db.session.add(file)
+
         db.session.add(post)
         post.ranking = post_ranking(post.score, post.posted_at)
         community.post_count += 1
