@@ -1149,6 +1149,9 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
 
             if activity_log.exception_message is not None and activity_log.result == 'processing':
                 activity_log.result = 'failure'
+            # Don't log successful json - save space
+            if site.log_activitypub_json and activity_log.result == 'success':
+                activity_log.activity_json = ''
             db.session.commit()
 
 
