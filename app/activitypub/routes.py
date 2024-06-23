@@ -1020,7 +1020,6 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                     if ocp.cross_posts is not None:
                                         ocp.cross_posts.remove(post.id)
                             post.delete_dependencies()
-                            post.community.post_count -= 1
                             announce_activity_to_followers(post.community, post.author, request_json)
                             post.deleted = True
                             db.session.commit()
