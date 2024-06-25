@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: piefed\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2024-05-21 19:51+1200\n"
-"PO-Revision-Date: 2024-06-13 23:59\n"
+"PO-Revision-Date: 2024-06-25 12:46\n"
 "Last-Translator: \n"
 "Language: ja\n"
 "Language-Team: Japanese\n"
@@ -2772,7 +2772,7 @@ msgstr "プロフィール"
 
 #: app/templates/user/_user_nav.html:11
 msgid "Blocks & Filters"
-msgstr ""
+msgstr "ブロックとフィルター"
 
 #: app/templates/user/delete_account.html:15
 #: app/templates/user/edit_settings.html:17
@@ -2825,15 +2825,15 @@ msgstr ""
 
 #: app/templates/user/edit_filters.html:33
 msgid "Filter in these places"
-msgstr ""
+msgstr "フィルターをする場所"
 
 #: app/templates/user/edit_filters.html:39
 msgid "One per line. Case does not matter."
-msgstr ""
+msgstr "1行に1つずつ設定できます、大文字と小文字は区別されません。"
 
 #: app/templates/user/edit_filters.html:41
 msgid "Stop applying this filter after this date. Optional."
-msgstr ""
+msgstr "この日付以降はフィルターの適用を停止します。これは任意です。"
 
 #: app/templates/user/edit_profile.html:16 app/user/routes.py:156
 #: app/user/routes.py:231
@@ -2867,11 +2867,11 @@ msgstr "その他のメール設定"
 #: app/templates/user/fediverse_redirect.html:17
 #: app/templates/user/fediverse_redirect.html:20
 msgid "Follow on remote instance"
-msgstr ""
+msgstr "リモートインスタンスでフォローする"
 
 #: app/templates/user/fediverse_redirect.html:21
 msgid "We are about to send you to your instance where you will then need to click the \"Follow\" button."
-msgstr ""
+msgstr "フォローしたいインスタンスを選択してください。そのインスタンスでプロフィールを表示します。"
 
 #: app/templates/user/filters.html:25
 msgid "Filters can hide posts that contain keywords you specify, either by making them less noticeable or invisible."
@@ -2903,19 +2903,19 @@ msgstr "インスタンス"
 
 #: app/templates/user/filters.html:81
 msgid "No blocked people"
-msgstr "ブロックされた人はいません"
+msgstr "ブロックしたユーザーはいません"
 
 #: app/templates/user/filters.html:99
 msgid "No blocked communities"
-msgstr ""
+msgstr "ブロックしたコミュニティはありません"
 
 #: app/templates/user/filters.html:117
 msgid "No blocked domains"
-msgstr ""
+msgstr "ブロックしたドメインはありません"
 
 #: app/templates/user/filters.html:135
 msgid "No blocked instances"
-msgstr ""
+msgstr "ブロックしたインスタンスはありません"
 
 #: app/templates/user/newsletter_unsubscribed.html:10
 msgid "You have unsubscribed from the email newsletter. We might email you for other reasons, though."
@@ -2967,7 +2967,7 @@ msgstr "Botアカウント"
 
 #: app/templates/user/show_profile.html:96
 msgid "Attitude"
-msgstr "態度ステータス"
+msgstr "評判度"
 
 #: app/templates/user/show_profile.html:96
 msgid "Ratio of upvotes cast to downvotes cast. Higher is more positive."
@@ -3040,7 +3040,7 @@ msgstr ""
 
 #: app/user/forms.py:35
 msgid "Interface language"
-msgstr ""
+msgstr "表示言語"
 
 #: app/user/forms.py:37
 msgid "Receive email about missed notifications"
@@ -3088,39 +3088,39 @@ msgstr ""
 
 #: app/user/forms.py:92
 msgid "Home feed"
-msgstr ""
+msgstr "ホームフィード"
 
 #: app/user/forms.py:93
 msgid "Posts in communities"
-msgstr ""
+msgstr "コミュニティの投稿"
 
 #: app/user/forms.py:94
 msgid "Comments on posts"
-msgstr "投稿にコメント"
+msgstr "投稿のコメント"
 
 #: app/user/forms.py:95
 msgid "Make semi-transparent"
-msgstr ""
+msgstr "半透明にする"
 
 #: app/user/forms.py:95
 msgid "Hide completely"
-msgstr ""
+msgstr "完全に隠す"
 
 #: app/user/forms.py:96
 msgid "Action to take"
-msgstr ""
+msgstr "実行処理"
 
 #: app/user/forms.py:97
 msgid "Keywords that trigger this filter"
-msgstr ""
+msgstr "このフィルタのトリガーとなるキーワード"
 
 #: app/user/forms.py:100
 msgid "Expire after"
-msgstr ""
+msgstr "有効期限"
 
 #: app/user/forms.py:105
 msgid "Your remote instance:"
-msgstr ""
+msgstr "リモートインスタンス："
 
 #: app/user/forms.py:108
 msgid "Mastodon, Misskey, Akkoma, Iceshrimp and friends"
