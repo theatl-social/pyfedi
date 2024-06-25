@@ -575,18 +575,21 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             if object_type in new_content_types:  # create or update a post
                                 in_reply_to = request_json['object']['inReplyTo'] if 'inReplyTo' in request_json['object'] else None
                                 if not in_reply_to:
-                                    if request_json['type'] == 'Create':
-                                        post = None
-                                    else:
-                                        post = Post.query.filter_by(ap_id=request_json['object']['id']).first()
+                                    post = Post.query.filter_by(ap_id=request_json['object']['id']).first()
                                     if post:
-                                        activity_log.activity_type = 'Update'
-                                        if can_edit(request_json['actor'], post):
-                                            update_post_from_activity(post, request_json)
-                                            announce_activity_to_followers(post.community, post.author, request_json)
-                                            activity_log.result = 'success'
+                                        if request_json['type'] == 'Create':
+                                            activity_log.result = 'ignored'
+                                            activity_log.exception_message = 'Create received for already known object'
+                                            db.session.commit()
+                                            return
                                         else:
-                                            activity_log.exception_message = 'Edit attempt denied'
+                                            activity_log.activity_type = 'Update'
+                                            if can_edit(request_json['actor'], post):
+                                                update_post_from_activity(post, request_json)
+                                                announce_activity_to_followers(post.community, post.author, request_json)
+                                                activity_log.result = 'success'
+                                            else:
+                                                activity_log.exception_message = 'Edit attempt denied'
                                     else:
                                         if can_create_post(user, community):
                                             try:
@@ -600,18 +603,21 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                         else:
                                             post = None
                                 else:
-                                    if request_json['type'] == 'Create':
-                                        reply = None
-                                    else:
-                                        reply = PostReply.query.filter_by(ap_id=request_json['object']['id']).first()
+                                    reply = PostReply.query.filter_by(ap_id=request_json['object']['id']).first()
                                     if reply:
-                                        activity_log.activity_type = 'Update'
-                                        if can_edit(request_json['actor'], reply):
-                                            update_post_reply_from_activity(reply, request_json)
-                                            announce_activity_to_followers(reply.community, reply.author, request_json)
-                                            activity_log.result = 'success'
+                                        if request_json['type'] == 'Create':
+                                            activity_log.result = 'ignored'
+                                            activity_log.exception_message = 'Create received for already known object'
+                                            db.session.commit()
+                                            return
                                         else:
-                                            activity_log.exception_message = 'Edit attempt denied'
+                                            activity_log.activity_type = 'Update'
+                                            if can_edit(request_json['actor'], reply):
+                                                update_post_reply_from_activity(reply, request_json)
+                                                announce_activity_to_followers(reply.community, reply.author, request_json)
+                                                activity_log.result = 'success'
+                                            else:
+                                                activity_log.exception_message = 'Edit attempt denied'
                                     else:
                                         if can_create_post_reply(user, community):
                                             try:
@@ -678,36 +684,42 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                 in_reply_to = request_json['object']['object']['inReplyTo'] if 'inReplyTo' in \
                                                                                                request_json['object']['object'] else None
                                 if not in_reply_to:
-                                    if request_json['object']['type'] == 'Create':
-                                        post = None
-                                    else:
-                                        post = Post.query.filter_by(ap_id=request_json['object']['object']['id']).first()
+                                    post = Post.query.filter_by(ap_id=request_json['object']['object']['id']).first()
                                     if post:
-                                        try:
-                                            update_post_from_activity(post, request_json['object'])
-                                        except KeyError:
-                                            activity_log.result = 'exception'
+                                        if request_json['object']['type'] == 'Create':
+                                            activity_log.result = 'ignored'
+                                            activity_log.exception_message = 'Create received for already known object'
                                             db.session.commit()
                                             return
-                                        activity_log.result = 'success'
+                                        else:
+                                            try:
+                                                update_post_from_activity(post, request_json['object'])
+                                            except KeyError:
+                                                activity_log.result = 'exception'
+                                                db.session.commit()
+                                                return
+                                            activity_log.result = 'success'
                                     else: # activity was a Create, or an Update sent instead of a Create
                                         if can_create_post(user, community):
                                             post = create_post(activity_log, community, request_json['object'], user, announce_id=request_json['id'])
                                         else:
                                             post = None
                                 else:
-                                    if request_json['object']['type'] == 'Create':
-                                        reply = None
-                                    else:
-                                        reply = PostReply.query.filter_by(ap_id=request_json['object']['object']['id']).first()
+                                    reply = PostReply.query.filter_by(ap_id=request_json['object']['object']['id']).first()
                                     if reply:
-                                        try:
-                                            update_post_reply_from_activity(reply, request_json['object'])
-                                        except KeyError:
-                                            activity_log.result = 'exception'
+                                        if request_json['object']['type'] == 'Create':
+                                            activity_log.result = 'ignored'
+                                            activity_log.exception_message = 'Create received for already known object'
                                             db.session.commit()
                                             return
-                                        activity_log.result = 'success'
+                                        else:
+                                            try:
+                                                update_post_reply_from_activity(reply, request_json['object'])
+                                            except KeyError:
+                                                activity_log.result = 'exception'
+                                                db.session.commit()
+                                                return
+                                            activity_log.result = 'success'
                                     else: # activity was a Create, or an Update sent instead of a Create
                                         if can_create_post_reply(user, community):
                                             post = create_post_reply(activity_log, community, in_reply_to, request_json['object'], user, announce_id=request_json['id'])
