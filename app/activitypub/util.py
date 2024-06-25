@@ -1461,8 +1461,8 @@ def remove_data_from_banned_user_task(deletor_ap_id, user_ap_id, target):
         post_replies = PostReply.query.filter_by(user_id=user.id)
         posts = Post.query.filter_by(user_id=user.id)
 
-    # community bans by mods
-    elif community and community.is_moderator(deletor):
+    # community bans by mods or admins
+    elif community and (community.is_moderator(deletor) or community.is_instance_admin(deletor)):
         post_replies = PostReply.query.filter_by(user_id=user.id, community_id=community.id, deleted=False)
         posts = Post.query.filter_by(user_id=user.id, community_id=community.id, deleted=False)
     else:
