@@ -1033,7 +1033,7 @@ def federate_post_to_user_followers(post):
         note['content'] = '<p><a href=' + post.url + '>' + post.title + '</a></p>'
     elif post.type == POST_TYPE_IMAGE:
         note['content'] = '<p>' + post.title + '</p>'
-        if post.image.id and post.image.source_url:
+        if post.image_id and post.image.source_url:
             if post.image.alt_text:
                 note['attachment'] = [{'type': 'Document', 'url': post.image.source_url, 'name': post.image.alt_text}]
             else:

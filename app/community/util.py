@@ -354,8 +354,9 @@ def save_post(form, post: Post, type: str):
                             width=img_width, height=img_height, thumbnail_width=thumbnail_width,
                             thumbnail_height=thumbnail_height, thumbnail_path=final_place_thumbnail,
                             source_url=final_place.replace('app/static/', f"https://{current_app.config['SERVER_NAME']}/static/"))
-                post.image = file
                 db.session.add(file)
+                db.session.commit()
+                post.image_id = file.id
     elif type == 'video':
         form.video_url.data = form.video_url.data.strip()
         post.title = form.video_title.data
