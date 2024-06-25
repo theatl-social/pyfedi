@@ -952,17 +952,16 @@ def parse_page(page_url, tags_to_search = KNOWN_OPENGRAPH_TAGS, fallback_tags = 
 
 def current_theme():
     """ The theme the current user has set, falling back to the site default if none specified or user is not logged in """
+    if hasattr(g, 'site'):
+        site = g.site
+    else:
+        site = Site.query.get(1)
     if current_user.is_authenticated:
         if current_user.theme is not None and current_user.theme != '':
             return current_user.theme
         else:
-            if hasattr(g, 'site'):
-                site = g.site
-            else:
-                site = Site.query.get(1)
             return site.default_theme if site.default_theme is not None else ''
     else:
-        site = Site.query.get(1)
         return site.default_theme if site.default_theme is not None else ''
 
 
