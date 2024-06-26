@@ -100,7 +100,7 @@ def send_newsletter(form):
         else:
             to = recipient.email
 
-        send_email(subject=form.subject.data, sender=f'{g.site.name} <noreply@{current_app.config["SERVER_NAME"]}>', recipients=[to],
+        send_email(subject=form.subject.data, sender=f'{g.site.name} <{current_app.config["MAIL_FROM"]}>', recipients=[to],
                    text_body=body_text, html_body=body_html)
 
         if form.test.data:

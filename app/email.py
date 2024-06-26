@@ -14,7 +14,7 @@ CHARSET = "UTF-8"
 def send_password_reset_email(user):
     token = user.get_reset_password_token()
     send_email(_('[PieFed] Reset Your Password'),
-               sender=f'PieFed <noreply@{current_app.config["SERVER_NAME"]}>',
+               sender=f'{g.site.name} <{current_app.config["MAIL_FROM"]}>',
                recipients=[user.email],
                text_body=render_template('email/reset_password.txt',
                                          user=user, token=token),
@@ -24,7 +24,7 @@ def send_password_reset_email(user):
 
 def send_verification_email(user):
     send_email(_('[PieFed] Please verify your email address'),
-               sender=f'PieFed <noreply@{current_app.config["SERVER_NAME"]}>',
+               sender=f'{g.site.name} <{current_app.config["MAIL_FROM"]}>',
                recipients=[user.email],
                text_body=render_template('email/verification.txt', user=user),
                html_body=render_template('email/verification.html', user=user))
@@ -33,7 +33,7 @@ def send_verification_email(user):
 def send_welcome_email(user, application_required):
     subject = _('Your application has been approved - welcome to PieFed') if application_required else _('Welcome to PieFed')
     send_email(subject,
-               sender=f'PieFed <{g.site.contact_email}>',
+               sender=f'{g.site.name} <{current_app.config["MAIL_FROM"]}>',
                recipients=[user.email],
                text_body=render_template('email/welcome.txt', user=user, application_required=application_required),
                html_body=render_template('email/welcome.html', user=user, application_required=application_required))
@@ -42,7 +42,7 @@ def send_welcome_email(user, application_required):
 @celery.task
 def send_async_email(subject, sender, recipients, text_body, html_body, reply_to):
     if 'ngrok.app' in sender:   # for local development
-        sender = 'PieFed <noreply@piefed.social>'
+        sender = f'{g.site.name} <{current_app.config["MAIL_FROM"]}>'
         return_path = 'bounces@piefed.social'
     else:
         return_path = 'bounces@' + current_app.config['SERVER_NAME']
