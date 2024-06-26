@@ -846,6 +846,8 @@ class User(UserMixin, db.Model):
         return result
 
     def created_recently(self):
+        if self.is_admin():
+            return False
         return self.created and self.created > utcnow() - timedelta(days=7)
 
     def has_blocked_instance(self, instance_id: int):
