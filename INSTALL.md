@@ -135,6 +135,10 @@ while `RedisCache` **should** be used in production. If using `RedisCache`, set 
 * Test email sending by going to https://yourdomain/test_email. It will try to send an email to the current user's email address.
 If it does not work check the log file at logs/pyfedi.log for clues.
 
+* BOUNCE_ADDRESS is where email bounces will go to. If BOUNCE_* is configured then all emails in that inbox
+will be treated as bounces and deleted after extracting the email addresses in them. Use a dedicated inbox
+for bounces, not a inbox you also use for other purposes.
+
 <div id="initialise-database-and-setup-admin-account"></div>
 
 ## Initialise database, and set up admin account
