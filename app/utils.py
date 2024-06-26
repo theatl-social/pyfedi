@@ -772,7 +772,7 @@ def community_moderators(community_id):
                                         ).all()
 
 
-def finalize_user_setup(user, application_required=False):
+def finalize_user_setup(user):
     from app.activitypub.signature import RsaKeys
     user.verified = True
     user.last_seen = utcnow()
@@ -783,7 +783,6 @@ def finalize_user_setup(user, application_required=False):
     user.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}"
     user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name.lower()}/inbox"
     db.session.commit()
-    send_welcome_email(user, application_required)
 
 
 def notification_subscribers(entity_id: int, entity_type: int) -> List[int]:
