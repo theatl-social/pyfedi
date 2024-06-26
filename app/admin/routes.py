@@ -20,6 +20,7 @@ from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_
     topics_for_form
 from app.community.util import save_icon_file, save_banner_file
 from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED
+from app.email import send_welcome_email
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
@@ -725,7 +726,8 @@ def admin_approve_registrations_approve(user_id):
         registration.approved_by = current_user.id
         db.session.commit()
         if user.verified:
-            finalize_user_setup(user, True)
+            finalize_user_setup(user)
+            send_welcome_email(user, True)
 
         flash(_('Registration approved.'))
 
@@ -740,8 +742,10 @@ def admin_user_edit(user_id):
     user = User.query.get_or_404(user_id)
     if form.validate_on_submit():
         user.bot = form.bot.data
-        user.verified = form.verified.data
         user.banned = form.banned.data
+        if form.verified.data and not user.verified:
+            finalize_user_setup(user)
+        user.verified = form.verified.data
         if form.remove_avatar.data and user.avatar_id:
             file = File.query.get(user.avatar_id)
             file.delete_from_disk()
@@ -827,19 +831,11 @@ def admin_users_add():
         user.show_nsfw = form.nsfw.data
         user.show_nsfl = form.nsfl.data
 
-        from app.activitypub.signature import RsaKeys
-        user.verified = True
         user.instance_id = 1
-        user.last_seen = utcnow()
-        private_key, public_key = RsaKeys.generate_keypair()
-        user.private_key = private_key
-        user.public_key = public_key
-        user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}".lower()
-        user.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}"
-        user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}/inbox"
         user.roles.append(Role.query.get(form.role.data))
         db.session.add(user)
         db.session.commit()
+        finalize_user_setup(user)
 
         flash(_('User added'))
         return redirect(url_for('admin.admin_users', local_remote='local'))
