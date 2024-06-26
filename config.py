@@ -16,7 +16,7 @@ class Config(object):
     MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS') is not None
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME') or None
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD') or None
-    MAIL_FROM = os.environ.get('MAIL_FROM') or None
+    MAIL_FROM = os.environ.get('MAIL_FROM') or 'noreply@' + os.environ.get('SERVER_NAME')
     MAIL_ERRORS = os.environ.get('MAIL_ERRORS') is not None
     ADMINS = os.environ.get('ADMINS')
     RECAPTCHA_PUBLIC_KEY = os.environ.get("RECAPTCHA_PUBLIC_KEY") or None
