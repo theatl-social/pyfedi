@@ -10,7 +10,7 @@
         <h1>{{ _('About %(site_name)s', site_name=g.site.name) }}</h1>
         <p> {{g.site.name}} is a <a href="https://join.piefed.social/">pyfedi</a> instance created on {{instance.created_at.strftime('%d-%m-%Y')}}. It is home to <a href="/people">{{user_amount}} users</a> (of which {{mau}} active in the last month). In the <a href="/communities/local"> {{community_amount}} communities</a> we discussed <a href="/domains">{{domains_amount}} domains</a> and made {{posts_amount}} posts.</p>
         <h2> Team </h2>
-        <p>This instance is administerred by {% for admin in admins %}<a href="/u/{{ admin.user_name }}">{{ admin.user_name }}</a>{{ ", " if not loop.last }}{% endfor %}.</p>
+        <p>This instance is administered by {% for admin in admins %}<a href="/u/{{ admin.user_name }}">{{ admin.user_name }}</a>{{ ", " if not loop.last }}{% endfor %}.</p>
         {% if staff %}
         <p>It is moderated by {% for s in staff %}<a href="/u/{{ s.user_name }}">{{ s.user_name }}</a>{{ ", " if not loop.last }}{% endfor %}.</p>
         {% endif %}

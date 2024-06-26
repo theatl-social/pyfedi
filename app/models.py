@@ -1506,7 +1506,11 @@ class Site(db.Model):
 
     @staticmethod
     def admins() -> List[User]:
-        return User.query.filter_by(deleted=False, banned=False).join(user_role).filter(user_role.c.role_id == 4).all()
+        return User.query.filter_by(deleted=False, banned=False).join(user_role).filter(user_role.c.role_id == 4).order_by(User.id).all()
+
+    @staticmethod
+    def staff() -> List[User]:
+        return User.query.filter_by(deleted=False, banned=False).join(user_role).filter(user_role.c.role_id == 3).order_by(User.id).all()
 
 
 #class IngressQueue(db.Model):
