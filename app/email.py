@@ -42,10 +42,10 @@ def send_welcome_email(user, application_required):
 @celery.task
 def send_async_email(subject, sender, recipients, text_body, html_body, reply_to):
     if 'ngrok.app' in sender:   # for local development
-        sender = f'{g.site.name} <{current_app.config["MAIL_FROM"]}>'
+        sender = 'PieFed <noreply@piefed.social'
         return_path = 'bounces@piefed.social'
     else:
-        return_path = 'bounces@' + current_app.config['SERVER_NAME']
+        return_path = current_app.config['BOUNCE_ADDRESS']
     # NB email will not be sent if you have not verified your domain name as an 'Identity' inside AWS SES
     if type(recipients) == str:
         recipients = [recipients]
