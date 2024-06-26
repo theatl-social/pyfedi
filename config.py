@@ -38,6 +38,7 @@ class Config(object):
     BOUNCE_HOST = os.environ.get('BOUNCE_HOST') or ''
     BOUNCE_USERNAME = os.environ.get('BOUNCE_USERNAME') or ''
     BOUNCE_PASSWORD = os.environ.get('BOUNCE_PASSWORD') or ''
+    BOUNCE_ADDRESS = os.environ.get('BOUNCE_ADDRESS') or MAIL_FROM or ''
 
     SENTRY_DSN = os.environ.get('SENTRY_DSN') or None
 
