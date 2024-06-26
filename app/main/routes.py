@@ -440,7 +440,7 @@ def test():
 
             # Send email!
             send_email(_('[PieFed] You have unread notifications'),
-                       sender=f'PieFed <noreply@{current_app.config["SERVER_NAME"]}>',
+                       sender=f'{g.site.name} <{current_app.config["MAIL_FROM"]}>',
                        recipients=[user.email],
                        text_body=flask.render_template('email/unread_notifications.txt', user=user, notifications=notifications),
                        html_body=flask.render_template('email/unread_notifications.html', user=user,
