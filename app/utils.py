@@ -776,9 +776,10 @@ def finalize_user_setup(user):
     from app.activitypub.signature import RsaKeys
     user.verified = True
     user.last_seen = utcnow()
-    private_key, public_key = RsaKeys.generate_keypair()
-    user.private_key = private_key
-    user.public_key = public_key
+    if user.private_key is None and user.public_key is None:
+        private_key, public_key = RsaKeys.generate_keypair()
+        user.private_key = private_key
+        user.public_key = public_key
     user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}".lower()
     user.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}"
     user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name.lower()}/inbox"
