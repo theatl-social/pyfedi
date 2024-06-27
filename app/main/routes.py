@@ -211,6 +211,12 @@ def list_communities():
         banned_from = communities_banned_from(current_user.id)
         if banned_from:
             communities = communities.filter(Community.id.not_in(banned_from))
+        if not current_user.show_nsfw:
+            communities = communities.filter(Community.nsfw == False)
+        if not current_user.show_nsfl:
+            communities = communities.filter(Community.nsfl == False)
+    else:
+        communities = communities.filter(and_(Community.nsfw == False, Community.nsfl == False))
 
     communities = communities.order_by(text('community.' + sort_by))
 
@@ -257,6 +263,12 @@ def list_local_communities():
         banned_from = communities_banned_from(current_user.id)
         if banned_from:
             communities = communities.filter(Community.id.not_in(banned_from))
+        if not current_user.show_nsfw:
+            communities = communities.filter(Community.nsfw == False)
+        if not current_user.show_nsfl:
+            communities = communities.filter(Community.nsfl == False)
+    else:
+        communities = communities.filter(and_(Community.nsfw == False, Community.nsfl == False))
 
     communities = communities.order_by(text('community.' + sort_by))
 
