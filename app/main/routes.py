@@ -340,8 +340,8 @@ def about_page():
     MAU = active_month()
     posts_amount = local_posts()
 
-    admins = db.session.execute(text('SELECT user_name, email  FROM "user" WHERE "id" IN (SELECT "user_id" FROM "user_role" WHERE "role_id" = 4) ORDER BY id')).all()
-    staff = db.session.execute(text('SELECT user_name FROM "user" WHERE "id" IN (SELECT "user_id" FROM "user_role" WHERE "role_id" = 2) ORDER BY id')).all()
+    admins = Site.admins()
+    staff = Site.staff()
     domains_amount = db.session.execute(text('SELECT COUNT(id) as c FROM "domain" WHERE "banned" IS false')).scalar()
     community_amount = local_communities()
     instance = Instance.query.filter_by(id=1).first()
