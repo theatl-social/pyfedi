@@ -19,15 +19,15 @@
         </form>
         <table class="table table-striped mt-1">
             <tr>
-               <th>Name</th>
+               <th title="{{ _('Display name.') }}">Name</th>
                <th>Local/Remote</th>
-               <th>Seen</th>
-               <th>Attitude</th>
-               <th>Rep</th>
+               <th title="{{ _('Last seen.') }}">Seen</th>
+               <th title="{{ _('Attitude: Percentage of up votes vs. down votes the account made.') }}">Attitude</th>
+               <th title="{{ _('Reputation: The Karma of the account. Total up votes minus down votes they got.') }}">Rep</th>
                <th>Banned</th>
-               <th>Reports</th>
-               <th>IP</th>
-               <th>Source</th>
+               <th title="{{ _('How often a user has been reported.') }}">Reports</th>
+               <th title="{{ _('IP address of last interaction.') }}">IP</th>
+               <th title="{{ _('Which website linked to PieFed when the user initially registered.') }}">Source</th>
                <th>Actions</th>
             </tr>
             {% for user in users.items %}
