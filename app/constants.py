@@ -32,4 +32,7 @@ NOTIF_TOPIC = 2
 NOTIF_POST = 3
 NOTIF_REPLY = 4
 
+ROLE_STAFF = 3
+ROLE_ADMIN = 4
+
 MICROBLOG_APPS = ["mastodon", "misskey", "akkoma", "iceshrimp", "pleroma"]

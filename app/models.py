@@ -20,7 +20,8 @@ import os
 import math
 
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER, \
-    SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER, NOTIF_COMMUNITY, NOTIF_TOPIC, NOTIF_POST, NOTIF_REPLY
+    SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER, NOTIF_COMMUNITY, NOTIF_TOPIC, NOTIF_POST, NOTIF_REPLY, \
+    ROLE_ADMIN, ROLE_STAFF
 
 
 # datetime.utcnow() is depreciated in Python 3.12 so it will need to be swapped out eventually
@@ -1506,11 +1507,11 @@ class Site(db.Model):
 
     @staticmethod
     def admins() -> List[User]:
-        return User.query.filter_by(deleted=False, banned=False).join(user_role).filter(user_role.c.role_id == 4).order_by(User.id).all()
+        return User.query.filter_by(deleted=False, banned=False).join(user_role).filter(user_role.c.role_id == ROLE_ADMIN).order_by(User.id).all()
 
     @staticmethod
     def staff() -> List[User]:
-        return User.query.filter_by(deleted=False, banned=False).join(user_role).filter(user_role.c.role_id == 3).order_by(User.id).all()
+        return User.query.filter_by(deleted=False, banned=False).join(user_role).filter(user_role.c.role_id == ROLE_STAFF).order_by(User.id).all()
 
 
 #class IngressQueue(db.Model):
