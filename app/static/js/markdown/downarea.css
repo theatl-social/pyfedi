@@ -23,8 +23,8 @@
 }
 
 .downarea {
-    background: #dbdbdb;
-    border: 1px solid #ccc;
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
     border-radius: 3px;
     width: auto;
     height: 150px;
@@ -38,13 +38,13 @@
 }
 
 .downarea.focused {
-    border-color: #bababa;
+    border-color: var(--bs-secondary-text-emphasis);
 }
 
 .downarea .resizer {
     width: 10px;
     height: 10px;
-    border: 5px solid #909090;
+    border: 5px solid var(--bs-secondary-color);
     border-top-color: transparent;
     border-left-color: transparent;
     border-bottom-right-radius: 3px;
@@ -72,18 +72,18 @@
 }
 
 .downarea .downarea-toolbar {
-    background: #e8e8e8;
+    background: var(--bs-secondary-bg);
     width: 100%;
     display: flex;
     justify-content: flex-start;
     align-items: center;
     padding: 5px;
-    border-bottom: 1px solid #cccccc;
+    border-bottom: 1px solid var(--bs-border-color);
     min-width: max-content !important;
 }
 
 .downarea.focused .downarea-toolbar {
-    border-bottom-color: #bababa;
+    border-bottom-color: var(--bs-secondary-text-emphasis);
 }
 
 .downarea-toolbar .downarea-toolbar-tool {
@@ -91,21 +91,22 @@
     justify-content: center;
     align-items: center;
     padding: 7px;
-    background: #fafafa;
+    background: var(--bs-light-bg-subtle);
     border-radius: 3px;
-    border: 1px solid #c2c2c2;
+    border: 1px solid var(--bs-secondary-border-subtle);
     cursor: pointer;
     margin-right: 5px;
     user-select: none;
     position: relative;
     font-size: 15px;
     font-weight: 500;
-    color: #2f2f2f;
+    color: var(--bs-emphasis-color);
 }
 
 .downarea-toolbar .downarea-toolbar-tool svg {
     width: 13px;
     opacity: 0.8;
+    fill: var(--bs-emphasis-color);
 }
 
 .downarea-toolbar .downarea-toolbar-tool:last-child {
@@ -119,7 +120,7 @@
     top: calc(100% + 2px);
     left: 0;
     z-index: 2;
-    border: 1px solid #cccccc;
+    border: 1px solid var(--bs-border-color);
     border-radius: 3px;
     overflow: auto;
     visibility: hidden;
@@ -132,7 +133,7 @@
 .downarea-toolbar .downarea-toolbar-tool .downarea-tool-dropdown ul {
     list-style-type: none;
     display: block;
-    background: #fafafa;
+    background: var(--bs-light-bg-subtle);
     cursor: default;
     padding: 3px 0;
 }
@@ -179,7 +180,7 @@
 .downarea .downarea-textarea {
     width: 100%;
     height: max-content;
-    background: #fff;
+    background: inherit;
     position: relative;
     margin-bottom: 20px;
 }
@@ -197,14 +198,14 @@
 .downarea .downarea-bottom {
     width: 100%;
     height: 19px;
-    background: #e8e8e8;
+    background: var(--bs-secondary-bg);
     position: absolute;
     bottom: 0;
     left: 0;
-    border-top: 1px solid #cccccc;
-    border-bottom: 1px solid #cccccc;
+    border-top: 1px solid var(--bs-border-color);
+    border-bottom: 1px solid var(--bs-border-color);
 }
 
 .downarea.focused .downarea-bottom {
-    border-top-color: #bababa;
+    border-top-color: var(--bs-secondary-text-emphasis);
 }
