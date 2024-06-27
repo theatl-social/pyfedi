@@ -358,7 +358,9 @@ def about_page():
     community_amount = local_communities()
     instance = Instance.query.filter_by(id=1).first()
     
-    return render_template('about.html', user_amount=user_amount, mau=MAU, posts_amount=posts_amount, domains_amount=domains_amount, community_amount=community_amount, instance=instance, admins=admins, staff=staff)
+    return render_template('about.html', user_amount=user_amount, mau=MAU, posts_amount=posts_amount,
+                           domains_amount=domains_amount, community_amount=community_amount, instance=instance,
+                           admins=admins, staff=staff)
 
 
 @bp.route('/privacy')

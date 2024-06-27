@@ -880,9 +880,9 @@ def admin_reports():
 
     reports = Report.query.filter(or_(Report.status == REPORT_STATE_NEW, Report.status == REPORT_STATE_ESCALATED))
     if local_remote == 'local':
-        reports = reports.filter_by(ap_id=None)
+        reports = reports.filter_by(source_instance_id=1)
     if local_remote == 'remote':
-        reports = reports.filter(Report.ap_id != None)
+        reports = reports.filter(Report.source_instance_id != 1)
     reports = reports.order_by(desc(Report.created_at)).paginate(page=page, per_page=1000, error_out=False)
 
     next_url = url_for('admin.admin_reports', page=reports.next_num) if reports.has_next else None
