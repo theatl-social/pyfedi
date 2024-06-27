@@ -19,10 +19,10 @@
                <th>Title</th>
                <th>Topic</th>
                <th>#&nbsp;Posts</th>
-               <th>Home</th>
-               <th>Popular</th>
-               <th>All</th>
-               <th>Warning</th>
+               <th title="{{ _('Posts show on home page.') }}">Home</th>
+               <th title="{{ _('Posts can be popular.') }}">Popular</th>
+               <th title="{{ _('Posts show in the All feed.') }}">All</th>
+               <th title="{{ _('Content warning, NSFW or NSFL set for community.') }}">Warning</th>
                <th>Actions</th>
             </tr>
             {% for community in communities.items %}
