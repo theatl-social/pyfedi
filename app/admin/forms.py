@@ -105,7 +105,7 @@ class EditCommunityForm(FlaskForm):
 
 class EditTopicForm(FlaskForm):
     name = StringField(_l('Name'), validators=[DataRequired()])
-    machine_name = StringField(_l('Url'), validators=[DataRequired()])
+    machine_name = StringField(_l('Slug'), validators=[DataRequired()])
     parent_id = SelectField(_l('Parent topic'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Save'))
 
