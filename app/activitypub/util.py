@@ -9,6 +9,7 @@ from typing import Union, Tuple, List
 import redis
 from flask import current_app, request, g, url_for, json
 from flask_babel import _
+from requests import JSONDecodeError
 from sqlalchemy import text, func, desc
 from app import db, cache, constants, celery
 from app.models import User, Post, Community, BannedInstances, File, PostReply, AllowedInstances, Instance, utcnow, \
@@ -341,7 +342,11 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                     except requests.exceptions.ConnectionError:
                         return None
                     if actor_data.status_code == 200:
-                        actor_json = actor_data.json()
+                        try:
+                            actor_json = actor_data.json()
+                        except JSONDecodeError as e:
+                            actor_data.close()
+                            return None
                         actor_data.close()
                         actor_model = actor_json_to_model(actor_json, address, server)
                         if community_only and not isinstance(actor_model, Community):
