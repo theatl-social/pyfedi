@@ -276,7 +276,7 @@ def show_post(post_id: int):
         recently_downvoted = recently_downvoted_posts(current_user.id)
         recently_upvoted_replies = recently_upvoted_post_replies(current_user.id)
         recently_downvoted_replies = recently_downvoted_post_replies(current_user.id)
-        reply_collapse_threshold = current_user.reply_collapse_threshold
+        reply_collapse_threshold = current_user.reply_collapse_threshold if current_user.reply_collapse_threshold else -1000
     else:
         recently_upvoted = []
         recently_downvoted = []
