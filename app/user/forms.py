@@ -35,8 +35,6 @@ class SettingsForm(FlaskForm):
     interface_language = SelectField(_l('Interface language'), coerce=str, validators=[Optional()], render_kw={'class': 'form-select'})
     newsletter = BooleanField(_l('Subscribe to email newsletter'))
     email_unread = BooleanField(_l('Receive email about missed notifications'))
-    reply_collapse_threshold = IntegerField(_l('Reply collapse threshold'))
-    reply_hide_threshold = IntegerField(_l('Reply hide threshold'))
     markdown_editor = BooleanField(_l('Use markdown editor GUI when writing'))
     searchable = BooleanField(_l('Show profile in user list'))
     indexable = BooleanField(_l('My posts appear in search results'))
@@ -97,6 +95,8 @@ class FilterForm(FlaskForm):
                             default=1, coerce=int, render_kw={'class': 'form-select'})
     hide_nsfl = SelectField(_l('Show NSFL posts'), choices=hide_type_choices,
                             default=1, coerce=int, render_kw={'class': 'form-select'})
+    reply_collapse_threshold = IntegerField(_l('Reply collapse threshold'))
+    reply_hide_threshold = IntegerField(_l('Reply hide threshold'))
     submit = SubmitField(_l('Save settings'))
 
 

@@ -235,8 +235,6 @@ def change_settings():
         current_user.email_unread = form.email_unread.data
         current_user.markdown_editor = form.markdown_editor.data
         current_user.interface_language = form.interface_language.data
-        current_user.reply_collapse_threshold = form.reply_collapse_threshold.data
-        current_user.reply_hide_threshold = form.reply_hide_threshold.data
         session['ui_language'] = form.interface_language.data
         import_file = request.files['import_file']
         if propagate_indexable:
@@ -273,8 +271,6 @@ def change_settings():
         form.theme.data = current_user.theme
         form.markdown_editor.data = current_user.markdown_editor
         form.interface_language.data = current_user.interface_language
-        form.reply_collapse_threshold.data = current_user.reply_collapse_threshold
-        form.reply_hide_threshold.data = current_user.reply_hide_threshold
 
     return render_template('user/edit_settings.html', title=_('Edit profile'), form=form, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
@@ -753,6 +749,8 @@ def user_settings_filters():
         current_user.ignore_bots = form.ignore_bots.data
         current_user.hide_nsfw = form.hide_nsfw.data
         current_user.hide_nsfl = form.hide_nsfl.data
+        current_user.reply_collapse_threshold = form.reply_collapse_threshold.data
+        current_user.reply_hide_threshold = form.reply_hide_threshold.data
         db.session.commit()
 
         flash(_('Your changes have been saved.'), 'success')
@@ -761,6 +759,8 @@ def user_settings_filters():
         form.ignore_bots.data = current_user.ignore_bots
         form.hide_nsfw.data = current_user.hide_nsfw
         form.hide_nsfl.data = current_user.hide_nsfl
+        form.reply_collapse_threshold.data = current_user.reply_collapse_threshold
+        form.reply_hide_threshold.data = current_user.reply_hide_threshold
     filters = Filter.query.filter_by(user_id=current_user.id).order_by(Filter.title).all()
     blocked_users = User.query.filter_by(deleted=False).join(UserBlock, UserBlock.blocked_id == User.id).\
         filter(UserBlock.blocker_id == current_user.id).order_by(User.user_name).all()
