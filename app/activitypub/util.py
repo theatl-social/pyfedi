@@ -998,6 +998,8 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory):
 
                             if file_ext == '.jpeg':
                                 file_ext = '.jpg'
+                            elif file_ext == '.svg+xml':
+                                return  # no need to resize SVG images
                         else:
                             file_ext = os.path.splitext(file.source_url)[1]
                             file_ext = file_ext.replace('%3f', '?')  # sometimes urls are not decoded properly
