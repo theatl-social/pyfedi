@@ -381,7 +381,7 @@ def shared_inbox():
         activity_log = ActivityPubLog(direction='in', result='failure')
 
         try:
-            request_json = request.get_json(force=True, cache=False)
+            request_json = request.get_json(force=True)
         except werkzeug.exceptions.BadRequest as e:
             activity_log.exception_message = 'Unable to parse json body: ' + e.description
             activity_log.result = 'failure'
