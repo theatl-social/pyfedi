@@ -59,9 +59,9 @@ def show_topic(topic_path):
         else:
             if current_user.ignore_bots == 1:
                 posts = posts.filter(Post.from_bot == False)
-            if current_user.show_nsfl == 1:
+            if current_user.hide_nsfl == 1:
                 posts = posts.filter(Post.nsfl == False)
-            if current_user.show_nsfw == 1:
+            if current_user.hide_nsfw == 1:
                 posts = posts.filter(Post.nsfw == False)
             posts = posts.filter(Post.deleted == False)
             content_filters = user_filters_posts(current_user.id)

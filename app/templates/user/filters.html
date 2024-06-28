@@ -22,8 +22,8 @@
             {{ form.csrf_token() }}
             <h5> Visibility </h5>
             {{ render_field(form.ignore_bots) }}
-            {{ render_field(form.show_nsfw) }}
-            {{ render_field(form.show_nsfl) }}
+            {{ render_field(form.hide_nsfw) }}
+            {{ render_field(form.hide_nsfl) }}
             {{ render_field(form.submit) }}
         </form>
         <hr />

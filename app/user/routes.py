@@ -751,16 +751,16 @@ def user_settings_filters():
     form = FilterForm()
     if form.validate_on_submit():
         current_user.ignore_bots = form.ignore_bots.data
-        current_user.show_nsfw = form.show_nsfw.data
-        current_user.show_nsfl = form.show_nsfl.data
+        current_user.hide_nsfw = form.hide_nsfw.data
+        current_user.hide_nsfl = form.hide_nsfl.data
         db.session.commit()
 
         flash(_('Your changes have been saved.'), 'success')
         return redirect(url_for('user.user_settings_filters'))
     elif request.method == 'GET':
         form.ignore_bots.data = current_user.ignore_bots
-        form.show_nsfw.data = current_user.show_nsfw
-        form.show_nsfl.data = current_user.show_nsfl
+        form.hide_nsfw.data = current_user.hide_nsfw
+        form.hide_nsfl.data = current_user.hide_nsfl
     filters = Filter.query.filter_by(user_id=current_user.id).order_by(Filter.title).all()
     blocked_users = User.query.filter_by(deleted=False).join(UserBlock, UserBlock.blocked_id == User.id).\
         filter(UserBlock.blocker_id == current_user.id).order_by(User.user_name).all()

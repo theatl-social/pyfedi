@@ -585,8 +585,8 @@ class User(UserMixin, db.Model):
     about_html = db.Column(db.Text) # html
     keywords = db.Column(db.String(256))
     matrix_user_id = db.Column(db.String(256))
-    show_nsfw = db.Column(db.Integer, default=1)
-    show_nsfl = db.Column(db.Integer, default=1)
+    hide_nsfw = db.Column(db.Integer, default=1)
+    hide_nsfl = db.Column(db.Integer, default=1)
     created = db.Column(db.DateTime, default=utcnow)
     last_seen = db.Column(db.DateTime, default=utcnow, index=True)
     avatar_id = db.Column(db.Integer, db.ForeignKey('file.id'), index=True)

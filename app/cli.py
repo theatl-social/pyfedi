@@ -332,9 +332,9 @@ def register(app):
                     posts = posts.filter(CommunityMember.user_id == user.id)
                     if user.ignore_bots == 1:
                         posts = posts.filter(Post.from_bot == False)
-                    if user.show_nsfl == 1:
+                    if user.hide_nsfl == 1:
                         posts = posts.filter(Post.nsfl == False)
-                    if user.show_nsfw == 1:
+                    if user.hide_nsfw == 1:
                         posts = posts.filter(Post.nsfw == False)
                     domains_ids = blocked_domains(user.id)
                     if domains_ids:

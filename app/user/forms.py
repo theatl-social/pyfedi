@@ -93,9 +93,9 @@ class FilterForm(FlaskForm):
                          (3, _l('Make semi-transparent'))]
     ignore_bots = SelectField(_l('Hide posts by bots'), choices=hide_type_choices,
                               default=0, coerce=int, render_kw={'class': 'form-select'})
-    show_nsfw = SelectField(_l('Show NSFW posts'), choices=hide_type_choices,
+    hide_nsfw = SelectField(_l('Show NSFW posts'), choices=hide_type_choices,
                             default=1, coerce=int, render_kw={'class': 'form-select'})
-    show_nsfl = SelectField(_l('Show NSFL posts'), choices=hide_type_choices,
+    hide_nsfl = SelectField(_l('Show NSFL posts'), choices=hide_type_choices,
                             default=1, coerce=int, render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Save settings'))
 

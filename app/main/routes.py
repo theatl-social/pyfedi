@@ -99,9 +99,9 @@ def home_page(type, sort):
 
         if current_user.ignore_bots == 1:
             posts = posts.filter(Post.from_bot == False)
-        if current_user.show_nsfl == 1:
+        if current_user.hide_nsfl == 1:
             posts = posts.filter(Post.nsfl == False)
-        if current_user.show_nsfw == 1:
+        if current_user.hide_nsfw == 1:
             posts = posts.filter(Post.nsfw == False)
 
         domains_ids = blocked_domains(current_user.id)
@@ -211,9 +211,9 @@ def list_communities():
         banned_from = communities_banned_from(current_user.id)
         if banned_from:
             communities = communities.filter(Community.id.not_in(banned_from))
-        if current_user.show_nsfw == 1:
+        if current_user.hide_nsfw == 1:
             communities = communities.filter(Community.nsfw == False)
-        if current_user.show_nsfl == 1:
+        if current_user.hide_nsfl == 1:
             communities = communities.filter(Community.nsfl == False)
     else:
         communities = communities.filter(and_(Community.nsfw == False, Community.nsfl == False))
@@ -263,9 +263,9 @@ def list_local_communities():
         banned_from = communities_banned_from(current_user.id)
         if banned_from:
             communities = communities.filter(Community.id.not_in(banned_from))
-        if current_user.show_nsfw == 1:
+        if current_user.hide_nsfw == 1:
             communities = communities.filter(Community.nsfw == False)
-        if current_user.show_nsfl == 1:
+        if current_user.hide_nsfl == 1:
             communities = communities.filter(Community.nsfl == False)
     else:
         communities = communities.filter(and_(Community.nsfw == False, Community.nsfl == False))
@@ -442,9 +442,9 @@ def test():
             posts = posts.filter(CommunityMember.user_id == user.id)
             if user.ignore_bots == 1:
                 posts = posts.filter(Post.from_bot == False)
-            if user.show_nsfl == 1:
+            if user.hide_nsfl == 1:
                 posts = posts.filter(Post.nsfl == False)
-            if user.show_nsfw == 1:
+            if user.hide_nsfw == 1:
                 posts = posts.filter(Post.nsfw == False)
             domains_ids = blocked_domains(user.id)
             if domains_ids:

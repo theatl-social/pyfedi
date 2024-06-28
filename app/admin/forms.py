@@ -131,9 +131,9 @@ class AddUserForm(FlaskForm):
                          (3, _l('Make semi-transparent'))]
     ignore_bots = SelectField(_l('Hide posts by bots'), choices=hide_type_choices,
                                  default=0, coerce=int, render_kw={'class': 'form-select'})
-    show_nsfw = SelectField(_l('Show NSFW posts'), choices=hide_type_choices, default=1,
+    hide_nsfw = SelectField(_l('Show NSFW posts'), choices=hide_type_choices, default=1,
                             coerce=int, render_kw={'class': 'form-select'})
-    show_nsfl = SelectField(_l('Show NSFL posts'), choices=hide_type_choices, default=1,
+    hide_nsfl = SelectField(_l('Show NSFL posts'), choices=hide_type_choices, default=1,
                             coerce=int, render_kw={'class': 'form-select'})
 
     nsfw = BooleanField(_l('Show NSFW posts'))
@@ -192,9 +192,9 @@ class EditUserForm(FlaskForm):
                          (1, _l('Hide completely')),
                          (2, _l('Blur')),
                          (3, _l('Make semi-transparent'))]
-    show_nsfw = SelectField(_l('Show NSFW posts'), choices=hide_type_choices, default=1,
+    hide_nsfw = SelectField(_l('Show NSFW posts'), choices=hide_type_choices, default=1,
                             coerce=int, render_kw={'class': 'form-select'})
-    show_nsfl = SelectField(_l('Show NSFL posts'), choices=hide_type_choices, default=1,
+    hide_nsfl = SelectField(_l('Show NSFL posts'), choices=hide_type_choices, default=1,
                             coerce=int, render_kw={'class': 'form-select'})
     role_options = [(2, _l('User')),
                (3, _l('Staff')),
