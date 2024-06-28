@@ -17,8 +17,8 @@ from app.models import Post, Community, CommunityMember, User, PostReply, PostVo
     Instance, Report, UserBlock, CommunityBan, CommunityJoinRequest, CommunityBlock, Filter, Domain, DomainBlock, \
     InstanceBlock, NotificationSubscription, PostBookmark, PostReplyBookmark
 from app.user import bp
-from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, FilterEditForm, \
-    RemoteFollowForm
+from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, \
+    FilterForm, KeywordFilterEditForm, RemoteFollowForm
 from app.user.utils import purge_user_then_delete, unsubscribe_from_community
 from app.utils import get_setting, render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     is_image_url, ensure_directory_exists, gibberish, file_get_contents, community_membership, user_filters_home, \
@@ -228,9 +228,6 @@ def change_settings():
     if form.validate_on_submit():
         propagate_indexable = form.indexable.data != current_user.indexable
         current_user.newsletter = form.newsletter.data
-        current_user.ignore_bots = form.ignore_bots.data
-        current_user.show_nsfw = form.nsfw.data
-        current_user.show_nsfl = form.nsfl.data
         current_user.searchable = form.searchable.data
         current_user.indexable = form.indexable.data
         current_user.default_sort = form.default_sort.data
@@ -270,9 +267,6 @@ def change_settings():
     elif request.method == 'GET':
         form.newsletter.data = current_user.newsletter
         form.email_unread.data = current_user.email_unread
-        form.ignore_bots.data = current_user.ignore_bots
-        form.nsfw.data = current_user.show_nsfw
-        form.nsfl.data = current_user.show_nsfl
         form.searchable.data = current_user.searchable
         form.indexable.data = current_user.indexable
         form.default_sort.data = current_user.default_sort
@@ -751,9 +745,22 @@ def import_settings_task(user_id, filename):
     db.session.commit()
 
 
-@bp.route('/user/settings/filters', methods=['GET'])
+@bp.route('/user/settings/filters', methods=['GET', 'POST'])
 @login_required
 def user_settings_filters():
+    form = FilterForm()
+    if form.validate_on_submit():
+        current_user.ignore_bots = form.ignore_bots.data
+        current_user.show_nsfw = form.show_nsfw.data
+        current_user.show_nsfl = form.show_nsfl.data
+        db.session.commit()
+
+        flash(_('Your changes have been saved.'), 'success')
+        return redirect(url_for('user.user_settings_filters'))
+    elif request.method == 'GET':
+        form.ignore_bots.data = current_user.ignore_bots
+        form.show_nsfw.data = current_user.show_nsfw
+        form.show_nsfl.data = current_user.show_nsfl
     filters = Filter.query.filter_by(user_id=current_user.id).order_by(Filter.title).all()
     blocked_users = User.query.filter_by(deleted=False).join(UserBlock, UserBlock.blocked_id == User.id).\
         filter(UserBlock.blocker_id == current_user.id).order_by(User.user_name).all()
@@ -763,7 +770,7 @@ def user_settings_filters():
         filter(DomainBlock.user_id == current_user.id).order_by(Domain.name).all()
     blocked_instances = Instance.query.join(InstanceBlock, InstanceBlock.instance_id == Instance.id).\
         filter(InstanceBlock.user_id == current_user.id).order_by(Instance.domain).all()
-    return render_template('user/filters.html', filters=filters, user=current_user,
+    return render_template('user/filters.html', form=form, filters=filters, user=current_user,
                            blocked_users=blocked_users, blocked_communities=blocked_communities,
                            blocked_domains=blocked_domains, blocked_instances=blocked_instances,
                            moderating_communities=moderating_communities(current_user.get_id()),
@@ -775,7 +782,7 @@ def user_settings_filters():
 @bp.route('/user/settings/filters/add', methods=['GET', 'POST'])
 @login_required
 def user_settings_filters_add():
-    form = FilterEditForm()
+    form = KeywordFilterEditForm()
     form.filter_replies.render_kw = {'disabled': True}
     if form.validate_on_submit():
         content_filter = Filter(title=form.title.data, filter_home=form.filter_home.data, filter_posts=form.filter_posts.data,
@@ -804,7 +811,7 @@ def user_settings_filters_edit(filter_id):
     content_filter = Filter.query.get_or_404(filter_id)
     if current_user.id != content_filter.user_id:
         abort(401)
-    form = FilterEditForm()
+    form = KeywordFilterEditForm()
     form.filter_replies.render_kw = {'disabled': True}
     if form.validate_on_submit():
         content_filter.title = form.title.data

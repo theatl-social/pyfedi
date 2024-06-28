@@ -89,7 +89,14 @@ class ReportUserForm(FlaskForm):
         return ', '.join(result)
 
 
-class FilterEditForm(FlaskForm):
+class FilterForm(FlaskForm):
+    ignore_bots = BooleanField(_l('Hide posts by bots'))
+    show_nsfw = BooleanField(_l('Show NSFW posts'))
+    show_nsfl = BooleanField(_l('Show NSFL posts'))
+    submit = SubmitField(_l('Save settings'))
+
+
+class KeywordFilterEditForm(FlaskForm):
     title = StringField(_l('Name'), validators=[DataRequired(), Length(min=3, max=50)])
     filter_home = BooleanField(_l('Home feed'), default=True)
     filter_posts = BooleanField(_l('Posts in communities'))
