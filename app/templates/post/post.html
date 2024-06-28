@@ -80,7 +80,7 @@
                                 {% if comment['comment'].author.deleted -%}
                                     [deleted]
                                 {% else -%}
-                                    {% if comment['comment'].author.avatar_id and comment['comment'].score > -10 and not low_bandwidth -%}
+                                    {% if comment['comment'].author.avatar_id and comment['comment'].score > reply_collapse_threshold and not low_bandwidth -%}
                                     <a href="/u/{{ comment['comment'].author.link() }}" title="{{ comment['comment'].author.ap_id }}">
                                         <img src="{{ comment['comment'].author.avatar_thumbnail() }}" alt="" loading="lazy" /></a>
                                     {% endif -%}
@@ -122,7 +122,7 @@
                             {% endwith -%}
                             </div>
                             <div class="hide_button">
-                                {% if comment['comment'].score <= -10 -%}
+                                {% if comment['comment'].score <= reply_collapse_threshold -%}
                                     <a href='#'><span class="fe fe-expand"></span></a>
                                 {% else -%}
                                     <a href='#'><span class="fe fe-collapse"></span></a>
@@ -148,7 +148,7 @@
                             {% endif -%}
                         {% endif -%}
                     </div>
-                    {% if comment['comment'].score <= -10 -%}
+                    {% if comment['comment'].score <= reply_collapse_threshold -%}
                         <script nonce="{{ session['nonce'] }}" type="text/javascript">
                             toBeHidden.push({{ comment['comment'].id }});
                         </script>

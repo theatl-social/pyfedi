@@ -21,6 +21,11 @@ def post_replies(post_id: int, sort_by: str, show_first: int = 0) -> List[PostRe
         blocked_accounts = blocked_users(current_user.id)
         if blocked_accounts:
             comments = comments.filter(PostReply.user_id.not_in(blocked_accounts))
+        if current_user.reply_hide_threshold:
+            comments = comments.filter(PostReply.score > current_user.reply_hide_threshold)
+    else:
+        comments.filter(PostReply.score > -20)
+
     if sort_by == 'hot':
         comments = comments.order_by(desc(PostReply.ranking))
     elif sort_by == 'top':

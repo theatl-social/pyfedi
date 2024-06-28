@@ -189,6 +189,12 @@ div.navbar {
   margin-bottom: 3px;
 }
 
+form {
+  h5 {
+    padding-top: 12px;
+  }
+}
+
 .coolfieldset, .coolfieldset.expanded{
   border:1px solid $light-grey;
   border-radius: 5px;

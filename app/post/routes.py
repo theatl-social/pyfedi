@@ -276,11 +276,13 @@ def show_post(post_id: int):
         recently_downvoted = recently_downvoted_posts(current_user.id)
         recently_upvoted_replies = recently_upvoted_post_replies(current_user.id)
         recently_downvoted_replies = recently_downvoted_post_replies(current_user.id)
+        reply_collapse_threshold = current_user.reply_collapse_threshold
     else:
         recently_upvoted = []
         recently_downvoted = []
         recently_upvoted_replies = []
         recently_downvoted_replies = []
+        reply_collapse_threshold = -10
 
     # Polls
     poll_form = False
@@ -316,6 +318,7 @@ def show_post(post_id: int):
                            noindex=not post.author.indexable, preconnect=post.url if post.url else None,
                            recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
                            recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies,
+                           reply_collapse_threshold=reply_collapse_threshold,
                            etag=f"{post.id}{sort}_{hash(post.last_active)}", markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
                            low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1', SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,

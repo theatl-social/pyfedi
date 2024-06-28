@@ -26,6 +26,10 @@
             {{ render_field(form.email_unread) }}
             <h5> Visibility </h5>
             {{ render_field(form.ignore_bots) }}
+            {{ render_field(form.reply_collapse_threshold) }}
+            <small class="field_hint">{{ _('Collapse replies with a score at or below this level - click to view.') }}</small>
+            {{ render_field(form.reply_hide_threshold) }}
+            <small class="field_hint">{{ _('Hide replies with a score at or below this level.') }}</small>
             {{ render_field(form.nsfw) }}
             {{ render_field(form.nsfl) }}
             {{ render_field(form.searchable) }}
