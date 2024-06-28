@@ -1,10 +1,16 @@
 {# do not use any back ticks in the HTML produced by this template - javascript needs to load it as a string. See community.html #}
-{% set content_blocked = post.blocked_by_content_filter(content_filters) %}
+{% set content_blocked = post.blocked_by_content_filter(content_filters)
+                         or (current_user.hide_nsfw == 3 and post.nsfw)
+                         or (current_user.hide_nsfl == 3 and post.nsfl)
+                         or (current_user.ignore_bots == 3 and post.from_bot) -%}
+{% set blur_content = (current_user.hide_nsfw == 2 and post.nsfw)
+                   or (current_user.hide_nsfl == 2 and post.nsfl)
+                   or (current_user.ignore_bots == 2 and post.from_bot) -%}
 {% if content_blocked and content_blocked == '-1' %}
     {# do nothing - blocked by keyword filter #}
 {% else %}
     {% set post_title = post.title.replace('`', "'") %}
-    <div class="item{{ ' reported' if post.reports > 0 and current_user.is_authenticated and post.community.is_moderator() }}{{ ' blocked' if content_blocked }}"
+    <div class="item{{ ' reported' if post.reports > 0 and current_user.is_authenticated and post.community.is_moderator() }}{{ ' blocked' if content_blocked }}{{ ' blur' if blur_content }}"
         {% if content_blocked %} title="{{ _('Filtered: ') }}{{ content_blocked }}"{% endif %}>
         {% if post.image_id %}
             <div class="masonry_thumb" title="{{ post_title }}">
