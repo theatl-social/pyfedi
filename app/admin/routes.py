@@ -743,6 +743,8 @@ def admin_user_edit(user_id):
     if form.validate_on_submit():
         user.bot = form.bot.data
         user.banned = form.banned.data
+        user.show_nsfw = form.show_nsfw.data
+        user.show_nsfl = form.show_nsfl.data
         if form.verified.data and not user.verified:
             finalize_user_setup(user)
         user.verified = form.verified.data
@@ -774,6 +776,8 @@ def admin_user_edit(user_id):
         form.bot.data = user.bot
         form.verified.data = user.verified
         form.banned.data = user.banned
+        form.show_nsfw.data = user.show_nsfw
+        form.show_nsfl.data = user.show_nsfl
         if user.roles and user.roles.count() > 0:
             form.role.data = user.roles[0].id
 
@@ -828,8 +832,8 @@ def admin_users_add():
                 user.cover = file
         user.newsletter = form.newsletter.data
         user.ignore_bots = form.ignore_bots.data
-        user.show_nsfw = form.nsfw.data
-        user.show_nsfl = form.nsfl.data
+        user.show_nsfw = form.show_nsfw.data
+        user.show_nsfl = form.show_nsfl.data
 
         user.instance_id = 1
         user.roles.append(Role.query.get(form.role.data))

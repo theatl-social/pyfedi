@@ -35,9 +35,6 @@ class SettingsForm(FlaskForm):
     interface_language = SelectField(_l('Interface language'), coerce=str, validators=[Optional()], render_kw={'class': 'form-select'})
     newsletter = BooleanField(_l('Subscribe to email newsletter'))
     email_unread = BooleanField(_l('Receive email about missed notifications'))
-    ignore_bots = BooleanField(_l('Hide posts by bots'))
-    nsfw = BooleanField(_l('Show NSFW posts'))
-    nsfl = BooleanField(_l('Show NSFL posts'))
     reply_collapse_threshold = IntegerField(_l('Reply collapse threshold'))
     reply_hide_threshold = IntegerField(_l('Reply hide threshold'))
     markdown_editor = BooleanField(_l('Use markdown editor GUI when writing'))
@@ -90,9 +87,16 @@ class ReportUserForm(FlaskForm):
 
 
 class FilterForm(FlaskForm):
-    ignore_bots = BooleanField(_l('Hide posts by bots'))
-    show_nsfw = BooleanField(_l('Show NSFW posts'))
-    show_nsfl = BooleanField(_l('Show NSFL posts'))
+    hide_type_choices = [(0, _l('Show')),
+                         (1, _l('Hide completely')),
+                         (2, _l('Blur')),
+                         (3, _l('Make semi-transparent'))]
+    ignore_bots = SelectField(_l('Hide posts by bots'), choices=hide_type_choices,
+                              default=0, coerce=int, render_kw={'class': 'form-select'})
+    show_nsfw = SelectField(_l('Show NSFW posts'), choices=hide_type_choices,
+                            default=1, coerce=int, render_kw={'class': 'form-select'})
+    show_nsfl = SelectField(_l('Show NSFL posts'), choices=hide_type_choices,
+                            default=1, coerce=int, render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Save settings'))
 
 

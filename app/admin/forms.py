@@ -125,7 +125,17 @@ class AddUserForm(FlaskForm):
     verified = BooleanField(_l('Email address is verified'))
     banned = BooleanField(_l('Banned'))
     newsletter = BooleanField(_l('Subscribe to email newsletter'))
-    ignore_bots = BooleanField(_l('Hide posts by bots'))
+    hide_type_choices = [(0, _l('Show')),
+                         (1, _l('Hide completely')),
+                         (2, _l('Blur')),
+                         (3, _l('Make semi-transparent'))]
+    ignore_bots = SelectField(_l('Hide posts by bots'), choices=hide_type_choices,
+                                 default=0, coerce=int, render_kw={'class': 'form-select'})
+    show_nsfw = SelectField(_l('Show NSFW posts'), choices=hide_type_choices, default=1,
+                            coerce=int, render_kw={'class': 'form-select'})
+    show_nsfl = SelectField(_l('Show NSFL posts'), choices=hide_type_choices, default=1,
+                            coerce=int, render_kw={'class': 'form-select'})
+
     nsfw = BooleanField(_l('Show NSFW posts'))
     nsfl = BooleanField(_l('Show NSFL posts'))
     role_options = [(2, _l('User')),
@@ -178,6 +188,14 @@ class EditUserForm(FlaskForm):
     bot = BooleanField(_l('This profile is a bot'))
     verified = BooleanField(_l('Email address is verified'))
     banned = BooleanField(_l('Banned'))
+    hide_type_choices = [(0, _l('Show')),
+                         (1, _l('Hide completely')),
+                         (2, _l('Blur')),
+                         (3, _l('Make semi-transparent'))]
+    show_nsfw = SelectField(_l('Show NSFW posts'), choices=hide_type_choices, default=1,
+                            coerce=int, render_kw={'class': 'form-select'})
+    show_nsfl = SelectField(_l('Show NSFL posts'), choices=hide_type_choices, default=1,
+                            coerce=int, render_kw={'class': 'form-select'})
     role_options = [(2, _l('User')),
                (3, _l('Staff')),
                (4, _l('Admin')),

@@ -24,7 +24,7 @@ def show_domain(domain_id):
         if domain.banned:
             domain = None
     if domain:
-        if current_user.is_anonymous or current_user.ignore_bots:
+        if current_user.is_anonymous or current_user.ignore_bots == 1:
             posts = Post.query.join(Community, Community.id == Post.community_id).\
                 filter(Post.from_bot == False, Post.domain_id == domain.id, Community.banned == False, Post.deleted == False).\
                 order_by(desc(Post.posted_at))
