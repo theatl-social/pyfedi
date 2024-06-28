@@ -1994,7 +1994,8 @@ def update_post_from_activity(post: Post, request_json: dict):
         if 'image' in request_json['object'] and post.image is None:
             image = File(source_url=request_json['object']['image']['url'])
             db.session.add(image)
-            post.image = image
+            db.session.commit()
+            post.image_id = image.id
             db.session.add(post)
             db.session.commit()
 
