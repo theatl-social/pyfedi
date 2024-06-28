@@ -465,7 +465,9 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                 # Create is new content. Update is often an edit, but Updates from Lemmy can also be new content
                 if request_json['type'] == 'Create' or request_json['type'] == 'Update':
                     activity_log.activity_type = 'Create'
-                    user_ap_id = request_json['object']['attributedTo'] if isinstance(request_json['object']['attributedTo'], str) else None
+                    user_ap_id = request_json['object']['attributedTo'] if 'attributedTo' in request_json['object'] and isinstance(request_json['object']['attributedTo'], str) else None
+                    if user_ap_id is None:  # if there is no attributedTo, fall back to the actor on the parent object
+                        user_ap_id = request_json['actor'] if 'actor' in request_json and isinstance(request_json['actor'], str) else None
                     if request_json['object']['type'] == 'ChatMessage':
                         activity_log.activity_type = 'Create ChatMessage'
                         sender = find_actor_or_create(user_ap_id)
