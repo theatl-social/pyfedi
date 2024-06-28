@@ -313,6 +313,7 @@ def register(app):
     @app.cli.command("send_missed_notifs")
     def send_missed_notifs():
         with app.app_context():
+            site = Site.query.get(1)
             users_to_notify = User.query.join(Notification, User.id == Notification.user_id).filter(
                 User.ap_id == None,
                 Notification.created_at > User.last_seen,
@@ -343,7 +344,7 @@ def register(app):
 
                     # Send email!
                     send_email(_('[PieFed] You have unread notifications'),
-                               sender=f'{g.site.name} <{current_app.config["MAIL_FROM"]}>',
+                               sender=f'{site.name} <{current_app.config["MAIL_FROM"]}>',
                                recipients=[user.email],
                                text_body=flask.render_template('email/unread_notifications.txt', user=user,
                                                                notifications=notifications),
