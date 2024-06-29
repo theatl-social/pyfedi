@@ -92,8 +92,8 @@ class ReportUserForm(FlaskForm):
 class FilterForm(FlaskForm):
     hide_type_choices = [(0, _l('Show')),
                          (1, _l('Hide completely')),
-                         (2, _l('Blur')),
-                         (3, _l('Make semi-transparent'))]
+                         (2, _l('Blur thumbnail')),
+                         (3, _l('Make post semi-transparent'))]
     ignore_bots = SelectField(_l('Hide posts by bots'), choices=hide_type_choices,
                               default=0, coerce=int, render_kw={'class': 'form-select'})
     hide_nsfw = SelectField(_l('Show NSFW posts'), choices=hide_type_choices,

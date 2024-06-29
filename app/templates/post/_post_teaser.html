@@ -32,18 +32,18 @@
                                     {% else -%}
                                         {% if post.type == POST_TYPE_VIDEO -%}
                                             <a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None, autoplay='true') }}" rel="nofollow ugc" aria-label="{{ _('Read article') }}"><span class="fe fe-video"></span><img src="{{ post.image.thumbnail_url() }}"
-                                                 alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if (post.nsfw and not post.community.nsfw) or (post.nsfl and not post.community.nsfl) }}" /></a>
+                                                 alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ ' blur' if blur_content }}" /></a>
                                         {% elif post.type == POST_TYPE_LINK -%}
                                             <a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="{{ _('Read article') }}"><span class="fe fe-external"></span><img src="{{ post.image.thumbnail_url() }}"
-                                                 alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if (post.nsfw and not post.community.nsfw) or (post.nsfl and not post.community.nsfl) }}" /></a>
+                                                 alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ ' blur' if blur_content }}" /></a>
                                         {% elif post.type == POST_TYPE_IMAGE -%}
                                             {% if post.image_id -%}
                                                 <a href="{{ post.image.view_url() }}" rel="nofollow ugc" aria-label="{{ _('View image') }}" target="_blank"><span class="fe fe-magnify"></span><img src="{{ post.image.thumbnail_url() }}"
-                                                alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if (post.nsfw and not post.community.nsfw) or (post.nsfl and not post.community.nsfl) }}" /></a>
+                                                alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ ' blur' if blur_content }}" /></a>
                                             {% endif -%}
                                         {% else -%}
                                             <a href="{{ url_for('activitypub.post_ap', post_id=post.id) }}" aria-label="{{ _('Read post') }}"><span class="fe fe-reply"></span><img src="{{ post.image.thumbnail_url() }}"
-                                                alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if (post.nsfw and not post.community.nsfw) or (post.nsfl and not post.community.nsfl) }}" /></a>
+                                                alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ ' blur' if blur_content }}" /></a>
                                         {% endif -%}
                                     {% endif -%}
                                 </div>
@@ -54,7 +54,7 @@
                                     </div>
                                 {% endif -%}
                             {% endif -%}
-                            <h3>{% if post.sticky -%}<span class="fe fe-sticky-left"></span>{% endif -%}<a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None) }}" class="post_teaser_title_a">{{ post.title }}</a>
+                            <h3>{% if post.sticky -%}<span class="fe fe-sticky-left"></span>{% endif -%}<a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None) }}" class="post_teaser_title_a">{{ post.title }} {{ current_user.hide_nsfw }} {{ current_user.hide_nsfl }} {{ current_user.ignore_bots }}</a>
                             {% if post.type == POST_TYPE_IMAGE -%}<span class="fe fe-image" aria-hidden="true"> </span>
                             {% elif post.type == POST_TYPE_POLL -%}<span class="fe fe-poll" aria-hidden="true"> </span>
                             {% elif (post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO) and post.domain_id -%}
