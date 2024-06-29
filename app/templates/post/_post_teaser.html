@@ -54,7 +54,7 @@
                                     </div>
                                 {% endif -%}
                             {% endif -%}
-                            <h3>{% if post.sticky -%}<span class="fe fe-sticky-left"></span>{% endif -%}<a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None) }}" class="post_teaser_title_a">{{ post.title }} {{ current_user.hide_nsfw }} {{ current_user.hide_nsfl }} {{ current_user.ignore_bots }}</a>
+                            <h3>{% if post.sticky -%}<span class="fe fe-sticky-left"></span>{% endif -%}<a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None) }}" class="post_teaser_title_a">{{ post.title }}</a>
                             {% if post.type == POST_TYPE_IMAGE -%}<span class="fe fe-image" aria-hidden="true"> </span>
                             {% elif post.type == POST_TYPE_POLL -%}<span class="fe fe-poll" aria-hidden="true"> </span>
                             {% elif (post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO) and post.domain_id -%}
