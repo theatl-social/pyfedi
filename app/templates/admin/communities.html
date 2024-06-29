@@ -27,17 +27,17 @@
             </tr>
             {% for community in communities.items %}
                 <tr>
-                    <td>{{ community.name }}</td>
-                    <td><img src="{{ community.icon_image('tiny') }}" class="community_icon rounded-circle" loading="lazy" />
-                        {{ community.display_name() }}{% if community.banned %} (banned){% endif %}</td>
+                    <td><a href="/c/{{ community.link() }}">{{ community.name }}</a></td>
+                    <td><a href="/c/{{ community.link() }}">
+                            <img src="{{ community.icon_image('tiny') }}" class="community_icon rounded-circle" loading="lazy" />
+                            {{ community.display_name() }}{% if community.banned %} (banned){% endif %}</a></td>
                     <td>{{ community.topic.name  }}</td>
                     <td>{{ community.post_count  }}</td>
                     <th>{{ '&check;'|safe if community.show_home else '&cross;'|safe }}</th>
                     <th>{{ '&check;'|safe if community.show_popular else '&cross;'|safe }}</th>
                     <th>{{ '&check;'|safe if community.show_all else '&cross;'|safe }}</th>
                     <th>{{ '&#x26A0;'|safe if community.nsfw or community.nsfl or community.content_warning else ''|safe }}</th>
-                    <td><a href="/c/{{ community.link() }}">View</a> |
-                        <a href="{{ url_for('admin.admin_community_edit', community_id=community.id) }}">Edit</a> |
+                    <td><a href="{{ url_for('admin.admin_community_edit', community_id=community.id) }}">Edit</a> |
                         <a href="{{ url_for('admin.admin_community_delete', community_id=community.id) }}" class="confirm_first">Delete</a>
                     </td>
                 </tr>
