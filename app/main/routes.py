@@ -31,8 +31,6 @@ from app.utils import render_template, get_setting, gibberish, request_etag_matc
     generate_image_from_video_url, blocked_users, microblog_content_to_title, menu_topics, languages_for_form
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Domain, Topic, File, Instance, \
     InstanceRole, Notification, Language, community_language, PostReply
-from PIL import Image
-import pytesseract
 
 
 @bp.route('/', methods=['HEAD', 'GET', 'POST'])

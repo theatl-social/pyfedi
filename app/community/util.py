@@ -24,7 +24,7 @@ from sqlalchemy import func, desc, text
 import os
 
 
-allowed_extensions = ['.gif', '.jpg', '.jpeg', '.png', '.webp', '.heic']
+allowed_extensions = ['.gif', '.jpg', '.jpeg', '.png', '.webp', '.heic', '.mpo']
 
 
 def search_for_community(address: str):
