@@ -16,7 +16,7 @@ def post_replies(post_id: int, sort_by: str, show_first: int = 0) -> List[PostRe
         instance_ids = blocked_instances(current_user.id)
         if instance_ids:
             comments = comments.filter(or_(PostReply.instance_id.not_in(instance_ids), PostReply.instance_id == None))
-        if current_user.ignore_bots:
+        if current_user.ignore_bots == 1:
             comments = comments.filter(PostReply.from_bot == False)
         blocked_accounts = blocked_users(current_user.id)
         if blocked_accounts:

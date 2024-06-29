@@ -18,10 +18,24 @@
         </nav>
         <h1>{{ _('Filters') }}</h1>
         {% include "user/_user_nav.html" %}
+        <form method='post' enctype="multipart/form-data" role="form">
+            {{ form.csrf_token() }}
+            <h5> Visibility </h5>
+            {{ render_field(form.ignore_bots) }}
+            {{ render_field(form.hide_nsfw) }}
+            {{ render_field(form.hide_nsfl) }}
+            {{ render_field(form.reply_collapse_threshold) }}
+            <small class="field_hint">{{ _('Collapse replies with a score at or below this level - click to view.') }}</small>
+            {{ render_field(form.reply_hide_threshold) }}
+            <small class="field_hint">{{ _('Hide replies with a score at or below this level.') }}</small>
+            {{ render_field(form.submit) }}
+        </form>
+        <hr />
+
+        <h5>Keyword Filters</h5>
         <div class="rh_action_buttons">
             <a class="btn btn-primary" href="{{ url_for('user.user_settings_filters_add') }}">{{ _('Add filter') }}</a>
         </div>
-
         <p class="card-text">{{ _('Filters can hide posts that contain keywords you specify, either by making them less noticeable or invisible.') }}</p>
         {% if filters %}
             <table class="table table-striped" role="table">
@@ -48,6 +62,7 @@
         {% else %}
             <p>{{ _('No filters defined yet.') }}</p>
         {% endif %}
+
         <h5>Blocks</h5>
         <p class="card-text">Manage what users, communities, domains or instances you want to block. Blocking them means you will no longer see any posts associated with them.</p>
         <nav id="block_chooser">

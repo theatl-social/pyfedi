@@ -27,8 +27,8 @@
             {{ render_field(form.verified) }}
             {{ render_field(form.banned) }}
             <p>receive newsletter: {{ user.newsletter }}</p>
-            <p>view nsfw: {{ user.show_nsfw }}</p>
-            <p>view nsfl: {{ user.show_nsfl }}</p>
+            {{ render_field(form.hide_nsfw) }}
+            {{ render_field(form.hide_nsfl) }}
             <p>searchable: {{ user.searchable }}</p>
             <p>indexable: {{ user.indexable }}</p>
             {{ render_field(form.role) }}

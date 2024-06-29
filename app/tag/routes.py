@@ -26,7 +26,7 @@ def show_tag(tag):
             join(post_tag, post_tag.c.post_id == Post.id).filter(post_tag.c.tag_id == tag.id). \
             filter(Community.banned == False, Post.deleted == False)
 
-        if current_user.is_anonymous or current_user.ignore_bots:
+        if current_user.is_anonymous or current_user.ignore_bots == 1:
             posts = posts.filter(Post.from_bot == False)
 
         if current_user.is_authenticated:
@@ -75,7 +75,7 @@ def show_tag_rss(tag):
             join(post_tag, post_tag.c.post_id == Post.id).filter(post_tag.c.tag_id == tag.id). \
             filter(Community.banned == False, Post.deleted == False)
 
-        if current_user.is_anonymous or current_user.ignore_bots:
+        if current_user.is_anonymous or current_user.ignore_bots == 1:
             posts = posts.filter(Post.from_bot == False)
         posts = posts.order_by(desc(Post.posted_at)).limit(100).all()
 
