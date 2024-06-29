@@ -88,7 +88,7 @@
                 {% for user in blocked_users %}
                     <tr>
                         <td><a href="{{ url_for('activitypub.user_profile', actor=user.ap_id if user.ap_id is not none else user.user_name.lower()) }}">{{ user.display_name() }}</a></td>
-                        <td><a class="no-underline confirm_first" href="{{ url_for('user.unblock_profile', actor=user.link()) }}" rel="nofollow"><span class="fe fe-delete"> {{ _('Unblock') }}</span></a></td>
+                        <td><a class="no-underline confirm_first" href="{{ url_for('user.unblock_profile', actor=user.link()) }}" rel="nofollow"><span class="fe fe-delete"></span> {{ _('Unblock') }}</a></td>
                     </tr>
                 {% endfor %}
                 </table>
@@ -106,7 +106,7 @@
                 {% for community in blocked_communities %}
                     <tr>
                         <td><a href="{{ url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not none else community.name) }}">{{ community.title }}</a></td>
-                        <td><a class="no-underline confirm_first" href="#" rel="nofollow"><span class="fe fe-delete"> {{ _('Unblock') }}</span></a></td>
+                        <td><a class="no-underline confirm_first" href="#" rel="nofollow"><span class="fe fe-delete"></span> {{ _('Unblock') }}</a></td>
                     </tr>
                 {% endfor %}
                 </table>
@@ -124,7 +124,7 @@
                 {% for domain in blocked_domains %}
                     <tr>
                         <td><a href="{{ url_for('domain.show_domain', domain_id=domain.id) }}">{{ domain.name }}</a></td>
-                        <td><a class="no-underline confirm_first" href="{{ url_for('domain.domain_unblock', domain_id=domain.id) }}" rel="nofollow"><span class="fe fe-delete"> {{ _('Unblock') }}</span></a></td>
+                        <td><a class="no-underline confirm_first" href="{{ url_for('domain.domain_unblock', domain_id=domain.id) }}" rel="nofollow"><span class="fe fe-delete"></span> {{ _('Unblock') }}</a></td>
                     </tr>
                 {% endfor %}
                 </table>
@@ -142,7 +142,7 @@
                 {% for instance in blocked_instances %}
                     <tr>
                         <td><a href="#">{{ instance.domain }}</a></td>
-                        <td><a class="no-underline confirm_first" href="{{ url_for('user.instance_unblock', instance_id=instance.id) }}" rel="nofollow"><span class="fe fe-delete"> {{ _('Unblock') }}</span></a></td>
+                        <td><a class="no-underline confirm_first" href="{{ url_for('user.instance_unblock', instance_id=instance.id) }}" rel="nofollow"><span class="fe fe-delete"></span> {{ _('Unblock') }}</a></td>
                     </tr>
                 {% endfor %}
                 </table>
