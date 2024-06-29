@@ -89,7 +89,23 @@ class ReportUserForm(FlaskForm):
         return ', '.join(result)
 
 
-class FilterEditForm(FlaskForm):
+class FilterForm(FlaskForm):
+    hide_type_choices = [(0, _l('Show')),
+                         (1, _l('Hide completely')),
+                         (2, _l('Blur')),
+                         (3, _l('Make semi-transparent'))]
+    ignore_bots = SelectField(_l('Hide posts by bots'), choices=hide_type_choices,
+                              default=0, coerce=int, render_kw={'class': 'form-select'})
+    hide_nsfw = SelectField(_l('Show NSFW posts'), choices=hide_type_choices,
+                            default=1, coerce=int, render_kw={'class': 'form-select'})
+    hide_nsfl = SelectField(_l('Show NSFL posts'), choices=hide_type_choices,
+                            default=1, coerce=int, render_kw={'class': 'form-select'})
+    reply_collapse_threshold = IntegerField(_l('Reply collapse threshold'))
+    reply_hide_threshold = IntegerField(_l('Reply hide threshold'))
+    submit = SubmitField(_l('Save settings'))
+
+
+class KeywordFilterEditForm(FlaskForm):
     title = StringField(_l('Name'), validators=[DataRequired(), Length(min=3, max=50)])
     filter_home = BooleanField(_l('Home feed'), default=True)
     filter_posts = BooleanField(_l('Posts in communities'))

@@ -30,11 +30,11 @@ def run_search():
 
         posts = Post.query.search(q)
         if current_user.is_authenticated:
-            if current_user.ignore_bots:
+            if current_user.ignore_bots == 1:
                 posts = posts.filter(Post.from_bot == False)
-            if current_user.show_nsfl is False:
+            if current_user.hide_nsfl == 1:
                 posts = posts.filter(Post.nsfl == False)
-            if current_user.show_nsfw is False:
+            if current_user.hide_nsfw == 1:
                 posts = posts.filter(Post.nsfw == False)
             domains_ids = blocked_domains(current_user.id)
             if domains_ids:
