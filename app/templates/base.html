@@ -208,7 +208,6 @@
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_site' }}" href="{{ url_for('admin.admin_site') }}">{{ _('Site profile') }}</a></li>
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_misc' }}" href="{{ url_for('admin.admin_misc') }}">{{ _('Misc settings') }}</a></li>
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_communities' }}" href="{{ url_for('admin.admin_communities') }}">{{ _('Communities') }}</a></li>
-                                      <li><a class="dropdown-item{{ ' active' if active_child == 'admin_communities' }}" href="{{ url_for('admin.admin_communities_no_topic') }}">{{ _('Communities - no topic') }}</a></li>
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_topics' }}" href="{{ url_for('admin.admin_topics') }}">{{ _('Topics') }}</a></li>
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_users' }}" href="{{ url_for('admin.admin_users', local_remote='local') }}">{{ _('Users') }}</a></li>
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_users_trash' }}" href="{{ url_for('admin.admin_users_trash', local_remote='local') }}">{{ _('Monitoring - users') }}</a></li>
