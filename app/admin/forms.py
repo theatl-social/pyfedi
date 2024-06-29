@@ -136,8 +136,6 @@ class AddUserForm(FlaskForm):
     hide_nsfl = SelectField(_l('Show NSFL posts'), choices=hide_type_choices, default=1,
                             coerce=int, render_kw={'class': 'form-select'})
 
-    nsfw = BooleanField(_l('Show NSFW posts'))
-    nsfl = BooleanField(_l('Show NSFL posts'))
     role_options = [(2, _l('User')),
                (3, _l('Staff')),
                (4, _l('Admin')),
