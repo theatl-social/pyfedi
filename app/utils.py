@@ -166,6 +166,14 @@ def gibberish(length: int = 10) -> str:
     return "".join([random.choice(random_chars) for x in range(length)])
 
 
+# used by @cache.cached() for home page and post caching
+def make_cache_key(sort=None, post_id=None):
+    if current_user.is_anonymous:
+        return f'{request.url}_{sort}_{post_id}_anon_{request.headers.get("Accept")}_{request.headers.get("Accept-Language")}'  # The Accept header differentiates between activitypub requests and everything else
+    else:
+        return f'{request.url}_{sort}_{post_id}_user_{current_user.id}'
+
+
 def is_image_url(url):
     common_image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp']
     mime_type = mime_type_using_head(url)

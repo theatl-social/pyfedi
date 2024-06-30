@@ -7,6 +7,7 @@ from time import sleep
 import flask
 import markdown2
 import requests
+from flask_caching import CachedResponse
 from sqlalchemy.sql.operators import or_, and_
 
 from app import db, cache
@@ -28,7 +29,8 @@ from app.utils import render_template, get_setting, gibberish, request_etag_matc
     ap_datetime, ip_address, retrieve_block_list, shorten_string, markdown_to_text, user_filters_home, \
     joined_communities, moderating_communities, parse_page, theme_list, get_request, markdown_to_html, allowlist_html, \
     blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
-    generate_image_from_video_url, blocked_users, microblog_content_to_title, menu_topics, languages_for_form
+    generate_image_from_video_url, blocked_users, microblog_content_to_title, menu_topics, languages_for_form, \
+    make_cache_key
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Domain, Topic, File, Instance, \
     InstanceRole, Notification, Language, community_language, PostReply
 
@@ -36,23 +38,36 @@ from app.models import Community, CommunityMember, Post, Site, User, utcnow, Dom
 @bp.route('/', methods=['HEAD', 'GET', 'POST'])
 @bp.route('/home', methods=['GET', 'POST'])
 @bp.route('/home/<sort>', methods=['GET', 'POST'])
+@cache.cached(make_cache_key=make_cache_key)
 def index(sort=None):
     if 'application/ld+json' in request.headers.get('Accept', '') or 'application/activity+json' in request.headers.get(
             'Accept', ''):
         return activitypub_application()
 
-    return home_page('home', sort)
+    return CachedResponse(
+        response=home_page('home', sort),
+        timeout=50 if current_user.is_anonymous else 5,
+    )
 
 
 @bp.route('/popular', methods=['GET'])
 @bp.route('/popular/<sort>', methods=['GET'])
+@cache.cached(timeout=5, make_cache_key=make_cache_key)
 def popular(sort=None):
-    return home_page('popular', sort)
+    return CachedResponse(
+        response=home_page('popular', sort),
+        timeout=50 if current_user.is_anonymous else 5,
+    )
+
 
 @bp.route('/all', methods=['GET'])
 @bp.route('/all/<sort>', methods=['GET'])
+@cache.cached(timeout=5, make_cache_key=make_cache_key)
 def all_posts(sort=None):
-    return home_page('all', sort)
+    return CachedResponse(
+        response=home_page('all', sort),
+        timeout=50 if current_user.is_anonymous else 5,
+    )
 
 
 def home_page(type, sort):
