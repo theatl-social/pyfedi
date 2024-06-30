@@ -737,8 +737,8 @@ fieldset legend {
 }
 @media (min-width: 992px) {
   .post_list .post_teaser .thumbnail img {
-    height: 70px;
-    width: 133px;
+    height: 90px;
+    width: 171px;
   }
 }
 .post_list .post_teaser .thumbnail img.blur {
