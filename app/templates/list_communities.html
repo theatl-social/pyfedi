@@ -63,23 +63,23 @@
                 <tr>
                     <th> </th>
                     <th {% if not low_bandwidth -%}colspan="2"{% endif -%} scope="col">
-                        <a href="?sort_by=title{{ ' desc' if sort_by == 'title' }}" title="{{ _('Sort by name') }}" rel="nofollow">{{ _('Community') }}
-                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'community.title' }}{{ 'fe fe-chevron-down' if sort_by == 'community.title desc' }}"></span>
+                        <a href="?sort_by=title{{ ' asc' if sort_by == 'title desc' else ' desc' }}" title="{{ _('Sort by name') }}" rel="nofollow">{{ _('Community') }}
+                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'title asc' }}{{ 'fe fe-chevron-down' if sort_by == 'title desc' }}"></span>
                         </a>
                     </th>
                     <th scope="col">
                         <a href="?sort_by=post_count{{ ' asc' if sort_by == 'post_count desc' else ' desc' }}" title="{{ _('Sort by post count') }}" rel="nofollow">{{ _('Posts') }}
-                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'post_count' }}{{ 'fe fe-chevron-down' if sort_by == 'community.post_count desc' }}"></span>
+                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'post_count asc' }}{{ 'fe fe-chevron-down' if sort_by == 'post_count desc' }}"></span>
                         </a>
                     </th>
                     <th scope="col">
                         <a href="?sort_by=post_reply_count{{ ' asc' if sort_by == 'post_reply_count desc' else ' desc' }}" title="{{ _('Sort by reply count') }}" rel="nofollow">{{ _('Comments') }}
-                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'post_reply_count' }}{{ 'fe fe-chevron-down' if sort_by == 'community.post_reply_count desc' }}"></span>
+                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'post_reply_count asc' }}{{ 'fe fe-chevron-down' if sort_by == 'post_reply_count desc' }}"></span>
                         </a>
                     </th>
                     <th scope="col">
                         <a href="?sort_by=last_active{{ ' asc' if sort_by == 'last_active desc' else ' desc' }}" title="{{ _('Sort by recent activity') }}" rel="nofollow">{{ _('Active') }}
-                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'last_active' }}{{ 'fe fe-chevron-down' if sort_by == 'community.last_active desc' }}"></span>
+                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'last_active asc' }}{{ 'fe fe-chevron-down' if sort_by == 'last_active desc' }}"></span>
                         </a>
                     </th>
                 </tr>

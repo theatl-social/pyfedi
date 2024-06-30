@@ -40,6 +40,8 @@ class Config(object):
     BOUNCE_USERNAME = os.environ.get('BOUNCE_USERNAME') or ''
     BOUNCE_PASSWORD = os.environ.get('BOUNCE_PASSWORD') or ''
 
+    BOOTSTRAP_SERVE_LOCAL = True
+
     SENTRY_DSN = os.environ.get('SENTRY_DSN') or None
 
     AWS_REGION = os.environ.get('AWS_REGION') or None

@@ -4,7 +4,7 @@
     {% extends "base.html" %}
 {% endif %} %}
 {% from 'bootstrap/form.html' import render_form %}
-{% set active_child = 'admin_users' %}
+{% set active_child = 'admin_users_trash' %}
 
 {% block app_content %}
 <div class="row">
@@ -34,9 +34,10 @@
             </tr>
             {% for user in users.items %}
                 <tr>
-                    <td><img src="{{ user.avatar_thumbnail() }}" class="community_icon rounded-circle" loading="lazy" />
-                        {{ user.display_name() }}</td>
-                    <td>{{ 'Local' if user.is_local() else 'Remote' }}</td>
+                    <td><a href="/u/{{ user.link() }}">
+                            <img src="{{ user.avatar_thumbnail() }}" class="community_icon rounded-circle" loading="lazy" />
+                            {{ user.display_name() }}</a></td>
+                    <td>{% if user.is_local() %}Local{% else %}<a href="{{ user.ap_profile_id }}">Remote</a>{% endif %}</td>
                     <td>{% if request.args.get('local_remote', '') == 'local' %}
                             {{ moment(user.last_seen).fromNow() }}
                         {% else %}
