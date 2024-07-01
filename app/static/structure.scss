@@ -330,8 +330,8 @@ html {
         object-fit: cover;
         margin-left: 5px;
         @include breakpoint(tablet) {
-          height: 70px;
-          width: 133px;
+          height: 90px;
+          width: 171px;
         }
         &.blur {
           filter: blur(3px);

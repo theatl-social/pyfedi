@@ -13,6 +13,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupMarkdownEditorEnabler();
     setupAddPollChoice();
     setupShowElementLinks();
+    setupLightboxTeaser();
 });
 
 // All elements with the class "showElement" will show the DOM element referenced by the data-id attribute
@@ -83,6 +84,15 @@ function setupLightboxGallery() {
     }
 }
 
+
+function setupLightboxTeaser() {
+    baguetteBox.run('.post_teaser', {
+        fullScreen: false,
+        async: true,
+        preload: 3,
+        ignoreClass: 'preview_image',
+    });
+}
 
 // fires after all resources have loaded, including stylesheets and js files
 window.addEventListener("load", function () {
