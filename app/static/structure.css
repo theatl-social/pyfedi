@@ -725,8 +725,9 @@ fieldset legend {
   top: 0;
 }
 .post_list .post_teaser .thumbnail .fe-video {
-  left: 121px;
+  left: 160px;
   top: 0;
+  padding-top: 1px;
 }
 .post_list .post_teaser .thumbnail img {
   height: 60px;
