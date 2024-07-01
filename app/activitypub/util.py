@@ -912,7 +912,7 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
             db.session.commit()
 
             if post.image_id:
-                make_image_sizes(post.image_id, 150, 512, 'posts')  # the 512 sized image is for masonry view
+                make_image_sizes(post.image_id, 170, 512, 'posts')  # the 512 sized image is for masonry view
 
         return post
     except KeyError as e:
@@ -1782,7 +1782,7 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
             db.session.commit()
 
         if post.image_id:
-            make_image_sizes(post.image_id, 150, 512, 'posts')  # the 512 sized image is for masonry view
+            make_image_sizes(post.image_id, 170, 512, 'posts')  # the 512 sized image is for masonry view
 
         # Update list of cross posts
         if post.url:
@@ -2002,7 +2002,7 @@ def update_post_from_activity(post: Post, request_json: dict):
             db.session.commit()
 
         if post.image_id and post.image_id != old_image_id:
-            make_image_sizes(post.image_id, 150, 512, 'posts')  # the 512 sized image is for masonry view
+            make_image_sizes(post.image_id, 170, 512, 'posts')  # the 512 sized image is for masonry view
     if 'sensitive' in request_json['object']:
         post.nsfw = request_json['object']['sensitive']
     if nsfl_in_title:

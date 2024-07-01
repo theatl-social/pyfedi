@@ -345,7 +345,7 @@ def save_post(form, post: Post, type: str):
                     img_width = img.width
                     img_height = img.height
                 # save a second, smaller, version as a thumbnail
-                img.thumbnail((150, 150))
+                img.thumbnail((170, 170))
                 img.save(final_place_thumbnail, format="WebP", quality=93)
                 thumbnail_width = img.width
                 thumbnail_height = img.height

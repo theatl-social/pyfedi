@@ -902,7 +902,7 @@ def url_to_thumbnail_file(filename) -> File:
             Image.MAX_IMAGE_PIXELS = 89478485
             with Image.open(final_place) as img:
                 img = ImageOps.exif_transpose(img)
-                img.thumbnail((150, 150))
+                img.thumbnail((170, 170))
                 img.save(final_place)
                 thumbnail_width = img.width
                 thumbnail_height = img.height

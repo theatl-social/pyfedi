@@ -332,7 +332,7 @@ html {
         margin-left: 5px;
         @include breakpoint(tablet) {
           height: 90px;
-          width: 171px;
+          width: 170px;
         }
         &.blur {
           filter: blur(3px);

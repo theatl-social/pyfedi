@@ -604,7 +604,7 @@ def add_image_post(actor):
         post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
         db.session.commit()
         if post.image_id and post.image.file_path is None:
-            make_image_sizes(post.image_id, 150, 512, 'posts')  # the 512 sized image is for masonry view
+            make_image_sizes(post.image_id, 170, 512, 'posts')  # the 512 sized image is for masonry view
 
         # Update list of cross posts
         if post.url:
@@ -684,7 +684,7 @@ def add_link_post(actor):
         post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
         db.session.commit()
         if post.image_id and post.image.file_path is None:
-            make_image_sizes(post.image_id, 150, 512, 'posts')  # the 512 sized image is for masonry view
+            make_image_sizes(post.image_id, 170, 512, 'posts')  # the 512 sized image is for masonry view
 
         # Update list of cross posts
         if post.url:
@@ -764,7 +764,7 @@ def add_video_post(actor):
         post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
         db.session.commit()
         if post.image_id and post.image.file_path is None:
-            make_image_sizes(post.image_id, 150, 512, 'posts')  # the 512 sized image is for masonry view
+            make_image_sizes(post.image_id, 170, 512, 'posts')  # the 512 sized image is for masonry view
 
         # Update list of cross posts
         if post.url:
