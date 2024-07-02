@@ -332,7 +332,6 @@ h1 .fe-bell, h1 .fe-no-bell {
 .fe-video {
   position: relative;
   top: 2px;
-  left: 1px;
 }
 .fe-video:before {
   content: "\ea05";
@@ -350,7 +349,6 @@ h1 .fe-bell, h1 .fe-no-bell {
 .fe-poll {
   position: relative;
   top: 2px;
-  left: 1px;
 }
 .fe-poll:before {
   content: "\e91b";

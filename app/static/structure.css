@@ -333,7 +333,6 @@ h1 .fe-bell, h1 .fe-no-bell {
 .fe-video {
   position: relative;
   top: 2px;
-  left: 1px;
 }
 .fe-video:before {
   content: "\ea05";
@@ -351,7 +350,6 @@ h1 .fe-bell, h1 .fe-no-bell {
 .fe-poll {
   position: relative;
   top: 2px;
-  left: 1px;
 }
 .fe-poll:before {
   content: "\e91b";
@@ -723,11 +721,6 @@ fieldset legend {
   padding-left: 1px;
   border-radius: 2px;
   top: 0;
-}
-.post_list .post_teaser .thumbnail .fe-video {
-  left: 160px;
-  top: 0;
-  padding-top: 1px;
 }
 .post_list .post_teaser .thumbnail img {
   height: 60px;

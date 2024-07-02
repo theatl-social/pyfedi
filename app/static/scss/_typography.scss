@@ -306,7 +306,6 @@ h1 {
 .fe-video {
   position: relative;
   top: 2px;
-  left: 1px;
   &:before {
     content: "\ea05";
   }
@@ -315,7 +314,6 @@ h1 {
 .fe-audio {
   position: relative;
   top: 1px;
-  left: 0;
   &:before {
     content: "\e9fc";
   }
@@ -324,7 +322,6 @@ h1 {
 .fe-poll {
   position: relative;
   top: 2px;
-  left: 1px;
   &:before {
     content: "\e91b"; /* possibly e985 */
   }
