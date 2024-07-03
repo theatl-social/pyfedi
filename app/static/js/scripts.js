@@ -108,8 +108,8 @@ function setupLightboxTeaser() {
             window.addEventListener('popstate', popStateListener);
 
             function baguetteBoxClickImg(event) {
-              if (this.style.width != "100%" && this.offsetWidth < window.innerWidth) {
-                this.style.width = "100%";
+              if (this.style.width != "100vw" && this.offsetWidth < window.innerWidth) {
+                this.style.width = "100vw";
                 this.style.maxHeight = "none";
               } else {
                 this.style.width = "";
@@ -121,7 +121,7 @@ function setupLightboxTeaser() {
             for (const el of document.querySelectorAll('div#baguetteBox-overlay img')) {
               el.addEventListener('click', baguetteBoxClickImg);
             }
-        }
+        },
     });
 }
 

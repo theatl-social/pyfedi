@@ -1110,3 +1110,19 @@ h1 .warning_badge {
 .post_body, .comment_body {
   word-wrap: break-word;
 }
+
+#baguetteBox-overlay {
+  overflow: scroll !important;
+  .full-image {
+    height: auto !important;
+    //min-height: 100%;
+    figure {
+      display: inline-block !important;
+    }
+  }
+}
+
+#baguetteBox-slider {
+  height: auto !important;
+  //min-height: 100%;
+}

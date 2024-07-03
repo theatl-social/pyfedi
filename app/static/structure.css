@@ -1435,4 +1435,20 @@ h1 .warning_badge {
   word-wrap: break-word;
 }
 
+#baguetteBox-overlay {
+  overflow: scroll !important;
+}
+
+#baguetteBox-overlay .full-image {
+    height: auto !important;
+}
+
+#baguetteBox-overlay .full-image figure {
+    display: inline-block !important;
+}
+
+#baguetteBox-slider {
+  height: auto !important;
+}
+
 /*# sourceMappingURL=structure.css.map */
