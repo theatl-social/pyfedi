@@ -88,9 +88,40 @@ function setupLightboxGallery() {
 function setupLightboxTeaser() {
     baguetteBox.run('.post_teaser', {
         fullScreen: false,
+        noScrollbars: true,
         async: true,
         preload: 3,
         ignoreClass: 'preview_image',
+        afterShow: function() {
+            var backButtonPrevented = false;
+            history.pushState(null, document.title, location.href);
+            function popStateListener(event) {
+              if (backButtonPrevented === false){
+                history.pushState(null, document.title, location.href);
+                baguetteBox.hide();
+                backButtonPrevented = true;
+              } else {
+                window.removeEventListener('popstate', popStateListener);
+                history.back();
+              }
+            }
+            window.addEventListener('popstate', popStateListener);
+
+            function baguetteBoxClickImg(event) {
+              if (this.style.width != "100%" && this.offsetWidth < window.innerWidth) {
+                this.style.width = "100%";
+                this.style.maxHeight = "none";
+              } else {
+                this.style.width = "";
+                this.style.maxHeight = "";
+                this.removeEventListener('click', baguetteBoxClickImg);
+                baguetteBox.hide();
+              }
+            };
+            for (const el of document.querySelectorAll('div#baguetteBox-overlay img')) {
+              el.addEventListener('click', baguetteBoxClickImg);
+            }
+        }
     });
 }
 
