@@ -71,7 +71,7 @@
                         <ul>
                             {% for community in subscribed %}
                                 <li>
-                                    <a href="/c/{{ community.link() }}"><img src="{{ community.icon_image() }}" class="community_icon rounded-circle" loading="lazy" />{{ community.display_name() }}</a>
+                                    {{ render_communityname(community) }}
                                 </li>
                             {% endfor %}
                         </ul>
@@ -81,7 +81,7 @@
                         <ul>
                             {% for community in moderates %}
                                 <li>
-                                    <a href="/c/{{ community.link() }}"><img src="{{ community.icon_image() }}" class="community_icon rounded-circle" loading="lazy" />{{ community.display_name() }}</a>
+                                    {{ render_communityname(community) }}
                                 </li>
                             {% endfor %}
                         </ul>
