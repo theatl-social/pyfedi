@@ -86,6 +86,9 @@ function setupLightboxGallery() {
 
 
 function setupLightboxTeaser() {
+    function popStateListener(event) {
+        baguetteBox.hide();
+    }
     baguetteBox.run('.post_teaser', {
         fullScreen: false,
         noScrollbars: true,
@@ -93,18 +96,7 @@ function setupLightboxTeaser() {
         preload: 3,
         ignoreClass: 'preview_image',
         afterShow: function() {
-            var backButtonPrevented = false;
-            history.pushState(null, document.title, location.href);
-            function popStateListener(event) {
-              if (backButtonPrevented === false){
-                history.pushState(null, document.title, location.href);
-                baguetteBox.hide();
-                backButtonPrevented = true;
-              } else {
-                window.removeEventListener('popstate', popStateListener);
-                history.back();
-              }
-            }
+            window.history.pushState('#lightbox', document.title, document.location+'#lightbox');
             window.addEventListener('popstate', popStateListener);
 
             function baguetteBoxClickImg(event) {
@@ -120,6 +112,12 @@ function setupLightboxTeaser() {
             };
             for (const el of document.querySelectorAll('div#baguetteBox-overlay img')) {
               el.addEventListener('click', baguetteBoxClickImg);
+            }
+        },
+        afterHide: function() {
+            if (window.history.state === '#lightbox') {
+              window.history.back();
+              window.removeEventListener('popstate', popStateListener);
             }
         },
     });
