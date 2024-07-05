@@ -2,7 +2,6 @@
 
 # Compile SCSS
 sass --style expanded styles.scss styles.css
-sass --style expanded structure.scss structure.css
 
 # https://github.com/feimosi/baguetteBox.js (MIT license)
 curl -o js/lightbox/baguetteBox.css -L https://github.com/feimosi/baguetteBox.js/raw/dev/dist/baguetteBox.min.css
