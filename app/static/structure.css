@@ -1430,13 +1430,11 @@ h1 .warning_badge {
 #baguetteBox-overlay {
   overflow: scroll !important;
 }
-
 #baguetteBox-overlay .full-image {
-    height: auto !important;
+  height: auto !important;
 }
-
 #baguetteBox-overlay .full-image figure {
-    display: inline-block !important;
+  display: inline-block !important;
 }
 
 #baguetteBox-slider {
