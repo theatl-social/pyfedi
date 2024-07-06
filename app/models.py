@@ -1465,6 +1465,19 @@ class PostReplyBookmark(db.Model):
     created_at = db.Column(db.DateTime, default=utcnow)
 
 
+class ModLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    community_id = db.Column(db.Integer, db.ForeignKey('community.id'), index=True)
+    type = db.Column(db.String(10))             # 'mod' or 'admin'
+    action = db.Column(db.String(30))           # 'removing post', 'banning from community', etc
+    reason = db.Column(db.String(512))
+    link = db.Column(db.String(512))
+    link_text = db.Column(db.String(512))
+    public = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=utcnow)
+
+
 class IpBan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ip_address = db.Column(db.String(50), index=True)
@@ -1506,6 +1519,7 @@ class Site(db.Model):
     logo_152 = db.Column(db.String(40), default='')
     logo_32 = db.Column(db.String(40), default='')
     logo_16 = db.Column(db.String(40), default='')
+    show_inoculation_block = db.Column(db.Boolean, default=True)
 
     @staticmethod
     def admins() -> List[User]:
