@@ -224,7 +224,7 @@ def show_post(post_id: int):
                     post_request(personal_inbox, create_json, current_user.private_key,
                                                        current_user.public_url() + '#main-key')
 
-        return redirect(url_for('activitypub.post_ap', post_id=post_id))  # redirect to current page to avoid refresh resubmitting the form
+        return redirect(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{reply.id}'))
     else:
         replies = post_replies(post.id, sort)
         form.notify_author.data = True
