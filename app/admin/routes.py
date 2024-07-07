@@ -155,6 +155,7 @@ def admin_misc():
             db.session.add(site)
         db.session.commit()
         cache.delete_memoized(blocked_referrers)
+        set_setting('public_modlog', form.public_modlog.data)
         flash('Settings saved.')
     elif request.method == 'GET':
         form.enable_downvotes.data = site.enable_downvotes
@@ -169,6 +170,7 @@ def admin_misc():
         form.auto_decline_referrers.data = site.auto_decline_referrers
         form.log_activitypub_json.data = site.log_activitypub_json
         form.default_theme.data = site.default_theme if site.default_theme is not None else ''
+        form.public_modlog.data = get_setting('public_modlog', False)
     return render_template('admin/misc.html', title=_('Misc settings'), form=form,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),

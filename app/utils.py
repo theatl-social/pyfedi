@@ -131,7 +131,9 @@ def head_request(uri, params=None, headers=None) -> requests.Response:
     return response
 
 
-# saves an arbitrary object into a persistent key-value store. cached.
+# Saves an arbitrary object into a persistent key-value store. cached.
+# Similar to g.site.* except g.site.* is populated on every single page load so g.site is best for settings that are
+# accessed very often (e.g. every page load)
 @cache.memoize(timeout=50)
 def get_setting(name: str, default=None):
     setting = Settings.query.filter_by(name=name).first()
@@ -1152,7 +1154,7 @@ def actor_contains_blocked_words(actor):
     return False
 
 
-def add_to_modlog(action: str, community_id: int = None, reason: str = '', link: str = '', link_text: str = '', public: bool = False):
+def add_to_modlog(action: str, community_id: int = None, reason: str = '', link: str = '', link_text: str = ''):
     """ Adds a new entry to the Moderation Log """
     if action not in ModLog.action_map.keys():
         raise Exception('Invalid action: ' + action)
@@ -1161,11 +1163,12 @@ def add_to_modlog(action: str, community_id: int = None, reason: str = '', link:
     else:
         action_type = 'mod'
     db.session.add(ModLog(user_id=current_user.id, community_id=community_id, type=action_type, action=action,
-                          reason=reason, link=link, link_text=link_text, public=public))
+                          reason=reason, link=link, link_text=link_text, public=get_setting('public_modlog', False)))
     db.session.commit()
 
 
-def add_to_modlog_activitypub(action: str, actor: User, community_id: int = None, reason: str = '', link: str = '', link_text: str = '', public: bool = False):
+def add_to_modlog_activitypub(action: str, actor: User, community_id: int = None, reason: str = '', link: str = '',
+                              link_text: str = ''):
     """ Adds a new entry to the Moderation Log - identical to above except has an 'actor' parameter """
     if action not in ModLog.action_map.keys():
         raise Exception('Invalid action: ' + action)
@@ -1174,5 +1177,5 @@ def add_to_modlog_activitypub(action: str, actor: User, community_id: int = None
     else:
         action_type = 'mod'
     db.session.add(ModLog(user_id=actor.id, community_id=community_id, type=action_type, action=action,
-                          reason=reason, link=link, link_text=link_text, public=public))
+                          reason=reason, link=link, link_text=link_text, public=get_setting('public_modlog', False)))
     db.session.commit()

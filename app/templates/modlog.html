@@ -1,0 +1,59 @@
+{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%} -%}
+{% from 'bootstrap5/form.html' import render_form -%}
+{% set active_child = 'list_communities' -%}
+
+{% block app_content -%}
+    <h1>{{ _('Moderation log') }}</h1>
+    <div class="table-responsive-md mt-4">
+        {% if modlog_entries.items %}
+        <table class="table table-responsive">
+            <thead>
+                <tr>
+                    <th>{{ _('When') }}</th>
+                    <th>{{ _('Moderator') }}</th>
+                    <th>{{ _('Action') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for modlog_entry in modlog_entries.items %}
+                    <tr>
+                        <td>{{ moment(modlog_entry.created_at).fromNow() }}</td>
+                        <td>{{ render_username(modlog_entry.author) }}</td>
+                        <td>{{ modlog_entry.action_to_str() }}
+                            {% if modlog_entry.link and modlog_entry.link_text -%}
+                                <a href="/{{ modlog_entry.link }}">{{ modlog_entry.link_text}}</a>
+                            {% elif modlog_entry.link_text -%}
+                                {{ modlog_entry.link_text }}
+                            {% endif -%}
+                            {% if modlog_entry.reason -%}
+                               <br>{{ _('Reason:') }} {{ modlog_entry.reason }}
+                            {% endif -%}
+                            {% if modlog_entry.community_id -%}
+                                <a href="/c/{{ modlog_entry.community.link() }}">{{ _(' in %(community_name)s', community_name='' + modlog_entry.community.display_name()) }}</a>
+                            {% endif -%}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else -%}
+            <p>{{ _('There are no moderation actions to show.') }}</p>
+        {% endif -%}
+    </div>
+    <nav aria-label="Pagination" class="mt-4" role="navigation">
+            {% if prev_url -%}
+                <a href="{{ prev_url }}" class="btn btn-primary" rel='nofollow'>
+                    <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
+                </a>
+            {% endif -%}
+            {% if next_url -%}
+                <a href="{{ next_url }}" class="btn btn-primary" rel='nofollow'>
+                    {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
+                </a>
+            {% endif -%}
+    </nav>
+{% endblock -%}

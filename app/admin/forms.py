@@ -36,8 +36,9 @@ class SiteMiscForm(FlaskForm):
     registration_mode = SelectField(_l('Registration mode'), choices=types, default=1, coerce=str, render_kw={'class': 'form-select'})
     application_question = TextAreaField(_l('Question to ask people applying for an account'))
     auto_decline_referrers = TextAreaField(_l('Block registrations from these referrers (one per line)'))
-    log_activitypub_json = BooleanField(_l('Log ActivityPub JSON for debugging'))
     default_theme = SelectField(_l('Default theme'), coerce=str, render_kw={'class': 'form-select'})
+    log_activitypub_json = BooleanField(_l('Log ActivityPub JSON for debugging'))
+    public_modlog = BooleanField(_l('Show moderation actions publicly'))
     submit = SubmitField(_l('Save'))
 
 

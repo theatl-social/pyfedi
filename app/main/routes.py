@@ -32,7 +32,7 @@ from app.utils import render_template, get_setting, gibberish, request_etag_matc
     generate_image_from_video_url, blocked_users, microblog_content_to_title, menu_topics, languages_for_form, \
     make_cache_key
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Domain, Topic, File, Instance, \
-    InstanceRole, Notification, Language, community_language, PostReply
+    InstanceRole, Notification, Language, community_language, PostReply, ModLog
 
 
 @bp.route('/', methods=['HEAD', 'GET', 'POST'])
@@ -351,6 +351,28 @@ def list_subscribed_communities():
                            low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site)
+
+
+@bp.route('/modlog', methods=['GET'])
+def modlog():
+    page = request.args.get('page', 1, type=int)
+    low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+
+    modlog_entries = ModLog.query.filter(ModLog.public == True).order_by(desc(ModLog.created_at))
+
+    # Pagination
+    modlog_entries = modlog_entries.paginate(page=page, per_page=100 if not low_bandwidth else 50, error_out=False)
+    next_url = url_for('main.modlog', page=modlog_entries.next_num) if modlog_entries.has_next else None
+    prev_url = url_for('main.modlog', page=modlog_entries.prev_num) if modlog_entries.has_prev and page != 1 else None
+
+    return render_template('modlog.html',
+                           title=_('Moderation Log'), modlog_entries=modlog_entries,
+                           next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth,
+                           moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site,
+                           inoculation=inoculation[randint(0, len(inoculation) - 1)]
+                           )
 
 
 @bp.route('/donate')
