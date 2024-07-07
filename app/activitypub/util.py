@@ -32,7 +32,7 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     shorten_string, reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, remove_tracking_from_link, \
     blocked_phrases, microblog_content_to_title, generate_image_from_video_url, is_video_url, reply_is_stupid, \
     notification_subscribers, communities_banned_from, lemmy_markdown_to_html, actor_contains_blocked_words, \
-    html_to_text, opengraph_parse, url_to_thumbnail_file
+    html_to_text, opengraph_parse, url_to_thumbnail_file, add_to_modlog_activitypub
 
 
 def public_key():
@@ -1434,6 +1434,9 @@ def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id
                 to_delete.deleted = True
                 community.post_count -= 1
                 db.session.commit()
+                if to_delete.author.id != deletor.id:
+                    add_to_modlog_activitypub('delete_post', deletor, community_id=community.id,
+                                              link_text=shorten_string(to_delete.title), link=f'post/{to_delete.id}')
             elif isinstance(to_delete, PostReply):
                 if not to_delete.author.bot:
                     to_delete.post.reply_count -= 1
@@ -1443,8 +1446,11 @@ def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id
                 else:
                     to_delete.delete_dependencies()
                     to_delete.deleted = True
-
                 db.session.commit()
+                if to_delete.author.id != deletor.id:
+                    add_to_modlog_activitypub('delete_post_reply', deletor, community_id=community.id,
+                                              link_text=f'comment on {shorten_string(to_delete.post.title)}',
+                                              link=f'post/{to_delete.post.id}#comment_{to_delete.id}')
 
 
 def remove_data_from_banned_user(deletor_ap_id, user_ap_id, target):

@@ -24,7 +24,7 @@
                 <!-- <a class="btn btn-primary" href="{{ url_for('community.community_add_moderator', community_id=community.id) }}">{{ _('Add moderator') }}</a> -->
             </div>
         </div>
-        <p>{{ _('See and handle all reports made about %(community)s', community=community.display_name()) }}</p>
+        <p>{{ _('See and handle all reports made about %(community)s', community=community.display_name()) }}.</p>
         {% if reports.items %}
         <form method="get">
             <input type="search" name="search" value="{{ search }}">
@@ -34,12 +34,12 @@
         </form>
         <table class="table table-striped">
             <tr>
-               <th>Local/Remote</th>
-               <th>Reasons</th>
-               <th>Description</th>
-               <th>Type</th>
-               <th>Created</th>
-               <th>Actions</th>
+               <th>{{ _('Local/Remote') }}</th>
+               <th>{{ _('Reasons') }}</th>
+               <th>{{ _('Description') }}</th>
+               <th>{{ _('Type') }}</th>
+               <th>{{ _('Created') }}</th>
+               <th>{{ _('Actions') }}</th>
             </tr>
             {% for report in reports.items %}
                 <tr>
@@ -87,7 +87,7 @@
                 {% endif %}
         </nav>
         {% else %}
-            <p>{{ _('No reports yet') }}</p>
+            <p>{{ _('No reports yet') }}.</p>
         {% endif %}
     </div>
 </div>

@@ -25,7 +25,7 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LIN
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, \
     File, PostVote, utcnow, Report, Notification, InstanceBlock, ActivityPubLog, Topic, Conversation, PostReply, \
-    NotificationSubscription, UserFollower, Instance, Language, Poll, PollChoice
+    NotificationSubscription, UserFollower, Instance, Language, Poll, PollChoice, ModLog
 from app.community import bp
 from app.user.utils import search_for_user
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
@@ -33,7 +33,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     request_etag_matches, return_304, instance_banned, can_create_post, can_upvote, can_downvote, user_filters_posts, \
     joined_communities, moderating_communities, blocked_domains, mimetype_from_url, blocked_instances, \
     community_moderators, communities_banned_from, show_ban_message, recently_upvoted_posts, recently_downvoted_posts, \
-    blocked_users, post_ranking, languages_for_form, english_language_id, menu_topics
+    blocked_users, post_ranking, languages_for_form, english_language_id, menu_topics, add_to_modlog
 from feedgen.feed import FeedGenerator
 from datetime import timezone, timedelta
 from copy import copy
@@ -1218,6 +1218,10 @@ def community_delete(community_id: int):
             community.delete_dependencies()
             db.session.delete(community)
             db.session.commit()
+
+            add_to_modlog('delete_community', community_id=community.id, link_text=community.display_name(),
+                          link=community.link())
+
             flash(_('Community deleted'))
             return redirect('/communities')
 
@@ -1287,7 +1291,11 @@ def community_add_moderator(community_id: int):
                         db.session.add(existing_conversation)
                         db.session.commit()
                     server = current_app.config['SERVER_NAME']
-                    send_message(f"Hi there. I've added you as a moderator to the community !{community.name}@{server}.", existing_conversation.id)
+                    send_message(f"Hi there. I've added you as a moderator to the community !{community.name}@{server}.",
+                                 existing_conversation.id)
+
+                add_to_modlog('add_mod', community_id=community_id, link_text=new_moderator.display_name(),
+                              link=new_moderator.link())
 
                 # Flush cache
                 cache.delete_memoized(moderating_communities, new_moderator.id)
@@ -1319,6 +1327,12 @@ def community_remove_moderator(community_id: int, user_id: int):
             existing_member.is_moderator = False
             db.session.commit()
             flash(_('Moderator removed'))
+
+            removed_mod = User.query.get(existing_member.user_id)
+
+            add_to_modlog('remove_mod', community_id=community_id, link_text=removed_mod.display_name(),
+                          link=removed_mod.link())
+
             # Flush cache
             cache.delete_memoized(moderating_communities, user_id)
             cache.delete_memoized(joined_communities, user_id)
@@ -1401,6 +1415,8 @@ def community_ban_user(community_id: int, user_id: int):
                                                           NotificationSubscription.user_id == user.id,
                                                           NotificationSubscription.type == NOTIF_COMMUNITY).delete()
 
+        add_to_modlog('ban_user', community_id=community.id, link_text=user.display_name(), link=user.link())
+
         return redirect(community.local_url())
     else:
         return render_template('community/community_ban_user.html', title=_('Ban from community'), form=form, community=community,
@@ -1445,6 +1461,8 @@ def community_unban_user(community_id: int, user_id: int):
     else:
         ...
         # todo: send chatmessage to remote user and federate it
+
+    add_to_modlog('unban_user', community_id=community.id, link_text=user.display_name(), link=user.link())
 
     return redirect(url_for('community.community_moderate_subscribers', actor=community.link()))
 
@@ -1550,6 +1568,42 @@ def community_moderate_subscribers(actor):
                                    menu_topics=menu_topics(), site=g.site,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)]
                                    )
+        else:
+            abort(401)
+    else:
+        abort(404)
+
+
+@bp.route('/<actor>/moderate/modlog', methods=['GET'])
+@login_required
+def community_modlog(actor):
+    community = actor_to_community(actor)
+
+    if community is not None:
+        if community.is_moderator() or current_user.is_admin():
+
+            page = request.args.get('page', 1, type=int)
+            low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+
+            modlog_entries = ModLog.query.filter(ModLog.community_id == community.id).order_by(desc(ModLog.created_at))
+
+            # Pagination
+            modlog_entries = modlog_entries.paginate(page=page, per_page=100 if not low_bandwidth else 50, error_out=False)
+            next_url = url_for('community.community_modlog', actor=actor,
+                               page=modlog_entries.next_num) if modlog_entries.has_next else None
+            prev_url = url_for('community.community_modlog', actor=actor,
+                               page=modlog_entries.prev_num) if modlog_entries.has_prev and page != 1 else None
+
+            return render_template('community/community_modlog.html',
+                                   title=_('Mod Log of %(community)s', community=community.display_name()),
+                                   community=community, current='modlog', modlog_entries=modlog_entries,
+                                   next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth,
+                                   moderating_communities=moderating_communities(current_user.get_id()),
+                                   joined_communities=joined_communities(current_user.get_id()),
+                                   menu_topics=menu_topics(), site=g.site,
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)]
+                                   )
+
         else:
             abort(401)
     else:

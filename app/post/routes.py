@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from random import randint
 
 from flask import redirect, url_for, flash, current_app, abort, request, g, make_response
-from flask_login import login_user, logout_user, current_user, login_required
+from flask_login import logout_user, current_user, login_required
 from flask_babel import _
 from sqlalchemy import or_, desc
 from wtforms import SelectField, RadioField
@@ -31,7 +31,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, moderating_communities, joined_communities, \
     blocked_instances, blocked_domains, community_moderators, blocked_phrases, show_ban_message, recently_upvoted_posts, \
     recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, reply_is_stupid, \
-    languages_for_form, english_language_id, MultiCheckboxField, menu_topics
+    languages_for_form, menu_topics, add_to_modlog
 
 
 def show_post(post_id: int):
@@ -39,7 +39,10 @@ def show_post(post_id: int):
     community: Community = post.community
 
     if community.banned or post.deleted:
-        abort(404)
+        if current_user.is_anonymous or not (current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff())):
+            abort(404)
+        else:
+            flash(_('This post has been deleted and is only visible to staff and admins.'), 'warning')
 
     sort = request.args.get('sort', 'hot')
 
@@ -1548,6 +1551,10 @@ def post_delete(post_id: int):
             for i in instances:
                 post_request(i.inbox, delete_json, current_user.private_key, current_user.public_url() + '#main-key')
 
+        if post.user_id != current_user.id:
+            add_to_modlog('delete_post', community_id=community.id, link_text=shorten_string(post.title),
+                          link=f'post/{post.id}')
+
     return redirect(url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not None else community.name))
 
 
@@ -1601,6 +1608,10 @@ def post_restore(post_id: int):
             for instance in post.community.following_instances():
                 if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
                     send_to_remote_instance(instance.id, post.community.id, announce)
+
+        if post.user_id != current_user.id:
+            add_to_modlog('restore_post', community_id=post.community.id, link_text=shorten_string(post.title),
+                          link=f'post/{post.id}')
 
         flash(_('Post has been restored.'))
     return redirect(url_for('activitypub.post_ap', post_id=post.id))
@@ -2097,6 +2108,10 @@ def post_reply_delete(post_id: int, comment_id: int):
                 for instance in post.community.following_instances():
                     if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
                         send_to_remote_instance(instance.id, post.community.id, announce)
+
+        if post_reply.user_id != current_user.id:
+            add_to_modlog('delete_post_reply', community_id=post.community.id, link_text=f'comment on {shorten_string(post.title)}',
+                          link=f'post/{post.id}#comment_{post_reply.id}')
 
     return redirect(url_for('activitypub.post_ap', post_id=post.id))
 

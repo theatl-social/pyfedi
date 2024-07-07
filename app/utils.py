@@ -36,7 +36,7 @@ from PIL import Image, ImageOps
 from app.email import send_welcome_email
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, ActivityPubLog, IpBan, \
     Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
-    File
+    File, ModLog
 
 
 # Flask's render_template function, with support for themes added
@@ -1150,3 +1150,29 @@ def actor_contains_blocked_words(actor):
             if blocked_word in actor:
                 return True
     return False
+
+
+def add_to_modlog(action: str, community_id: int = None, reason: str = '', link: str = '', link_text: str = '', public: bool = False):
+    """ Adds a new entry to the Moderation Log """
+    if action not in ModLog.action_map.keys():
+        raise Exception('Invalid action: ' + action)
+    if current_user.is_admin() or current_user.is_staff():
+        action_type = 'admin'
+    else:
+        action_type = 'mod'
+    db.session.add(ModLog(user_id=current_user.id, community_id=community_id, type=action_type, action=action,
+                          reason=reason, link=link, link_text=link_text, public=public))
+    db.session.commit()
+
+
+def add_to_modlog_activitypub(action: str, actor: User, community_id: int = None, reason: str = '', link: str = '', link_text: str = '', public: bool = False):
+    """ Adds a new entry to the Moderation Log - identical to above except has an 'actor' parameter """
+    if action not in ModLog.action_map.keys():
+        raise Exception('Invalid action: ' + action)
+    if actor.is_instance_admin():
+        action_type = 'admin'
+    else:
+        action_type = 'mod'
+    db.session.add(ModLog(user_id=actor.id, community_id=community_id, type=action_type, action=action,
+                          reason=reason, link=link, link_text=link_text, public=public))
+    db.session.commit()

@@ -741,6 +741,22 @@ class User(UserMixin, db.Model):
                 return True
         return False
 
+    @cache.memoize(timeout=30)
+    def is_staff(self):
+        for role in self.roles:
+            if role.name == 'Staff':
+                return True
+        return False
+
+    def is_instance_admin(self):
+        if self.instance_id:
+            instance_role = InstanceRole.query.filter(InstanceRole.instance_id == self.instance_id,
+                                                      InstanceRole.user_id == self.id,
+                                                      InstanceRole.role == 'admin').first()
+            return instance_role is not None
+        else:
+            return False
+
     def trustworthy(self):
         if self.is_admin():
             return True
@@ -1476,6 +1492,31 @@ class ModLog(db.Model):
     link_text = db.Column(db.String(512))
     public = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=utcnow)
+
+    community = db.relationship('Community', lazy='joined', foreign_keys=[community_id])
+    author = db.relationship('User', lazy='joined', foreign_keys=[user_id])
+
+    action_map = {
+        'add_mod': _l('Added moderator'),
+        'remove_mod': _l('Removed moderator'),
+        'featured_post': _l('Featured post'),
+        'unfeatured_post': _l('Unfeatured post'),
+        'delete_post': _l('Deleted post'),
+        'restore_post': _l('Un-deleted post'),
+        'delete_post_reply': _l('Deleted comment'),
+        'restore_post_reply': _l('Un-deleted comment'),
+        'delete_community': _l('Deleted community'),
+        'delete_user': _l('Deleted account'),
+        'undelete_user': _l('Restored account'),
+        'ban_user': _l('Banned account'),
+        'unban_user': _l('Un-banned account'),
+    }
+
+    def action_to_str(self):
+        if self.action in self.action_map:
+            return self.action_map[self.action]
+        else:
+            return self.action
 
 
 class IpBan(db.Model):

@@ -1509,7 +1509,7 @@ def post_ap2(post_id):
 
 
 @bp.route('/post/<int:post_id>', methods=['GET', 'POST'])
-@cache.cached(timeout=5, make_cache_key=make_cache_key)
+@cache.cached(timeout=3, make_cache_key=make_cache_key)
 def post_ap(post_id):
     if request.method == 'GET' and is_activitypub_request():
         post = Post.query.get_or_404(post_id)

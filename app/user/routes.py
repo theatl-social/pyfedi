@@ -23,7 +23,7 @@ from app.user.utils import purge_user_then_delete, unsubscribe_from_community
 from app.utils import get_setting, render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     is_image_url, ensure_directory_exists, gibberish, file_get_contents, community_membership, user_filters_home, \
     user_filters_posts, user_filters_replies, moderating_communities, joined_communities, theme_list, blocked_instances, \
-    allowlist_html, recently_upvoted_posts, recently_downvoted_posts, blocked_users, menu_topics
+    allowlist_html, recently_upvoted_posts, recently_downvoted_posts, blocked_users, menu_topics, add_to_modlog
 from sqlalchemy import desc, or_, text
 import os
 
@@ -317,6 +317,8 @@ def ban_profile(actor):
             user.banned = True
             db.session.commit()
 
+            add_to_modlog('ban_user', link_text=user.display_name(), link=user.link())
+
             flash(f'{actor} has been banned.')
     else:
         abort(401)
@@ -341,6 +343,8 @@ def unban_profile(actor):
         else:
             user.banned = False
             db.session.commit()
+
+            add_to_modlog('unban_user', link_text=user.display_name(), link=user.link())
 
             flash(f'{actor} has been unbanned.')
     else:
@@ -467,7 +471,7 @@ def report_profile(actor):
 def delete_profile(actor):
     if user_access('manage users', current_user.id):
         actor = actor.strip()
-        user = User.query.filter_by(user_name=actor, deleted=False).first()
+        user:User = User.query.filter_by(user_name=actor, deleted=False).first()
         if user is None:
             user = User.query.filter_by(ap_id=actor, deleted=False).first()
             if user is None:
@@ -479,6 +483,8 @@ def delete_profile(actor):
             user.deleted = True
             user.delete_dependencies()
             db.session.commit()
+
+            add_to_modlog('delete_user', link_text=user.display_name(), link=user.link())
 
             flash(f'{actor} has been deleted.')
     else:
@@ -605,6 +611,9 @@ def ban_purge_profile(actor):
                 user.purge_content()
                 db.session.commit()
                 flash(f'{actor} has been banned, deleted and all their content deleted.')
+
+            add_to_modlog('delete_user', link_text=user.display_name(), link=user.link())
+
     else:
         abort(401)
 

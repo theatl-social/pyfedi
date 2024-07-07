@@ -25,7 +25,7 @@ from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow
     User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
-    topic_tree, languages_for_form, menu_topics, ensure_directory_exists
+    topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog
 from app.admin import bp
 
 
@@ -868,6 +868,8 @@ def admin_user_delete(user_id):
         user.deleted = True
         user.delete_dependencies()
         db.session.commit()
+
+        add_to_modlog('delete_user', link_text=user.display_name(), link=user.link())
 
     flash(_('User deleted'))
     return redirect(url_for('admin.admin_users'))
