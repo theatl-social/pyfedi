@@ -358,7 +358,14 @@ def modlog():
     page = request.args.get('page', 1, type=int)
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
-    modlog_entries = ModLog.query.filter(ModLog.public == True).order_by(desc(ModLog.created_at))
+    # Admins can see all of the modlog, everyone else can only see public entries
+    if current_user.is_authenticated:
+        if current_user.is_admin() or current_user.is_staff():
+            modlog_entries = ModLog.query.order_by(desc(ModLog.created_at))
+        else:
+            modlog_entries = ModLog.query.filter(ModLog.public == True).order_by(desc(ModLog.created_at))
+    else:
+        modlog_entries = ModLog.query.filter(ModLog.public == True).order_by(desc(ModLog.created_at))
 
     # Pagination
     modlog_entries = modlog_entries.paginate(page=page, per_page=100 if not low_bandwidth else 50, error_out=False)
