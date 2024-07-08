@@ -553,7 +553,7 @@ def add_discussion_post(actor):
         if community.posting_warning:
             flash(community.posting_warning)
 
-    return render_template('community/add_discussion_post.html', title=_('Add post to community'), form=form, community=community,
+    return render_template('community/add_post.html', title=_('Add post to community'), form=form, community=community,
                            markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.id),
@@ -633,7 +633,7 @@ def add_image_post(actor):
         form.communities.data = community.id
         form.notify_author.data = True
 
-    return render_template('community/add_image_post.html', title=_('Add post to community'), form=form, community=community,
+    return render_template('community/add_post.html', title=_('Add post to community'), form=form, community=community,
                            markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.id),
@@ -713,7 +713,7 @@ def add_link_post(actor):
         form.communities.data = community.id
         form.notify_author.data = True
 
-    return render_template('community/add_link_post.html', title=_('Add post to community'), form=form, community=community,
+    return render_template('community/add_post.html', title=_('Add post to community'), form=form, community=community,
                            markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.id),
@@ -793,7 +793,7 @@ def add_video_post(actor):
         form.communities.data = community.id
         form.notify_author.data = True
 
-    return render_template('community/add_video_post.html', title=_('Add post to community'), form=form, community=community,
+    return render_template('community/add_post.html', title=_('Add post to community'), form=form, community=community,
                            markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.id),
@@ -862,7 +862,7 @@ def add_poll_post(actor):
         if community.posting_warning:
             flash(community.posting_warning)
 
-    return render_template('community/add_poll_post.html', title=_('Add poll to community'), form=form, community=community,
+    return render_template('community/add_post.html', title=_('Add poll to community'), form=form, community=community,
                            markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.id),

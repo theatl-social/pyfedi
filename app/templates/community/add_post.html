@@ -17,11 +17,19 @@
                 </label>
                 {% include 'community/_add_post_types.html' %}
             </div>
-            {{ render_field(form.communities) }}
 
+            {{ render_field(form.communities) }}
             {{ render_field(form.title) }}
-            {{ render_field(form.video_url) }}
-            <p class="small field_hint">{{ _('Provide a URL ending with .mp4 or .webm.') }}</p>
+            {% if post.type == POST_TYPE_LINK %}
+                {{ render_field(form.link_url) }}
+            {% elif post.type == POST_TYPE_IMAGE %}
+                {{ render_field(form.image_file) }}
+                {{ render_field(form.image_alt_text) }}
+                <small class="field_hint">{{ _('Describe the image, to help visually impaired people.') }}</small>
+            {% elif post.type == POST_TYPE_VIDEO %}
+                {{ render_field(form.video_url) }}
+                <p class="small field_hint">{{ _('Provide a URL ending with .mp4 or .webm.') }}</p>
+            {% endif %}
             {{ render_field(form.body) }}
             {% if not low_bandwidth %}
                   {% if markdown_editor %}
@@ -39,6 +47,47 @@
                         <a href="#" aria-hidden="true" class="markdown_editor_enabler create_post_markdown_editor_enabler" data-id="body">{{ _('Enable markdown editor') }}</a>
                   {% endif %}
             {% endif %}
+
+            {% if post.type == POST_TYPE_POLL %}
+                <fieldset id="pollChoicesFieldset">
+                    <legend>{{ _('Poll choices') }}</legend>
+                    <div class="form-group">
+                        {{ form.choice_1(class_="form-control", **{"placeholder": "First choice"}) }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.choice_2(class_="form-control", **{"placeholder": "Second choice"}) }}
+                    </div>
+                    <div class="form-group" style="display: none;">
+                        {{ form.choice_3(class_="form-control") }}
+                    </div>
+                    <div class="form-group" style="display: none;">
+                        {{ form.choice_4(class_="form-control") }}
+                    </div>
+                    <div class="form-group" style="display: none;">
+                        {{ form.choice_5(class_="form-control") }}
+                    </div>
+                    <div class="form-group" style="display: none;">
+                        {{ form.choice_6(class_="form-control") }}
+                    </div>
+                    <div class="form-group" style="display: none;">
+                        {{ form.choice_7(class_="form-control") }}
+                    </div>
+                    <div class="form-group" style="display: none;">
+                        {{ form.choice_8(class_="form-control") }}
+                    </div>
+                    <div class="form-group" style="display: none;">
+                        {{ form.choice_9(class_="form-control") }}
+                    </div>
+                    <div class="form-group" style="display: none;">
+                        {{ form.choice_10(class_="form-control") }}
+                    </div>
+                    <button id="addPollChoice" type="button" class="btn btn-primary">{{ _('Add choice') }}</button>
+                </fieldset>
+                {{ render_field(form.mode) }}
+                {{ render_field(form.finish_in) }}
+                {{ render_field(form.local_only) }}
+            {% endif %}
+
             {{ render_field(form.tags) }}
             <small class="field_hint">{{ _('Separate each tag with a comma.') }}</small>
 
