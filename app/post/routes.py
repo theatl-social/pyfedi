@@ -950,8 +950,8 @@ def post_edit_discussion_post(post_id: int):
 
             return redirect(url_for('activitypub.post_ap', post_id=post.id))
         else:
-            form.discussion_title.data = post.title
-            form.discussion_body.data = post.body
+            form.title.data = post.title
+            form.body.data = post.body
             form.notify_author.data = post.notify_author
             form.nsfw.data = post.nsfw
             form.nsfl.data = post.nsfl
@@ -960,7 +960,7 @@ def post_edit_discussion_post(post_id: int):
             form.tags.data = tags_to_string(post)
             if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
                 form.sticky.render_kw = {'disabled': True}
-            return render_template('post/post_edit_discussion.html', title=_('Edit post'), form=form, post=post,
+            return render_template('post/post_edit.html', title=_('Edit post'), form=form, post=post,
                                    markdown_editor=current_user.markdown_editor, mods=mod_list,
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
@@ -1036,8 +1036,8 @@ def post_edit_image_post(post_id: int):
 
             return redirect(url_for('activitypub.post_ap', post_id=post.id))
         else:
-            form.image_title.data = post.title
-            form.image_body.data = post.body
+            form.title.data = post.title
+            form.body.data = post.body
             form.image_alt_text.data = post.image.alt_text
             form.notify_author.data = post.notify_author
             form.nsfw.data = post.nsfw
@@ -1047,7 +1047,7 @@ def post_edit_image_post(post_id: int):
             form.tags.data = tags_to_string(post)
             if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
                 form.sticky.render_kw = {'disabled': True}
-            return render_template('post/post_edit_image.html', title=_('Edit post'), form=form, post=post,
+            return render_template('post/post_edit.html', title=_('Edit post'), form=form, post=post,
                                    markdown_editor=current_user.markdown_editor, mods=mod_list,
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
@@ -1123,8 +1123,8 @@ def post_edit_link_post(post_id: int):
 
             return redirect(url_for('activitypub.post_ap', post_id=post.id))
         else:
-            form.link_title.data = post.title
-            form.link_body.data = post.body
+            form.title.data = post.title
+            form.body.data = post.body
             form.link_url.data = post.url
             form.notify_author.data = post.notify_author
             form.nsfw.data = post.nsfw
@@ -1134,7 +1134,7 @@ def post_edit_link_post(post_id: int):
             form.tags.data = tags_to_string(post)
             if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
                 form.sticky.render_kw = {'disabled': True}
-            return render_template('post/post_edit_link.html', title=_('Edit post'), form=form, post=post,
+            return render_template('post/post_edit.html', title=_('Edit post'), form=form, post=post,
                                    markdown_editor=current_user.markdown_editor, mods=mod_list,
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
@@ -1210,8 +1210,8 @@ def post_edit_video_post(post_id: int):
 
             return redirect(url_for('activitypub.post_ap', post_id=post.id))
         else:
-            form.video_title.data = post.title
-            form.video_body.data = post.body
+            form.title.data = post.title
+            form.body.data = post.body
             form.video_url.data = post.url
             form.notify_author.data = post.notify_author
             form.nsfw.data = post.nsfw
@@ -1221,7 +1221,7 @@ def post_edit_video_post(post_id: int):
             form.tags.data = tags_to_string(post)
             if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
                 form.sticky.render_kw = {'disabled': True}
-            return render_template('post/post_edit_video.html', title=_('Edit post'), form=form, post=post,
+            return render_template('post/post_edit.html', title=_('Edit post'), form=form, post=post,
                                    markdown_editor=current_user.markdown_editor, mods=mod_list,
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
@@ -1275,8 +1275,8 @@ def post_edit_poll_post(post_id: int):
 
             return redirect(url_for('activitypub.post_ap', post_id=post.id))
         else:
-            form.poll_title.data = post.title
-            form.poll_body.data = post.body
+            form.title.data = post.title
+            form.body.data = post.body
             form.notify_author.data = post.notify_author
             form.nsfw.data = post.nsfw
             form.nsfl.data = post.nsfl
@@ -1293,7 +1293,7 @@ def post_edit_poll_post(post_id: int):
             form.tags.data = tags_to_string(post)
             if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
                 form.sticky.render_kw = {'disabled': True}
-            return render_template('post/post_edit_poll.html', title=_('Edit post'), form=form, post=post,
+            return render_template('post/post_edit.html', title=_('Edit post'), form=form, post=post,
                                    markdown_editor=current_user.markdown_editor, mods=mod_list,
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),

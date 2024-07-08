@@ -8,7 +8,7 @@ from flask_login import current_user
 from app import create_app, db, cli
 import os, click
 from flask import session, g, json, request, current_app
-from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_ARTICLE, POST_TYPE_VIDEO
+from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_ARTICLE, POST_TYPE_VIDEO, POST_TYPE_POLL
 from app.models import Site
 from app.utils import getmtime, gibberish, shorten_string, shorten_url, digits, user_access, community_membership, \
     can_create_post, can_upvote, can_downvote, shorten_number, ap_datetime, current_theme, community_link_to_href, \
@@ -22,8 +22,8 @@ cli.register(app)
 def app_context_processor():
     def getmtime(filename):
         return os.path.getmtime('app/static/' + filename)
-    return dict(getmtime=getmtime, post_type_link=POST_TYPE_LINK, post_type_image=POST_TYPE_IMAGE,
-                post_type_article=POST_TYPE_ARTICLE, post_type_video=POST_TYPE_VIDEO)
+    return dict(getmtime=getmtime, POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
+                POST_TYPE_ARTICLE=POST_TYPE_ARTICLE, POST_TYPE_VIDEO=POST_TYPE_VIDEO, POST_TYPE_POLL=POST_TYPE_POLL)
 
 
 @app.shell_context_processor

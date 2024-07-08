@@ -250,15 +250,12 @@ def save_post(form, post: Post, type: str):
     post.notify_author = form.notify_author.data
     post.language_id = form.language_id.data
     current_user.language_id = form.language_id.data
+    post.title = form.title.data
+    post.body = form.body.data
+    post.body_html = markdown_to_html(post.body)
     if type == '' or type == 'discussion':
-        post.title = form.discussion_title.data
-        post.body = form.discussion_body.data
-        post.body_html = markdown_to_html(post.body)
         post.type = POST_TYPE_ARTICLE
     elif type == 'link':
-        post.title = form.link_title.data
-        post.body = form.link_body.data
-        post.body_html = markdown_to_html(post.body)
         url_changed = post.id is None or form.link_url.data != post.url
         post.url = remove_tracking_from_link(form.link_url.data.strip())
         post.type = POST_TYPE_LINK
@@ -298,11 +295,8 @@ def save_post(form, post: Post, type: str):
                                     db.session.add(file)
 
     elif type == 'image':
-        post.title = form.image_title.data
-        post.body = form.image_body.data
-        post.body_html = markdown_to_html(post.body)
         post.type = POST_TYPE_IMAGE
-        alt_text = form.image_alt_text.data if form.image_alt_text.data else form.image_title.data
+        alt_text = form.image_alt_text.data if form.image_alt_text.data else form.title.data
         uploaded_file = request.files['image_file']
         if uploaded_file and uploaded_file.filename != '':
             if post.image_id:
@@ -359,9 +353,6 @@ def save_post(form, post: Post, type: str):
                 post.image_id = file.id
     elif type == 'video':
         form.video_url.data = form.video_url.data.strip()
-        post.title = form.video_title.data
-        post.body = form.video_body.data
-        post.body_html = markdown_to_html(post.body)
         url_changed = post.id is None or form.video_url.data != post.url
         post.url = remove_tracking_from_link(form.video_url.data.strip())
         post.type = POST_TYPE_VIDEO
@@ -390,8 +381,7 @@ def save_post(form, post: Post, type: str):
                             db.session.add(file)
 
     elif type == 'poll':
-        post.title = form.poll_title.data
-        post.body = form.poll_title.data + '\n' + form.poll_body.data if post.title not in form.poll_body.data else form.poll_body.data
+        post.body = form.title.data + '\n' + form.body.data if post.title not in form.body.data else form.body.data
         post.body_html = markdown_to_html(post.body)
         post.type = POST_TYPE_POLL
     else:
