@@ -1,9 +1,0 @@
-<div id="type_of_post" class="btn-group flex-wrap" role="navigation">
-    <a href="{{ url_for('community.add_discussion_post', actor=actor) }}" class="btn {{ 'btn-primary' if request.path.endswith('submit') else 'btn-outline-secondary' }}" aria-label="{{ _('Start a discussion') }}">{{ _('Discussion') }}</a>
-    <a href="{{ url_for('community.add_link_post', actor=actor) }}" class="btn {{ 'btn-primary' if request.path.endswith('submit_link') else 'btn-outline-secondary' }}" aria-label="{{ _('Share a link') }}">{{ _('Link') }}</a>
-    <a href="{{ url_for('community.add_image_post', actor=actor) }}" class="btn {{ 'btn-primary' if request.path.endswith('submit_image') else 'btn-outline-secondary' }}" aria-label="{{ _('Share an image') }}">{{ _('Image') }}</a>
-    <a href="{{ url_for('community.add_video_post', actor=actor) }}" class="btn {{ 'btn-primary' if request.path.endswith('submit_video') else 'btn-outline-secondary' }}" aria-label="{{ _('Share a video') }}">{{ _('Video') }}</a>
-    <a href="{{ url_for('community.add_poll_post', actor=actor) }}" class="btn {{ 'btn-primary' if request.path.endswith('submit_poll') else 'btn-outline-secondary' }}" aria-label="{{ _('Create a poll') }}">{{ _('Poll') }}</a>
-    <!--
-    <a href="#" class="btn" aria-label="{{ _('Create an event') }}">{{ _('Event') }}</a> -->
-</div>
