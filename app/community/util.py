@@ -242,7 +242,7 @@ def actor_to_community(actor) -> Community:
     return community
 
 
-def save_post(form, post: Post, type: str):
+def save_post(form, post: Post, type: int):
     post.indexable = current_user.indexable
     post.sticky = form.sticky.data
     post.nsfw = form.nsfw.data
@@ -253,9 +253,9 @@ def save_post(form, post: Post, type: str):
     post.title = form.title.data
     post.body = form.body.data
     post.body_html = markdown_to_html(post.body)
-    if type == '' or type == 'discussion':
+    if not type or type == POST_TYPE_ARTICLE:
         post.type = POST_TYPE_ARTICLE
-    elif type == 'link':
+    elif type == POST_TYPE_LINK:
         url_changed = post.id is None or form.link_url.data != post.url
         post.url = remove_tracking_from_link(form.link_url.data.strip())
         post.type = POST_TYPE_LINK
@@ -294,7 +294,7 @@ def save_post(form, post: Post, type: str):
                                     post.image = file
                                     db.session.add(file)
 
-    elif type == 'image':
+    elif type == POST_TYPE_IMAGE:
         post.type = POST_TYPE_IMAGE
         alt_text = form.image_alt_text.data if form.image_alt_text.data else form.title.data
         uploaded_file = request.files['image_file']
@@ -351,7 +351,7 @@ def save_post(form, post: Post, type: str):
                 db.session.add(file)
                 db.session.commit()
                 post.image_id = file.id
-    elif type == 'video':
+    elif type == POST_TYPE_VIDEO:
         form.video_url.data = form.video_url.data.strip()
         url_changed = post.id is None or form.video_url.data != post.url
         post.url = remove_tracking_from_link(form.video_url.data.strip())
@@ -380,7 +380,7 @@ def save_post(form, post: Post, type: str):
                             post.image = file
                             db.session.add(file)
 
-    elif type == 'poll':
+    elif type == POST_TYPE_POLL:
         post.body = form.title.data + '\n' + form.body.data if post.title not in form.body.data else form.body.data
         post.body_html = markdown_to_html(post.body)
         post.type = POST_TYPE_POLL
@@ -414,7 +414,7 @@ def save_post(form, post: Post, type: str):
     db.session.commit()
 
     # Save poll choices. NB this will delete all votes whenever a poll is edited. Partially because it's easier to code but also to stop malicious alterations to polls after people have already voted
-    if type == 'poll':
+    if type == POST_TYPE_POLL:
         db.session.execute(text('DELETE FROM "poll_choice_vote" WHERE post_id = :post_id'), {'post_id': post.id})
         db.session.execute(text('DELETE FROM "poll_choice" WHERE post_id = :post_id'), {'post_id': post.id})
         for i in range(1, 10):

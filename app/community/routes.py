@@ -531,7 +531,7 @@ def add_discussion_post(actor):
         if not can_create_post(current_user, community):
             abort(401)
         post = Post(user_id=current_user.id, community_id=form.communities.data, instance_id=1)
-        save_post(form, post, 'discussion')
+        save_post(form, post, POST_TYPE_ARTICLE)
         community.post_count += 1
         community.last_active = g.site.last_active = utcnow()
         db.session.commit()
@@ -597,7 +597,7 @@ def add_image_post(actor):
         if not can_create_post(current_user, community):
             abort(401)
         post = Post(user_id=current_user.id, community_id=form.communities.data, instance_id=1)
-        save_post(form, post, 'image')
+        save_post(form, post, POST_TYPE_IMAGE)
         community.post_count += 1
         community.last_active = g.site.last_active = utcnow()
         db.session.commit()
@@ -677,7 +677,7 @@ def add_link_post(actor):
         if not can_create_post(current_user, community):
             abort(401)
         post = Post(user_id=current_user.id, community_id=form.communities.data, instance_id=1)
-        save_post(form, post, 'link')
+        save_post(form, post, POST_TYPE_LINK)
         community.post_count += 1
         community.last_active = g.site.last_active = utcnow()
         db.session.commit()
@@ -757,7 +757,7 @@ def add_video_post(actor):
         if not can_create_post(current_user, community):
             abort(401)
         post = Post(user_id=current_user.id, community_id=form.communities.data, instance_id=1)
-        save_post(form, post, 'video')
+        save_post(form, post, POST_TYPE_VIDEO)
         community.post_count += 1
         community.last_active = g.site.last_active = utcnow()
         db.session.commit()
@@ -837,7 +837,7 @@ def add_poll_post(actor):
         if not can_create_post(current_user, community):
             abort(401)
         post = Post(user_id=current_user.id, community_id=form.communities.data, instance_id=1)
-        save_post(form, post, 'poll')
+        save_post(form, post, POST_TYPE_POLL)
         poll = Poll.query.filter_by(post_id=post.id).first()
         community.post_count += 1
         community.last_active = g.site.last_active = utcnow()
