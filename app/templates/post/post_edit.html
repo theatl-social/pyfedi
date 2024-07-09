@@ -79,7 +79,7 @@
                     <button id="addPollChoice" type="button" class="btn btn-primary">{{ _('Add choice') }}</button>
                 </fieldset>
                 {{ render_field(form.mode) }}
-                {{ render_field(form.finish_in) }}
+                {% if form.finish_in %}{{ render_field(form.finish_in) }}{% endif %}
                 {{ render_field(form.local_only) }}
             {% endif %}
 
