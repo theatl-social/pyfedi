@@ -889,6 +889,14 @@ div.navbar {
     }
   }
 
+  .comment_community {
+    display: inline-block;
+    img {
+      height: 1rem;
+      width: auto;
+    }
+  }
+
   a.unhide {
     display: none;
     text-decoration: none;

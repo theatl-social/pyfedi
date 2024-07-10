@@ -10,14 +10,12 @@
     {% if teaser -%}
     <div class="row">
         <div class="col-12 hidable">
-            in reply to: <a href="{{ url_for('activitypub.post_ap', post_id=post_reply.post.id, _anchor='comment_' + str(post_reply.id)) }}">{{ post_reply.post.title | truncate(80, True) }}</a>
+            reply to: <a href="{{ url_for('activitypub.post_ap', post_id=post_reply.post.id, _anchor='comment_' + str(post_reply.id)) }}">{{ post_reply.post.title | truncate(80, True) }}</a>
+            <span class="comment_community">in {{ render_communityname(post_reply.post.community) }}</span>
         </div>
     </div>
     {% endif -%}
     <div class="row">
-        <div class="col-auto">
-            {{ render_communityname(post_reply.post.community) }}
-        </div>
         <div class="col-auto comment_author">
             by
             {{ render_username(post_reply.author) }}
