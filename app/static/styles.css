@@ -1238,7 +1238,7 @@ div.navbar {
   border-radius: 50%;
   vertical-align: middle;
 }
-.comment .comment_author a.unhide {
+.comment a.unhide {
   display: none;
   text-decoration: none;
   padding: 5px 15px;
