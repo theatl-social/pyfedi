@@ -995,7 +995,8 @@ def post_edit(post_id: int):
 
             if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
                 form.sticky.render_kw = {'disabled': True}
-            return render_template('post/post_edit.html', title=_('Edit post'), form=form, post=post,
+            return render_template('post/post_edit.html', title=_('Edit post'), form=form,
+                                   post_type=post.type, community=post.community,
                                    markdown_editor=current_user.markdown_editor, mods=mod_list,
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),

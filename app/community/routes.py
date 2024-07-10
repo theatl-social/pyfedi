@@ -491,20 +491,37 @@ def join_then_add(actor):
         db.session.commit()
         flash('You joined ' + community.title)
     if not community.user_is_banned(current_user):
-        return redirect(url_for('community.add_discussion_post', actor=community.link()))
+        return redirect(url_for('community.add_post', actor=community.link(), type='discussion'))
     else:
         abort(401)
 
 
-@bp.route('/<actor>/submit', methods=['GET', 'POST'])
+@bp.route('/<actor>/submit/<string:type>', methods=['GET', 'POST'])
+@bp.route('/<actor>/submit', defaults={'type': 'discussion'}, methods=['GET', 'POST'])
 @login_required
 @validation_required
-def add_discussion_post(actor):
+def add_post(actor, type):
     if current_user.banned:
         return show_ban_message()
     community = actor_to_community(actor)
 
-    form = CreateDiscussionForm()
+    if type == 'discussion':
+        post_type = POST_TYPE_ARTICLE
+        form = CreateDiscussionForm()
+    elif type == 'link':
+        post_type = POST_TYPE_LINK
+        form = CreateLinkForm()
+    elif type == 'image':
+        post_type = POST_TYPE_IMAGE
+        form = CreateImageForm()
+    elif type == 'video':
+        post_type = POST_TYPE_VIDEO
+        form = CreateVideoForm()
+    elif type == 'poll':
+        post_type = POST_TYPE_POLL
+        form = CreatePollForm()
+    else:
+        abort(404)
 
     if g.site.enable_nsfl is False:
         form.nsfl.render_kw = {'disabled': True}
@@ -531,78 +548,13 @@ def add_discussion_post(actor):
         if not can_create_post(current_user, community):
             abort(401)
         post = Post(user_id=current_user.id, community_id=form.communities.data, instance_id=1)
-        save_post(form, post, POST_TYPE_ARTICLE)
+        save_post(form, post, post_type)
         community.post_count += 1
         community.last_active = g.site.last_active = utcnow()
         db.session.commit()
         post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
         db.session.commit()
 
-        upvote_own_post(post)
-
-        notify_about_post(post)
-
-        federate_post_to_user_followers(post)
-        if not community.local_only:
-            federate_post(community, post)
-
-        return redirect(f"/post/{post.id}")
-    else:
-        form.communities.data = community.id
-        form.notify_author.data = True
-        if community.posting_warning:
-            flash(community.posting_warning)
-
-    return render_template('community/add_discussion_post.html', title=_('Add post to community'), form=form, community=community,
-                           markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.id),
-                           menu_topics=menu_topics(), site=g.site,
-                           inoculation=inoculation[randint(0, len(inoculation) - 1)]
-    )
-
-
-@bp.route('/<actor>/submit_image', methods=['GET', 'POST'])
-@login_required
-@validation_required
-def add_image_post(actor):
-    if current_user.banned:
-        return show_ban_message()
-    community = actor_to_community(actor)
-
-    form = CreateImageForm()
-
-    if g.site.enable_nsfl is False:
-        form.nsfl.render_kw = {'disabled': True}
-    if community.nsfw:
-        form.nsfw.data = True
-        form.nsfw.render_kw = {'disabled': True}
-    if community.nsfl:
-        form.nsfl.data = True
-        form.nsfw.render_kw = {'disabled': True}
-    if not(community.is_moderator() or community.is_owner() or current_user.is_admin()):
-        form.sticky.render_kw = {'disabled': True}
-
-    form.communities.choices = [(c.id, c.display_name()) for c in current_user.communities()]
-    if not community_in_list(community.id, form.communities.choices):
-        form.communities.choices.append((community.id, community.display_name()))
-
-    form.language_id.choices = languages_for_form()
-
-    if not can_create_post(current_user, community):
-        abort(401)
-
-    if form.validate_on_submit():
-        community = Community.query.get_or_404(form.communities.data)
-        if not can_create_post(current_user, community):
-            abort(401)
-        post = Post(user_id=current_user.id, community_id=form.communities.data, instance_id=1)
-        save_post(form, post, POST_TYPE_IMAGE)
-        community.post_count += 1
-        community.last_active = g.site.last_active = utcnow()
-        db.session.commit()
-        post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
-        db.session.commit()
         if post.image_id and post.image.file_path is None:
             make_image_sizes(post.image_id, 170, 512, 'posts')  # the 512 sized image is for masonry view
 
@@ -624,245 +576,28 @@ def add_image_post(actor):
         upvote_own_post(post)
         notify_about_post(post)
 
-        federate_post_to_user_followers(post)
-        if not community.local_only:
-            federate_post(community, post)
-
-        return redirect(f"/post/{post.id}")
-    else:
-        form.communities.data = community.id
-        form.notify_author.data = True
-
-    return render_template('community/add_image_post.html', title=_('Add post to community'), form=form, community=community,
-                           markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.id),
-                           menu_topics=menu_topics(), site=g.site,
-                           inoculation=inoculation[randint(0, len(inoculation) - 1)]
-    )
-
-
-@bp.route('/<actor>/submit_link', methods=['GET', 'POST'])
-@login_required
-@validation_required
-def add_link_post(actor):
-    if current_user.banned:
-        return show_ban_message()
-    community = actor_to_community(actor)
-
-    form = CreateLinkForm()
-
-    if g.site.enable_nsfl is False:
-        form.nsfl.render_kw = {'disabled': True}
-    if community.nsfw:
-        form.nsfw.data = True
-        form.nsfw.render_kw = {'disabled': True}
-    if community.nsfl:
-        form.nsfl.data = True
-        form.nsfw.render_kw = {'disabled': True}
-    if not(community.is_moderator() or community.is_owner() or current_user.is_admin()):
-        form.sticky.render_kw = {'disabled': True}
-
-    form.communities.choices = [(c.id, c.display_name()) for c in current_user.communities()]
-    if not community_in_list(community.id, form.communities.choices):
-        form.communities.choices.append((community.id, community.display_name()))
-
-    form.language_id.choices = languages_for_form()
-
-    if not can_create_post(current_user, community):
-        abort(401)
-
-    if form.validate_on_submit():
-        community = Community.query.get_or_404(form.communities.data)
-        if not can_create_post(current_user, community):
-            abort(401)
-        post = Post(user_id=current_user.id, community_id=form.communities.data, instance_id=1)
-        save_post(form, post, POST_TYPE_LINK)
-        community.post_count += 1
-        community.last_active = g.site.last_active = utcnow()
-        db.session.commit()
-        post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
-        db.session.commit()
-        if post.image_id and post.image.file_path is None:
-            make_image_sizes(post.image_id, 170, 512, 'posts')  # the 512 sized image is for masonry view
-
-        # Update list of cross posts
-        if post.url:
-            other_posts = Post.query.filter(Post.id != post.id, Post.url == post.url,
-                                    Post.posted_at > post.posted_at - timedelta(days=6)).all()
-            for op in other_posts:
-                if op.cross_posts is None:
-                    op.cross_posts = [post.id]
-                else:
-                    op.cross_posts.append(post.id)
-                if post.cross_posts is None:
-                    post.cross_posts = [op.id]
-                else:
-                    post.cross_posts.append(op.id)
-            db.session.commit()
-
-        upvote_own_post(post)
-        notify_about_post(post)
-
-        federate_post_to_user_followers(post)
-        if not community.local_only:
-            federate_post(community, post)
-
-        return redirect(f"/post/{post.id}")
-    else:
-        form.communities.data = community.id
-        form.notify_author.data = True
-
-    return render_template('community/add_link_post.html', title=_('Add post to community'), form=form, community=community,
-                           markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.id),
-                           menu_topics=menu_topics(), site=g.site,
-                           inoculation=inoculation[randint(0, len(inoculation) - 1)]
-    )
-
-
-@bp.route('/<actor>/submit_video', methods=['GET', 'POST'])
-@login_required
-@validation_required
-def add_video_post(actor):
-    if current_user.banned:
-        return show_ban_message()
-    community = actor_to_community(actor)
-
-    form = CreateVideoForm()
-
-    if g.site.enable_nsfl is False:
-        form.nsfl.render_kw = {'disabled': True}
-    if community.nsfw:
-        form.nsfw.data = True
-        form.nsfw.render_kw = {'disabled': True}
-    if community.nsfl:
-        form.nsfl.data = True
-        form.nsfw.render_kw = {'disabled': True}
-    if not(community.is_moderator() or community.is_owner() or current_user.is_admin()):
-        form.sticky.render_kw = {'disabled': True}
-
-    form.communities.choices = [(c.id, c.display_name()) for c in current_user.communities()]
-    if not community_in_list(community.id, form.communities.choices):
-        form.communities.choices.append((community.id, community.display_name()))
-
-    form.language_id.choices = languages_for_form()
-
-    if not can_create_post(current_user, community):
-        abort(401)
-
-    if form.validate_on_submit():
-        community = Community.query.get_or_404(form.communities.data)
-        if not can_create_post(current_user, community):
-            abort(401)
-        post = Post(user_id=current_user.id, community_id=form.communities.data, instance_id=1)
-        save_post(form, post, POST_TYPE_VIDEO)
-        community.post_count += 1
-        community.last_active = g.site.last_active = utcnow()
-        db.session.commit()
-        post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
-        db.session.commit()
-        if post.image_id and post.image.file_path is None:
-            make_image_sizes(post.image_id, 170, 512, 'posts')  # the 512 sized image is for masonry view
-
-        # Update list of cross posts
-        if post.url:
-            other_posts = Post.query.filter(Post.id != post.id, Post.url == post.url,
-                                    Post.posted_at > post.posted_at - timedelta(days=6)).all()
-            for op in other_posts:
-                if op.cross_posts is None:
-                    op.cross_posts = [post.id]
-                else:
-                    op.cross_posts.append(post.id)
-                if post.cross_posts is None:
-                    post.cross_posts = [op.id]
-                else:
-                    post.cross_posts.append(op.id)
-            db.session.commit()
-
-        upvote_own_post(post)
-        notify_about_post(post)
-
-        federate_post_to_user_followers(post)
-        if not community.local_only:
-            federate_post(community, post)
-
-        return redirect(f"/post/{post.id}")
-    else:
-        form.communities.data = community.id
-        form.notify_author.data = True
-
-    return render_template('community/add_video_post.html', title=_('Add post to community'), form=form, community=community,
-                           markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.id),
-                           menu_topics=menu_topics(), site=g.site,
-                           inoculation=inoculation[randint(0, len(inoculation) - 1)]
-    )
-
-
-@bp.route('/<actor>/submit_poll', methods=['GET', 'POST'])
-@login_required
-@validation_required
-def add_poll_post(actor):
-    if current_user.banned:
-        return show_ban_message()
-    community = actor_to_community(actor)
-
-    form = CreatePollForm()
-
-    if g.site.enable_nsfl is False:
-        form.nsfl.render_kw = {'disabled': True}
-    if community.nsfw:
-        form.nsfw.data = True
-        form.nsfw.render_kw = {'disabled': True}
-    if community.nsfl:
-        form.nsfl.data = True
-        form.nsfw.render_kw = {'disabled': True}
-    if not(community.is_moderator() or community.is_owner() or current_user.is_admin()):
-        form.sticky.render_kw = {'disabled': True}
-
-    form.communities.choices = [(c.id, c.display_name()) for c in current_user.communities()]
-    if not community_in_list(community.id, form.communities.choices):
-        form.communities.choices.append((community.id, community.display_name()))
-
-    form.language_id.choices = languages_for_form()
-
-    if not can_create_post(current_user, community):
-        abort(401)
-
-    if form.validate_on_submit():
-        community = Community.query.get_or_404(form.communities.data)
-        if not can_create_post(current_user, community):
-            abort(401)
-        post = Post(user_id=current_user.id, community_id=form.communities.data, instance_id=1)
-        save_post(form, post, POST_TYPE_POLL)
-        poll = Poll.query.filter_by(post_id=post.id).first()
-        community.post_count += 1
-        community.last_active = g.site.last_active = utcnow()
-        db.session.commit()
-        post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
-        db.session.commit()
-
-        upvote_own_post(post)
-
-        notify_about_post(post)
-
-        if not poll.local_only:
+        if post_type == POST_TYPE_POLL:
+            poll = Poll.query.filter_by(post_id=post.id).first()
+            if not poll.local_only:
+                federate_post_to_user_followers(post)
+            if not community.local_only and not poll.local_only:
+                federate_post(community, post)
+        else:
             federate_post_to_user_followers(post)
-        if not community.local_only and not poll.local_only:
-            federate_post(community, post)
+            if not community.local_only:
+                federate_post(community, post)
 
         return redirect(f"/post/{post.id}")
     else:
         form.communities.data = community.id
         form.notify_author.data = True
-        form.finish_in.data = '3d'
+        if post_type == POST_TYPE_POLL:
+            form.finish_in.data = '3d'
         if community.posting_warning:
             flash(community.posting_warning)
 
-    return render_template('community/add_poll_post.html', title=_('Add poll to community'), form=form, community=community,
+    return render_template('community/add_post.html', title=_('Add post to community'), form=form,
+                           post_type=post_type, community=community,
                            markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.id),
