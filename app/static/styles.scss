@@ -918,10 +918,13 @@ div.navbar {
       }
     }
 
-    .notif_toggle {
-      text-decoration: none;
-      font-size: 87%;
-      padding: 5px 15px;
+    .notify_toggle {
+      display: inline-block;
+      a {
+        text-decoration: none;
+        font-size: 87%;
+        padding: 5px 15px;
+      }
     }
   }
 
@@ -1408,7 +1411,7 @@ form {
   text-decoration: none;
 }
 
-.notif_toggle  {
+.notify_toggle  {
   display: block;
   position: absolute;
   top: 2px;

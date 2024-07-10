@@ -1252,7 +1252,10 @@ div.navbar {
 .comment .comment_actions .hide_button a {
   padding: 5px 15px;
 }
-.comment .comment_actions .notif_toggle {
+.comment .comment_actions .notify_toggle {
+  display: inline-block;
+}
+.comment .comment_actions .notify_toggle a {
   text-decoration: none;
   font-size: 87%;
   padding: 5px 15px;
@@ -1704,7 +1707,7 @@ form h5 {
   text-decoration: none;
 }
 
-.notif_toggle {
+.notify_toggle {
   display: block;
   position: absolute;
   top: 2px;
