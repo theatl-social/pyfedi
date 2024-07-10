@@ -774,19 +774,12 @@ div.navbar {
 .post_list .post_teaser .main_row .post_utilities a:first-child, .post_list .post_teaser .main_row .post_utilities > div:first-child, .post_list .post_teaser .main_row .post_utilities > span:first-child {
   text-align: left;
 }
-.post_list .post_teaser .main_row .post_options {
-  position: absolute;
-  bottom: -1px;
-}
 .post_list .post_teaser .utilities_row a {
   display: inline-block;
   min-width: 44px;
   min-height: 44px;
   justify-content: center;
   align-content: center;
-}
-.post_list .post_teaser .utilities_row .preview_image, .post_list .post_teaser .utilities_row .post_options {
-  text-align: center;
 }
 .post_list .post_teaser .thumbnail {
   float: right;

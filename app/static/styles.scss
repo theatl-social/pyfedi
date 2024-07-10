@@ -367,11 +367,6 @@ div.navbar {
           }
         }
       }
-
-      .post_options {
-        position: absolute;
-        bottom: -1px;
-      }
     }
 
     .utilities_row {
@@ -381,9 +376,6 @@ div.navbar {
         min-height: $min-touch-target;
         justify-content: center;
         align-content: center;
-      }
-      .preview_image, .post_options {
-        text-align: center;
       }
     }
 
