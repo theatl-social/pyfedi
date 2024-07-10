@@ -20,7 +20,10 @@
 
         <div class="post_list">
             {% for post_reply in post_replies.items %}
-                {% include 'post/_post_reply_teaser.html' %}
+                {% with teaser=True %}
+                    {% include 'post/_post_reply_teaser.html' %}
+                {% endwith %}
+                <hr />
             {% else -%}
                 <p>{{ _('No comments have been bookmarked. Use the three dots on each comment to find the bookmark function.') }}</p>
             {% endfor -%}

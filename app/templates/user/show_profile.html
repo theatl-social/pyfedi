@@ -122,7 +122,10 @@
             <h2 class="mt-4" id="comments">Comments</h2>
             <div class="post_list">
                 {% for post_reply in post_replies.items %}
-                    {% include 'post/_post_reply_teaser.html' %}
+                    {% with teaser=True, disable_voting=True %}
+                        {% include 'post/_post_reply_teaser.html' %}
+                    {% endwith %}
+                    <hr />
                 {% endfor %}
             </div>
             <nav aria-label="{{ _('Comment pagination') }}" class="mt-4" role="navigation">
