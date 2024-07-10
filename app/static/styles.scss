@@ -356,7 +356,7 @@ div.navbar {
         position: absolute;
         bottom: -12px;
         left: 10px;
-        a {
+        a, > div, > span {
           display: inline-block;
           min-width: 44px;
           line-height: 44px;
