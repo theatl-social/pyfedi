@@ -22,7 +22,8 @@ cli.register(app)
 def app_context_processor():
     def getmtime(filename):
         return os.path.getmtime('app/static/' + filename)
-    return dict(getmtime=getmtime, POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
+    return dict(getmtime=getmtime, instance_domain=current_app.config['SERVER_NAME'],
+                POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
                 POST_TYPE_ARTICLE=POST_TYPE_ARTICLE, POST_TYPE_VIDEO=POST_TYPE_VIDEO, POST_TYPE_POLL=POST_TYPE_POLL)
 
 
@@ -32,7 +33,6 @@ def make_shell_context():
 
 
 with app.app_context():
-    app.jinja_env.globals['getmtime'] = getmtime
     app.jinja_env.globals['len'] = len
     app.jinja_env.globals['digits'] = digits
     app.jinja_env.globals['str'] = str

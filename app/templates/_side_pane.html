@@ -49,7 +49,7 @@
                     </ul>
                 {% endif -%}
                 {% if community.local_only -%}
-                <p>{{ _('Only people on %(instance_name)s can post or reply in this community.', instance_name=current_app.config['SERVER_NAME']) }}</p>
+                <p>{{ _('Only people on %(instance_domain)s can post or reply in this community.', instance_domain=instance_domain) }}</p>
                 {% endif -%}
                 {% if rss_feed -%}
                 <p class="mt-4">
