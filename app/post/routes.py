@@ -891,91 +891,25 @@ def post_reply_options(post_id: int, comment_id: int):
                            )
 
 
-@bp.route('/post/<int:post_id>/edit', methods=['GET'])
+@bp.route('/post/<int:post_id>/edit', methods=['GET', 'POST'])
 @login_required
 def post_edit(post_id: int):
     post = Post.query.get_or_404(post_id)
     if post.type == POST_TYPE_ARTICLE:
-        return redirect(url_for('post.post_edit_discussion_post', post_id=post_id))
+        form = CreateDiscussionForm()
     elif post.type == POST_TYPE_LINK:
-        return redirect(url_for('post.post_edit_link_post', post_id=post_id))
+        form = CreateLinkForm()
     elif post.type == POST_TYPE_IMAGE:
-        return redirect(url_for('post.post_edit_image_post', post_id=post_id))
+        form = CreateImageForm()
     elif post.type == POST_TYPE_VIDEO:
-        return redirect(url_for('post.post_edit_video_post', post_id=post_id))
+        form = CreateVideoForm()
     elif post.type == POST_TYPE_POLL:
-        return redirect(url_for('post.post_edit_poll_post', post_id=post_id))
+        form = CreatePollForm()
+        poll = Poll.query.filter_by(post_id=post_id).first()
+        del form.finish_in
     else:
         abort(404)
-
-
-@bp.route('/post/<int:post_id>/edit_discussion', methods=['GET', 'POST'])
-@login_required
-def post_edit_discussion_post(post_id: int):
-    post = Post.query.get_or_404(post_id)
-    form = CreateDiscussionForm()
-    del form.communities
-
-    mods = post.community.moderators()
-    if post.community.private_mods:
-        mod_list = []
-    else:
-        mod_user_ids = [mod.user_id for mod in mods]
-        mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
-
-    if post.user_id == current_user.id or post.community.is_moderator() or current_user.is_admin():
-        if g.site.enable_nsfl is False:
-            form.nsfl.render_kw = {'disabled': True}
-        if post.community.nsfw:
-            form.nsfw.data = True
-            form.nsfw.render_kw = {'disabled': True}
-        if post.community.nsfl:
-            form.nsfl.data = True
-            form.nsfw.render_kw = {'disabled': True}
-
-        form.language_id.choices = languages_for_form()
-
-        if form.validate_on_submit():
-            save_post(form, post, 'discussion')
-            post.community.last_active = utcnow()
-            post.edited_at = utcnow()
-            db.session.commit()
-
-            flash(_('Your changes have been saved.'), 'success')
-
-            # federate edit
-            if not post.community.local_only:
-                federate_post_update(post)
-            federate_post_edit_to_user_followers(post)
-
-            return redirect(url_for('activitypub.post_ap', post_id=post.id))
-        else:
-            form.discussion_title.data = post.title
-            form.discussion_body.data = post.body
-            form.notify_author.data = post.notify_author
-            form.nsfw.data = post.nsfw
-            form.nsfl.data = post.nsfl
-            form.sticky.data = post.sticky
-            form.language_id.data = post.language_id
-            form.tags.data = tags_to_string(post)
-            if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
-                form.sticky.render_kw = {'disabled': True}
-            return render_template('post/post_edit_discussion.html', title=_('Edit post'), form=form, post=post,
-                                   markdown_editor=current_user.markdown_editor, mods=mod_list,
-                                   moderating_communities=moderating_communities(current_user.get_id()),
-                                   joined_communities=joined_communities(current_user.get_id()),
-                                   menu_topics=menu_topics(), site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)]
-                                   )
-    else:
-        abort(401)
-
-
-@bp.route('/post/<int:post_id>/edit_image', methods=['GET', 'POST'])
-@login_required
-def post_edit_image_post(post_id: int):
-    post = Post.query.get_or_404(post_id)
-    form = CreateImageForm()
+    
     del form.communities
 
     mods = post.community.moderators()
@@ -1000,10 +934,9 @@ def post_edit_image_post(post_id: int):
         form.language_id.choices = languages_for_form()
 
         if form.validate_on_submit():
-            save_post(form, post, 'image')
+            save_post(form, post, post.type)
             post.community.last_active = utcnow()
             post.edited_at = utcnow()
-            db.session.commit()
 
             if post.url != old_url:
                 if post.cross_posts is not None:
@@ -1025,275 +958,44 @@ def post_edit_image_post(post_id: int):
                     else:
                         post.cross_posts.append(ncp.id)
 
-                db.session.commit()
+            db.session.commit()
 
             flash(_('Your changes have been saved.'), 'success')
-            # federate edit
 
+            # federate edit
             if not post.community.local_only:
                 federate_post_update(post)
             federate_post_edit_to_user_followers(post)
 
             return redirect(url_for('activitypub.post_ap', post_id=post.id))
         else:
-            form.image_title.data = post.title
-            form.image_body.data = post.body
-            form.image_alt_text.data = post.image.alt_text
+            form.title.data = post.title
+            form.body.data = post.body
             form.notify_author.data = post.notify_author
             form.nsfw.data = post.nsfw
             form.nsfl.data = post.nsfl
             form.sticky.data = post.sticky
             form.language_id.data = post.language_id
             form.tags.data = tags_to_string(post)
+            if post.type == POST_TYPE_LINK:
+                form.link_url.data = post.url
+            elif post.type == POST_TYPE_IMAGE:
+                form.image_alt_text.data = post.image.alt_text
+            elif post.type == POST_TYPE_VIDEO:
+                form.video_url.data = post.url
+            elif post.type == POST_TYPE_POLL:
+                poll = Poll.query.filter_by(post_id=post.id).first()
+                form.mode.data = poll.mode
+                form.local_only.data = poll.local_only
+                i = 1
+                for choice in PollChoice.query.filter_by(post_id=post.id).order_by(PollChoice.sort_order).all():
+                    form_field = getattr(form, f"choice_{i}")
+                    form_field.data = choice.choice_text
+                    i += 1
+
             if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
                 form.sticky.render_kw = {'disabled': True}
-            return render_template('post/post_edit_image.html', title=_('Edit post'), form=form, post=post,
-                                   markdown_editor=current_user.markdown_editor, mods=mod_list,
-                                   moderating_communities=moderating_communities(current_user.get_id()),
-                                   joined_communities=joined_communities(current_user.get_id()),
-                                   menu_topics=menu_topics(), site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)]
-                                   )
-    else:
-        abort(401)
-
-
-@bp.route('/post/<int:post_id>/edit_link', methods=['GET', 'POST'])
-@login_required
-def post_edit_link_post(post_id: int):
-    post = Post.query.get_or_404(post_id)
-    form = CreateLinkForm()
-    del form.communities
-
-    mods = post.community.moderators()
-    if post.community.private_mods:
-        mod_list = []
-    else:
-        mod_user_ids = [mod.user_id for mod in mods]
-        mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
-
-    if post.user_id == current_user.id or post.community.is_moderator() or current_user.is_admin():
-        if g.site.enable_nsfl is False:
-            form.nsfl.render_kw = {'disabled': True}
-        if post.community.nsfw:
-            form.nsfw.data = True
-            form.nsfw.render_kw = {'disabled': True}
-        if post.community.nsfl:
-            form.nsfl.data = True
-            form.nsfw.render_kw = {'disabled': True}
-
-        old_url = post.url
-
-        form.language_id.choices = languages_for_form()
-
-        if form.validate_on_submit():
-            save_post(form, post, 'link')
-            post.community.last_active = utcnow()
-            post.edited_at = utcnow()
-            db.session.commit()
-
-            if post.url != old_url:
-                if post.cross_posts is not None:
-                    old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
-                    post.cross_posts.clear()
-                    for ocp in old_cross_posts:
-                        if ocp.cross_posts is not None:
-                            ocp.cross_posts.remove(post.id)
-
-                new_cross_posts = Post.query.filter(Post.id != post.id, Post.url == post.url,
-                                                Post.posted_at > post.edited_at - timedelta(days=6)).all()
-                for ncp in new_cross_posts:
-                    if ncp.cross_posts is None:
-                        ncp.cross_posts = [post.id]
-                    else:
-                        ncp.cross_posts.append(post.id)
-                    if post.cross_posts is None:
-                        post.cross_posts = [ncp.id]
-                    else:
-                        post.cross_posts.append(ncp.id)
-
-                db.session.commit()
-
-            flash(_('Your changes have been saved.'), 'success')
-            # federate edit
-
-            if not post.community.local_only:
-                federate_post_update(post)
-            federate_post_edit_to_user_followers(post)
-
-            return redirect(url_for('activitypub.post_ap', post_id=post.id))
-        else:
-            form.link_title.data = post.title
-            form.link_body.data = post.body
-            form.link_url.data = post.url
-            form.notify_author.data = post.notify_author
-            form.nsfw.data = post.nsfw
-            form.nsfl.data = post.nsfl
-            form.sticky.data = post.sticky
-            form.language_id.data = post.language_id
-            form.tags.data = tags_to_string(post)
-            if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
-                form.sticky.render_kw = {'disabled': True}
-            return render_template('post/post_edit_link.html', title=_('Edit post'), form=form, post=post,
-                                   markdown_editor=current_user.markdown_editor, mods=mod_list,
-                                   moderating_communities=moderating_communities(current_user.get_id()),
-                                   joined_communities=joined_communities(current_user.get_id()),
-                                   menu_topics=menu_topics(), site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)]
-                                   )
-    else:
-        abort(401)
-
-
-@bp.route('/post/<int:post_id>/edit_video', methods=['GET', 'POST'])
-@login_required
-def post_edit_video_post(post_id: int):
-    post = Post.query.get_or_404(post_id)
-    form = CreateVideoForm()
-    del form.communities
-
-    mods = post.community.moderators()
-    if post.community.private_mods:
-        mod_list = []
-    else:
-        mod_user_ids = [mod.user_id for mod in mods]
-        mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
-
-    if post.user_id == current_user.id or post.community.is_moderator() or current_user.is_admin():
-        if g.site.enable_nsfl is False:
-            form.nsfl.render_kw = {'disabled': True}
-        if post.community.nsfw:
-            form.nsfw.data = True
-            form.nsfw.render_kw = {'disabled': True}
-        if post.community.nsfl:
-            form.nsfl.data = True
-            form.nsfw.render_kw = {'disabled': True}
-
-        old_url = post.url
-
-        form.language_id.choices = languages_for_form()
-
-        if form.validate_on_submit():
-            save_post(form, post, 'video')
-            post.community.last_active = utcnow()
-            post.edited_at = utcnow()
-            db.session.commit()
-
-            if post.url != old_url:
-                if post.cross_posts is not None:
-                    old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
-                    post.cross_posts.clear()
-                    for ocp in old_cross_posts:
-                        if ocp.cross_posts is not None:
-                            ocp.cross_posts.remove(post.id)
-
-                new_cross_posts = Post.query.filter(Post.id != post.id, Post.url == post.url,
-                                                Post.posted_at > post.edited_at - timedelta(days=6)).all()
-                for ncp in new_cross_posts:
-                    if ncp.cross_posts is None:
-                        ncp.cross_posts = [post.id]
-                    else:
-                        ncp.cross_posts.append(post.id)
-                    if post.cross_posts is None:
-                        post.cross_posts = [ncp.id]
-                    else:
-                        post.cross_posts.append(ncp.id)
-
-                db.session.commit()
-
-            flash(_('Your changes have been saved.'), 'success')
-            # federate edit
-
-            if not post.community.local_only:
-                federate_post_update(post)
-            federate_post_edit_to_user_followers(post)
-
-            return redirect(url_for('activitypub.post_ap', post_id=post.id))
-        else:
-            form.video_title.data = post.title
-            form.video_body.data = post.body
-            form.video_url.data = post.url
-            form.notify_author.data = post.notify_author
-            form.nsfw.data = post.nsfw
-            form.nsfl.data = post.nsfl
-            form.sticky.data = post.sticky
-            form.language_id.data = post.language_id
-            form.tags.data = tags_to_string(post)
-            if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
-                form.sticky.render_kw = {'disabled': True}
-            return render_template('post/post_edit_video.html', title=_('Edit post'), form=form, post=post,
-                                   markdown_editor=current_user.markdown_editor, mods=mod_list,
-                                   moderating_communities=moderating_communities(current_user.get_id()),
-                                   joined_communities=joined_communities(current_user.get_id()),
-                                   menu_topics=menu_topics(), site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)]
-                                   )
-    else:
-        abort(401)
-
-
-@bp.route('/post/<int:post_id>/edit_poll', methods=['GET', 'POST'])
-@login_required
-def post_edit_poll_post(post_id: int):
-    post = Post.query.get_or_404(post_id)
-    poll = Poll.query.filter_by(post_id=post_id).first()
-    form = CreatePollForm()
-    del form.communities
-    del form.finish_in
-
-    mods = post.community.moderators()
-    if post.community.private_mods:
-        mod_list = []
-    else:
-        mod_user_ids = [mod.user_id for mod in mods]
-        mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
-
-    if post.user_id == current_user.id or post.community.is_moderator() or current_user.is_admin():
-        if g.site.enable_nsfl is False:
-            form.nsfl.render_kw = {'disabled': True}
-        if post.community.nsfw:
-            form.nsfw.data = True
-            form.nsfw.render_kw = {'disabled': True}
-        if post.community.nsfl:
-            form.nsfl.data = True
-            form.nsfw.render_kw = {'disabled': True}
-
-        form.language_id.choices = languages_for_form()
-
-        if form.validate_on_submit():
-            save_post(form, post, 'poll')
-            post.community.last_active = utcnow()
-            post.edited_at = utcnow()
-            db.session.commit()
-
-            flash(_('Your changes have been saved.'), 'success')
-
-            # federate edit
-            if not post.community.local_only and not poll.local_only:
-                federate_post_update(post)
-                federate_post_edit_to_user_followers(post)
-
-            return redirect(url_for('activitypub.post_ap', post_id=post.id))
-        else:
-            form.poll_title.data = post.title
-            form.poll_body.data = post.body
-            form.notify_author.data = post.notify_author
-            form.nsfw.data = post.nsfw
-            form.nsfl.data = post.nsfl
-            form.sticky.data = post.sticky
-            form.language_id.data = post.language_id
-            poll = Poll.query.filter_by(post_id=post.id).first()
-            form.mode.data = poll.mode
-            form.local_only.data = poll.local_only
-            i = 1
-            for choice in PollChoice.query.filter_by(post_id=post.id).order_by(PollChoice.sort_order).all():
-                form_field = getattr(form, f"choice_{i}")
-                form_field.data = choice.choice_text
-                i += 1
-            form.tags.data = tags_to_string(post)
-            if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
-                form.sticky.render_kw = {'disabled': True}
-            return render_template('post/post_edit_poll.html', title=_('Edit post'), form=form, post=post,
+            return render_template('post/post_edit.html', title=_('Edit post'), form=form, post=post,
                                    markdown_editor=current_user.markdown_editor, mods=mod_list,
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),

@@ -77,30 +77,9 @@
                         {% if comment['comment'].author.id == post.author.id -%}original_poster{% endif -%}" aria-level="{{ comment['comment'].depth + 1 }}" role="treeitem" aria-expanded="true" tabindex="0">
                         <div class="limit_height">{% if not comment['comment'].author.indexable -%}<!--googleoff: all-->{% endif -%}
                             <div class="comment_author">
-                                {% if comment['comment'].author.deleted -%}
-                                    [deleted]
-                                {% else -%}
-                                    {% if comment['comment'].author.avatar_id and comment['comment'].score > reply_collapse_threshold and not low_bandwidth -%}
-                                    <a href="/u/{{ comment['comment'].author.link() }}" title="{{ comment['comment'].author.ap_id }}">
-                                        <img src="{{ comment['comment'].author.avatar_thumbnail() }}" alt="" loading="lazy" /></a>
-                                    {% endif -%}
-                                    <a href="/u/{{ comment['comment'].author.link() }}" title="{{ comment['comment'].author.link() }}" aria-label="{{ _('Author') }}">
-                                            {{ comment['comment'].author.display_name() }}</a>
-                                {% endif -%}
-                                {% if comment['comment'].author.created_recently() -%}
-                                    <span class="fe fe-new-account small" title="New account"> </span>
-                                {% endif -%}
-                                {% if comment['comment'].author.bot -%}
-                                    <span class="fe fe-bot-account small" title="Bot account"> </span>
-                                {% endif -%}
-                                {% if comment['comment'].author.id != current_user.id -%}
-                                    {% if comment['comment'].author.reputation < -10 -%}
-                                        <span class="fe fe-warning red" title="Very low reputation. Beware."> </span>
-                                        <span class="fe fe-warning red" title="Very low reputation. Beware!"> </span>
-                                    {% elif comment['comment'].author.reputation < 0 -%}
-                                        <span class="fe fe-warning orangered" title="Low reputation."> </span>
-                                    {% endif -%}
-                                {% endif -%}
+                                {% with collapsed = comment['comment'].score < reply_collapse_threshold -%}
+                                    {{ render_username(comment['comment'].author) }}
+                                {% endwith -%}
                                 {% if comment['comment'].author.id == post.author.id -%}<span title="Submitter of original post" aria-label="{{ _('Post creator') }}" class="small">[OP] </span>{% endif -%}
                                 <span class="text-muted small" aria_label="{{ _('When: ') }}">{{ moment(comment['comment'].posted_at).fromNow(refresh=True) }}{% if comment['comment'].edited_at -%}, edited {{ moment(comment['comment'].edited_at).fromNow(refresh=True) }} {% endif -%}</span>
                                 <a class="unhide" href="#"><span class="fe fe-expand"></span></a>
@@ -214,9 +193,7 @@
                 <ul class="list-group list-group-flush">
                     {% for community in related_communities -%}
                         <li class="list-group-item">
-                            <a href="/c/{{ community.link() }}" aria-label="{{ _('Go to community') }}"><img src="{{ community.icon_image() }}" class="community_icon rounded-circle" loading="lazy" alt="" />
-                                {{ community.display_name() }}
-                            </a>
+                            {{ render_communityname(community) }}
                         </li>
                     {% endfor -%}
                 </ul>

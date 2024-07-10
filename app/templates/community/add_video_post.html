@@ -19,24 +19,24 @@
             </div>
             {{ render_field(form.communities) }}
 
-            {{ render_field(form.video_title) }}
+            {{ render_field(form.title) }}
             {{ render_field(form.video_url) }}
             <p class="small field_hint">{{ _('Provide a URL ending with .mp4 or .webm.') }}</p>
-            {{ render_field(form.video_body) }}
+            {{ render_field(form.body) }}
             {% if not low_bandwidth %}
                   {% if markdown_editor %}
                         <script nonce="{{ session['nonce'] }}">
                             window.addEventListener("load", function () {
                                 var downarea = new DownArea({
-                                    elem: document.querySelector('#video_body'),
+                                    elem: document.querySelector('#body'),
                                     resize: DownArea.RESIZE_VERTICAL,
                                     hide: ['heading', 'bold-italic'],
                                 });
-                                setupAutoResize('video_body');
+                                setupAutoResize('body');
                             });
                         </script>
                   {% else %}
-                        <a href="#" aria-hidden="true" class="markdown_editor_enabler create_post_markdown_editor_enabler" data-id="link_body">{{ _('Enable markdown editor') }}</a>
+                        <a href="#" aria-hidden="true" class="markdown_editor_enabler create_post_markdown_editor_enabler" data-id="body">{{ _('Enable markdown editor') }}</a>
                   {% endif %}
             {% endif %}
             {{ render_field(form.tags) }}

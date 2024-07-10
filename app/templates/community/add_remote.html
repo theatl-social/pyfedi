@@ -25,8 +25,7 @@
                             <div class="card-title">{{ _('Found a community:') }}</div>
                             <div class="card-body">
                                 <p>
-                                    <a href="/c/{{ new_community.link() }}"><img src="{{ new_community.icon_image()}}" class="community_icon rounded-circle" style="width: 30px; vertical-align: middle;" /></a>
-                                    <a href="/c/{{ new_community.link() }}">{{ new_community.title }}@{{ new_community.ap_domain }}</a>
+                                    {{ render_communityname(new_community) }}
                                 </p>
                                 <p> {% if subscribed %}
                                         <a class="btn btn-primary mt-4" href="/community/{{ new_community.link() }}/unsubscribe">{{ _('Leave') }}</a>

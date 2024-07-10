@@ -171,7 +171,7 @@
                         <ul class="list-group list-group-flush">
                             {% for community in subscribed %}
                                 <li class="list-group-item">
-                                    <a href="/c/{{ community.link() }}"><img src="{{ community.icon_image() }}" class="community_icon rounded-circle" loading="lazy" />{{ community.display_name() }}</a>
+                                    {{ render_communityname(community) }}
                                 </li>
                             {% endfor %}
                         </ul>
@@ -181,7 +181,7 @@
                         <ul class="list-group list-group-flush">
                             {% for community in moderates %}
                                 <li class="list-group-item">
-                                    <a href="/c/{{ community.link() }}"><img src="{{ community.icon_image() }}" class="community_icon rounded-circle" loading="lazy" />{{ community.display_name() }}</a>
+                                    {{ render_communityname(community) }}
                                 </li>
                             {% endfor %}
                         </ul>

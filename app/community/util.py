@@ -242,7 +242,7 @@ def actor_to_community(actor) -> Community:
     return community
 
 
-def save_post(form, post: Post, type: str):
+def save_post(form, post: Post, type: int):
     post.indexable = current_user.indexable
     post.sticky = form.sticky.data
     post.nsfw = form.nsfw.data
@@ -250,15 +250,12 @@ def save_post(form, post: Post, type: str):
     post.notify_author = form.notify_author.data
     post.language_id = form.language_id.data
     current_user.language_id = form.language_id.data
-    if type == '' or type == 'discussion':
-        post.title = form.discussion_title.data
-        post.body = form.discussion_body.data
-        post.body_html = markdown_to_html(post.body)
+    post.title = form.title.data
+    post.body = form.body.data
+    post.body_html = markdown_to_html(post.body)
+    if not type or type == POST_TYPE_ARTICLE:
         post.type = POST_TYPE_ARTICLE
-    elif type == 'link':
-        post.title = form.link_title.data
-        post.body = form.link_body.data
-        post.body_html = markdown_to_html(post.body)
+    elif type == POST_TYPE_LINK:
         url_changed = post.id is None or form.link_url.data != post.url
         post.url = remove_tracking_from_link(form.link_url.data.strip())
         post.type = POST_TYPE_LINK
@@ -297,12 +294,9 @@ def save_post(form, post: Post, type: str):
                                     post.image = file
                                     db.session.add(file)
 
-    elif type == 'image':
-        post.title = form.image_title.data
-        post.body = form.image_body.data
-        post.body_html = markdown_to_html(post.body)
+    elif type == POST_TYPE_IMAGE:
         post.type = POST_TYPE_IMAGE
-        alt_text = form.image_alt_text.data if form.image_alt_text.data else form.image_title.data
+        alt_text = form.image_alt_text.data if form.image_alt_text.data else form.title.data
         uploaded_file = request.files['image_file']
         if uploaded_file and uploaded_file.filename != '':
             if post.image_id:
@@ -357,11 +351,8 @@ def save_post(form, post: Post, type: str):
                 db.session.add(file)
                 db.session.commit()
                 post.image_id = file.id
-    elif type == 'video':
+    elif type == POST_TYPE_VIDEO:
         form.video_url.data = form.video_url.data.strip()
-        post.title = form.video_title.data
-        post.body = form.video_body.data
-        post.body_html = markdown_to_html(post.body)
         url_changed = post.id is None or form.video_url.data != post.url
         post.url = remove_tracking_from_link(form.video_url.data.strip())
         post.type = POST_TYPE_VIDEO
@@ -389,9 +380,8 @@ def save_post(form, post: Post, type: str):
                             post.image = file
                             db.session.add(file)
 
-    elif type == 'poll':
-        post.title = form.poll_title.data
-        post.body = form.poll_title.data + '\n' + form.poll_body.data if post.title not in form.poll_body.data else form.poll_body.data
+    elif type == POST_TYPE_POLL:
+        post.body = form.title.data + '\n' + form.body.data if post.title not in form.body.data else form.body.data
         post.body_html = markdown_to_html(post.body)
         post.type = POST_TYPE_POLL
     else:
@@ -424,7 +414,7 @@ def save_post(form, post: Post, type: str):
     db.session.commit()
 
     # Save poll choices. NB this will delete all votes whenever a poll is edited. Partially because it's easier to code but also to stop malicious alterations to polls after people have already voted
-    if type == 'poll':
+    if type == POST_TYPE_POLL:
         db.session.execute(text('DELETE FROM "poll_choice_vote" WHERE post_id = :post_id'), {'post_id': post.id})
         db.session.execute(text('DELETE FROM "poll_choice" WHERE post_id = :post_id'), {'post_id': post.id})
         for i in range(1, 10):

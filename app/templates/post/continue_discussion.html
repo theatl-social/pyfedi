@@ -16,30 +16,9 @@
                     <div id="comment_{{ comment['comment'].id }}" class="comment {% if comment['comment'].author.id == post.author.id %}original_poster{% endif %}" role="treeitem">
                         <div class="limit_height">
                             <div class="comment_author">
-                                {% if comment['comment'].author.deleted %}
-                                    [deleted]
-                                {% else %}
-                                    {% if comment['comment'].author.avatar_id and comment['comment'].score > -10 and not low_bandwidth %}
-                                    <a href="/u/{{ comment['comment'].author.link() }}" title="{{ comment['comment'].author.ap_id }}">
-                                        <img src="{{ comment['comment'].author.avatar_thumbnail() }}" alt="Avatar" loading="lazy" /></a>
-                                    {% endif %}
-                                    <a href="/u/{{ comment['comment'].author.link() }}" title="{{ comment['comment'].author.link() }}">
-                                            {{ comment['comment'].author.display_name() }}</a>
-                                {% endif %}
-                                {% if comment['comment'].author.created_recently() %}
-                                    <span class="fe fe-new-account small" title="New account"> </span>
-                                {% endif %}
-                                {% if comment['comment'].author.bot %}
-                                    <span class="fe fe-bot-account small" title="Bot account"> </span>
-                                {% endif %}
-                                {% if comment['comment'].author.id != current_user.id %}
-                                    {% if comment['comment'].author.reputation < -10 %}
-                                        <span class="fe fe-warning red" title="Very low reputation. Beware."> </span>
-                                        <span class="fe fe-warning red" title="Very low reputation. Beware!"> </span>
-                                    {% elif comment['comment'].author.reputation < 0 %}
-                                        <span class="fe fe-warning orangered" title="Low reputation."> </span>
-                                    {% endif %}
-                                {% endif %}
+                                {% with collapsed = comment['comment'].score < -10 -%}
+                                    {{ render_username(comment['comment'].author) }}
+                                {% endwith -%}
                                 {% if comment['comment'].author.id == post.author.id %}<span title="Submitter of original post" aria-label="submitter" class="small">[OP] </span>{% endif %}
                                 <span class="text-muted small">{{ moment(comment['comment'].posted_at).fromNow(refresh=True) }}{% if comment['comment'].edited_at %}, edited {{ moment(comment['comment'].edited_at).fromNow(refresh=True) }} {% endif %}</span>
                                 <a class="unhide" href="#"><span class="fe fe-expand"></span></a>

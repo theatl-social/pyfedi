@@ -92,9 +92,7 @@
                 <ul class="list-group list-group-flush">
                     {% for community in topic_communities %}
                         <li class="list-group-item">
-                            <a href="/c/{{ community.link() }}" aria-label="{{ _('Go to community') }}"><img src="{{ community.icon_image() }}" class="community_icon rounded-circle" loading="lazy" alt="" />
-                                {{ community.display_name() }}
-                            </a>
+                            {{ render_communityname(community) }}
                         </li>
                     {% endfor %}
                 </ul>

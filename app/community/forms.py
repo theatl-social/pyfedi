@@ -92,10 +92,10 @@ class BanUserCommunityForm(FlaskForm):
     submit = SubmitField(_l('Ban'))
 
 
-class CreateDiscussionForm(FlaskForm):
+class CreatePostForm(FlaskForm):
     communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
-    discussion_title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])
-    discussion_body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5})
+    title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])
+    body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5})
     tags = StringField(_l('Tags'), validators=[Optional(), Length(min=3, max=5000)])
     sticky = BooleanField(_l('Sticky'))
     nsfw = BooleanField(_l('NSFW'))
@@ -105,19 +105,13 @@ class CreateDiscussionForm(FlaskForm):
     submit = SubmitField(_l('Save'))
 
 
-class CreateLinkForm(FlaskForm):
-    communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
-    link_title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])
-    link_body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5})
+class CreateDiscussionForm(CreatePostForm):
+    pass
+
+
+class CreateLinkForm(CreatePostForm):
     link_url = StringField(_l('URL'), validators=[DataRequired(), Regexp(r'^https?://', message='Submitted links need to start with "http://"" or "https://"')],
                            render_kw={'placeholder': 'https://...'})
-    tags = StringField(_l('Tags'), validators=[Optional(), Length(min=3, max=5000)])
-    sticky = BooleanField(_l('Sticky'))
-    nsfw = BooleanField(_l('NSFW'))
-    nsfl = BooleanField(_l('Gore/gross'))
-    notify_author = BooleanField(_l('Notify about replies'))
-    language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
-    submit = SubmitField(_l('Save'))
 
     def validate(self, extra_validators=None) -> bool:
         domain = domain_from_url(self.link_url.data, create=False)
@@ -127,19 +121,9 @@ class CreateLinkForm(FlaskForm):
         return True
 
 
-class CreateVideoForm(FlaskForm):
-    communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
-    video_title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])
-    video_body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5})
+class CreateVideoForm(CreatePostForm):
     video_url = StringField(_l('URL'), validators=[DataRequired(), Regexp(r'^https?://', message='Submitted links need to start with "http://"" or "https://"')],
                            render_kw={'placeholder': 'https://...'})
-    tags = StringField(_l('Tags'), validators=[Optional(), Length(min=3, max=5000)])
-    sticky = BooleanField(_l('Sticky'))
-    nsfw = BooleanField(_l('NSFW'))
-    nsfl = BooleanField(_l('Gore/gross'))
-    notify_author = BooleanField(_l('Notify about replies'))
-    language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
-    submit = SubmitField(_l('Save'))
 
     def validate(self, extra_validators=None) -> bool:
         domain = domain_from_url(self.video_url.data, create=False)
@@ -149,19 +133,9 @@ class CreateVideoForm(FlaskForm):
         return True
 
 
-class CreateImageForm(FlaskForm):
-    communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
-    image_title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])
+class CreateImageForm(CreatePostForm):
     image_alt_text = StringField(_l('Alt text'), validators=[Optional(), Length(min=3, max=1500)])
-    image_body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5})
     image_file = FileField(_l('Image'), validators=[DataRequired()], render_kw={'accept': 'image/*'})
-    tags = StringField(_l('Tags'), validators=[Optional(), Length(min=3, max=5000)])
-    sticky = BooleanField(_l('Sticky'))
-    nsfw = BooleanField(_l('NSFW'))
-    nsfl = BooleanField(_l('Gore/gross'))
-    notify_author = BooleanField(_l('Notify about replies'))
-    language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
-    submit = SubmitField(_l('Save'))
 
     def validate(self, extra_validators=None) -> bool:
         uploaded_file = request.files['image_file']
@@ -187,10 +161,7 @@ class CreateImageForm(FlaskForm):
         return True
 
 
-class CreatePollForm(FlaskForm):
-    communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
-    poll_title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])
-    poll_body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5})
+class CreatePollForm(CreatePostForm):
     mode = SelectField(_('Mode'), validators=[DataRequired()], choices=[('single', _l('Voters choose one option')), ('multiple', _l('Voters choose many options'))], render_kw={'class': 'form-select'})
     finish_choices=[
         ('30m', _l('30 minutes')),
@@ -213,13 +184,6 @@ class CreatePollForm(FlaskForm):
     choice_8 = StringField('Choice')
     choice_9 = StringField('Choice')
     choice_10 = StringField('Choice')
-    tags = StringField(_l('Tags'), validators=[Optional(), Length(min=3, max=5000)])
-    sticky = BooleanField(_l('Sticky'))
-    nsfw = BooleanField(_l('NSFW'))
-    nsfl = BooleanField(_l('Gore/gross'))
-    notify_author = BooleanField(_l('Notify about replies'))
-    language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
-    submit = SubmitField(_l('Save'))
 
     def validate(self, extra_validators=None) -> bool:
         choices_made = 0
