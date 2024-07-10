@@ -702,9 +702,7 @@ div.navbar {
 
   .upvote_button, .downvote_button {
     display: inline-block;
-    padding: 5px 0 5px 3px;
     text-align: center;
-    position: relative;
     cursor: pointer;
     color: rgba(var(--bs-link-color-rgb),var(--bs-link-opacity,1));
     min-width: $min-touch-target;
@@ -733,8 +731,6 @@ div.navbar {
   }
 
   .upvote_button {
-    top: 1px;
-
     .htmx-indicator {
       left: 13px;
       top: 7px;
@@ -742,7 +738,6 @@ div.navbar {
   }
 
   .downvote_button {
-    top: 1px;
     .htmx-indicator {
       left: 12px;
       top: 5px;

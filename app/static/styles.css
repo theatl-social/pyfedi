@@ -1063,9 +1063,7 @@ div.navbar {
 }
 .voting_buttons_new .upvote_button, .voting_buttons_new .downvote_button {
   display: inline-block;
-  padding: 5px 0 5px 3px;
   text-align: center;
-  position: relative;
   cursor: pointer;
   color: rgba(var(--bs-link-color-rgb), var(--bs-link-opacity, 1));
   min-width: 44px;
@@ -1088,15 +1086,9 @@ div.navbar {
   color: darkred;
   font-weight: bold;
 }
-.voting_buttons_new .upvote_button {
-  top: 1px;
-}
 .voting_buttons_new .upvote_button .htmx-indicator {
   left: 13px;
   top: 7px;
-}
-.voting_buttons_new .downvote_button {
-  top: 1px;
 }
 .voting_buttons_new .downvote_button .htmx-indicator {
   left: 12px;
