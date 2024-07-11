@@ -1233,9 +1233,6 @@ div.navbar {
 .comment a.unhide {
   display: none;
   text-decoration: none;
-  padding: 5px 15px;
-  position: relative;
-  top: 3px;
 }
 .comment .comment_actions {
   margin-top: -10px;
