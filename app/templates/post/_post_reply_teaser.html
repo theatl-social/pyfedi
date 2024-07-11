@@ -3,8 +3,12 @@
   disable_voting: Disable voting buttons (to prevent mass downvoting)
   no_collapse: Don't collapse for admin and moderator views
 #}
-{% set collapsed = (post_reply.score <= current_user.reply_collapse_threshold)
-                   and not no_collapse -%}
+{% if current_user.is_authenticated -%}
+    {% set collapsed = (post_reply.score <= current_user.reply_collapse_threshold)
+                       and not no_collapse -%}
+{% else -%}
+    {% set collapsed = (post_reply.score <= -10) and not no_collapse -%}
+{% endif -%}
 <div class="container comment{% if post_reply.score <= -10 %} low_score{% endif %}" id="comment_{{ post_reply.id }}">
     {% if not post_reply.author.indexable -%}<!--googleoff: all-->{% endif -%}
     {% if teaser -%}
@@ -63,9 +67,11 @@
             {% endif -%}
         </div>
         <div class="col-auto ms-auto">
-           {% with comment=dict(comment=post_reply) -%}
-                {% include "post/_reply_notification_toggle.html" -%}
-           {% endwith -%}
+            {% if current_user.is_authenticated -%}
+                {% with comment=dict(comment=post_reply) -%}
+                    {% include "post/_reply_notification_toggle.html" -%}
+                {% endwith -%}
+            {% endif -%}
         </div>
         <div class="col-auto">
             <a href="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) }}" class="" rel="nofollow noindex" aria-label="{{ _('Comment options') }}"><span class="fe fe-options" title="Options"> </span></a>
