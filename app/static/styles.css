@@ -765,18 +765,14 @@ div.navbar {
   bottom: -12px;
   left: 10px;
 }
-.post_list .post_teaser .main_row .post_utilities a {
+.post_list .post_teaser .main_row .post_utilities a, .post_list .post_teaser .main_row .post_utilities > div, .post_list .post_teaser .main_row .post_utilities > span {
   display: inline-block;
   min-width: 44px;
   line-height: 44px;
   text-align: center;
 }
-.post_list .post_teaser .main_row .post_utilities a:first-child {
+.post_list .post_teaser .main_row .post_utilities a:first-child, .post_list .post_teaser .main_row .post_utilities > div:first-child, .post_list .post_teaser .main_row .post_utilities > span:first-child {
   text-align: left;
-}
-.post_list .post_teaser .main_row .post_options {
-  position: absolute;
-  bottom: -1px;
 }
 .post_list .post_teaser .utilities_row a {
   display: inline-block;
@@ -784,9 +780,6 @@ div.navbar {
   min-height: 44px;
   justify-content: center;
   align-content: center;
-}
-.post_list .post_teaser .utilities_row .preview_image, .post_list .post_teaser .utilities_row .post_options {
-  text-align: center;
 }
 .post_list .post_teaser .thumbnail {
   float: right;
@@ -1070,9 +1063,7 @@ div.navbar {
 }
 .voting_buttons_new .upvote_button, .voting_buttons_new .downvote_button {
   display: inline-block;
-  padding: 5px 0 5px 3px;
   text-align: center;
-  position: relative;
   cursor: pointer;
   color: rgba(var(--bs-link-color-rgb), var(--bs-link-opacity, 1));
   min-width: 44px;
@@ -1095,15 +1086,9 @@ div.navbar {
   color: darkred;
   font-weight: bold;
 }
-.voting_buttons_new .upvote_button {
-  top: 1px;
-}
 .voting_buttons_new .upvote_button .htmx-indicator {
   left: 13px;
   top: 7px;
-}
-.voting_buttons_new .downvote_button {
-  top: 1px;
 }
 .voting_buttons_new .downvote_button .htmx-indicator {
   left: 12px;
@@ -1238,12 +1223,16 @@ div.navbar {
   border-radius: 50%;
   vertical-align: middle;
 }
-.comment .comment_author a.unhide {
+.comment .comment_community {
+  display: inline-block;
+}
+.comment .comment_community img {
+  height: 1rem;
+  width: auto;
+}
+.comment a.unhide {
   display: none;
   text-decoration: none;
-  padding: 5px 15px;
-  position: relative;
-  top: 3px;
 }
 .comment .comment_actions {
   margin-top: -10px;
@@ -1259,7 +1248,10 @@ div.navbar {
 .comment .comment_actions .hide_button a {
   padding: 5px 15px;
 }
-.comment .comment_actions .notif_toggle {
+.comment .comment_actions .notify_toggle {
+  display: inline-block;
+}
+.comment .comment_actions .notify_toggle a {
   text-decoration: none;
   font-size: 87%;
   padding: 5px 15px;
@@ -1711,7 +1703,7 @@ form h5 {
   text-decoration: none;
 }
 
-.notif_toggle {
+.notify_toggle {
   display: block;
   position: absolute;
   top: 2px;

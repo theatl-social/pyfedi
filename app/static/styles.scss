@@ -356,7 +356,7 @@ div.navbar {
         position: absolute;
         bottom: -12px;
         left: 10px;
-        a {
+        a, > div, > span {
           display: inline-block;
           min-width: 44px;
           line-height: 44px;
@@ -367,11 +367,6 @@ div.navbar {
           }
         }
       }
-
-      .post_options {
-        position: absolute;
-        bottom: -1px;
-      }
     }
 
     .utilities_row {
@@ -381,9 +376,6 @@ div.navbar {
         min-height: $min-touch-target;
         justify-content: center;
         align-content: center;
-      }
-      .preview_image, .post_options {
-        text-align: center;
       }
     }
 
@@ -710,9 +702,7 @@ div.navbar {
 
   .upvote_button, .downvote_button {
     display: inline-block;
-    padding: 5px 0 5px 3px;
     text-align: center;
-    position: relative;
     cursor: pointer;
     color: rgba(var(--bs-link-color-rgb),var(--bs-link-opacity,1));
     min-width: $min-touch-target;
@@ -741,8 +731,6 @@ div.navbar {
   }
 
   .upvote_button {
-    top: 1px;
-
     .htmx-indicator {
       left: 13px;
       top: 7px;
@@ -750,7 +738,6 @@ div.navbar {
   }
 
   .downvote_button {
-    top: 1px;
     .htmx-indicator {
       left: 12px;
       top: 5px;
@@ -900,14 +887,19 @@ div.navbar {
       border-radius: 50%;
       vertical-align: middle;
     }
+  }
 
-    a.unhide {
-      display: none;
-      text-decoration: none;
-      padding: 5px 15px;
-      position: relative;
-      top: 3px;
+  .comment_community {
+    display: inline-block;
+    img {
+      height: 1rem;
+      width: auto;
     }
+  }
+
+  a.unhide {
+    display: none;
+    text-decoration: none;
   }
 
   .comment_actions {
@@ -926,10 +918,13 @@ div.navbar {
       }
     }
 
-    .notif_toggle {
-      text-decoration: none;
-      font-size: 87%;
-      padding: 5px 15px;
+    .notify_toggle {
+      display: inline-block;
+      a {
+        text-decoration: none;
+        font-size: 87%;
+        padding: 5px 15px;
+      }
     }
   }
 
@@ -1416,7 +1411,7 @@ form {
   text-decoration: none;
 }
 
-.notif_toggle  {
+.notify_toggle  {
   display: block;
   position: absolute;
   top: 2px;

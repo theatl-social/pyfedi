@@ -1,5 +1,89 @@
-<div class="post_reply_teaser">
-    {{ post_reply.body_html|safe }}
-    <p><a href="{{ url_for('activitypub.post_ap', post_id=post_reply.post.id, _anchor='comment_' + str(post_reply.id)) }}">{{ _('View context') }}</a></p>
+{# Options:
+  teaser: Renders just a teaser
+  disable_voting: Disable voting buttons (to prevent mass downvoting)
+  no_collapse: Don't collapse for admin and moderator views
+#}
+{% if current_user.is_authenticated -%}
+    {% set collapsed = (post_reply.score <= current_user.reply_collapse_threshold)
+                       and not no_collapse -%}
+{% else -%}
+    {% set collapsed = (post_reply.score <= -10) and not no_collapse -%}
+{% endif -%}
+<div class="container comment{% if post_reply.score <= -10 %} low_score{% endif %}" id="comment_{{ post_reply.id }}">
+    {% if not post_reply.author.indexable -%}<!--googleoff: all-->{% endif -%}
+    {% if teaser -%}
+    <div class="row">
+        <div class="col-12 hidable">
+            reply to: <a href="{{ url_for('activitypub.post_ap', post_id=post_reply.post.id, _anchor='comment_' + str(post_reply.id)) }}">{{ post_reply.post.title | truncate(80, True) }}</a>
+            <span class="comment_community">in {{ render_communityname(post_reply.post.community) }}</span>
+        </div>
+    </div>
+    {% endif -%}
+    <div class="row">
+        <div class="col-auto comment_author">
+            by
+            {{ render_username(post_reply.author) }}
+            {% if post_reply.author.id == post_reply.post.author.id -%}
+                <span title="Submitter of original post" aria-label="{{ _('Post creator') }}" class="small"> [OP]</span>
+            {% endif -%}
+        </div>
+        <div class="col-auto text-muted small">
+            {{ moment(post_reply.posted_at).fromNow(refresh=True) }}
+            {% if post_reply.edited_at -%}, edited {{ moment(post_reply.edited_at).fromNow(refresh=True) }} {% endif -%}
+        </div>
+        <div class="col-auto">
+            {% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) -%}
+                <span class="red fe fe-report" title="{{ _('Reported. Check comment for issues.') }}"></span>
+            {% endif -%}
+        </div>
+        <div class="col-auto">
+            <a class="unhide" href="#"><span class="fe fe-expand"></span></a>
+        </div>
+    </div>
+
+    <div class="row comment_body hidable{% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) %} reported{% endif %}">
+        <div class="col-12">
+            {{ post_reply.body_html | community_links | safe }}
+        </div>
+    </div>
+    <div class="row comment_actions hidable">
+        <div class="col-auto">
+            {% if post_reply.post.comments_enabled -%}
+                <a href="{{ url_for('post.add_reply', post_id=post_reply.post.id, comment_id=post_reply.id) }}" class="" rel="nofollow noindex"><span class="fe fe-reply"></span> reply</a>
+            {% endif -%}
+        </div>
+        <div class="col-auto voting_buttons_new">
+            {% if not disable_voting -%}
+                {% with comment=post_reply, community=post_reply.post.community -%}
+                    {% include "post/_comment_voting_buttons.html" -%}
+                {% endwith -%}
+            {% endif -%}
+        </div>
+        <div class="col-auto hide_button">
+            {% if collapsed -%}
+                <a href='#' class=""><span class="fe fe-expand"></span></a>
+            {% else -%}
+                <a href='#' class=""><span class="fe fe-collapse"></span></a>
+            {% endif -%}
+        </div>
+        <div class="col-auto ms-auto">
+            {% if current_user.is_authenticated -%}
+                {% with comment=dict(comment=post_reply) -%}
+                    {% include "post/_reply_notification_toggle.html" -%}
+                {% endwith -%}
+            {% endif -%}
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) }}" class="" rel="nofollow noindex" aria-label="{{ _('Comment options') }}"><span class="fe fe-options" title="Options"> </span></a>
+        </div>
+    </div>
+    {% if not post_reply.author.indexable -%}<!--googleon all-->{% endif -%}
+    {% if collapsed -%}
+        <script nonce="{{ session['nonce'] }}" type="text/javascript">
+            if (typeof(toBeHidden) === 'undefined') {
+                toBeHidden = Array();
+            }
+            toBeHidden.push({{ post_reply.id }});
+        </script>
+    {% endif -%}
 </div>
-<hr />
