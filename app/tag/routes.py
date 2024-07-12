@@ -61,7 +61,7 @@ def show_tag(tag):
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
                                menu_topics=menu_topics(),
-                               inoculation=inoculation[randint(0, len(inoculation) - 1)]
+                               inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
                                )
     else:
         abort(404)

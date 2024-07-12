@@ -39,6 +39,7 @@ class SiteMiscForm(FlaskForm):
     default_theme = SelectField(_l('Default theme'), coerce=str, render_kw={'class': 'form-select'})
     log_activitypub_json = BooleanField(_l('Log ActivityPub JSON for debugging'))
     public_modlog = BooleanField(_l('Show moderation actions publicly'))
+    show_inoculation_block = BooleanField(_l('Show Rational Discourse Toolkit in sidebar'))
     submit = SubmitField(_l('Save'))
 
 

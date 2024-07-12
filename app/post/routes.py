@@ -328,7 +328,7 @@ def show_post(post_id: int):
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
-                           inoculation=inoculation[randint(0, len(inoculation) - 1)]
+                           inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
                            )
     response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
     return response
@@ -643,7 +643,7 @@ def continue_discussion(post_id, comment_id):
                            menu_topics=menu_topics(), site=g.site,
                            community=post.community,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                           inoculation=inoculation[randint(0, len(inoculation) - 1)])
+                           inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
     response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
     return response
 
@@ -850,7 +850,7 @@ def add_reply(post_id: int, comment_id: int):
                                moderating_communities=moderating_communities(current_user.get_id()), mods=mod_list,
                                joined_communities = joined_communities(current_user.id), community=post.community,
                                SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                               inoculation=inoculation[randint(0, len(inoculation) - 1)])
+                               inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
 
 
 @bp.route('/post/<int:post_id>/options', methods=['GET'])
@@ -1001,7 +1001,7 @@ def post_edit(post_id: int):
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)]
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
                                    )
     else:
         abort(401)
@@ -1750,7 +1750,7 @@ def post_reply_edit(post_id: int, comment_id: int):
                                    joined_communities=joined_communities(current_user.get_id()), menu_topics=menu_topics(),
                                    community=post.community, site=g.site,
                                    SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)])
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
     else:
         abort(401)
 

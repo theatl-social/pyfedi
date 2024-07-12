@@ -303,7 +303,8 @@ def show_community(community: Community):
                            content_filters=content_filters, moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site, sort=sort,
-                           inoculation=inoculation[randint(0, len(inoculation) - 1)], post_layout=post_layout, current_app=current_app)
+                           inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                           post_layout=post_layout, current_app=current_app)
 
 
 # RSS feed of the community
@@ -602,7 +603,7 @@ def add_post(actor, type):
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.id),
                            menu_topics=menu_topics(), site=g.site,
-                           inoculation=inoculation[randint(0, len(inoculation) - 1)]
+                           inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
     )
 
 
@@ -1159,7 +1160,7 @@ def community_ban_user(community_id: int, user_id: int):
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
                                menu_topics=menu_topics(), site=g.site,
-                               inoculation=inoculation[randint(0, len(inoculation) - 1)]
+                               inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
                                )
 
 
@@ -1266,7 +1267,7 @@ def community_moderate(actor):
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)]
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
                                    )
         else:
             abort(401)
@@ -1301,7 +1302,7 @@ def community_moderate_subscribers(actor):
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)]
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
                                    )
         else:
             abort(401)
@@ -1336,7 +1337,7 @@ def community_modlog(actor):
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)]
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
                                    )
 
         else:
