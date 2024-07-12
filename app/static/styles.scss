@@ -701,6 +701,7 @@ div.navbar {
   display: inline-block;
 
   .upvote_button, .downvote_button {
+    position: relative; /* so the htmx-indicators can be position: absolute */
     display: inline-block;
     text-align: center;
     cursor: pointer;
