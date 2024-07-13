@@ -979,7 +979,18 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory):
             except:
                 pass
             else:
-                if source_image_response.status_code == 200:
+                if source_image_response.status_code == 404 and '/api/v3/image_proxy' in file.source_url:
+                    source_image_response.close()
+                    # Lemmy failed to retrieve the image but we might have better luck. Example source_url: https://slrpnk.net/api/v3/image_proxy?url=https%3A%2F%2Fi.guim.co.uk%2Fimg%2Fmedia%2F24e87cb4d730141848c339b3b862691ca536fb26%2F0_164_3385_2031%2Fmaster%2F3385.jpg%3Fwidth%3D1200%26height%3D630%26quality%3D85%26auto%3Dformat%26fit%3Dcrop%26overlay-align%3Dbottom%252Cleft%26overlay-width%3D100p%26overlay-base64%3DL2ltZy9zdGF0aWMvb3ZlcmxheXMvdGctZGVmYXVsdC5wbmc%26enable%3Dupscale%26s%3D0ec9d25a8cb5db9420471054e26cfa63
+                    # The un-proxied image url is the query parameter called 'url'
+                    parsed_url = urlparse(file.source_url)
+                    query_params = parse_qs(parsed_url.query)
+                    if 'url' in query_params:
+                        url_value = query_params['url'][0]
+                        source_image_response = get_request(url_value)
+                    else:
+                        source_image_response = None
+                if source_image_response and source_image_response.status_code == 200:
                     content_type = source_image_response.headers.get('content-type')
                     if content_type and content_type.startswith('image'):
                         source_image = source_image_response.content
