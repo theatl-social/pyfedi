@@ -65,7 +65,7 @@ class EditCommunityForm(FlaskForm):
 
 class AddModeratorForm(FlaskForm):
     user_name = StringField(_l('User name'), validators=[DataRequired()])
-    submit = SubmitField(_l('Add'))
+    submit = SubmitField(_l('Find'))
 
 
 class EscalateReportForm(FlaskForm):

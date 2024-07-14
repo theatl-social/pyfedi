@@ -23,7 +23,7 @@
             </div>
             <p>{{ _('See and change who moderates this community') }}</p>
             <div class="col-12 text-right">
-                <a class="btn btn-primary" href="{{ url_for('community.community_add_moderator', community_id=community.id) }}">{{ _('Add moderator') }}</a>
+                <a class="btn btn-primary" href="{{ url_for('community.community_find_moderator', community_id=community.id) }}">{{ _('Add moderator') }}</a>
             </div>
         </div>
         <table class="table table-responsive">
