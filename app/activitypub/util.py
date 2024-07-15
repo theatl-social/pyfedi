@@ -1222,7 +1222,7 @@ def new_instance_profile_task(instance_id: int):
                                     InstanceRole.instance_id == instance.id,
                                     InstanceRole.role == 'admin').delete()
                             db.session.commit()
-    elif instance_data.status_code == 406:  # Mastodon and PeerTube do this
+    elif instance_data.status_code == 406 or instance_data.status_code == 404:  # Mastodon and PeerTube do 406, a.gup.pe does 404
         instance.inbox = f"https://{instance.domain}/inbox"
         instance.updated_at = utcnow()
         db.session.commit()
@@ -2413,7 +2413,7 @@ def resolve_remote_post(uri: str, community_id: int, announce_actor=None) -> Uni
     if announce_actor:
         parsed_url = urlparse(announce_actor)
         announce_actor_domain = parsed_url.netloc
-        if announce_actor_domain != uri_domain:
+        if announce_actor_domain != 'a.gup.pe' and announce_actor_domain != uri_domain:
             return None
     actor_domain = None
     actor = None
@@ -2490,13 +2490,22 @@ def resolve_remote_post(uri: str, community_id: int, announce_actor=None) -> Uni
               'id': f"https://{uri_domain}/activities/create/gibberish(15)",
               'object': post_data
             }
-            post = create_post(activity_log, community, request_json, user)
-            if post:
-                if 'published' in post_data:
-                    post.posted_at=post_data['published']
-                    post.last_active=post_data['published']
-                    db.session.commit()
-                return post
+            if 'inReplyTo' in request_json['object'] and request_json['object']['inReplyTo']:
+                post_reply = create_post_reply(activity_log, community, request_json['object']['inReplyTo'], request_json, user)
+                if post_reply:
+                    if 'published' in post_data:
+                        post_reply.posted_at = post_data['published']
+                        post_reply.post.last_active = post_data['published']
+                        db.session.commit()
+                    return post_reply
+            else:
+                post = create_post(activity_log, community, request_json, user)
+                if post:
+                    if 'published' in post_data:
+                        post.posted_at=post_data['published']
+                        post.last_active=post_data['published']
+                        db.session.commit()
+                    return post
 
     return None
 

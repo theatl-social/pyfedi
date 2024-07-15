@@ -5,14 +5,11 @@ from random import randint
 from time import sleep
 
 import flask
-import markdown2
-import requests
 from flask_caching import CachedResponse
 from sqlalchemy.sql.operators import or_, and_
 
 from app import db, cache
-from app.activitypub.util import make_image_sizes_async, refresh_user_profile, find_actor_or_create, \
-    refresh_community_profile_task, users_total, active_month, local_posts, local_communities, local_comments
+from app.activitypub.util import users_total, active_month, local_posts, local_communities
 from app.activitypub.signature import default_context
 from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, POST_TYPE_IMAGE, POST_TYPE_LINK, \
     SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_VIDEO, POST_TYPE_POLL
@@ -24,7 +21,6 @@ from flask_moment import moment
 from flask_login import current_user, login_required
 from flask_babel import _, get_locale
 from sqlalchemy import select, desc, text
-from sqlalchemy_searchable import search
 from app.utils import render_template, get_setting, gibberish, request_etag_matches, return_304, blocked_domains, \
     ap_datetime, ip_address, retrieve_block_list, shorten_string, markdown_to_text, user_filters_home, \
     joined_communities, moderating_communities, parse_page, theme_list, get_request, markdown_to_html, allowlist_html, \

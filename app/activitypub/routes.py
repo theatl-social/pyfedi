@@ -654,13 +654,13 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
 
                 # Announce is new content and votes that happened on a remote server.
                 if request_json['type'] == 'Announce':
-                    if isinstance(request_json['object'], str):
+                    if isinstance(request_json['object'], str):  # Mastodon, PeerTube, A.gup.pe
                         activity_log.activity_json = json.dumps(request_json)
                         activity_log.exception_message = 'invalid json?'
                         if 'actor' in request_json:
                             community = find_actor_or_create(request_json['actor'], community_only=True, create_if_not_found=False)
                             if community:
-                                resolve_remote_post(request_json['object'], community.id, request_json['actor'])
+                                post = resolve_remote_post(request_json['object'], community.id, request_json['actor'])
                     elif request_json['object']['type'] == 'Create' or request_json['object']['type'] == 'Update':
                         activity_log.activity_type = request_json['object']['type']
                         if 'object' in request_json and 'object' in request_json['object']:
@@ -1176,7 +1176,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
             if activity_log.exception_message is not None and activity_log.result == 'processing':
                 activity_log.result = 'failure'
             # Don't log successful json - save space
-            if site.log_activitypub_json and activity_log.result == 'success':
+            if site.log_activitypub_json and activity_log.result == 'success' and not current_app.debug:
                 activity_log.activity_json = ''
             db.session.commit()
 
