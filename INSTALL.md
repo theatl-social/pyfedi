@@ -375,7 +375,7 @@ server {
     server_name piefed.social
     root /whatever
 
-    keepalive_timeout 5;
+    keepalive_timeout 30;
     ssi off;
 
     location / {
@@ -389,6 +389,14 @@ server {
         proxy_pass http://app_server;
         ssi off;
     }
+
+    # Serve static files directly with nginx
+    location /static/ {
+        alias /whatever/app/static/;
+        expires max;
+        access_log off;
+    }
+
 }
 ```
 
