@@ -27,7 +27,7 @@ class SiteProfileForm(FlaskForm):
 class SiteMiscForm(FlaskForm):
     enable_downvotes = BooleanField(_l('Enable downvotes'))
     allow_local_image_posts = BooleanField(_l('Allow local image posts'))
-    remote_image_cache_days = IntegerField(_l('Days to cache images from remote instances for'))
+    remote_image_cache_days = IntegerField(_l('Days to cache images from remote instances for'), render_kw={'placeholder': _l('0 means cache forever')})
     enable_nsfw = BooleanField(_l('Allow NSFW communities'))
     enable_nsfl = BooleanField(_l('Allow NSFL communities and posts'))
     community_creation_admin_only = BooleanField(_l('Only admins can create new local communities'))
