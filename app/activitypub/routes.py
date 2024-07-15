@@ -961,7 +961,19 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             process_user_follow_request.delay(request_json, activity_log.id, user.id)
                 # Accept: remote server is accepting our previous follow request
                 elif request_json['type'] == 'Accept':
-                    if request_json['object']['type'] == 'Follow':
+                    if isinstance(request_json['object'], str): # a.gup.pe accepts using a string with the ID of the follow request
+                        join_request_parts = request_json['object'].split('/')
+                        join_request = CommunityJoinRequest.query.get(join_request_parts[-1])
+                        existing_membership = CommunityMember.query.filter_by(user_id=join_request.user_id,
+                                                                              community_id=join_request.community_id).first()
+                        if not existing_membership:
+                            member = CommunityMember(user_id=join_request.user_id, community_id=join_request.community_id)
+                            db.session.add(member)
+                            community.subscriptions_count += 1
+                            db.session.commit()
+                            cache.delete_memoized(community_membership, User.query.get(join_request.user_id), Community.query.get(join_request.community_id))
+                        activity_log.result = 'success'
+                    elif request_json['object']['type'] == 'Follow':
                         community_ap_id = request_json['actor']
                         user_ap_id = request_json['object']['actor']
                         user = find_actor_or_create(user_ap_id)
