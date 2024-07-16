@@ -256,6 +256,9 @@ def allowlist_html(html: str) -> str:
             for attr in list(tag.attrs):
                 if attr not in ['href', 'src', 'alt', 'class']:
                     del tag[attr]
+            # Remove some mastodon guff - spans with class "invisible"
+            if tag.name == 'span' and 'class' in tag.attrs and 'invisible' in tag.attrs['class']:
+                tag.extract()
             # Add nofollow and target=_blank to anchors
             if tag.name == 'a':
                 tag.attrs['rel'] = 'nofollow ugc'

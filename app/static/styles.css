@@ -1,3 +1,4 @@
+@charset "UTF-8";
 /* */
 .red {
   color: red;
@@ -1667,6 +1668,10 @@ form h5 {
 
 #timeSpent {
   cursor: wait;
+}
+
+.ellipsis::after {
+  content: "…";
 }
 
 .option_list {

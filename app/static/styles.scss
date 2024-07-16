@@ -1374,6 +1374,10 @@ form {
   cursor: wait;
 }
 
+.ellipsis::after {
+  content: "…";
+}
+
 .option_list {
   list-style-type: none;
   margin-bottom: 0;

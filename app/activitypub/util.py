@@ -2496,6 +2496,7 @@ def resolve_remote_post(uri: str, community_id: int, announce_actor=None) -> Uni
                     if 'published' in post_data:
                         post_reply.posted_at = post_data['published']
                         post_reply.post.last_active = post_data['published']
+                        post_reply.community.last_active = utcnow()
                         db.session.commit()
                     return post_reply
             else:
@@ -2504,6 +2505,7 @@ def resolve_remote_post(uri: str, community_id: int, announce_actor=None) -> Uni
                     if 'published' in post_data:
                         post.posted_at=post_data['published']
                         post.last_active=post_data['published']
+                        post.community.last_active = utcnow()
                         db.session.commit()
                     return post
 
