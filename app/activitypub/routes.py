@@ -431,14 +431,17 @@ def shared_inbox():
 
         actor = find_actor_or_create(request_json['actor']) if 'actor' in request_json else None
         if actor is not None:
-            if HttpSignature.verify_request(request, actor.public_key, skip_date=True):
-                if current_app.debug:
-                    process_inbox_request(request_json, activity_log.id, ip_address())
+            try:
+                if HttpSignature.verify_request(request, actor.public_key, skip_date=True):
+                    if current_app.debug:
+                        process_inbox_request(request_json, activity_log.id, ip_address())
+                    else:
+                        process_inbox_request.delay(request_json, activity_log.id, ip_address())
+                    return ''
                 else:
-                    process_inbox_request.delay(request_json, activity_log.id, ip_address())
-                return ''
-            else:
-                activity_log.exception_message = 'Could not verify signature'
+                    activity_log.exception_message = 'Could not verify signature'
+            except VerificationError as e:
+                activity_log.exception_message = 'Could not verify signature: ' + str(e)
         else:
             actor_name = request_json['actor'] if 'actor' in request_json else ''
             activity_log.exception_message = f'Actor could not be found: {actor_name}'

@@ -407,6 +407,13 @@ def user_access(permission: str, user_id: int) -> bool:
     return has_access is not None
 
 
+def role_access(permission: str, role_id: int) -> bool:
+    has_access = db.session.execute(text('SELECT * FROM "role_permission" as rp ' +
+                                         'WHERE rp.role_id = :role_id AND rp.permission = :permission'),
+                                    {'role_id': role_id, 'permission': permission}).first()
+    return has_access is not None
+
+
 @cache.memoize(timeout=10)
 def community_membership(user: User, community: Community) -> int:
     if community is None:

@@ -22,7 +22,7 @@ from app.community.util import save_icon_file, save_banner_file
 from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED
 from app.email import send_welcome_email
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
-    User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language
+    User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
     topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog
@@ -918,6 +918,34 @@ def newsletter():
         return redirect(url_for('admin.newsletter'))
 
     return render_template("admin/newsletter.html", form=form, title=_('Send newsletter'),
+                           moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
+                           site=g.site
+                           )
+
+
+@bp.route('/permissions', methods=['GET', 'POST'])
+@login_required
+@permission_required('change instance settings')
+def admin_permissions():
+    if request.method == 'POST':
+        permissions = db.session.execute(text('SELECT DISTINCT permission FROM "role_permission"')).fetchall()
+        db.session.execute(text('DELETE FROM "role_permission"'))
+        roles = [3, 4]  # 3 = Staff, 4 = Admin
+        for permission in permissions:
+            for role in roles:
+                if request.form.get(f'role_{role}_{permission[0]}'):
+                    db.session.add(RolePermission(role_id=role, permission=permission[0]))
+        db.session.commit()
+
+        flash(_('Settings saved'))
+
+    roles = Role.query.filter(Role.id > 2).order_by(Role.weight).all()
+    permissions = db.session.execute(text('SELECT DISTINCT permission FROM "role_permission"')).fetchall()
+
+    return render_template('admin/permissions.html', title=_('Role permissions'), roles=roles,
+                           permissions=permissions,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(),
