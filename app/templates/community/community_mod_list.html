@@ -22,9 +22,11 @@
                 <h1 class="mt-2">{{ _('Moderators for %(community)s', community=community.display_name()) }}</h1>
             </div>
             <p>{{ _('See and change who moderates this community') }}</p>
-            <div class="col-12 text-right">
-                <a class="btn btn-primary" href="{{ url_for('community.community_find_moderator', community_id=community.id) }}">{{ _('Add moderator') }}</a>
-            </div>
+            {% if community.is_owner() -%}
+                <div class="col-12 text-right">
+                    <a class="btn btn-primary" href="{{ url_for('community.community_find_moderator', community_id=community.id) }}">{{ _('Add moderator') }}</a>
+                </div>
+            {% endif -%}
         </div>
         <table class="table table-responsive">
             <thead>
@@ -37,7 +39,7 @@
                 {% for moderator in moderators %}
                     <tr>
                         <td>{{ moderator.display_name() }}</td>
-                        <td>{% if not community.is_owner(moderator) %}
+                        <td>{% if not community.is_owner(moderator) and (current_user.is_admin() or moderator.id == current_user.id) %}
                             <a class="no-underline confirm_first"
                                href="{{ url_for('community.community_remove_moderator', community_id=community.id, user_id=moderator.id) }}"
                                rel="nofollow"><span class="fe fe-delete"></span> {{ _('Remove') }}</a>{% endif %}</td>

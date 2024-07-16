@@ -975,7 +975,7 @@ def community_mod_list(community_id: int):
     if current_user.banned:
         return show_ban_message()
     community = Community.query.get_or_404(community_id)
-    if community.is_owner() or current_user.is_admin():
+    if community.is_owner() or current_user.is_admin() or community.is_moderator(current_user):
 
         moderators = User.query.filter(User.banned == False).join(CommunityMember, CommunityMember.user_id == User.id).\
             filter(CommunityMember.community_id == community_id, or_(CommunityMember.is_moderator == True, CommunityMember.is_owner == True)).all()
@@ -986,6 +986,8 @@ def community_mod_list(community_id: int):
                         joined_communities=joined_communities(current_user.get_id()),
                         menu_topics=menu_topics(), site=g.site
                         )
+    else:
+        abort(401)
 
 
 @bp.route('/community/<int:community_id>/moderators/add/<int:user_id>', methods=['GET', 'POST'])
@@ -1057,6 +1059,8 @@ def community_find_moderator(community_id: int):
                                joined_communities=joined_communities(current_user.get_id()),
                                menu_topics=menu_topics(), site=g.site
                                )
+    else:
+        abort(401)
 
 
 @bp.route('/community/<int:community_id>/moderators/remove/<int:user_id>', methods=['GET', 'POST'])
@@ -1065,7 +1069,7 @@ def community_remove_moderator(community_id: int, user_id: int):
     if current_user.banned:
         return show_ban_message()
     community = Community.query.get_or_404(community_id)
-    if community.is_owner() or current_user.is_admin():
+    if community.is_owner() or current_user.is_admin() or user_id == current_user.id:
 
         existing_member = CommunityMember.query.filter(CommunityMember.user_id == user_id,
                                                        CommunityMember.community_id == community_id).first()
@@ -1085,6 +1089,8 @@ def community_remove_moderator(community_id: int, user_id: int):
             cache.delete_memoized(community_moderators, community_id)
 
         return redirect(url_for('community.community_mod_list', community_id=community.id))
+    else:
+        abort(401)
 
 
 @bp.route('/community/<int:community_id>/block_instance', methods=['GET', 'POST'])
