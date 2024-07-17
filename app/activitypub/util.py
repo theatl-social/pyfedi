@@ -398,6 +398,14 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
     return None
 
 
+def find_language(code: str) -> Language | None:
+    existing_language = Language.query.filter(Language.code == code).first()
+    if existing_language:
+        return existing_language
+    else:
+        return None
+
+
 def find_language_or_create(code: str, name: str) -> Language:
     existing_language = Language.query.filter(Language.code == code).first()
     if existing_language:
@@ -1551,10 +1559,14 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
         elif 'content' in request_json['object']:   # Kbin
             post_reply.body_html = allowlist_html(request_json['object']['content'])
             post_reply.body = ''
+        # Language - Lemmy uses 'language' while Mastodon uses 'contentMap'
         if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
             language = find_language_or_create(request_json['object']['language']['identifier'],
                                                request_json['object']['language']['name'])
             post_reply.language_id = language.id
+        elif 'contentMap' in request_json['object'] and isinstance(request_json['object']['contentMap'], dict):
+            language = find_language(next(iter(request_json['object']['contentMap'])))  # Combination of next and iter gets the first key in a dict
+            post_reply.language_id = language.id if language else None
 
         if post_id is not None:
             # Discard post_reply if it contains certain phrases. Good for stopping spam floods.
@@ -1751,10 +1763,14 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
                 db.session.add(icon)
                 post.image = icon
 
+        # Language. Lemmy uses 'language' while Mastodon has 'contentMap'
         if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
             language = find_language_or_create(request_json['object']['language']['identifier'],
                                                request_json['object']['language']['name'])
             post.language_id = language.id
+        elif 'contentMap' in request_json['object'] and isinstance(request_json['object']['contentMap'], dict):
+            language = find_language(next(iter(request_json['object']['contentMap'])))
+            post.language_id = language.id if language else None
         if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
             for json_tag in request_json['object']['tag']:
                 if json_tag and json_tag['type'] == 'Hashtag':
