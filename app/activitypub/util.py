@@ -1515,7 +1515,7 @@ def remove_data_from_banned_user_task(deletor_ap_id, user_ap_id, target):
     db.session.commit()
 
 
-def create_post_reply(activity_log: ActivityPubLog, community: Community, in_reply_to, request_json: dict, user: User, announce_id=None) -> Union[Post, None]:
+def create_post_reply(activity_log: ActivityPubLog, community: Community, in_reply_to, request_json: dict, user: User, announce_id=None) -> Union[PostReply, None]:
     if community.local_only:
         activity_log.exception_message = 'Community is local only, reply discarded'
         activity_log.result = 'ignored'
@@ -1627,7 +1627,7 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
                 activity_log.exception_message = 'Comments disabled, reply discarded'
                 activity_log.result = 'ignored'
                 return None
-            return post
+            return post_reply
         else:
             activity_log.exception_message = 'Could not find parent post'
             return None
@@ -2400,7 +2400,7 @@ def can_delete(user_ap_id, post):
     return can_edit(user_ap_id, post)
 
 
-def resolve_remote_post(uri: str, community_id: int, announce_actor=None) -> Union[Post, None]:
+def resolve_remote_post(uri: str, community_id: int, announce_actor=None) -> Union[Post, PostReply, None]:
     post = Post.query.filter_by(ap_id=uri).first()
     if post:
         return post

@@ -626,8 +626,8 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                     else:
                                         if can_create_post_reply(user, community):
                                             try:
-                                                post = create_post_reply(activity_log, community, in_reply_to, request_json, user)
-                                                if post:
+                                                post_reply = create_post_reply(activity_log, community, in_reply_to, request_json, user)
+                                                if post_reply:
                                                     announce_activity_to_followers(community, user, request_json)
                                             except TypeError as e:
                                                 activity_log.exception_message = 'TypeError. See log file.'
