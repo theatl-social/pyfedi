@@ -15,7 +15,8 @@ from app.chat.util import send_message
 from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, CreateImageForm, CreateLinkForm, \
     ReportCommunityForm, \
     DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm, \
-    EscalateReportForm, ResolveReportForm, CreateVideoForm, CreatePollForm, RetrieveRemotePost
+    EscalateReportForm, ResolveReportForm, CreateVideoForm, CreatePollForm, RetrieveRemotePost, \
+    EditCommunityWikiPageForm
 from app.community.util import search_for_community, actor_to_community, \
     save_post, save_icon_file, save_banner_file, send_to_remote_instance, \
     delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users
@@ -25,7 +26,8 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LIN
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, \
     File, PostVote, utcnow, Report, Notification, InstanceBlock, ActivityPubLog, Topic, Conversation, PostReply, \
-    NotificationSubscription, UserFollower, Instance, Language, Poll, PollChoice, ModLog
+    NotificationSubscription, UserFollower, Instance, Language, Poll, PollChoice, ModLog, CommunityWikiPage, \
+    CommunityWikiPageRevision
 from app.community import bp
 from app.user.utils import search_for_user
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
@@ -1322,6 +1324,184 @@ def community_moderate_subscribers(actor):
                                    )
         else:
             abort(401)
+    else:
+        abort(404)
+
+
+@bp.route('/<actor>/moderate/wiki', methods=['GET'])
+@login_required
+def community_wiki_list(actor):
+    community = actor_to_community(actor)
+
+    if community is not None:
+        if community.is_moderator() or current_user.is_admin():
+            low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+            pages = CommunityWikiPage.query.filter(CommunityWikiPage.community_id == community.id).order_by(CommunityWikiPage.title).all()
+            return render_template('community/community_wiki_list.html', title=_('Community Wiki'), community=community,
+                                   pages=pages, low_bandwidth=low_bandwidth, current='wiki',
+                                   moderating_communities=moderating_communities(current_user.get_id()),
+                                   joined_communities=joined_communities(current_user.get_id()),
+                                   menu_topics=menu_topics(), site=g.site,
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                   )
+        else:
+            abort(401)
+    else:
+        abort(404)
+
+
+@bp.route('/<actor>/moderate/wiki/add', methods=['GET', 'POST'])
+@login_required
+def community_wiki_add(actor):
+    community = actor_to_community(actor)
+
+    if community is not None:
+        if community.is_moderator() or current_user.is_admin():
+            low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+            form = EditCommunityWikiPageForm()
+            if form.validate_on_submit():
+                new_page = CommunityWikiPage(community_id=community.id, slug=form.slug.data, title=form.title.data,
+                                             body=form.body.data, who_can_edit=form.who_can_edit.data)
+                new_page.body_html = markdown_to_html(new_page.body)
+                db.session.add(new_page)
+                db.session.commit()
+
+                initial_revision = CommunityWikiPageRevision(wiki_page_id=new_page.id, user_id=current_user.id,
+                                                             community_id=community.id, title=form.title.data,
+                                                             body=form.body.data, body_html=new_page.body_html)
+                db.session.add(initial_revision)
+                db.session.commit()
+
+                flash(_('Saved'))
+                return redirect(url_for('community.community_wiki_list', actor=community.link()))
+
+            return render_template('community/community_wiki_edit.html', title=_('Add wiki page'), community=community,
+                                   form=form, low_bandwidth=low_bandwidth, current='wiki',
+                                   moderating_communities=moderating_communities(current_user.get_id()),
+                                   joined_communities=joined_communities(current_user.get_id()),
+                                   menu_topics=menu_topics(), site=g.site,
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                   )
+        else:
+            abort(401)
+    else:
+        abort(404)
+
+
+@bp.route('/<actor>/wiki/<slug>', methods=['GET', 'POST'])
+def community_wiki_view(actor, slug):
+    community = actor_to_community(actor)
+
+    if community is not None:
+        page: CommunityWikiPage = CommunityWikiPage.query.filter_by(slug=slug, community_id=community.id).first()
+        if page is None:
+            abort(404)
+        else:
+            # Breadcrumbs
+            breadcrumbs = []
+            breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+            breadcrumb.text = _('Home')
+            breadcrumb.url = '/'
+            breadcrumbs.append(breadcrumb)
+
+            if community.topic_id:
+                topics = []
+                previous_topic = Topic.query.get(community.topic_id)
+                topics.append(previous_topic)
+                while previous_topic.parent_id:
+                    topic = Topic.query.get(previous_topic.parent_id)
+                    topics.append(topic)
+                    previous_topic = topic
+                topics = list(reversed(topics))
+
+                breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+                breadcrumb.text = _('Topics')
+                breadcrumb.url = '/topics'
+                breadcrumbs.append(breadcrumb)
+
+                existing_url = '/topic'
+                for topic in topics:
+                    breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+                    breadcrumb.text = topic.name
+                    breadcrumb.url = f"{existing_url}/{topic.machine_name}"
+                    breadcrumbs.append(breadcrumb)
+                    existing_url = breadcrumb.url
+            else:
+                breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+                breadcrumb.text = _('Communities')
+                breadcrumb.url = '/communities'
+                breadcrumbs.append(breadcrumb)
+
+            return render_template('community/community_wiki_page_view.html', title=page.title, page=page,
+                                   community=community, breadcrumbs=breadcrumbs, is_moderator=community.is_moderator(),
+                                   is_owner=community.is_owner(),
+                                   moderating_communities=moderating_communities(current_user.get_id()),
+                                   joined_communities=joined_communities(current_user.get_id()),
+                                   menu_topics=menu_topics(), site=g.site,
+                                   inoculation=inoculation[
+                                       randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                   )
+
+
+@bp.route('/<actor>/moderate/wiki/<int:page_id>/edit', methods=['GET', 'POST'])
+@login_required
+def community_wiki_edit(actor, page_id):
+    community = actor_to_community(actor)
+
+    if community is not None:
+        page: CommunityWikiPage = CommunityWikiPage.query.get_or_404(page_id)
+        if page.can_edit(current_user, community):
+            low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+
+            form = EditCommunityWikiPageForm()
+            if form.validate_on_submit():
+                page.title = form.title.data
+                page.slug = form.slug.data
+                page.body = form.body.data
+                page.body_html = markdown_to_html(page.body)
+                page.who_can_edit = form.who_can_edit.data
+                page.edited_at = utcnow()
+                new_revision = CommunityWikiPageRevision(wiki_page_id=page.id, user_id=current_user.id,
+                                                             community_id=community.id, title=form.title.data,
+                                                             body=form.body.data, body_html=page.body_html)
+                db.session.add(new_revision)
+                db.session.commit()
+                flash(_('Saved'))
+                if request.args.get('return') == 'list':
+                    return redirect(url_for('community.community_wiki_list', actor=community.link()))
+                elif request.args.get('return') == 'page':
+                    return redirect(url_for('community.community_wiki_view', actor=community.link(), slug=page.slug))
+            else:
+                form.title.data = page.title
+                form.slug.data = page.slug
+                form.body.data = page.body
+                form.who_can_edit.data = page.who_can_edit
+
+            return render_template('community/community_wiki_edit.html', title=_('Edit wiki page'), community=community,
+                                   form=form, low_bandwidth=low_bandwidth,
+                                   moderating_communities=moderating_communities(current_user.get_id()),
+                                   joined_communities=joined_communities(current_user.get_id()),
+                                   menu_topics=menu_topics(), site=g.site,
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                   )
+        else:
+            abort(401)
+    else:
+        abort(404)
+
+
+@bp.route('/<actor>/moderate/wiki/<int:page_id>/delete', methods=['GET'])
+@login_required
+def community_wiki_delete(actor, page_id):
+    community = actor_to_community(actor)
+
+    if community is not None:
+        page: CommunityWikiPage = CommunityWikiPage.query.get_or_404(page_id)
+        if page.can_edit(current_user, community):
+            db.session.delete(page)
+            db.session.commit()
+            flash(_('Page deleted'))
+        return redirect(url_for('community.community_wiki_list', actor=community.link()))
     else:
         abort(404)
 

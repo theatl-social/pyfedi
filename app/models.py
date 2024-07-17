@@ -406,6 +406,7 @@ class Community(db.Model):
 
     posts = db.relationship('Post', lazy='dynamic', cascade="all, delete-orphan")
     replies = db.relationship('PostReply', lazy='dynamic', cascade="all, delete-orphan")
+    wiki_pages = db.relationship('CommunityWikiPage', lazy='dynamic', backref='community', cascade="all, delete-orphan")
     icon = db.relationship('File', foreign_keys=[icon_id], single_parent=True, backref='community', cascade="all, delete-orphan")
     image = db.relationship('File', foreign_keys=[image_id], single_parent=True, cascade="all, delete-orphan")
     languages = db.relationship('Language', lazy='dynamic', secondary=community_language, backref=db.backref('communities', lazy='dynamic'))
@@ -476,15 +477,25 @@ class Community(db.Model):
                                      ))
                                      ).filter(CommunityMember.is_banned == False).all()
 
+    def is_member(self, user):
+        if user is None:
+            return CommunityMember.query.filter(CommunityMember.user_id == current_user.get_id(),
+                                                CommunityMember.community_id == self.id,
+                                                CommunityMember.is_banned == False).all()
+        else:
+            return CommunityMember.query.filter(CommunityMember.user_id == user.id,
+                                                CommunityMember.community_id == self.id,
+                                                CommunityMember.is_banned == False).all()
+
     def is_moderator(self, user=None):
         if user is None:
-            return any(moderator.user_id == current_user.id for moderator in self.moderators())
+            return any(moderator.user_id == current_user.get_id() for moderator in self.moderators())
         else:
             return any(moderator.user_id == user.id for moderator in self.moderators())
 
     def is_owner(self, user=None):
         if user is None:
-            return any(moderator.user_id == current_user.id and moderator.is_owner for moderator in self.moderators())
+            return any(moderator.user_id == current_user.get_id() and moderator.is_owner for moderator in self.moderators())
         else:
             return any(moderator.user_id == user.id and moderator.is_owner for moderator in self.moderators())
 
@@ -1244,6 +1255,46 @@ class CommunityMember(db.Model):
     is_banned = db.Column(db.Boolean, default=False, index=True)
     notify_new_posts = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=utcnow)
+
+
+class CommunityWikiPage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    community_id = db.Column(db.Integer, db.ForeignKey('community.id'), index=True)
+    slug = db.Column(db.String(100), index=True)
+    title = db.Column(db.String(255))
+    body = db.Column(db.Text)
+    body_html = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=utcnow)
+    edited_at = db.Column(db.DateTime, default=utcnow)
+    who_can_edit = db.Column(db.Integer, default=0)     # 0 = mods & admins, 1 = trusted, 2 = community members, 3 = anyone
+    revisions = db.relationship('CommunityWikiPageRevision', backref=db.backref('page'), cascade='all,delete',
+                                lazy='dynamic')
+    def can_edit(self, user: User, community: Community):
+        if user.is_anonymous:
+            return False
+        if self.who_can_edit == 0:
+            if user.is_admin() or user.is_staff() or community.is_moderator(user):
+                return True
+        elif self.who_can_edit == 1:
+            if user.is_admin() or user.is_staff() or community.is_moderator(user) or user.trustworthy():
+                return True
+        elif self.who_can_edit == 2:
+            if user.is_admin() or user.is_staff() or community.is_moderator(user) or user.trustworthy() or community.is_member(user):
+                return True
+        elif self.who_can_edit == 3:
+            return True
+        return False
+
+
+class CommunityWikiPageRevision(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wiki_page_id = db.Column(db.Integer, db.ForeignKey('community_wiki_page.id'), index=True)
+    community_id = db.Column(db.Integer, db.ForeignKey('community.id'), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    title = db.Column(db.String(255))
+    body = db.Column(db.Text)
+    body_html = db.Column(db.Text)
+    edited_at = db.Column(db.DateTime, default=utcnow)
 
 
 class UserFollower(db.Model):

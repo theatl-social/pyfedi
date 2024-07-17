@@ -63,6 +63,19 @@ class EditCommunityForm(FlaskForm):
     submit = SubmitField(_l('Save'))
 
 
+class EditCommunityWikiPageForm(FlaskForm):
+    title = StringField(_l('Title'), validators=[DataRequired()])
+    slug = StringField(_l('Slug'), validators=[DataRequired()])
+    body = TextAreaField(_l('Body'), render_kw={'rows': '10'})
+    edit_options = [(0, _l('Mods and admins')),
+                    (1, _l('Trusted accounts')),
+                    (2, _l('Community members')),
+                    (3, _l('Any account'))
+    ]
+    who_can_edit = SelectField(_l('Who can edit'), coerce=int, choices=edit_options, validators=[Optional()], render_kw={'class': 'form-select'})
+    submit = SubmitField(_l('Save'))
+
+
 class AddModeratorForm(FlaskForm):
     user_name = StringField(_l('User name'), validators=[DataRequired()])
     submit = SubmitField(_l('Find'))

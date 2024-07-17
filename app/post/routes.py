@@ -55,7 +55,7 @@ def show_post(post_id: int):
         flash(_('%(name)s has indicated they made a mistake in this post.', name=post.author.user_name), 'warning')
 
     mods = community_moderators(community.id)
-    is_moderator = current_user.is_authenticated and any(mod.user_id == current_user.id for mod in mods)
+    is_moderator = community.is_moderator()
 
     if community.private_mods:
         mod_list = []
@@ -310,21 +310,19 @@ def show_post(post_id: int):
     if post.type == POST_TYPE_LINK and body_has_no_archive_link(post.body_html) and url_needs_archive(post.url):
         archive_link = generate_archive_link(post.url)
 
-    response = render_template('post/post.html', title=post.title, post=post, is_moderator=is_moderator, community=post.community,
+    response = render_template('post/post.html', title=post.title, post=post, is_moderator=is_moderator, is_owner=community.is_owner(),
+                           community=post.community,
                            breadcrumbs=breadcrumbs, related_communities=related_communities, mods=mod_list,
                            poll_form=poll_form, poll_results=poll_results, poll_data=poll_data, poll_choices=poll_choices, poll_total_votes=poll_total_votes,
                            canonical=post.ap_id, form=form, replies=replies, THREAD_CUTOFF_DEPTH=constants.THREAD_CUTOFF_DEPTH,
-                           description=description, og_image=og_image, POST_TYPE_IMAGE=constants.POST_TYPE_IMAGE,
-                           POST_TYPE_LINK=constants.POST_TYPE_LINK, POST_TYPE_ARTICLE=constants.POST_TYPE_ARTICLE,
-                           POST_TYPE_VIDEO=constants.POST_TYPE_VIDEO, POST_TYPE_POLL=constants.POST_TYPE_POLL,
+                           description=description, og_image=og_image,
                            autoplay=request.args.get('autoplay', False), archive_link=archive_link,
                            noindex=not post.author.indexable, preconnect=post.url if post.url else None,
                            recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
                            recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies,
                            reply_collapse_threshold=reply_collapse_threshold,
                            etag=f"{post.id}{sort}_{hash(post.last_active)}", markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
-                           low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1', SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
-                           SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
+                           low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
