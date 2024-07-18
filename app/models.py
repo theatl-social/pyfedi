@@ -1296,6 +1296,8 @@ class CommunityWikiPageRevision(db.Model):
     body_html = db.Column(db.Text)
     edited_at = db.Column(db.DateTime, default=utcnow)
 
+    author = db.relationship('User', lazy='joined', foreign_keys=[user_id])
+
 
 class UserFollower(db.Model):
     local_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)

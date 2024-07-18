@@ -45,7 +45,8 @@
                                 Actions
                               </button>
                               <ul class="dropdown-menu">
-                                  <li><a class="dropdown-item" href="{{ url_for('community.community_wiki_view', actor=community.link(), slug=page.slug) }}">{{ _('View') }}</a></li>
+                                  <li><a class="dropdown-item" href="{{ url_for('community.community_wiki_view', actor=community.link(), slug=page.slug) }}">{{ _('View page') }}</a></li>
+                                  <li><a class="dropdown-item" href="{{ url_for('community.community_wiki_revisions', actor=community.link(), page_id=page.id) }}">{{ _('View revisions') }}</a></li>
                                 <li><a class="dropdown-item"
                                        href="{{ url_for('community.community_wiki_edit', actor=community.link(), page_id=page.id, return='list') }}">
                                     {{ _('Edit') }}</a></li>
@@ -59,6 +60,7 @@
                 {% endfor %}
             </tbody>
         </table>
+        <p>{{ _('Add a link to the wiki in the community description.') }}</p>
         {% else -%}
             <p>{{ _('There are no wiki pages in this community.') }}</p>
         {% endif -%}

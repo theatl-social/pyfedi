@@ -216,7 +216,7 @@ def mime_type_using_head(url):
 
 
 # sanitise HTML using an allow list
-def allowlist_html(html: str) -> str:
+def allowlist_html(html: str, a_target='_blank') -> str:
     if html is None or html == '':
         return ''
     allowed_tags = ['p', 'strong', 'a', 'ul', 'ol', 'li', 'em', 'blockquote', 'cite', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre',
@@ -262,7 +262,7 @@ def allowlist_html(html: str) -> str:
             # Add nofollow and target=_blank to anchors
             if tag.name == 'a':
                 tag.attrs['rel'] = 'nofollow ugc'
-                tag.attrs['target'] = '_blank'
+                tag.attrs['target'] = a_target
             # Add loading=lazy to images
             if tag.name == 'img':
                 tag.attrs['loading'] = 'lazy'
@@ -275,14 +275,14 @@ def allowlist_html(html: str) -> str:
 
 
 # this is for pyfedi's version of Markdown (differs from lemmy for: newlines for soft breaks, ...)
-def markdown_to_html(markdown_text) -> str:
+def markdown_to_html(markdown_text, anchors_new_tab=True) -> str:
     if markdown_text:
         raw_html = markdown2.markdown(markdown_text, safe_mode=True,
                     extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True, 'breaks': {'on_newline': True, 'on_backslash': True}})
         # support lemmy's spoiler format
         re_spoiler = re.compile(r':{3}\s*?spoiler\s+?(\S.+?)(?:\n|</p>)(.+?)(?:\n|<p>):{3}', re.S)
         raw_html = re_spoiler.sub(r'<details><summary>\1</summary><p>\2</p></details>', raw_html)
-        return allowlist_html(raw_html)
+        return allowlist_html(raw_html, a_target='_blank' if anchors_new_tab else '')
     else:
         return ''
 

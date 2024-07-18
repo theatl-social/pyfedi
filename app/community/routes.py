@@ -848,9 +848,9 @@ def community_edit(community_id: int):
         if form.validate_on_submit():
             community.title = form.title.data
             community.description = form.description.data
-            community.description_html = markdown_to_html(form.description.data)
+            community.description_html = markdown_to_html(form.description.data, anchors_new_tab=False)
             community.rules = form.rules.data
-            community.rules_html = markdown_to_html(form.rules.data)
+            community.rules_html = markdown_to_html(form.rules.data, anchors_new_tab=False)
             community.nsfw = form.nsfw.data
             community.local_only = form.local_only.data
             community.restricted_to_mods = form.restricted_to_mods.data
@@ -1443,6 +1443,91 @@ def community_wiki_view(actor, slug):
                                    )
 
 
+@bp.route('/<actor>/wiki/<slug>/<revision_id>', methods=['GET', 'POST'])
+@login_required
+def community_wiki_view_revision(actor, slug, revision_id):
+    community = actor_to_community(actor)
+
+    if community is not None:
+        page: CommunityWikiPage = CommunityWikiPage.query.filter_by(slug=slug, community_id=community.id).first()
+        revision: CommunityWikiPageRevision = CommunityWikiPageRevision.query.get_or_404(revision_id)
+        if page is None or revision is None:
+            abort(404)
+        else:
+            # Breadcrumbs
+            breadcrumbs = []
+            breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+            breadcrumb.text = _('Home')
+            breadcrumb.url = '/'
+            breadcrumbs.append(breadcrumb)
+
+            if community.topic_id:
+                topics = []
+                previous_topic = Topic.query.get(community.topic_id)
+                topics.append(previous_topic)
+                while previous_topic.parent_id:
+                    topic = Topic.query.get(previous_topic.parent_id)
+                    topics.append(topic)
+                    previous_topic = topic
+                topics = list(reversed(topics))
+
+                breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+                breadcrumb.text = _('Topics')
+                breadcrumb.url = '/topics'
+                breadcrumbs.append(breadcrumb)
+
+                existing_url = '/topic'
+                for topic in topics:
+                    breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+                    breadcrumb.text = topic.name
+                    breadcrumb.url = f"{existing_url}/{topic.machine_name}"
+                    breadcrumbs.append(breadcrumb)
+                    existing_url = breadcrumb.url
+            else:
+                breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+                breadcrumb.text = _('Communities')
+                breadcrumb.url = '/communities'
+                breadcrumbs.append(breadcrumb)
+
+            return render_template('community/community_wiki_revision_view.html', title=page.title, page=page,
+                                   community=community, breadcrumbs=breadcrumbs, is_moderator=community.is_moderator(),
+                                   is_owner=community.is_owner(), revision=revision,
+                                   moderating_communities=moderating_communities(current_user.get_id()),
+                                   joined_communities=joined_communities(current_user.get_id()),
+                                   menu_topics=menu_topics(), site=g.site,
+                                   inoculation=inoculation[
+                                       randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                   )
+
+
+@bp.route('/<actor>/wiki/<slug>/<revision_id>/revert', methods=['GET'])
+@login_required
+def community_wiki_revert_revision(actor, slug, revision_id):
+    community = actor_to_community(actor)
+
+    if community is not None:
+        page: CommunityWikiPage = CommunityWikiPage.query.filter_by(slug=slug, community_id=community.id).first()
+        revision: CommunityWikiPageRevision = CommunityWikiPageRevision.query.get_or_404(revision_id)
+        if page is None or revision is None:
+            abort(404)
+        else:
+            if page.can_edit(current_user, community):
+                page.body = revision.body
+                page.body_html = revision.body_html
+                page.edited_at = utcnow()
+
+                new_revision = CommunityWikiPageRevision(wiki_page_id=page.id, user_id=current_user.id,
+                                                         community_id=community.id, title=revision.title,
+                                                         body=revision.body, body_html=revision.body_html)
+                db.session.add(new_revision)
+                db.session.commit()
+
+                flash(_('Reverted to old version of the page.'))
+                return redirect(url_for('community.community_wiki_revisions', actor=community.link(), page_id=page.id))
+            else:
+                abort(401)
+
+
 @bp.route('/<actor>/moderate/wiki/<int:page_id>/edit', methods=['GET', 'POST'])
 @login_required
 def community_wiki_edit(actor, page_id):
@@ -1479,6 +1564,35 @@ def community_wiki_edit(actor, page_id):
 
             return render_template('community/community_wiki_edit.html', title=_('Edit wiki page'), community=community,
                                    form=form, low_bandwidth=low_bandwidth,
+                                   moderating_communities=moderating_communities(current_user.get_id()),
+                                   joined_communities=joined_communities(current_user.get_id()),
+                                   menu_topics=menu_topics(), site=g.site,
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                   )
+        else:
+            abort(401)
+    else:
+        abort(404)
+
+
+@bp.route('/<actor>/moderate/wiki/<int:page_id>/revisions', methods=['GET', 'POST'])
+@login_required
+def community_wiki_revisions(actor, page_id):
+    community = actor_to_community(actor)
+
+    if community is not None:
+        page: CommunityWikiPage = CommunityWikiPage.query.get_or_404(page_id)
+        if page.can_edit(current_user, community):
+            low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+
+            revisions = CommunityWikiPageRevision.query.filter_by(wiki_page_id=page.id).\
+                order_by(desc(CommunityWikiPageRevision.edited_at)).all()
+
+            most_recent_revision = revisions[0].id
+
+            return render_template('community/community_wiki_revisions.html', title=_('%(title)s revisions', title=page.title),
+                                   community=community, page=page, revisions=revisions, most_recent_revision=most_recent_revision,
+                                   low_bandwidth=low_bandwidth,
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
