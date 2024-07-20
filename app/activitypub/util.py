@@ -1550,15 +1550,17 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
                                ap_create_id=request_json['id'],
                                ap_announce_id=announce_id,
                                instance_id=user.instance_id)
-        # Get comment content. Lemmy and Kbin put this in different places.
+        # Get comment content. Lemmy puts this in unusual place.
         if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
                 'mediaType' in request_json['object']['source'] and \
                 request_json['object']['source']['mediaType'] == 'text/markdown':
             post_reply.body = request_json['object']['source']['content']
             post_reply.body_html = lemmy_markdown_to_html(post_reply.body)
-        elif 'content' in request_json['object']:   # Kbin
+        elif 'content' in request_json['object']:   # Kbin, Mastodon, etc provide their posts as html
+            if not request_json['object']['content'].startswith('<p>') or not request_json['object']['content'].startswith('<blockquote>'):
+                request_json['object']['content'] = '<p>' + request_json['object']['content'] + '</p>'
             post_reply.body_html = allowlist_html(request_json['object']['content'])
-            post_reply.body = ''
+            post_reply.body = html_to_text(post_reply.body_html)
         # Language - Lemmy uses 'language' while Mastodon uses 'contentMap'
         if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
             language = find_language_or_create(request_json['object']['language']['identifier'],
