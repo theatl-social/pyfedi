@@ -420,6 +420,32 @@ Once a week or so it's good to run `remove_orphan_files.sh` to save disk space:
 5 4 * * 1 rimu cd /home/rimu/pyfedi && /home/rimu/pyfedi/remove_orphan_files.sh
 ```
 
+If celery is hanging occasionally (we're looking into it but it's a hard one to solve), put this script in /etc/cron.hourly:
+
+```
+#!/bin/bash
+
+# Define the service to restart
+SERVICE="celery.service"
+
+# Get the load average for the last 1 minute
+LOAD=$(awk '{print $1}' /proc/loadavg)
+
+# Check if the load average is less than 0.1
+if (( $(echo "$LOAD < 0.1" | bc -l) )); then
+    # Restart the service
+    systemctl restart $SERVICE
+    # Log the action
+    echo "$(date): Load average is $LOAD. Restarted $SERVICE." >> /var/log/restart_service.log
+else
+    # Log that no action was taken
+    echo "$(date): Load average is $LOAD. No action taken." >> /var/log/restart_service.log
+fi
+
+```
+
+Adjust the echo "$LOAD < 0.1" to suit your system.
+
 ### Email
 
 Email can be sent either through SMTP or Amazon web services (SES). SES is faster but PieFed does not send much
