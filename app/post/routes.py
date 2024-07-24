@@ -1180,8 +1180,9 @@ def federate_post_edit_to_user_followers(post):
 
     instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower, UserFollower.remote_user_id == User.id)
     instances = instances.filter(UserFollower.local_user_id == post.user_id)
-    for i in instances:
-        post_request(i.inbox, update, current_user.private_key, current_user.public_url() + '#main-key')
+    for instance in instances:
+        if instance.inbox and not instance_banned(instance.domain):
+            post_request_in_background(instance.inbox, update, current_user.private_key, current_user.public_url() + '#main-key')
 
 
 @bp.route('/post/<int:post_id>/delete', methods=['GET', 'POST'])
@@ -1249,8 +1250,10 @@ def post_delete(post_id: int):
         if followers:
             instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower, UserFollower.remote_user_id == User.id)
             instances = instances.filter(UserFollower.local_user_id == post.user_id)
-            for i in instances:
-                post_request(i.inbox, delete_json, current_user.private_key, current_user.public_url() + '#main-key')
+            for instance in instances:
+                if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(
+                        instance.domain):
+                    post_request_in_background(instance.inbox, delete_json, current_user.private_key, current_user.public_url() + '#main-key')
 
         if post.user_id != current_user.id:
             add_to_modlog('delete_post', community_id=community.id, link_text=shorten_string(post.title),
