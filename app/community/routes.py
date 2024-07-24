@@ -9,7 +9,7 @@ from slugify import slugify
 from sqlalchemy import or_, desc, text
 
 from app import db, constants, cache
-from app.activitypub.signature import RsaKeys, post_request, default_context
+from app.activitypub.signature import RsaKeys, post_request, default_context, post_request_in_background
 from app.activitypub.util import notify_about_post, make_image_sizes, resolve_remote_post
 from app.chat.util import send_message
 from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, CreateImageForm, CreateLinkForm, \
@@ -684,12 +684,9 @@ def federate_post(community, post):
             })
         page['oneOf' if poll.mode == 'single' else 'anyOf'] = choices
     if not community.is_local():  # this is a remote community - send the post to the instance that hosts it
-        success = post_request(community.ap_inbox_url, create, current_user.private_key,
+        post_request_in_background(community.ap_inbox_url, create, current_user.private_key,
                                current_user.public_url() + '#main-key')
-        if success:
-            flash(_('Your post to %(name)s has been made.', name=community.title))
-        else:
-            flash('There was a problem making your post to ' + community.title)
+        flash(_('Your post to %(name)s has been made.', name=community.title))
     else:  # local community - send (announce) post out to followers
         announce = {
             "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
@@ -799,8 +796,9 @@ def federate_post_to_user_followers(post):
 
     instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower, UserFollower.remote_user_id == User.id)
     instances = instances.filter(UserFollower.local_user_id == post.user_id).filter(Instance.gone_forever == False)
-    for i in instances:
-        post_request(i.inbox, create, current_user.private_key, current_user.public_url() + '#main-key')
+    for instance in instances:
+        if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
+            post_request_in_background(instance.inbox, create, current_user.private_key, current_user.public_url() + '#main-key')
 
 
 @bp.route('/community/<int:community_id>/report', methods=['GET', 'POST'])
