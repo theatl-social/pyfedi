@@ -396,7 +396,7 @@ def subscribe(actor):
                     "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
                 }
                 success = post_request(community.ap_inbox_url, follow, current_user.private_key,
-                                                           current_user.public_url() + '#main-key')
+                                                           current_user.public_url() + '#main-key', timeout=10)
                 if not success:
                     flash(_("There was a problem while trying to communicate with remote server. If other people have already joined this community it won't matter."), 'error')
             # for local communities, joining is instant
@@ -443,7 +443,7 @@ def unsubscribe(actor):
                         'object': follow
                     }
                     success = post_request(community.ap_inbox_url, undo, current_user.private_key,
-                                                               current_user.public_url() + '#main-key')
+                                                               current_user.public_url() + '#main-key', timeout=10)
                     if not success:
                         flash('There was a problem while trying to unsubscribe', 'error')
 
