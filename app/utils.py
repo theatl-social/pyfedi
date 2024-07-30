@@ -204,7 +204,7 @@ def is_video_url(url):
 def mime_type_using_head(url):
     # Find the mime type of a url by doing a HEAD request - this is the same as GET except only the HTTP headers are transferred
     try:
-        response = requests.head(url)
+        response = requests.head(url, timeout=5)
         response.raise_for_status()  # Raise an exception for HTTP errors
         content_type = response.headers.get('Content-Type')
         if content_type:
@@ -1053,7 +1053,8 @@ def in_sorted_list(arr, target):
 # Makes a still image from a video url, without downloading the whole video file
 def generate_image_from_video_url(video_url, output_path, length=2):
 
-    response = requests.get(video_url, stream=True, headers={'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0'})  # Imgur requires a user agent
+    response = requests.get(video_url, stream=True, timeout=5,
+                            headers={'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0'})  # Imgur requires a user agent
     content_type = response.headers.get('Content-Type')
     if content_type:
         if 'video/mp4' in content_type:

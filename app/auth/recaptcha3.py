@@ -83,7 +83,7 @@ class Recaptcha3Validator(object):
             'response': response
         }
 
-        http_response = requests.post(RECAPTCHA_VERIFY_SERVER, data)
+        http_response = requests.post(RECAPTCHA_VERIFY_SERVER, data, timeout=10)
         if http_response.status_code != 200:
             return False
 
