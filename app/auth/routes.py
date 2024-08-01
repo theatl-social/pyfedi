@@ -59,9 +59,8 @@ def login():
         session['ui_language'] = user.interface_language
         current_user.last_seen = utcnow()
         current_user.ip_address = ip_address()
-        if current_user.ip_address_country is None or current_user.ip_address_country == '':
-            ip_address_info = ip2location(current_user.ip_address)
-            current_user.ip_address_country = ip_address_info['country'] if ip_address_info else current_user.ip_address_country
+        ip_address_info = ip2location(current_user.ip_address)
+        current_user.ip_address_country = ip_address_info['country'] if ip_address_info else current_user.ip_address_country
         db.session.commit()
         next_page = request.args.get('next')
         if not next_page or url_parse(next_page).netloc != '':
