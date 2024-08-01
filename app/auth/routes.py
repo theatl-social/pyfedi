@@ -8,7 +8,7 @@ from wtforms import Label
 from app import db, cache
 from app.auth import bp
 from app.auth.forms import LoginForm, RegistrationForm, ResetPasswordRequestForm, ResetPasswordForm
-from app.auth.util import random_token, normalize_utf
+from app.auth.util import random_token, normalize_utf, ip2location
 from app.email import send_verification_email, send_password_reset_email
 from app.models import User, utcnow, IpBan, UserRegistration, Notification, Site
 from app.utils import render_template, ip_address, user_ip_banned, user_cookie_banned, banned_ip_addresses, \
@@ -59,6 +59,9 @@ def login():
         session['ui_language'] = user.interface_language
         current_user.last_seen = utcnow()
         current_user.ip_address = ip_address()
+        if current_user.ip_address_country is None or current_user.ip_address_country == '':
+            ip_address_info = ip2location(current_user.ip_address)
+            current_user.ip_address_country = ip_address_info['country'] if ip_address_info else current_user.ip_address_country
         db.session.commit()
         next_page = request.args.get('next')
         if not next_page or url_parse(next_page).netloc != '':
@@ -123,6 +126,8 @@ def register():
                             banned=user_ip_banned() or user_cookie_banned(), email_unread_sent=False,
                             referrer=session.get('Referer', ''))
                 user.set_password(form.password.data)
+                ip_address_info = ip2location(user.ip_address)
+                user.ip_address_country = ip_address_info['country'] if ip_address_info else ''
                 db.session.add(user)
                 db.session.commit()
                 send_verification_email(user)

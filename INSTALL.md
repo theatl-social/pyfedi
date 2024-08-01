@@ -235,6 +235,9 @@ also [see this](https://pganalyze.com/blog/5mins-postgres-tuning-huge-pages).
 
 [PgBouncer](https://www.pgbouncer.org) can be helpful in a high traffic situation.
 
+To assess whether to accept a registration application it can be helpful to know the country of the applicant. This can be
+automatically discovered by using [the ipinfo service](https://ipinfo.io/) - register with them to get an API token and put it into your .env file.
+
 <div id="background-services"></div>
 
 ### Background services

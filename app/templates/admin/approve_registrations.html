@@ -17,14 +17,14 @@
         </form>
         <table class="table table-striped">
             <tr>
-               <th>Name</th>
-                <th>Email</th>
-                <th>Email verifed</th>
-                <th>Answer</th>
-                <th>Applied</th>
-                <th>IP</th>
-                <th>Source</th>
-               <th>Actions</th>
+               <th>{{ _('Name') }}</th>
+                <th>{{ _('Email') }}</th>
+                <th>{{ _('Email verifed') }}</th>
+                <th>{{ _('Answer') }}</th>
+                <th>{{ _('Applied') }}</th>
+                <th>{{ _('IP and country code') }}</th>
+                <th>{{ _('Source') }}</th>
+               <th>{{ _('Actions') }}</th>
             </tr>
             {% for registration in registrations %}
                 <tr>
@@ -34,11 +34,48 @@
                     <td>{{ '<span class="green">&check;</span>'|safe if registration.user.verified else '<span class="red">&cross;</span>'|safe }}</td>
                     <td>{{ registration.answer }}</td>
                     <td>{{ moment(registration.created_at).fromNow() }}</td>
-                    <td>{{ registration.user.ip_address if registration.user.ip_address }} </td>
+                    <td>{{ registration.user.ip_address if registration.user.ip_address }}<br />{{ registration.user.ip_address_country if registration.user.ip_address_country }}</td>
                     <td>{{ registration.user.referrer if registration.user.referrer }} </td>
                     <td><a href="{{ url_for('admin.admin_approve_registrations_approve', user_id=registration.user.id) }}" class="btn btn-sm btn-primary">{{ _('Approve') }}</a>
                         <a href="/u/{{ registration.user.link() }}">{{ _('View') }}</a> |
                         <a href="{{ url_for('admin.admin_user_delete', user_id=registration.user.id) }}" class="confirm_first">{{ _('Delete') }}</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+            <p>{{ _('No one is waiting to be approved.') }}</p>
+        {% endif %}
+    </div>
+</div>
+<hr />
+<div class="row">
+    <div class="col">
+        <h1>{{ _('Recently approved') }}</h1>
+        {% if recently_approved %}
+        <table class="table table-striped">
+            <tr>
+               <th>{{ _('Name') }}</th>
+                <th>{{ _('Email') }}</th>
+                <th>{{ _('Email verifed') }}</th>
+                <th>{{ _('Answer') }}</th>
+                <th>{{ _('Applied') }}</th>
+                <th>{{ _('IP and country code') }}</th>
+                <th>{{ _('Source') }}</th>
+               <th>{{ _('Actions') }}</th>
+            </tr>
+            {% for registration in recently_approved %}
+                <tr>
+                    <td><img src="{{ registration.user.avatar_thumbnail() }}" class="community_icon rounded-circle" loading="lazy" />
+                        {{ registration.user.display_name() }}</td>
+                    <td><a href="mailto:{{ registration.user.email }}">{{ registration.user.email }}</a></td>
+                    <td>{{ '<span class="green">&check;</span>'|safe if registration.user.verified else '<span class="red">&cross;</span>'|safe }}</td>
+                    <td>{{ registration.answer }}</td>
+                    <td>{{ moment(registration.created_at).fromNow() }}</td>
+                    <td>{{ registration.user.ip_address if registration.user.ip_address }}<br />{{ registration.user.ip_address_country if registration.user.ip_address_country }}</td>
+                    <td>{{ registration.user.referrer if registration.user.referrer }} </td>
+                    <td>
+                        <a href="/u/{{ registration.user.link() }}">{{ _('View') }}</a>
                     </td>
                 </tr>
             {% endfor %}

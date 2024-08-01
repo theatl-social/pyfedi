@@ -56,3 +56,5 @@ class Config(object):
     SPICY_UNDER_10 = float(os.environ.get('SPICY_UNDER_10', 1.0))
     SPICY_UNDER_30 = float(os.environ.get('SPICY_UNDER_30', 1.0))
     SPICY_UNDER_60 = float(os.environ.get('SPICY_UNDER_60', 1.0))
+
+    IPINFO_TOKEN = os.environ.get('IPINFO_TOKEN') or ''
