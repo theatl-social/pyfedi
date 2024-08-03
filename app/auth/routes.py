@@ -136,7 +136,7 @@ def register():
                     application = UserRegistration(user_id=user.id, answer=form.question.data)
                     db.session.add(application)
                     for admin in Site.admins():
-                        notify = Notification(title='New registration', url='/admin/approve_registrations', user_id=admin.id,
+                        notify = Notification(title='New registration', url=f'/admin/approve_registrations?account={user.id}', user_id=admin.id,
                                           author_id=user.id)
                         admin.unread_notifications += 1
                         db.session.add(notify)

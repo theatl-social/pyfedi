@@ -19,16 +19,16 @@
         </form>
         <table class="table table-striped mt-1">
             <tr>
-               <th title="{{ _('Display name.') }}">Name</th>
-               <th>Local/Remote</th>
-               <th title="{{ _('Last seen.') }}">Seen</th>
-               <th title="{{ _('Attitude: Percentage of up votes vs. down votes the account made.') }}">Attitude</th>
-               <th title="{{ _('Reputation: The Karma of the account. Total up votes minus down votes they got.') }}">Rep</th>
-               <th>Banned</th>
-               <th title="{{ _('How often a user has been reported.') }}">Reports</th>
-               <th title="{{ _('IP address of last interaction.') }}">IP</th>
-               <th title="{{ _('Which website linked to PieFed when the user initially registered.') }}">Source</th>
-               <th>Actions</th>
+               <th title="{{ _('Display name.') }}">{{ _('Name') }}</th>
+               <th>{{ _('Local/Remote') }}</th>
+               <th title="{{ _('Last seen.') }}">{{ _('Seen') }}</th>
+               <th title="{{ _('Attitude: Percentage of up votes vs. down votes the account made.') }}">{{ _('Attitude') }}</th>
+               <th title="{{ _('Reputation: The Karma of the account. Total up votes minus down votes they got.') }}">{{ _('Reputation') }}</th>
+               <th>{{ _('Banned') }}</th>
+               <th title="{{ _('How often a user has been reported.') }}">{{ _('Reports') }}</th>
+               <th title="{{ _('IP address of last interaction.') }}">{{ _('IP and country code') }}</th>
+               <th title="{{ _('Which website linked to PieFed when the user initially registered.') }}">{{ _('Source') }}</th>
+               <th>{{ _('Actions') }}</th>
             </tr>
             {% for user in users.items %}
                 <tr>
