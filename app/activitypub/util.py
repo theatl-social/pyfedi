@@ -1749,12 +1749,12 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
                                               url=post.ap_id, user_id=admin.id,
                                               author_id=user.id)
                         db.session.add(notify)
-            if not domain.banned:
-                domain.post_count += 1
-                post.domain = domain
-            else:
+            if domain.banned or domain.name.endswith('.pages.dev'):
                 post = None
                 activity_log.exception_message = domain.name + ' is blocked by admin'
+            else:
+                domain.post_count += 1
+                post.domain = domain
 
     if post is not None:
         if request_json['object']['type'] == 'Video':
