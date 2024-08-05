@@ -7,6 +7,10 @@
 
 $min-touch-target: 44px;
 
+@view-transition {
+  navigation: auto;
+}
+
 html {
   @include breakpoint(phablet) {
     scroll-padding-top: 80px;

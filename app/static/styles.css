@@ -441,6 +441,9 @@ fieldset legend {
   background-color: #d8e5ee;
 }
 
+@view-transition {
+  navigation: auto;
+}
 @media (min-width: 768px) {
   html {
     scroll-padding-top: 80px;
