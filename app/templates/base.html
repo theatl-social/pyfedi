@@ -52,6 +52,7 @@
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="HandheldFriendly" content="True">
         <meta name="MobileOptimized" content="320">
+        <link rel="expect" blocking="render" href="#navbarSupportedContent">
         {% block styles -%}
             {{ bootstrap.load_css() }}
             <link href="{{ url_for('static', filename='styles.css', changed=getmtime('styles.css')) }}" type="text/css" rel="stylesheet" />
@@ -89,28 +90,6 @@
         {% if noindex -%}
             <meta name="robots" content="noindex">
         {% endif -%}
-        <script nonce="{{ session['nonce']}}">
-            const getStoredTheme = () => localStorage.getItem('theme')
-            const setStoredTheme = theme => localStorage.setItem('theme', theme)
-
-            const getPreferredTheme = () => {
-              const storedTheme = getStoredTheme()
-              if (storedTheme) {
-                return storedTheme
-              }
-              return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-            }
-
-            const setTheme = theme => {
-                if (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                  document.documentElement.setAttribute('data-bs-theme', 'dark')
-                } else {
-                  document.documentElement.setAttribute('data-bs-theme', theme)
-                }
-            }
-
-            setTheme(getPreferredTheme());
-        </script>
       {% if preconnect and not low_bandwidth -%}
         <link rel="preconnect" href='{{ preconnect }}'>
       {% endif -%}

@@ -1,3 +1,22 @@
+const getStoredTheme = () => localStorage.getItem('theme');
+const setStoredTheme = theme => localStorage.setItem('theme', theme);
+
+const getPreferredTheme = () => {
+  const storedTheme = getStoredTheme()
+  if (storedTheme) {
+    return storedTheme
+  }
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
+const setTheme = theme => {
+    if (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      document.documentElement.setAttribute('data-bs-theme', 'dark')
+    } else {
+      document.documentElement.setAttribute('data-bs-theme', theme)
+    }
+}
+
 // fires after DOM is ready for manipulation
 document.addEventListener("DOMContentLoaded", function () {
     setupCommunityNameInput();
@@ -7,6 +26,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupTimeTracking();
     setupMobileNav();
     setupLightDark();
+    setTheme(getPreferredTheme());
     setupKeyboardShortcuts();
     setupTopicChooser();
     setupConversationChooser();
