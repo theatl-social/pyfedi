@@ -15,8 +15,9 @@ from app.inoculation import inoculation
 from app.models import Topic, Community, Post, utcnow, CommunityMember, CommunityJoinRequest, User, \
     NotificationSubscription
 from app.topic import bp
+from app.email import send_email
 from app import db, celery, cache
-from app.topic.forms import ChooseTopicsForm
+from app.topic.forms import ChooseTopicsForm, SuggestTopicsForm
 from app.utils import render_template, user_filters_posts, moderating_communities, joined_communities, \
     community_membership, blocked_domains, validation_required, mimetype_from_url, blocked_instances, \
     communities_banned_from, blocked_users, menu_topics
@@ -235,6 +236,35 @@ def topic_notification(topic_id: int):
         db.session.commit()
 
     return render_template('topic/_notification_toggle.html', topic=topic)
+
+@bp.route('/suggest-topics', methods=['GET', 'POST'])
+@login_required
+def suggest_topics():
+    form = SuggestTopicsForm()
+    if current_user.created_recently() or current_user.reputation <= -10 or current_user.banned or not current_user.verified:
+        return redirect(url_for('topic.suggestion_denied'))
+    if form.validate_on_submit():
+        sub = f'New Topic Suggestion from {g.site.name}'
+        send = f'{g.site.name} <{current_app.config["MAIL_FROM"]}>'
+        recip = g.site.contact_email
+        tn = form.topic_name.data
+        cft = form.communities_for_topic.data
+        text_body = f'{current_user.user_name} suggested the new Topic "{tn}", containing the communities: {cft}'
+        html_body = f'<p>{current_user.user_name} suggested the new Topic "{tn}", containing the communities: {cft}</p>'
+        send_email(sub, send, recip, text_body=text_body, html_body=html_body)
+        flash(_(f'Thank you for the Topic Suggestion! Your suggestion has been sent to the site administrator(s)'))
+        return redirect(url_for('main.list_topics'))
+    else:
+        return render_template('topic/suggest_topics.html', form=form, title=_('Suggest A Topic!"'),
+                               moderating_communities=moderating_communities(current_user.get_id()),
+                               joined_communities=joined_communities(current_user.get_id()),
+                               menu_topics=menu_topics(),
+                               site=g.site)
+
+@bp.route('/topic/suggestion-denied', methods=['GET'])
+@login_required
+def suggestion_denied():
+    return render_template('topic/suggestion_denied.html')
 
 
 def topics_for_form():
