@@ -594,7 +594,7 @@ def can_downvote(user, community: Community, site=None) -> bool:
         except:
             site = Site.query.get(1)
 
-    if not site.enable_downvotes and community.is_local():
+    if not site.enable_downvotes:
         return False
 
     if community.local_only and not user.is_local():
