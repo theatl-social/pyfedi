@@ -291,7 +291,9 @@ def markdown_to_html(markdown_text, anchors_new_tab=True) -> str:
 # this is for lemmy's version of Markdown (can be removed in future - when HTML from them filtered through an allow_list is used, instead of MD)
 def lemmy_markdown_to_html(markdown_text) -> str:
     if markdown_text:
-        raw_html = markdown2.markdown(markdown_text, safe_mode=True, extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True})
+        raw_html = markdown2.markdown(markdown_text, safe_mode=True, extras={'middle-word-em': False, 'tables': True,
+                                                                             'fenced-code-blocks': True, 'strike': True,
+                                                                             'breaks': {'on_newline': False, 'on_backslash': True}})
         # replace lemmy spoiler tokens with appropriate html tags instead.
         re_spoiler = re.compile(r':{3}\s*?spoiler\s+?(\S.+?)(?:\n|</p>)(.+?)(?:\n|<p>):{3}', re.S)
         raw_html = re_spoiler.sub(r'<details><summary>\1</summary><p>\2</p></details>', raw_html)
