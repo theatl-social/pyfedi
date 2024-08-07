@@ -34,6 +34,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupAddPollChoice();
     setupShowElementLinks();
     setupLightboxTeaser();
+    setupLightboxPostBody();
 });
 
 // All elements with the class "showElement" will show the DOM element referenced by the data-id attribute
@@ -140,6 +141,25 @@ function setupLightboxTeaser() {
               window.removeEventListener('popstate', popStateListener);
             }
         },
+    });
+}
+
+function setupLightboxPostBody() {
+    const images = document.querySelectorAll('.post_body img');
+    images.forEach(function(img) {
+        const parent = img.parentNode;
+        const link = document.createElement('a');
+        link.href = img.src;
+        link.setAttribute('data-caption', img.alt);
+        parent.replaceChild(link, img);
+        link.appendChild(img);
+    });
+
+    baguetteBox.run('.post_body', {
+        fullScreen: false,
+        titleTag: true,
+        async: true,
+        preload: 3
     });
 }
 
