@@ -60,7 +60,7 @@ def admin_site():
         # Save site icon
         uploaded_icon = request.files['icon']
         if uploaded_icon and uploaded_icon.filename != '':
-            allowed_extensions = ['.gif', '.jpg', '.jpeg', '.png', '.webp']
+            allowed_extensions = ['.gif', '.jpg', '.jpeg', '.png', '.webp', '.svg']
             file_ext = os.path.splitext(uploaded_icon.filename)[1]
             if file_ext.lower() not in allowed_extensions:
                 abort(400)
@@ -80,31 +80,35 @@ def admin_site():
             # Save logo file
             base_filename = f'logo_{gibberish(5)}'
             uploaded_icon.save(f'{directory}/{base_filename}{file_ext}')
-            img = Image.open(f'{directory}/{base_filename}{file_ext}')
-            if img.width > 100:
-                img.thumbnail((100, 100))
-                img.save(f'{directory}/{base_filename}_100{file_ext}')
-                site.logo = f'/static/media/{base_filename}_100{file_ext}'
-                delete_original = True
-            else:
-                site.logo = f'/static/media/{base_filename}{file_ext}'
+            if file_ext == '.svg':
                 delete_original = False
+                site.logo = site.logo_152 = site.logo_32 = site.logo_16 = f'/static/media/{base_filename}{file_ext}'
+            else:
+                img = Image.open(f'{directory}/{base_filename}{file_ext}')
+                if img.width > 100:
+                    img.thumbnail((100, 100))
+                    img.save(f'{directory}/{base_filename}_100{file_ext}')
+                    site.logo = f'/static/media/{base_filename}_100{file_ext}'
+                    delete_original = True
+                else:
+                    site.logo = f'/static/media/{base_filename}{file_ext}'
+                    delete_original = False
 
-            # Save multiple copies of the logo - different sizes
-            img = Image.open(f'{directory}/{base_filename}{file_ext}')
-            img.thumbnail((152, 152))
-            img.save(f'{directory}/{base_filename}_152{file_ext}')
-            site.logo_152 = f'/static/media/{base_filename}_152{file_ext}'
+                # Save multiple copies of the logo - different sizes
+                img = Image.open(f'{directory}/{base_filename}{file_ext}')
+                img.thumbnail((152, 152))
+                img.save(f'{directory}/{base_filename}_152{file_ext}')
+                site.logo_152 = f'/static/media/{base_filename}_152{file_ext}'
 
-            img = Image.open(f'{directory}/{base_filename}{file_ext}')
-            img.thumbnail((32, 32))
-            img.save(f'{directory}/{base_filename}_32{file_ext}')
-            site.logo_32 = f'/static/media/{base_filename}_32{file_ext}'
+                img = Image.open(f'{directory}/{base_filename}{file_ext}')
+                img.thumbnail((32, 32))
+                img.save(f'{directory}/{base_filename}_32{file_ext}')
+                site.logo_32 = f'/static/media/{base_filename}_32{file_ext}'
 
-            img = Image.open(f'{directory}/{base_filename}{file_ext}')
-            img.thumbnail((16, 16))
-            img.save(f'{directory}/{base_filename}_16{file_ext}')
-            site.logo_16 = f'/static/media/{base_filename}_16{file_ext}'
+                img = Image.open(f'{directory}/{base_filename}{file_ext}')
+                img.thumbnail((16, 16))
+                img.save(f'{directory}/{base_filename}_16{file_ext}')
+                site.logo_16 = f'/static/media/{base_filename}_16{file_ext}'
 
             if delete_original:
                 os.unlink(f'app/static/media/{base_filename}{file_ext}')
