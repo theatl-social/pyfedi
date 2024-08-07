@@ -4,6 +4,7 @@ from random import randint
 
 from feedgen.feed import FeedGenerator
 from flask import request, flash, json, url_for, current_app, redirect, abort, make_response, g
+from flask import render_template as flask_render_template
 from flask_login import login_required, current_user
 from flask_babel import _
 from sqlalchemy import text, desc, or_
@@ -244,14 +245,22 @@ def suggest_topics():
     if current_user.created_recently() or current_user.reputation <= -10 or current_user.banned or not current_user.verified:
         return redirect(url_for('topic.suggestion_denied'))
     if form.validate_on_submit():
-        sub = f'New Topic Suggestion from {g.site.name}'
-        send = f'{g.site.name} <{current_app.config["MAIL_FROM"]}>'
-        recip = g.site.contact_email
-        tn = form.topic_name.data
-        cft = form.communities_for_topic.data
-        text_body = f'{current_user.user_name} suggested the new Topic "{tn}", containing the communities: {cft}'
-        html_body = f'<p>{current_user.user_name} suggested the new Topic "{tn}", containing the communities: {cft}</p>'
-        send_email(sub, send, recip, text_body=text_body, html_body=html_body)
+        subject = f'New Topic Suggestion from {g.site.name}'
+        sender = f'{g.site.name} <{current_app.config["MAIL_FROM"]}>'
+        recipients = g.site.contact_email
+        topic_name = form.topic_name.data
+        communities_for_topic = form.communities_for_topic.data
+        send_email(subject, 
+                    sender, 
+                    recipients, 
+                    text_body=flask_render_template('email/suggested_topic.txt', site_name=g.site.name, 
+                                                current_user_name=current_user.user_name, topic_name=topic_name, 
+                                                communities_for_topic=communities_for_topic), 
+                    html_body=flask_render_template('email/suggested_topic.html', site_name=g.site.name, 
+                                                current_user_name=current_user.user_name, topic_name=topic_name, 
+                                                communities_for_topic=communities_for_topic, 
+                                                domain=current_app.config['SERVER_NAME'])
+                    )
         flash(_(f'Thank you for the Topic Suggestion! Your suggestion has been sent to the site administrator(s)'))
         return redirect(url_for('main.list_topics'))
     else:
