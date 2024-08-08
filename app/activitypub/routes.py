@@ -739,7 +739,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                 activity_log.exception_message = 'Activity about local content which is already present'
                                 activity_log.result = 'ignored'
 
-                    elif request_json['object']['type'] == 'Like':
+                    elif request_json['object']['type'] == 'Like' or request_json['object']['type'] == 'EmojiReact':
                         activity_log.activity_type = request_json['object']['type']
                         user_ap_id = request_json['object']['actor']
                         liked_ap_id = request_json['object']['object']
@@ -1081,7 +1081,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             else:
                                 activity_log.exception_message = 'Delete: cannot find ' + ap_id
 
-                elif request_json['type'] == 'Like':  # Upvote
+                elif request_json['type'] == 'Like' or request_json['type'] == 'EmojiReact':  # Upvote
                     activity_log.activity_type = request_json['type']
                     user_ap_id = request_json['actor']
                     user = find_actor_or_create(user_ap_id)
