@@ -342,7 +342,7 @@ def microblog_content_to_title(html: str) -> str:
             title = shorten_string(title, 197)
         else:
             title = '(content in post body)'
-        return title
+        return title.strip()
 
     if end_index != -1:
         if question_index != -1 and question_index == end_index:
@@ -357,7 +357,7 @@ def microblog_content_to_title(html: str) -> str:
                 break
         title = title[:i] + ' ...' if i > 0 else ''
 
-    return title
+    return title.strip()
 
 
 def community_link_to_href(link: str) -> str:

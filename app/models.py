@@ -980,6 +980,7 @@ class Post(db.Model):
     body = db.Column(db.Text)
     body_html = db.Column(db.Text)
     type = db.Column(db.Integer)
+    microblog = db.Column(db.Boolean, default=False)
     comments_enabled = db.Column(db.Boolean, default=True)
     deleted = db.Column(db.Boolean, default=False, index=True)
     mea_culpa = db.Column(db.Boolean, default=False)
