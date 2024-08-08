@@ -12,3 +12,8 @@ from app import db
 class ChooseTopicsForm(FlaskForm):
     chosen_topics = MultiCheckboxField(_l('Choose some topics you are interested in'), coerce=int)
     submit = SubmitField(_l('Choose'))
+
+class SuggestTopicsForm(FlaskForm):
+    topic_name = TextAreaField(_l('New Topic Name'), validators=[DataRequired(), Length(min=1, max=100)], render_kw={'placeholder': 'New Topic name here...'})
+    communities_for_topic = TextAreaField(_l('Suggested Communities'), validators=[DataRequired(), Length(min=1, max=5000)], render_kw={'placeholder': 'Comma seperated list of community suggestions'})
+    submit = SubmitField(_l('Submit'))

@@ -1,0 +1,8 @@
+Hi {{ site_name }} Admin!
+
+The user {{ current_user_name }} has suggested the following new Topic:
+
+Topic Name: {{ topic_name }}
+Communities: {{ communities_for_topic }}
+
+Thank you for your time and attention.
