@@ -39,6 +39,18 @@ def send_welcome_email(user, application_required):
                html_body=render_template('email/welcome.html', user=user, application_required=application_required))
 
 
+def send_topic_suggestion(communities_for_topic, user, recipients, subject, topic_name):
+    send_email(subject,
+               sender=f'{g.site.name} <{current_app.config["MAIL_FROM"]}>',
+               recipients=recipients,
+               text_body=render_template('email/suggested_topic.txt', site_name=g.site.name,
+                                               current_user_name=user.user_name, topic_name=topic_name,
+                                               communities_for_topic=communities_for_topic),
+               html_body=render_template('email/suggested_topic.html', site_name=g.site.name,
+                                               current_user_name=user.user_name, topic_name=topic_name,
+                                               communities_for_topic=communities_for_topic,
+                                               domain=current_app.config['SERVER_NAME']))
+
 @celery.task
 def send_async_email(subject, sender, recipients, text_body, html_body, reply_to):
     if 'ngrok.app' in sender:   # for local development

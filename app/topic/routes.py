@@ -16,7 +16,7 @@ from app.inoculation import inoculation
 from app.models import Topic, Community, Post, utcnow, CommunityMember, CommunityJoinRequest, User, \
     NotificationSubscription
 from app.topic import bp
-from app.email import send_email
+from app.email import send_email, send_topic_suggestion
 from app import db, celery, cache
 from app.topic.forms import ChooseTopicsForm, SuggestTopicsForm
 from app.utils import render_template, user_filters_posts, moderating_communities, joined_communities, \
@@ -238,37 +238,28 @@ def topic_notification(topic_id: int):
 
     return render_template('topic/_notification_toggle.html', topic=topic)
 
-@bp.route('/suggest-topics', methods=['GET', 'POST'])
+
+@bp.route('/topics/new', methods=['GET', 'POST'])
 @login_required
 def suggest_topics():
     form = SuggestTopicsForm()
-    if current_user.created_recently() or current_user.reputation <= -10 or current_user.banned or not current_user.verified:
+    if not current_user.trustworthy():
         return redirect(url_for('topic.suggestion_denied'))
     if form.validate_on_submit():
-        subject = f'New Topic Suggestion from {g.site.name}'
-        sender = f'{g.site.name} <{current_app.config["MAIL_FROM"]}>'
+        subject = f'New topic suggestion from {g.site.name}'
         recipients = g.site.contact_email
         topic_name = form.topic_name.data
         communities_for_topic = form.communities_for_topic.data
-        send_email(subject, 
-                    sender, 
-                    recipients, 
-                    text_body=flask_render_template('email/suggested_topic.txt', site_name=g.site.name, 
-                                                current_user_name=current_user.user_name, topic_name=topic_name, 
-                                                communities_for_topic=communities_for_topic), 
-                    html_body=flask_render_template('email/suggested_topic.html', site_name=g.site.name, 
-                                                current_user_name=current_user.user_name, topic_name=topic_name, 
-                                                communities_for_topic=communities_for_topic, 
-                                                domain=current_app.config['SERVER_NAME'])
-                    )
-        flash(_(f'Thank you for the Topic Suggestion! Your suggestion has been sent to the site administrator(s)'))
+        send_topic_suggestion(communities_for_topic, current_user, recipients, subject, topic_name)
+        flash(_(f'Thank you for the topic suggestion, it has been sent to the site administrator(s).'))
         return redirect(url_for('main.list_topics'))
     else:
-        return render_template('topic/suggest_topics.html', form=form, title=_('Suggest A Topic!"'),
+        return render_template('topic/suggest_topics.html', form=form, title=_('Suggest a topic"'),
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
                                menu_topics=menu_topics(),
                                site=g.site)
+
 
 @bp.route('/topic/suggestion-denied', methods=['GET'])
 @login_required
