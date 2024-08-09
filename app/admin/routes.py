@@ -33,11 +33,10 @@ from app.admin import bp
 @login_required
 @permission_required('change instance settings')
 def admin_home():
-    current_mode = current_app.config['MODE']
     return render_template('admin/home.html', title=_('Admin'), moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(),
-                           site=g.site, current_mode=current_mode)
+                           site=g.site)
 
 
 @bp.route('/site', methods=['GET', 'POST'])
