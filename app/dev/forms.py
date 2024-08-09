@@ -9,7 +9,13 @@ from app import db
 
 
 class AddTestCommunities(FlaskForm):
-    communities_submit = SubmitField(_l('Populate Communities for Testing'))
+    communities_submit = SubmitField(_l('Populate Communities'))
 
 class AddTestTopics(FlaskForm):
-    topics_submit = SubmitField(_l('Populate Topics for Testing'))
+    topics_submit = SubmitField(_l('Populate Topics'))
+
+class DeleteTestCommunities(FlaskForm):
+    delete_communities_submit = SubmitField(_l('Delete Communities'))
+
+class DeleteTestTopics(FlaskForm):
+    delete_topics_submit = SubmitField(_l('Delete Topics'))

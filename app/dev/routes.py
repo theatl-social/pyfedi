@@ -1,27 +1,28 @@
-from flask import request, flash, json, url_for, current_app, redirect, g, abort
+import random
+from flask import request, flash, url_for, current_app, redirect, g
 from flask_login import login_required, current_user
 from flask_babel import _
-from sqlalchemy import desc, or_, and_, text
 
+from app import db, cache
 from app.activitypub.signature import RsaKeys
-from app import db, celery, cache
-from app.dev.forms import AddTestCommunities, AddTestTopics
-from app.models import Site, User, Community, CommunityMember, Language, Topic
-from app.utils import render_template, community_membership, moderating_communities, joined_communities, menu_topics, markdown_to_html
+from app.admin.routes import unsubscribe_everyone_then_delete
 from app.dev import bp
-import random
+from app.dev.forms import AddTestCommunities, AddTestTopics, DeleteTestCommunities, DeleteTestTopics
+from app.models import Site, User, Community, CommunityMember, Language, Topic, utcnow
+from app.utils import render_template, community_membership, moderating_communities, joined_communities, menu_topics, markdown_to_html
 
 
-# use this to populate communities in the database
+# a page for handy dev tools
 @bp.route('/dev/tools', methods=['GET', 'POST'])
 @login_required
 def tools():
     communities_form = AddTestCommunities()
     topics_form = AddTestTopics()
+    delete_communities_form = DeleteTestCommunities()
+    delete_topics_form = DeleteTestTopics()
+
+    # create 30 dev_ communities
     if communities_form.communities_submit.data and communities_form.validate():
-        # do a for loop for a range up to 30 or so
-        # build the community title from that and then submit it 
-        # to the db
         for n in range(30):
             # generate a keypair
             private_key, public_key = RsaKeys.generate_keypair()
@@ -42,27 +43,26 @@ def tools():
                                   ap_followers_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + name.lower() + '/followers',
                                   ap_domain=current_app.config['SERVER_NAME'],
                                   subscriptions_count=1, instance_id=1, low_quality='memes' in name)            
-            #
+            
             # add and commit to db
             db.session.add(community)
             db.session.commit()
-            #
+            
             # add community membership for current user
             # add to db
             membership = CommunityMember(user_id=current_user.id, community_id=community.id, is_moderator=True,
                                          is_owner=True)
             db.session.add(membership)
-            # 
-            # add english as language choice
-            # commit to db
-            # community.languages.append(Language.query.filter(Language.name.in_('English')))
-            # db.session.commit()
-            #
-            # do the cache.dememoiz
+            
+            # do the cache clearing bits
             cache.delete_memoized(community_membership, current_user, community)
             cache.delete_memoized(joined_communities, current_user.id)
             cache.delete_memoized(moderating_communities, current_user.id)
+        
+        # redirect browser to communities list page
         return redirect(url_for('main.list_communities'))
+    
+    # create 10 dev_ topics
     elif topics_form.topics_submit.data and topics_form.validate():
         # get the list of communities in the db
         communities = Community.query.filter_by(banned=False)
@@ -72,25 +72,20 @@ def tools():
         for c in range(10):
             rand_communities.append(random.choice(communities.all()))
         
-        # get those community_ids
-        # rand_community_ids = []
-        # for c in rand_communities:
-            # rand_community_ids.append(c.id)
-        
         # generate new topics
-        # for n in range(10):
-        #     # generate strings for name, machine_name, and default to 0 communities
-        #     loop_num = "{:02d}".format(n)
-        #     name = "dev_Topic_" + loop_num
-        #     machine_name = "dev-topic-" + loop_num
-        #     num_communities = 0
-        #     # make the topic
-        #     topic = Topic(name=name, machine_name=machine_name, num_communities=num_communities)
-        #     # add the new topic to the db
-        #     db.session.add(topic)
-        #     db.session.commit()
-        #     # refresh the topic menu
-        #     cache.delete_memoized(menu_topics)
+        for n in range(10):
+            # generate strings for name, machine_name, and default to 0 communities
+            loop_num = "{:02d}".format(n)
+            name = "dev_Topic_" + loop_num
+            machine_name = "dev-topic-" + loop_num
+            num_communities = 0
+            # make the topic
+            topic = Topic(name=name, machine_name=machine_name, num_communities=num_communities)
+            # add the new topic to the db
+            db.session.add(topic)
+            db.session.commit()
+            # refresh the topic menu
+            cache.delete_memoized(menu_topics)
 
         # get the list of topics in the db
         topics = Topic.query.filter_by()
@@ -112,16 +107,77 @@ def tools():
         # update the num_communities for the topic
         # save the db again
         for i in range(10): 
-
             community = rand_communities[i]
             community.topic_id = rand_topic_ids[i]
             db.session.commit()
             community.topic.num_communities = community.topic.communities.count()
             db.session.commit()
-
         
-        # flash(_(f'rand_topic_ids: {rand_topic_ids}'))
-        # return redirect(url_for('dev.tools'))
+        # redirect browser to topics list page
         return redirect(url_for('main.list_topics'))
+
+    # delete dev_ communities
+    elif delete_communities_form.delete_communities_submit.data and delete_communities_form.validate():
+        # get the list of local communities
+        communities = Community.query.filter_by(banned=False, local_only=True)
+        
+        # sort for ones whose name field starts with "dev_"
+        dev_communities = []
+        for c in communities.all():
+            if c.name.startswith("dev_"):
+                dev_communities.append(c)
+
+        # loop through the list and:
+        # - ban the community
+        # - set its last active state
+        # - commit to db
+        # - call the unsubscribe and delete from admin.routes
+        for c in dev_communities:
+            c.banned = True
+            c.last_active = utcnow()
+            db.session.commit()
+            unsubscribe_everyone_then_delete(c.id)
+        
+        # redirect browser to communities list page
+        flash(f'{len(dev_communities)} Dev Communities Deleted')
+        return redirect(url_for('main.list_communities'))
+
+    # delete dev_ topics
+    elif delete_topics_form.delete_topics_submit.data and delete_topics_form.validate():
+        # get the list of topics in the db
+        topics = Topic.query.filter_by()
+
+        # sort for the ones whose name field starts with "dev_"
+        dev_topics = []
+        for t in topics.all():
+            if t.name.startswith("dev_"):
+                dev_topics.append(t)
+        
+        # loop through the topics
+        # if the topic has communities in it, set it aside and tell the dev
+        # else delete it
+        topics_with_communities = 0
+        deleted_topics = 0
+   
+        for t in dev_topics:
+            topic = Topic.query.filter_by(id=t.id).first()
+            topic.num_communities = topic.communities.count()
+            if topic.num_communities == 0:
+                db.session.delete(topic)
+                db.session.commit()
+            else:
+                topics_with_communities += 1
+
+        if topics_with_communities > 0:
+            flash(_(f'{deleted_topics} Dev Topics Deleted. {topics_with_communities} Dev Topics remain as they still have communities'))
+            return redirect(url_for('main.list_topics')) 
+        else:
+            flash(_(f'{deleted_topics} Dev Topics Deleted.'))
+            return redirect(url_for('main.list_topics')) 
+
     else:
-        return render_template('dev/tools.html', communities_form=communities_form, topics_form=topics_form)
+        return render_template('dev/tools.html', 
+                                communities_form=communities_form, 
+                                topics_form=topics_form,
+                                delete_communities_form=delete_communities_form,
+                                delete_topics_form=delete_topics_form)
