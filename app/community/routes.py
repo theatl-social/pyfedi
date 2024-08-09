@@ -951,12 +951,15 @@ def community_delete(community_id: int):
             if community.is_local():
                 community.banned = True
                 # todo: federate deletion out to all instances. At end of federation process, delete_dependencies() and delete community
+
+            # record for modlog
+            reason = f"Community {community.name} deleted by {current_user.user_name}"
+            add_to_modlog('delete_community', reason=reason)
+
+            # actually delete the community
             community.delete_dependencies()
             db.session.delete(community)
             db.session.commit()
-
-            add_to_modlog('delete_community', community_id=community.id, link_text=community.display_name(),
-                          link=community.link())
 
             flash(_('Community deleted'))
             return redirect('/communities')
