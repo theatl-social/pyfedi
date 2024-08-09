@@ -12,7 +12,17 @@
                 <div class="card-body p-6">
                     <div class="card-title">{{ _('Add Communities to DB for Testing') }}</div>
                     <div class="card-body">
-                        {{ render_form(form) }}
+                        {{ render_form(communities_form) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col col-login mx-auto">
+            <div class="card mt-5">
+                <div class="card-body p-6">
+                    <div class="card-title">{{ _('Add Topics to DB for Testing') }}</div>
+                    <div class="card-body">
+                        {{ render_form(topics_form) }}
                     </div>
                 </div>
             </div>

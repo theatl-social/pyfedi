@@ -9,4 +9,7 @@ from app import db
 
 
 class AddTestCommunities(FlaskForm):
-    submit = SubmitField(_l('Populate Communities for Testing'))
+    communities_submit = SubmitField(_l('Populate Communities for Testing'))
+
+class AddTestTopics(FlaskForm):
+    topics_submit = SubmitField(_l('Populate Topics for Testing'))
