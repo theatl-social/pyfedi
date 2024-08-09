@@ -113,6 +113,7 @@ pip install -r requirements.txt
     
 
 ### Extra info
+
 * `SERVER_NAME` should be the domain of the site/instance. Use `127.0.0.1:5000` during development unless using ngrok.
 * `RECAPTCHA_PUBLIC_KEY` and `RECAPTCHA_PRIVATE_KEY` can be generated at https://www.google.com/recaptcha/admin/create (this is optional - omit to allow registration without RECAPCHA).
 * `CACHE_TYPE` can be `FileSystemCache` or `RedisCache`. `FileSystemCache` is fine during development (set `CACHE_DIR` to `/tmp/piefed` or `/dev/shm/piefed`)
@@ -138,6 +139,12 @@ If it does not work check the log file at logs/pyfedi.log for clues.
 * BOUNCE_ADDRESS is where email bounces will go to. If BOUNCE_* is configured then all emails in that inbox
 will be treated as bounces and deleted after extracting the email addresses in them. Use a dedicated inbox
 for bounces, not a inbox you also use for other purposes.
+
+### Development mode
+
+Setting `MODE=development` in the `.env` file will enable the `<your-site>/dev/tools` page.
+
+That page can be accessed from the `Admin` navigation drop down, or nav bar as `Dev Tools`. That page has buttons that can create/delete communities and topics. The communities and topics will all begin with "dev_".
 
 <div id="initialise-database-and-setup-admin-account"></div>
 
