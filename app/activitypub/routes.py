@@ -514,21 +514,20 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             community_ap_id = ''
                             locations = ['audience', 'cc', 'to']
                             if 'object' in request_json:
-                                rjs = [ request_json, request_json['object'] ]
+                                rjs = [request_json, request_json['object']]
                             else:
-                                rjs = [ request_json ]
-                            local_community_prefix = f"https://{current_app.config['SERVER_NAME']}/c/"
+                                rjs = [request_json]
                             followers_suffix = '/followers'
                             for rj in rjs:
-                                for loc in locations:
-                                    if loc in rj:
-                                        id = rj[loc]
-                                        if isinstance(id, str):
-                                            if id.startswith(local_community_prefix) and not id.endswith(followers_suffix):
-                                                community_ap_id = id
-                                        if isinstance(id, list):
-                                            for c in id:
-                                                if c.startswith(local_community_prefix) and not c.endswith(followers_suffix):
+                                for location in locations:
+                                    if location in rj:
+                                        potential_id = rj[location]
+                                        if isinstance(potential_id, str):
+                                            if not potential_id.startswith('https://www.w3.org') and not potential_id.endswith(followers_suffix):
+                                                community_ap_id = potential_id
+                                        if isinstance(potential_id, list):
+                                            for c in potential_id:
+                                                if not c.startswith('https://www.w3.org') and not c.endswith(followers_suffix):
                                                     community_ap_id = c
                                                     break
                                     if community_ap_id:
