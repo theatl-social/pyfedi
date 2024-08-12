@@ -1,5 +1,5 @@
 import random
-from flask import request, flash, url_for, current_app, redirect, g
+from flask import request, flash, url_for, current_app, redirect, g, abort
 from flask_login import login_required, current_user
 from flask_babel import _
 
@@ -8,6 +8,7 @@ from app.activitypub.signature import RsaKeys
 from app.admin.routes import unsubscribe_everyone_then_delete
 from app.dev import bp
 from app.dev.forms import AddTestCommunities, AddTestTopics, DeleteTestCommunities, DeleteTestTopics
+from app.inoculation import inoculation
 from app.models import Site, User, Community, CommunityMember, Language, Topic, utcnow
 from app.utils import render_template, community_membership, moderating_communities, joined_communities, menu_topics, markdown_to_html
 
@@ -16,6 +17,8 @@ from app.utils import render_template, community_membership, moderating_communit
 @bp.route('/dev/tools', methods=['GET', 'POST'])
 @login_required
 def tools():
+    if not current_app.debug:
+        abort(404)
     communities_form = AddTestCommunities()
     topics_form = AddTestTopics()
     delete_communities_form = DeleteTestCommunities()
@@ -177,7 +180,12 @@ def tools():
 
     else:
         return render_template('dev/tools.html', 
-                                communities_form=communities_form, 
-                                topics_form=topics_form,
-                                delete_communities_form=delete_communities_form,
-                                delete_topics_form=delete_topics_form)
+                               communities_form=communities_form,
+                               topics_form=topics_form,
+                               delete_communities_form=delete_communities_form,
+                               delete_topics_form=delete_topics_form,
+                               moderating_communities=moderating_communities(current_user.get_id()),
+                               joined_communities=joined_communities(current_user.get_id()),
+                               menu_topics=menu_topics(), site=g.site,
+                               inoculation=inoculation[random.randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                               )
