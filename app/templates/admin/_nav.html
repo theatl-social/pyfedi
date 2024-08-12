@@ -15,4 +15,7 @@
     <a href="{{ url_for('admin.newsletter') }}">{{ _('Newsletter') }}</a> |
     <a href="{{ url_for('admin.admin_permissions') }}">{{ _('Permissions') }}</a> |
     <a href="{{ url_for('admin.admin_activities') }}">{{ _('Activities') }}</a>
+    {% if current_mode == 'development' %}
+        | <a href="{{ url_for('dev.tools') }}">{{ _('Dev Tools') }}</a>
+    {% endif%}    
 </nav>

@@ -1,0 +1,54 @@
+{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
+    {% extends 'themes/' + theme() + '/base.html' %}
+{% else %}
+    {% extends "base.html" %}
+{% endif %} %}
+{% from 'bootstrap/form.html' import render_form %}
+{% set active_child = 'dev_tools' %}
+
+{% block app_content %}
+<div class="row">
+    <div class="col col-login mx-auto">
+        <div class="card mt-5">
+            <div class="card-body p-6">
+                <div class="card-title">{{ _('Add Dev Communities') }}</div>
+                <div class="card-body">
+                    {{ render_form(communities_form) }}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col col-login mx-auto">
+        <div class="card mt-5">
+            <div class="card-body p-6">
+                <div class="card-title">{{ _('Add Dev Topics') }}</div>
+                <div class="card-body">
+                    {{ render_form(topics_form) }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col col-login mx-auto">
+        <div class="card mt-5">
+            <div class="card-body p-6">
+                <div class="card-title">{{ _('Delete Dev Communities') }}</div>
+                <div class="card-body">
+                    {{ render_form(delete_communities_form) }}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col col-login mx-auto">
+        <div class="card mt-5">
+            <div class="card-body p-6">
+                <div class="card-title">{{ _('Delete Dev Topics') }}</div>
+                <div class="card-body">
+                    {{ render_form(delete_topics_form) }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

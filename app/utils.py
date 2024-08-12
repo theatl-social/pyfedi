@@ -24,6 +24,7 @@ warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 import requests
 import os
 from flask import current_app, json, redirect, url_for, request, make_response, Response, g, flash
+from flask_babel import _
 from flask_login import current_user, logout_user
 from sqlalchemy import text, or_
 from wtforms.fields  import SelectField, SelectMultipleField
@@ -41,6 +42,11 @@ from app.models import Settings, Domain, Instance, BannedInstances, User, Commun
 
 # Flask's render_template function, with support for themes added
 def render_template(template_name: str, **context) -> Response:
+    # add current_mode to context 
+    # if mode is 'development' this will enable the dev tools link in the admin drop down
+    current_mode = current_app.config['MODE']
+    context['current_mode'] = current_mode
+
     theme = current_theme()
     if theme != '' and os.path.exists(f'app/templates/themes/{theme}/{template_name}'):
         content = flask.render_template(f'themes/{theme}/{template_name}', **context)
