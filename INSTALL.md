@@ -142,7 +142,7 @@ for bounces, not a inbox you also use for other purposes.
 
 ### Development mode
 
-Setting `MODE=development` in the `.env` file will enable the `<your-site>/dev/tools` page.
+Setting `FLASK_DEBUG=1` in the `.env` file will enable the `<your-site>/dev/tools` page.
 
 That page can be accessed from the `Admin` navigation drop down, or nav bar as `Dev Tools`. That page has buttons that can create/delete communities and topics. The communities and topics will all begin with "dev_".
 

@@ -10,12 +10,14 @@ from app.dev import bp
 from app.dev.forms import AddTestCommunities, AddTestTopics, DeleteTestCommunities, DeleteTestTopics
 from app.inoculation import inoculation
 from app.models import Site, User, Community, CommunityMember, Language, Topic, utcnow
-from app.utils import render_template, community_membership, moderating_communities, joined_communities, menu_topics, markdown_to_html
+from app.utils import render_template, community_membership, moderating_communities, joined_communities, menu_topics, \
+    markdown_to_html, permission_required
 
 
 # a page for handy dev tools
 @bp.route('/dev/tools', methods=['GET', 'POST'])
 @login_required
+@permission_required('change instance settings')
 def tools():
     if not current_app.debug:
         abort(404)
