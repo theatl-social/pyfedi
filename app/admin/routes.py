@@ -424,12 +424,16 @@ def admin_community_edit(community_id):
 @permission_required('administer all communities')
 def admin_community_delete(community_id):
     community = Community.query.get_or_404(community_id)
+    
 
     community.banned = True  # Unsubscribing everyone could take a long time so until that is completed hide this community from the UI by banning it.
     community.last_active = utcnow()
     db.session.commit()
 
     unsubscribe_everyone_then_delete(community.id)
+
+    reason = f"Community {community.name} deleted by {current_user.user_name}"
+    add_to_modlog('delete_community', reason=reason)
 
     flash(_('Community deleted'))
     return redirect(url_for('admin.admin_communities'))
