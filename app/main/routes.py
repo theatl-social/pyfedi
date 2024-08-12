@@ -34,43 +34,63 @@ from app.models import Community, CommunityMember, Post, Site, User, utcnow, Dom
 @bp.route('/', methods=['HEAD', 'GET', 'POST'])
 @bp.route('/home', methods=['GET', 'POST'])
 @bp.route('/home/<sort>', methods=['GET', 'POST'])
+@bp.route('/home/<sort>/<view_filter>', methods=['GET', 'POST'])
 @cache.cached(make_cache_key=make_cache_key)
-def index(sort=None):
+def index(sort=None, view_filter=None):
     if 'application/ld+json' in request.headers.get('Accept', '') or 'application/activity+json' in request.headers.get(
             'Accept', ''):
         return activitypub_application()
 
+    # view_filter = request.view_args['view_filter'] if request.view_args['view_filter'] else None
+    # view_filter_list = list(request.view_args)
+    # view_filter = view_filter_list
+    if 'sort' in  request.view_args:
+        view_filter = request.view_args['sort']  
+
+
     return CachedResponse(
-        response=home_page('home', sort),
+        response=home_page('home', sort, view_filter),
         timeout=50 if current_user.is_anonymous else 5,
     )
 
 
 @bp.route('/popular', methods=['GET'])
 @bp.route('/popular/<sort>', methods=['GET'])
+@bp.route('/popular/<sort>/<view_filter>', methods=['GET', 'POST'])
 @cache.cached(timeout=5, make_cache_key=make_cache_key)
-def popular(sort=None):
+def popular(sort=None, view_filter=None):
+    # view_filter = request.view_args['view_filter'] if request.view_args['view_filter'] else None
+    if 'sort' in  request.view_args:
+        view_filter = request.view_args['sort']  
     return CachedResponse(
-        response=home_page('popular', sort),
+        response=home_page('popular', sort, view_filter),
         timeout=50 if current_user.is_anonymous else 5,
     )
 
 
 @bp.route('/all', methods=['GET'])
 @bp.route('/all/<sort>', methods=['GET'])
+@bp.route('/all/<sort>/<view_filter>', methods=['GET', 'POST'])
 @cache.cached(timeout=5, make_cache_key=make_cache_key)
-def all_posts(sort=None):
+def all_posts(sort=None, view_filter=None):
+    # view_filter = request.view_args['view_filter'] if request.view_args['view_filter'] else None
+    if 'sort' in  request.view_args:
+        view_filter = request.view_args['sort']  
     return CachedResponse(
-        response=home_page('all', sort),
+        response=home_page('all', sort, view_filter),
         timeout=50 if current_user.is_anonymous else 5,
     )
 
 
-def home_page(type, sort):
+def home_page(type, sort, view_filter):
     verification_warning()
 
     if sort is None:
         sort = current_user.default_sort if current_user.is_authenticated else 'hot'
+
+    if view_filter is None:
+        # view_filter = current_user.default_view_filter if current_user.is_authenticated else 'all'
+        view_filter = 'all'
 
     # If nothing has changed since their last visit, return HTTP 304
     current_etag = f"{type}_{sort}_{hash(str(g.site.last_active))}"
@@ -169,6 +189,8 @@ def home_page(type, sort):
         recently_upvoted = []
         recently_downvoted = []
 
+    flash(_(f'view_filter: {view_filter}'))
+
     return render_template('index.html', posts=posts, active_communities=active_communities, show_post_community=True,
                            POST_TYPE_IMAGE=POST_TYPE_IMAGE, POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_VIDEO=POST_TYPE_VIDEO, POST_TYPE_POLL=POST_TYPE_POLL,
                            low_bandwidth=low_bandwidth, recently_upvoted=recently_upvoted,
@@ -179,7 +201,7 @@ def home_page(type, sort):
                            #rss_feed_name=f"Posts on " + g.site.name,
                            title=f"{g.site.name} - {g.site.description}",
                            description=shorten_string(markdown_to_text(g.site.sidebar), 150),
-                           content_filters=content_filters, type=type, sort=sort,
+                           content_filters=content_filters, type=type, sort=sort, view_filter=view_filter,
                            announcement=allowlist_html(get_setting('announcement', '')),
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
