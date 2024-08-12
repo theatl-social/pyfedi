@@ -106,7 +106,7 @@
                 {% for community in blocked_communities %}
                     <tr>
                         <td><a href="{{ url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not none else community.name) }}">{{ community.title }}</a></td>
-                        <td><a class="no-underline confirm_first" href="#" rel="nofollow"><span class="fe fe-delete"></span> {{ _('Unblock') }}</a></td>
+                        <td><a class="no-underline confirm_first" href="{{ url_for('user.user_community_unblock', community_id=community.id) }}" rel="nofollow"><span class="fe fe-delete"></span> {{ _('Unblock') }}</a></td>
                     </tr>
                 {% endfor %}
                 </table>
@@ -141,7 +141,7 @@
                     </tr>
                 {% for instance in blocked_instances %}
                     <tr>
-                        <td><a href="#">{{ instance.domain }}</a></td>
+                        <td><a href="https://{{ instance.domain }}">{{ instance.domain }}</a></td>
                         <td><a class="no-underline confirm_first" href="{{ url_for('user.instance_unblock', instance_id=instance.id) }}" rel="nofollow"><span class="fe fe-delete"></span> {{ _('Unblock') }}</a></td>
                     </tr>
                 {% endfor %}

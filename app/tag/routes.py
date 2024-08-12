@@ -11,7 +11,8 @@ from app.inoculation import inoculation
 from app.models import Post, Community, Tag, post_tag
 from app.tag import bp
 from app.utils import render_template, permission_required, joined_communities, moderating_communities, \
-    user_filters_posts, blocked_instances, blocked_users, blocked_domains, menu_topics, mimetype_from_url
+    user_filters_posts, blocked_instances, blocked_users, blocked_domains, menu_topics, mimetype_from_url, \
+    blocked_communities
 from sqlalchemy import desc, or_
 
 
@@ -36,6 +37,9 @@ def show_tag(tag):
             instance_ids = blocked_instances(current_user.id)
             if instance_ids:
                 posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
+            community_ids = blocked_communities(current_user.id)
+            if community_ids:
+                posts = posts.filter(Post.community_id.not_in(community_ids))
             # filter blocked users
             blocked_accounts = blocked_users(current_user.id)
             if blocked_accounts:

@@ -6,7 +6,8 @@ from sqlalchemy import or_
 from app.models import Post, Language, Community
 from app.search import bp
 from app.utils import moderating_communities, joined_communities, render_template, blocked_domains, blocked_instances, \
-    communities_banned_from, recently_upvoted_posts, recently_downvoted_posts, blocked_users, menu_topics
+    communities_banned_from, recently_upvoted_posts, recently_downvoted_posts, blocked_users, menu_topics, \
+    blocked_communities
 from app.community.forms import RetrieveRemotePost
 from app.activitypub.util import resolve_remote_post_from_search
 
@@ -42,6 +43,9 @@ def run_search():
             instance_ids = blocked_instances(current_user.id)
             if instance_ids:
                 posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
+            community_ids = blocked_communities(current_user.id)
+            if community_ids:
+                posts = posts.filter(Post.community_id.not_in(community_ids))
             # filter blocked users
             blocked_accounts = blocked_users(current_user.id)
             if blocked_accounts:

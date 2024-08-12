@@ -36,7 +36,7 @@ from PIL import Image, ImageOps
 
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, ActivityPubLog, IpBan, \
     Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
-    File, ModLog
+    File, ModLog, CommunityBlock
 
 
 # Flask's render_template function, with support for themes added
@@ -434,6 +434,12 @@ def communities_banned_from(user_id: int) -> List[int]:
 def blocked_domains(user_id) -> List[int]:
     blocks = DomainBlock.query.filter_by(user_id=user_id)
     return [block.domain_id for block in blocks]
+
+
+@cache.memoize(timeout=86400)
+def blocked_communities(user_id) -> List[int]:
+    blocks = CommunityBlock.query.filter_by(user_id=user_id)
+    return [block.community_id for block in blocks]
 
 
 @cache.memoize(timeout=86400)

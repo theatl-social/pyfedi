@@ -23,7 +23,8 @@ from app.user.utils import purge_user_then_delete, unsubscribe_from_community
 from app.utils import get_setting, render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     is_image_url, ensure_directory_exists, gibberish, file_get_contents, community_membership, user_filters_home, \
     user_filters_posts, user_filters_replies, moderating_communities, joined_communities, theme_list, blocked_instances, \
-    allowlist_html, recently_upvoted_posts, recently_downvoted_posts, blocked_users, menu_topics, add_to_modlog
+    allowlist_html, recently_upvoted_posts, recently_downvoted_posts, blocked_users, menu_topics, add_to_modlog, \
+    blocked_communities
 from sqlalchemy import desc, or_, text
 import os
 
@@ -504,6 +505,21 @@ def instance_unblock(instance_id):
         db.session.commit()
         cache.delete_memoized(blocked_instances, current_user.id)
         flash(f'{instance.domain} has been unblocked.')
+
+    goto = request.args.get('redirect') if 'redirect' in request.args else url_for('user.user_settings_filters')
+    return redirect(goto)
+
+
+@bp.route('/user/community/<int:community_id>/unblock', methods=['GET'])
+@login_required
+def user_community_unblock(community_id):
+    community = Community.query.get_or_404(community_id)
+    existing_block = CommunityBlock.query.filter_by(user_id=current_user.id, community_id=community.id).first()
+    if existing_block:
+        db.session.delete(existing_block)
+        db.session.commit()
+        cache.delete_memoized(blocked_communities, current_user.id)
+        flash(f'{community.display_name()} has been unblocked.')
 
     goto = request.args.get('redirect') if 'redirect' in request.args else url_for('user.user_settings_filters')
     return redirect(goto)

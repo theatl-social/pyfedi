@@ -25,7 +25,7 @@ from app.models import Settings, BannedInstances, Interest, Role, User, RolePerm
     utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply, Language, \
     Tag, InstanceRole
 from app.utils import file_get_contents, retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
-    shorten_string, get_request, html_to_text
+    shorten_string, get_request, html_to_text, blocked_communities
 
 
 def register(app):
@@ -339,6 +339,9 @@ def register(app):
                     domains_ids = blocked_domains(user.id)
                     if domains_ids:
                         posts = posts.filter(or_(Post.domain_id.not_in(domains_ids), Post.domain_id == None))
+                    community_ids = blocked_communities(user.id)
+                    if community_ids:
+                        posts = posts.filter(Post.community_id.not_in(community_ids))
                     posts = posts.filter(Post.posted_at > user.last_seen).order_by(desc(Post.score))
                     posts = posts.limit(20).all()
 

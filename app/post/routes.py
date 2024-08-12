@@ -23,7 +23,7 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_
 from app.models import Post, PostReply, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, InstanceBlock, Report, Site, Community, \
     Topic, User, Instance, NotificationSubscription, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
-    PostReplyBookmark
+    PostReplyBookmark, CommunityBlock
 from app.post import bp
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
@@ -31,7 +31,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, moderating_communities, joined_communities, \
     blocked_instances, blocked_domains, community_moderators, blocked_phrases, show_ban_message, recently_upvoted_posts, \
     recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, reply_is_stupid, \
-    languages_for_form, menu_topics, add_to_modlog
+    languages_for_form, menu_topics, add_to_modlog, blocked_communities
 
 
 def show_post(post_id: int):
@@ -1461,6 +1461,19 @@ def post_block_domain(post_id: int):
         db.session.commit()
         cache.delete_memoized(blocked_domains, current_user.id)
     flash(_('Posts linking to %(name)s will be hidden.', name=post.domain.name))
+    return redirect(post.community.local_url())
+
+
+@bp.route('/post/<int:post_id>/block_community', methods=['GET', 'POST'])
+@login_required
+def post_block_community(post_id: int):
+    post = Post.query.get_or_404(post_id)
+    existing = CommunityBlock.query.filter_by(user_id=current_user.id, community_id=post.community_id).first()
+    if not existing:
+        db.session.add(CommunityBlock(user_id=current_user.id, community_id=post.community_id))
+        db.session.commit()
+        cache.delete_memoized(blocked_communities, current_user.id)
+    flash(_('Posts in %(name)s will be hidden.', name=post.community.display_name()))
     return redirect(post.community.local_url())
 
 

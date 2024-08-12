@@ -21,7 +21,7 @@ from app import db, celery, cache
 from app.topic.forms import ChooseTopicsForm, SuggestTopicsForm
 from app.utils import render_template, user_filters_posts, moderating_communities, joined_communities, \
     community_membership, blocked_domains, validation_required, mimetype_from_url, blocked_instances, \
-    communities_banned_from, blocked_users, menu_topics
+    communities_banned_from, blocked_users, menu_topics, blocked_communities
 
 
 @bp.route('/topic/<path:topic_path>', methods=['GET'])
@@ -75,6 +75,9 @@ def show_topic(topic_path):
             instance_ids = blocked_instances(current_user.id)
             if instance_ids:
                 posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
+            community_ids = blocked_communities(current_user.id)
+            if community_ids:
+                posts = posts.filter(Post.community_id.not_in(community_ids))
             # filter blocked users
             blocked_accounts = blocked_users(current_user.id)
             if blocked_accounts:

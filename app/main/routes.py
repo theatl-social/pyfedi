@@ -26,7 +26,7 @@ from app.utils import render_template, get_setting, gibberish, request_etag_matc
     joined_communities, moderating_communities, parse_page, theme_list, get_request, markdown_to_html, allowlist_html, \
     blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
     generate_image_from_video_url, blocked_users, microblog_content_to_title, menu_topics, languages_for_form, \
-    make_cache_key
+    make_cache_key, blocked_communities
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Domain, Topic, File, Instance, \
     InstanceRole, Notification, Language, community_language, PostReply, ModLog
 
@@ -119,6 +119,9 @@ def home_page(type, sort):
         instance_ids = blocked_instances(current_user.id)
         if instance_ids:
             posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
+        community_ids = blocked_communities(current_user.id)
+        if community_ids:
+            posts = posts.filter(Post.community_id.not_in(community_ids))
         # filter blocked users
         blocked_accounts = blocked_users(current_user.id)
         if blocked_accounts:
@@ -153,6 +156,9 @@ def home_page(type, sort):
         banned_from = communities_banned_from(current_user.id)
         if banned_from:
             active_communities = active_communities.filter(Community.id.not_in(banned_from))
+        community_ids = blocked_communities(current_user.id)
+        if community_ids:
+            active_communities = active_communities.filter(Community.id.not_in(community_ids))
     active_communities = active_communities.order_by(desc(Community.last_active)).limit(5).all()
 
     # Voting history
