@@ -169,7 +169,7 @@ def gibberish(length: int = 10) -> str:
 
 
 # used by @cache.cached() for home page and post caching
-def make_cache_key(sort=None, post_id=None):
+def make_cache_key(sort=None, post_id=None, view_filter=None):
     if current_user.is_anonymous:
         return f'{request.url}_{sort}_{post_id}_anon_{request.headers.get("Accept")}_{request.headers.get("Accept-Language")}'  # The Accept header differentiates between activitypub requests and everything else
     else:
