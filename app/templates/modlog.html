@@ -14,7 +14,7 @@
             <thead>
                 <tr>
                     <th>{{ _('When') }}</th>
-                    <th>{{ _('Moderator') }}</th>
+                    {% if can_see_names %}<th>{{ _('Moderator') }}</th>{% endif %}
                     <th>{{ _('Action') }}</th>
                 </tr>
             </thead>
@@ -22,7 +22,7 @@
                 {% for modlog_entry in modlog_entries.items %}
                     <tr>
                         <td>{{ moment(modlog_entry.created_at).fromNow() }}</td>
-                        <td>{{ render_username(modlog_entry.author) }}</td>
+                        {% if can_see_names %}<td>{{ render_username(modlog_entry.author) }}</td>{% endif %}
                         <td>{{ modlog_entry.action_to_str() }}
                             {% if modlog_entry.link and modlog_entry.link_text -%}
                                 <a href="/{{ modlog_entry.link }}">{{ modlog_entry.link_text}}</a>

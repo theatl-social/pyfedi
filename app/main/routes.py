@@ -360,11 +360,13 @@ def list_subscribed_communities():
 def modlog():
     page = request.args.get('page', 1, type=int)
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+    can_see_names = False
 
     # Admins can see all of the modlog, everyone else can only see public entries
     if current_user.is_authenticated:
         if current_user.is_admin() or current_user.is_staff():
             modlog_entries = ModLog.query.order_by(desc(ModLog.created_at))
+            can_see_names = True
         else:
             modlog_entries = ModLog.query.filter(ModLog.public == True).order_by(desc(ModLog.created_at))
     else:
@@ -376,7 +378,7 @@ def modlog():
     prev_url = url_for('main.modlog', page=modlog_entries.prev_num) if modlog_entries.has_prev and page != 1 else None
 
     return render_template('modlog.html',
-                           title=_('Moderation Log'), modlog_entries=modlog_entries,
+                           title=_('Moderation Log'), modlog_entries=modlog_entries, can_see_names=can_see_names,
                            next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
