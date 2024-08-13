@@ -100,6 +100,12 @@ def home_page(type, sort, view_filter):
 
     if current_user.is_anonymous:
         flash(_('Create an account to tailor this feed to your interests.'))
+        # view filter
+        # anon can only filter to local/all
+        # if view_filter == 'local':
+            # posts = Post.query.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False, Post.instance_id == 1)
+        # else:
+            # posts = Post.query.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
         posts = Post.query.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
         posts = posts.join(Community, Community.id == Post.community_id)
         if type == 'home':
@@ -146,6 +152,12 @@ def home_page(type, sort, view_filter):
             posts = posts.filter(Post.user_id.not_in(blocked_accounts))
         content_filters = user_filters_home(current_user.id)
 
+    # view filter - subscribed/local/all
+    if view_filter == 'subscribed':
+        posts = posts.filter(CommunityMember.user_id == current_user.id)
+    elif view_filter == 'local':
+        posts = posts.filter(Post.instance_id == 1)
+
     # Sorting
     if sort == 'hot':
         posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
@@ -155,6 +167,8 @@ def home_page(type, sort, view_filter):
         posts = posts.order_by(desc(Post.posted_at))
     elif sort == 'active':
         posts = posts.order_by(desc(Post.last_active))
+
+    # flash(_(f'posts: {posts}'))
 
     # Pagination
     posts = posts.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50, error_out=False)
@@ -187,7 +201,6 @@ def home_page(type, sort, view_filter):
         recently_upvoted = []
         recently_downvoted = []
 
-    flash(_(f'view_filter: {view_filter}'))
 
     return render_template('index.html', posts=posts, active_communities=active_communities, show_post_community=True,
                            POST_TYPE_IMAGE=POST_TYPE_IMAGE, POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_VIDEO=POST_TYPE_VIDEO, POST_TYPE_POLL=POST_TYPE_POLL,
