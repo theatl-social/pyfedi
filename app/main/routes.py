@@ -33,7 +33,7 @@ from app.models import Community, CommunityMember, Post, Site, User, utcnow, Dom
 
 @bp.route('/', methods=['HEAD', 'GET', 'POST'])
 @bp.route('/home', methods=['GET', 'POST'])
-# @bp.route('/home/<sort>', methods=['GET', 'POST'])
+@bp.route('/home/<sort>', methods=['GET', 'POST'])
 @bp.route('/home/<sort>/<view_filter>', methods=['GET', 'POST'])
 @cache.cached(make_cache_key=make_cache_key)
 def index(sort=None, view_filter=None):
@@ -52,7 +52,7 @@ def index(sort=None, view_filter=None):
 
 
 @bp.route('/popular', methods=['GET'])
-# @bp.route('/popular/<sort>', methods=['GET'])
+@bp.route('/popular/<sort>', methods=['GET'])
 @bp.route('/popular/<sort>/<view_filter>', methods=['GET', 'POST'])
 @cache.cached(timeout=5, make_cache_key=make_cache_key)
 def popular(sort=None, view_filter=None):
@@ -67,7 +67,7 @@ def popular(sort=None, view_filter=None):
 
 
 @bp.route('/all', methods=['GET'])
-# @bp.route('/all/<sort>', methods=['GET'])
+@bp.route('/all/<sort>', methods=['GET'])
 @bp.route('/all/<sort>/<view_filter>', methods=['GET', 'POST'])
 @cache.cached(timeout=5, make_cache_key=make_cache_key)
 def all_posts(sort=None, view_filter=None):
@@ -100,12 +100,6 @@ def home_page(type, sort, view_filter):
 
     if current_user.is_anonymous:
         flash(_('Create an account to tailor this feed to your interests.'))
-        # view filter
-        # anon can only filter to local/all
-        # if view_filter == 'local':
-            # posts = Post.query.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False, Post.instance_id == 1)
-        # else:
-            # posts = Post.query.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
         posts = Post.query.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
         posts = posts.join(Community, Community.id == Post.community_id)
         if type == 'home':
@@ -167,8 +161,6 @@ def home_page(type, sort, view_filter):
         posts = posts.order_by(desc(Post.posted_at))
     elif sort == 'active':
         posts = posts.order_by(desc(Post.last_active))
-
-    # flash(_(f'posts: {posts}'))
 
     # Pagination
     posts = posts.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50, error_out=False)
