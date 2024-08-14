@@ -667,22 +667,6 @@ div.navbar {
   }
 }
 
-.post_body {
-  img {
-    max-height: 40vh;
-    max-width: 100%;
-    height: auto;
-  }
-}
-
-.comment_body {
-  img {
-    max-height: 40vh;
-    max-width: 100%;
-    height: auto;
-  }
-}
-
 
 #replies {
   scroll-margin-top: 5em;
@@ -1012,10 +996,24 @@ fieldset {
 }
 
 .post_body, .comment_body {
+  word-wrap: break-word;
+
+  img {
+    max-height: 40vh;
+    max-width: 100%;
+    height: auto;
+  }
+
   blockquote {
     border-left: 2px solid var(--bs-secondary);
     padding: 0.1em 5px;
     font-style: italic;
+  }
+
+  table.table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
   }
 }
 
@@ -1188,9 +1186,7 @@ h1 .warning_badge {
   }
 }
 
-.post_body, .comment_body {
-  word-wrap: break-word;
-}
+
 
 #baguetteBox-overlay {
   overflow: scroll;
