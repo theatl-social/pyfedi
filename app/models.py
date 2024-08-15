@@ -343,8 +343,6 @@ class Topic(db.Model):
         return existing_notification is not None
 
 
-
-
 class Community(db.Model):
     query_class = FullTextSearchQuery
     id = db.Column(db.Integer, primary_key=True)
@@ -571,7 +569,6 @@ class Community(db.Model):
         db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == self.id).delete()
         db.session.query(CommunityMember).filter(CommunityMember.community_id == self.id).delete()
         db.session.query(Report).filter(Report.suspect_community_id == self.id).delete()
-
 
 
 user_role = db.Table('user_role',
