@@ -15,6 +15,7 @@
             {{ render_field(form.title) }}
             {% if post_type == POST_TYPE_LINK %}
                 {{ render_field(form.link_url) }}
+                <div id="urlUsed"></div>
             {% elif post_type == POST_TYPE_IMAGE %}
                 {{ render_field(form.image_file) }}
                 {{ render_field(form.image_alt_text) }}

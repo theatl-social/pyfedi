@@ -124,7 +124,10 @@ class CreateDiscussionForm(CreatePostForm):
 
 class CreateLinkForm(CreatePostForm):
     link_url = StringField(_l('URL'), validators=[DataRequired(), Regexp(r'^https?://', message='Submitted links need to start with "http://"" or "https://"')],
-                           render_kw={'placeholder': 'https://...'})
+                           render_kw={'placeholder': 'https://...',
+                                      'hx-get': '/community/check_url_already_posted',
+                                      'hx-params': '*',
+                                      'hx-target': '#urlUsed'})
 
     def validate(self, extra_validators=None) -> bool:
         domain = domain_from_url(self.link_url.data, create=False)

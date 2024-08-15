@@ -2,7 +2,9 @@ from collections import namedtuple
 from io import BytesIO
 from random import randint
 
-from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, g, json
+import flask
+from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, g, json, \
+    jsonify
 from flask_login import current_user, login_required
 from flask_babel import _
 from slugify import slugify
@@ -36,7 +38,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     joined_communities, moderating_communities, blocked_domains, mimetype_from_url, blocked_instances, \
     community_moderators, communities_banned_from, show_ban_message, recently_upvoted_posts, recently_downvoted_posts, \
     blocked_users, post_ranking, languages_for_form, english_language_id, menu_topics, add_to_modlog, \
-    blocked_communities
+    blocked_communities, remove_tracking_from_link
 from feedgen.feed import FeedGenerator
 from datetime import timezone, timedelta
 from copy import copy
@@ -1802,6 +1804,17 @@ def lookup(community, domain):
                 return redirect(referrer)
             else:
                 return redirect('/')
+
+
+@bp.route('/check_url_already_posted')
+def check_url_already_posted():
+    url = request.args.get('link_url')
+    if url:
+        url = remove_tracking_from_link(url.strip())
+        communities = Community.query.filter_by(banned=False).join(Post).filter(Post.url == url).all()
+        return flask.render_template('community/check_url_posted.html', communities=communities)
+    else:
+        abort(404)
 
 
 def upvote_own_post(post):

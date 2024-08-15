@@ -1,0 +1,7 @@
+{% if communities -%}
+    <p>{{ _('This link has already been posted to these communities:') }}<br>
+    {% for community in communities -%}
+        {{ community.display_name() }}<br>
+    {% endfor -%}
+    </p>
+{% endif %}
