@@ -219,7 +219,7 @@ The site will still run without federation. You can create local communities and
 
 My way around this is to use ngrok.com, which is a quick and simple way to create a temporary VPN with a domain and SSL. The free plan comes with ephermeral domain names that change every few days, which will break federation, or one randomly-named static domain that will need re-launching every few days. $10 per month will get you https://yourwhatever.ngrok.app which won't change. 
 
-Once you have ngrok working, edit the `.env` file and change the `SERVER_NAME` variable to your new domain name. 
+Once you have ngrok working, edit the `.env` file and change the `SERVER_NAME` variable to your new domain name (all lower case).
 
 <div id="running-piefed-in-production"></div>
 

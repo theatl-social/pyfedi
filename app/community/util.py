@@ -36,6 +36,10 @@ def search_for_community(address: str):
             reason = f" Reason: {banned.reason}" if banned.reason is not None else ''
             raise Exception(f"{server} is blocked.{reason}")  # todo: create custom exception class hierarchy
 
+        if current_app.config['SERVER_NAME'] == server:
+            already_exists = Community.query.filter_by(name=name, ap_id=None).first()
+            return already_exists
+
         already_exists = Community.query.filter_by(ap_id=address[1:]).first()
         if already_exists:
             return already_exists
