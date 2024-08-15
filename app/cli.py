@@ -191,6 +191,19 @@ def register(app):
                 tag.post_count = post_count
                 db.session.commit()
 
+            # Delete soft-deleted content after 7 days
+            for post_reply in PostReply.query.filter(PostReply.deleted == True,
+                                                     PostReply.posted_at < utcnow() - timedelta(days=7)).all():
+                post_reply.delete_dependencies()
+                db.session.delete(post_reply)
+
+            for post in Post.query.filter(Post.deleted == True,
+                                          Post.posted_at < utcnow() - timedelta(days=7)).all():
+                post.delete_dependencies()
+                db.session.delete(post)
+
+            db.session.commit()
+
             # Check for dormant or dead instances
             instances = Instance.query.filter(Instance.gone_forever == False, Instance.id != 1).all()
             HEADERS = {'User-Agent': 'PieFed/1.0', 'Accept': 'application/activity+json'}
@@ -283,16 +296,6 @@ def register(app):
                                             InstanceRole.instance_id == instance.id,
                                             InstanceRole.role == 'admin').delete()
                                         db.session.commit()
-
-            # Delete soft-deleted content after 7 days
-            for post_reply in PostReply.query.filter(PostReply.deleted == True, PostReply.posted_at < utcnow() - timedelta(days=7)).all():
-                db.session.delete(post_reply)
-
-            for post in Post.query.filter(Post.deleted == True, Post.posted_at < utcnow() - timedelta(days=7)).all():
-                post.delete_dependencies()
-                db.session.delete(post)
-
-            db.session.commit()
 
     @app.cli.command("spaceusage")
     def spaceusage():
