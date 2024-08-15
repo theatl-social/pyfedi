@@ -440,6 +440,9 @@ def shared_inbox():
                 return ''
             except VerificationError as e:
                 activity_log.exception_message = 'Could not verify signature: ' + str(e)
+                activity_log.result = 'failure'
+                db.session.commit()
+                return '', 400
         else:
             actor_name = request_json['actor'] if 'actor' in request_json else ''
             activity_log.exception_message = f'Actor could not be found: {actor_name}'
