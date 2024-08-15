@@ -175,7 +175,7 @@ def register(app):
             communities = Community.query.filter(Community.content_retention > 0).all()
             for community in communities:
                 cut_off = utcnow() - timedelta(days=community.content_retention)
-                db.session.execute(text('UPDATE "post" SET deleted = true WHERE posted_at < :cut_off AND community_id = :community_id'), {
+                db.session.execute(text('UPDATE "post" SET deleted = true WHERE sticky = false AND posted_at < :cut_off AND community_id = :community_id'), {
                     'cut_off': cut_off,
                     'community_id': community.id
                 })
