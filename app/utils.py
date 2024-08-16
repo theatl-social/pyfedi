@@ -626,7 +626,8 @@ def can_upvote(user, community: Community) -> bool:
 
 
 def can_create_post(user, content: Community) -> bool:
-    if community is None:
+
+    if content is None:
         return False
 
     if user is None or content is None or user.banned:
