@@ -1,4 +1,4 @@
-<div class="btn-group mt-1 mb-2" style="float: right;" aria-label="{{ _('Post filters: ') }}">
+<div class="view_filter btn-group mt-1 mb-2" aria-label="{{ _('Post filters: ') }}">
     {% if not current_user.is_anonymous %}
         <a href="/home/{{ sort }}/subscribed" class="btn {{ 'btn-primary' if view_filter == 'subscribed' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Posts from joined communities') }}">
             {{ _('Subscribed') }}

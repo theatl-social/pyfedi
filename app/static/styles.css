@@ -743,6 +743,15 @@ div.navbar {
   left: 122px;
 }
 
+@media (min-width: 768px) {
+  .view_filter {
+    float: right;
+  }
+}
+
+.post_list {
+  clear: both;
+}
 .post_list .post_teaser {
   border-bottom: solid 2px #ddd;
   padding-top: 8px;

@@ -328,7 +328,14 @@ div.navbar {
   }
 }
 
+.view_filter {
+  @include breakpoint(phablet) {
+    float: right;
+  }
+}
+
 .post_list {
+  clear: both;
   .post_teaser {
 
     border-bottom: solid 2px $light-grey;
