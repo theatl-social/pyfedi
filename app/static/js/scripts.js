@@ -691,6 +691,7 @@ function setupMarkdownEditorEnabler() {
                     elem: document.querySelector('#' + dataId),
                     resize: DownArea.RESIZE_VERTICAL,
                     hide: ['heading', 'bold-italic'],
+                    value: document.getElementById(dataId).value
                 });
                 setupAutoResize(dataId);
                 link.style.display = 'none';
