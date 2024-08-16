@@ -630,7 +630,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                             parent_post_id, parent_comment_id, _ = find_reply_parent(in_reply_to)
                                             if parent_comment_id:
                                                 community = PostReply.query.get(parent_comment_id).community
-                                            else:
+                                            elif parent_post_id:
                                                 community = Post.query.get(parent_post_id).community
                                         if can_create_post_reply(user, community):
                                             try:
