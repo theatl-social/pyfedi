@@ -1,8 +1,6 @@
 import os.path
-from datetime import datetime, timedelta
-from math import log
+from datetime import timedelta
 from random import randint
-from time import sleep
 
 import flask
 from flask_caching import CachedResponse
@@ -13,22 +11,22 @@ from app.activitypub.util import users_total, active_month, local_posts, local_c
 from app.activitypub.signature import default_context
 from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, POST_TYPE_IMAGE, POST_TYPE_LINK, \
     SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_VIDEO, POST_TYPE_POLL
-from app.email import send_email, send_welcome_email
+from app.email import send_email
 from app.inoculation import inoculation
 from app.main import bp
 from flask import g, session, flash, request, current_app, url_for, redirect, make_response, jsonify
 from flask_moment import moment
 from flask_login import current_user, login_required
 from flask_babel import _, get_locale
-from sqlalchemy import select, desc, text
-from app.utils import render_template, get_setting, gibberish, request_etag_matches, return_304, blocked_domains, \
-    ap_datetime, ip_address, retrieve_block_list, shorten_string, markdown_to_text, user_filters_home, \
-    joined_communities, moderating_communities, parse_page, theme_list, get_request, markdown_to_html, allowlist_html, \
+from sqlalchemy import desc, text
+from app.utils import render_template, get_setting, request_etag_matches, return_304, blocked_domains, \
+    ap_datetime, shorten_string, markdown_to_text, user_filters_home, \
+    joined_communities, moderating_communities, markdown_to_html, allowlist_html, \
     blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
-    generate_image_from_video_url, blocked_users, microblog_content_to_title, menu_topics, languages_for_form, \
+    blocked_users, menu_topics, languages_for_form, \
     make_cache_key, blocked_communities
-from app.models import Community, CommunityMember, Post, Site, User, utcnow, Domain, Topic, File, Instance, \
-    InstanceRole, Notification, Language, community_language, PostReply, ModLog
+from app.models import Community, CommunityMember, Post, Site, User, utcnow, Domain, Topic, Instance, \
+    Notification, Language, community_language, ModLog
 
 
 @bp.route('/', methods=['HEAD', 'GET', 'POST'])
@@ -41,57 +39,25 @@ def index(sort=None, view_filter=None):
             'Accept', ''):
         return activitypub_application()
 
-    if 'view_filter' in  request.view_args:
-        view_filter = request.view_args['view_filter']  
-
-
     return CachedResponse(
-        response=home_page('home', sort, view_filter),
+        response=home_page(sort, view_filter),
         timeout=50 if current_user.is_anonymous else 5,
     )
 
 
-@bp.route('/popular', methods=['GET'])
-@bp.route('/popular/<sort>', methods=['GET'])
-@bp.route('/popular/<sort>/<view_filter>', methods=['GET', 'POST'])
-@cache.cached(timeout=5, make_cache_key=make_cache_key)
-def popular(sort=None, view_filter=None):
-    
-    if 'view_filter' in  request.view_args:
-        view_filter = request.view_args['view_filter']  
-    
-    return CachedResponse(
-        response=home_page('popular', sort, view_filter),
-        timeout=50 if current_user.is_anonymous else 5,
-    )
-
-
-@bp.route('/all', methods=['GET'])
-@bp.route('/all/<sort>', methods=['GET'])
-@bp.route('/all/<sort>/<view_filter>', methods=['GET', 'POST'])
-@cache.cached(timeout=5, make_cache_key=make_cache_key)
-def all_posts(sort=None, view_filter=None):
-    
-    if 'view_filter' in  request.view_args:
-        view_filter = request.view_args['view_filter']  
-    
-    return CachedResponse(
-        response=home_page('all', sort, view_filter),
-        timeout=50 if current_user.is_anonymous else 5,
-    )
-
-
-def home_page(type, sort, view_filter):
+def home_page(sort, view_filter):
     verification_warning()
 
     if sort is None:
         sort = current_user.default_sort if current_user.is_authenticated else 'hot'
 
     if view_filter is None:
-        view_filter = 'all'
+        view_filter = current_user.default_filter if current_user.is_authenticated else 'popular'
+        if view_filter is None:
+            view_filter = 'subscribed'
 
     # If nothing has changed since their last visit, return HTTP 304
-    current_etag = f"{type}_{sort}_{hash(str(g.site.last_active))}"
+    current_etag = f"{sort}_{view_filter}_{hash(str(g.site.last_active))}"
     if current_user.is_anonymous and request_etag_matches(current_etag):
         return return_304(current_etag)
 
@@ -101,28 +67,9 @@ def home_page(type, sort, view_filter):
     if current_user.is_anonymous:
         flash(_('Create an account to tailor this feed to your interests.'))
         posts = Post.query.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
-        posts = posts.join(Community, Community.id == Post.community_id)
-        if type == 'home':
-            posts = posts.filter(Community.show_home == True)
-        elif type == 'popular':
-            posts = posts.filter(Community.show_popular == True).filter(Post.score > 100)
-        elif type == 'all':
-            posts = posts.filter(Community.show_all == True)
         content_filters = {}
     else:
-        if type == 'home':
-            posts = Post.query.join(CommunityMember, Post.community_id == CommunityMember.community_id).filter(
-                CommunityMember.is_banned == False, Post.deleted == False)
-            # posts = posts.join(User, CommunityMember.user_id == User.id).filter(User.id == current_user.id)
-            posts = posts.filter(CommunityMember.user_id == current_user.id)
-        elif type == 'popular':
-            posts = Post.query.filter(Post.from_bot == False)
-            posts = posts.join(Community, Community.id == Post.community_id)
-            posts = posts.filter(Community.show_popular == True, Post.score > 100, Post.deleted == False)
-        elif type == 'all':
-            posts = Post.query
-            posts = posts.join(Community, Community.id == Post.community_id)
-            posts = posts.filter(Community.show_all == True, Post.deleted == False)
+        posts = Post.query.filter(Post.deleted == False)
 
         if current_user.ignore_bots == 1:
             posts = posts.filter(Post.from_bot == False)
@@ -148,9 +95,16 @@ def home_page(type, sort, view_filter):
 
     # view filter - subscribed/local/all
     if view_filter == 'subscribed':
+        posts = posts.join(CommunityMember, Post.community_id == CommunityMember.community_id).filter(CommunityMember.is_banned == False)
         posts = posts.filter(CommunityMember.user_id == current_user.id)
     elif view_filter == 'local':
         posts = posts.filter(Post.instance_id == 1)
+    elif view_filter == 'popular':
+        posts = posts.join(Community, Community.id == Post.community_id)
+        posts = posts.filter(Community.show_popular == True, Post.score > 100)
+    elif view_filter == 'all':
+        posts = posts.join(Community, Community.id == Post.community_id)
+        posts = posts.filter(Community.show_all == True)
 
     # Sorting
     if sort == 'hot':
@@ -164,15 +118,8 @@ def home_page(type, sort, view_filter):
 
     # Pagination
     posts = posts.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50, error_out=False)
-    if type == 'home':
-        next_url = url_for('main.index', page=posts.next_num, sort=sort) if posts.has_next else None
-        prev_url = url_for('main.index', page=posts.prev_num, sort=sort) if posts.has_prev and page != 1 else None
-    elif type == 'popular':
-        next_url = url_for('main.popular', page=posts.next_num, sort=sort) if posts.has_next else None
-        prev_url = url_for('main.popular', page=posts.prev_num, sort=sort) if posts.has_prev and page != 1 else None
-    elif type == 'all':
-        next_url = url_for('main.all_posts', page=posts.next_num, sort=sort) if posts.has_next else None
-        prev_url = url_for('main.all_posts', page=posts.prev_num, sort=sort) if posts.has_prev and page != 1 else None
+    next_url = url_for('main.index', page=posts.next_num, sort=sort, view_filter=view_filter) if posts.has_next else None
+    prev_url = url_for('main.index', page=posts.prev_num, sort=sort, view_filter=view_filter) if posts.has_prev and page != 1 else None
 
     # Active Communities
     active_communities = Community.query.filter_by(banned=False)
@@ -193,18 +140,17 @@ def home_page(type, sort, view_filter):
         recently_upvoted = []
         recently_downvoted = []
 
-
     return render_template('index.html', posts=posts, active_communities=active_communities, show_post_community=True,
                            POST_TYPE_IMAGE=POST_TYPE_IMAGE, POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_VIDEO=POST_TYPE_VIDEO, POST_TYPE_POLL=POST_TYPE_POLL,
                            low_bandwidth=low_bandwidth, recently_upvoted=recently_upvoted,
                            recently_downvoted=recently_downvoted,
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
-                           etag=f"{type}_{sort}_{hash(str(g.site.last_active))}", next_url=next_url, prev_url=prev_url,
+                           etag=f"{sort}_{view_filter}_{hash(str(g.site.last_active))}", next_url=next_url, prev_url=prev_url,
                            #rss_feed=f"https://{current_app.config['SERVER_NAME']}/feed",
                            #rss_feed_name=f"Posts on " + g.site.name,
                            title=f"{g.site.name} - {g.site.description}",
                            description=shorten_string(markdown_to_text(g.site.sidebar), 150),
-                           content_filters=content_filters, type=type, sort=sort, view_filter=view_filter,
+                           content_filters=content_filters, sort=sort, view_filter=view_filter,
                            announcement=allowlist_html(get_setting('announcement', '')),
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),

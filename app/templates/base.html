@@ -118,13 +118,7 @@
             <div class="collapse navbar-collapse" id="navbarSupportedContent" role="navigation">
                     <ul class="nav navbar-nav ml-md-4">
                         {% if current_user.is_anonymous %}
-                            <li class="nav-item dropdown{% if active_parent == 'home' %} active{% endif %}">
-                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/home" aria-haspopup="true" aria-expanded="false">{{ _('Home') }}</a>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item{% if active_child == 'popular' %} active{% endif %}" href="/home"><span class="fe fe-home"></span>{{ _('Home') }}</a></li>
-                                  <li><a class="dropdown-item{% if active_child == 'popular' %} active{% endif %}" href="/popular"><span class="fe fe-popular"></span>{{ _('Popular') }}</a></li>
-                                  <li><a class="dropdown-item{% if active_child == 'all_posts' %} active{% endif %}" href="/all"><span class="fe fe-all"></span>{{ _('All posts') }}</a></li>
-                                </ul>
+                            <li class="nav-item"><a class="nav-link" href="/">{{ _('Home') }}</a></li>
                             <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %}">
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/topics" aria-haspopup="true" aria-expanded="false">{{ _('Topics') }}</a>
                                 <ul class="dropdown-menu">
@@ -144,13 +138,7 @@
                             <li class="nav-item"><a class="nav-link" href="/auth/register">{{ _('Register') }}</a></li>
                             <li class="nav-item"><a class="nav-link" href="/donate">{{ _('Donate') }}</a></li>
                         {% else %}
-                            <li class="nav-item dropdown{% if active_parent == 'home' %} active{% endif %}">
-                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/home" aria-haspopup="true" aria-expanded="false">{{ _('Home') }}</a>
-                                <ul class="dropdown-menu">
-                                  <li><a class="dropdown-item{% if active_child == 'home' %} active{% endif %}" href="/home"><span class="fe fe-home"></span>{{ _('Home') }}</a></li>
-                                  <li><a class="dropdown-item{% if active_child == 'popular' %} active{% endif %}" href="/popular"><span class="fe fe-popular"></span>{{ _('Popular') }}</a></li>
-                                  <li><a class="dropdown-item{% if active_child == 'all' %} active{% endif %}" href="/all"><span class="fe fe-all"></span>{{ _('All posts') }}</a></li>
-                                </ul>
+                            <li class="nav-item"><a class="nav-link" href="/">{{ _('Home') }}</a></li>
                             <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %}">
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/topics"  aria-haspopup="true" aria-expanded="false">{{ _('Topics') }}</a>
                                 <ul class="dropdown-menu">

@@ -1,9 +1,7 @@
-from flask import session
 from flask_login import current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, PasswordField, BooleanField, EmailField, TextAreaField, FileField, \
     RadioField, DateField, SelectField, IntegerField
-from wtforms.fields.choices import SelectMultipleField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Optional
 from flask_babel import _, lazy_gettext as _l
 
@@ -16,7 +14,8 @@ class ProfileForm(FlaskForm):
     password_field = PasswordField(_l('Set new password'), validators=[Optional(), Length(min=1, max=50)],
                                    render_kw={"autocomplete": 'new-password'})
     about = TextAreaField(_l('Bio'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5})
-    matrixuserid = StringField(_l('Matrix User ID'), validators=[Optional(), Length(max=255)], render_kw={'autocomplete': 'off'})
+    matrixuserid = StringField(_l('Matrix User ID'), validators=[Optional(), Length(max=255)],
+                               render_kw={'autocomplete': 'off'})
     profile_file = FileField(_l('Avatar image'), render_kw={'accept': 'image/*'})
     banner_file = FileField(_l('Top banner image'), render_kw={'accept': 'image/*'})
     bot = BooleanField(_l('This profile is a bot'))
@@ -32,7 +31,8 @@ class ProfileForm(FlaskForm):
 
 
 class SettingsForm(FlaskForm):
-    interface_language = SelectField(_l('Interface language'), coerce=str, validators=[Optional()], render_kw={'class': 'form-select'})
+    interface_language = SelectField(_l('Interface language'), coerce=str, validators=[Optional()],
+                                     render_kw={'class': 'form-select'})
     newsletter = BooleanField(_l('Subscribe to email newsletter'))
     email_unread = BooleanField(_l('Receive email about missed notifications'))
     ignore_bots = BooleanField(_l('Hide posts by bots'))
@@ -46,11 +46,19 @@ class SettingsForm(FlaskForm):
     manually_approves_followers = BooleanField(_l('Manually approve followers'))
     import_file = FileField(_l('Import community subscriptions and user blocks from Lemmy'))
     sorts = [('hot', _l('Hot')),
-                      ('top', _l('Top')),
-                      ('new', _l('New')),
-                      ('active', _l('Active')),
-                      ]
-    default_sort = SelectField(_l('By default, sort posts by'), choices=sorts, validators=[DataRequired()], coerce=str, render_kw={'class': 'form-select'})
+             ('top', _l('Top')),
+             ('new', _l('New')),
+             ('active', _l('Active')),
+             ]
+    default_sort = SelectField(_l('Default post sort'), choices=sorts, validators=[DataRequired()], coerce=str,
+                               render_kw={'class': 'form-select'})
+    filters = [('subscribed', _l('Subscribed')),
+               ('local', _l('Local')),
+               ('popular', _l('Popular')),
+               ('all', _l('All')),
+               ]
+    default_filter = SelectField(_l('Default home filter'), choices=filters, validators=[DataRequired()], coerce=str,
+                                 render_kw={'class': 'form-select'})
     theme = SelectField(_l('Theme'), coerce=str, render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Save settings'))
 
@@ -113,8 +121,8 @@ class KeywordFilterEditForm(FlaskForm):
     hide_type_choices = [(0, _l('Make semi-transparent')), (1, _l('Hide completely'))]
     hide_type = RadioField(_l('Action to take'), choices=hide_type_choices, default=1, coerce=int)
     keywords = TextAreaField(_l('Keywords that trigger this filter'),
-                            render_kw={'placeholder': 'One keyword or phrase per line', 'rows': 3},
-                            validators=[DataRequired(), Length(min=3, max=500)])
+                             render_kw={'placeholder': 'One keyword or phrase per line', 'rows': 3},
+                             validators=[DataRequired(), Length(min=3, max=500)])
     expire_after = DateField(_l('Expire after'), validators=[Optional()])
     submit = SubmitField(_l('Save'))
 

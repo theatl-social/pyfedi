@@ -179,6 +179,7 @@ def register(app):
                     'cut_off': cut_off,
                     'community_id': community.id
                 })
+            db.session.commit()
 
             # Remove activity older than 3 days
             db.session.query(ActivityPubLog).filter(ActivityPubLog.created_at < utcnow() - timedelta(days=3)).delete()
@@ -196,6 +197,7 @@ def register(app):
                                                      PostReply.posted_at < utcnow() - timedelta(days=7)).all():
                 post_reply.delete_dependencies()
                 db.session.delete(post_reply)
+            db.session.commit()
 
             for post in Post.query.filter(Post.deleted == True,
                                           Post.posted_at < utcnow() - timedelta(days=7)).all():

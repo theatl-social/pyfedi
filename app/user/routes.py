@@ -232,6 +232,7 @@ def change_settings():
         current_user.searchable = form.searchable.data
         current_user.indexable = form.indexable.data
         current_user.default_sort = form.default_sort.data
+        current_user.default_filter = form.default_filter.data
         current_user.theme = form.theme.data
         current_user.email_unread = form.email_unread.data
         current_user.markdown_editor = form.markdown_editor.data
@@ -269,6 +270,7 @@ def change_settings():
         form.searchable.data = current_user.searchable
         form.indexable.data = current_user.indexable
         form.default_sort.data = current_user.default_sort
+        form.default_filter.data = current_user.default_filter
         form.theme.data = current_user.theme
         form.markdown_editor.data = current_user.markdown_editor
         form.interface_language.data = current_user.interface_language
