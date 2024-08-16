@@ -8,7 +8,7 @@ from flask_babel import _
 from sqlalchemy import or_, desc
 from wtforms import SelectField, RadioField
 
-from app import db, constants, cache
+from app import db, constants, cache, celery
 from app.activitypub.signature import HttpSignature, post_request, default_context, post_request_in_background
 from app.activitypub.util import notify_about_post_reply, inform_followers_of_post_update
 from app.community.util import save_post, send_to_remote_instance
@@ -1191,75 +1191,77 @@ def post_delete(post_id: int):
     post = Post.query.get_or_404(post_id)
     community = post.community
     if post.user_id == current_user.id or community.is_moderator() or current_user.is_admin():
-        if post.url:
-            if post.cross_posts is not None:
-                old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
-                post.cross_posts.clear()
-                for ocp in old_cross_posts:
-                    if ocp.cross_posts is not None:
-                        ocp.cross_posts.remove(post.id)
-        post.delete_dependencies()
-        post.deleted = True
-        g.site.last_active = community.last_active = utcnow()
-        db.session.commit()
-        flash(_('Post deleted.'))
-
-        delete_json = {
-            'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
-            'type': 'Delete',
-            'actor': current_user.public_url(),
-            'audience': post.community.public_url(),
-            'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
-            'published': ap_datetime(utcnow()),
-            'cc': [
-                current_user.followers_url()
-            ],
-            'object': post.ap_id,
-            'uri': post.ap_id
-        }
-        if post.user_id != current_user.id:
-            delete_json['summary'] = 'Deleted by mod'
-
-        if not community.local_only:
-            if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
-                success = post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
-                                       current_user.public_url() + '#main-key')
-                if not success:
-                    flash('Failed to send delete to remote server', 'error')
-            else:  # local community - send it to followers on remote instances
-                announce = {
-                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
-                    "type": 'Announce',
-                    "to": [
-                        "https://www.w3.org/ns/activitystreams#Public"
-                    ],
-                    "actor": post.community.ap_profile_id,
-                    "cc": [
-                        post.community.ap_followers_url
-                    ],
-                    '@context': default_context(),
-                    'object': delete_json
-                }
-
-                for instance in post.community.following_instances():
-                    if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(
-                            instance.domain):
-                        send_to_remote_instance(instance.id, post.community.id, announce)
-
-        followers = UserFollower.query.filter_by(local_user_id=post.user_id)
-        if followers:
-            instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower, UserFollower.remote_user_id == User.id)
-            instances = instances.filter(UserFollower.local_user_id == post.user_id)
-            for instance in instances:
-                if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(
-                        instance.domain):
-                    post_request_in_background(instance.inbox, delete_json, current_user.private_key, current_user.public_url() + '#main-key')
-
-        if post.user_id != current_user.id:
-            add_to_modlog('delete_post', community_id=community.id, link_text=shorten_string(post.title),
-                          link=f'post/{post.id}')
-
+        post_delete_post(community, post, current_user.id)
     return redirect(url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not None else community.name))
+
+
+def post_delete_post(community: Community, post: Post, user_id: int):
+    user: User = User.query.get(user_id)
+    if post.url:
+        if post.cross_posts is not None:
+            old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
+            post.cross_posts.clear()
+            for ocp in old_cross_posts:
+                if ocp.cross_posts is not None:
+                    ocp.cross_posts.remove(post.id)
+    post.delete_dependencies()
+    post.deleted = True
+    if hasattr(g, 'site'):  # g.site is invalid when running from cli
+        g.site.last_active = community.last_active = utcnow()
+        flash(_('Post deleted.'))
+    db.session.commit()
+
+    delete_json = {
+        'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+        'type': 'Delete',
+        'actor': user.public_url(),
+        'audience': post.community.public_url(),
+        'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
+        'published': ap_datetime(utcnow()),
+        'cc': [
+            user.followers_url()
+        ],
+        'object': post.ap_id,
+        'uri': post.ap_id
+    }
+    if post.user_id != user.id:
+        delete_json['summary'] = 'Deleted by mod'
+
+    # Federation
+    if not community.local_only:
+        if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
+            post_request(post.community.ap_inbox_url, delete_json, user.private_key, user.public_url() + '#main-key')
+        else:  # local community - send it to followers on remote instances
+            announce = {
+                "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+                "type": 'Announce',
+                "to": [
+                    "https://www.w3.org/ns/activitystreams#Public"
+                ],
+                "actor": post.community.ap_profile_id,
+                "cc": [
+                    post.community.ap_followers_url
+                ],
+                '@context': default_context(),
+                'object': delete_json
+            }
+            for instance in post.community.following_instances():
+                if instance.inbox and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
+                    send_to_remote_instance(instance.id, post.community.id, announce)
+
+    # Federate to microblog followers
+    followers = UserFollower.query.filter_by(local_user_id=post.user_id)
+    if followers:
+        instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower,
+                                                                                    UserFollower.remote_user_id == User.id)
+        instances = instances.filter(UserFollower.local_user_id == post.user_id)
+        for instance in instances:
+            if instance.inbox and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain) and not instance.dormant:
+                post_request_in_background(instance.inbox, delete_json, user.private_key, user.public_url() + '#main-key')
+
+    if post.user_id != user.id:
+        add_to_modlog('delete_post', community_id=community.id, link_text=shorten_string(post.title),
+                      link=f'post/{post.id}')
 
 
 @bp.route('/post/<int:post_id>/restore', methods=['GET', 'POST'])

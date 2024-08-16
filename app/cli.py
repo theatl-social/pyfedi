@@ -24,8 +24,9 @@ from app.email import send_verification_email, send_email
 from app.models import Settings, BannedInstances, Interest, Role, User, RolePermission, Domain, ActivityPubLog, \
     utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply, Language, \
     Tag, InstanceRole, Community
+from app.post.routes import post_delete_post
 from app.utils import file_get_contents, retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
-    shorten_string, get_request, html_to_text, blocked_communities
+    shorten_string, get_request, html_to_text, blocked_communities, ap_datetime
 
 
 def register(app):
@@ -175,11 +176,10 @@ def register(app):
             communities = Community.query.filter(Community.content_retention > 0).all()
             for community in communities:
                 cut_off = utcnow() - timedelta(days=community.content_retention)
-                db.session.execute(text('UPDATE "post" SET deleted = true WHERE sticky = false AND posted_at < :cut_off AND community_id = :community_id'), {
-                    'cut_off': cut_off,
-                    'community_id': community.id
-                })
-            db.session.commit()
+                old_posts = Post.query.filter_by(sticky=False, community_id=community.id).filter(Post.posted_at < cut_off).all()
+                for post in old_posts:
+                    post_delete_post(community, post, post.user_id)
+                    community.post_count -= 1
 
             # Remove activity older than 3 days
             db.session.query(ActivityPubLog).filter(ActivityPubLog.created_at < utcnow() - timedelta(days=3)).delete()
