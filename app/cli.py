@@ -176,9 +176,9 @@ def register(app):
             communities = Community.query.filter(Community.content_retention > 0).all()
             for community in communities:
                 cut_off = utcnow() - timedelta(days=community.content_retention)
-                old_posts = Post.query.filter_by(sticky=False, community_id=community.id).filter(Post.posted_at < cut_off).all()
+                old_posts = Post.query.filter_by(deleted=False, sticky=False, community_id=community.id).filter(Post.posted_at < cut_off).all()
                 for post in old_posts:
-                    post_delete_post(community, post, post.user_id)
+                    post_delete_post(community, post, post.user_id, federate_all_communities=False)
                     community.post_count -= 1
 
             # Remove activity older than 3 days

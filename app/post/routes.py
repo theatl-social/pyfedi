@@ -1195,7 +1195,7 @@ def post_delete(post_id: int):
     return redirect(url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not None else community.name))
 
 
-def post_delete_post(community: Community, post: Post, user_id: int):
+def post_delete_post(community: Community, post: Post, user_id: int, federate_all_communities=True):
     user: User = User.query.get(user_id)
     if post.url:
         if post.cross_posts is not None:
@@ -1228,10 +1228,11 @@ def post_delete_post(community: Community, post: Post, user_id: int):
         delete_json['summary'] = 'Deleted by mod'
 
     # Federation
-    if not community.local_only:
-        if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
+    if not community.local_only:    # local_only communities do not federate
+        # if this is a remote community and we are a mod of that community
+        if not post.community.is_local() and user.is_local() and (community.is_moderator(user) or community.is_owner(user)):
             post_request(post.community.ap_inbox_url, delete_json, user.private_key, user.public_url() + '#main-key')
-        else:  # local community - send it to followers on remote instances
+        elif post.community.is_local():  # if this is a local community - Announce it to followers on remote instances
             announce = {
                 "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
                 "type": 'Announce',
