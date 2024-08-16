@@ -572,14 +572,16 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             db.session.commit()
                             return
                         user = find_actor_or_create(user_ap_id)
-                        if (user and not user.is_local()) and community:
-                            user.last_seen = community.last_active = site.last_active = utcnow()
-
+                        if user and not user.is_local():
+                            if community:
+                                user.last_seen = community.last_active = site.last_active = utcnow()
+                            else:
+                                user.last_seen = site.last_active = utcnow()
                             object_type = request_json['object']['type']
                             new_content_types = ['Page', 'Article', 'Link', 'Note', 'Question']
                             if object_type in new_content_types:  # create or update a post
                                 in_reply_to = request_json['object']['inReplyTo'] if 'inReplyTo' in request_json['object'] else None
-                                if not in_reply_to:
+                                if not in_reply_to: # Creating a new post
                                     post = Post.query.filter_by(ap_id=request_json['object']['id']).first()
                                     if post:
                                         if request_json['type'] == 'Create':
@@ -607,7 +609,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                                 post = None
                                         else:
                                             post = None
-                                else:
+                                else:   # Creating a reply / comment
                                     reply = PostReply.query.filter_by(ap_id=request_json['object']['id']).first()
                                     if reply:
                                         if request_json['type'] == 'Create':
@@ -624,6 +626,12 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                             else:
                                                 activity_log.exception_message = 'Edit attempt denied'
                                     else:
+                                        if community is None:   # Mastodon: replies do not specify the community they're in. Attempt to find out the community by looking at the parent object
+                                            parent_post_id, parent_comment_id, _ = find_reply_parent(in_reply_to)
+                                            if parent_comment_id:
+                                                community = PostReply.query.get(parent_comment_id).community
+                                            else:
+                                                community = Post.query.get(parent_post_id).community
                                         if can_create_post_reply(user, community):
                                             try:
                                                 post_reply = create_post_reply(activity_log, community, in_reply_to, request_json, user)

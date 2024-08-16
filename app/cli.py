@@ -263,7 +263,7 @@ def register(app):
                 db.session.commit()
 
                 # retrieve list of Admins from /api/v3/site, update InstanceRole
-                if not instance.dormant and (instance.software == 'lemmy' or instance.software == 'piefed'):
+                if instance.online() and (instance.software == 'lemmy' or instance.software == 'piefed'):
                     try:
                         response = get_request(f'https://{instance.domain}/api/v3/site')
                     except:

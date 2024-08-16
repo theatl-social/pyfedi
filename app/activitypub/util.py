@@ -326,6 +326,8 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                 elif isinstance(user, Community):
                     refresh_community_profile(user.id)
                     # refresh_instance_profile(user.instance_id) # disable in favour of cron job - see app.cli.daily_maintenance()
+        if community_only and not isinstance(user, Community):
+            return None
         return user
     else:   # User does not exist in the DB, it's going to need to be created from it's remote home instance
         if create_if_not_found:

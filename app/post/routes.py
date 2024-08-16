@@ -1257,7 +1257,7 @@ def post_delete_post(community: Community, post: Post, user_id: int, federate_al
                                                                                     UserFollower.remote_user_id == User.id)
         instances = instances.filter(UserFollower.local_user_id == post.user_id)
         for instance in instances:
-            if instance.inbox and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain) and not instance.dormant:
+            if instance.inbox and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain) and instance.online():
                 post_request_in_background(instance.inbox, delete_json, user.private_key, user.public_url() + '#main-key')
 
     if post.user_id != user.id:
