@@ -98,7 +98,8 @@ def home_page(sort, view_filter):
         posts = posts.join(CommunityMember, Post.community_id == CommunityMember.community_id).filter(CommunityMember.is_banned == False)
         posts = posts.filter(CommunityMember.user_id == current_user.id)
     elif view_filter == 'local':
-        posts = posts.filter(Post.instance_id == 1)
+        posts = posts.join(Community, Community.id == Post.community_id)
+        posts = posts.filter(Community.instance_id == 1)
     elif view_filter == 'popular':
         posts = posts.join(Community, Community.id == Post.community_id)
         posts = posts.filter(Community.show_popular == True, Post.score > 100)
