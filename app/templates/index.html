@@ -13,6 +13,7 @@
             <div id="home_announcement">{{ announcement|safe }}</div>
         {% endif -%}
         {% include "_home_nav.html" %}
+        {% include "_view_filter_nav.html" %}
         <div class="post_list">
             {% for post in posts.items -%}
                 {% include 'post/_post_teaser.html' %}

@@ -1,0 +1,13 @@
+<div class="btn-group mt-1 mb-2" style="float: right;">
+    {% if not current_user.is_anonymous %}
+        <a href="/{{ type }}/{{ sort }}/subscribed" class="btn {{ 'btn-primary' if view_filter == 'subscribed' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+            {{ _('Subscribed') }}
+        </a>
+    {% endif %}
+    <a href="/{{ type }}/{{ sort }}/local" class="btn {{ 'btn-primary' if view_filter == 'local' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+        {{ _('Local') }}
+    </a>
+    <a href="/{{ type }}/{{ sort }}/all" class="btn {{ 'btn-primary' if view_filter == 'all' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+        {{ _('All') }}
+    </a>
+</div>
