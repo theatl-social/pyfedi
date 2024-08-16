@@ -176,6 +176,32 @@ class CreateImageForm(CreatePostForm):
 
         return True
 
+class EditImageForm(CreatePostForm):
+    image_alt_text = StringField(_l('Alt text'), validators=[Optional(), Length(min=3, max=1500)])
+    # image_file = FileField(_l('Image'), validators=[DataRequired()], render_kw={'accept': 'image/*'})
+
+    def validate(self, extra_validators=None) -> bool:
+        # uploaded_file = request.files['image_file']
+        # if uploaded_file and uploaded_file.filename != '':
+        #     Image.MAX_IMAGE_PIXELS = 89478485
+        #     # Do not allow fascist meme content
+        #     try:
+        #         image_text = pytesseract.image_to_string(Image.open(BytesIO(uploaded_file.read())).convert('L'))
+        #     except FileNotFoundError as e:
+        #         image_text = ''
+        #     if 'Anonymous' in image_text and (
+        #             'No.' in image_text or ' N0' in image_text):  # chan posts usually contain the text 'Anonymous' and ' No.12345'
+        #         self.image_file.errors.append(
+        #             f"This image is an invalid file type.")  # deliberately misleading error message
+        #         current_user.reputation -= 1
+        #         db.session.commit()
+        #         return False
+        if self.communities:
+            community = Community.query.get(self.communities.data)
+            if community.is_local() and g.site.allow_local_image_posts is False:
+                self.communities.errors.append(_l('Images cannot be posted to local communities.'))
+
+        return True
 
 class CreatePollForm(CreatePostForm):
     mode = SelectField(_('Mode'), validators=[DataRequired()], choices=[('single', _l('Voters choose one option')), ('multiple', _l('Voters choose many options'))], render_kw={'class': 'form-select'})

@@ -17,7 +17,24 @@
                 {{ render_field(form.link_url) }}
                 <div id="urlUsed"></div>
             {% elif post_type == POST_TYPE_IMAGE %}
-                {{ render_field(form.image_file) }}
+                {% if post.image_id -%}
+                    <div class="post_image">
+                        {% if low_bandwidth -%}
+                            <a href="{{ post.image.view_url(resize=True) }}" rel="nofollow ugc"><img src="{{ post.image.medium_url() }}"
+                                alt="{{ post.image.alt_text if post.image.alt_text else post.title }}" fetchpriority="high" referrerpolicy="same-origin"
+                                width="{{ post.image.width }}" height="{{ post.image.height }}" /></a>
+                        {% else -%}
+                            <a href="{{ post.image.view_url() }}" rel="nofollow ugc">
+                                <img src="{{ post.image.view_url(resize=True) }}" lowsrc="{{ post.image.medium_url() }}"
+                                    sizes="(max-width: 512px) 100vw, 854px" srcset="{{ post.image.medium_url() }} 512w, {{ post.image.view_url(resize=True) }} 1024w"
+                                    alt="{{ post.image.alt_text if post.image.alt_text else post.title }}"
+                                    fetchpriority="high" referrerpolicy="same-origin" >
+                            </a>
+                        {% endif -%}
+                    </div>                
+                {% else %}
+                    {{ render_field(form.image_file) }}
+                {% endif %}
                 {{ render_field(form.image_alt_text) }}
                 <small class="field_hint">{{ _('Describe the image, to help visually impaired people.') }}</small>
             {% elif post_type == POST_TYPE_VIDEO %}

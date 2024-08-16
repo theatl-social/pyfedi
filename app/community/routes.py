@@ -604,9 +604,13 @@ def add_post(actor, type):
             form.finish_in.data = '3d'
         if community.posting_warning:
             flash(community.posting_warning)
+    
+    # empty post to pass since this extends edit_post.html 
+    # and that one checks for a post.image_id for editing image posts
+    post = None
 
     return render_template('community/add_post.html', title=_('Add post to community'), form=form,
-                           post_type=post_type, community=community,
+                           post_type=post_type, community=community, post=post,
                            markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.id),
