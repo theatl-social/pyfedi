@@ -408,6 +408,7 @@ class Community(db.Model):
     icon = db.relationship('File', foreign_keys=[icon_id], single_parent=True, backref='community', cascade="all, delete-orphan")
     image = db.relationship('File', foreign_keys=[image_id], single_parent=True, cascade="all, delete-orphan")
     languages = db.relationship('Language', lazy='dynamic', secondary=community_language, backref=db.backref('communities', lazy='dynamic'))
+    instance = db.relationship('Instance', lazy='dynamic', foreign_keys=[instance_id])
 
     def language_ids(self):
         return [language.id for language in self.languages.all()]

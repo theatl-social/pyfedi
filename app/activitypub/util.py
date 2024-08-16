@@ -478,7 +478,7 @@ def refresh_user_profile(user_id):
 @celery.task
 def refresh_user_profile_task(user_id):
     user = User.query.get(user_id)
-    if user:
+    if user and user.instance.online():
         try:
             actor_data = get_request(user.ap_public_url, headers={'Accept': 'application/activity+json'})
         except requests.exceptions.ReadTimeout:
@@ -557,7 +557,7 @@ def refresh_community_profile(community_id):
 @celery.task
 def refresh_community_profile_task(community_id):
     community = Community.query.get(community_id)
-    if community and not community.is_local():
+    if community and community.instance.online() and not community.is_local():
         try:
             actor_data = get_request(community.ap_public_url, headers={'Accept': 'application/activity+json'})
         except requests.exceptions.ReadTimeout:
