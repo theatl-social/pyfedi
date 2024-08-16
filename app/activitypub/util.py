@@ -1472,6 +1472,33 @@ def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id
                                               link=f'post/{to_delete.post.id}#comment_{to_delete.id}')
 
 
+def restore_post_or_comment(object_json):
+    if current_app.debug:
+        restore_post_or_comment_task(object_json)
+    else:
+        restore_post_or_comment_task.delay(object_json)
+
+
+@celery.task
+def restore_post_or_comment_task(object_json):
+    restorer = find_actor_or_create(object_json['actor']) if 'actor' in object_json else None
+    community = find_actor_or_create(object_json['audience'], community_only=True)  if 'audience' in object_json else None
+    to_restore = find_liked_object(object_json['object']) if 'object' in object_json else None
+
+    if restorer and community and to_restore:
+        if restorer.is_admin() or community.is_moderator(restorer) or community.is_instance_admin(restorer) or to_restore.author.id == restorer.id:
+            if isinstance(to_restore, Post):
+                # TODO: restore_dependencies()
+                to_restore.deleted = False
+                community.post_count += 1
+                db.session.commit()
+                if to_restore.author.id != restorer.id:
+                    add_to_modlog_activitypub('restore_post', restorer, community_id=community.id,
+                                              link_text=shorten_string(to_restore.title), link=f'post/{to_restore.id}')
+
+            # TODO: if isinstance(to_restore, PostReply):
+
+
 def remove_data_from_banned_user(deletor_ap_id, user_ap_id, target):
     if current_app.debug:
         remove_data_from_banned_user_task(deletor_ap_id, user_ap_id, target)
