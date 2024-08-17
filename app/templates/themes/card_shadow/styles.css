@@ -1,0 +1,40 @@
+
+.post_list .post_teaser h3 {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.post_body a, .comment_body a {
+    text-decoration: underline;
+}
+
+.post_list .post_teaser {
+    /*       top right bottom left*/
+    margin: 10px 5px 5px 5px;
+    /*       top right bottom left*/
+    padding: 5px 5px 5px 5px;
+    /* box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2); */
+    box-shadow: 0 4px 8px 0 rgba(0,123,255,0.2);
+    transition: 0.3s;
+    /* border: solid 1px rgba(0,0,0,0.2); */
+    border-left: solid 2px rgba(0,0,0,0.2);
+    border-bottom: solid 2px rgba(0,0,0,0.2);
+    border-right: solid 1px rgba(0,0,0,0.2);
+    border-radius: 5px; /* 5px rounded corners */
+}
+
+[data-bs-theme="dark"] .post_list .post_teaser {
+    /*       top right bottom left*/
+    margin: 10px 5px 5px 5px;
+    /*       top right bottom left*/
+    padding: 5px 5px 5px 5px;
+    box-shadow: 0 4px 8px 0 rgba(0,123,255,0.2);
+    /* box-shadow: 0 4px 8px 0 #007bff; */
+    transition: 0.3s;
+    /* border: solid 1px rgba(0,123,255,0.2); */
+    border-left: solid 2px rgba(0,123,255,0.2);
+    border-bottom: solid 2px rgba(0,123,255,0.2);
+    border-right: solid 1px rgba(0,123,255,0.2);
+    border-radius: 5px; /* 5px rounded corners */
+
+}
