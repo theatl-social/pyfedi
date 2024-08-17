@@ -898,7 +898,6 @@ def post_edit(post_id: int):
     elif post.type == POST_TYPE_LINK:
         form = CreateLinkForm()
     elif post.type == POST_TYPE_IMAGE:
-        # form = CreateImageForm()
         form = EditImageForm()
     elif post.type == POST_TYPE_VIDEO:
         form = CreateVideoForm()

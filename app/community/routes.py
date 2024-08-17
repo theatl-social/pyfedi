@@ -605,7 +605,7 @@ def add_post(actor, type):
         if community.posting_warning:
             flash(community.posting_warning)
     
-    # empty post to pass since this extends edit_post.html 
+    # empty post to pass since add_post.html extends edit_post.html 
     # and that one checks for a post.image_id for editing image posts
     post = None
 
