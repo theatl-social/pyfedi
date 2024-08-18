@@ -81,6 +81,9 @@ class Instance(db.Model):
         role = InstanceRole.query.filter_by(instance_id=self.id, user_id=user_id).first()
         return role and role.role == 'admin'
 
+    def __repr__(self):
+        return '<Instance {}>'.format(self.domain)
+
 
 class InstanceRole(db.Model):
     instance_id = db.Column(db.Integer, db.ForeignKey('instance.id'), primary_key=True)

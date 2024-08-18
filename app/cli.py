@@ -218,7 +218,7 @@ def register(app):
                         if nodeinfo.status_code == 200:
                             nodeinfo_json = nodeinfo.json()
                             for links in nodeinfo_json['links']:
-                                if 'rel' in links and (
+                                if isinstance(links, dict) and 'rel' in links and (
                                         links['rel'] == 'http://nodeinfo.diaspora.software/ns/schema/2.0' or
                                         links['rel'] == 'https://nodeinfo.diaspora.software/ns/schema/2.0' or
                                         links['rel'] == 'http://nodeinfo.diaspora.software/ns/schema/2.1'):
@@ -228,6 +228,8 @@ def register(app):
                                     db.session.commit()
                                     sleep(0.1)
                                     break
+                                else:
+                                    instance.failures += 1
                         elif node.status_code >= 400:
                             current_app.logger.info(f"{instance.domain} has no well-known/nodeinfo response")
                     except requests.exceptions.ReadTimeout:
@@ -239,8 +241,7 @@ def register(app):
 
                 if instance.nodeinfo_href:
                     try:
-                        node = requests.get(instance.nodeinfo_href, headers=HEADERS, timeout=5,
-                                                            allow_redirects=True)
+                        node = requests.get(instance.nodeinfo_href, headers=HEADERS, timeout=5, allow_redirects=True)
                         if node.status_code == 200:
                             node_json = node.json()
                             if 'software' in node_json:
@@ -250,8 +251,10 @@ def register(app):
                                 instance.dormant = False
                         elif node.status_code >= 400:
                             instance.failures += 1
+                            instance.nodeinfo_href = None
                     except requests.exceptions.RequestException:
                         instance.failures += 1
+                        instance.nodeinfo_href = None
                 if instance.failures > 7 and instance.dormant == True:
                     instance.gone_forever = True
                 elif instance.failures > 2 and instance.dormant == False:

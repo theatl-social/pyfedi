@@ -1245,10 +1245,10 @@ def new_instance_profile_task(instance_id: int):
         if nodeinfo.status_code == 200:
             nodeinfo_json = nodeinfo.json()
             for links in nodeinfo_json['links']:
-                if 'rel' in links and (
+                if isinstance(links, dict) and 'rel' in links and (
                     links['rel'] == 'http://nodeinfo.diaspora.software/ns/schema/2.0' or    # most platforms except KBIN and Lemmy v0.19.4
                     links['rel'] == 'https://nodeinfo.diaspora.software/ns/schema/2.0' or   # KBIN
-                    links['rel'] == 'http://nodeinfo.diaspora.software/ns/schema/2.1'):     # Lemmy v0.19.4 (no 2.0 back-compat provided here)
+                    links['rel'] == 'http://nodeinfo.diaspora.software/ns/schema/2.1'):     # Lemmy v0.19.4+ (no 2.0 back-compat provided here)
                     try:
                         time.sleep(0.1)
                         node = requests.get(links['href'], headers=HEADERS, timeout=5,
@@ -1260,7 +1260,7 @@ def new_instance_profile_task(instance_id: int):
                                 instance.version = node_json['software']['version']
                                 instance.nodeinfo_href = links['href']
                                 db.session.commit()
-                                break # most platforms (except Lemmy v0.19.4) that provide 2.1 also provide 2.0 - there's no need to check both
+                                break  # most platforms (except Lemmy v0.19.4) that provide 2.1 also provide 2.0 - there's no need to check both
                     except:
                         return
     except:
