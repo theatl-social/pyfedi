@@ -181,10 +181,6 @@ def register(app):
                     post_delete_post(community, post, post.user_id, federate_all_communities=False)
                     community.post_count -= 1
 
-            # Remove activity older than 3 days
-            db.session.query(ActivityPubLog).filter(ActivityPubLog.created_at < utcnow() - timedelta(days=3)).delete()
-            db.session.commit()
-
             # Ensure accurate count of posts associated with each hashtag
             for tag in Tag.query.all():
                 post_count = db.session.execute(text('SELECT COUNT(post_id) as c FROM "post_tag" WHERE tag_id = :tag_id'),

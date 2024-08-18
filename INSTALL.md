@@ -430,7 +430,13 @@ Once a week or so it's good to run `remove_orphan_files.sh` to save disk space:
 5 4 * * 1 rimu cd /home/rimu/pyfedi && /home/rimu/pyfedi/remove_orphan_files.sh
 ```
 
-If celery is hanging occasionally (we're looking into it but it's a hard one to solve), put this script in /etc/cron.hourly:
+One per day there are some maintenance tasks that PieFed needs to do:
+
+```
+5 2 * * * rimu cd /home/rimu/pyfedi && /home/rimu/pyfedi/daily.sh
+```
+
+If celery is hanging occasionally, put this script in /etc/cron.hourly:
 
 ```
 #!/bin/bash
