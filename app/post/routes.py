@@ -14,7 +14,7 @@ from app.activitypub.util import notify_about_post_reply, inform_followers_of_po
 from app.community.util import save_post, send_to_remote_instance
 from app.inoculation import inoculation
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm
-from app.community.forms import CreateLinkForm, CreateImageForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm
+from app.community.forms import CreateLinkForm, CreateImageForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm
 from app.post.util import post_replies, get_comment_branch, post_reply_count, tags_to_string, url_needs_archive, \
     generate_archive_link, body_has_no_archive_link
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
@@ -898,7 +898,7 @@ def post_edit(post_id: int):
     elif post.type == POST_TYPE_LINK:
         form = CreateLinkForm()
     elif post.type == POST_TYPE_IMAGE:
-        form = CreateImageForm()
+        form = EditImageForm()
     elif post.type == POST_TYPE_VIDEO:
         form = CreateVideoForm()
     elif post.type == POST_TYPE_POLL:
@@ -978,6 +978,7 @@ def post_edit(post_id: int):
             if post.type == POST_TYPE_LINK:
                 form.link_url.data = post.url
             elif post.type == POST_TYPE_IMAGE:
+                # existing_image = True
                 form.image_alt_text.data = post.image.alt_text
             elif post.type == POST_TYPE_VIDEO:
                 form.video_url.data = post.url
@@ -994,7 +995,7 @@ def post_edit(post_id: int):
             if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
                 form.sticky.render_kw = {'disabled': True}
             return render_template('post/post_edit.html', title=_('Edit post'), form=form,
-                                   post_type=post.type, community=post.community,
+                                   post_type=post.type, community=post.community, post=post,
                                    markdown_editor=current_user.markdown_editor, mods=mod_list,
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),

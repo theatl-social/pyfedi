@@ -176,6 +176,16 @@ class CreateImageForm(CreatePostForm):
 
         return True
 
+class EditImageForm(CreatePostForm):
+    image_alt_text = StringField(_l('Alt text'), validators=[Optional(), Length(min=3, max=1500)])
+
+    def validate(self, extra_validators=None) -> bool:
+        if self.communities:
+            community = Community.query.get(self.communities.data)
+            if community.is_local() and g.site.allow_local_image_posts is False:
+                self.communities.errors.append(_l('Images cannot be posted to local communities.'))
+
+        return True
 
 class CreatePollForm(CreatePostForm):
     mode = SelectField(_('Mode'), validators=[DataRequired()], choices=[('single', _l('Voters choose one option')), ('multiple', _l('Voters choose many options'))], render_kw={'class': 'form-select'})
