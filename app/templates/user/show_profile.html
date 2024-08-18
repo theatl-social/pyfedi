@@ -90,6 +90,7 @@
 
         </div>
         <p class="small">{{ _('Joined') }}: {{ moment(user.created).fromNow(refresh=True) }}<br />
+            {% if current_user.is_authenticated and current_user.is_admin() and user.last_seen %}{{ _('Active') }}: {{ moment(user.last_seen).fromNow(refresh=True) }}<br />{% endif %}
             {% if user.bot %}
                 {{ _('Bot Account') }}<br />
             {% endif %}
