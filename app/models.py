@@ -75,7 +75,7 @@ class Instance(db.Model):
     communities = db.relationship('Community', backref='instance', lazy='dynamic')
 
     def online(self):
-        return not self.dormant and not self.gone_forever
+        return not (self.dormant or self.gone_forever)
 
     def user_is_admin(self, user_id):
         role = InstanceRole.query.filter_by(instance_id=self.id, user_id=user_id).first()
