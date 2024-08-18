@@ -75,7 +75,7 @@ def before_request():
 @app.after_request
 def after_request(response):
     if 'auth/register' not in request.path:
-        response.headers['Content-Security-Policy'] = f"script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net 'nonce-{session['nonce']}'"
+        response.headers['Content-Security-Policy'] = f"script-src 'self' 'nonce-{session['nonce']}'"
         response.headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains; preload'
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'DENY'

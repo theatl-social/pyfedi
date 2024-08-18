@@ -26,7 +26,7 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
 from app.utils import gibberish, get_setting, is_image_url, allowlist_html, render_template, \
     domain_from_url, markdown_to_html, community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
-    community_moderators, lemmy_markdown_to_html, make_cache_key
+    community_moderators, lemmy_markdown_to_html
 from sqlalchemy import desc
 import werkzeug.exceptions
 
@@ -1536,7 +1536,6 @@ def post_ap2(post_id):
 
 
 @bp.route('/post/<int:post_id>', methods=['GET', 'POST'])
-@cache.cached(timeout=3, make_cache_key=make_cache_key)
 def post_ap(post_id):
     if request.method == 'GET' and is_activitypub_request():
         post = Post.query.get_or_404(post_id)

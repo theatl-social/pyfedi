@@ -23,9 +23,8 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     ap_datetime, shorten_string, markdown_to_text, user_filters_home, \
     joined_communities, moderating_communities, markdown_to_html, allowlist_html, \
     blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
-    blocked_users, menu_topics, languages_for_form, \
-    make_cache_key, blocked_communities
-from app.models import Community, CommunityMember, Post, Site, User, utcnow, Domain, Topic, Instance, \
+    blocked_users, menu_topics, languages_for_form, blocked_communities
+from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog
 
 
@@ -33,16 +32,12 @@ from app.models import Community, CommunityMember, Post, Site, User, utcnow, Dom
 @bp.route('/home', methods=['GET', 'POST'])
 @bp.route('/home/<sort>', methods=['GET', 'POST'])
 @bp.route('/home/<sort>/<view_filter>', methods=['GET', 'POST'])
-@cache.cached(make_cache_key=make_cache_key)
 def index(sort=None, view_filter=None):
     if 'application/ld+json' in request.headers.get('Accept', '') or 'application/activity+json' in request.headers.get(
             'Accept', ''):
         return activitypub_application()
 
-    return CachedResponse(
-        response=home_page(sort, view_filter),
-        timeout=50 if current_user.is_anonymous else 5,
-    )
+    return home_page(sort, view_filter)
 
 
 def home_page(sort, view_filter):
