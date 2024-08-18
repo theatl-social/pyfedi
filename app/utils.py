@@ -571,7 +571,7 @@ def user_ip_banned() -> bool:
         return current_ip_address in banned_ip_addresses()
 
 
-@cache.memoize(timeout=30)
+@cache.memoize(timeout=60)
 def instance_banned(domain: str) -> bool:   # see also activitypub.util.instance_blocked()
     if domain is None or domain == '':
         return False

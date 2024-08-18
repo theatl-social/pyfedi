@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from threading import Thread
 from time import sleep
 from random import randint
 from typing import List
@@ -717,7 +716,7 @@ def send_to_remote_instance_task(instance_id: int, community_id: int, payload):
     community = Community.query.get(community_id)
     if community:
         instance = Instance.query.get(instance_id)
-        if instance.inbox and instance.online():
+        if instance.inbox and instance.online() and not instance_banned(instance.domain):
             if post_request(instance.inbox, payload, community.private_key, community.ap_profile_id + '#main-key'):
                 instance.last_successful_send = utcnow()
                 instance.failures = 0
