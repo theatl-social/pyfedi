@@ -41,6 +41,9 @@
                             <li>{{ render_username(mod) }}</li>
                         {% endfor -%}
                     </ul>
+                    {% if un_moderated -%}
+                    <p class="red small">{{ _('Moderators have not been active recently.') }}</p>
+                    {% endif -%}
                 {% endif -%}
                 {% if not community.is_local() -%}
                     <ul>
