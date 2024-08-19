@@ -1158,6 +1158,14 @@ def languages_for_form():
         for language_id in recently_used_language_ids:
             used_languages.append((language_id, ""))
 
+        # use 'English' as a default for brand new users (no posts or replies yet)
+        # not great, but better than them accidently using 'Afaraf' (the first in a alphabetical list of languages)
+        # FIXME: use site language when it is settable by admins, or anything that avoids hardcoding 'English' in
+        if not used_languages:
+            id = english_language_id()
+            if id:
+                used_languages.append((id, ""))
+
     for language in Language.query.order_by(Language.name).all():
         try:
             i = used_languages.index((language.id, ""))
