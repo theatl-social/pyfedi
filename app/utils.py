@@ -1156,7 +1156,8 @@ def languages_for_form():
         # but Language.query.filter(Language.id.in_(recently_used_language_ids)) isn't guaranteed to return
         # language results in the same order as that List :(
         for language_id in recently_used_language_ids:
-            used_languages.append((language_id, ""))
+            if language_id is not None:
+                used_languages.append((language_id, ""))
 
         # use 'English' as a default for brand new users (no posts or replies yet)
         # not great, but better than them accidently using 'Afaraf' (the first in a alphabetical list of languages)
