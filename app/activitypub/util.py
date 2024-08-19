@@ -34,6 +34,8 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     notification_subscribers, communities_banned_from, lemmy_markdown_to_html, actor_contains_blocked_words, \
     html_to_text, opengraph_parse, url_to_thumbnail_file, add_to_modlog_activitypub
 
+from sqlalchemy import or_
+
 
 def public_key():
     if not os.path.exists('./public.pem'):
@@ -289,7 +291,8 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
         return Community.query.filter(Community.ap_profile_id == actor).first()  # finds communities formatted like https://localhost/c/*
 
     if current_app.config['SERVER_NAME'] + '/u/' in actor:
-        user = User.query.filter(User.ap_profile_id == actor).filter_by(ap_id=None, banned=False).first()  # finds local users
+        alt_user_name = actor_url.rsplit('/', 1)[-1]
+        user = User.query.filter(or_(User.ap_profile_id == actor, User.alt_user_name == alt_user_name)).filter_by(ap_id=None, banned=False).first()  # finds local users
         if user is None:
             return None
     elif actor.startswith('https://'):
