@@ -280,7 +280,7 @@ def user_profile(actor):
                         }
             if not main_user_name:
                 actor_data['name'] = 'Anonymous'
-                actor_data['published'] = ap_datetime(user.created + timedelta(minutes=randint(-2592000, 2592000)))
+                actor_data['published'] = ap_datetime(user.created + timedelta(minutes=randint(-2592000, 0)))
             if user.avatar_id is not None and main_user_name:
                 actor_data["icon"] = {
                     "type": "Image",
