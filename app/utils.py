@@ -1134,32 +1134,39 @@ def recently_downvoted_post_replies(user_id) -> List[int]:
 
 
 def languages_for_form():
-    result = []
     used_languages = []
+    other_languages = []
     if current_user.is_authenticated:
-        recently_used_post_languages = db.session.execute(text("""SELECT language_id 
+        recently_used_language_ids = db.session.execute(text("""SELECT language_id
                                                                 FROM (
-                                                                    SELECT language_id, posted_at 
-                                                                    FROM "post" 
-                                                                    WHERE user_id = :user_id 
+                                                                    SELECT language_id, posted_at
+                                                                    FROM "post"
+                                                                    WHERE user_id = :user_id
                                                                     UNION ALL
-                                                                    SELECT language_id, posted_at 
-                                                                    FROM "post_reply" 
-                                                                    WHERE user_id = :user_id 
+                                                                    SELECT language_id, posted_at
+                                                                    FROM "post_reply"
+                                                                    WHERE user_id = :user_id
                                                                 ) AS subquery
                                                                 GROUP BY language_id
                                                                 ORDER BY MAX(posted_at) DESC
                                                                 LIMIT 10"""),
-                                                          {'user_id': current_user.id}).scalars()
-        for language in Language.query.filter(Language.id.in_(recently_used_post_languages)).all():
-            result.append((language.id, language.name))
-            used_languages.append(language.id)
+                                                          {'user_id': current_user.id}).scalars().all()
+
+        # note: recently_used_language_ids is now a List, ordered with the most recently used at the top
+        # but Language.query.filter(Language.id.in_(recently_used_language_ids)) isn't guaranteed to return
+        # language results in the same order as that List :(
+        for language_id in recently_used_language_ids:
+            used_languages.append((language_id, ""))
 
     for language in Language.query.order_by(Language.name).all():
-        if language.code != 'und' and language.id not in used_languages:
-            result.append((language.id, language.name))
+        try:
+            i = used_languages.index((language.id, ""))
+            used_languages[i] = (language.id, language.name)
+        except:
+            if language.code != "und":
+                other_languages.append((language.id, language.name))
 
-    return result
+    return used_languages + other_languages
 
 
 def english_language_id():
