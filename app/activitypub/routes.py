@@ -856,7 +856,6 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             comment = None
                             target_ap_id = request_json['object']['object']['object']           # object object object!
                             post = undo_vote(activity_log, comment, post, target_ap_id, user)
-                            activity_log.result = 'success'
                         elif request_json['object']['object']['type'] == 'Delete':
                             if 'object' in request_json and 'object' in request_json['object']:
                                 restore_post_or_comment(request_json['object']['object'])
