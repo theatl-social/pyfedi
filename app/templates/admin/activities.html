@@ -11,11 +11,15 @@
     <div class="col">
         <h1>{{ _('Activities') }}</h1>
         Result Filter: 
-        <a href="{{ url_for('admin.admin_activities') }}">All</a> | 
-        <a href="{{ url_for('admin.admin_activities', result='failure') }}">Failure</a> | 
-        <a href="{{ url_for('admin.admin_activities', result='success') }}">Success</a> | 
-        <a href="{{ url_for('admin.admin_activities', result='ignored') }}">Ignored</a> | 
-        <a href="{{ url_for('admin.admin_activities', result='processing') }}">Processing</a>
+        <a href="{{ url_for('admin.admin_activities', direction=request.args.get('direction')) }}">All</a> |
+        <a href="{{ url_for('admin.admin_activities', result='failure', direction=request.args.get('direction')) }}">Failure</a> |
+        <a href="{{ url_for('admin.admin_activities', result='success', direction=request.args.get('direction')) }}">Success</a> |
+        <a href="{{ url_for('admin.admin_activities', result='ignored', direction=request.args.get('direction')) }}">Ignored</a> |
+        <a href="{{ url_for('admin.admin_activities', result='processing', direction=request.args.get('direction')) }}">Processing</a> ---
+        Direction Filter:
+        <a href="{{ url_for('admin.admin_activities', result=request.args.get('result')) }}">Both</a> |
+        <a href="{{ url_for('admin.admin_activities', result=request.args.get('result'), direction='in') }}">In</a> |
+        <a href="{{ url_for('admin.admin_activities', result=request.args.get('result'), direction='out') }}">Out</a>
         <table class="table">
             <tr>
                <th>When</th>
