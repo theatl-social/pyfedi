@@ -1921,10 +1921,16 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
         send_notifs_to = set(notification_subscribers(parent_reply.id, NOTIF_REPLY))
         for notify_id in send_notifs_to:
             if new_reply.user_id != notify_id:
-                new_notification = Notification(title=shorten_string(_('Reply to comment on %(post_title)s',
-                                                                       post_title=parent_reply.post.title), 50),
-                                                url=f"/post/{parent_reply.post.id}#comment_{new_reply.id}",
-                                                user_id=notify_id, author_id=new_reply.user_id)
+                if new_reply.depth <= THREAD_CUTOFF_DEPTH:
+                    new_notification = Notification(title=shorten_string(_('Reply to comment on %(post_title)s',
+                                                                           post_title=parent_reply.post.title), 50),
+                                                    url=f"/post/{parent_reply.post.id}#comment_{new_reply.id}",
+                                                    user_id=notify_id, author_id=new_reply.user_id)
+                else:
+                    new_notification = Notification(title=shorten_string(_('Reply to comment on %(post_title)s',
+                                                                           post_title=parent_reply.post.title), 50),
+                                                    url=f"/post/{parent_reply.post.id}/comment/{parent_reply.id}#comment_{new_reply.id}",
+                                                    user_id=notify_id, author_id=new_reply.user_id)
                 db.session.add(new_notification)
                 user = User.query.get(notify_id)
                 user.unread_notifications += 1
