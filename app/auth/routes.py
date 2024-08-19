@@ -1,4 +1,5 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
+from random import randint
 from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, g
 from werkzeug.urls import url_parse
 from flask_login import login_user, logout_user, current_user
@@ -12,7 +13,7 @@ from app.auth.util import random_token, normalize_utf, ip2location
 from app.email import send_verification_email, send_password_reset_email
 from app.models import User, utcnow, IpBan, UserRegistration, Notification, Site
 from app.utils import render_template, ip_address, user_ip_banned, user_cookie_banned, banned_ip_addresses, \
-    finalize_user_setup, blocked_referrers
+    finalize_user_setup, blocked_referrers, gibberish
 
 
 @bp.route('/login', methods=['GET', 'POST'])
@@ -123,7 +124,7 @@ def register():
                 user = User(user_name=form.user_name.data, title=form.user_name.data, email=form.real_email.data,
                             verification_token=verification_token, instance_id=1, ip_address=ip_address(),
                             banned=user_ip_banned() or user_cookie_banned(), email_unread_sent=False,
-                            referrer=session.get('Referer', ''))
+                            referrer=session.get('Referer', ''), alt_user_name=gibberish(randint(8, 20)))
                 user.set_password(form.password.data)
                 ip_address_info = ip2location(user.ip_address)
                 user.ip_address_country = ip_address_info['country'] if ip_address_info else ''

@@ -397,12 +397,12 @@ def post_vote(post_id: int, vote_direction):
     if not post.community.local_only:
         if undo:
             action_json = {
-                'actor': current_user.public_url(),
+                'actor': current_user.public_url(not(post.community.instance.votes_are_public() and current_user.vote_privately())),
                 'type': 'Undo',
                 'id': f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}",
                 'audience': post.community.public_url(),
                 'object': {
-                    'actor': current_user.public_url(),
+                    'actor': current_user.public_url(not(post.community.instance.votes_are_public() and current_user.vote_privately())),
                     'object': post.public_url(),
                     'type': undo,
                     'id': f"https://{current_app.config['SERVER_NAME']}/activities/{undo.lower()}/{gibberish(15)}",
@@ -412,7 +412,7 @@ def post_vote(post_id: int, vote_direction):
         else:
             action_type = 'Like' if vote_direction == 'upvote' else 'Dislike'
             action_json = {
-                'actor': current_user.public_url(),
+                'actor': current_user.public_url(not(post.community.instance.votes_are_public() and current_user.vote_privately())),
                 'object': post.profile_id(),
                 'type': action_type,
                 'id': f"https://{current_app.config['SERVER_NAME']}/activities/{action_type.lower()}/{gibberish(15)}",
@@ -437,7 +437,7 @@ def post_vote(post_id: int, vote_direction):
                     send_to_remote_instance(instance.id, post.community.id, announce)
         else:
             success = post_request_in_background(post.community.ap_inbox_url, action_json, current_user.private_key,
-                                                            current_user.public_url() + '#main-key')
+                                                            current_user.public_url(not(post.community.instance.votes_are_public() and current_user.vote_privately())) + '#main-key')
             if not success:
                 flash('Failed to send vote', 'warning')
 
@@ -514,7 +514,7 @@ def comment_vote(comment_id, vote_direction):
                 'id': f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}",
                 'audience': comment.community.public_url(),
                 'object': {
-                    'actor': current_user.public_url(),
+                    'actor': current_user.public_url(not(comment.community.instance.votes_are_public() and current_user.vote_privately())),
                     'object': comment.public_url(),
                     'type': undo,
                     'id': f"https://{current_app.config['SERVER_NAME']}/activities/{undo.lower()}/{gibberish(15)}",
@@ -524,7 +524,7 @@ def comment_vote(comment_id, vote_direction):
         else:
             action_type = 'Like' if vote_direction == 'upvote' else 'Dislike'
             action_json = {
-                'actor': current_user.public_url(),
+                'actor': current_user.public_url(not(comment.community.instance.votes_are_public() and current_user.vote_privately())),
                 'object': comment.public_url(),
                 'type': action_type,
                 'id': f"https://{current_app.config['SERVER_NAME']}/activities/{action_type.lower()}/{gibberish(15)}",
@@ -548,10 +548,8 @@ def comment_vote(comment_id, vote_direction):
                 if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
                     send_to_remote_instance(instance.id, comment.community.id, announce)
         else:
-            success = post_request_in_background(comment.community.ap_inbox_url, action_json, current_user.private_key,
-                                                            current_user.public_url() + '#main-key')
-            if not success:
-                flash('Failed to send vote', 'warning')
+            post_request_in_background(comment.community.ap_inbox_url, action_json, current_user.private_key,
+                                       current_user.public_url(not(comment.community.instance.votes_are_public() and current_user.vote_privately())) + '#main-key')
 
     current_user.last_seen = utcnow()
     current_user.ip_address = ip_address()

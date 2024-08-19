@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from time import sleep
+from random import randint
 
 from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, json, g
 from flask_login import login_user, logout_user, current_user, login_required
@@ -238,6 +239,11 @@ def change_settings():
         current_user.markdown_editor = form.markdown_editor.data
         current_user.interface_language = form.interface_language.data
         session['ui_language'] = form.interface_language.data
+        if form.vote_privately.data:
+            if current_user.alt_user_name is None or current_user.alt_user_name == '':
+                current_user.alt_user_name = gibberish(randint(8, 20))
+        else:
+            current_user.alt_user_name = ''
         import_file = request.files['import_file']
         if propagate_indexable:
             db.session.execute(text('UPDATE "post" set indexable = :indexable WHERE user_id = :user_id'),
@@ -274,6 +280,7 @@ def change_settings():
         form.theme.data = current_user.theme
         form.markdown_editor.data = current_user.markdown_editor
         form.interface_language.data = current_user.interface_language
+        form.vote_privately.data = current_user.vote_privately()
 
     return render_template('user/edit_settings.html', title=_('Edit profile'), form=form, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),

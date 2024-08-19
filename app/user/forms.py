@@ -44,6 +44,7 @@ class SettingsForm(FlaskForm):
     searchable = BooleanField(_l('Show profile in user list'))
     indexable = BooleanField(_l('My posts appear in search results'))
     manually_approves_followers = BooleanField(_l('Manually approve followers'))
+    vote_privately = BooleanField(_l('Vote privately'))
     import_file = FileField(_l('Import community subscriptions and user blocks from Lemmy'))
     sorts = [('hot', _l('Hot')),
              ('top', _l('Top')),

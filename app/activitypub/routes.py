@@ -1,10 +1,11 @@
-from urllib.parse import urlparse, parse_qs
 
+from flask import request, current_app, abort, jsonify, json, g, url_for, redirect, make_response
 from flask_login import current_user
+from sqlalchemy import desc, or_
+import werkzeug.exceptions
 
 from app import db, constants, cache, celery
 from app.activitypub import bp
-from flask import request, current_app, abort, jsonify, json, g, url_for, redirect, make_response
 
 from app.activitypub.signature import HttpSignature, post_request, VerificationError, default_context
 from app.community.routes import show_community
@@ -27,8 +28,6 @@ from app.utils import gibberish, get_setting, is_image_url, allowlist_html, rend
     domain_from_url, markdown_to_html, community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
     community_moderators, lemmy_markdown_to_html
-from sqlalchemy import desc
-import werkzeug.exceptions
 
 
 @bp.route('/testredis')
@@ -77,7 +76,7 @@ def webfinger():
 
         seperator = 'u'
         type = 'Person'
-        user = User.query.filter_by(user_name=actor.strip(), deleted=False, banned=False, ap_id=None).first()
+        user = User.query.filter(or_(User.user_name == actor.strip(), User.alt_user_name == actor.strip())).filter_by(deleted=False, banned=False, ap_id=None).first()
         if user is None:
             community = Community.query.filter_by(name=actor.strip(), ap_id=None).first()
             if community is None:
@@ -233,18 +232,21 @@ def user_profile(actor):
         if '@' in actor:
             user: User = User.query.filter_by(ap_id=actor.lower()).first()
         else:
-            user: User = User.query.filter_by(user_name=actor, ap_id=None).first()
+            user: User = User.query.filter(or_(User.user_name == actor, User.alt_user_name == actor)).filter_by(ap_id=None).first()
             if user is None:
                 user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor.lower()}', deleted=False, ap_id=None).first()
     else:
         if '@' in actor:
             user: User = User.query.filter_by(ap_id=actor.lower(), deleted=False, banned=False).first()
         else:
-            user: User = User.query.filter_by(user_name=actor, deleted=False, ap_id=None).first()
+            user: User = User.query.filter(or_(User.user_name == actor, User.alt_user_name == actor)).filter_by(deleted=False, ap_id=None).first()
             if user is None:
                 user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor.lower()}', deleted=False, ap_id=None).first()
 
     if user is not None:
+        main_user_name = True
+        if user.alt_user_name == actor:
+            main_user_name = False
         if request.method == 'HEAD':
             if is_activitypub_request():
                 resp = jsonify('')
@@ -256,43 +258,48 @@ def user_profile(actor):
             server = current_app.config['SERVER_NAME']
             actor_data = {  "@context": default_context(),
                             "type": "Person" if not user.bot else "Service",
-                            "id": user.public_url(),
+                            "id": user.public_url(main_user_name),
                             "preferredUsername": actor,
                             "name": user.title if user.title else user.user_name,
-                            "inbox": f"{user.public_url()}/inbox",
-                            "outbox": f"{user.public_url()}/outbox",
+                            "inbox": f"{user.public_url(main_user_name)}/inbox",
+                            "outbox": f"{user.public_url(main_user_name)}/outbox",
                             "discoverable": user.searchable,
                             "indexable": user.indexable,
                             "manuallyApprovesFollowers": False if not user.ap_manually_approves_followers else user.ap_manually_approves_followers,
                             "publicKey": {
-                                "id": f"{user.public_url()}#main-key",
-                                "owner": user.public_url(),
-                                "publicKeyPem": user.public_key      # .replace("\n", "\\n")    #LOOKSWRONG
+                                "id": f"{user.public_url(main_user_name)}#main-key",
+                                "owner": user.public_url(main_user_name),
+                                "publicKeyPem": user.public_key
                             },
                             "endpoints": {
                                 "sharedInbox": f"https://{server}/inbox"
                             },
                             "published": ap_datetime(user.created),
                         }
-            if user.avatar_id is not None:
+            if not main_user_name:
+                actor_data['name'] = 'Anonymous'
+            if user.avatar_id is not None and main_user_name:
                 actor_data["icon"] = {
                     "type": "Image",
                     "url": f"https://{current_app.config['SERVER_NAME']}{user.avatar_image()}"
                 }
-            if user.cover_id is not None:
+            if user.cover_id is not None and main_user_name:
                 actor_data["image"] = {
                     "type": "Image",
                     "url": f"https://{current_app.config['SERVER_NAME']}{user.cover_image()}"
                 }
-            if user.about_html:
+            if user.about_html and main_user_name:
                 actor_data['summary'] = user.about_html
-            if user.matrix_user_id:
+            if user.matrix_user_id and main_user_name:
                 actor_data['matrixUserId'] = user.matrix_user_id
             resp = jsonify(actor_data)
             resp.content_type = 'application/activity+json'
             return resp
         else:
-            return show_profile(user)
+            if main_user_name:
+                return show_profile(user)
+            else:
+                return render_template('errors/alt_profile.html')
     else:
         abort(404)
 

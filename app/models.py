@@ -81,6 +81,9 @@ class Instance(db.Model):
         role = InstanceRole.query.filter_by(instance_id=self.id, user_id=user_id).first()
         return role and role.role == 'admin'
 
+    def votes_are_public(self):
+        return self.software.lower() == 'lemmy' or self.software.lower() == 'mbin' or self.software.lower() == 'kbin'
+
     def __repr__(self):
         return '<Instance {}>'.format(self.domain)
 
@@ -585,6 +588,7 @@ class User(UserMixin, db.Model):
     query_class = FullTextSearchQuery
     id = db.Column(db.Integer, primary_key=True)
     user_name = db.Column(db.String(255), index=True)
+    alt_user_name = db.Column(db.String(255), index=True)
     title = db.Column(db.String(256))
     email = db.Column(db.String(255), index=True)
     password_hash = db.Column(db.String(128))
@@ -734,6 +738,9 @@ class User(UserMixin, db.Model):
             size += self.cover.filesize()
         return size
 
+    def vote_privately(self):
+        return self.alt_user_name is not None and self.alt_user_name != ''
+
     def num_content(self):
         content = 0
         content += db.session.execute(text('SELECT COUNT(id) as c FROM "post" WHERE user_id = :user_id'), {'user_id': self.id}).scalar()
@@ -873,8 +880,11 @@ class User(UserMixin, db.Model):
         result = self.ap_profile_id if self.ap_profile_id else f"https://{current_app.config['SERVER_NAME']}/u/{self.user_name.lower()}"
         return result
 
-    def public_url(self):
-        result = self.ap_public_url if self.ap_public_url else f"https://{current_app.config['SERVER_NAME']}/u/{self.user_name}"
+    def public_url(self, main_user_name=True):
+        if main_user_name:
+            result = self.ap_public_url if self.ap_public_url else f"https://{current_app.config['SERVER_NAME']}/u/{self.user_name}"
+        else:
+            result = f"https://{current_app.config['SERVER_NAME']}/u/{self.alt_user_name}"
         return result
 
     def created_recently(self):
