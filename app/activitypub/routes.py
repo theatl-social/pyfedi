@@ -1,3 +1,5 @@
+from datetime import timedelta
+from random import randint
 
 from flask import request, current_app, abort, jsonify, json, g, url_for, redirect, make_response
 from flask_login import current_user
@@ -278,6 +280,7 @@ def user_profile(actor):
                         }
             if not main_user_name:
                 actor_data['name'] = 'Anonymous'
+                actor_data['published'] = ap_datetime(user.created + timedelta(minutes=randint(-2592000, 2592000)))
             if user.avatar_id is not None and main_user_name:
                 actor_data["icon"] = {
                     "type": "Image",
