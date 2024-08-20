@@ -172,7 +172,7 @@ def show_community(community: Community):
     if low_bandwidth:
         post_layout = None
     else:
-        if community.default_layout is not None:
+        if community.default_layout is not None and community.default_layout != '':
             post_layout = request.args.get('layout', community.default_layout)
         else:
             post_layout = request.args.get('layout', 'list')
