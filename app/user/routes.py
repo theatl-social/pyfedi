@@ -731,15 +731,19 @@ def import_settings_task(user_id, filename):
                     # send ActivityPub message to remote community, asking to follow. Accept message will be sent to our shared inbox
                     join_request = CommunityJoinRequest(user_id=user.id, community_id=community.id)
                     db.session.add(join_request)
+                    member = CommunityMember(user_id=user.id, community_id=community.id)
+                    db.session.add(member)
                     db.session.commit()
-                    follow = {
-                        "actor": current_user.public_url(),
-                        "to": [community.public_url()],
-                        "object": community.public_url(),
-                        "type": "Follow",
-                        "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
-                    }
-                    success = post_request(community.ap_inbox_url, follow, user.private_key,
+                    success = True
+                    if not community.instance.gone_forever:
+                        follow = {
+                          "actor": current_user.public_url(),
+                          "to": [community.public_url()],
+                          "object": community.public_url(),
+                          "type": "Follow",
+                          "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+                        }
+                        success = post_request(community.ap_inbox_url, follow, user.private_key,
                                            user.public_url() + '#main-key')
                     if not success:
                         sleep(5)    # give them a rest
