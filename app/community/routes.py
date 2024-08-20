@@ -403,14 +403,16 @@ def subscribe(actor):
                 join_request = CommunityJoinRequest(user_id=current_user.id, community_id=community.id)
                 db.session.add(join_request)
                 db.session.commit()
-                follow = {
-                    "actor": current_user.public_url(),
-                    "to": [community.public_url()],
-                    "object": community.public_url(),
-                    "type": "Follow",
-                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
-                }
-                success = post_request(community.ap_inbox_url, follow, current_user.private_key,
+                success = True
+                if not community.instance.gone_forever:
+                    follow = {
+                      "actor": current_user.public_url(),
+                      "to": [community.public_url()],
+                      "object": community.public_url(),
+                      "type": "Follow",
+                      "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+                    }
+                    success = post_request(community.ap_inbox_url, follow, current_user.private_key,
                                                            current_user.public_url() + '#main-key', timeout=10)
                 if not success:
                     flash(_("There was a problem while trying to communicate with remote server. If other people have already joined this community it won't matter."), 'error')
@@ -442,22 +444,24 @@ def unsubscribe(actor):
                 proceed = True
                 # Undo the Follow
                 if '@' in actor:    # this is a remote community, so activitypub is needed
-                    undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
-                    follow = {
-                        "actor": current_user.public_url(),
-                        "to": [community.public_url()],
-                        "object": community.public_url(),
-                        "type": "Follow",
-                        "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
-                    }
-                    undo = {
-                        'actor': current_user.public_url(),
-                        'to': [community.public_url()],
-                        'type': 'Undo',
-                        'id': undo_id,
-                        'object': follow
-                    }
-                    success = post_request(community.ap_inbox_url, undo, current_user.private_key,
+                    success = True
+                    if not community.instance.gone_forever:
+                        undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
+                        follow = {
+                          "actor": current_user.public_url(),
+                          "to": [community.public_url()],
+                          "object": community.public_url(),
+                          "type": "Follow",
+                          "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
+                        }
+                        undo = {
+                          'actor': current_user.public_url(),
+                          'to': [community.public_url()],
+                          'type': 'Undo',
+                          'id': undo_id,
+                          'object': follow
+                        }
+                        success = post_request(community.ap_inbox_url, undo, current_user.private_key,
                                                                current_user.public_url() + '#main-key', timeout=10)
                     if not success:
                         flash('There was a problem while trying to unsubscribe', 'error')

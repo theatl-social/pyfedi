@@ -55,6 +55,9 @@ def unsubscribe_from_everything_then_delete_task(user_id):
 
 
 def unsubscribe_from_community(community, user):
+    if community.instance.gone_forever:
+        return
+
     undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
     follow = {
         "actor": user.public_url(),
@@ -70,13 +73,7 @@ def unsubscribe_from_community(community, user):
         'id': undo_id,
         'object': follow
     }
-    activity = ActivityPubLog(direction='out', activity_id=undo_id, activity_type='Undo',
-                              activity_json=json.dumps(undo), result='processing')
-    db.session.add(activity)
-    db.session.commit()
     post_request(community.ap_inbox_url, undo, user.private_key, user.public_url() + '#main-key')
-    activity.result = 'success'
-    db.session.commit()
 
 
 def send_newsletter(form):
