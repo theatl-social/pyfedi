@@ -509,7 +509,7 @@ def comment_vote(comment_id, vote_direction):
     if not comment.community.local_only:
         if undo:
             action_json = {
-                'actor': current_user.public_url(),
+                'actor': current_user.public_url(not(comment.community.instance.votes_are_public() and current_user.vote_privately())),
                 'type': 'Undo',
                 'id': f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}",
                 'audience': comment.community.public_url(),
