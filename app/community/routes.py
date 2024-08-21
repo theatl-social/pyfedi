@@ -499,15 +499,16 @@ def join_then_add(actor):
             join_request = CommunityJoinRequest(user_id=current_user.id, community_id=community.id)
             db.session.add(join_request)
             db.session.commit()
-            follow = {
-                "actor": current_user.public_url(),
-                "to": [community.public_url()],
-                "object": community.public_url(),
-                "type": "Follow",
-                "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
-            }
-            success = post_request(community.ap_inbox_url, follow, current_user.private_key,
-                                   current_user.public_url() + '#main-key')
+            if not community.instance.gone_forever:
+                follow = {
+                  "actor": current_user.public_url(),
+                  "to": [community.public_url()],
+                  "object": community.public_url(),
+                  "type": "Follow",
+                  "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+                }
+                post_request(community.ap_inbox_url, follow, current_user.private_key,
+                                            current_user.public_url() + '#main-key')
         member = CommunityMember(user_id=current_user.id, community_id=community.id)
         db.session.add(member)
         db.session.commit()
