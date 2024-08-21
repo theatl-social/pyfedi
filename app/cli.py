@@ -230,7 +230,7 @@ def register(app):
                                     break
                                 else:
                                     instance.failures += 1
-                        elif node.status_code >= 400:
+                        elif nodeinfo.status_code >= 400:
                             current_app.logger.info(f"{instance.domain} has no well-known/nodeinfo response")
                     except requests.exceptions.ReadTimeout:
                         instance.failures += 1
