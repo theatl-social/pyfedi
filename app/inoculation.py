@@ -78,7 +78,7 @@ inoculation = [
     },
     {
         'id': 'deradicalisation',
-        'title': 'Deredicalisation',
+        'title': 'Deradicalisation',
         'description': '',
         'links': [
             {
