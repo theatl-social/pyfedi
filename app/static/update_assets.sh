@@ -14,8 +14,6 @@ curl -o js/markdown/downarea.js -L https://codeberg.org/PieFed/downarea2/raw/bra
 # https://htmx.org/ (Zero-Clause BSD)
 curl -o js/htmx.min.js -L https://unpkg.com/htmx.org@2.0.0
 
-# https://momentjs.com/ (MIT license)
-curl -o js/moment-with-locales.min.js -L https://momentjs.com/downloads/moment-with-locales.min.js
 
 # ToDo: coolfieldset.js
 

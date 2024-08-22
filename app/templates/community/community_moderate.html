@@ -47,7 +47,7 @@
                     <td>{{ report.reasons }}</td>
                     <td>{{ report.description }}</td>
                     <td>{{ report.type_text() }}</td>
-                    <td>{{ moment(report.created_at).fromNow() }}</td>
+                    <td>{{ arrow.get(report.created_at).humanize(locale=locale) }}</td>
                     <td>
                         <div class="dropdown">
                           <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">

@@ -31,7 +31,7 @@
                     <td>{{ report.reasons }}</td>
                     <td>{{ report.description }}</td>
                     <td>{{ report.type_text() }}</td>
-                    <td>{{ moment(report.created_at).fromNow() }}</td>
+                    <td>{{ arrow.get(report.created_at).humanize(locale=locale) }}</td>
                     <td>
                         {% if report.suspect_conversation_id %}
                             <a href="/chat/{{ report.suspect_conversation_id }}#message">View</a>

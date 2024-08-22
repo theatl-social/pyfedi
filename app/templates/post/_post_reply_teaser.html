@@ -28,8 +28,8 @@
             {% endif -%}
         </div>
         <div class="col-auto text-muted small">
-            {{ moment(post_reply.posted_at).fromNow(refresh=True) }}
-            {% if post_reply.edited_at -%}, edited {{ moment(post_reply.edited_at).fromNow(refresh=True) }} {% endif -%}
+            {{ arrow.get(post_reply.posted_at).humanize(locale=locale) }}
+            {% if post_reply.edited_at -%}, edited {{ arrow.get(post_reply.edited_at).humanize(locale=locale) }} {% endif -%}
         </div>
         <div class="col-auto">
             {% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) -%}

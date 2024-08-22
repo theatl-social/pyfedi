@@ -66,7 +66,7 @@
                             {% for message in messages %}
                                 <div id="message_{{ message.id }}" class="card message {{ 'from_other_party' if message.sender_id != current_user.id else 'from_me' }}">
                                     <div class="message_body">
-                                        <span class="message_created_at text-muted small">{{ moment(message.created_at).fromNow(refresh=True) }}</span>
+                                        <span class="message_created_at text-muted small">{{ arrow.get(message.created_at).humanize(locale=locale) }}</span>
                                         <span class="message_sender"><a href="/u/{{ message.sender.link() }}">{{ message.sender.display_name() }}</a></span>: {{ message.body_html|safe }}
                                     </div>
                                 </div>

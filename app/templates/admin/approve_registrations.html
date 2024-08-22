@@ -33,7 +33,7 @@
                     <td><a href="mailto:{{ registration.user.email }}">{{ registration.user.email }}</a></td>
                     <td>{{ '<span class="green">&check;</span>'|safe if registration.user.verified else '<span class="red">&cross;</span>'|safe }}</td>
                     <td>{{ registration.answer }}</td>
-                    <td>{{ moment(registration.created_at).fromNow() }}</td>
+                    <td>{{ arrow.get(registration.created_at).humanize(locale=locale) }}</td>
                     <td>{{ registration.user.ip_address if registration.user.ip_address }}<br />{{ registration.user.ip_address_country if registration.user.ip_address_country }}</td>
                     <td>{{ registration.user.referrer if registration.user.referrer }} </td>
                     <td><a href="{{ url_for('admin.admin_approve_registrations_approve', user_id=registration.user.id) }}" class="btn btn-sm btn-primary">{{ _('Approve') }}</a>
@@ -71,7 +71,7 @@
                     <td><a href="mailto:{{ registration.user.email }}">{{ registration.user.email }}</a></td>
                     <td>{{ '<span class="green">&check;</span>'|safe if registration.user.verified else '<span class="red">&cross;</span>'|safe }}</td>
                     <td>{{ registration.answer }}</td>
-                    <td>{{ moment(registration.created_at).fromNow() }}</td>
+                    <td>{{ arrow.get(registration.created_at).humanize(locale=locale) }}</td>
                     <td>{{ registration.user.ip_address if registration.user.ip_address }}<br />{{ registration.user.ip_address_country if registration.user.ip_address_country }}</td>
                     <td>{{ registration.user.referrer if registration.user.referrer }} </td>
                     <td>

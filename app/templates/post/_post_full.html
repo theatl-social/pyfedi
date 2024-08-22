@@ -26,8 +26,8 @@
             {% endif -%}
             <p>{% if post.reports > 0 and current_user.is_authenticated and post.community.is_moderator(current_user) -%}
                     <span class="red fe fe-report" title="{{ _('Reported. Check post for issues.') }}"></span>
-                {% endif -%}<small>submitted {{ moment(post.posted_at).fromNow() }} by {{ render_username(post.author) }}
-                {% if post.edited_at -%} edited {{ moment(post.edited_at).fromNow() }}{% endif -%}
+                {% endif -%}<small>submitted {{ arrow.get(post.posted_at).humanize(locale=locale) }} by {{ render_username(post.author) }}
+                {% if post.edited_at -%} edited {{ arrow.get(post.edited_at).humanize(locale=locale) }}{% endif -%}
             </small></p>
             <div class="post_image">
                 {% if post.image_id -%}
@@ -80,9 +80,9 @@
             {% endif -%}
             <p>{% if post.reports > 0 and current_user.is_authenticated and post.community.is_moderator(current_user) -%}
                     <span class="red fe fe-report" title="{{ _('Reported. Check post for issues.') }}"></span>
-                {% endif -%}<small>submitted {{ moment(post.posted_at).fromNow() }} by
+                {% endif -%}<small>submitted {{ arrow.get(post.posted_at).humanize(locale=locale) }} by
                 {{ render_username(post.author) }}
-                {% if post.edited_at -%} edited {{ moment(post.edited_at).fromNow() }}{% endif -%}</small>
+                {% if post.edited_at -%} edited {{ arrow.get(post.edited_at).humanize(locale=locale) }}{% endif -%}</small>
             </p>
             {% if post.type == POST_TYPE_LINK -%}
                 <p><a href="{{ post.url }}" rel="nofollow ugc" target="_blank" class="post_link" aria-label="Go to post url">{{ post.url|shorten_url }}
@@ -164,7 +164,7 @@
                         {% endfor -%}
                         </ul>
                         <p>{{ _('Total votes: %(total_votes)d.', total_votes=poll_total_votes) }}</p>
-                        <p>{{ _('Poll closes') }} {{ moment(poll_data.end_poll).fromNow(refresh=True) }}.</p>
+                        <p>{{ _('Poll closes') }} {{ arrow.get(poll_data.end_poll).humanize(locale=locale) }}.</p>
                     {% elif poll_form -%}
                         {% if current_user.is_authenticated -%}
                             <form action='/poll/{{ post.id }}/vote' method="post">

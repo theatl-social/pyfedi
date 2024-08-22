@@ -37,7 +37,7 @@
                             {{ user.display_name() }}</a></td>
                     <td>{% if user.is_local() %}Local{% else %}<a href="{{ user.ap_profile_id }}">Remote</a>{% endif %}</td>
                     <td>{% if request.args.get('local_remote', '') == 'local' %}
-                            {{ moment(user.last_seen).fromNow() }}
+                            {{ arrow.get(user.last_seen).humanize(locale=locale) }}
                         {% else %}
                             {{ user.last_seen }}
                         {% endif %}

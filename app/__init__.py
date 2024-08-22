@@ -10,7 +10,6 @@ from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_bootstrap import Bootstrap5
 from flask_mail import Mail
-from flask_moment import Moment
 from flask_babel import Babel, lazy_gettext as _l
 from flask_caching import Cache
 from celery import Celery
@@ -39,7 +38,6 @@ login.login_view = 'auth.login'
 login.login_message = _l('Please log in to access this page.')
 mail = Mail()
 bootstrap = Bootstrap5()
-moment = Moment()
 babel = Babel(locale_selector=get_locale)
 cache = Cache()
 celery = Celery(__name__, broker=Config.CELERY_BROKER_URL)
@@ -61,7 +59,6 @@ def create_app(config_class=Config):
     login.init_app(app)
     mail.init_app(app)
     bootstrap.init_app(app)
-    moment.init_app(app)
     make_searchable(db.metadata)
     babel.init_app(app, locale_selector=get_locale)
     cache.init_app(app)

@@ -110,7 +110,7 @@
                         <th scope="row" class="pl-0"><a href="/c/{{ community.link() }}" aria-label="{{ _('Browse %(name)s', name=community.display_name()) }}">{{ community.display_name() }}</a></th>
                         <td>{{ community.post_count }}</td>
                         <td>{{ community.post_reply_count }}</td>
-                        <td>{{ moment(community.last_active).fromNow(refresh=True) }}</td>
+                        <td>{{ arrow.get(community.last_active).humanize(locale=locale) }}</td>
                     </tr>
                 {% endfor -%}
             </tbody>

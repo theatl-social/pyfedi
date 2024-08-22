@@ -35,7 +35,7 @@
             <tbody>
                 {% for modlog_entry in modlog_entries.items %}
                     <tr>
-                        <td>{{ moment(modlog_entry.created_at).fromNow() }}</td>
+                        <td>{{ arrow.get(modlog_entry.created_at).humanize(locale=locale) }}</td>
                         <td>{{ render_username(modlog_entry.author) }}</td>
                         <td>{{ modlog_entry.action_to_str() }}
                             {% if modlog_entry.link and modlog_entry.link_text -%}

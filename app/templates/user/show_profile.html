@@ -89,8 +89,8 @@
         {% endif %}
 
         </div>
-        <p class="small">{{ _('Joined') }}: {{ moment(user.created).fromNow(refresh=True) }}<br />
-            {% if current_user.is_authenticated and current_user.is_admin() and user.last_seen %}{{ _('Active') }}: {{ moment(user.last_seen).fromNow(refresh=True) }}<br />{% endif %}
+        <p class="small">{{ _('Joined') }}: {{ arrow.get(user.created).humanize(locale=locale) }}<br />
+            {% if current_user.is_authenticated and current_user.is_admin() and user.last_seen %}{{ _('Active') }}: {{ arrow.get(user.last_seen).humanize(locale=locale) }}<br />{% endif %}
             {% if user.bot %}
                 {{ _('Bot Account') }}<br />
             {% endif %}
