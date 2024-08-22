@@ -46,7 +46,8 @@ from pyld import jsonld
 from email.utils import formatdate
 from app import db, celery
 from app.constants import DATETIME_MS_FORMAT
-from app.models import utcnow, ActivityPubLog
+from app.models import utcnow, ActivityPubLog, Community, Instance, CommunityMember, User
+from sqlalchemy import text
 
 
 def http_date(epoch_seconds=None):
@@ -103,8 +104,14 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str, con
             result = HttpSignature.signed_request(uri, body, private_key, key_id, content_type, method, timeout)
             if result.status_code != 200 and result.status_code != 202 and result.status_code != 204:
                 log.result = 'failure'
-                log.exception_message += f' Response status code was {result.status_code}'
-                current_app.logger.error(f'Response code for post attempt to {uri} was ' +
+                log.exception_message = f'{result.status_code}: {result.text:.100}' + ' - '
+                if 'DOCTYPE html' in result.text:
+                    log.result = 'ignored'
+                    log.exception_message  = f'{result.status_code}: HTML instead of JSON response - '
+                elif 'community_has_no_followers' in result.text:
+                    fix_local_community_membership(uri, private_key)
+                else:
+                    current_app.logger.error(f'Response code for post attempt to {uri} was ' +
                                          str(result.status_code) + ' ' + result.text)
             log.exception_message += uri
             if result.status_code == 202:
@@ -536,3 +543,20 @@ def default_context():
             "identifier": "sc:identifier"
         })
     return context
+
+
+def fix_local_community_membership(uri: str, private_key: str):
+    community = Community.query.filter_by(private_key=private_key).first()
+    parsed_url = urlparse(uri)
+    instance_domain = parsed_url.netloc
+    instance = Instance.query.filter_by(domain=instance_domain).first()
+
+    if community and instance:
+        followers = CommunityMember.query.filter_by(community_id=community.id). \
+                                    join(User, User.id == CommunityMember.user_id). \
+                                    filter(User.instance_id == instance.id)
+        for f in followers:
+            db.session.execute(text('DELETE FROM "community_member" WHERE user_id = :user_id AND community_id = :community_id'),
+                                                {'user_id': f.user_id, 'community_id': community.id})
+
+

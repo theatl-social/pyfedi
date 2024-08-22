@@ -305,12 +305,13 @@ def send_community_follow(community_id, join_request_id, user_id):
     with current_app.app_context():
         user = User.query.get(user_id)
         community = Community.query.get(community_id)
-        follow = {
-            "actor": user.public_url(),
-            "to": [community.public_url()],
-            "object": community.public_url(),
-            "type": "Follow",
-            "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request_id}"
-        }
-        success = post_request(community.ap_inbox_url, follow, user.private_key,
-                               user.public_url() + '#main-key')
+        if not community.instance.gone_forever:
+            follow = {
+              "actor": user.public_url(),
+              "to": [community.public_url()],
+              "object": community.public_url(),
+              "type": "Follow",
+              "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request_id}"
+            }
+            post_request(community.ap_inbox_url, follow, user.private_key,
+                                        user.public_url() + '#main-key')
