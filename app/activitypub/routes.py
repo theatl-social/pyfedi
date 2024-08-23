@@ -25,7 +25,7 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
     user_removed_from_remote_server, create_post, create_post_reply, update_post_reply_from_activity, \
     update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection, find_reported_object, \
     process_report, ensure_domains_match, can_edit, can_delete, remove_data_from_banned_user, resolve_remote_post, \
-    inform_followers_of_post_update, comment_model_to_json, restore_post_or_comment, ban_local_user
+    inform_followers_of_post_update, comment_model_to_json, restore_post_or_comment, ban_local_user, unban_local_user
 from app.utils import gibberish, get_setting, is_image_url, allowlist_html, render_template, \
     domain_from_url, markdown_to_html, community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
@@ -856,6 +856,14 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             if 'object' in request_json and 'object' in request_json['object']:
                                 restore_post_or_comment(request_json['object']['object'])
                                 activity_log.result = 'success'
+                        elif request_json['object']['object']['type'] == 'Block':
+                            activity_log.activity_type = 'Undo User Ban'
+                            deletor_ap_id = request_json['object']['object']['actor']
+                            user_ap_id = request_json['object']['object']['object']
+                            target = request_json['object']['object']['target']
+                            if target == request_json['actor'] and user_ap_id.startswith('https://' + current_app.config['SERVER_NAME']):
+                                unban_local_user(deletor_ap_id, user_ap_id, target)
+                            activity_log.result = 'success'
                     elif request_json['object']['type'] == 'Add' and 'target' in request_json['object']:
                         activity_log.activity_type = request_json['object']['type']
                         target = request_json['object']['target']
@@ -1052,6 +1060,14 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                         post_or_comment = undo_downvote(activity_log, comment, post, target_ap_id, user)
                         if post_or_comment:
                             announce_activity_to_followers(post_or_comment.community, user, request_json)
+                        activity_log.result = 'success'
+                    elif request_json['object']['type'] == 'Block':  # Undoing a ban
+                        activity_log.activity_type = 'Undo User Ban'
+                        deletor_ap_id = request_json['object']['actor']
+                        user_ap_id = request_json['object']['object']
+                        target = request_json['object']['target']
+                        if user_ap_id.startswith('https://' + current_app.config['SERVER_NAME']):
+                            unban_local_user(deletor_ap_id, user_ap_id, target)
                         activity_log.result = 'success'
                 elif request_json['type'] == 'Delete':
                     if isinstance(request_json['object'], str):
