@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import html
 import os
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 from random import randint
 from typing import Union, Tuple, List
 
@@ -14,7 +14,7 @@ from sqlalchemy import text, func, desc
 from app import db, cache, constants, celery
 from app.models import User, Post, Community, BannedInstances, File, PostReply, AllowedInstances, Instance, utcnow, \
     PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation, \
-    Language, Tag, Poll, PollChoice, UserFollower
+    Language, Tag, Poll, PollChoice, UserFollower, CommunityBan, CommunityJoinRequest, NotificationSubscription
 from app.activitypub.signature import signed_get_request, post_request
 import time
 import base64
@@ -32,7 +32,8 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     shorten_string, reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, remove_tracking_from_link, \
     blocked_phrases, microblog_content_to_title, generate_image_from_video_url, is_video_url, reply_is_stupid, \
     notification_subscribers, communities_banned_from, lemmy_markdown_to_html, actor_contains_blocked_words, \
-    html_to_text, opengraph_parse, url_to_thumbnail_file, add_to_modlog_activitypub
+    html_to_text, opengraph_parse, url_to_thumbnail_file, add_to_modlog_activitypub, joined_communities, \
+    moderating_communities
 
 from sqlalchemy import or_
 
@@ -1553,6 +1554,78 @@ def remove_data_from_banned_user_task(deletor_ap_id, user_ap_id, target):
         post.deleted = True
         post.community.post_count -= 1
     db.session.commit()
+
+
+def ban_local_user(deletor_ap_id, user_ap_id, target, request_json):
+    if current_app.debug:
+        ban_local_user_task(deletor_ap_id, user_ap_id, target, request_json)
+    else:
+        ban_local_user_task.delay(deletor_ap_id, user_ap_id, target, request_json)
+
+
+@celery.task
+def ban_local_user_task(deletor_ap_id, user_ap_id, target, request_json):
+    # same info in 'Block' and 'Announce/Block' can be sent at same time, and both call this function
+    ban_in_progress = cache.get(f'{deletor_ap_id} is banning {user_ap_id} from {target}')
+    if not ban_in_progress:
+        cache.set(f'{deletor_ap_id} is banning {user_ap_id} from {target}', True, timeout=300)
+    else:
+        return
+
+    deletor = find_actor_or_create(deletor_ap_id, create_if_not_found=False)
+    user = find_actor_or_create(user_ap_id, create_if_not_found=False)
+    community = Community.query.filter_by(ap_profile_id=target).first()
+
+    if not deletor or not user:
+        return
+
+    # site bans by admins
+    if deletor.instance.user_is_admin(deletor.id) and target == f"https://{deletor.instance.domain}/":
+        # need instance_ban table?
+        ...
+
+    # community bans by mods or admins
+    elif community and (community.is_moderator(deletor) or community.is_instance_admin(deletor)):
+        existing = CommunityBan.query.filter_by(community_id=community.id, user_id=user.id).first()
+
+        if not existing:
+            new_ban = CommunityBan(community_id=community.id, user_id=user.id, banned_by=deletor.id)
+            if 'summary' in request_json:
+                new_ban.reason=request_json['summary']
+
+            if 'expires' in request_json and datetime.fromisoformat(request_json['expires']) > datetime.now(timezone.utc):
+                new_ban.ban_until = datetime.fromisoformat(request_json['expires'])
+            elif 'endTime' in request_json and datetime.fromisoformat(request_json['endTime']) > datetime.now(timezone.utc):
+                new_ban.ban_until = datetime.fromisoformat(request_json['endTime'])
+
+            db.session.add(new_ban)
+            db.session.commit()
+
+        db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == community.id, CommunityJoinRequest.user_id == user.id).delete()
+
+        community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=user.id).first()
+        if community_membership_record:
+            community_membership_record.is_banned = True
+
+        cache.delete_memoized(communities_banned_from, user.id)
+        cache.delete_memoized(joined_communities, user.id)
+        cache.delete_memoized(moderating_communities, user.id)
+
+        # Notify banned person
+        notify = Notification(title=shorten_string('You have been banned from ' + community.title),
+                                      url=f'/notifications', user_id=user.id,
+                                      author_id=deletor.id)
+        db.session.add(notify)
+        if not current_app.debug:                       # user.unread_notifications += 1 hangs app if 'user' is the same person
+            user.unread_notifications += 1              # who pressed 'Re-submit this activity'.
+        db.session.commit()
+
+        # Remove their notification subscription,  if any
+        db.session.query(NotificationSubscription).filter(NotificationSubscription.entity_id == community.id,
+                                                          NotificationSubscription.user_id == user.id,
+                                                          NotificationSubscription.type == NOTIF_COMMUNITY).delete()
+
+        add_to_modlog_activitypub('ban_user', deletor, community_id=community.id, link_text=user.display_name(), link=user.link())
 
 
 def create_post_reply(activity_log: ActivityPubLog, community: Community, in_reply_to, request_json: dict, user: User, announce_id=None) -> Union[PostReply, None]:
