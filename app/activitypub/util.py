@@ -934,15 +934,15 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
 
 
 # Save two different versions of a File, after downloading it from file.source_url. Set a width parameter to None to avoid generating one of that size
-def make_image_sizes(file_id, thumbnail_width=50, medium_width=120, directory='posts'):
+def make_image_sizes(file_id, thumbnail_width=50, medium_width=120, directory='posts', toxic_community=False):
     if current_app.debug:
-        make_image_sizes_async(file_id, thumbnail_width, medium_width, directory)
+        make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, toxic_community)
     else:
-        make_image_sizes_async.apply_async(args=(file_id, thumbnail_width, medium_width, directory), countdown=randint(1, 10))  # Delay by up to 10 seconds so servers do not experience a stampede of requests all in the same second
+        make_image_sizes_async.apply_async(args=(file_id, thumbnail_width, medium_width, directory, toxic_community), countdown=randint(1, 10))  # Delay by up to 10 seconds so servers do not experience a stampede of requests all in the same second
 
 
 @celery.task
-def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory):
+def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, toxic_community):
     file = File.query.get(file_id)
     if file and file.source_url:
         # Videos
@@ -1068,7 +1068,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory):
                         db.session.commit()
 
                         # Alert regarding fascist meme content
-                        if img_width < 2000:    # images > 2000px tend to be real photos instead of 4chan screenshots.
+                        if toxic_community and img_width < 2000:    # images > 2000px tend to be real photos instead of 4chan screenshots.
                             try:
                                 image_text = pytesseract.image_to_string(Image.open(BytesIO(source_image)).convert('L'), timeout=30)
                             except Exception as e:
@@ -1858,7 +1858,7 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
             db.session.commit()
 
         if post.image_id:
-            make_image_sizes(post.image_id, 170, 512, 'posts')  # the 512 sized image is for masonry view
+            make_image_sizes(post.image_id, 170, 512, 'posts', community.low_quality)  # the 512 sized image is for masonry view
 
         # Update list of cross posts
         if post.url:
