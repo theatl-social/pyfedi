@@ -846,14 +846,13 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
                     instance_id=user.instance_id,
                     indexable = user.indexable
                     )
-        if 'source' in post_json and \
-                post_json['source']['mediaType'] == 'text/markdown':
-            post.body = post_json['source']['content']
-            post.body_html = lemmy_markdown_to_html(post.body)
-        elif 'content' in post_json:
+        if 'content' in post_json:
             if post_json['mediaType'] == 'text/html':
                 post.body_html = allowlist_html(post_json['content'])
-                post.body = html_to_text(post.body_html)
+                if 'source' in post_json and post_json['source']['mediaType'] == 'text/markdown':
+                    post.body = post_json['source']['content']
+                else:
+                    post.body = html_to_text(post.body_html)
             elif post_json['mediaType'] == 'text/markdown':
                 post.body = post_json['content']
                 post.body_html = markdown_to_html(post.body)
@@ -1711,17 +1710,15 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
                                ap_create_id=request_json['id'],
                                ap_announce_id=announce_id,
                                instance_id=user.instance_id)
-        # Get comment content. Lemmy puts this in unusual place.
-        if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
-                'mediaType' in request_json['object']['source'] and \
-                request_json['object']['source']['mediaType'] == 'text/markdown':
-            post_reply.body = request_json['object']['source']['content']
-            post_reply.body_html = lemmy_markdown_to_html(post_reply.body)
-        elif 'content' in request_json['object']:   # Kbin, Mastodon, etc provide their posts as html
+        if 'content' in request_json['object']:   # Kbin, Mastodon, etc provide their posts as html
             if not request_json['object']['content'].startswith('<p>') or not request_json['object']['content'].startswith('<blockquote>'):
                 request_json['object']['content'] = '<p>' + request_json['object']['content'] + '</p>'
             post_reply.body_html = allowlist_html(request_json['object']['content'])
-            post_reply.body = html_to_text(post_reply.body_html)
+            if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
+                    'mediaType' in request_json['object']['source'] and request_json['object']['source']['mediaType'] == 'text/markdown':
+                post_reply.body = request_json['object']['source']['content']
+            else:
+                post_reply.body = html_to_text(post_reply.body_html)
         # Language - Lemmy uses 'language' while Mastodon uses 'contentMap'
         if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
             language = find_language_or_create(request_json['object']['language']['identifier'],
@@ -1843,18 +1840,19 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
                 indexable=user.indexable,
                 microblog=microblog
                 )
-    # Get post content. Lemmy and Kbin put this in different places.
-    if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and request_json['object']['source']['mediaType'] == 'text/markdown': # Lemmy
-        post.body = request_json['object']['source']['content']
-        post.body_html = lemmy_markdown_to_html(post.body)
-    elif 'content' in request_json['object'] and request_json['object']['content'] is not None: # Kbin
+    if 'content' in request_json['object'] and request_json['object']['content'] is not None:
         if 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/html':
             post.body_html = allowlist_html(request_json['object']['content'])
-            post.body = html_to_text(post.body_html)
+            if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and request_json['object']['source']['mediaType'] == 'text/markdown':
+                post.body = request_json['object']['source']['content']
+            else:
+                post.body = html_to_text(post.body_html)
         elif 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/markdown':
             post.body = request_json['object']['content']
             post.body_html = markdown_to_html(post.body)
         else:
+            if not request_json['object']['content'].startswith('<p>') or not request_json['object']['content'].startswith('<blockquote>'):
+                request_json['object']['content'] = '<p>' + request_json['object']['content'] + '</p>'
             post.body_html = allowlist_html(request_json['object']['content'])
             post.body = html_to_text(post.body_html)
         if microblog:
@@ -2070,14 +2068,15 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
 
 
 def update_post_reply_from_activity(reply: PostReply, request_json: dict):
-    if 'source' in request_json['object'] and \
-            isinstance(request_json['object']['source'], dict) and \
-            request_json['object']['source']['mediaType'] == 'text/markdown':
-        reply.body = request_json['object']['source']['content']
-        reply.body_html = lemmy_markdown_to_html(reply.body)
-    elif 'content' in request_json['object']:
+    if 'content' in request_json['object']:   # Kbin, Mastodon, etc provide their posts as html
+        if not request_json['object']['content'].startswith('<p>') or not request_json['object']['content'].startswith('<blockquote>'):
+            request_json['object']['content'] = '<p>' + request_json['object']['content'] + '</p>'
         reply.body_html = allowlist_html(request_json['object']['content'])
-        reply.body = ''
+        if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
+            'mediaType' in request_json['object']['source'] and request_json['object']['source']['mediaType'] == 'text/markdown':
+            reply.body = request_json['object']['source']['content']
+        else:
+            reply.body = html_to_text(post_reply.body_html)
     # Language
     if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
         language = find_language_or_create(request_json['object']['language']['identifier'], request_json['object']['language']['name'])
@@ -2094,19 +2093,19 @@ def update_post_from_activity(post: Post, request_json: dict):
 
     nsfl_in_title = '[NSFL]' in name.upper() or '(NSFL)' in name.upper()
     post.title = name
-    if 'source' in request_json['object'] and \
-            isinstance(request_json['object']['source'], dict) and \
-            request_json['object']['source']['mediaType'] == 'text/markdown':
-        post.body = request_json['object']['source']['content']
-        post.body_html = lemmy_markdown_to_html(post.body)
-    elif 'content' in request_json['object'] and request_json['object']['content'] is not None: # Kbin
+    if 'content' in request_json['object'] and request_json['object']['content'] is not None:
         if 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/html':
             post.body_html = allowlist_html(request_json['object']['content'])
-            post.body = html_to_text(post.body_html)
+            if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and request_json['object']['source']['mediaType'] == 'text/markdown':
+                post.body = request_json['object']['source']['content']
+            else:
+                post.body = html_to_text(post.body_html)
         elif 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/markdown':
             post.body = request_json['object']['content']
             post.body_html = markdown_to_html(post.body)
         else:
+            if not request_json['object']['content'].startswith('<p>') or not request_json['object']['content'].startswith('<blockquote>'):
+                request_json['object']['content'] = '<p>' + request_json['object']['content'] + '</p>'
             post.body_html = allowlist_html(request_json['object']['content'])
             post.body = html_to_text(post.body_html)
         if name == "[Microblog]":
