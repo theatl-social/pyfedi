@@ -3,11 +3,12 @@ from datetime import timedelta
 from random import randint
 
 import flask
+from pyld import jsonld
 from sqlalchemy.sql.operators import or_, and_
 
 from app import db, cache
 from app.activitypub.util import users_total, active_month, local_posts, local_communities
-from app.activitypub.signature import default_context
+from app.activitypub.signature import default_context, LDSignature
 from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, POST_TYPE_IMAGE, POST_TYPE_LINK, \
     SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_VIDEO, POST_TYPE_POLL
 from app.email import send_email
@@ -423,7 +424,25 @@ def list_files(directory):
 @bp.route('/test')
 def test():
 
-    x = languages_for_form()
+    json = {
+      "@context": "https://www.w3.org/ns/activitystreams",
+      "actor": "https://ioc.exchange/users/haiviittech",
+      "id": "https://ioc.exchange/users/haiviittech#delete",
+      "object": "https://ioc.exchange/users/haiviittech",
+      "to": [
+        "https://www.w3.org/ns/activitystreams#Public"
+      ],
+      "type": "Delete"
+    }
+
+    r = User.query.get(1)
+
+    jsonld.set_document_loader(jsonld.requests_document_loader(timeout=5))
+
+    ld = LDSignature.create_signature(json, r.private_key, r.public_url() + '#main-key')
+    json.update(ld)
+
+    LDSignature.verify_signature(json, r.public_key)
 
     #for community in Community.query.filter(Community.content_retention != -1):
     #    for post in community.posts.filter(Post.posted_at < utcnow() - timedelta(days=Community.content_retention)):

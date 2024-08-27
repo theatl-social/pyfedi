@@ -17,7 +17,7 @@ cryptography==42.0.4
 pyopenssl==24.2.1
 Bootstrap-Flask==2.3.0
 arrow==1.2.3
-pyld==2.0.3
+pyld==2.0.4
 boto3==1.28.35
 markdown2==2.4.12
 beautifulsoup4==4.12.2

@@ -438,7 +438,7 @@ class LDSignature:
             signature = document.pop("signature")
             # Create the options document
             options = {
-                "@context": "https://w3id.org/identity/v1",
+                "@context": "https://w3id.org/security/v1",
                 "creator": signature["creator"],
                 "created": signature["created"],
             }
@@ -472,7 +472,7 @@ class LDSignature:
         """
         # Create the options document
         options: dict[str, str] = {
-            "@context": "https://w3id.org/identity/v1",
+            "@context": "https://w3id.org/security/v1",
             "creator": key_id,
             "created": format_ld_date(utcnow()),
         }
