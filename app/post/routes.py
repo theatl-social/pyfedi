@@ -1008,9 +1008,9 @@ def federate_post_update(post):
     page_json = {
         'type': 'Page',
         'id': post.ap_id,
-        'attributedTo': current_user.ap_profile_id,
+        'attributedTo': current_user.public_url(),
         'to': [
-            post.community.ap_profile_id,
+            post.community.public_url(),
             'https://www.w3.org/ns/activitystreams#Public'
         ],
         'name': post.title,
@@ -1024,7 +1024,7 @@ def federate_post_update(post):
         'stickied': post.sticky,
         'published': ap_datetime(post.posted_at),
         'updated': ap_datetime(post.edited_at),
-        'audience': post.community.ap_profile_id,
+        'audience': post.community.public_url(),
         'language': {
             'identifier': post.language_code(),
             'name': post.language_name()

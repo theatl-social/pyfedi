@@ -270,9 +270,29 @@ def allowlist_html(html: str, a_target='_blank') -> str:
             if tag.name == 'table':
                 tag.attrs['class'] = 'table'
 
+    clean_html = str(soup)
+
     # avoid returning empty anchors
     re_empty_anchor = re.compile(r'<a href="(.*?)" rel="nofollow ugc" target="_blank"><\/a>')
-    return re_empty_anchor.sub(r'<a href="\1" rel="nofollow ugc" target="_blank">\1</a>', str(soup))
+    clean_html = re_empty_anchor.sub(r'<a href="\1" rel="nofollow ugc" target="_blank">\1</a>', clean_html)
+
+    # replace lemmy's spoiler markdown left in HTML
+    re_spoiler = re.compile(r':{3}\s*?spoiler\s+?(\S.+?)(?:\n|</p>)(.+?)(?:\n|<p>):{3}', re.S)
+    clean_html = re_spoiler.sub(r'<details><summary>\1</summary><p>\2</p></details>', clean_html)
+
+    # replace strikethough markdown left in HTML
+    re_strikethough = re.compile(r'~~(.*)~~')
+    clean_html = re_strikethough.sub(r'<s>\1</s>', clean_html)
+
+    # replace subscript markdown left in HTML
+    re_subscript = re.compile(r'~(.*)~')
+    clean_html = re_subscript.sub(r'<sub>\1</sub>', clean_html)
+
+    # replace superscript markdown left in HTML
+    re_superscript = re.compile(r'\^(.*)\^')
+    clean_html = re_superscript.sub(r'<sup>\1</sup>', clean_html)
+
+    return clean_html
 
 
 # this is for pyfedi's version of Markdown (differs from lemmy for: newlines for soft breaks, ...)
@@ -280,13 +300,17 @@ def markdown_to_html(markdown_text, anchors_new_tab=True) -> str:
     if markdown_text:
         raw_html = markdown2.markdown(markdown_text, safe_mode=True,
                     extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True, 'breaks': {'on_newline': True, 'on_backslash': True}})
-        # support lemmy's spoiler format
-        re_spoiler = re.compile(r':{3}\s*?spoiler\s+?(\S.+?)(?:\n|</p>)(.+?)(?:\n|<p>):{3}', re.S)
-        raw_html = re_spoiler.sub(r'<details><summary>\1</summary><p>\2</p></details>', raw_html)
         return allowlist_html(raw_html, a_target='_blank' if anchors_new_tab else '')
     else:
         return ''
 
+
+# Have started process of replacing this function, and just using Lemmy's HTML 'content' field, same as other platforms that only provide that.
+# Lemmy's MD supports line breaks as SPACE-SPACE-NEWLINE or SPACE-BACKSLASH-NEWLINE but Markdown2 can't support both: without the 'breaks'
+# extra, it doesn't translate SPACE-BACKSLASH-NEWLINE to <br />, but with it it doesn't translate SPACE-SPACE-NEWLINE to <br />
+
+# done so far: post bodies (backfilled), post bodies (create), post bodies (edit), replies (create), replies (edit)
+# not done yet: user profiles, community descriptions, chat messages, over-writing with 'banned' or 'deleted by author', replies from autotl;dr bot
 
 # this is for lemmy's version of Markdown (can be removed in future - when HTML from them filtered through an allow_list is used, instead of MD)
 def lemmy_markdown_to_html(markdown_text) -> str:
@@ -294,9 +318,6 @@ def lemmy_markdown_to_html(markdown_text) -> str:
         raw_html = markdown2.markdown(markdown_text, safe_mode=True, extras={'middle-word-em': False, 'tables': True,
                                                                              'fenced-code-blocks': True, 'strike': True,
                                                                              'breaks': {'on_newline': False, 'on_backslash': True}})
-        # replace lemmy spoiler tokens with appropriate html tags instead.
-        re_spoiler = re.compile(r':{3}\s*?spoiler\s+?(\S.+?)(?:\n|</p>)(.+?)(?:\n|<p>):{3}', re.S)
-        raw_html = re_spoiler.sub(r'<details><summary>\1</summary><p>\2</p></details>', raw_html)
         return allowlist_html(raw_html)
     else:
         return ''
