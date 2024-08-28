@@ -13,7 +13,8 @@
         <div class="row post_replies">
             <div class="col">
                 {% macro render_comment(comment) %}
-                    <div id="comment_{{ comment['comment'].id }}" class="comment {% if comment['comment'].author.id == post.author.id %}original_poster{% endif %}" role="treeitem">
+                    <div id="comment_{{ comment['comment'].id }}" class="comment {% if comment['comment'].author.id == post.author.id %}original_poster{% endif %}" role="treeitem"
+                        {% if comment['comment'].language_id and comment['comment'].language.code != 'en' %} lang="{{ comment['comment'].language.code }}"{% endif %}>
                         <div class="limit_height">
                             <div class="comment_author">
                                 {% with collapsed = comment['comment'].score < -10 -%}

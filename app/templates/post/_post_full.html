@@ -13,7 +13,7 @@
             <div class="voting_buttons" aria-live="assertive">
                 {% include "post/_post_voting_buttons.html" -%}
             </div>
-            <h1 class="mt-2 post_title">{{ post.title }}
+            <h1 class="mt-2 post_title"{% if post.language_id and post.language.code != 'en' %} lang="{{ post.language.code }}"{% endif %}>{{ post.title }}
                 {% if current_user.is_authenticated -%}
                     {% include 'post/_post_notification_toggle.html' -%}
                 {% endif -%}
@@ -47,7 +47,7 @@
                     <a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="Go to image"><img src="{{ post.url }}" style="max-width: 100%; height: auto;"  /></a>
                 {% endif -%}
             </div>
-            <div class="post_body mt-2">
+            <div class="post_body mt-2"{% if post.language_id and post.language.code != 'en' %} lang="{{ post.language.code }}"{% endif %}>
                 {{ post.body_html|community_links|safe if post.body_html else '' }}
             </div>
         </div>
@@ -65,7 +65,7 @@
             <div class="voting_buttons" aria-live="assertive">
                 {% include "post/_post_voting_buttons.html" -%}
             </div>
-            <h1 class="mt-2 post_title">{{ post.title }}
+            <h1 class="mt-2 post_title" {% if post.language_id and post.language.code != 'en' %}lang="{{ post.language.code }}"{% endif %}>{{ post.title }}
                 {% if current_user.is_authenticated -%}
                     {% include 'post/_post_notification_toggle.html' -%}
                 {% endif -%}
