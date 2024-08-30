@@ -50,7 +50,7 @@ def send_message(message: str, conversation_id: int) -> ChatMessage:
                 }
                 success = post_request(recipient.ap_inbox_url, reply_json, current_user.private_key,
                                        current_user.public_url() + '#main-key')
-                if not success:
+                if success is False or isinstance(success, str):
                     flash(_('Message failed to send to %(name)s.', name=recipient.link()), 'error')
 
     flash(_('Message sent.'))

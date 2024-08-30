@@ -126,7 +126,10 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str, con
         log.result = 'success'
     db.session.commit()
 
-    return log.result != 'failure'
+    if log.result != 'failure':
+        return True
+    else:
+        return log.exception_message
 
 
 def signed_get_request(uri: str, private_key: str, key_id: str, content_type: str = "application/activity+json",

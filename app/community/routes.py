@@ -398,13 +398,13 @@ def subscribe(actor):
             banned = CommunityBan.query.filter_by(user_id=current_user.id, community_id=community.id).first()
             if banned:
                 flash(_('You cannot join this community'))
+            success = True
             if remote:
                 # send ActivityPub message to remote community, asking to follow. Accept message will be sent to our shared inbox
                 join_request = CommunityJoinRequest(user_id=current_user.id, community_id=community.id)
                 db.session.add(join_request)
                 db.session.commit()
-                success = True
-                if not community.instance.gone_forever:
+                if community.instance.online():
                     follow = {
                       "actor": current_user.public_url(),
                       "to": [community.public_url()],
@@ -414,13 +414,17 @@ def subscribe(actor):
                     }
                     success = post_request(community.ap_inbox_url, follow, current_user.private_key,
                                                            current_user.public_url() + '#main-key', timeout=10)
-                if not success:
-                    flash(_("There was a problem while trying to communicate with remote server. If other people have already joined this community it won't matter."), 'error')
+                if success is False or isinstance(success, str):
+                    if 'is not in allowlist' in success:
+                        flash(_('%(name)s does not allow us to join their communities.', name=community.instance.domain), 'error')
+                    else:
+                        flash(_("There was a problem while trying to communicate with remote server. If other people have already joined this community it won't matter."), 'error')
             # for local communities, joining is instant
             member = CommunityMember(user_id=current_user.id, community_id=community.id)
             db.session.add(member)
             db.session.commit()
-            flash('You joined ' + community.title)
+            if success is True:
+                flash('You joined ' + community.title)
         referrer = request.headers.get('Referer', None)
         cache.delete_memoized(community_membership, current_user, community)
         cache.delete_memoized(joined_communities, current_user.id)
@@ -463,7 +467,7 @@ def unsubscribe(actor):
                         }
                         success = post_request(community.ap_inbox_url, undo, current_user.private_key,
                                                                current_user.public_url() + '#main-key', timeout=10)
-                    if not success:
+                    if success is False or isinstance(success, str):
                         flash('There was a problem while trying to unsubscribe', 'error')
 
                 if proceed:

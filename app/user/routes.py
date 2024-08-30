@@ -745,7 +745,7 @@ def import_settings_task(user_id, filename):
                         }
                         success = post_request(community.ap_inbox_url, follow, user.private_key,
                                            user.public_url() + '#main-key')
-                    if not success:
+                    if success is False or isinstance(success, str):
                         sleep(5)    # give them a rest
                 else:  # for local communities, joining is instant
                     banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
