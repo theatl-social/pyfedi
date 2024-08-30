@@ -113,7 +113,11 @@ def add_remote():
     if form.validate_on_submit():
         address = form.address.data.strip().lower()
         if address.startswith('!') and '@' in address:
-            new_community = search_for_community(address)
+            try:
+                new_community = search_for_community(address)
+            except Exception as e:
+                if 'is blocked.' in str(e):
+                    flash(_('Sorry, that instance is blocked, check https://gui.fediseer.com/ for reasons.'), 'warning')
         elif address.startswith('@') and '@' in address[1:]:
             # todo: the user is searching for a person instead
             ...
@@ -1805,7 +1809,11 @@ def lookup(community, domain):
         if current_user.is_authenticated:
             new_community = None
 
-            new_community = search_for_community(address)
+            try:
+                new_community = search_for_community(address)
+            except Exception as e:
+                if 'is blocked.' in str(e):
+                    flash(_('Sorry, that instance is blocked, check https://gui.fediseer.com/ for reasons.'), 'warning')
             if new_community is None:
                 if g.site.enable_nsfw:
                     flash(_('Community not found.'), 'warning')
