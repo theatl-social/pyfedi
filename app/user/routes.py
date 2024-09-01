@@ -969,16 +969,16 @@ def fediverse_redirect(actor):
         if form.validate_on_submit():
             redirect_url = ''
             if form.instance_type.data == 'mastodon':
-                redirect_url = f'https://{form.instance_url.data}/@{user.user_name.lower()}@{current_app.config["SERVER_NAME"]}'
+                redirect_url = f'https://{form.instance_url.data}/@{user.user_name}@{current_app.config["SERVER_NAME"]}'
             elif form.instance_type.data == 'lemmy':
                 flash(_("Lemmy can't follow profiles, sorry"), 'error')
                 return render_template('user/fediverse_redirect.html', form=form, user=user, send_to='', current_app=current_app)
             elif form.instance_type.data == 'friendica':
-                redirect_url = f'https://{form.instance_url.data}/search?q={user.user_name.lower()}@{current_app.config["SERVER_NAME"]}'
+                redirect_url = f'https://{form.instance_url.data}/search?q={user.user_name}@{current_app.config["SERVER_NAME"]}'
             elif form.instance_type.data == 'hubzilla':
-                redirect_url = f'https://{form.instance_url.data}/search?q={user.user_name.lower()}@{current_app.config["SERVER_NAME"]}'
+                redirect_url = f'https://{form.instance_url.data}/search?q={user.user_name}@{current_app.config["SERVER_NAME"]}'
             elif form.instance_type.data == 'pixelfed':
-                redirect_url = f'https://{form.instance_url.data}/i/results?q={user.user_name.lower()}@{current_app.config["SERVER_NAME"]}'
+                redirect_url = f'https://{form.instance_url.data}/i/results?q={user.user_name}@{current_app.config["SERVER_NAME"]}'
 
             resp = make_response(redirect(redirect_url))
             resp.set_cookie('remote_instance_url', form.instance_url.data, expires=datetime(year=2099, month=12, day=30))
