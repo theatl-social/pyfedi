@@ -1877,12 +1877,17 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
                 return None
     if 'attachment' in request_json['object'] and len(request_json['object']['attachment']) > 0 and \
             'type' in request_json['object']['attachment'][0]:
+        alt_text = None
         if request_json['object']['attachment'][0]['type'] == 'Link':
-            post.url = request_json['object']['attachment'][0]['href']              # Lemmy
+            post.url = request_json['object']['attachment'][0]['href']              # Lemmy < 0.19.4
         if request_json['object']['attachment'][0]['type'] == 'Document':
             post.url = request_json['object']['attachment'][0]['url']               # Mastodon
+            if 'name' in request_json['object']['attachment'][0]:
+                alt_text = request_json['object']['attachment'][0]['name']
         if request_json['object']['attachment'][0]['type'] == 'Image':
-            post.url = request_json['object']['attachment'][0]['url']               # PixelFed
+            post.url = request_json['object']['attachment'][0]['url']               # PixelFed, PieFed, Lemmy >= 0.19.4
+            if 'name' in request_json['object']['attachment'][0]:
+                alt_text = request_json['object']['attachment'][0]['name']
         if post.url:
             if is_image_url(post.url):
                 post.type = POST_TYPE_IMAGE
@@ -1890,6 +1895,8 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
                     image = File(source_url=request_json['object']['image']['url'])
                 else:
                     image = File(source_url=post.url)
+                    if alt_text:
+                        image.alt_text = alt_text
                 db.session.add(image)
                 post.image = image
             elif is_video_url(post.url):
@@ -2128,12 +2135,17 @@ def update_post_from_activity(post: Post, request_json: dict):
         post.url = old_url
     if 'attachment' in request_json['object'] and len(request_json['object']['attachment']) > 0 and \
             'type' in request_json['object']['attachment'][0]:
+        alt_text = None
         if request_json['object']['attachment'][0]['type'] == 'Link':
-            post.url = request_json['object']['attachment'][0]['href']              # Lemmy
+            post.url = request_json['object']['attachment'][0]['href']              # Lemmy < 0.19.4
         if request_json['object']['attachment'][0]['type'] == 'Document':
             post.url = request_json['object']['attachment'][0]['url']               # Mastodon
+            if 'name' in request_json['object']['attachment'][0]:
+                alt_text = request_json['object']['attachment'][0]['name']
         if request_json['object']['attachment'][0]['type'] == 'Image':
-            post.url = request_json['object']['attachment'][0]['url']               # PixelFed
+            post.url = request_json['object']['attachment'][0]['url']               # PixelFed / PieFed / Lemmy >= 0.19.4
+            if 'name' in request_json['object']['attachment'][0]:
+                alt_text = request_json['object']['attachment'][0]['name']
     if post.url == '':
         post.type = POST_TYPE_ARTICLE
     if (post.url and post.url != old_url) or (post.url == '' and old_url != ''):
@@ -2150,6 +2162,8 @@ def update_post_from_activity(post: Post, request_json: dict):
                 image = File(source_url=request_json['object']['image']['url'])
             else:
                 image = File(source_url=post.url)
+                if alt_text:
+                    image.alt_text = alt_text
             db.session.add(image)
             post.image = image
         elif is_video_url(post.url):
