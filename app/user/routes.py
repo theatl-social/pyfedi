@@ -240,10 +240,18 @@ def export_user_settings(user, admin_request=False):
         user_dict['markdown_editor'] = user.markdown_editor
         user_dict['interface_language'] = user.interface_language
         user_dict['reply_collapse_threshold'] = user.reply_collapse_threshold
+        if user.avatar_image() != '':
+            user_dict['avatar_image'] = f"https://{current_app.config['SERVER_NAME']}/{user.avatar_image()}"
+        if user.cover_image() != '':
+            user_dict['cover_image'] = f"https://{current_app.config['SERVER_NAME']}/{user.cover_image()}"
 
         # lemmy output compatibility
         user_dict['display_name'] = user.user_name
         user_dict['bio'] = user.about
+        if user.avatar_image() != '':
+            user_dict['avatar'] = f"https://{current_app.config['SERVER_NAME']}/{user.avatar_image()}"
+        if user.cover_image() != '':
+            user_dict['banner'] = f"https://{current_app.config['SERVER_NAME']}/{user.cover_image()}"
         user_dict['matrix_id'] = user.matrix_user_id
         user_dict['bot_account'] = user.bot
         user_dict['settings'] = {
@@ -268,6 +276,14 @@ def export_user_settings(user, admin_request=False):
         if admin_request:
             user_dict['public_key'] = user.public_key
             user_dict['private_key'] = user.private_key
+
+            user_roles = []
+            for r in user.roles.all():
+                user_roles.append(r.name)
+            user_dict['roles'] = user_roles
+
+            user_dict['reputation'] = user.reputation
+            user_dict['attitude'] = user.attitude
 
         # setup the BytesIO buffer
         buffer = BytesIO()
