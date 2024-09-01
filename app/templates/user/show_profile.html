@@ -220,6 +220,13 @@
                             </div>
                         {% endif %}
                     </div>
+                    <div class="row">
+                        {% if user_access('manage users', current_user.id) %}
+                            <div class="col-4">
+                                <a class="w-100 btn btn-primary confirm_first" href="/u/{{ user.link() }}/export_settings">{{ _('Export Settings') }}</a>
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         {% endif %}
