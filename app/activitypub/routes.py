@@ -1461,18 +1461,18 @@ def process_user_follow_request(request_json, activitypublog_id, remote_user_id)
             auto_accept = not local_user.ap_manually_approves_followers
             new_follower = UserFollower(local_user_id=local_user.id, remote_user_id=remote_user.id, is_accepted=auto_accept)
             if not local_user.ap_followers_url:
-                local_user.ap_followers_url = local_user.ap_public_url + '/followers'
+                local_user.ap_followers_url = local_user.public_url() + '/followers'
             db.session.add(new_follower)
         accept = {
             "@context": default_context(),
-            "actor": local_user.ap_profile_id,
+            "actor": local_user.public_url(),
             "to": [
-                remote_user.ap_profile_id
+                remote_user.public_url()
             ],
             "object": {
-                "actor": remote_user.ap_profile_id,
+                "actor": remote_user.public_url(),
                 "to": None,
-                "object": local_user.ap_profile_id,
+                "object": local_user.public_url(),
                 "type": "Follow",
                 "id": follow_id
             },

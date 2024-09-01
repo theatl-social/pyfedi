@@ -760,12 +760,12 @@ def federate_post_to_user_followers(post):
         'type': 'Note',
         'id': post.ap_id,
         'inReplyTo': None,
-        'attributedTo': current_user.ap_profile_id,
+        'attributedTo': current_user.public_url(),
         'to': [
             'https://www.w3.org/ns/activitystreams#Public'
         ],
         'cc': [
-            current_user.ap_followers_url
+            current_user.followers_url()
         ],
         'content': '',
         'mediaType': 'text/html',
@@ -783,12 +783,12 @@ def federate_post_to_user_followers(post):
     }
     create = {
         "id": f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}",
-        "actor": current_user.ap_profile_id,
+        "actor": current_user.public_url(),
         "to": [
             "https://www.w3.org/ns/activitystreams#Public"
         ],
         "cc": [
-            current_user.ap_followers_url
+            current_user.followers_url()
         ],
         "type": "Create",
         "object": note,
