@@ -1055,8 +1055,9 @@ def federate_post_update(post):
         # NB image is a dict while attachment is a list of dicts (usually just one dict in the list)
         page_json['image'] = {'type': 'Image', 'url': image_url}
         if post.type == POST_TYPE_IMAGE:
-            page_json['attachment'] = [{'type': 'Link',
-                                        'href': post.image.source_url}]  # source_url is always a https link, no need for .replace() as done above
+            page_json['attachment'] = [{'type': 'Image',
+                                        'url': post.image.source_url,  # source_url is always a https link, no need for .replace() as done above
+                                        'name': post.image.alt_text}]
     if post.type == POST_TYPE_POLL:
         poll = Poll.query.filter_by(post_id=post.id).first()
         page_json['type'] = 'Question'
@@ -1151,10 +1152,7 @@ def federate_post_edit_to_user_followers(post):
     elif post.type == POST_TYPE_IMAGE:
         note['content'] = '<p>' + post.title + '</p>'
         if post.image_id and post.image.source_url:
-            if post.image.alt_text:
-                note['attachment'] = [{'type': 'Document', 'url': post.image.source_url, 'name': post.image.alt_text}]
-            else:
-                note['attachment'] = [{'type': 'Document', 'url': post.image.source_url}]
+            note['attachment'] = [{'type': 'Image', 'url': post.image.source_url, 'name': post.image.alt_text}]
     elif post.type == POST_TYPE_POLL:
         poll = Poll.query.filter_by(post_id=post.id).first()
         note['type'] = 'Question'
