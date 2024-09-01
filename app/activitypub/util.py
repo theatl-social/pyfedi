@@ -1685,6 +1685,23 @@ def unban_local_user_task(deletor_ap_id, user_ap_id, target):
         add_to_modlog_activitypub('unban_user', deletor, community_id=community.id, link_text=user.display_name(), link=user.link())
 
 
+def lock_post(mod_ap_id, post_id, comments_enabled):
+    if current_app.debug:
+        lock_post_task(mod_ap_id, post_id, comments_enabled)
+    else:
+        lock_post_task.delay(mod_ap_id, post_id, comments_enabled)
+
+
+@celery.task
+def lock_post_task(mod_ap_id, post_id, comments_enabled):
+    mod = find_actor_or_create(mod_ap_id, create_if_not_found=False)
+    post = Post.query.filter_by(ap_id=post_id).first()
+    if mod and post:
+        if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
+            post.comments_enabled = comments_enabled
+            db.session.commit()
+
+
 def create_post_reply(activity_log: ActivityPubLog, community: Community, in_reply_to, request_json: dict, user: User, announce_id=None) -> Union[PostReply, None]:
     if community.local_only:
         activity_log.exception_message = 'Community is local only, reply discarded'
