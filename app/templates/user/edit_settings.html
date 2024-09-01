@@ -37,6 +37,11 @@
             <h5>Import</h5>
             {{ render_field(form.import_file) }}
             {{ render_field(form.submit) }}
+            <hr>
+            <h5>Export</h5>
+            <p>Export community subscriptions and user settings</p>
+            {{ render_field(form.export_settings) }}
+            <hr>
         </form>
         <p class="mt-4 pt-4">
             <a class="btn btn-warning" href="{{ url_for('user.delete_account') }}">{{ _('Delete account') }}</a>

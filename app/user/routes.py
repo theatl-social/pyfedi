@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta
 from time import sleep
 from random import randint
+from io import BytesIO
 
-from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, json, g
+from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, json, g, send_file
 from flask_login import login_user, logout_user, current_user, login_required
 from flask_babel import _, lazy_gettext as _l
 
@@ -28,6 +29,7 @@ from app.utils import get_setting, render_template, markdown_to_html, user_acces
     blocked_communities
 from sqlalchemy import desc, or_, text
 import os
+import json as python_json
 
 
 @bp.route('/people', methods=['GET', 'POST'])
@@ -227,7 +229,65 @@ def change_settings():
         ('de', _l('German')),
         ('ja', _l('Japanese')),
     ]
-    if form.validate_on_submit():
+    # seperate if to handle just the 'Export' button being clicked
+    if form.export_settings.data and form.validate():
+        # make the empty dict
+        user_dict = {}
+
+        # take the current_user already found
+        # add user's settings to the dict for output
+        user_dict['user_name'] = user.user_name
+        user_dict['alt_user_name'] = user.alt_user_name
+        user_dict['title'] = user.title
+        user_dict['email'] = user.email
+        user_dict['about'] = user.about
+        # user_dict['about_html'] = user.about_html
+        user_dict['keywords'] = user.keywords
+        user_dict['matrix_user_id'] = user.matrix_user_id
+        user_dict['hide_nsfw'] = user.hide_nsfw
+        user_dict['hide_nsfl'] = user.hide_nsfl
+        # user_dict['public_key'] = user.public_key
+        # user_dict['private_key'] = user.private_key
+        user_dict['receive_message_mode'] = user.receive_message_mode
+        user_dict['bot'] = user.bot
+        user_dict['ignore_bots'] = user.ignore_bots
+        user_dict['default_sort'] = user.default_sort
+        user_dict['default_filter'] = user.default_filter
+        user_dict['theme'] = user.theme
+        user_dict['markdown_editor'] = user.markdown_editor
+        user_dict['interface_language'] = user.interface_language
+        user_dict['reply_collapse_threshold'] = user.reply_collapse_threshold
+        # user_dict['roles'] = user.roles
+        # user_dict['vote_privately'] = user.vote_privately
+
+        # get the user subscribed communities' ap_profile_id
+        user_subscribed_communities = []
+        for c in user.communities():
+            if c.ap_profile_id is None:
+                continue
+            else:
+                user_subscribed_communities.append(c.ap_profile_id)
+        user_dict['followed_communities'] = user_subscribed_communities
+
+        # setup the BytesIO buffer
+        buffer = BytesIO()
+        buffer.write(str(python_json.dumps(user_dict)).encode('utf-8'))
+        buffer.seek(0)
+        
+        # confirmation displated to user when the page loads up again
+        flash(_l('Export Complete.'))
+
+        # send the file to the user as a download
+        # the as_attachment=True results in flask
+        # redirecting to the current page, so no
+        # url_for needed here
+        return send_file(
+            buffer, 
+            download_name=f'{user.user_name}_piefed_settings.json', 
+            as_attachment=True, 
+            mimetype='application/json'
+            )
+    elif form.validate_on_submit():
         propagate_indexable = form.indexable.data != current_user.indexable
         current_user.newsletter = form.newsletter.data
         current_user.searchable = form.searchable.data
