@@ -484,7 +484,7 @@ def refresh_user_profile(user_id):
 @celery.task
 def refresh_user_profile_task(user_id):
     user = User.query.get(user_id)
-    if user and user.instance.online():
+    if user and user.instance_id and user.instance.online():
         try:
             actor_data = get_request(user.ap_public_url, headers={'Accept': 'application/activity+json'})
         except requests.exceptions.ReadTimeout:
@@ -1730,7 +1730,7 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
                                ap_announce_id=announce_id,
                                instance_id=user.instance_id)
         if 'content' in request_json['object']:   # Kbin, Mastodon, etc provide their posts as html
-            if not request_json['object']['content'].startswith('<p>') or not request_json['object']['content'].startswith('<blockquote>'):
+            if not (request_json['object']['content'].startswith('<p>') or request_json['object']['content'].startswith('<blockquote>')):
                 request_json['object']['content'] = '<p>' + request_json['object']['content'] + '</p>'
             post_reply.body_html = allowlist_html(request_json['object']['content'])
             if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
@@ -1870,7 +1870,7 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
             post.body = request_json['object']['content']
             post.body_html = markdown_to_html(post.body)
         else:
-            if not request_json['object']['content'].startswith('<p>') or not request_json['object']['content'].startswith('<blockquote>'):
+            if not (request_json['object']['content'].startswith('<p>') or request_json['object']['content'].startswith('<blockquote>')):
                 request_json['object']['content'] = '<p>' + request_json['object']['content'] + '</p>'
             post.body_html = allowlist_html(request_json['object']['content'])
             post.body = html_to_text(post.body_html)
@@ -2095,14 +2095,14 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
 
 def update_post_reply_from_activity(reply: PostReply, request_json: dict):
     if 'content' in request_json['object']:   # Kbin, Mastodon, etc provide their posts as html
-        if not request_json['object']['content'].startswith('<p>') or not request_json['object']['content'].startswith('<blockquote>'):
+        if not (request_json['object']['content'].startswith('<p>') or request_json['object']['content'].startswith('<blockquote>')):
             request_json['object']['content'] = '<p>' + request_json['object']['content'] + '</p>'
         reply.body_html = allowlist_html(request_json['object']['content'])
         if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
             'mediaType' in request_json['object']['source'] and request_json['object']['source']['mediaType'] == 'text/markdown':
             reply.body = request_json['object']['source']['content']
         else:
-            reply.body = html_to_text(post_reply.body_html)
+            reply.body = html_to_text(reply.body_html)
     # Language
     if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
         language = find_language_or_create(request_json['object']['language']['identifier'], request_json['object']['language']['name'])
@@ -2130,7 +2130,7 @@ def update_post_from_activity(post: Post, request_json: dict):
             post.body = request_json['object']['content']
             post.body_html = markdown_to_html(post.body)
         else:
-            if not request_json['object']['content'].startswith('<p>') or not request_json['object']['content'].startswith('<blockquote>'):
+            if not (request_json['object']['content'].startswith('<p>') or request_json['object']['content'].startswith('<blockquote>')):
                 request_json['object']['content'] = '<p>' + request_json['object']['content'] + '</p>'
             post.body_html = allowlist_html(request_json['object']['content'])
             post.body = html_to_text(post.body_html)
