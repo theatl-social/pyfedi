@@ -22,6 +22,7 @@
                <th>Title</th>
                <th>Topic</th>
                <th>#&nbsp;Posts</th>
+               <th>Retention</th>
                <th title="{{ _('Posts show on home page.') }}">Home</th>
                <th title="{{ _('Posts can be popular.') }}">Popular</th>
                <th title="{{ _('Posts show in the All feed.') }}">All</th>
@@ -34,6 +35,7 @@
                     <td>{{ render_communityname(community) }}{% if community.banned %} (banned){% endif %}</td>
                     <td>{{ community.topic.name  }}</td>
                     <td>{{ community.post_count  }}</td>
+                    <td>{{ community.content_retention if community.content_retention != -1 }}</td>
                     <th>{{ '&check;'|safe if community.show_home else '&cross;'|safe }}</th>
                     <th>{{ '&check;'|safe if community.show_popular else '&cross;'|safe }}</th>
                     <th>{{ '&check;'|safe if community.show_all else '&cross;'|safe }}</th>
