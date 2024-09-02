@@ -2095,12 +2095,14 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
 
 def update_post_reply_from_activity(reply: PostReply, request_json: dict):
     if 'content' in request_json['object']:   # Kbin, Mastodon, etc provide their posts as html
+        if not request_json['object']['content'].startswith('<p>') or not request_json['object']['content'].startswith('<blockquote>'):
+            request_json['object']['content'] = '<p>' + request_json['object']['content'] + '</p>'
         reply.body_html = allowlist_html(request_json['object']['content'])
         if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
             'mediaType' in request_json['object']['source'] and request_json['object']['source']['mediaType'] == 'text/markdown':
             reply.body = request_json['object']['source']['content']
         else:
-            reply.body = html_to_text(reply.body_html)
+            reply.body = html_to_text(post_reply.body_html)
     # Language
     if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
         language = find_language_or_create(request_json['object']['language']['identifier'], request_json['object']['language']['name'])
