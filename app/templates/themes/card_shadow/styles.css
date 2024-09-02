@@ -1,3 +1,31 @@
+/* shadow for the button groups */
+.btn-group {
+    /* rounded corners */
+    border-radius: 6px;
+    /* shadow horizontal-offset vertical-offset blur spread color */
+    box-shadow: 0 3px 5px 0 rgba(0,0,0,0.2);
+    transition: 0.3s;
+}
+
+/* setting the color for the "selected" button border */
+.btn-primary {
+    /* border */
+    border: solid 1px rgb(0,123,255,0.2);
+}
+
+/* setting the "unselected" button border */
+.btn-outline-secondary {
+    /* border */
+    border: solid 1px rgb(0,123,255,0.2);
+}
+
+/* shadow for the navbar  */
+.navbar {
+    /* shadow horizontal-offset vertical-offset blur spread color */
+    box-shadow: 0 3px 5px 0 rgba(0,0,0,0.2);
+    transition: 0.3s;
+}
+
 /* this is used in the big list of posts to browse  */
 .post_list .post_teaser {
     /* outside space  top right bottom left */
