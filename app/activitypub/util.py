@@ -1729,7 +1729,9 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
                                ap_create_id=request_json['id'],
                                ap_announce_id=announce_id,
                                instance_id=user.instance_id)
-        if 'content' in request_json['object']:
+        if 'content' in request_json['object']:   # Kbin, Mastodon, etc provide their posts as html
+            if not request_json['object']['content'].startswith('<p>') or not request_json['object']['content'].startswith('<blockquote>'):
+                request_json['object']['content'] = '<p>' + request_json['object']['content'] + '</p>'
             post_reply.body_html = allowlist_html(request_json['object']['content'])
             if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
                     'mediaType' in request_json['object']['source'] and request_json['object']['source']['mediaType'] == 'text/markdown':
