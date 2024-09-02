@@ -213,9 +213,7 @@ def remove_cover():
     return '<div> ' + _('Banner removed!') + '</div>'
 
 # export settings function. used in the /user/settings for a user to export their own settings
-# used in the admin moderation /u/<actor>/export_settings call to let admins
-# export the user settings plus admin relevant settings
-def export_user_settings(user, admin_request=False):
+def export_user_settings(user):
         # make the empty dict
         user_dict = {}
 
@@ -272,19 +270,6 @@ def export_user_settings(user, admin_request=False):
                 user_subscribed_communities.append(c.ap_profile_id)
         user_dict['followed_communities'] = user_subscribed_communities
 
-        # if this is an admin level export request
-        if admin_request:
-            user_dict['public_key'] = user.public_key
-            user_dict['private_key'] = user.private_key
-
-            user_roles = []
-            for r in user.roles.all():
-                user_roles.append(r.name)
-            user_dict['roles'] = user_roles
-
-            user_dict['reputation'] = user.reputation
-            user_dict['attitude'] = user.attitude
-
         # setup the BytesIO buffer
         buffer = BytesIO()
         buffer.write(str(python_json.dumps(user_dict)).encode('utf-8'))
@@ -313,7 +298,7 @@ def change_settings():
     # seperate if to handle just the 'Export' button being clicked
     if form.export_settings.data and form.validate():
         # get the user settings for this user
-        buffer = export_user_settings(user, admin_request=False)
+        buffer = export_user_settings(user)
         
         # confirmation displayed to user when the page loads up again
         flash(_l('Export Complete.'))
@@ -598,36 +583,6 @@ def delete_profile(actor):
             add_to_modlog('delete_user', link_text=user.display_name(), link=user.link())
 
             flash(f'{actor} has been deleted.')
-    else:
-        abort(401)
-
-    goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
-    return redirect(goto)
-
-@bp.route('/u/<actor>/export_settings', methods=['GET'])
-@login_required
-def export_settings(actor):
-    if user_access('manage users', current_user.id):
-        actor = actor.strip()
-        user:User = User.query.filter_by(user_name=actor, deleted=False).first()
-        if user is None:
-            user = User.query.filter_by(ap_id=actor, deleted=False).first()
-            if user is None:
-                abort(404)
-        # get the user settings for this user
-        buffer = export_user_settings(user, admin_request=True)
-        
-        # send the file to the user as a download
-        # the as_attachment=True results in flask
-        # redirecting to the current page, so no
-        # url_for needed here
-        return send_file(
-            buffer, 
-            download_name=f'{user.user_name}_piefed_settings.json', 
-            as_attachment=True, 
-            mimetype='application/json'
-        )
-
     else:
         abort(401)
 
