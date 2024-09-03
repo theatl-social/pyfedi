@@ -232,13 +232,22 @@ def export_user_settings(user):
             user_dict['banner'] = user.cover_image()
         user_dict['matrix_id'] = user.matrix_user_id
         user_dict['bot_account'] = user.bot
+        if user.hide_nsfw == 1:
+            lemmy_show_nsfw = False
+        else:
+            lemmy_show_nsfw = True
+        if user.ignore_bots == 1:
+            lemmy_show_bot_accounts = False
+        else:
+            lemmy_show_bot_accounts = True
         user_dict['settings'] = {
             "email": f"{user.email}",
             "show_nsfw": lemmy_show_nsfw,
             "theme": user.theme,
             "default_sort_type": f'{user.default_sort}'.capitalize(),
             "default_listing_type": f'{user.default_filter}'.capitalize(),
-            "interface_language": user.interface_language
+            "interface_language": user.interface_language,
+            "show_bot_accounts": lemmy_show_bot_accounts
         }
         # get the user subscribed communities' ap_profile_id
         user_subscribed_communities = []
@@ -316,10 +325,6 @@ def export_user_settings(user):
             user_dict['avatar_image'] = f"https://{current_app.config['SERVER_NAME']}/{user.avatar_image()}"
         if user.cover_image() != '':
             user_dict['cover_image'] = f"https://{current_app.config['SERVER_NAME']}/{user.cover_image()}"
-        if user.hide_nsfw == 1:
-            lemmy_show_nsfw = False
-        else:
-            lemmy_show_nsfw = True
         user_dict['user_blocks'] = blocked_users
 
         # setup the BytesIO buffer
