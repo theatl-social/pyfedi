@@ -242,6 +242,13 @@ def export_user_settings(user):
             user_dict['avatar_image'] = f"https://{current_app.config['SERVER_NAME']}/{user.avatar_image()}"
         if user.cover_image() != '':
             user_dict['cover_image'] = f"https://{current_app.config['SERVER_NAME']}/{user.cover_image()}"
+        # get blocked users
+        blocked_users = []
+        user_blocks = UserBlock.query.filter_by(blocker_id=user.id).all()
+        for ub in user_blocks:
+            blocked_user = User.query.filter_by(id=ub.blocked_id).first()
+            blocked_users.append(blocked_user.ap_public_url)
+        user_dict['user_blocks'] = blocked_users
 
         # lemmy output compatibility
         user_dict['display_name'] = user.title
@@ -268,6 +275,7 @@ def export_user_settings(user):
             "default_listing_type": f'{user.default_filter}'.capitalize(),
             "interface_language": user.interface_language
         }
+        user_dict['blocked_users'] = blocked_users
 
         # get the user subscribed communities' ap_profile_id
         user_subscribed_communities = []
@@ -277,6 +285,14 @@ def export_user_settings(user):
             else:
                 user_subscribed_communities.append(c.ap_profile_id)
         user_dict['followed_communities'] = user_subscribed_communities
+
+        # get bookmrked/saved posts
+        # get bookmarked/saved comments
+        # get blocked communities
+        
+
+
+        # get blocked instances
 
         # setup the BytesIO buffer
         buffer = BytesIO()
