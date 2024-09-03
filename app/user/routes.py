@@ -267,6 +267,22 @@ def export_user_settings(user):
             blocked_instances.append(i.domain)
         user_dict['blocked_instances'] = blocked_instances
 
+        # get bookmarked/saved posts
+        bookmarked_posts = []
+        post_bookmarks = PostBookmark.query.filter_by(user_id=user.id).all()        
+        for pb in post_bookmarks:
+            p = Post.query.filter_by(id=pb.post_id).first()
+            bookmarked_posts.append(p.ap_id)
+        user_dict['saved_posts'] = bookmarked_posts
+
+        # get bookmarked/saved comments
+        saved_comments = []
+        post_reply_bookmarks = PostReplyBookmark.query.filter_by(user_id=user.id).all()
+        for prb in post_reply_bookmarks:
+            pr = PostReply.query.filter_by(id=prb.post_reply_id).first()
+            saved_comments.append(pr.ap_id)
+        user_dict['saved_comments'] = saved_comments
+
         # lemmy output compatibility
         user_dict['display_name'] = user.title
         user_dict['bio'] = user.about
@@ -303,8 +319,6 @@ def export_user_settings(user):
                 user_subscribed_communities.append(c.ap_profile_id)
         user_dict['followed_communities'] = user_subscribed_communities
 
-        # get bookmrked/saved posts
-        # get bookmarked/saved comments
         
 
 
