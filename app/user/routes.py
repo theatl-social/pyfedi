@@ -244,20 +244,28 @@ def export_user_settings(user):
             user_dict['cover_image'] = f"https://{current_app.config['SERVER_NAME']}/{user.cover_image()}"
 
         # lemmy output compatibility
-        user_dict['display_name'] = user.user_name
+        user_dict['display_name'] = user.title
         user_dict['bio'] = user.about
         if user.avatar_image() != '':
             user_dict['avatar'] = f"https://{current_app.config['SERVER_NAME']}/{user.avatar_image()}"
+        else:
+            user_dict['avatar'] = user.avatar_image()
         if user.cover_image() != '':
             user_dict['banner'] = f"https://{current_app.config['SERVER_NAME']}/{user.cover_image()}"
+        else:
+            user_dict['banner'] = user.cover_image()
         user_dict['matrix_id'] = user.matrix_user_id
         user_dict['bot_account'] = user.bot
+        if user.hide_nsfw == 1:
+            lemmy_show_nsfw = False
+        else:
+            lemmy_show_nsfw = True
         user_dict['settings'] = {
             "email": f"{user.email}",
-            "show_nsfw": user.hide_nsfw,
+            "show_nsfw": lemmy_show_nsfw,
             "theme": user.theme,
-            "default_sort_type": user.default_sort,
-            "default_listing_type": user.default_filter,
+            "default_sort_type": f'{user.default_sort}'.capitalize(),
+            "default_listing_type": f'{user.default_filter}'.capitalize(),
             "interface_language": user.interface_language
         }
 
