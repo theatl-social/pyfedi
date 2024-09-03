@@ -27,7 +27,7 @@
                 <tr>
                     <td><a href="https://{{ instance.domain }}" rel="noopener nofollow noindex noreferrer">{{ instance.domain }}</a></td>
                     <td>{{ instance.software  }}</td>
-                    <td>{{ instance.version  }}</td>
+                    <td>{{ instance.version if instance.version }}</td>
                     <td>{{ arrow.get(instance.last_seen).humanize(locale=locale) if instance.last_seen }}</td>
                     <td>{{ arrow.get(instance.last_successful_send).humanize(locale=locale) if instance.last_successful_send }}</td>
                 </tr>
