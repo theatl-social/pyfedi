@@ -11,6 +11,8 @@
 .btn-primary {
     /* border */
     border: solid 1px rgb(0,123,255,0.2);
+    box-shadow: 0 3px 5px 0 rgba(0,0,0,0.2);
+
 }
 
 /* setting the "unselected" button border */
@@ -22,7 +24,7 @@
 /* shadow for the navbar  */
 .navbar {
     /* shadow horizontal-offset vertical-offset blur spread color */
-    box-shadow: 0 3px 5px 0 rgba(0,0,0,0.2);
+    box-shadow: 0 3px 5px 0 rgba(0,0,0,0.1);
     transition: 0.3s;
 }
 
@@ -40,8 +42,12 @@
     /* rounded corners */
     border-radius: 5px;
     /* shadow horizontal-offset vertical-offset blur spread color */
-    box-shadow: 0 3px 5px 0 rgba(0,0,0,0.2);
+    box-shadow: 0 3px 5px 0 rgba(0,0,0,0.15);
     transition: 0.3s;
+}
+
+.post_list .post_teaser h3 {
+    margin-top: 0;
 }
 
 /* "Active Communities", "About PieFed", and "Rational Discourse Kit" use this */
