@@ -219,6 +219,80 @@ def export_user_settings(user):
 
         # take the current_user already found
         # add user's settings to the dict for output
+        # arranaged to match the lemmy settings output order
+        user_dict['display_name'] = user.title
+        user_dict['bio'] = user.about
+        if user.avatar_image() != '':
+            user_dict['avatar'] = f"https://{current_app.config['SERVER_NAME']}/{user.avatar_image()}"
+        else:
+            user_dict['avatar'] = user.avatar_image()
+        if user.cover_image() != '':
+            user_dict['banner'] = f"https://{current_app.config['SERVER_NAME']}/{user.cover_image()}"
+        else:
+            user_dict['banner'] = user.cover_image()
+        user_dict['matrix_id'] = user.matrix_user_id
+        user_dict['bot_account'] = user.bot
+        user_dict['settings'] = {
+            "email": f"{user.email}",
+            "show_nsfw": lemmy_show_nsfw,
+            "theme": user.theme,
+            "default_sort_type": f'{user.default_sort}'.capitalize(),
+            "default_listing_type": f'{user.default_filter}'.capitalize(),
+            "interface_language": user.interface_language
+        }
+        # get the user subscribed communities' ap_profile_id
+        user_subscribed_communities = []
+        for c in user.communities():
+            if c.ap_profile_id is None:
+                continue
+            else:
+                user_subscribed_communities.append(c.ap_profile_id)
+        user_dict['followed_communities'] = user_subscribed_communities
+
+        # get bookmarked/saved posts
+        bookmarked_posts = []
+        post_bookmarks = PostBookmark.query.filter_by(user_id=user.id).all()        
+        for pb in post_bookmarks:
+            p = Post.query.filter_by(id=pb.post_id).first()
+            bookmarked_posts.append(p.ap_id)
+        user_dict['saved_posts'] = bookmarked_posts
+
+        # get bookmarked/saved comments
+        saved_comments = []
+        post_reply_bookmarks = PostReplyBookmark.query.filter_by(user_id=user.id).all()
+        for prb in post_reply_bookmarks:
+            pr = PostReply.query.filter_by(id=prb.post_reply_id).first()
+            saved_comments.append(pr.ap_id)
+        user_dict['saved_comments'] = saved_comments
+
+        # get blocked communities
+        blocked_communities = []
+        community_blocks = CommunityBlock.query.filter_by(user_id=user.id).all()
+        for cb in community_blocks:
+            c = Community.query.filter_by(id=cb.community_id).first()
+            blocked_communities.append(c.ap_public_url)
+        user_dict['blocked_communities'] = blocked_communities
+
+        # get blocked users
+        blocked_users = []
+        user_blocks = UserBlock.query.filter_by(blocker_id=user.id).all()
+        for ub in user_blocks:
+            blocked_user = User.query.filter_by(id=ub.blocked_id).first()
+            blocked_users.append(blocked_user.ap_public_url)
+        user_dict['blocked_users'] = blocked_users
+
+        # get blocked instances
+        blocked_instances = []
+        instance_blocks = InstanceBlock.query.filter_by(user_id=user.id).all()
+        for ib in instance_blocks:
+            i = Instance.query.filter_by(id=ib.instance_id).first()
+            blocked_instances.append(i.domain)
+        user_dict['blocked_instances'] = blocked_instances
+
+        # piefed versions of (most of) the same settings
+        # TO-DO: adjust the piefed side import method to just take the doubled
+        # settings from the lemmy formatted output. Then remove the duplicate
+        # items here.
         user_dict['user_name'] = user.user_name
         user_dict['alt_user_name'] = user.alt_user_name
         user_dict['title'] = user.title
@@ -242,86 +316,11 @@ def export_user_settings(user):
             user_dict['avatar_image'] = f"https://{current_app.config['SERVER_NAME']}/{user.avatar_image()}"
         if user.cover_image() != '':
             user_dict['cover_image'] = f"https://{current_app.config['SERVER_NAME']}/{user.cover_image()}"
-        
-        # get blocked users
-        blocked_users = []
-        user_blocks = UserBlock.query.filter_by(blocker_id=user.id).all()
-        for ub in user_blocks:
-            blocked_user = User.query.filter_by(id=ub.blocked_id).first()
-            blocked_users.append(blocked_user.ap_public_url)
-        user_dict['user_blocks'] = blocked_users
-
-        # get blocked communities
-        blocked_communities = []
-        community_blocks = CommunityBlock.query.filter_by(user_id=user.id).all()
-        for cb in community_blocks:
-            c = Community.query.filter_by(id=cb.community_id).first()
-            blocked_communities.append(c.ap_public_url)
-        user_dict['blocked_communities'] = blocked_communities
-
-        # get blocked instances
-        blocked_instances = []
-        instance_blocks = InstanceBlock.query.filter_by(user_id=user.id).all()
-        for ib in instance_blocks:
-            i = Instance.query.filter_by(id=ib.instance_id).first()
-            blocked_instances.append(i.domain)
-        user_dict['blocked_instances'] = blocked_instances
-
-        # get bookmarked/saved posts
-        bookmarked_posts = []
-        post_bookmarks = PostBookmark.query.filter_by(user_id=user.id).all()        
-        for pb in post_bookmarks:
-            p = Post.query.filter_by(id=pb.post_id).first()
-            bookmarked_posts.append(p.ap_id)
-        user_dict['saved_posts'] = bookmarked_posts
-
-        # get bookmarked/saved comments
-        saved_comments = []
-        post_reply_bookmarks = PostReplyBookmark.query.filter_by(user_id=user.id).all()
-        for prb in post_reply_bookmarks:
-            pr = PostReply.query.filter_by(id=prb.post_reply_id).first()
-            saved_comments.append(pr.ap_id)
-        user_dict['saved_comments'] = saved_comments
-
-        # lemmy output compatibility
-        user_dict['display_name'] = user.title
-        user_dict['bio'] = user.about
-        if user.avatar_image() != '':
-            user_dict['avatar'] = f"https://{current_app.config['SERVER_NAME']}/{user.avatar_image()}"
-        else:
-            user_dict['avatar'] = user.avatar_image()
-        if user.cover_image() != '':
-            user_dict['banner'] = f"https://{current_app.config['SERVER_NAME']}/{user.cover_image()}"
-        else:
-            user_dict['banner'] = user.cover_image()
-        user_dict['matrix_id'] = user.matrix_user_id
-        user_dict['bot_account'] = user.bot
         if user.hide_nsfw == 1:
             lemmy_show_nsfw = False
         else:
             lemmy_show_nsfw = True
-        user_dict['settings'] = {
-            "email": f"{user.email}",
-            "show_nsfw": lemmy_show_nsfw,
-            "theme": user.theme,
-            "default_sort_type": f'{user.default_sort}'.capitalize(),
-            "default_listing_type": f'{user.default_filter}'.capitalize(),
-            "interface_language": user.interface_language
-        }
-        user_dict['blocked_users'] = blocked_users
-
-        # get the user subscribed communities' ap_profile_id
-        user_subscribed_communities = []
-        for c in user.communities():
-            if c.ap_profile_id is None:
-                continue
-            else:
-                user_subscribed_communities.append(c.ap_profile_id)
-        user_dict['followed_communities'] = user_subscribed_communities
-
-        
-
-
+        user_dict['user_blocks'] = blocked_users
 
         # setup the BytesIO buffer
         buffer = BytesIO()
