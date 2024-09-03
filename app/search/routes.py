@@ -1,7 +1,7 @@
 from flask import request, flash, json, url_for, current_app, redirect, g
 from flask_login import login_required, current_user
 from flask_babel import _
-from sqlalchemy import or_
+from sqlalchemy import or_, desc
 
 from app.models import Post, Language, Community
 from app.search import bp
@@ -22,14 +22,16 @@ def run_search():
     else:
         banned_from = []
 
-    if request.args.get('q') is not None:
-        q = request.args.get('q')
-        page = request.args.get('page', 1, type=int)
-        community_id = request.args.get('community', 0, type=int)
-        language_id = request.args.get('language', 0, type=int)
-        low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+    page = request.args.get('page', 1, type=int)
+    community_id = request.args.get('community', 0, type=int)
+    language_id = request.args.get('language', 0, type=int)
+    type = request.args.get('type', 0, type=int)
+    low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+    q = request.args.get('q')
+    sort_by = request.args.get('sort_by', '')
 
-        posts = Post.query.search(q)
+    if q is not None or type != 0 or language_id != 0 or community_id != 0:
+        posts = Post.query
         if current_user.is_authenticated:
             if current_user.ignore_bots == 1:
                 posts = posts.filter(Post.from_bot == False)
@@ -58,10 +60,18 @@ def run_search():
             posts = posts.filter(Post.nsfw == False)
 
         posts = posts.filter(Post.indexable == True)
+        if q is not None:
+            posts = posts.search(q, sort=True if sort_by == '' else False)
+        if type != 0:
+            posts = posts.filter(Post.type == type)
         if community_id:
             posts = posts.filter(Post.community_id == community_id)
         if language_id:
             posts = posts.filter(Post.language_id == language_id)
+        if sort_by == 'date':
+            posts = posts.order_by(desc(Post.posted_at))
+        elif sort_by == 'top':
+            posts = posts.order_by(desc(Post.up_votes - Post.down_votes))
 
         posts = posts.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50,
                                error_out=False)
