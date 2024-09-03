@@ -242,6 +242,7 @@ def export_user_settings(user):
             user_dict['avatar_image'] = f"https://{current_app.config['SERVER_NAME']}/{user.avatar_image()}"
         if user.cover_image() != '':
             user_dict['cover_image'] = f"https://{current_app.config['SERVER_NAME']}/{user.cover_image()}"
+        
         # get blocked users
         blocked_users = []
         user_blocks = UserBlock.query.filter_by(blocker_id=user.id).all()
@@ -249,6 +250,22 @@ def export_user_settings(user):
             blocked_user = User.query.filter_by(id=ub.blocked_id).first()
             blocked_users.append(blocked_user.ap_public_url)
         user_dict['user_blocks'] = blocked_users
+
+        # get blocked communities
+        blocked_communities = []
+        community_blocks = CommunityBlock.query.filter_by(user_id=user.id).all()
+        for cb in community_blocks:
+            c = Community.query.filter_by(id=cb.community_id).first()
+            blocked_communities.append(c.ap_public_url)
+        user_dict['blocked_communities'] = blocked_communities
+
+        # get blocked instances
+        blocked_instances = []
+        instance_blocks = InstanceBlock.query.filter_by(user_id=user.id).all()
+        for ib in instance_blocks:
+            i = Instance.query.filter_by(id=ib.instance_id).first()
+            blocked_instances.append(i.domain)
+        user_dict['blocked_instances'] = blocked_instances
 
         # lemmy output compatibility
         user_dict['display_name'] = user.title
@@ -288,11 +305,9 @@ def export_user_settings(user):
 
         # get bookmrked/saved posts
         # get bookmarked/saved comments
-        # get blocked communities
         
 
 
-        # get blocked instances
 
         # setup the BytesIO buffer
         buffer = BytesIO()
