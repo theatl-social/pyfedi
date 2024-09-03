@@ -71,9 +71,7 @@ def run_search():
         if language_id:
             posts = posts.filter(Post.language_id == language_id)
         if software:
-            instances = Instance.query.filter_by(software=software)
-            instance_ids = [instance.id for instance in instances]
-            posts = posts.filter(Post.instance_id.in_(instance_ids))
+            posts = posts.join(Instance, Post.instance_id == Instance.id).filter(Instance.software == software)
         if sort_by == 'date':
             posts = posts.order_by(desc(Post.posted_at))
         elif sort_by == 'top':
