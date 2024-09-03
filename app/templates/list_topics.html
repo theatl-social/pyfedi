@@ -33,7 +33,7 @@
     {% else -%}
         <p>{{ _('There are no communities yet.') }}</p>
     {% endif -%}
-        <p><a href="/communities" class="btn btn-primary">{{ _('Explore communities') }}</a></p>
+        <p><a href="/communities" class="btn btn-primary">{{ _('More communities') }}</a></p>
     {% if current_user.is_authenticated and current_user.trustworthy() -%}
         <p><a href="/topics/new" class="btn btn-primary">{{ _('Suggest a topic') }}</a></p>
     {% endif -%}
