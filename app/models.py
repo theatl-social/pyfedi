@@ -87,6 +87,10 @@ class Instance(db.Model):
     def __repr__(self):
         return '<Instance {}>'.format(self.domain)
 
+    @classmethod
+    def unique_software_names(cls):
+        return list(db.session.execute(text('SELECT DISTINCT software FROM instance ORDER BY software')).scalars())
+
 
 class InstanceRole(db.Model):
     instance_id = db.Column(db.Integer, db.ForeignKey('instance.id'), primary_key=True)

@@ -41,6 +41,16 @@
                                     {% endfor %}
                                 </select>
                             </div>
+                            <div class="form-group"><label class="form-control-label" for="software" aria-label="Restrict results by instance software">{{ _('Instance Software') }}</label>
+                                <select class="form-control form-select" id="software" name="software">
+                                    <option value="">{{ _('All') }}</option>
+                                    {% for software in instance_software %}
+                                        {% if not software =='guppe groups' %}
+                                            <option value="{{ software }}">{{ software }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
                             <div class="form-group"><label class="form-control-label" for="type" aria-label="Sort results">{{ _('Sort by') }}</label>
                                 <select class="form-control form-select" id="sort_by" name="sort_by">
                                     <option value="">{{ _('Relevance') }}</option>
