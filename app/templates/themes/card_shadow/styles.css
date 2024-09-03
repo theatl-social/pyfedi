@@ -1,0 +1,126 @@
+/* shadow for the button groups */
+.btn-group {
+    /* rounded corners */
+    border-radius: 6px;
+    /* shadow horizontal-offset vertical-offset blur spread color */
+    box-shadow: 0 3px 5px 0 rgba(0,0,0,0.2);
+    transition: 0.3s;
+}
+
+/* setting the color for the "selected" button border */
+.btn-primary {
+    /* border */
+    border: solid 1px rgb(0,123,255,0.2);
+}
+
+/* setting the "unselected" button border */
+.btn-outline-secondary {
+    /* border */
+    border: solid 1px rgb(0,123,255,0.2);
+}
+
+/* shadow for the navbar  */
+.navbar {
+    /* shadow horizontal-offset vertical-offset blur spread color */
+    box-shadow: 0 3px 5px 0 rgba(0,0,0,0.2);
+    transition: 0.3s;
+}
+
+/* this is used in the big list of posts to browse  */
+.post_list .post_teaser {
+    /* outside space  top right bottom left */
+    margin: 10px 2px 2px 2px;
+    /* inside space  top right bottom left */
+    padding: 5px 5px 5px 5px;
+    /* border */
+    border-top: solid 1px rgb(0,123,255,0.2);
+    border-right: solid 1px rgba(0,123,255,0.2);
+    border-bottom: solid 1px rgba(0,123,255,0.2);
+    border-left: solid 1px rgba(0,123,255,0.2);
+    /* rounded corners */
+    border-radius: 5px;
+    /* shadow horizontal-offset vertical-offset blur spread color */
+    box-shadow: 0 3px 5px 0 rgba(0,0,0,0.2);
+    transition: 0.3s;
+}
+
+/* "Active Communities", "About PieFed", and "Rational Discourse Kit" use this */
+.side_pane .card {
+    /* border */
+    /* border-top: solid 1px rgb(0,123,255,0.2); */
+    border-right: solid 1px rgba(0,123,255,0.2);
+    border-bottom: solid 1px rgba(0,123,255,0.2);
+    border-left: solid 1px rgba(0,123,255,0.2);
+    /* rounded corners */
+    border-radius: 5px;
+    /* shadow horizontal-offset vertical-offset blur spread color */
+    box-shadow: 0 3px 5px 0 rgba(0,0,0,0.2);
+    transition: 0.3s;
+}
+
+/* this adds some pixels to the bottom of the main pane */
+/* this is really only needed so the side_pane "Active Communities" */
+/* box has a buffer and does not collide with the main_pane  */
+/* holding the list of posts */
+.main_pane {
+    /* outside space  top right bottom left */
+    margin: 0 0 15px 0;
+}
+
+/* all posts except for image posts use this */
+.post_type_normal {
+    /* outside space  top right bottom left*/
+    margin: 0 5px 5px 5px;
+    /* inside space  top right bottom left*/
+    padding: 5px 5px 5px 5px;
+    /* border */
+    border-top: solid 1px rgb(0,123,255,0.2);
+    border-right: solid 1px rgba(0,123,255,0.2);
+    border-bottom: solid 1px rgba(0,123,255,0.2);
+    border-left: solid 1px rgba(0,123,255,0.2);
+    /* rounded corners */
+    border-radius: 5px;
+    /* shadow horizontal-offset vertical-offset blur spread color */
+    box-shadow: 0 3px 5px 0 rgba(0,0,0,0.2);
+    transition: 0.3s;
+}
+
+/* image posts */
+.post_type_image {
+    /* outside space  top right bottom left*/
+    margin: 0 5px 5px 5px;
+    /* inside space  top right bottom left*/
+    padding: 5px 5px 5px 5px;
+    /* border */
+    border-top: solid 1px rgb(0,123,255,0.2);
+    border-right: solid 1px rgba(0,123,255,0.2);
+    border-bottom: solid 1px rgba(0,123,255,0.2);
+    border-left: solid 1px rgba(0,123,255,0.2);
+    /* rounded corners */
+    border-radius: 5px;
+    /* shadow horizontal-offset vertical-offset blur spread color */
+    box-shadow: 0 3px 5px 0 rgba(0,0,0,0.2);
+    transition: 0.3s;
+}
+
+/* "tile" and "wide tile" community view items */
+#masonry .item {
+    /* outside space  top right bottom left*/
+    margin: 0 2px 6px 2px;
+    /* rounded corners */
+    border-radius: 5px;
+}
+
+/* post edit options card */
+.p-6 {
+    /* border */
+    /* border-top: solid 1px rgb(0,123,255,0.2); */
+    border-right: solid 1px rgba(0,123,255,0.2);
+    border-bottom: solid 1px rgba(0,123,255,0.2);
+    border-left: solid 1px rgba(0,123,255,0.2);
+    /* rounded corners */
+    border-radius: 5px;
+    /* shadow horizontal-offset vertical-offset blur spread color */
+    box-shadow: 0 3px 5px 0 rgba(0,0,0,0.2);
+    transition: 0.3s;
+}
