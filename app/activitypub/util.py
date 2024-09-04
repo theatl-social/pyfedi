@@ -859,21 +859,34 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
                 post.body = post_json['content']
                 post.body_html = markdown_to_html(post.body)
         if 'attachment' in post_json and len(post_json['attachment']) > 0 and 'type' in post_json['attachment'][0]:
+            alt_text = None
             if post_json['attachment'][0]['type'] == 'Link':
-                post.url = post_json['attachment'][0]['href']
+                post.url = post_json['attachment'][0]['href']                       # Lemmy < 0.19.4
+            if post_json['attachment'][0]['type'] == 'Image':
+                post.url = post_json['attachment'][0]['url']                        # PieFed, Lemmy >= 0.19.4
+                if 'name' in post_json['attachment'][0]:
+                    alt_text = post_json['attachment'][0]['name']
+            if post.url:
                 if is_image_url(post.url):
                     post.type = POST_TYPE_IMAGE
                     if 'image' in post_json and 'url' in post_json['image']:
                         image = File(source_url=post_json['image']['url'])
                     else:
                         image = File(source_url=post.url)
+                        if alt_text:
+                            image.alt_text = alt_text
+                    db.session.add(image)
+                    post.image = image
+                elif is_video_url(post.url):
+                    post.type = POST_TYPE_VIDEO
+                    image = File(source_url=post.url)
                     db.session.add(image)
                     post.image = image
                 else:
                     post.type = POST_TYPE_LINK
                     post.url = remove_tracking_from_link(post.url)
-
                 domain = domain_from_url(post.url)
+
                 # notify about links to banned websites.
                 already_notified = set()        # often admins and mods are the same people - avoid notifying them twice
                 if domain:
