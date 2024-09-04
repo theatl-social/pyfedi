@@ -546,7 +546,8 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                         break
                                 if community_ap_id:
                                     break
-                            if not community_ap_id and 'object' in request_json and 'inReplyTo' in request_json['object']:
+                            if not community_ap_id and 'object' in request_json and \
+                                    'inReplyTo' in request_json['object'] and request_json['object']['inReplyTo'] is not None:
                                 post_being_replied_to = Post.query.filter_by(ap_id=request_json['object']['inReplyTo']).first()
                                 if post_being_replied_to:
                                     community_ap_id = post_being_replied_to.community.ap_profile_id
