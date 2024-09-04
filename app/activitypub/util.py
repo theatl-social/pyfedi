@@ -925,9 +925,11 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
         if 'tag' in post_json:
             for json_tag in post_json['tag']:
                 if json_tag['type'] == 'Hashtag':
-                    hashtag = find_hashtag_or_create(json_tag['name'])
-                    if hashtag:
-                        post.tags.append(hashtag)
+                    # Lemmy adds the community slug as a hashtag on every post in the community, which we want to ignore
+                    if json_tag['name'][1:].lower() != community.name.lower():
+                        hashtag = find_hashtag_or_create(json_tag['name'])
+                        if hashtag:
+                            post.tags.append(hashtag)
 
         if post is not None:
             if 'image' in post_json and post.image is None:
