@@ -698,7 +698,7 @@ def actor_json_to_model(activity_json, address, server):
                         email=f"{address}@{server}",
                         about_html=parse_summary(activity_json),
                         matrix_user_id=activity_json['matrixUserId'] if 'matrixUserId' in activity_json else '',
-                        indexable=activity_json['indexable'] if 'indexable' in activity_json else False,
+                        indexable=activity_json['indexable'] if 'indexable' in activity_json else True,
                         searchable=activity_json['discoverable'] if 'discoverable' in activity_json else True,
                         created=activity_json['published'] if 'published' in activity_json else utcnow(),
                         ap_id=f"{address.lower()}@{server.lower()}",
