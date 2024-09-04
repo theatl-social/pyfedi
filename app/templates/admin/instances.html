@@ -1,0 +1,77 @@
+{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
+    {% extends 'themes/' + theme() + '/base.html' %}
+{% else %}
+    {% extends "base.html" %}
+{% endif %}
+{% from 'bootstrap/form.html' import render_form %}
+{% set active_child = 'admin_instances' %}
+
+{% block app_content %}
+<div class="row">
+    <div class="col">
+        <h1>{{ title }}</h1>
+        <form method="get">
+            <input type="search" name="search"> <input type="submit" name="submit" value="Search">
+        </form>
+        <table class="table table-striped">
+            <tr>
+               <th>Domain</th>
+               <th>Software</th>
+               <th>Version</th>
+               <th>Posts</th>
+               <th>Post Replies</th>
+               <th>Communities</th>
+               <th>Vote Weight</th>
+               <th title="{{ _('When an Activity was received from them') }}">Seen</th>
+               <th title="{{ _('When we successfully sent them an Activity') }}">Sent</th>
+               <th title="{{ _('How many times we failed to send (reset to 0 after every successful send)') }}">Failed</th>
+               <th title="{{ _('Instance Status - Online/Dormant/Gone Forever') }}">Status</th>
+               <th>Actions</th>
+            </tr>
+            {% for instance in instances.items %}
+                <tr>
+                    <td><a href="https://{{ instance.domain }}" rel="noopener nofollow noindex noreferrer">{{ instance.domain }}</a></td>
+                    <td>{{ instance.software  }}</td>
+                    <td>{{ instance.version if instance.version }}</td>
+                    <td>{{ len(instance.posts.all())  }}</td>
+                    <td>{{ len(instance.post_replies.all())  }}</td>
+                    <td>{{ len(instance.communities.all())  }}</td>
+                    <td>{{ instance.vote_weight  }}</td>
+                    <td>{{ arrow.get(instance.last_seen).humanize(locale=locale) if instance.last_seen }}</td>
+                    <td>{{ arrow.get(instance.last_successful_send).humanize(locale=locale) if instance.last_successful_send }}</td>
+                    <td>{{ instance.failures  }}</td>
+                    {% if instance.gone_forever %}
+                        <td>Gone Forever</td>
+                    {% elif instance.dormant %}
+                        <td>Dormant</td>
+                    {% else %}
+                        <td>Online</td>
+                    {% endif %}
+                    <!-- <td><a href="{{ url_for('admin.admin_community_edit', community_id=community.id) }}">Edit</a> | -->
+                        <!-- <a href="{{ url_for('admin.admin_community_delete', community_id=community.id) }}" class="confirm_first">Delete</a> -->
+                    <!-- </td> -->
+                </tr>
+            {% endfor %}
+        </table>
+        <nav aria-label="Pagination" class="mt-4" role="navigation">
+                {% if prev_url %}
+                    <a href="{{ prev_url }}" class="btn btn-primary">
+                        <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
+                    </a>
+                {% endif %}
+                {% if next_url %}
+                    <a href="{{ next_url }}" class="btn btn-primary">
+                        {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
+                    </a>
+                {% endif %}
+        </nav>
+    </div>
+</div>
+<hr />
+<div class="row">
+    <div class="col">
+        {% include 'admin/_nav.html' %}
+    </div>
+</div>
+<hr />
+{% endblock %}
