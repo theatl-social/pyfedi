@@ -12,7 +12,7 @@ from sqlalchemy import or_, desc, text
 
 from app import db, constants, cache
 from app.activitypub.signature import RsaKeys, post_request, default_context, post_request_in_background
-from app.activitypub.util import notify_about_post, make_image_sizes, resolve_remote_post
+from app.activitypub.util import notify_about_post, make_image_sizes, resolve_remote_post, extract_domain_and_actor
 from app.chat.util import send_message
 from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, CreateImageForm, CreateLinkForm, \
     ReportCommunityForm, \
@@ -123,9 +123,12 @@ def add_remote():
             ...
         elif '@' in address:
             new_community = search_for_community('!' + address)
+        elif address.startswith('https://'):
+            server, community = extract_domain_and_actor(address)
+            new_community = search_for_community('!' + community + '@' + server)
         else:
             message = Markup(
-                'Type address in the format !community@server.name. Search on <a href="https://lemmyverse.net/communities">Lemmyverse.net</a> to find some.')
+                'Accepted address formats: !community@server.name or https://server.name/{c|m}/community. Search on <a href="https://lemmyverse.net/communities">Lemmyverse.net</a> to find some.')
             flash(message, 'error')
         if new_community is None:
             if g.site.enable_nsfw:
