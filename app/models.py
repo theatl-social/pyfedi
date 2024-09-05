@@ -93,8 +93,8 @@ class Instance(db.Model):
     def known_communities_count(self):
         return db.session.execute(text(f'SELECT count(*) FROM community WHERE instance_id = {self.id}')).all()[0].count
 
-    # def known_users_count(self):
-        # return db.session.execute(text(f'SELECT count(DISTINCT instance_id) as count FROM USER')).all()[0].count
+    def known_users_count(self):
+        return db.session.execute(text(f'SELECT count(*) FROM "user" WHERE instance_id = {self.id}')).all()[0].count
 
     def __repr__(self):
         return '<Instance {}>'.format(self.domain)

@@ -23,6 +23,7 @@
                <th>Software</th>
                <th>Version</th>
                <th title="{{ _('Known Communities') }}">Communities</td>
+               <th title="{{ _('Known Users') }}">Users</td>
                <th>Posts</th>
                <th>Post Replies</th>
                <th>Vote Weight</th>
@@ -37,6 +38,7 @@
                     <td>{{ instance.software  }}</td>
                     <td>{{ instance.version if instance.version }}</td>
                     <td>{{ instance.known_communities_count()  }}</td>
+                    <td>{{ instance.known_users_count()  }}</td>
                     <td>{{ instance.post_count()  }}</td>
                     <td>{{ instance.post_replies_count()  }}</td>
                     <td>{{ instance.vote_weight  }}</td>
