@@ -974,6 +974,9 @@ def admin_instances():
 
     instances = Instance.query.order_by(Instance.domain)
 
+    if search:
+        instances = instances.filter(Instance.domain.ilike(f"%{search}%"))
+
     # Pagination
     instances = instances.paginate(page=page,
                                        per_page=250 if current_user.is_authenticated and not low_bandwidth else 50,
