@@ -18,6 +18,7 @@
                <th>Domain</th>
                <th>Software</th>
                <th>Version</th>
+               <th title="{{ _('Known Users') }}">Users</td>
                <th>Posts</th>
                <th>Post Replies</th>
                <th>Communities</th>
@@ -32,6 +33,7 @@
                     <td><a href="https://{{ instance.domain }}" rel="noopener nofollow noindex noreferrer">{{ instance.domain }}</a></td>
                     <td>{{ instance.software  }}</td>
                     <td>{{ instance.version if instance.version }}</td>
+                    <td>{{ len(user_model.query.filter_by(instance_id=instance.id).all()) }}</td>
                     <td>{{ len(instance.posts.all())  }}</td>
                     <td>{{ len(instance.post_replies.all())  }}</td>
                     <td>{{ len(instance.communities.all())  }}</td>
