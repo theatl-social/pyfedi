@@ -974,6 +974,7 @@ def admin_instances():
 
     instances = Instance.query.order_by(Instance.domain)
     user_model = User
+    community_model = Community
 
     if search:
         instances = instances.filter(Instance.domain.ilike(f"%{search}%"))
@@ -988,7 +989,8 @@ def admin_instances():
     return render_template('admin/instances.html', instances=instances,
                            title=_('Instances'), search=search,
                            next_url=next_url, prev_url=prev_url,
-                           low_bandwidth=low_bandwidth, user_model=user_model,
+                           low_bandwidth=low_bandwidth, 
+                           user_model=user_model, community_model=community_model,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site)
