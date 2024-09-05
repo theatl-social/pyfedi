@@ -13,6 +13,10 @@
         <form method="get">
             <input type="search" name="search"> <input type="submit" name="submit" value="Search">
         </form>
+        Status Filter:
+        <a href="{{ url_for('admin.admin_instances') }}">Online</a> | 
+        <a href="{{ url_for('admin.admin_instances_dormant') }}">Dormant</a> |
+        <a href="{{ url_for('admin.admin_instances_gone_forever') }}">Gone Forever</a> |
         <table class="table table-striped">
             <tr>
                <th>Domain</th>
