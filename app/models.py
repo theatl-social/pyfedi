@@ -84,6 +84,8 @@ class Instance(db.Model):
     def votes_are_public(self):
         return self.software.lower() == 'lemmy' or self.software.lower() == 'mbin' or self.software.lower() == 'kbin'
 
+    # the db execute returns a cursorresult. the all() returns a list with one item in it. 
+    # the [0] gets the one sqlalchemy Row object, the Row.count then is the number we show 
     def post_count(self):
         return db.session.execute(text(f'SELECT count(*) FROM post WHERE instance_id = {self.id}')).all()[0].count
 
