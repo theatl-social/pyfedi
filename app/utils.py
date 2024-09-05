@@ -285,11 +285,11 @@ def allowlist_html(html: str, a_target='_blank') -> str:
     clean_html = re_strikethough.sub(r'<s>\1</s>', clean_html)
 
     # replace subscript markdown left in HTML
-    re_subscript = re.compile(r'~(.*)~')
+    re_subscript = re.compile(r'~(\S+)~')
     clean_html = re_subscript.sub(r'<sub>\1</sub>', clean_html)
 
     # replace superscript markdown left in HTML
-    re_superscript = re.compile(r'\^(.*)\^')
+    re_superscript = re.compile(r'\^(\S+)\^')
     clean_html = re_superscript.sub(r'<sup>\1</sup>', clean_html)
 
     return clean_html
