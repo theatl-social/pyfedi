@@ -378,7 +378,9 @@ div.navbar {
       height: 100%;
       align-content: center;
       display: flex;
-      align-items: center;
+      @include breakpoint(tablet) {
+        align-items: center;
+      }
 
       a {
         display: block;

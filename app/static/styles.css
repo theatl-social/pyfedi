@@ -795,7 +795,11 @@ div.navbar {
   height: 100%;
   align-content: center;
   display: flex;
-  align-items: center;
+}
+@media (min-width: 992px) {
+  .post_list .post_teaser .thumbnail {
+    align-items: center;
+  }
 }
 .post_list .post_teaser .thumbnail a {
   display: block;
