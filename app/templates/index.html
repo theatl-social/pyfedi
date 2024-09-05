@@ -14,7 +14,7 @@
         {% endif -%}
         {% include "_home_nav.html" %}
         {% include "_view_filter_nav.html" %}
-        <div class="post_list">
+        <div class="post_list h-feed">
             {% for post in posts.items -%}
                 {% include 'post/_post_teaser.html' %}
             {% else -%}

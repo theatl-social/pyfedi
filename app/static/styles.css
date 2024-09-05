@@ -197,12 +197,20 @@
 }
 
 .fe-reply {
-  position: relative;
-  top: 1px;
+  margin-right: 2px;
+  margin-top: -1px;
 }
 
 .fe-reply::before {
   content: "\e990";
+}
+
+.fe-discussion::before {
+  content: "\e991";
+}
+
+.fe-link::before {
+  content: "\e991";
 }
 
 .fe-layers {
@@ -773,54 +781,60 @@ div.navbar {
   display: inline-block;
   max-width: 78%;
 }
-.post_list .post_teaser .main_row .post_utilities {
-  position: absolute;
-  bottom: -12px;
-  left: 10px;
-}
-.post_list .post_teaser .main_row .post_utilities a, .post_list .post_teaser .main_row .post_utilities > div, .post_list .post_teaser .main_row .post_utilities > span {
-  display: inline-block;
-  min-width: 44px;
-  line-height: 44px;
-  text-align: center;
-}
-.post_list .post_teaser .main_row .post_utilities a:first-child, .post_list .post_teaser .main_row .post_utilities > div:first-child, .post_list .post_teaser .main_row .post_utilities > span:first-child {
-  text-align: left;
-}
-.post_list .post_teaser .utilities_row a {
-  display: inline-block;
-  min-width: 44px;
-  min-height: 44px;
-  justify-content: center;
-  align-content: center;
-}
-.post_list .post_teaser .thumbnail {
-  float: right;
-  padding-left: 0;
-  padding-right: 0;
+.post_list .post_teaser .col_thumbnail {
+  width: 74px;
   position: relative;
 }
-.post_list .post_teaser .thumbnail .fe {
+@media (min-width: 992px) {
+  .post_list .post_teaser .col_thumbnail {
+    width: 22.667%;
+  }
+}
+.post_list .post_teaser .thumbnail {
+  text-align: center;
+  height: 100%;
+  align-content: center;
+  display: flex;
+  align-items: center;
+}
+.post_list .post_teaser .thumbnail a {
+  display: block;
+  width: 100%;
+  position: relative;
+}
+.post_list .post_teaser .thumbnail .fe-external, .post_list .post_teaser .thumbnail .fe-video, .post_list .post_teaser .thumbnail .fe-image, .post_list .post_teaser .thumbnail .fe-audio, .post_list .post_teaser .thumbnail .fe-magnify {
   display: block;
   position: absolute;
-  right: 0;
+  right: -20px;
   background-color: rgba(255, 255, 255, 0.7);
   padding-bottom: 1px;
   padding-left: 1px;
   border-radius: 2px;
-  top: 0;
+  top: 3px;
+}
+@media (min-width: 992px) {
+  .post_list .post_teaser .thumbnail .fe-external, .post_list .post_teaser .thumbnail .fe-video, .post_list .post_teaser .thumbnail .fe-image, .post_list .post_teaser .thumbnail .fe-audio, .post_list .post_teaser .thumbnail .fe-magnify {
+    right: -4px;
+  }
+}
+.post_list .post_teaser .thumbnail .fe-discussion, .post_list .post_teaser .thumbnail .fe-poll, .post_list .post_teaser .thumbnail .fe-link {
+  font-size: 52px;
+  opacity: 0.3;
 }
 .post_list .post_teaser .thumbnail img {
   height: 60px;
   width: 60px;
   border-radius: 5px;
   object-fit: cover;
-  margin-left: 5px;
+  margin-left: 4px;
+  margin-top: 4px;
+  margin-bottom: 4px;
 }
 @media (min-width: 992px) {
   .post_list .post_teaser .thumbnail img {
     height: 90px;
     width: 170px;
+    max-width: 100%;
   }
 }
 .post_list .post_teaser .thumbnail img.blur {
@@ -849,7 +863,19 @@ div.navbar {
   font-size: 80%;
 }
 
+.post_teaser_body {
+  position: relative;
+  padding-bottom: 32px;
+}
+
+.post_utilities_bar_wrapper {
+  position: absolute;
+  bottom: -7px;
+  width: 97%;
+}
+
 .post_utilities_bar {
+  position: relative;
   display: flex;
   min-height: 44px;
 }
@@ -863,13 +889,33 @@ div.navbar {
   padding: 3px;
   padding-left: 0;
 }
-.post_utilities_bar .post_options_link {
+.post_utilities_bar .post_replies_link {
   display: flex;
   width: 44px;
   height: 44px;
   padding: 3px;
   justify-content: center;
   align-items: center;
+  margin-left: -6px;
+}
+.post_utilities_bar .voting_buttons_new {
+  display: flex;
+  height: 44px;
+  padding: 3px;
+  justify-content: center;
+  align-items: center;
+}
+.post_utilities_bar .post_options_link, .post_utilities_bar .preview_image {
+  display: flex;
+  width: 44px;
+  height: 44px;
+  padding: 3px;
+  justify-content: center;
+  align-items: center;
+}
+
+.post_full .post_utilities_bar .voting_buttons_new {
+  margin-left: -15px;
 }
 
 #masonry {
@@ -1072,6 +1118,9 @@ div.navbar {
   min-width: 44px;
   min-height: 44px;
 }
+.voting_buttons_new .upvote_button span, .voting_buttons_new .downvote_button span {
+  line-height: 44px;
+}
 .voting_buttons_new .upvote_button.digits_4, .voting_buttons_new .downvote_button.digits_4 {
   width: 68px;
 }
@@ -1091,11 +1140,11 @@ div.navbar {
 }
 .voting_buttons_new .upvote_button .htmx-indicator {
   left: 13px;
-  top: 7px;
+  top: 14px;
 }
 .voting_buttons_new .downvote_button .htmx-indicator {
   left: 12px;
-  top: 5px;
+  top: 14px;
 }
 .voting_buttons_new .htmx-indicator {
   position: absolute;

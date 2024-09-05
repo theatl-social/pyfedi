@@ -102,6 +102,10 @@ def url_needs_archive(url) -> bool:
             hostname = parsed_url.hostname.lower()
         except:
             return False
+        if hostname == 'nytimes.com' and 'unlocked_article_code' in url:
+            return False
+        if hostname == 'theatlantic.com' and 'gift' in url:
+            return False
         return hostname in paywalled_sites
     else:
         return False

@@ -362,49 +362,47 @@ div.navbar {
         display: inline-block;
         max-width: 78%;
       }
-
-      .post_utilities {
-        position: absolute;
-        bottom: -12px;
-        left: 10px;
-        a, > div, > span {
-          display: inline-block;
-          min-width: 44px;
-          line-height: 44px;
-          text-align: center;
-
-          &:first-child {
-            text-align: left;
-          }
-        }
-      }
     }
 
-    .utilities_row {
-      a {
-        display: inline-block;
-        min-width: $min-touch-target;
-        min-height: $min-touch-target;
-        justify-content: center;
-        align-content: center;
+    .col_thumbnail {
+      width: 74px;
+      position: relative;
+      @include breakpoint(tablet) {
+        width: 22.667%;
       }
     }
 
     .thumbnail {
-      float: right;
-      padding-left: 0;
-      padding-right: 0;
-      position: relative;
 
-      .fe {
+      text-align: center;
+      height: 100%;
+      align-content: center;
+      display: flex;
+      align-items: center;
+
+      a {
+        display: block;
+        width: 100%;
+        position: relative;
+      }
+
+      .fe-external, .fe-video, .fe-image, .fe-audio, .fe-magnify {
         display: block;
         position: absolute;
-        right: 0;
+        right: -20px;
+        @include breakpoint(tablet) {
+          right: -4px;
+        }
         background-color: rgba(256,256,256, 0.7);
         padding-bottom: 1px;
         padding-left: 1px;
         border-radius: 2px;
-        top: 0;
+        top: 3px;
+      }
+
+      .fe-discussion, .fe-poll, .fe-link {
+        font-size: 52px;
+        opacity: 0.3;
       }
 
       img {
@@ -412,10 +410,13 @@ div.navbar {
         width: 60px;
         border-radius: 5px;
         object-fit: cover;
-        margin-left: 5px;
+        margin-left: 4px;
+        margin-top: 4px;
+        margin-bottom: 4px;
         @include breakpoint(tablet) {
           height: 90px;
           width: 170px;
+          max-width: 100%;
         }
         &.blur {
           filter: blur(3px);
@@ -454,7 +455,19 @@ div.navbar {
   }
 }
 
+.post_teaser_body {
+  position: relative;
+  padding-bottom: 32px;
+}
+
+.post_utilities_bar_wrapper {
+  position: absolute;
+  bottom: -7px;
+  width: 97%;
+}
+
 .post_utilities_bar {
+  position: relative;
   display: flex;
   min-height: $min-touch-target;
 
@@ -469,13 +482,37 @@ div.navbar {
     padding-left: 0;
   }
 
-  .post_options_link {
+  .post_replies_link {
     display: flex;
     width: $min-touch-target;
     height: $min-touch-target;
     padding: 3px;
     justify-content: center;
     align-items: center;
+    margin-left: -6px;
+  }
+
+  .voting_buttons_new {
+    display: flex;
+    height: $min-touch-target;
+    padding: 3px;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .post_options_link, .preview_image {
+    display: flex;
+    width: $min-touch-target;
+    height: $min-touch-target;
+    padding: 3px;
+    justify-content: center;
+    align-items: center;
+  }
+}
+
+.post_full .post_utilities_bar {
+  .voting_buttons_new {
+    margin-left: -15px;
   }
 }
 
@@ -703,6 +740,9 @@ div.navbar {
     color: rgba(var(--bs-link-color-rgb),var(--bs-link-opacity,1));
     min-width: $min-touch-target;
     min-height: $min-touch-target;
+    span {
+      line-height: $min-touch-target;
+    }
 
     &.digits_4 {
       width: 68px;
@@ -729,14 +769,14 @@ div.navbar {
   .upvote_button {
     .htmx-indicator {
       left: 13px;
-      top: 7px;
+      top: 14px;
     }
   }
 
   .downvote_button {
     .htmx-indicator {
       left: 12px;
-      top: 5px;
+      top: 14px;
     }
   }
 
