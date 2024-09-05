@@ -22,11 +22,9 @@
                <th>Domain</th>
                <th>Software</th>
                <th>Version</th>
-               <th title="{{ _('Known Users') }}">Users</td>
                <th title="{{ _('Known Communities') }}">Communities</td>
                <th>Posts</th>
                <th>Post Replies</th>
-               <th>Communities</th>
                <th>Vote Weight</th>
                <th title="{{ _('When an Activity was received from them') }}">Seen</th>
                <th title="{{ _('When we successfully sent them an Activity') }}">Sent</th>
@@ -38,11 +36,9 @@
                     <td><a href="https://{{ instance.domain }}" rel="noopener nofollow noindex noreferrer">{{ instance.domain }}</a></td>
                     <td>{{ instance.software  }}</td>
                     <td>{{ instance.version if instance.version }}</td>
-                    <td>{{ len(user_model.query.filter_by(instance_id=instance.id).all()) }}</td>
-                    <td>{{ len(community_model.query.filter_by(instance_id=instance.id).all()) }}</td>
-                    <td>{{ len(instance.posts.all())  }}</td>
-                    <td>{{ len(instance.post_replies.all())  }}</td>
-                    <td>{{ len(instance.communities.all())  }}</td>
+                    <td>{{ instance.known_communities_count()  }}</td>
+                    <td>{{ instance.post_count()  }}</td>
+                    <td>{{ instance.post_replies_count()  }}</td>
                     <td>{{ instance.vote_weight  }}</td>
                     <td>{{ arrow.get(instance.last_seen).humanize(locale=locale) if instance.last_seen }}</td>
                     <td>{{ arrow.get(instance.last_successful_send).humanize(locale=locale) if instance.last_successful_send }}</td>

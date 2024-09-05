@@ -973,8 +973,6 @@ def admin_instances():
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
     instances = Instance.query.order_by(Instance.domain)
-    user_model = User
-    community_model = Community
 
     if search:
         instances = instances.filter(Instance.domain.ilike(f"%{search}%"))
@@ -990,7 +988,6 @@ def admin_instances():
                            title=_('Instances'), search=search,
                            next_url=next_url, prev_url=prev_url,
                            low_bandwidth=low_bandwidth, 
-                           user_model=user_model, community_model=community_model,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site)
@@ -1004,8 +1001,6 @@ def admin_instances_dormant():
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
     instances = Instance.query.order_by(Instance.domain)
-    user_model = User
-    community_model = Community
 
     instances = instances.filter(Instance.dormant == True)
     
@@ -1023,7 +1018,6 @@ def admin_instances_dormant():
                            title=_('Dormant Instances'), search=search,
                            next_url=next_url, prev_url=prev_url,
                            low_bandwidth=low_bandwidth, 
-                           user_model=user_model, community_model=community_model,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site)
@@ -1037,8 +1031,6 @@ def admin_instances_gone_forever():
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
     instances = Instance.query.order_by(Instance.domain)
-    user_model = User
-    community_model = Community
     
     instances = instances.filter(Instance.gone_forever == True)
 
@@ -1056,7 +1048,6 @@ def admin_instances_gone_forever():
                            title=_('Gone Forever Instances'), search=search,
                            next_url=next_url, prev_url=prev_url,
                            low_bandwidth=low_bandwidth, 
-                           user_model=user_model, community_model=community_model,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site)
