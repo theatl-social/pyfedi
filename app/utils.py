@@ -381,6 +381,14 @@ def microblog_content_to_title(html: str) -> str:
     return title.strip()
 
 
+def first_paragraph(html):
+    soup = BeautifulSoup(html, 'html.parser')
+    first_paragraph = soup.find('p')
+    if first_paragraph:
+        return f'<p>{first_paragraph.text}</p>'
+    else:
+        return ''
+
 def community_link_to_href(link: str) -> str:
     pattern = r"!([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
     server = r'<a href=https://' + current_app.config['SERVER_NAME'] + r'/community/lookup/'

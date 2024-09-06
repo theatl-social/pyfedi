@@ -12,19 +12,11 @@
     </h3>
     <span class="author small">{% if show_post_community -%}<a href="/c/{{ post.community.link() }}" aria-label="{{ _('Go to community %(name)s', name=post.community.name) }}">c/{{ post.community.name }}</a>{% endif -%}
                     by {{ render_username(post.author) }} <time datetime="{{ post.last_active }}">{{ arrow.get(post.last_active if sort == 'active' else post.posted_at).humanize(locale=locale) }}</time></span>
-    {% include "post/post_teaser/_utilities_bar.html" %}
-</div>
-<div class="col col-2 col_thumbnail">
-    {% if post.image_id -%}
-        <div class="thumbnail{{ ' lbw' if low_bandwidth }}" aria-hidden="true">
-            {% if low_bandwidth -%}
-                <a href="{{ post.image.view_url() }}" rel="nofollow ugc" aria-label="{{ _('View image') }}" target="_blank"><span class="fe fe-magnify"></span></a>
-            {% else -%}
-                {% if post.image_id -%}
-                    <a href="{{ post.image.view_url() }}" rel="nofollow ugc" aria-label="{{ _('View image') }}" target="_blank"><span class="fe fe-magnify"></span><img src="{{ post.image.thumbnail_url() }}"
+    {% if post.image_id and not low_bandwidth -%}
+        <div class="post_teaser_image_preview">
+            <a href="{{ post.image.view_url() }}" rel="nofollow ugc" aria-label="{{ _('View image') }}" target="_blank"><img src="{{ post.image.medium_url() }}"
                     alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ ' blur' if blur_content }}" /></a>
-                {% endif -%}
-            {% endif -%}
         </div>
     {% endif -%}
+    {% include "post/post_teaser/_utilities_bar.html" %}
 </div>

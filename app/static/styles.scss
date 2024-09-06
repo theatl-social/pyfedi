@@ -459,6 +459,55 @@ div.navbar {
   padding-bottom: 32px;
 }
 
+.post_teaser_article_preview {
+  position: relative;
+  max-height: 100px;
+  overflow: hidden;
+  padding-left: 3px;
+  padding-right: 3px;
+
+  p {
+    margin: 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1; /* Limits the text to a specific number of lines */
+    line-clamp: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: normal;
+  }
+}
+
+.post_teaser_image_preview {
+  text-align: center;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  img {
+    max-width: 100%;
+    padding-right: 4px;
+  }
+}
+
+.post_teaser_video_preview {
+  text-align: center;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  position: relative;
+  img {
+    max-width: 100%;
+    padding-right: 4px;
+  }
+  .fe-video {
+    position: absolute;
+    left: 43%;
+    top: 40%;
+    width: 13%;
+    font-size: 64px;
+    background-color: white;
+    opacity: 0.5;
+  }
+}
+
 .post_utilities_bar_wrapper {
   position: absolute;
   bottom: -7px;
