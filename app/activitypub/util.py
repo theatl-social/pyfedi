@@ -33,7 +33,7 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     blocked_phrases, microblog_content_to_title, generate_image_from_video_url, is_video_url, reply_is_stupid, \
     notification_subscribers, communities_banned_from, lemmy_markdown_to_html, actor_contains_blocked_words, \
     html_to_text, opengraph_parse, url_to_thumbnail_file, add_to_modlog_activitypub, joined_communities, \
-    moderating_communities
+    moderating_communities, is_video_hosting_site
 
 from sqlalchemy import or_
 
@@ -1933,7 +1933,7 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
                         image.alt_text = alt_text
                 db.session.add(image)
                 post.image = image
-            elif is_video_url(post.url):
+            elif is_video_url(post.url):    # youtube is detected later
                 post.type = POST_TYPE_VIDEO
                 image = File(source_url=post.url)
                 db.session.add(image)
@@ -2007,6 +2007,8 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
 
         if post.url:
             post.url = remove_tracking_from_link(post.url)      # moved here as changes youtu.be to youtube.com
+        if is_video_hosting_site(post.url):
+            post.type = POST_TYPE_VIDEO
         db.session.add(post)
         post.ranking = post_ranking(post.score, post.posted_at)
         community.post_count += 1

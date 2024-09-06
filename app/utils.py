@@ -188,7 +188,7 @@ def is_image_url(url):
         return any(path.endswith(extension) for extension in common_image_extensions)
 
 
-def is_video_url(url):
+def is_video_url(url: str) -> bool:
     common_video_extensions = ['.mp4', '.webm']
     mime_type = mime_type_using_head(url)
     if mime_type:
@@ -198,6 +198,18 @@ def is_video_url(url):
         parsed_url = urlparse(url)
         path = parsed_url.path.lower()
         return any(path.endswith(extension) for extension in common_video_extensions)
+
+
+def is_video_hosting_site(url: str) -> bool:
+    video_hosting_sites = ['https://www.youtube.com', 'https://youtu.be', 'https://www.vimeo.com', 'https://www.redgifs.com/watch/']
+    for starts_with in video_hosting_sites:
+        if url.startswith(starts_with):
+            return True
+
+    if 'videos/watch' in url:   # PeerTube
+        return True
+
+    return False
 
 
 @cache.memoize(timeout=10)
