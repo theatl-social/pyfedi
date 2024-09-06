@@ -1291,8 +1291,9 @@ div.navbar {
   text-decoration: none;
 }
 .comment .comment_actions {
-  margin-top: -10px;
+  margin-top: -18px;
   position: relative;
+  padding-bottom: 5px;
 }
 .comment .comment_actions a {
   text-decoration: none;
