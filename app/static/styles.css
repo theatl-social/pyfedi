@@ -925,7 +925,8 @@ div.navbar {
 .post_utilities_bar {
   display: flex;
   min-height: 44px;
-  justify-content: space-between;
+  /* justify-content: space-between; */
+  justify-content: left;
 }
 @media (min-width: 992px) {
   .post_utilities_bar {

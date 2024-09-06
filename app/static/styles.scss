@@ -517,7 +517,8 @@ div.navbar {
 .post_utilities_bar {
   display: flex;
   min-height: $min-touch-target;
-  justify-content: space-between;
+  /* justify-content: space-between; */
+  justify-content: left;
   @include breakpoint(tablet) {
     justify-content: left;
   }
