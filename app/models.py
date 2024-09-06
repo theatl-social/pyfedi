@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, date, timezone
 from time import time
 from typing import List, Union
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 import requests
 from flask import current_app, escape, url_for, render_template_string
@@ -1063,24 +1064,34 @@ class Post(db.Model):
         db.session.query(PollChoice).filter(PollChoice.post_id == self.id).delete()
         db.session.query(Poll).filter(Poll.post_id == self.id).delete()
         db.session.query(Report).filter(Report.suspect_post_id == self.id).delete()
-        db.session.execute(text('DELETE FROM post_reply_vote WHERE post_reply_id IN (SELECT id FROM post_reply WHERE post_id = :post_id)'),
+        db.session.execute(text('DELETE FROM "post_reply_vote" WHERE post_reply_id IN (SELECT id FROM post_reply WHERE post_id = :post_id)'),
                            {'post_id': self.id})
-        db.session.execute(text('DELETE FROM post_reply WHERE post_id = :post_id'), {'post_id': self.id})
-        db.session.execute(text('DELETE FROM post_vote WHERE post_id = :post_id'), {'post_id': self.id})
+        db.session.execute(text('DELETE FROM "post_reply" WHERE post_id = :post_id'), {'post_id': self.id})
+        db.session.execute(text('DELETE FROM "post_vote"" WHERE post_id = :post_id'), {'post_id': self.id})
         if self.image_id:
             file = File.query.get(self.image_id)
             file.delete_from_disk()
 
-    def youtube_embed(self):
+    def youtube_embed(self) -> str:
         if self.url:
-            vpos = self.url.find('v=')
-            if vpos != -1:
-                return self.url[vpos + 2:vpos + 13] + '?rel=0' + self.url[vpos + 13:]
-            vpos = self.url.find('/shorts/')
-            if vpos != -1:
-                params = self.url[vpos + 19:]
-                params = params.replace('?t=', '&start=')
-                return self.url[vpos + 8:vpos + 19] + '?rel=0' + params
+            parsed_url = urlparse(self.url)
+            query_params = parse_qs(parsed_url.query)
+
+            if 'v' in query_params:
+                video_id = query_params.pop('v')[0]
+                query_params['rel'] = '0'
+                new_query = urlencode(query_params, doseq=True)
+                return f'{video_id}?{new_query}'
+
+            if '/shorts/' in parsed_url.path:
+                video_id = parsed_url.path.split('/shorts/')[1].split('/')[0]
+                if 't' in query_params:
+                    query_params['start'] = query_params.pop('t')[0]
+                query_params['rel'] = '0'
+                new_query = urlencode(query_params, doseq=True)
+                return f'{video_id}?{new_query}'
+
+        return ''
 
     def peertube_embed(self):
         if self.url:
