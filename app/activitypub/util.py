@@ -1940,7 +1940,6 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
                 post.image = image
             else:
                 post.type = POST_TYPE_LINK
-                post.url = remove_tracking_from_link(post.url)
             domain = domain_from_url(post.url)
             # notify about links to banned websites.
             already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
@@ -1995,7 +1994,10 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
             post.image = image
         if post.image is None and post.type == POST_TYPE_LINK: # This is a link post but the source instance has not provided a thumbnail image
             # Let's see if we can do better than the source instance did!
-            opengraph = opengraph_parse(post.url)
+            tn_url = post.url
+            if tn_url[:32] == 'https://www.youtube.com/watch?v=':
+                tn_url = 'https://youtu.be/' + tn_url[32:43]            # better chance of thumbnail from youtu.be than youtube.com
+            opengraph = opengraph_parse(tn_url)
             if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
                 filename = opengraph.get('og:image') or opengraph.get('og:image:url')
                 if not filename.startswith('/'):
@@ -2003,6 +2005,8 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
                     post.image = file
                     db.session.add(file)
 
+        if post.url:
+            post.url = remove_tracking_from_link(post.url)      # moved here as changes youtu.be to youtube.com
         db.session.add(post)
         post.ranking = post_ranking(post.score, post.posted_at)
         community.post_count += 1
@@ -2184,6 +2188,8 @@ def update_post_from_activity(post: Post, request_json: dict):
                 alt_text = request_json['object']['attachment'][0]['name']
     if post.url == '':
         post.type = POST_TYPE_ARTICLE
+    else:
+        post.url = remove_tracking_from_link(post.url)
     if (post.url and post.url != old_url) or (post.url == '' and old_url != ''):
         if post.image_id:
             old_image = File.query.get(post.image_id)
@@ -2209,7 +2215,6 @@ def update_post_from_activity(post: Post, request_json: dict):
             post.image = image
         else:
             post.type = POST_TYPE_LINK
-            post.url = remove_tracking_from_link(post.url)
         domain = domain_from_url(post.url)
         # notify about links to banned websites.
         already_notified = set()  # often admins and mods are the same people - avoid notifying them twice

@@ -287,7 +287,10 @@ def save_post(form, post: Post, type: int):
                 else:
                     # check opengraph tags on the page and make a thumbnail if an image is available in the og:image meta tag
                     if not post.type == POST_TYPE_VIDEO:
-                        opengraph = opengraph_parse(form.link_url.data)
+                        tn_url = form.link_url.data
+                        if tn_url[:32] == 'https://www.youtube.com/watch?v=':
+                            tn_url = 'https://youtu.be/' + tn_url[32:43]            # better chance of thumbnail from youtu.be than youtube.com
+                        opengraph = opengraph_parse(tn_url)
                         if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
                             filename = opengraph.get('og:image') or opengraph.get('og:image:url')
                             if not filename.startswith('/'):
