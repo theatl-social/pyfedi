@@ -224,12 +224,8 @@ def export_user_settings(user):
         user_dict['bio'] = user.about
         if user.avatar_image() != '':
             user_dict['avatar'] = f"https://{current_app.config['SERVER_NAME']}/{user.avatar_image()}"
-        else:
-            user_dict['avatar'] = user.avatar_image()
         if user.cover_image() != '':
             user_dict['banner'] = f"https://{current_app.config['SERVER_NAME']}/{user.cover_image()}"
-        else:
-            user_dict['banner'] = user.cover_image()
         user_dict['matrix_id'] = user.matrix_user_id
         user_dict['bot_account'] = user.bot
         if user.hide_nsfw == 1:
@@ -247,7 +243,31 @@ def export_user_settings(user):
             "default_sort_type": f'{user.default_sort}'.capitalize(),
             "default_listing_type": f'{user.default_filter}'.capitalize(),
             "interface_language": user.interface_language,
-            "show_bot_accounts": lemmy_show_bot_accounts
+            "show_bot_accounts": lemmy_show_bot_accounts,
+            # the below items are needed for lemmy to do the import
+            # the "id" and "person_id" are just set to 42
+            # as they expect an int, but it does not override the
+            # existing user's "id"  and "public_id"
+            "id": 42,
+            "person_id": 42,
+            "show_avatars": True,
+            "send_notifications_to_email": False,
+            "show_scores": True,
+            "show_bot_accounts": True,
+            "show_read_posts": True,
+            "email_verified": False,
+            "accepted_application": True,
+            "open_links_in_new_tab": False,
+            "blur_nsfw": True,
+            "auto_expand": False,
+            "infinite_scroll_enabled": False,
+            "admin": False,
+            "post_listing_mode": "List",
+            "totp_2fa_enabled": False,
+            "enable_keyboard_navigation": False,
+            "enable_animated_images": True,
+            "collapse_bot_comments": False
+
         }
         # get the user subscribed communities' ap_profile_id
         user_subscribed_communities = []
