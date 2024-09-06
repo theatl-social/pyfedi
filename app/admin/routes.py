@@ -963,3 +963,91 @@ def admin_permissions():
                            menu_topics=menu_topics(),
                            site=g.site
                            )
+                        
+@bp.route('/instances', methods=['GET', 'POST'])
+@login_required
+@permission_required('change instance settings')
+def admin_instances():
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '')
+    low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+
+    instances = Instance.query.order_by(Instance.domain)
+
+    if search:
+        instances = instances.filter(Instance.domain.ilike(f"%{search}%"))
+
+    # Pagination
+    instances = instances.paginate(page=page,
+                                       per_page=250 if current_user.is_authenticated and not low_bandwidth else 50,
+                                       error_out=False)
+    next_url = url_for('admin.admin_instances', page=instances.next_num) if instances.has_next else None
+    prev_url = url_for('admin.admin_instances', page=instances.prev_num) if instances.has_prev and page != 1 else None
+
+    return render_template('admin/instances.html', instances=instances,
+                           title=_('Instances'), search=search,
+                           next_url=next_url, prev_url=prev_url,
+                           low_bandwidth=low_bandwidth, 
+                           moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site)
+
+@bp.route('/instances/dormant', methods=['GET', 'POST'])
+@login_required
+@permission_required('change instance settings')
+def admin_instances_dormant():
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '')
+    low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+
+    instances = Instance.query.order_by(Instance.domain)
+
+    instances = instances.filter(Instance.dormant == True)
+    
+    if search:
+        instances = instances.filter(Instance.domain.ilike(f"%{search}%"))
+
+    # Pagination
+    instances = instances.paginate(page=page,
+                                       per_page=250 if current_user.is_authenticated and not low_bandwidth else 50,
+                                       error_out=False)
+    next_url = url_for('admin.admin_instances', page=instances.next_num) if instances.has_next else None
+    prev_url = url_for('admin.admin_instances', page=instances.prev_num) if instances.has_prev and page != 1 else None
+
+    return render_template('admin/instances.html', instances=instances,
+                           title=_('Dormant Instances'), search=search,
+                           next_url=next_url, prev_url=prev_url,
+                           low_bandwidth=low_bandwidth, 
+                           moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site)
+
+@bp.route('/instances/gone-forever', methods=['GET', 'POST'])
+@login_required
+@permission_required('change instance settings')
+def admin_instances_gone_forever():
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '')
+    low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+
+    instances = Instance.query.order_by(Instance.domain)
+    
+    instances = instances.filter(Instance.gone_forever == True)
+
+    if search:
+        instances = instances.filter(Instance.domain.ilike(f"%{search}%"))
+
+    # Pagination
+    instances = instances.paginate(page=page,
+                                       per_page=250 if current_user.is_authenticated and not low_bandwidth else 50,
+                                       error_out=False)
+    next_url = url_for('admin.admin_instances', page=instances.next_num) if instances.has_next else None
+    prev_url = url_for('admin.admin_instances', page=instances.prev_num) if instances.has_prev and page != 1 else None
+
+    return render_template('admin/instances.html', instances=instances,
+                           title=_('Gone Forever Instances'), search=search,
+                           next_url=next_url, prev_url=prev_url,
+                           low_bandwidth=low_bandwidth, 
+                           moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site)

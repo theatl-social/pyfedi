@@ -84,6 +84,20 @@ class Instance(db.Model):
     def votes_are_public(self):
         return self.software.lower() == 'lemmy' or self.software.lower() == 'mbin' or self.software.lower() == 'kbin'
 
+    # the db execute returns a cursorresult. the all() returns a list with one item in it. 
+    # the [0] gets the one sqlalchemy Row object, the Row.count then is the number we show 
+    def post_count(self):
+        return db.session.execute(text(f'SELECT count(*) FROM post WHERE instance_id = {self.id}')).all()[0].count
+
+    def post_replies_count(self):
+        return db.session.execute(text(f'SELECT count(*) FROM post_reply WHERE instance_id = {self.id}')).all()[0].count
+    
+    def known_communities_count(self):
+        return db.session.execute(text(f'SELECT count(*) FROM community WHERE instance_id = {self.id}')).all()[0].count
+
+    def known_users_count(self):
+        return db.session.execute(text(f'SELECT count(*) FROM "user" WHERE instance_id = {self.id}')).all()[0].count
+
     def __repr__(self):
         return '<Instance {}>'.format(self.domain)
 
