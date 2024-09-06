@@ -1002,7 +1002,7 @@ def admin_instances_dormant():
 
     instances = Instance.query.order_by(Instance.domain)
 
-    instances = instances.filter(Instance.dormant == True)
+    instances = instances.filter(Instance.dormant == True, Instance.gone_forever == False)
     
     if search:
         instances = instances.filter(Instance.domain.ilike(f"%{search}%"))
