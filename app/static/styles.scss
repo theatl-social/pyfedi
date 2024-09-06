@@ -365,10 +365,13 @@ div.navbar {
     }
 
     .col_thumbnail {
-      width: 74px;
+      width: 70px;
       position: relative;
+      padding-left: 0;
+      padding-right: 0;
+      left: -13px;
       @include breakpoint(tablet) {
-        width: 22.667%;
+        width: 170px;
       }
     }
 
@@ -391,15 +394,12 @@ div.navbar {
       .fe-external, .fe-video, .fe-image, .fe-audio, .fe-magnify {
         display: block;
         position: absolute;
-        right: -20px;
-        @include breakpoint(tablet) {
-          right: -4px;
-        }
+        right: 0;
         background-color: rgba(256,256,256, 0.7);
         padding-bottom: 1px;
         padding-left: 1px;
         border-radius: 2px;
-        top: 3px;
+        top: 0;
       }
 
       .fe-discussion, .fe-poll, .fe-link {
@@ -412,9 +412,6 @@ div.navbar {
         width: 60px;
         border-radius: 5px;
         object-fit: cover;
-        margin-left: 4px;
-        margin-top: 4px;
-        margin-bottom: 4px;
         @include breakpoint(tablet) {
           height: 90px;
           width: 170px;
@@ -469,7 +466,6 @@ div.navbar {
 }
 
 .post_utilities_bar {
-  position: relative;
   display: flex;
   min-height: $min-touch-target;
 
@@ -1450,9 +1446,6 @@ form {
 
 .post_options_link {
   display: block;
-  position: absolute;
-  bottom: 0;
-  right: -2px;
   width: 41px;
   text-decoration: none;
 }

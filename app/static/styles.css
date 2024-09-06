@@ -782,12 +782,15 @@ div.navbar {
   max-width: 78%;
 }
 .post_list .post_teaser .col_thumbnail {
-  width: 74px;
+  width: 70px;
   position: relative;
+  padding-left: 0;
+  padding-right: 0;
+  left: -13px;
 }
 @media (min-width: 992px) {
   .post_list .post_teaser .col_thumbnail {
-    width: 22.667%;
+    width: 170px;
   }
 }
 .post_list .post_teaser .thumbnail {
@@ -809,17 +812,12 @@ div.navbar {
 .post_list .post_teaser .thumbnail .fe-external, .post_list .post_teaser .thumbnail .fe-video, .post_list .post_teaser .thumbnail .fe-image, .post_list .post_teaser .thumbnail .fe-audio, .post_list .post_teaser .thumbnail .fe-magnify {
   display: block;
   position: absolute;
-  right: -20px;
+  right: 0;
   background-color: rgba(255, 255, 255, 0.7);
   padding-bottom: 1px;
   padding-left: 1px;
   border-radius: 2px;
-  top: 3px;
-}
-@media (min-width: 992px) {
-  .post_list .post_teaser .thumbnail .fe-external, .post_list .post_teaser .thumbnail .fe-video, .post_list .post_teaser .thumbnail .fe-image, .post_list .post_teaser .thumbnail .fe-audio, .post_list .post_teaser .thumbnail .fe-magnify {
-    right: -4px;
-  }
+  top: 0;
 }
 .post_list .post_teaser .thumbnail .fe-discussion, .post_list .post_teaser .thumbnail .fe-poll, .post_list .post_teaser .thumbnail .fe-link {
   font-size: 52px;
@@ -830,9 +828,6 @@ div.navbar {
   width: 60px;
   border-radius: 5px;
   object-fit: cover;
-  margin-left: 4px;
-  margin-top: 4px;
-  margin-bottom: 4px;
 }
 @media (min-width: 992px) {
   .post_list .post_teaser .thumbnail img {
@@ -879,7 +874,6 @@ div.navbar {
 }
 
 .post_utilities_bar {
-  position: relative;
   display: flex;
   min-height: 44px;
 }
@@ -1757,9 +1751,6 @@ form h5 {
 
 .post_options_link {
   display: block;
-  position: absolute;
-  bottom: 0;
-  right: -2px;
   width: 41px;
   text-decoration: none;
 }
