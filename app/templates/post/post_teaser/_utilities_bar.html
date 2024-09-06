@@ -4,7 +4,7 @@
         <div class="voting_buttons_new" aria-live="assertive">
             {% include "post/_post_voting_buttons.html" -%}
         </div>
-        {% if post.type == POST_TYPE_IMAGE -%}
+        {% if post.type == POST_TYPE_IMAGE and low_bandwidth -%}
             {% if post.image_id -%}
                 <a href="{{ post.image.view_url() }}" rel="nofollow ugc" class="preview_image" aria-label="{{ _('View image') }}" aria-hidden="true"><span class="fe fe-magnify"></span></a>
             {% else -%}

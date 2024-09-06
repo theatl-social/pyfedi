@@ -925,6 +925,12 @@ div.navbar {
 .post_utilities_bar {
   display: flex;
   min-height: 44px;
+  justify-content: space-between;
+}
+@media (min-width: 992px) {
+  .post_utilities_bar {
+    justify-content: left;
+  }
 }
 .post_utilities_bar .cross_post_button {
   display: flex;

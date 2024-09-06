@@ -517,6 +517,10 @@ div.navbar {
 .post_utilities_bar {
   display: flex;
   min-height: $min-touch-target;
+  justify-content: space-between;
+  @include breakpoint(tablet) {
+    justify-content: left;
+  }
 
   .cross_post_button {
     display: flex;
