@@ -1060,9 +1060,10 @@ def remove_tracking_from_link(url):
         else:
             new_query_string = ''
 
-        cleaned_url = f"https://youtu.be/{video_id}"
+        cleaned_url = f"https://youtube.com/watch?v={video_id}"
         if new_query_string:
-            cleaned_url += f"?{new_query_string}"
+            new_query_string = new_query_string.replace('t=', 'start=')
+            cleaned_url += f"&{new_query_string}"
 
         return cleaned_url
     else:

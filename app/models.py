@@ -1059,7 +1059,7 @@ class Post(db.Model):
         if self.url:
             vpos = self.url.find('v=')
             if vpos != -1:
-                return self.url[vpos + 2:vpos + 13]
+                return self.url[vpos + 2:vpos + 13] + '?rel=0' + self.url[vpos + 13:]
 
     def peertube_embed(self):
         if self.url:
