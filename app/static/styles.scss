@@ -545,7 +545,7 @@ div.navbar {
 
 .post_utilities_bar_wrapper {
   position: absolute;
-  bottom: -7px;
+  bottom: -9px;
   width: 97%;
 }
 
@@ -571,12 +571,11 @@ div.navbar {
 
   .post_replies_link {
     display: flex;
-    width: $min-touch-target;
+    min-width: $min-touch-target;
     height: $min-touch-target;
     padding: 3px;
-    justify-content: center;
     align-items: center;
-    margin-left: -6px;
+    margin-left: -3px;
   }
 
   .voting_buttons_new {

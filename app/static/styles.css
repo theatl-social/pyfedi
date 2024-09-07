@@ -950,7 +950,7 @@ div.navbar {
 
 .post_utilities_bar_wrapper {
   position: absolute;
-  bottom: -7px;
+  bottom: -9px;
   width: 97%;
 }
 
@@ -977,12 +977,11 @@ div.navbar {
 }
 .post_utilities_bar .post_replies_link {
   display: flex;
-  width: 44px;
+  min-width: 44px;
   height: 44px;
   padding: 3px;
-  justify-content: center;
   align-items: center;
-  margin-left: -6px;
+  margin-left: -3px;
 }
 .post_utilities_bar .voting_buttons_new {
   display: flex;
