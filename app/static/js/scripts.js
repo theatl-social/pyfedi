@@ -46,6 +46,8 @@ function setupYouTubeLazyLoad() {
                     videoObserver.unobserve(videoWrapper);
                 }
             });
+        }, {
+            rootMargin: "0px 0px 300px 0px" // Preload when 300px away from the viewport
         });
 
         lazyVideos.forEach((video) => {
