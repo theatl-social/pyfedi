@@ -10,6 +10,7 @@ if(!setTheme) {
 
 // fires after DOM is ready for manipulation
 document.addEventListener("DOMContentLoaded", function () {
+    setupYouTubeLazyLoad();
     setupCommunityNameInput();
     setupShowMoreLinks();
     setupConfirmFirst();
@@ -26,6 +27,42 @@ document.addEventListener("DOMContentLoaded", function () {
     setupLightboxTeaser();
     setupLightboxPostBody();
 });
+
+function setupYouTubeLazyLoad() {
+    const lazyVideos = document.querySelectorAll(".video-wrapper");
+
+    if ("IntersectionObserver" in window) {
+        let videoObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    let videoWrapper = entry.target;
+                    let iframe = document.createElement("iframe");
+                    iframe.src = videoWrapper.getAttribute("data-src");
+                    iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen";
+
+                    videoWrapper.innerHTML = "";
+                    videoWrapper.appendChild(iframe);
+
+                    videoObserver.unobserve(videoWrapper);
+                }
+            });
+        });
+
+        lazyVideos.forEach((video) => {
+            videoObserver.observe(video);
+        });
+    } else {
+        // Fallback for older browsers
+        lazyVideos.forEach((video) => {
+            let iframe = document.createElement("iframe");
+            iframe.src = video.getAttribute("data-src");
+            iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen";
+
+            video.innerHTML = "";
+            video.appendChild(iframe);
+        });
+    }
+}
 
 // All elements with the class "showElement" will show the DOM element referenced by the data-id attribute
 function setupShowElementLinks() {

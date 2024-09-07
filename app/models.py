@@ -1072,14 +1072,15 @@ class Post(db.Model):
             file = File.query.get(self.image_id)
             file.delete_from_disk()
 
-    def youtube_embed(self) -> str:
+    def youtube_embed(self, rel=True) -> str:
         if self.url:
             parsed_url = urlparse(self.url)
             query_params = parse_qs(parsed_url.query)
 
             if 'v' in query_params:
                 video_id = query_params.pop('v')[0]
-                query_params['rel'] = '0'
+                if rel:
+                    query_params['rel'] = '0'
                 new_query = urlencode(query_params, doseq=True)
                 return f'{video_id}?{new_query}'
 
@@ -1087,7 +1088,8 @@ class Post(db.Model):
                 video_id = parsed_url.path.split('/shorts/')[1].split('/')[0]
                 if 't' in query_params:
                     query_params['start'] = query_params.pop('t')[0]
-                query_params['rel'] = '0'
+                if rel:
+                    query_params['rel'] = '0'
                 new_query = urlencode(query_params, doseq=True)
                 return f'{video_id}?{new_query}'
 
