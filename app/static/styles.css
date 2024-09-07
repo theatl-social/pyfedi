@@ -891,6 +891,10 @@ div.navbar {
   margin-top: 10px;
   margin-bottom: 10px;
 }
+.post_teaser_image_preview a {
+  display: inline-block;
+  max-width: 512px;
+}
 .post_teaser_image_preview img {
   max-width: 100%;
   padding-right: 4px;
