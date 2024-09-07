@@ -897,7 +897,8 @@ div.navbar {
 }
 .post_teaser_image_preview img {
   max-width: 100%;
-  padding-right: 4px;
+  margin-right: 4px;
+  border-radius: 5px;
 }
 
 .post_teaser_video_preview {
