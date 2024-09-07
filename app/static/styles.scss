@@ -459,7 +459,7 @@ div.navbar {
   padding-bottom: 32px;
 }
 
-.post_teaser_article_preview {
+.post_teaser_article_preview, .post_teaser_link_preview {
   position: relative;
   max-height: 100px;
   overflow: hidden;
@@ -470,8 +470,8 @@ div.navbar {
     margin: 0;
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1; /* Limits the text to a specific number of lines */
-    line-clamp: 1;
+    -webkit-line-clamp: 2; /* Limits the text to a specific number of lines */
+    line-clamp: 2;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: normal;
@@ -493,10 +493,7 @@ div.navbar {
   margin-top: 10px;
   margin-bottom: 10px;
   position: relative;
-  img {
-    max-width: 100%;
-    padding-right: 4px;
-  }
+
   .fe-video {
     position: absolute;
     left: 43%;
@@ -506,6 +503,12 @@ div.navbar {
     background-color: white;
     opacity: 0.5;
   }
+}
+
+.max_width_512 {
+  max-width: 512px;
+  display: inline-block;
+  width: 100%;
 }
 
 .post_utilities_bar_wrapper {

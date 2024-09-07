@@ -18,5 +18,10 @@
                     alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ ' blur' if blur_content }}" /></a>
         </div>
     {% endif -%}
+    {% if post.body_html -%}
+        <div class="post_teaser_link_preview">
+            {{ first_paragraph(post.body_html) | safe }}
+        </div>
+    {% endif -%}
     {% include "post/post_teaser/_utilities_bar.html" %}
 </div>
