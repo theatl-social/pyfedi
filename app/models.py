@@ -1067,7 +1067,7 @@ class Post(db.Model):
         db.session.execute(text('DELETE FROM "post_reply_vote" WHERE post_reply_id IN (SELECT id FROM post_reply WHERE post_id = :post_id)'),
                            {'post_id': self.id})
         db.session.execute(text('DELETE FROM "post_reply" WHERE post_id = :post_id'), {'post_id': self.id})
-        db.session.execute(text('DELETE FROM "post_vote"" WHERE post_id = :post_id'), {'post_id': self.id})
+        db.session.execute(text('DELETE FROM "post_vote" WHERE post_id = :post_id'), {'post_id': self.id})
         if self.image_id:
             file = File.query.get(self.image_id)
             file.delete_from_disk()
