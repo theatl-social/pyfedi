@@ -10,7 +10,14 @@ if(!setTheme) {
 
 // fires after DOM is ready for manipulation
 document.addEventListener("DOMContentLoaded", function () {
-    setupYouTubeLazyLoad();
+    if(navigator.getBattery) {
+        navigator.getBattery().then(function(battery) {
+            // Only load youtube videos in teasers if there is plenty of power available
+            if (battery.charging) {
+                setupYouTubeLazyLoad();
+            }
+        });
+    }
     setupCommunityNameInput();
     setupShowMoreLinks();
     setupConfirmFirst();
