@@ -23,6 +23,7 @@
                <th>Topic</th>
                <th>#&nbsp;Posts</th>
                <th>Retention</th>
+               <th>Layout</th>
                <th title="{{ _('Posts show on home page.') }}">Home</th>
                <th title="{{ _('Posts can be popular.') }}">Popular</th>
                <th title="{{ _('Posts show in the All feed.') }}">All</th>
@@ -36,6 +37,7 @@
                     <td>{{ community.topic.name  }}</td>
                     <td>{{ community.post_count  }}</td>
                     <td>{{ community.content_retention if community.content_retention != -1 }}</td>
+                    <td>{{ community.default_layout if community.default_layout }}</td>
                     <th>{{ '&check;'|safe if community.show_home else '&cross;'|safe }}</th>
                     <th>{{ '&check;'|safe if community.show_popular else '&cross;'|safe }}</th>
                     <th>{{ '&check;'|safe if community.show_all else '&cross;'|safe }}</th>
