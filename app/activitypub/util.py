@@ -2007,8 +2007,8 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
 
         if post.url:
             post.url = remove_tracking_from_link(post.url)      # moved here as changes youtu.be to youtube.com
-        if is_video_hosting_site(post.url):
-            post.type = POST_TYPE_VIDEO
+            if is_video_hosting_site(post.url):
+                post.type = POST_TYPE_VIDEO
         db.session.add(post)
         post.ranking = post_ranking(post.score, post.posted_at)
         community.post_count += 1
