@@ -7,7 +7,7 @@ from app.models import Post, Language, Community, Instance
 from app.search import bp
 from app.utils import moderating_communities, joined_communities, render_template, blocked_domains, blocked_instances, \
     communities_banned_from, recently_upvoted_posts, recently_downvoted_posts, blocked_users, menu_topics, \
-    blocked_communities
+    blocked_communities, show_ban_message
 from app.community.forms import RetrieveRemotePost
 from app.activitypub.util import resolve_remote_post_from_search
 

@@ -2805,14 +2805,14 @@ def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
         if not community and post_data['type'] == 'Page':                                         # lemmy
             if 'audience' in post_data:
                 community_id = post_data['audience']
-                community = Community.query.filter_by(ap_profile_id=community_id).first()
+                community = find_actor_or_create(community_id, community_only=True)
 
         if not community and post_data['type'] == 'Video':                                        # peertube
             if 'attributedTo' in post_data and isinstance(post_data['attributedTo'], list):
                 for a in post_data['attributedTo']:
                     if a['type'] == 'Group':
                         community_id = a['id']
-                        community = Community.query.filter_by(ap_profile_id=community_id).first()
+                        community = find_actor_or_create(community_id, community_only=True)
                         if community:
                             break
 

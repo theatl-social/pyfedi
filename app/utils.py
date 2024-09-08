@@ -8,6 +8,7 @@ import tempfile
 import urllib
 from collections import defaultdict
 from datetime import datetime, timedelta, date
+from time import sleep
 from typing import List, Literal, Union
 
 import markdown2
@@ -81,6 +82,7 @@ def getmtime(filename):
 
 # do a GET request to a uri, return the result
 def get_request(uri, params=None, headers=None) -> requests.Response:
+    timeout = 15 if 'washingtonpost.com' in uri else 5  # Washington Post is really slow on og:image for some reason
     if headers is None:
         headers = {'User-Agent': 'PieFed/1.0'}
     else:
@@ -90,7 +92,6 @@ def get_request(uri, params=None, headers=None) -> requests.Response:
     else:
         payload_str = urllib.parse.urlencode(params) if params else None
     try:
-        timeout = 15 if 'washingtonpost.com' in uri else 5  # Washington Post is really slow on og:image for some reason
         response = requests.get(uri, params=payload_str, headers=headers, timeout=timeout, allow_redirects=True)
     except requests.exceptions.SSLError as invalid_cert:
         # Not our problem if the other end doesn't have proper SSL
@@ -100,11 +101,19 @@ def get_request(uri, params=None, headers=None) -> requests.Response:
         # Convert to a more generic error we handle
         raise requests.exceptions.RequestException(f"InvalidCodepoint: {str(ex)}") from None
     except requests.exceptions.ReadTimeout as read_timeout:
-        current_app.logger.info(f"{uri} {read_timeout}")
-        raise requests.exceptions.ReadTimeout from read_timeout
+        try:    # retry, this time with a longer timeout
+            sleep(random.randint(3, 10))
+            response = requests.get(uri, params=payload_str, headers=headers, timeout=timeout * 2, allow_redirects=True)
+        except Exception as e:
+            current_app.logger.info(f"{uri} {read_timeout}")
+            raise requests.exceptions.ReadTimeout from read_timeout
     except requests.exceptions.ConnectionError as connection_error:
-        current_app.logger.info(f"{uri} {connection_error}")
-        raise requests.exceptions.ConnectionError from connection_error
+        try:    # retry, this time with a longer timeout
+            sleep(random.randint(3, 10))
+            response = requests.get(uri, params=payload_str, headers=headers, timeout=timeout * 2, allow_redirects=True)
+        except Exception as e:
+            current_app.logger.info(f"{uri} {connection_error}")
+            raise requests.exceptions.ConnectionError from connection_error
 
     return response
 
