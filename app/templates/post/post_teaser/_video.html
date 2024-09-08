@@ -37,7 +37,7 @@
                 {% if 'youtube.com' in post.url -%}
                     <div class="video-wrapper" data-src="https://www.youtube.com/embed/{{ post.youtube_embed() }}">
                         <a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None, autoplay='true') }}" rel="nofollow ugc" aria-label="{{ _('Read article') }}">
-                            <img src="https://img.youtube.com/vi/{{ post.youtube_embed(rel=False).replace('v=', '').replace('?', '') }}/hqdefault.jpg" alt="Video Thumbnail" width="512" height="288">
+                            <img src="https://img.youtube.com/vi/{{ post.youtube_embed(rel=False).replace('v=', '').replace('?', '') }}/hqdefault.jpg" alt="Video Thumbnail" width="512" height="288" loading="lazy">
                         </a>
                     </div>
                 {% endif -%}
