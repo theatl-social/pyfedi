@@ -284,6 +284,7 @@ def user_profile(actor):
             if not main_user_name:
                 actor_data['name'] = 'Anonymous'
                 actor_data['published'] = ap_datetime(user.created + timedelta(minutes=randint(-2592000, 0)))
+                actor_data['summary'] = '<p>This is an anonymous alternative account of another account. It has been generated automatically for a Piefed user who chose to keep their interactions private. They cannot reply to your messages using this account, but only upvote (like) or downvote (dislike). For more information about Piefed and this feature see <a href="https://piefed.social/post/205362">https://piefed.social/post/205362</a>.</p>'
             if user.avatar_id is not None and main_user_name:
                 actor_data["icon"] = {
                     "type": "Image",
