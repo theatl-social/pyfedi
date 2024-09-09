@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta
 from time import sleep
 from random import randint
+from io import BytesIO
 
-from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, json, g
+from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, json, g, send_file
 from flask_login import login_user, logout_user, current_user, login_required
 from flask_babel import _, lazy_gettext as _l
 
@@ -28,6 +29,7 @@ from app.utils import get_setting, render_template, markdown_to_html, user_acces
     blocked_communities
 from sqlalchemy import desc, or_, text
 import os
+import json as python_json
 
 
 @bp.route('/people', methods=['GET', 'POST'])
@@ -210,6 +212,149 @@ def remove_cover():
             cache.delete_memoized(User.cover_image, current_user)
     return '<div> ' + _('Banner removed!') + '</div>'
 
+# export settings function. used in the /user/settings for a user to export their own settings
+def export_user_settings(user):
+        # make the empty dict
+        user_dict = {}
+
+        # take the current_user already found
+        # add user's settings to the dict for output
+        # arranaged to match the lemmy settings output order
+        user_dict['display_name'] = user.title
+        user_dict['bio'] = user.about
+        if user.avatar_image() != '':
+            user_dict['avatar'] = f"https://{current_app.config['SERVER_NAME']}/{user.avatar_image()}"
+        if user.cover_image() != '':
+            user_dict['banner'] = f"https://{current_app.config['SERVER_NAME']}/{user.cover_image()}"
+        user_dict['matrix_id'] = user.matrix_user_id
+        user_dict['bot_account'] = user.bot
+        if user.hide_nsfw == 1:
+            lemmy_show_nsfw = False
+        else:
+            lemmy_show_nsfw = True
+        if user.ignore_bots == 1:
+            lemmy_show_bot_accounts = False
+        else:
+            lemmy_show_bot_accounts = True
+        user_dict['settings'] = {
+            "email": f"{user.email}",
+            "show_nsfw": lemmy_show_nsfw,
+            "theme": user.theme,
+            "default_sort_type": f'{user.default_sort}'.capitalize(),
+            "default_listing_type": f'{user.default_filter}'.capitalize(),
+            "interface_language": user.interface_language,
+            "show_bot_accounts": lemmy_show_bot_accounts,
+            # the below items are needed for lemmy to do the import
+            # the "id" and "person_id" are just set to 42
+            # as they expect an int, but it does not override the
+            # existing user's "id"  and "public_id"
+            "id": 42,
+            "person_id": 42,
+            "show_avatars": True,
+            "send_notifications_to_email": False,
+            "show_scores": True,
+            "show_bot_accounts": True,
+            "show_read_posts": True,
+            "email_verified": False,
+            "accepted_application": True,
+            "open_links_in_new_tab": False,
+            "blur_nsfw": True,
+            "auto_expand": False,
+            "infinite_scroll_enabled": False,
+            "admin": False,
+            "post_listing_mode": "List",
+            "totp_2fa_enabled": False,
+            "enable_keyboard_navigation": False,
+            "enable_animated_images": True,
+            "collapse_bot_comments": False
+
+        }
+        # get the user subscribed communities' ap_profile_id
+        user_subscribed_communities = []
+        for c in user.communities():
+            if c.ap_profile_id is None:
+                continue
+            else:
+                user_subscribed_communities.append(c.ap_profile_id)
+        user_dict['followed_communities'] = user_subscribed_communities
+
+        # get bookmarked/saved posts
+        bookmarked_posts = []
+        post_bookmarks = PostBookmark.query.filter_by(user_id=user.id).all()        
+        for pb in post_bookmarks:
+            p = Post.query.filter_by(id=pb.post_id).first()
+            bookmarked_posts.append(p.ap_id)
+        user_dict['saved_posts'] = bookmarked_posts
+
+        # get bookmarked/saved comments
+        saved_comments = []
+        post_reply_bookmarks = PostReplyBookmark.query.filter_by(user_id=user.id).all()
+        for prb in post_reply_bookmarks:
+            pr = PostReply.query.filter_by(id=prb.post_reply_id).first()
+            saved_comments.append(pr.ap_id)
+        user_dict['saved_comments'] = saved_comments
+
+        # get blocked communities
+        blocked_communities = []
+        community_blocks = CommunityBlock.query.filter_by(user_id=user.id).all()
+        for cb in community_blocks:
+            c = Community.query.filter_by(id=cb.community_id).first()
+            blocked_communities.append(c.ap_public_url)
+        user_dict['blocked_communities'] = blocked_communities
+
+        # get blocked users
+        blocked_users = []
+        user_blocks = UserBlock.query.filter_by(blocker_id=user.id).all()
+        for ub in user_blocks:
+            blocked_user = User.query.filter_by(id=ub.blocked_id).first()
+            blocked_users.append(blocked_user.ap_public_url)
+        user_dict['blocked_users'] = blocked_users
+
+        # get blocked instances
+        blocked_instances = []
+        instance_blocks = InstanceBlock.query.filter_by(user_id=user.id).all()
+        for ib in instance_blocks:
+            i = Instance.query.filter_by(id=ib.instance_id).first()
+            blocked_instances.append(i.domain)
+        user_dict['blocked_instances'] = blocked_instances
+
+        # piefed versions of (most of) the same settings
+        # TO-DO: adjust the piefed side import method to just take the doubled
+        # settings from the lemmy formatted output. Then remove the duplicate
+        # items here.
+        user_dict['user_name'] = user.user_name
+        user_dict['alt_user_name'] = user.alt_user_name
+        user_dict['title'] = user.title
+        user_dict['email'] = user.email
+        user_dict['about'] = user.about
+        user_dict['about_html'] = user.about_html
+        user_dict['keywords'] = user.keywords
+        user_dict['matrix_user_id'] = user.matrix_user_id
+        user_dict['hide_nsfw'] = user.hide_nsfw
+        user_dict['hide_nsfl'] = user.hide_nsfl
+        user_dict['receive_message_mode'] = user.receive_message_mode
+        user_dict['bot'] = user.bot
+        user_dict['ignore_bots'] = user.ignore_bots
+        user_dict['default_sort'] = user.default_sort
+        user_dict['default_filter'] = user.default_filter
+        user_dict['theme'] = user.theme
+        user_dict['markdown_editor'] = user.markdown_editor
+        user_dict['interface_language'] = user.interface_language
+        user_dict['reply_collapse_threshold'] = user.reply_collapse_threshold
+        if user.avatar_image() != '':
+            user_dict['avatar_image'] = f"https://{current_app.config['SERVER_NAME']}/{user.avatar_image()}"
+        if user.cover_image() != '':
+            user_dict['cover_image'] = f"https://{current_app.config['SERVER_NAME']}/{user.cover_image()}"
+        user_dict['user_blocks'] = blocked_users
+
+        # setup the BytesIO buffer
+        buffer = BytesIO()
+        buffer.write(str(python_json.dumps(user_dict)).encode('utf-8'))
+        buffer.seek(0)
+        
+        # pass the buffer back to the calling function, so it can be given to the 
+        # user for downloading
+        return buffer
 
 @bp.route('/user/settings', methods=['GET', 'POST'])
 @login_required
@@ -227,7 +372,25 @@ def change_settings():
         ('de', _l('German')),
         ('ja', _l('Japanese')),
     ]
-    if form.validate_on_submit():
+    # seperate if to handle just the 'Export' button being clicked
+    if form.export_settings.data and form.validate():
+        # get the user settings for this user
+        buffer = export_user_settings(user)
+        
+        # confirmation displayed to user when the page loads up again
+        flash(_l('Export Complete.'))
+
+        # send the file to the user as a download
+        # the as_attachment=True results in flask
+        # redirecting to the current page, so no
+        # url_for needed here
+        return send_file(
+            buffer, 
+            download_name=f'{user.user_name}_piefed_settings.json', 
+            as_attachment=True, 
+            mimetype='application/json'
+            )
+    elif form.validate_on_submit():
         propagate_indexable = form.indexable.data != current_user.indexable
         current_user.newsletter = form.newsletter.data
         current_user.searchable = form.searchable.data
@@ -502,7 +665,6 @@ def delete_profile(actor):
 
     goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
     return redirect(goto)
-
 
 @bp.route('/instance/<int:instance_id>/unblock', methods=['GET'])
 @login_required
