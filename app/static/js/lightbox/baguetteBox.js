@@ -480,8 +480,8 @@
 
     function hideOverlay() {
         if (options.noScrollbars) {
-            document.documentElement.style.overflowY = 'auto';
-            document.body.style.overflowY = 'auto';
+            document.documentElement.style.overflowY = '';
+            document.body.style.overflowY = '';
         }
         if (overlay.style.display === 'none') {
             return;
