@@ -210,6 +210,8 @@ def is_video_url(url: str) -> bool:
 
 
 def is_video_hosting_site(url: str) -> bool:
+    if url is None or url == '':
+        return False
     video_hosting_sites = ['https://youtube.com', 'https://www.youtube.com', 'https://youtu.be', 'https://www.vimeo.com', 'https://www.redgifs.com/watch/']
     for starts_with in video_hosting_sites:
         if url.startswith(starts_with):
