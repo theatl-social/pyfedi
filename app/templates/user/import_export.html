@@ -21,24 +21,15 @@
         {% include "user/_user_nav.html" %}
         <form method='post' enctype="multipart/form-data" role="form">
             {{ form.csrf_token() }}
-            <h5> Mail Settings </h5>
-            {{ render_field(form.newsletter) }}
-            {{ render_field(form.email_unread) }}
-            <h5> Visibility </h5>
-            {{ render_field(form.searchable) }}
-            {{ render_field(form.indexable) }}
-            <h5> Preferences </h5>
-            {{ render_field(form.interface_language) }}
-            {{ render_field(form.markdown_editor) }}
-            {{ render_field(form.default_sort) }}
-            {{ render_field(form.default_filter) }}
-            {{ render_field(form.theme) }}
-            {{ render_field(form.vote_privately) }}
+            <h5>Import</h5>
+            {{ render_field(form.import_file) }}
             {{ render_field(form.submit) }}
+            <hr>
+            <h5>Export</h5>
+            <p>Export community subscriptions and user settings</p>
+            {{ render_field(form.export_settings) }}
+            <hr>
         </form>
-        <p class="mt-4 pt-4">
-            <a class="btn btn-warning" href="{{ url_for('user.delete_account') }}">{{ _('Delete account') }}</a>
-        </p>
   </div>
 </div>
 {% endblock %}

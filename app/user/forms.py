@@ -45,8 +45,6 @@ class SettingsForm(FlaskForm):
     indexable = BooleanField(_l('My posts appear in search results'))
     manually_approves_followers = BooleanField(_l('Manually approve followers'))
     vote_privately = BooleanField(_l('Vote privately'))
-    import_file = FileField(_l('Import community subscriptions and user blocks from Lemmy'))
-    export_settings = SubmitField(_l('Export'))
     sorts = [('hot', _l('Hot')),
              ('top', _l('Top')),
              ('new', _l('New')),
@@ -63,6 +61,12 @@ class SettingsForm(FlaskForm):
                                  render_kw={'class': 'form-select'})
     theme = SelectField(_l('Theme'), coerce=str, render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Save settings'))
+
+
+class ImportExportForm(FlaskForm):
+    import_file = FileField(_l('Import community subscriptions and user blocks from Lemmy'))
+    export_settings = SubmitField(_l('Export'))
+    submit = SubmitField(_l('Import'))
 
 
 class DeleteAccountForm(FlaskForm):

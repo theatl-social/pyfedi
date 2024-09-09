@@ -20,7 +20,7 @@ from app.models import Post, Community, CommunityMember, User, PostReply, PostVo
     InstanceBlock, NotificationSubscription, PostBookmark, PostReplyBookmark
 from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, \
-    FilterForm, KeywordFilterEditForm, RemoteFollowForm
+    FilterForm, KeywordFilterEditForm, RemoteFollowForm, ImportExportForm
 from app.user.utils import purge_user_then_delete, unsubscribe_from_community
 from app.utils import get_setting, render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     is_image_url, ensure_directory_exists, gibberish, file_get_contents, community_membership, user_filters_home, \
@@ -372,21 +372,7 @@ def change_settings():
         ('de', _l('German')),
         ('ja', _l('Japanese')),
     ]
-    # separate if to handle just the 'Export' button being clicked
-    if form.export_settings.data and form.validate():
-        # get the user settings for this user
-        buffer = export_user_settings(user)
-        
-        # confirmation displayed to user when the page loads up again
-        flash(_('Export Complete.'))
-
-        # send the file to the user as a download
-        # the as_attachment=True results in flask
-        # redirecting to the current page, so no
-        # url_for needed here
-        return send_file(buffer, download_name=f'{user.user_name}_piefed_settings.json', as_attachment=True,
-                         mimetype='application/json')
-    elif form.validate_on_submit():
+    if form.validate_on_submit():
         propagate_indexable = form.indexable.data != current_user.indexable
         current_user.newsletter = form.newsletter.data
         current_user.searchable = form.searchable.data
@@ -403,11 +389,57 @@ def change_settings():
                 current_user.alt_user_name = gibberish(randint(8, 20))
         else:
             current_user.alt_user_name = ''
-        import_file = request.files['import_file']
         if propagate_indexable:
             db.session.execute(text('UPDATE "post" set indexable = :indexable WHERE user_id = :user_id'),
                                {'user_id': current_user.id,
                                 'indexable': current_user.indexable})
+
+        db.session.commit()
+
+        flash(_('Your changes have been saved.'), 'success')
+        return redirect(url_for('user.change_settings'))
+    elif request.method == 'GET':
+        form.newsletter.data = current_user.newsletter
+        form.email_unread.data = current_user.email_unread
+        form.searchable.data = current_user.searchable
+        form.indexable.data = current_user.indexable
+        form.default_sort.data = current_user.default_sort
+        form.default_filter.data = current_user.default_filter
+        form.theme.data = current_user.theme
+        form.markdown_editor.data = current_user.markdown_editor
+        form.interface_language.data = current_user.interface_language
+        form.vote_privately.data = current_user.vote_privately()
+
+    return render_template('user/edit_settings.html', title=_('Edit profile'), form=form, user=current_user,
+                           moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site
+                           )
+
+
+@bp.route('/user/settings/import_export', methods=['GET', 'POST'])
+@login_required
+def user_settings_import_export():
+    user = User.query.filter_by(id=current_user.id, deleted=False, banned=False, ap_id=None).first()
+    if user is None:
+        abort(404)
+    form = ImportExportForm()
+    # separate if to handle just the 'Export' button being clicked
+    if form.export_settings.data and form.validate():
+        # get the user settings for this user
+        buffer = export_user_settings(user)
+
+        # confirmation displayed to user when the page loads up again
+        flash(_('Export Complete.'))
+
+        # send the file to the user as a download
+        # the as_attachment=True results in flask
+        # redirecting to the current page, so no
+        # url_for needed here
+        return send_file(buffer, download_name=f'{user.user_name}_piefed_settings.json', as_attachment=True,
+                         mimetype='application/json')
+    elif form.validate_on_submit():
+        import_file = request.files['import_file']
         if import_file and import_file.filename != '':
             file_ext = os.path.splitext(import_file.filename)[1]
             if file_ext.lower() != '.json':
@@ -428,20 +460,9 @@ def change_settings():
         db.session.commit()
 
         flash(_('Your changes have been saved.'), 'success')
-        return redirect(url_for('user.change_settings'))
-    elif request.method == 'GET':
-        form.newsletter.data = current_user.newsletter
-        form.email_unread.data = current_user.email_unread
-        form.searchable.data = current_user.searchable
-        form.indexable.data = current_user.indexable
-        form.default_sort.data = current_user.default_sort
-        form.default_filter.data = current_user.default_filter
-        form.theme.data = current_user.theme
-        form.markdown_editor.data = current_user.markdown_editor
-        form.interface_language.data = current_user.interface_language
-        form.vote_privately.data = current_user.vote_privately()
+        return redirect(url_for('user.user_settings_import_export'))
 
-    return render_template('user/edit_settings.html', title=_('Edit profile'), form=form, user=current_user,
+    return render_template('user/import_export.html', title=_('Import & Export'), form=form, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site
