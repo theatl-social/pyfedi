@@ -212,6 +212,7 @@ def remove_cover():
             cache.delete_memoized(User.cover_image, current_user)
     return '<div> ' + _('Banner removed!') + '</div>'
 
+
 # export settings function. used in the /user/settings for a user to export their own settings
 def export_user_settings(user):
         # make the empty dict
@@ -219,7 +220,7 @@ def export_user_settings(user):
 
         # take the current_user already found
         # add user's settings to the dict for output
-        # arranaged to match the lemmy settings output order
+        # arranged to match the lemmy settings output order
         user_dict['display_name'] = user.title
         user_dict['bio'] = user.about
         if user.avatar_image() != '':
@@ -253,7 +254,6 @@ def export_user_settings(user):
             "show_avatars": True,
             "send_notifications_to_email": False,
             "show_scores": True,
-            "show_bot_accounts": True,
             "show_read_posts": True,
             "email_verified": False,
             "accepted_application": True,
@@ -323,7 +323,6 @@ def export_user_settings(user):
         # settings from the lemmy formatted output. Then remove the duplicate
         # items here.
         user_dict['user_name'] = user.user_name
-        user_dict['alt_user_name'] = user.alt_user_name
         user_dict['title'] = user.title
         user_dict['email'] = user.email
         user_dict['about'] = user.about
@@ -356,6 +355,7 @@ def export_user_settings(user):
         # user for downloading
         return buffer
 
+
 @bp.route('/user/settings', methods=['GET', 'POST'])
 @login_required
 def change_settings():
@@ -372,24 +372,20 @@ def change_settings():
         ('de', _l('German')),
         ('ja', _l('Japanese')),
     ]
-    # seperate if to handle just the 'Export' button being clicked
+    # separate if to handle just the 'Export' button being clicked
     if form.export_settings.data and form.validate():
         # get the user settings for this user
         buffer = export_user_settings(user)
         
         # confirmation displayed to user when the page loads up again
-        flash(_l('Export Complete.'))
+        flash(_('Export Complete.'))
 
         # send the file to the user as a download
         # the as_attachment=True results in flask
         # redirecting to the current page, so no
         # url_for needed here
-        return send_file(
-            buffer, 
-            download_name=f'{user.user_name}_piefed_settings.json', 
-            as_attachment=True, 
-            mimetype='application/json'
-            )
+        return send_file(buffer, download_name=f'{user.user_name}_piefed_settings.json', as_attachment=True,
+                         mimetype='application/json')
     elif form.validate_on_submit():
         propagate_indexable = form.indexable.data != current_user.indexable
         current_user.newsletter = form.newsletter.data
