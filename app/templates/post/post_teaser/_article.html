@@ -10,7 +10,7 @@
     <span class="author small">{% if show_post_community -%}<a href="/c/{{ post.community.link() }}" aria-label="{{ _('Go to community %(name)s', name=post.community.name) }}">c/{{ post.community.name }}</a>{% endif -%}
                     by {{ render_username(post.author) }} <time datetime="{{ post.last_active }}">{{ arrow.get(post.last_active if sort == 'active' else post.posted_at).humanize(locale=locale) }}</time></span>
     {% if post.body_html -%}
-        <div class="post_teaser_article_preview">
+        <div class="post_teaser_article_preview small">
             {{ first_paragraph(post.body_html) | safe }}
         </div>
     {% endif -%}
