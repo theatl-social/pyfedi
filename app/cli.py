@@ -3,6 +3,7 @@
 import imaplib
 import re
 from datetime import datetime, timedelta
+from random import randint
 from time import sleep
 
 import flask
@@ -26,7 +27,7 @@ from app.models import Settings, BannedInstances, Interest, Role, User, RolePerm
     Tag, InstanceRole, Community
 from app.post.routes import post_delete_post
 from app.utils import file_get_contents, retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
-    shorten_string, get_request, html_to_text, blocked_communities, ap_datetime
+    shorten_string, get_request, html_to_text, blocked_communities, ap_datetime, gibberish
 
 
 def register(app):
@@ -156,7 +157,8 @@ def register(app):
             admin_user = User(user_name=user_name, title=user_name,
                               email=email, verification_token=verification_token,
                               instance_id=1, email_unread_sent=False,
-                              private_key=private_key, public_key=public_key)
+                              private_key=private_key, public_key=public_key,
+                              alt_user_name=gibberish(randint(8, 20)))
             admin_user.set_password(password)
             admin_user.roles.append(admin_role)
             admin_user.verified = True
