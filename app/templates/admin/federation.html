@@ -16,6 +16,13 @@
 </div>
 <hr />
 <div class="row">
+    <div class="column">
+        <p>Use this to "pre-load" the top 50 known threadiverse communities, as rnaked by posts and activity. The list of communities pulls from the same list as <a href="https://lemmyverse.net/communities">LemmyVerse</a>. NSFW communities and communities from banned instances are excluded.</p>
+        {{ render_form(preload_form) }}
+    </div>
+</div>
+<hr />
+<div class="row">
     <div class="col">
         {% include 'admin/_nav.html' %}
     </div>

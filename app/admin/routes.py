@@ -15,7 +15,7 @@ from app.activitypub.routes import process_inbox_request, process_delete_request
 from app.activitypub.signature import post_request, default_context
 from app.activitypub.util import instance_allowed, instance_blocked
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
-    EditTopicForm, SendNewsletterForm, AddUserForm
+    EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form
 from app.community.util import save_icon_file, save_banner_file
@@ -190,12 +190,17 @@ def admin_misc():
 @permission_required('change instance settings')
 def admin_federation():
     form = FederationForm()
+    preload_form = PreLoadCommunitiesForm()
     site = Site.query.get(1)
     if site is None:
         site = Site()
     # todo: finish form
     site.updated = utcnow()
-    if form.validate_on_submit():
+    if preload_form.pre_load_submit.data and preload_form.validate():
+        flash(_('add communities button clicked'))
+        return redirect(url_for('admin.admin_federation'))
+
+    elif form.validate_on_submit():
         if form.use_allowlist.data:
             set_setting('use_allowlist', True)
             db.session.execute(text('DELETE FROM allowed_instances'))
@@ -228,7 +233,8 @@ def admin_federation():
         form.blocked_phrases.data = site.blocked_phrases
         form.blocked_actors.data = get_setting('actor_blocked_words', '88')
 
-    return render_template('admin/federation.html', title=_('Federation settings'), form=form,
+    return render_template('admin/federation.html', title=_('Federation settings'), 
+                           form=form, preload_form=preload_form,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(),
