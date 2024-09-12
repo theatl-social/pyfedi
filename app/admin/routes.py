@@ -14,12 +14,13 @@ from PIL import Image
 from app import db, celery, cache
 from app.activitypub.routes import process_inbox_request, process_delete_request
 from app.activitypub.signature import post_request, default_context
-from app.activitypub.util import instance_allowed, instance_blocked
+from app.activitypub.util import instance_allowed, instance_blocked, extract_domain_and_actor
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form
-from app.community.util import save_icon_file, save_banner_file
+from app.community.util import save_icon_file, save_banner_file, search_for_community
+from app.community.routes import do_subscribe
 from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED
 from app.email import send_welcome_email
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
@@ -269,10 +270,23 @@ def admin_federation():
         # sort the list based on the users_active_week key
         parsed_communities_sorted = sorted(cnotbanned, key=lambda c: c['counts']['users_active_week'], reverse=True)
 
-        # testing - print the top 20 in the list to a flash
-        top_20 = []
+        # get the community urls to join
+        community_urls_to_join = []
         for i in range(communities_to_add):
-            top_20.append(parsed_communities_sorted[i]['url'])
+            community_urls_to_join.append(parsed_communities_sorted[i]['url'])
+
+        # loop through the list and send off the follow requests
+        pre_load_messages = []
+        for c in community_urls_to_join:
+            # get the relevant url bits 
+            server, community = extract_domain_and_actor(c)
+            # find the community
+            new_community = search_for_community('!' + community + '@' + server)
+            # subscribe to the community
+            # since this is using the alt_user_name, capture the messages
+            # returned by do_subscibe as well
+            message = do_subscribe(new_community.ap_id, main_user_name=False)
+
 
         flash(_(f'top_20 == {top_20}'))
         # flash(_(f'leng_before == {leng_before}, leng_middle == {leng_middle}, leng_after == {leng_after}'))
