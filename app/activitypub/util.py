@@ -543,6 +543,7 @@ def refresh_user_profile_task(user_id):
                     user.cover = cover
                     db.session.add(cover)
                     cover_changed = True
+            user.recalculate_post_stats()
             db.session.commit()
             if user.avatar_id and avatar_changed:
                 make_image_sizes(user.avatar_id, 40, 250, 'users')
@@ -1310,11 +1311,14 @@ def downvote_post(post, user):
         post.down_votes += 1
         # Make 'hot' sort more spicy by amplifying the effect of early downvotes
         if post.up_votes + post.down_votes <= 30:
-            post.score -= current_app.config['SPICY_UNDER_30']
+            effect = current_app.config['SPICY_UNDER_30']
         elif post.up_votes + post.down_votes <= 60:
-            post.score -= current_app.config['SPICY_UNDER_60']
+            effect = current_app.config['SPICY_UNDER_60']
         else:
-            post.score -= 1.0
+            effect = -1.0
+        if user.cannot_vote():
+            effect = 0
+        post.score -= effect
         vote = PostVote(user_id=user.id, post_id=post.id, author_id=post.author.id,
                         effect=effect)
         post.author.reputation += effect
@@ -1349,7 +1353,9 @@ def downvote_post_reply(comment, user):
     if not existing_vote:
         effect = -1.0
         comment.down_votes += 1
-        comment.score -= 1.0
+        if user.cannot_vote():
+            effect = 0
+        comment.score -= effect
         vote = PostReplyVote(user_id=user.id, post_reply_id=comment.id,
                              author_id=comment.author.id, effect=effect)
         comment.author.reputation += effect
@@ -1381,6 +1387,8 @@ def upvote_post_reply(comment, user):
     effect = instance_weight(user.ap_domain)
     existing_vote = PostReplyVote.query.filter_by(user_id=user.id,
                                                   post_reply_id=comment.id).first()
+    if user.cannot_vote():
+        effect = 0
     if not existing_vote:
         comment.up_votes += 1
         comment.score += effect
@@ -1424,6 +1432,8 @@ def upvote_post(post, user):
         spicy_effect = effect * current_app.config['SPICY_UNDER_30']
     elif post.up_votes + post.down_votes <= 60:
         spicy_effect = effect * current_app.config['SPICY_UNDER_60']
+    if user.cannot_vote():
+        effect = spicy_effect = 0
     existing_vote = PostVote.query.filter_by(user_id=user.id, post_id=post.id).first()
     if not existing_vote:
         post.up_votes += 1
@@ -1474,6 +1484,7 @@ def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id
                 to_delete.delete_dependencies()
                 to_delete.deleted = True
                 community.post_count -= 1
+                to_delete.author.post_count -= 1
                 db.session.commit()
                 if to_delete.author.id != deletor.id:
                     add_to_modlog_activitypub('delete_post', deletor, community_id=community.id,
@@ -1487,6 +1498,7 @@ def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id
                 else:
                     to_delete.delete_dependencies()
                     to_delete.deleted = True
+                to_delete.author.post_reply_count -= 1
                 db.session.commit()
                 if to_delete.author.id != deletor.id:
                     add_to_modlog_activitypub('delete_post_reply', deletor, community_id=community.id,
@@ -1513,6 +1525,7 @@ def restore_post_or_comment_task(object_json):
                 # TODO: restore_dependencies()
                 to_restore.deleted = False
                 community.post_count += 1
+                to_restore.author.post_count += 1
                 db.session.commit()
                 if to_restore.author.id != restorer.id:
                     add_to_modlog_activitypub('restore_post', restorer, community_id=community.id,
@@ -1816,6 +1829,7 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
                     community.last_active = post.last_active = utcnow()
                 activity_log.result = 'success'
                 post_reply.ranking = confidence(post_reply.up_votes, post_reply.down_votes)
+                user.post_reply_count += 1
                 db.session.commit()
 
                 # send notification to the post/comment being replied to
@@ -2014,6 +2028,7 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
         community.post_count += 1
         community.last_active = utcnow()
         activity_log.result = 'success'
+        user.post_count += 1
         db.session.commit()
 
         # Polls need to be processed quite late because they need a post_id to refer to

@@ -1104,6 +1104,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             post.delete_dependencies()
                             announce_activity_to_followers(post.community, post.author, request_json)
                             post.deleted = True
+                            post.author.post_count -= 1
                             db.session.commit()
                             activity_log.result = 'success'
                         else:
@@ -1119,6 +1120,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                     reply.post.reply_count -= 1
                                 reply.deleted = True
                                 announce_activity_to_followers(reply.community, reply.author, request_json)
+                                reply.author.post_reply_count -= 1
                                 db.session.commit()
                                 activity_log.result = 'success'
                             else:

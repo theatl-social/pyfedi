@@ -584,6 +584,7 @@ def add_post(actor, type):
         post = Post(user_id=current_user.id, community_id=form.communities.data, instance_id=1)
         save_post(form, post, post_type)
         community.post_count += 1
+        current_user.post_count += 1
         community.last_active = g.site.last_active = utcnow()
         db.session.commit()
         post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"

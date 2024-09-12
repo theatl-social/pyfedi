@@ -637,6 +637,8 @@ class User(UserMixin, db.Model):
     timezone = db.Column(db.String(20))
     reputation = db.Column(db.Float, default=0.0)
     attitude = db.Column(db.Float, default=1.0)  # (upvotes cast - downvotes cast) / (upvotes + downvotes). A number between 1 and -1 is the ratio between up and down votes they cast
+    post_count = db.Column(db.Integer, default=0)
+    post_reply_count = db.Column(db.Integer, default=0)
     stripe_customer_id = db.Column(db.String(50))
     stripe_subscription_id = db.Column(db.String(50))
     searchable = db.Column(db.Boolean, default=True)
@@ -805,6 +807,11 @@ class User(UserMixin, db.Model):
             return False
         return True
 
+    def cannot_vote(self):
+        if self.is_local():
+            return False
+        return self.post_count == 0 and self.post_reply_count == 0 and len(self.user_name) == 8  # most vote manipulation bots have 8 character user names and never post any content
+
     def link(self) -> str:
         if self.is_local():
             return self.user_name
@@ -843,24 +850,21 @@ class User(UserMixin, db.Model):
         return self.expires < datetime(2019, 9, 1)
 
     def recalculate_attitude(self):
-        upvotes = db.session.execute(text('SELECT COUNT(id) as c FROM "post_vote" WHERE user_id = :user_id AND effect > 0'),
-                                         {'user_id': self.id}).scalar()
-        downvotes = db.session.execute(text('SELECT COUNT(id) as c FROM "post_vote" WHERE user_id = :user_id AND effect < 0'),
-                                         {'user_id': self.id}).scalar()
-        if upvotes is None:
-            upvotes = 0
-        if downvotes is None:
-            downvotes = 0
+        upvotes = downvotes = 0
+        last_50_votes = PostVote.query.filter(PostVote.user_id == self.id).order_by(-PostVote.id).limit(50)
+        for vote in last_50_votes:
+            if vote.effect > 0:
+                upvotes += 1
+            if vote.effect < 0:
+                downvotes += 1
 
-        comment_upvotes = db.session.execute(text('SELECT COUNT(id) as c FROM "post_reply_vote" WHERE user_id = :user_id AND effect > 0'),
-                                     {'user_id': self.id}).scalar()
-        comment_downvotes = db.session.execute(text('SELECT COUNT(id) as c FROM "post_reply_vote" WHERE user_id = :user_id AND effect < 0'),
-                                       {'user_id': self.id}).scalar()
-
-        if comment_upvotes is None:
-            comment_upvotes = 0
-        if comment_downvotes is None:
-            comment_downvotes = 0
+        comment_upvotes = comment_downvotes = 0
+        last_50_votes = PostReplyVote.query.filter(PostReplyVote.user_id == self.id).order_by(-PostReplyVote.id).limit(50)
+        for vote in last_50_votes:
+            if vote.effect > 0:
+                comment_upvotes += 1
+            if vote.effect < 0:
+                comment_downvotes += 1
 
         total_upvotes = upvotes + comment_upvotes
         total_downvotes = downvotes + comment_downvotes
@@ -872,6 +876,14 @@ class User(UserMixin, db.Model):
                 self.attitude = (total_upvotes - total_downvotes) / (total_upvotes + total_downvotes)
             else:
                 self.attitude = 1.0
+
+    def recalculate_post_stats(self, posts=True, replies=True):
+        if posts:
+            self.post_count = db.session.execute(text('SELECT COUNT(id) as c FROM "post" WHERE user_id = :user_id AND deleted = false'),
+                                                 {'user_id': self.id}).scalar()
+        if replies:
+            self.post_reply_count = db.session.execute(text('SELECT COUNT(id) as c FROM "post_reply" WHERE user_id = :user_id AND deleted = false'),
+                                                       {'user_id': self.id}).scalar()
 
     def subscribed(self, community_id: int) -> int:
         if community_id is None:

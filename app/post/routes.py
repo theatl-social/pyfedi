@@ -15,7 +15,7 @@ from app.community.util import save_post, send_to_remote_instance
 from app.inoculation import inoculation
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm
 from app.community.forms import CreateLinkForm, CreateImageForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm
-from app.post.util import post_replies, get_comment_branch, post_reply_count, tags_to_string, url_needs_archive, \
+from app.post.util import post_replies, get_comment_branch, get_post_reply_count, tags_to_string, url_needs_archive, \
     generate_archive_link, body_has_no_archive_link
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
     POST_TYPE_IMAGE, \
@@ -111,6 +111,7 @@ def show_post(post_id: int):
         post.last_active = community.last_active = utcnow()
         post.reply_count += 1
         community.post_reply_count += 1
+        current_user.post_reply_count += 1
         current_user.language_id = form.language_id.data
 
         db.session.add(reply)
@@ -737,8 +738,9 @@ def add_reply(post_id: int, comment_id: int):
         elif current_user.reputation < -100:
             reply.score -= 1
             reply.ranking -= 1
-        post.reply_count = post_reply_count(post.id)
+        post.reply_count = get_post_reply_count(post.id)
         post.last_active = post.community.last_active = utcnow()
+        current_user.post_reply_count += 1
         db.session.commit()
         form.body.data = ''
         flash('Your comment has been added.')
@@ -1201,6 +1203,8 @@ def post_delete_post(community: Community, post: Post, user_id: int, federate_al
                     ocp.cross_posts.remove(post.id)
     post.delete_dependencies()
     post.deleted = True
+    post.author.post_count -= 1
+    community.post_count -= 1
     if hasattr(g, 'site'):  # g.site is invalid when running from cli
         g.site.last_active = community.last_active = utcnow()
         flash(_('Post deleted.'))
@@ -1266,6 +1270,8 @@ def post_restore(post_id: int):
     post = Post.query.get_or_404(post_id)
     if post.community.is_moderator() or post.community.is_owner() or current_user.is_admin():
         post.deleted = False
+        post.author.post_count += 1
+        post.community.post_count += 1
         db.session.commit()
 
         # Federate un-delete
@@ -1781,6 +1787,7 @@ def post_reply_delete(post_id: int, comment_id: int):
             post_reply.delete_dependencies()
             post_reply.deleted = True
         g.site.last_active = community.last_active = utcnow()
+        post_reply.author.post_reply_count -= 1
         db.session.commit()
         flash(_('Comment deleted.'))
         # federate delete
