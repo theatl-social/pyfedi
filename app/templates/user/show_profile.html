@@ -94,7 +94,10 @@
             {% if user.bot %}
                 {{ _('Bot Account') }}<br />
             {% endif %}
-            {{ _('Attitude') }}: <span title="{{ _('Ratio of upvotes cast to downvotes cast. Higher is more positive.') }}">{{ (user.attitude * 100) | round | int }}%</span></p>
+            {{ _('Attitude') }}: <span title="{{ _('Ratio of upvotes cast to downvotes cast. Higher is more positive.') }}">{{ (user.attitude * 100) | round | int }}%</span><br />
+            {{ _('Posts') }}: {{ user.post_count }}<br />
+            {{ _('Comments') }}: {{ user.post_reply_count }}<br />
+        </p>
         {{ user.about_html|safe }}
         {% if posts %}
             <h2 class="mt-4">Posts</h2>
