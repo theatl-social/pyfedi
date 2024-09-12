@@ -201,8 +201,11 @@ def admin_federation():
 
     # this is the pre-load communities button
     if preload_form.pre_load_submit.data and preload_form.validate():
-        # var - how many communities to add, hard-coded to 20 for now, can be made editable later
-        communities_to_add = 25
+        # how many communities to add
+        if preload_form.communities_num.data:
+            communities_to_add = preload_form.communities_num.data
+        else:
+            communities_to_add = 25
 
         # pull down the community.full.json
         resp = r.get('https://data.lemmyverse.net/data/community.full.json')
@@ -280,16 +283,19 @@ def admin_federation():
         for c in community_urls_to_join:
             # get the relevant url bits 
             server, community = extract_domain_and_actor(c)
+            # message = {'server': server, 'community': community}
             # find the community
             new_community = search_for_community('!' + community + '@' + server)
+            # message = {'server': server, 'community': community, 'new_community': new_community}
             # subscribe to the community
             # since this is using the alt_user_name, capture the messages
             # returned by do_subscibe as well
             message = do_subscribe(new_community.ap_id, main_user_name=False)
+            pre_load_messages.append(message)
 
 
-        flash(_(f'top_20 == {top_20}'))
-        # flash(_(f'leng_before == {leng_before}, leng_middle == {leng_middle}, leng_after == {leng_after}'))
+        # flash(_(f'community_urls_to_join == {community_urls_to_join}')) # testing
+        flash(_(f'Results: {pre_load_messages}'))
         return redirect(url_for('admin.admin_federation'))
     
     # this is the main settings form

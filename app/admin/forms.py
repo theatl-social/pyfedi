@@ -52,6 +52,7 @@ class FederationForm(FlaskForm):
     submit = SubmitField(_l('Save'))
 
 class PreLoadCommunitiesForm(FlaskForm):
+    communities_num = IntegerField(_l('Number of Communities to add'))
     pre_load_submit = SubmitField(_l('Add Communities'))
 
 class EditCommunityForm(FlaskForm):
