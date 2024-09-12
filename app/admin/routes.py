@@ -1,6 +1,7 @@
 import os
 from datetime import datetime, timedelta
 from io import BytesIO
+import requests as r
 from time import sleep
 
 from flask import request, flash, json, url_for, current_app, redirect, g, abort
@@ -196,10 +197,88 @@ def admin_federation():
         site = Site()
     # todo: finish form
     site.updated = utcnow()
-    if preload_form.pre_load_submit.data and preload_form.validate():
-        flash(_('add communities button clicked'))
-        return redirect(url_for('admin.admin_federation'))
 
+    # this is the pre-load communities button
+    if preload_form.pre_load_submit.data and preload_form.validate():
+        # var - how many communities to add, hard-coded to 20 for now, can be made editable later
+        communities_to_add = 25
+
+        # pull down the community.full.json
+        resp = r.get('https://data.lemmyverse.net/data/community.full.json')
+
+        # asign the json from the response to a var
+        cfj = resp.json()
+
+        # sort out the nsfw communities
+        csfw = []
+        for c in cfj:
+            if c['nsfw']:
+                continue
+            else:
+                csfw.append(c)
+
+        # sort out any that have less than 100 posts
+        cplt100 = []
+        for c in csfw:
+            if c['counts']['posts'] < 100:
+                continue
+            else:
+                cplt100.append(c)
+
+        # sort out any that do not have greater than 500 active users over the past week
+        cuawgt500 = []
+        for c in cplt100:
+            if c['counts']['users_active_week'] < 500:
+                continue
+            else:
+                cuawgt500.append(c)
+
+        # sort out any instances we have already banned
+        banned_instances = BannedInstances.query.all()
+        banned_urls = []
+        cnotbanned = []
+        for bi in banned_instances:
+            banned_urls.append(bi.domain)
+        for c in cuawgt500:
+            if c['baseurl'] in banned_urls:
+                continue
+            else:
+                cnotbanned.append(c)
+
+        # sort out the 'seven things you can't say on tv' names (cursewords, ie sh*t), plus some
+        # "low effort" communities
+        # I dont know why, but some of them slip through on the first pass, so I just 
+        # ran the list again and filter out more
+        #
+        # TO-DO: fix the need for the double filter
+        seven_things_plus = [
+            'shit', 'piss', 'fuck', 
+            'cunt', 'cocksucker', 'motherfucker', 'tits', 
+            'memes', 'piracy', '196', 'greentext', 'usauthoritarianism',
+            'enoughmuskspam', 'political_weirdos'
+            ]
+        for c in cnotbanned:
+            for w in seven_things_plus:
+                if w in c['name']:
+                    cnotbanned.remove(c)
+        for c in cnotbanned:
+            for w in seven_things_plus:
+                if w in c['name']:
+                    cnotbanned.remove(c)
+
+        # sort the list based on the users_active_week key
+        parsed_communities_sorted = sorted(cnotbanned, key=lambda c: c['counts']['users_active_week'], reverse=True)
+
+        # testing - print the top 20 in the list to a flash
+        top_20 = []
+        for i in range(communities_to_add):
+            top_20.append(parsed_communities_sorted[i]['url'])
+
+        flash(_(f'top_20 == {top_20}'))
+        # flash(_(f'leng_before == {leng_before}, leng_middle == {leng_middle}, leng_after == {leng_after}'))
+        return redirect(url_for('admin.admin_federation'))
+    
+    # this is the main settings form
     elif form.validate_on_submit():
         if form.use_allowlist.data:
             set_setting('use_allowlist', True)
@@ -222,7 +301,8 @@ def admin_federation():
         db.session.commit()
 
         flash(_('Admin settings saved'))
-
+    
+    # this is just the regular page load
     elif request.method == 'GET':
         form.use_allowlist.data = get_setting('use_allowlist', False)
         form.use_blocklist.data = not form.use_allowlist.data
