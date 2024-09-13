@@ -397,7 +397,7 @@ def subscribe(actor):
     else:
         return redirect('/c/' + actor)
 
-# this is separated out from the route, so it can be used by the 
+# this is separated out from the subscribe route so it can be used by the 
 # admin.admin_federation.preload_form as well
 @celery.task
 def do_subscribe(actor, user_id, main_user_name=True):
@@ -413,7 +413,6 @@ def do_subscribe(actor, user_id, main_user_name=True):
 
     if community is not None:
         pre_load_message['community'] = community.ap_id
-        # if community.id in communities_banned_from(current_user.id):
         if community.id in communities_banned_from(user.id):
             if main_user_name:
                 abort(401)
@@ -467,21 +466,11 @@ def do_subscribe(actor, user_id, main_user_name=True):
                     pre_load_message['status'] = 'joined'
         else:
             if not main_user_name:
-                # user already subscribed or pending and its not the preload request
-                # pass
-            # else:
                 pre_load_message['status'] = 'already subscribed, or subsciption pending'
         
-        # if main_user_name:
-            # referrer = request.headers.get('Referer', None)
         cache.delete_memoized(community_membership, user, community)
         cache.delete_memoized(joined_communities, user.id)
         if not main_user_name:
-            # if referrer is not None:
-                # return redirect(referrer)
-            # else:
-                # return redirect('/c/' + actor)
-        # else:
             return pre_load_message
     else:
         if main_user_name:
