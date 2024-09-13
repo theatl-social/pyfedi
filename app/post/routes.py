@@ -338,62 +338,7 @@ def show_post(post_id: int):
 @validation_required
 def post_vote(post_id: int, vote_direction):
     post = Post.query.get_or_404(post_id)
-    existing_vote = PostVote.query.filter_by(user_id=current_user.id, post_id=post.id).first()
-    undo = None
-    if existing_vote:
-        if not post.community.low_quality:
-            post.author.reputation -= existing_vote.effect
-        if existing_vote.effect > 0:  # previous vote was up
-            if vote_direction == 'upvote':  # new vote is also up, so remove it
-                db.session.delete(existing_vote)
-                post.up_votes -= 1
-                post.score -= 1
-                undo = 'Like'
-            else:  # new vote is down while previous vote was up, so reverse their previous vote
-                existing_vote.effect = -1
-                post.up_votes -= 1
-                post.down_votes += 1
-                post.score -= 2
-        else:  # previous vote was down
-            if vote_direction == 'downvote':  # new vote is also down, so remove it
-                db.session.delete(existing_vote)
-                post.down_votes -= 1
-                post.score += 1
-                undo = 'Dislike'
-            else:  # new vote is up while previous vote was down, so reverse their previous vote
-                existing_vote.effect = 1
-                post.up_votes += 1
-                post.down_votes -= 1
-                post.score += 2
-    else:
-        if vote_direction == 'upvote':
-            effect = 1
-            post.up_votes += 1
-            # Make 'hot' sort more spicy by amplifying the effect of early upvotes
-            if post.up_votes + post.down_votes <= 10:
-                post.score += current_app.config['SPICY_UNDER_10']
-            elif post.up_votes + post.down_votes <= 30:
-                post.score += current_app.config['SPICY_UNDER_30']
-            elif post.up_votes + post.down_votes <= 60:
-                post.score += current_app.config['SPICY_UNDER_60']
-            else:
-                post.score += 1
-        else:
-            effect = -1
-            post.down_votes += 1
-            if post.up_votes + post.down_votes <= 30:
-                post.score -= current_app.config['SPICY_UNDER_30']
-            elif post.up_votes + post.down_votes <= 60:
-                post.score -= current_app.config['SPICY_UNDER_60']
-            else:
-                post.score -= 1
-        vote = PostVote(user_id=current_user.id, post_id=post.id, author_id=post.author.id,
-                             effect=effect)
-        # upvotes do not increase reputation in low quality communities
-        if post.community.low_quality and effect > 0:
-            effect = 0
-        post.author.reputation += effect
-        db.session.add(vote)
+    undo = post.vote(current_user, vote_direction)
 
     if not post.community.local_only:
         if undo:
@@ -440,14 +385,6 @@ def post_vote(post_id: int, vote_direction):
             post_request_in_background(post.community.ap_inbox_url, action_json, current_user.private_key,
                                        current_user.public_url(not(post.community.instance.votes_are_public() and current_user.vote_privately())) + '#main-key')
 
-    current_user.last_seen = utcnow()
-    current_user.ip_address = ip_address()
-    if not current_user.banned:
-        post.ranking = post_ranking(post.score, post.created_at)
-        db.session.commit()
-        current_user.recalculate_attitude()
-        db.session.commit()
-
     recently_upvoted = []
     recently_downvoted = []
     if vote_direction == 'upvote' and undo is None:
@@ -467,43 +404,7 @@ def post_vote(post_id: int, vote_direction):
 @validation_required
 def comment_vote(comment_id, vote_direction):
     comment = PostReply.query.get_or_404(comment_id)
-    existing_vote = PostReplyVote.query.filter_by(user_id=current_user.id, post_reply_id=comment.id).first()
-    undo = None
-    if existing_vote:
-        if existing_vote.effect > 0:  # previous vote was up
-            if vote_direction == 'upvote':  # new vote is also up, so remove it
-                db.session.delete(existing_vote)
-                comment.up_votes -= 1
-                comment.score -= 1
-                undo = 'Like'
-            else:  # new vote is down while previous vote was up, so reverse their previous vote
-                existing_vote.effect = -1
-                comment.up_votes -= 1
-                comment.down_votes += 1
-                comment.score -= 2
-        else:  # previous vote was down
-            if vote_direction == 'downvote':  # new vote is also down, so remove it
-                db.session.delete(existing_vote)
-                comment.down_votes -= 1
-                comment.score += 1
-                undo = 'Dislike'
-            else:  # new vote is up while previous vote was down, so reverse their previous vote
-                existing_vote.effect = 1
-                comment.up_votes += 1
-                comment.down_votes -= 1
-                comment.score += 2
-    else:
-        if vote_direction == 'upvote':
-            effect = 1
-            comment.up_votes += 1
-            comment.score += 1
-        else:
-            effect = -1
-            comment.down_votes += 1
-            comment.score -= 1
-        vote = PostReplyVote(user_id=current_user.id, post_reply_id=comment_id, author_id=comment.author.id, effect=effect)
-        comment.author.reputation += effect
-        db.session.add(vote)
+    undo = comment.vote(current_user, vote_direction)
 
     if not comment.community.local_only:
         if undo:
@@ -549,13 +450,6 @@ def comment_vote(comment_id, vote_direction):
         else:
             post_request_in_background(comment.community.ap_inbox_url, action_json, current_user.private_key,
                                        current_user.public_url(not(comment.community.instance.votes_are_public() and current_user.vote_privately())) + '#main-key')
-
-    current_user.last_seen = utcnow()
-    current_user.ip_address = ip_address()
-    comment.ranking = confidence(comment.up_votes, comment.down_votes)
-    db.session.commit()
-    current_user.recalculate_attitude()
-    db.session.commit()
 
     recently_upvoted = []
     recently_downvoted = []

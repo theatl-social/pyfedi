@@ -101,6 +101,14 @@ class Instance(db.Model):
         return db.session.execute(text('SELECT COUNT(id) as c FROM "user" WHERE instance_id = :instance_id'),
                                   {'instance_id': self.id}).scalar()
 
+    @classmethod
+    def weight(cls, domain: str):
+        if domain:
+            instance = Instance.query.filter_by(domain=domain).first()
+            if instance:
+                return instance.vote_weight
+        return 1.0
+
     def __repr__(self):
         return '<Instance {}>'.format(self.domain)
 
@@ -1154,6 +1162,96 @@ class Post(db.Model):
                                  'name': f'#{tag.name}'})
         return return_value
 
+    # All the following post/comment ranking math is explained at https://medium.com/hacking-and-gonzo/how-reddit-ranking-algorithms-work-ef111e33d0d9
+    epoch = datetime(1970, 1, 1)
+
+    def epoch_seconds(self, date):
+        td = date - self.epoch
+        return td.days * 86400 + td.seconds + (float(td.microseconds) / 1000000)
+
+    # All the following post/comment ranking math is explained at https://medium.com/hacking-and-gonzo/how-reddit-ranking-algorithms-work-ef111e33d0d9
+    def post_ranking(self, score, date: datetime):
+        if date is None:
+            date = datetime.utcnow()
+        if score is None:
+            score = 1
+        order = math.log(max(abs(score), 1), 10)
+        sign = 1 if score > 0 else -1 if score < 0 else 0
+        seconds = self.epoch_seconds(date) - 1685766018
+        return round(sign * order + seconds / 45000, 7)
+
+    def vote(self, user: User, vote_direction: str):
+        assert vote_direction == 'upvote' or vote_direction == 'downvote'
+        existing_vote = PostVote.query.filter_by(user_id=user.id, post_id=self.id).first()
+        undo = None
+        if existing_vote:
+            if not self.community.low_quality:
+                self.author.reputation -= existing_vote.effect
+            if existing_vote.effect > 0:  # previous vote was up
+                if vote_direction == 'upvote':  # new vote is also up, so remove it
+                    db.session.delete(existing_vote)
+                    self.up_votes -= 1
+                    self.score -= existing_vote.effect
+                    undo = 'Like'
+                else:  # new vote is down while previous vote was up, so reverse their previous vote
+                    existing_vote.effect = -1
+                    self.up_votes -= 1
+                    self.down_votes += 1
+                    self.score -= existing_vote.effect * 2
+            else:  # previous vote was down
+                if vote_direction == 'downvote':  # new vote is also down, so remove it
+                    db.session.delete(existing_vote)
+                    self.down_votes -= 1
+                    self.score += existing_vote.effect
+                    undo = 'Dislike'
+                else:  # new vote is up while previous vote was down, so reverse their previous vote
+                    existing_vote.effect = 1
+                    self.up_votes += 1
+                    self.down_votes -= 1
+                    self.score += existing_vote.effect * 2
+        else:
+            if vote_direction == 'upvote':
+                effect = Instance.weight(user.ap_domain)
+                spicy_effect = effect
+                # Make 'hot' sort more spicy by amplifying the effect of early upvotes
+                if self.up_votes + self.down_votes <= 10:
+                    spicy_effect = effect * current_app.config['SPICY_UNDER_10']
+                elif self.up_votes + self.down_votes <= 30:
+                    spicy_effect = effect * current_app.config['SPICY_UNDER_30']
+                elif self.up_votes + self.down_votes <= 60:
+                    spicy_effect = effect * current_app.config['SPICY_UNDER_60']
+                if user.cannot_vote():
+                    effect = spicy_effect = 0
+                self.up_votes += 1
+                self.score += spicy_effect
+            else:
+                effect = -1.0
+                self.down_votes += 1
+                # Make 'hot' sort more spicy by amplifying the effect of early downvotes
+                if self.up_votes + self.down_votes <= 30:
+                    effect = current_app.config['SPICY_UNDER_30']
+                elif self.up_votes + self.down_votes <= 60:
+                    effect = current_app.config['SPICY_UNDER_60']
+                else:
+                    effect = -1.0
+                if user.cannot_vote():
+                    effect = 0
+                self.score -= effect
+            vote = PostVote(user_id=user.id, post_id=self.id, author_id=self.author.id,
+                            effect=effect)
+            # upvotes do not increase reputation in low quality communities
+            if self.community.low_quality and effect > 0:
+                effect = 0
+            self.author.reputation += effect
+            db.session.add(vote)
+
+            user.last_seen = utcnow()
+        if not user.banned:
+            self.ranking = self.post_ranking(self.score, self.created_at)
+            user.recalculate_attitude()
+            db.session.commit()
+        return undo
+
 
 class PostReply(db.Model):
     query_class = FullTextSearchQuery
@@ -1273,6 +1371,79 @@ class PostReply(db.Model):
                                                                       NotificationSubscription.user_id == user_id,
                                                                       NotificationSubscription.type == NOTIF_REPLY).first()
         return existing_notification is not None
+
+    # used for ranking comments
+    def _confidence(self, ups, downs):
+        n = ups + downs
+
+        if n == 0:
+            return 0.0
+
+        z = 1.281551565545
+        p = float(ups) / n
+
+        left = p + 1 / (2 * n) * z * z
+        right = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n))
+        under = 1 + 1 / n * z * z
+
+        return (left - right) / under
+
+    def confidence(self, ups, downs) -> float:
+        if ups is None or ups < 0:
+            ups = 0
+        if downs is None or downs < 0:
+            downs = 0
+        if ups + downs == 0:
+            return 0.0
+        else:
+            return self._confidence(ups, downs)
+
+    def vote(self, user: User, vote_direction: str):
+        existing_vote = PostReplyVote.query.filter_by(user_id=user.id, post_reply_id=self.id).first()
+        undo = None
+        if existing_vote:
+            if existing_vote.effect > 0:  # previous vote was up
+                if vote_direction == 'upvote':  # new vote is also up, so remove it
+                    db.session.delete(existing_vote)
+                    self.up_votes -= 1
+                    self.score -= 1
+                    undo = 'Like'
+                else:  # new vote is down while previous vote was up, so reverse their previous vote
+                    existing_vote.effect = -1
+                    self.up_votes -= 1
+                    self.down_votes += 1
+                    self.score -= 2
+            else:  # previous vote was down
+                if vote_direction == 'downvote':  # new vote is also down, so remove it
+                    db.session.delete(existing_vote)
+                    self.down_votes -= 1
+                    self.score += 1
+                    undo = 'Dislike'
+                else:  # new vote is up while previous vote was down, so reverse their previous vote
+                    existing_vote.effect = 1
+                    self.up_votes += 1
+                    self.down_votes -= 1
+                    self.score += 2
+        else:
+            if user.cannot_vote():
+                effect = 0
+            else:
+                effect = 1
+            if vote_direction == 'upvote':
+                self.up_votes += 1
+            else:
+                effect = effect * -1
+                self.down_votes += 1
+            self.score += effect
+            vote = PostReplyVote(user_id=user.id, post_reply_id=self.id, author_id=self.author.id,
+                                 effect=effect)
+            self.author.reputation += effect
+            db.session.add(vote)
+        current_user.last_seen = utcnow()
+        self.ranking = self.confidence(self.up_votes, self.down_votes)
+        user.recalculate_attitude()
+        db.session.commit()
+        return undo
 
 
 class Domain(db.Model):

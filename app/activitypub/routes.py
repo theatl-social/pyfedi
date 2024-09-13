@@ -20,15 +20,14 @@ from app.models import User, Community, CommunityJoinRequest, CommunityMember, C
     ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice
 from app.activitypub.util import public_key, users_total, active_half_year, active_month, local_posts, local_comments, \
     post_to_activity, find_actor_or_create, instance_blocked, find_reply_parent, find_liked_object, \
-    lemmy_site_data, instance_weight, is_activitypub_request, downvote_post_reply, downvote_post, upvote_post_reply, \
-    upvote_post, delete_post_or_comment, community_members, \
+    lemmy_site_data, is_activitypub_request, delete_post_or_comment, community_members, \
     user_removed_from_remote_server, create_post, create_post_reply, update_post_reply_from_activity, \
     update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection, find_reported_object, \
     process_report, ensure_domains_match, can_edit, can_delete, remove_data_from_banned_user, resolve_remote_post, \
     inform_followers_of_post_update, comment_model_to_json, restore_post_or_comment, ban_local_user, unban_local_user, \
     lock_post
-from app.utils import gibberish, get_setting, is_image_url, allowlist_html, render_template, \
-    domain_from_url, markdown_to_html, community_membership, ap_datetime, ip_address, can_downvote, \
+from app.utils import gibberish, get_setting, render_template, \
+    community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
     community_moderators, lemmy_markdown_to_html
 
@@ -780,11 +779,8 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             # insert into voted table
                             if liked is None:
                                 activity_log.exception_message = 'Liked object not found'
-                            elif liked is not None and isinstance(liked, Post):
-                                upvote_post(liked, user)
-                                activity_log.result = 'success'
-                            elif liked is not None and isinstance(liked, PostReply):
-                                upvote_post_reply(liked, user)
+                            elif liked is not None and isinstance(liked, (Post, PostReply)):
+                                liked.vote(user, 'upvote')
                                 activity_log.result = 'success'
                             else:
                                 activity_log.exception_message = 'Could not detect type of like'
@@ -813,10 +809,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                 if disliked is None:
                                     activity_log.exception_message = 'Liked object not found'
                                 elif isinstance(disliked, (Post, PostReply)):
-                                    if isinstance(disliked, Post):
-                                        downvote_post(disliked, user)
-                                    elif isinstance(disliked, PostReply):
-                                        downvote_post_reply(disliked, user)
+                                    disliked.vote(user, 'downvote')
                                     activity_log.result = 'success'
                                     # todo: recalculate 'hotness' of liked post/reply
                                 else:
@@ -1152,11 +1145,8 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                         # insert into voted table
                         if liked is None:
                             activity_log.exception_message = 'Liked object not found'
-                        elif liked is not None and isinstance(liked, Post):
-                            upvote_post(liked, user)
-                            activity_log.result = 'success'
-                        elif liked is not None and isinstance(liked, PostReply):
-                            upvote_post_reply(liked, user)
+                        elif liked is not None and isinstance(liked, (Post, PostReply)):
+                            liked.vote(user, 'upvote')
                             activity_log.result = 'success'
                         else:
                             activity_log.exception_message = 'Could not detect type of like'
@@ -1186,10 +1176,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             if disliked is None:
                                 activity_log.exception_message = 'Liked object not found'
                             elif isinstance(disliked, (Post, PostReply)):
-                                if isinstance(disliked, Post):
-                                    downvote_post(disliked, user)
-                                elif isinstance(disliked, PostReply):
-                                    downvote_post_reply(disliked, user)
+                                disliked.vote(user, 'downvote')
                                 activity_log.result = 'success'
                             else:
                                 activity_log.exception_message = 'Could not detect type of like'
