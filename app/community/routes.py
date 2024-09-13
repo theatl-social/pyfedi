@@ -473,8 +473,9 @@ def do_subscribe(actor, user_id, main_user_name=True):
                 pass
             else:
                 pre_load_message['status'] = 'already subscribed, or subsciption pending'
-
-        referrer = request.headers.get('Referer', None)
+        
+        if main_user_name:
+            referrer = request.headers.get('Referer', None)
         # cache.delete_memoized(community_membership, current_user, community)
         # cache.delete_memoized(joined_communities, current_user.id)
         cache.delete_memoized(community_membership, user, community)
