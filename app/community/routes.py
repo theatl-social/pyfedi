@@ -391,6 +391,11 @@ def show_community_rss(actor):
 @validation_required
 def subscribe(actor):
     do_subscribe(actor, current_user.id)
+    referrer = request.headers.get('Referer', None)
+    if referrer is not None:
+        return redirect(referrer)
+    else:
+        return redirect('/c/' + actor)
 
 # this is separated out from the route, so it can be used by the 
 # admin.admin_federation.preload_form as well
@@ -414,9 +419,7 @@ def do_subscribe(actor, user_id, main_user_name=True):
                 abort(401)
             else:
                 pre_load_message['user_banned'] = True
-        # if community_membership(current_user, community) != SUBSCRIPTION_MEMBER and community_membership(current_user, community) != SUBSCRIPTION_PENDING:
         if community_membership(user, community) != SUBSCRIPTION_MEMBER and community_membership(user, community) != SUBSCRIPTION_PENDING:
-            # banned = CommunityBan.query.filter_by(user_id=current_user.id, community_id=community.id).first()
             banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
             if banned:
                 if main_user_name:
@@ -426,21 +429,17 @@ def do_subscribe(actor, user_id, main_user_name=True):
             success = True
             if remote:
                 # send ActivityPub message to remote community, asking to follow. Accept message will be sent to our shared inbox
-                # join_request = CommunityJoinRequest(user_id=current_user.id, community_id=community.id)
                 join_request = CommunityJoinRequest(user_id=user.id, community_id=community.id)
                 db.session.add(join_request)
                 db.session.commit()
                 if community.instance.online():
                     follow = {
-                    #   "actor": current_user.public_url(main_user_name=main_user_name),
                       "actor": user.public_url(main_user_name=main_user_name),
                       "to": [community.public_url()],
                       "object": community.public_url(),
                       "type": "Follow",
                       "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
                     }
-                    # success = post_request(community.ap_inbox_url, follow, current_user.private_key,
-                                                        #    current_user.public_url() + '#main-key', timeout=10)
                     success = post_request(community.ap_inbox_url, follow, user.private_key,
                                                            user.public_url(main_user_name=main_user_name) + '#main-key', timeout=10)
                 if success is False or isinstance(success, str):
@@ -458,7 +457,6 @@ def do_subscribe(actor, user_id, main_user_name=True):
                             pre_load_message['status'] = msg_to_user
 
             # for local communities, joining is instant
-            # member = CommunityMember(user_id=current_user.id, community_id=community.id)
             member = CommunityMember(user_id=user.id, community_id=community.id)
             db.session.add(member)
             db.session.commit()
@@ -468,24 +466,22 @@ def do_subscribe(actor, user_id, main_user_name=True):
                 else:
                     pre_load_message['status'] = 'joined'
         else:
-            if main_user_name:
+            if not main_user_name:
                 # user already subscribed or pending and its not the preload request
-                pass
-            else:
+                # pass
+            # else:
                 pre_load_message['status'] = 'already subscribed, or subsciption pending'
         
-        if main_user_name:
-            referrer = request.headers.get('Referer', None)
-        # cache.delete_memoized(community_membership, current_user, community)
-        # cache.delete_memoized(joined_communities, current_user.id)
+        # if main_user_name:
+            # referrer = request.headers.get('Referer', None)
         cache.delete_memoized(community_membership, user, community)
         cache.delete_memoized(joined_communities, user.id)
-        if main_user_name:
-            if referrer is not None:
-                return redirect(referrer)
-            else:
-                return redirect('/c/' + actor)
-        else:
+        if not main_user_name:
+            # if referrer is not None:
+                # return redirect(referrer)
+            # else:
+                # return redirect('/c/' + actor)
+        # else:
             return pre_load_message
     else:
         if main_user_name:
