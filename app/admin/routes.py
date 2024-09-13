@@ -291,10 +291,10 @@ def admin_federation():
             # capture the messages returned by do_subscibe
             # and show to user if instance is in debug mode
             if current_app.debug:
-                message = do_subscribe(new_community.ap_id, user, main_user_name=False)
+                message = do_subscribe(new_community.ap_id, user.id, main_user_name=False)
                 pre_load_messages.append(message)
             else:
-                message_we_wont_do_anything_with = do_subscribe.delay(new_community.ap_id, user, main_user_name=False)
+                message_we_wont_do_anything_with = do_subscribe.delay(new_community.ap_id, user.id, main_user_name=False)
 
         if current_app.debug:
             flash(_(f'Results: {pre_load_messages}'))

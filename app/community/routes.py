@@ -390,14 +390,15 @@ def show_community_rss(actor):
 @login_required
 @validation_required
 def subscribe(actor):
-    do_subscribe(actor, current_user)
+    do_subscribe(actor, current_user.id)
 
 # this is separated out from the route, so it can be used by the 
 # admin.admin_federation.preload_form as well
 @celery.task
-def do_subscribe(actor, user, main_user_name=True):
+def do_subscribe(actor, user_id, main_user_name=True):
     remote = False
     actor = actor.strip()
+    user = User.query.get(user_id)
     pre_load_message = {}
     if '@' in actor:
         community = Community.query.filter_by(banned=False, ap_id=actor).first()
