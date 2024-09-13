@@ -51,9 +51,11 @@ class FederationForm(FlaskForm):
     blocked_actors = TextAreaField(_l('Discard all posts and comments by users with these words in their name (one per line)'))
     submit = SubmitField(_l('Save'))
 
+
 class PreLoadCommunitiesForm(FlaskForm):
-    communities_num = IntegerField(_l('Number of Communities to add'))
+    communities_num = IntegerField(_l('Number of Communities to add'), default=25)
     pre_load_submit = SubmitField(_l('Add Communities'))
+
 
 class EditCommunityForm(FlaskForm):
     title = StringField(_l('Title'), validators=[DataRequired()])

@@ -10,7 +10,7 @@ from flask_babel import _
 from slugify import slugify
 from sqlalchemy import or_, desc, text
 
-from app import db, constants, cache
+from app import db, constants, cache, celery
 from app.activitypub.signature import RsaKeys, post_request, default_context, post_request_in_background
 from app.activitypub.util import notify_about_post, make_image_sizes, resolve_remote_post, extract_domain_and_actor
 from app.chat.util import send_message
@@ -394,6 +394,7 @@ def subscribe(actor):
 
 # this is separated out from the route, so it can be used by the 
 # admin.admin_federation.preload_form as well
+@celery.task
 def do_subscribe(actor, main_user_name=True):
     remote = False
     actor = actor.strip()
@@ -457,6 +458,13 @@ def do_subscribe(actor, main_user_name=True):
                     flash('You joined ' + community.title)
                 else:
                     pre_load_message['status'] = 'joined'
+        else:
+            if main_user_name:
+                # user already subscribed or pending and its not the preload request
+                pass
+            else:
+                pre_load_message['status'] = 'already subscribed, or subsciption pending'
+
         referrer = request.headers.get('Referer', None)
         cache.delete_memoized(community_membership, current_user, community)
         cache.delete_memoized(joined_communities, current_user.id)

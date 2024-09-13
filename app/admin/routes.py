@@ -283,19 +283,22 @@ def admin_federation():
         for c in community_urls_to_join:
             # get the relevant url bits 
             server, community = extract_domain_and_actor(c)
-            # message = {'server': server, 'community': community}
             # find the community
             new_community = search_for_community('!' + community + '@' + server)
-            # message = {'server': server, 'community': community, 'new_community': new_community}
-            # subscribe to the community
-            # since this is using the alt_user_name, capture the messages
-            # returned by do_subscibe as well
-            message = do_subscribe(new_community.ap_id, main_user_name=False)
-            pre_load_messages.append(message)
+            # subscribe to the community using alt_profile
+            # capture the messages returned by do_subscibe
+            # and show to user if instance is in debug mode
+            if current_app.debug:
+                message = do_subscribe(new_community.ap_id, main_user_name=False)
+                pre_load_messages.append(message)
+            else:
+                message_we_wont_do_anything_with = do_subscribe.delay(new_community.ap_id, main_user_name=False)
 
+        if current_app.debug:
+            flash(_(f'Results: {pre_load_messages}'))
+        else:
+            flash(_('Subscription process launched to background, check admin/activities for details'))
 
-        # flash(_(f'community_urls_to_join == {community_urls_to_join}')) # testing
-        flash(_(f'Results: {pre_load_messages}'))
         return redirect(url_for('admin.admin_federation'))
     
     # this is the main settings form
@@ -334,7 +337,7 @@ def admin_federation():
         form.blocked_actors.data = get_setting('actor_blocked_words', '88')
 
     return render_template('admin/federation.html', title=_('Federation settings'), 
-                           form=form, preload_form=preload_form,
+                           form=form, preload_form=preload_form, current_app_debug=current_app.debug,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(),

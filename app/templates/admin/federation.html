@@ -17,7 +17,10 @@
 <hr />
 <div class="row">
     <div class="column">
-        <p>Use this to "pre-load" the top 50 known threadiverse communities, as rnaked by posts and activity. The list of communities pulls from the same list as <a href="https://lemmyverse.net/communities">LemmyVerse</a>. NSFW communities and communities from banned instances are excluded.</p>
+        <p>Use this to "pre-load" known threadiverse communities, as ranked by posts and activity. The list of communities pulls from the same list as <a href="https://lemmyverse.net/communities">LemmyVerse</a>. NSFW communities and communities from banned instances are excluded.</p>
+        {% if current_app_debug %}
+        <p>*** This instance is in development mode. Loading more than 6 communities here could cause timeouts, depending on how your networking is setup. ***</p>
+        {% endif %}
         {{ render_form(preload_form) }}
     </div>
 </div>
