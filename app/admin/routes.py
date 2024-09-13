@@ -275,6 +275,12 @@ def admin_federation():
 
         # get the community urls to join
         community_urls_to_join = []
+        
+        # if the admin user wants more added than we have, then just add all of them
+        if communities_to_add > len(parsed_communities_sorted):
+            communities_to_add = len(parsed_communities_sorted) 
+        
+        # make the list of urls
         for i in range(communities_to_add):
             community_urls_to_join.append(parsed_communities_sorted[i]['url'])
 
