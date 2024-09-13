@@ -305,7 +305,7 @@ def admin_federation():
         if current_app.debug:
             flash(_(f'Results: {pre_load_messages}'))
         else:
-            flash(_('Subscription process launched to background, check admin/activities for details'))
+            flash(_(f'Subscription process for {communities_to_add} of {len(parsed_communities_sorted)} communities launched to background, check admin/activities for details'))
 
         return redirect(url_for('admin.admin_federation'))
     
