@@ -279,6 +279,8 @@ def admin_federation():
             community_urls_to_join.append(parsed_communities_sorted[i]['url'])
 
         # loop through the list and send off the follow requests
+        # use User #1, the first instance admin
+        user = User.query.get(1)
         pre_load_messages = []
         for c in community_urls_to_join:
             # get the relevant url bits 
@@ -289,10 +291,10 @@ def admin_federation():
             # capture the messages returned by do_subscibe
             # and show to user if instance is in debug mode
             if current_app.debug:
-                message = do_subscribe(new_community.ap_id, main_user_name=False)
+                message = do_subscribe(new_community.ap_id, user, main_user_name=False)
                 pre_load_messages.append(message)
             else:
-                message_we_wont_do_anything_with = do_subscribe.delay(new_community.ap_id, main_user_name=False)
+                message_we_wont_do_anything_with = do_subscribe.delay(new_community.ap_id, user, main_user_name=False)
 
         if current_app.debug:
             flash(_(f'Results: {pre_load_messages}'))
