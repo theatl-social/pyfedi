@@ -27,7 +27,7 @@ from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow
     User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
-    topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog
+    topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request
 from app.admin import bp
 
 
@@ -196,7 +196,7 @@ def admin_federation():
     site = Site.query.get(1)
     if site is None:
         site = Site()
-    # todo: finish form
+
     site.updated = utcnow()
 
     # this is the pre-load communities button
@@ -208,46 +208,45 @@ def admin_federation():
             communities_to_add = 25
 
         # pull down the community.full.json
-        resp = r.get('https://data.lemmyverse.net/data/community.full.json')
-
-        # asign the json from the response to a var
-        cfj = resp.json()
+        resp = get_request('https://data.lemmyverse.net/data/community.full.json')
+        community_json = resp.json()
+        resp.close()
 
         # sort out the nsfw communities
-        csfw = []
-        for c in cfj:
-            if c['nsfw']:
+        safe_for_work_communities = []
+        for community in community_json:
+            if community['nsfw']:
                 continue
             else:
-                csfw.append(c)
+                safe_for_work_communities.append(community)
 
         # sort out any that have less than 100 posts
-        cplt100 = []
-        for c in csfw:
-            if c['counts']['posts'] < 100:
+        communities_with_lots_of_content = []
+        for community in safe_for_work_communities:
+            if community['counts']['posts'] < 100:
                 continue
             else:
-                cplt100.append(c)
+                communities_with_lots_of_content.append(community)
 
         # sort out any that do not have greater than 500 active users over the past week
-        cuawgt500 = []
-        for c in cplt100:
-            if c['counts']['users_active_week'] < 500:
+        communities_with_lots_of_activity = []
+        for community in communities_with_lots_of_content:
+            if community['counts']['users_active_week'] < 500:
                 continue
             else:
-                cuawgt500.append(c)
+                communities_with_lots_of_activity.append(community)
 
         # sort out any instances we have already banned
         banned_instances = BannedInstances.query.all()
         banned_urls = []
-        cnotbanned = []
+        communities_not_banned = []
         for bi in banned_instances:
             banned_urls.append(bi.domain)
-        for c in cuawgt500:
-            if c['baseurl'] in banned_urls:
+        for community in communities_with_lots_of_activity:
+            if community['baseurl'] in banned_urls:
                 continue
             else:
-                cnotbanned.append(c)
+                communities_not_banned.append(community)
 
         # sort out the 'seven things you can't say on tv' names (cursewords, ie sh*t), plus some
         # "low effort" communities
@@ -259,19 +258,19 @@ def admin_federation():
             'shit', 'piss', 'fuck', 
             'cunt', 'cocksucker', 'motherfucker', 'tits', 
             'memes', 'piracy', '196', 'greentext', 'usauthoritarianism',
-            'enoughmuskspam', 'political_weirdos'
+            'enoughmuskspam', 'political_weirdos', '4chan'
             ]
-        for c in cnotbanned:
-            for w in seven_things_plus:
-                if w in c['name']:
-                    cnotbanned.remove(c)
-        for c in cnotbanned:
-            for w in seven_things_plus:
-                if w in c['name']:
-                    cnotbanned.remove(c)
+        for community in communities_not_banned:
+            for word in seven_things_plus:
+                if word in community['name']:
+                    communities_not_banned.remove(community)
+        for community in communities_not_banned:
+            for word in seven_things_plus:
+                if word in community['name']:
+                    communities_not_banned.remove(community)
 
         # sort the list based on the users_active_week key
-        parsed_communities_sorted = sorted(cnotbanned, key=lambda c: c['counts']['users_active_week'], reverse=True)
+        parsed_communities_sorted = sorted(communities_not_banned, key=lambda c: c['counts']['users_active_week'], reverse=True)
 
         # get the community urls to join
         community_urls_to_join = []
@@ -288,9 +287,9 @@ def admin_federation():
         # use User #1, the first instance admin
         user = User.query.get(1)
         pre_load_messages = []
-        for c in community_urls_to_join:
+        for community in community_urls_to_join:
             # get the relevant url bits 
-            server, community = extract_domain_and_actor(c)
+            server, community = extract_domain_and_actor(community)
             # find the community
             new_community = search_for_community('!' + community + '@' + server)
             # subscribe to the community using alt_profile
@@ -303,9 +302,11 @@ def admin_federation():
                 message_we_wont_do_anything_with = do_subscribe.delay(new_community.ap_id, user.id, main_user_name=False)
 
         if current_app.debug:
-            flash(_(f'Results: {pre_load_messages}'))
+            flash(_('Results: %(results)s', results=str(pre_load_messages)))
         else:
-            flash(_(f'Subscription process for {communities_to_add} of {len(parsed_communities_sorted)} communities launched to background, check admin/activities for details'))
+            flash(
+                _('Subscription process for %(communities_to_add)d of %(parsed_communities_sorted)d communities launched in background, check admin/activities for details',
+                  communities_to_add=communities_to_add, parsed_communities_sorted=len(parsed_communities_sorted)))
 
         return redirect(url_for('admin.admin_federation'))
     

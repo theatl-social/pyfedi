@@ -397,6 +397,7 @@ def subscribe(actor):
     else:
         return redirect('/c/' + actor)
 
+
 # this is separated out from the subscribe route so it can be used by the 
 # admin.admin_federation.preload_form as well
 @celery.task
