@@ -1,6 +1,7 @@
 import os
 from datetime import datetime, timedelta
 from io import BytesIO
+import requests as r
 from time import sleep
 
 from flask import request, flash, json, url_for, current_app, redirect, g, abort
@@ -13,12 +14,13 @@ from PIL import Image
 from app import db, celery, cache
 from app.activitypub.routes import process_inbox_request, process_delete_request
 from app.activitypub.signature import post_request, default_context
-from app.activitypub.util import instance_allowed, instance_blocked
+from app.activitypub.util import instance_allowed, instance_blocked, extract_domain_and_actor
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
-    EditTopicForm, SendNewsletterForm, AddUserForm
+    EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form
-from app.community.util import save_icon_file, save_banner_file
+from app.community.util import save_icon_file, save_banner_file, search_for_community
+from app.community.routes import do_subscribe
 from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED
 from app.email import send_welcome_email
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
@@ -190,12 +192,125 @@ def admin_misc():
 @permission_required('change instance settings')
 def admin_federation():
     form = FederationForm()
+    preload_form = PreLoadCommunitiesForm()
     site = Site.query.get(1)
     if site is None:
         site = Site()
     # todo: finish form
     site.updated = utcnow()
-    if form.validate_on_submit():
+
+    # this is the pre-load communities button
+    if preload_form.pre_load_submit.data and preload_form.validate():
+        # how many communities to add
+        if preload_form.communities_num.data:
+            communities_to_add = preload_form.communities_num.data
+        else:
+            communities_to_add = 25
+
+        # pull down the community.full.json
+        resp = r.get('https://data.lemmyverse.net/data/community.full.json')
+
+        # asign the json from the response to a var
+        cfj = resp.json()
+
+        # sort out the nsfw communities
+        csfw = []
+        for c in cfj:
+            if c['nsfw']:
+                continue
+            else:
+                csfw.append(c)
+
+        # sort out any that have less than 100 posts
+        cplt100 = []
+        for c in csfw:
+            if c['counts']['posts'] < 100:
+                continue
+            else:
+                cplt100.append(c)
+
+        # sort out any that do not have greater than 500 active users over the past week
+        cuawgt500 = []
+        for c in cplt100:
+            if c['counts']['users_active_week'] < 500:
+                continue
+            else:
+                cuawgt500.append(c)
+
+        # sort out any instances we have already banned
+        banned_instances = BannedInstances.query.all()
+        banned_urls = []
+        cnotbanned = []
+        for bi in banned_instances:
+            banned_urls.append(bi.domain)
+        for c in cuawgt500:
+            if c['baseurl'] in banned_urls:
+                continue
+            else:
+                cnotbanned.append(c)
+
+        # sort out the 'seven things you can't say on tv' names (cursewords, ie sh*t), plus some
+        # "low effort" communities
+        # I dont know why, but some of them slip through on the first pass, so I just 
+        # ran the list again and filter out more
+        #
+        # TO-DO: fix the need for the double filter
+        seven_things_plus = [
+            'shit', 'piss', 'fuck', 
+            'cunt', 'cocksucker', 'motherfucker', 'tits', 
+            'memes', 'piracy', '196', 'greentext', 'usauthoritarianism',
+            'enoughmuskspam', 'political_weirdos'
+            ]
+        for c in cnotbanned:
+            for w in seven_things_plus:
+                if w in c['name']:
+                    cnotbanned.remove(c)
+        for c in cnotbanned:
+            for w in seven_things_plus:
+                if w in c['name']:
+                    cnotbanned.remove(c)
+
+        # sort the list based on the users_active_week key
+        parsed_communities_sorted = sorted(cnotbanned, key=lambda c: c['counts']['users_active_week'], reverse=True)
+
+        # get the community urls to join
+        community_urls_to_join = []
+        
+        # if the admin user wants more added than we have, then just add all of them
+        if communities_to_add > len(parsed_communities_sorted):
+            communities_to_add = len(parsed_communities_sorted) 
+        
+        # make the list of urls
+        for i in range(communities_to_add):
+            community_urls_to_join.append(parsed_communities_sorted[i]['url'])
+
+        # loop through the list and send off the follow requests
+        # use User #1, the first instance admin
+        user = User.query.get(1)
+        pre_load_messages = []
+        for c in community_urls_to_join:
+            # get the relevant url bits 
+            server, community = extract_domain_and_actor(c)
+            # find the community
+            new_community = search_for_community('!' + community + '@' + server)
+            # subscribe to the community using alt_profile
+            # capture the messages returned by do_subscibe
+            # and show to user if instance is in debug mode
+            if current_app.debug:
+                message = do_subscribe(new_community.ap_id, user.id, main_user_name=False)
+                pre_load_messages.append(message)
+            else:
+                message_we_wont_do_anything_with = do_subscribe.delay(new_community.ap_id, user.id, main_user_name=False)
+
+        if current_app.debug:
+            flash(_(f'Results: {pre_load_messages}'))
+        else:
+            flash(_(f'Subscription process for {communities_to_add} of {len(parsed_communities_sorted)} communities launched to background, check admin/activities for details'))
+
+        return redirect(url_for('admin.admin_federation'))
+    
+    # this is the main settings form
+    elif form.validate_on_submit():
         if form.use_allowlist.data:
             set_setting('use_allowlist', True)
             db.session.execute(text('DELETE FROM allowed_instances'))
@@ -217,7 +332,8 @@ def admin_federation():
         db.session.commit()
 
         flash(_('Admin settings saved'))
-
+    
+    # this is just the regular page load
     elif request.method == 'GET':
         form.use_allowlist.data = get_setting('use_allowlist', False)
         form.use_blocklist.data = not form.use_allowlist.data
@@ -228,7 +344,8 @@ def admin_federation():
         form.blocked_phrases.data = site.blocked_phrases
         form.blocked_actors.data = get_setting('actor_blocked_words', '88')
 
-    return render_template('admin/federation.html', title=_('Federation settings'), form=form,
+    return render_template('admin/federation.html', title=_('Federation settings'), 
+                           form=form, preload_form=preload_form, current_app_debug=current_app.debug,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(),

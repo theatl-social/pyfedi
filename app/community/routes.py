@@ -10,7 +10,7 @@ from flask_babel import _
 from slugify import slugify
 from sqlalchemy import or_, desc, text
 
-from app import db, constants, cache
+from app import db, constants, cache, celery
 from app.activitypub.signature import RsaKeys, post_request, default_context, post_request_in_background
 from app.activitypub.util import notify_about_post, make_image_sizes, resolve_remote_post, extract_domain_and_actor
 from app.chat.util import send_message
@@ -390,8 +390,21 @@ def show_community_rss(actor):
 @login_required
 @validation_required
 def subscribe(actor):
+    do_subscribe(actor, current_user.id)
+    referrer = request.headers.get('Referer', None)
+    if referrer is not None:
+        return redirect(referrer)
+    else:
+        return redirect('/c/' + actor)
+
+# this is separated out from the subscribe route so it can be used by the 
+# admin.admin_federation.preload_form as well
+@celery.task
+def do_subscribe(actor, user_id, main_user_name=True):
     remote = False
     actor = actor.strip()
+    user = User.query.get(user_id)
+    pre_load_message = {}
     if '@' in actor:
         community = Community.query.filter_by(banned=False, ap_id=actor).first()
         remote = True
@@ -399,48 +412,73 @@ def subscribe(actor):
         community = Community.query.filter_by(name=actor, banned=False, ap_id=None).first()
 
     if community is not None:
-        if community.id in communities_banned_from(current_user.id):
-            abort(401)
-        if community_membership(current_user, community) != SUBSCRIPTION_MEMBER and community_membership(current_user, community) != SUBSCRIPTION_PENDING:
-            banned = CommunityBan.query.filter_by(user_id=current_user.id, community_id=community.id).first()
+        pre_load_message['community'] = community.ap_id
+        if community.id in communities_banned_from(user.id):
+            if main_user_name:
+                abort(401)
+            else:
+                pre_load_message['user_banned'] = True
+        if community_membership(user, community) != SUBSCRIPTION_MEMBER and community_membership(user, community) != SUBSCRIPTION_PENDING:
+            banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
             if banned:
-                flash(_('You cannot join this community'))
+                if main_user_name:
+                    flash(_('You cannot join this community'))
+                else:
+                    pre_load_message['community_banned_by_local_instance'] = True
             success = True
             if remote:
                 # send ActivityPub message to remote community, asking to follow. Accept message will be sent to our shared inbox
-                join_request = CommunityJoinRequest(user_id=current_user.id, community_id=community.id)
+                join_request = CommunityJoinRequest(user_id=user.id, community_id=community.id)
                 db.session.add(join_request)
                 db.session.commit()
                 if community.instance.online():
                     follow = {
-                      "actor": current_user.public_url(),
+                      "actor": user.public_url(main_user_name=main_user_name),
                       "to": [community.public_url()],
                       "object": community.public_url(),
                       "type": "Follow",
                       "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
                     }
-                    success = post_request(community.ap_inbox_url, follow, current_user.private_key,
-                                                           current_user.public_url() + '#main-key', timeout=10)
+                    success = post_request(community.ap_inbox_url, follow, user.private_key,
+                                                           user.public_url(main_user_name=main_user_name) + '#main-key', timeout=10)
                 if success is False or isinstance(success, str):
                     if 'is not in allowlist' in success:
-                        flash(_('%(name)s does not allow us to join their communities.', name=community.instance.domain), 'error')
+                        msg_to_user = f'{community.instance.domain} does not allow us to join their communities.'
+                        if main_user_name:
+                            flash(_(msg_to_user), 'error')
+                        else:
+                            pre_load_message['status'] = msg_to_user
                     else:
-                        flash(_("There was a problem while trying to communicate with remote server. If other people have already joined this community it won't matter."), 'error')
+                        msg_to_user = "There was a problem while trying to communicate with remote server. If other people have already joined this community it won't matter."
+                        if main_user_name:
+                            flash(_(msg_to_user), 'error')
+                        else:
+                            pre_load_message['status'] = msg_to_user
+
             # for local communities, joining is instant
-            member = CommunityMember(user_id=current_user.id, community_id=community.id)
+            member = CommunityMember(user_id=user.id, community_id=community.id)
             db.session.add(member)
             db.session.commit()
             if success is True:
-                flash('You joined ' + community.title)
-        referrer = request.headers.get('Referer', None)
-        cache.delete_memoized(community_membership, current_user, community)
-        cache.delete_memoized(joined_communities, current_user.id)
-        if referrer is not None:
-            return redirect(referrer)
+                if main_user_name:
+                    flash('You joined ' + community.title)
+                else:
+                    pre_load_message['status'] = 'joined'
         else:
-            return redirect('/c/' + actor)
+            if not main_user_name:
+                pre_load_message['status'] = 'already subscribed, or subsciption pending'
+        
+        cache.delete_memoized(community_membership, user, community)
+        cache.delete_memoized(joined_communities, user.id)
+        if not main_user_name:
+            return pre_load_message
     else:
-        abort(404)
+        if main_user_name:
+            abort(404)
+        else:
+            pre_load_message['community'] = actor
+            pre_load_message['status'] = 'community not found'
+            return pre_load_message
 
 
 @bp.route('/<actor>/unsubscribe', methods=['GET'])
