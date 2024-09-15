@@ -14,6 +14,7 @@ from flask_babel import Babel, lazy_gettext as _l
 from flask_caching import Cache
 from celery import Celery
 from sqlalchemy_searchable import make_searchable
+import httpx
 
 from config import Config
 
@@ -41,6 +42,7 @@ bootstrap = Bootstrap5()
 babel = Babel(locale_selector=get_locale)
 cache = Cache()
 celery = Celery(__name__, broker=Config.CELERY_BROKER_URL)
+httpx_client = httpx.Client(http2=True, limits=httpx.Limits(max_connections=20))
 
 
 def create_app(config_class=Config):

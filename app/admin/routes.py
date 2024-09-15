@@ -1,7 +1,5 @@
 import os
-from datetime import datetime, timedelta
-from io import BytesIO
-import requests as r
+from datetime import timedelta
 from time import sleep
 
 from flask import request, flash, json, url_for, current_app, redirect, g, abort

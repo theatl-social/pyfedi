@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, date
 from time import sleep
 from typing import List, Literal, Union
 
+import httpx
 import markdown2
 import math
 from urllib.parse import urlparse, parse_qs, urlencode
@@ -19,10 +20,8 @@ import flask
 from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
 import warnings
 
-from app.activitypub.signature import default_context
 
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
-import requests
 import os
 from flask import current_app, json, redirect, url_for, request, make_response, Response, g, flash
 from flask_babel import _
@@ -30,7 +29,7 @@ from flask_login import current_user, logout_user
 from sqlalchemy import text, or_
 from wtforms.fields  import SelectField, SelectMultipleField
 from wtforms.widgets import Select, html_params, ListWidget, CheckboxInput
-from app import db, cache
+from app import db, cache, httpx_client
 import re
 from moviepy.editor import VideoFileClip
 from PIL import Image, ImageOps
@@ -81,7 +80,7 @@ def getmtime(filename):
 
 
 # do a GET request to a uri, return the result
-def get_request(uri, params=None, headers=None) -> requests.Response:
+def get_request(uri, params=None, headers=None) -> httpx.Response:
     timeout = 15 if 'washingtonpost.com' in uri else 5  # Washington Post is really slow on og:image for some reason
     if headers is None:
         headers = {'User-Agent': 'PieFed/1.0'}
@@ -92,50 +91,39 @@ def get_request(uri, params=None, headers=None) -> requests.Response:
     else:
         payload_str = urllib.parse.urlencode(params) if params else None
     try:
-        response = requests.get(uri, params=payload_str, headers=headers, timeout=timeout, allow_redirects=True)
-    except requests.exceptions.SSLError as invalid_cert:
-        # Not our problem if the other end doesn't have proper SSL
-        current_app.logger.info(f"{uri} {invalid_cert}")
-        raise requests.exceptions.SSLError from invalid_cert
+        response = httpx_client.get(uri, params=payload_str, headers=headers, timeout=timeout, follow_redirects=True)
     except ValueError as ex:
         # Convert to a more generic error we handle
-        raise requests.exceptions.RequestException(f"InvalidCodepoint: {str(ex)}") from None
-    except requests.exceptions.ReadTimeout as read_timeout:
+        raise httpx.HTTPError(f"HTTPError: {str(ex)}") from None
+    except httpx.ReadError as connection_error:
         try:    # retry, this time with a longer timeout
             sleep(random.randint(3, 10))
-            response = requests.get(uri, params=payload_str, headers=headers, timeout=timeout * 2, allow_redirects=True)
-        except Exception as e:
-            current_app.logger.info(f"{uri} {read_timeout}")
-            raise requests.exceptions.ReadTimeout from read_timeout
-    except requests.exceptions.ConnectionError as connection_error:
-        try:    # retry, this time with a longer timeout
-            sleep(random.randint(3, 10))
-            response = requests.get(uri, params=payload_str, headers=headers, timeout=timeout * 2, allow_redirects=True)
+            response = httpx_client.get(uri, params=payload_str, headers=headers, timeout=timeout * 2, follow_redirects=True)
         except Exception as e:
             current_app.logger.info(f"{uri} {connection_error}")
-            raise requests.exceptions.ConnectionError from connection_error
+            raise httpx_client.ReadError from connection_error
+    except httpx.HTTPError as read_timeout:
+        try:    # retry, this time with a longer timeout
+            sleep(random.randint(3, 10))
+            response = httpx_client.get(uri, params=payload_str, headers=headers, timeout=timeout * 2, follow_redirects=True)
+        except Exception as e:
+            current_app.logger.info(f"{uri} {read_timeout}")
+            raise httpx.HTTPError from read_timeout
 
     return response
 
 
 # do a HEAD request to a uri, return the result
-def head_request(uri, params=None, headers=None) -> requests.Response:
+def head_request(uri, params=None, headers=None) -> httpx.Response:
     if headers is None:
         headers = {'User-Agent': 'PieFed/1.0'}
     else:
         headers.update({'User-Agent': 'PieFed/1.0'})
     try:
-        response = requests.head(uri, params=params, headers=headers, timeout=5, allow_redirects=True)
-    except requests.exceptions.SSLError as invalid_cert:
-        # Not our problem if the other end doesn't have proper SSL
-        current_app.logger.info(f"{uri} {invalid_cert}")
-        raise requests.exceptions.SSLError from invalid_cert
-    except ValueError as ex:
-        # Convert to a more generic error we handle
-        raise requests.exceptions.RequestException(f"InvalidCodepoint: {str(ex)}") from None
-    except requests.exceptions.ReadTimeout as read_timeout:
-        current_app.logger.info(f"{uri} {read_timeout}")
-        raise requests.exceptions.ReadTimeout from read_timeout
+        response = httpx_client.head(uri, params=params, headers=headers, timeout=5, allow_redirects=True)
+    except httpx.HTTPError as er:
+        current_app.logger.info(f"{uri} {er}")
+        raise httpx.HTTPError from er
 
     return response
 
@@ -227,14 +215,14 @@ def is_video_hosting_site(url: str) -> bool:
 def mime_type_using_head(url):
     # Find the mime type of a url by doing a HEAD request - this is the same as GET except only the HTTP headers are transferred
     try:
-        response = requests.head(url, timeout=5)
+        response = httpx_client.head(url, timeout=5)
         response.raise_for_status()  # Raise an exception for HTTP errors
         content_type = response.headers.get('Content-Type')
         if content_type:
             return content_type
         else:
             return ''
-    except requests.exceptions.RequestException as e:
+    except httpx.HTTPError as e:
         return ''
 
 
@@ -525,7 +513,7 @@ def blocked_referrers() -> List[str]:
 
 def retrieve_block_list():
     try:
-        response = requests.get('https://raw.githubusercontent.com/rimu/no-qanon/master/domains.txt', timeout=1)
+        response = httpx_client.get('https://raw.githubusercontent.com/rimu/no-qanon/master/domains.txt', timeout=1)
     except:
         return None
     if response and response.status_code == 200:
@@ -534,7 +522,7 @@ def retrieve_block_list():
 
 def retrieve_peertube_block_list():
     try:
-        response = requests.get('https://peertube_isolation.frama.io/list/peertube_isolation.json', timeout=1)
+        response = httpx_client.get('https://peertube_isolation.frama.io/list/peertube_isolation.json', timeout=1)
     except:
         return None
     list = ''
@@ -542,6 +530,7 @@ def retrieve_peertube_block_list():
         response_data = response.json()
         for row in response_data['data']:
             list += row['value'] + "\n"
+    response.close()
     return list.strip()
 
 
@@ -951,7 +940,7 @@ def opengraph_parse(url):
 def url_to_thumbnail_file(filename) -> File:
     try:
         timeout = 15 if 'washingtonpost.com' in filename else 5 # Washington Post is really slow for some reason
-        response = requests.get(filename, timeout=timeout)
+        response = httpx_client.get(filename, timeout=timeout)
     except:
         return None
     if response.status_code == 200:
@@ -1118,7 +1107,7 @@ def in_sorted_list(arr, target):
 # Makes a still image from a video url, without downloading the whole video file
 def generate_image_from_video_url(video_url, output_path, length=2):
 
-    response = requests.get(video_url, stream=True, timeout=5,
+    response = httpx_client.get(video_url, stream=True, timeout=5,
                             headers={'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0'})  # Imgur requires a user agent
     content_type = response.headers.get('Content-Type')
     if content_type:

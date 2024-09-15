@@ -1,9 +1,10 @@
 import logging
-import requests
 from flask import Markup, current_app, request, session
 from wtforms import ValidationError
 from wtforms.fields import HiddenField
 from wtforms.widgets import HiddenInput
+
+from app import httpx_client
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +84,7 @@ class Recaptcha3Validator(object):
             'response': response
         }
 
-        http_response = requests.post(RECAPTCHA_VERIFY_SERVER, data, timeout=10)
+        http_response = httpx_client.post(RECAPTCHA_VERIFY_SERVER, data, timeout=10)
         if http_response.status_code != 200:
             return False
 

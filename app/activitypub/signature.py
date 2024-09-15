@@ -34,7 +34,7 @@ import json
 from typing import Literal, TypedDict, cast
 from urllib.parse import urlparse
 
-import requests
+import httpx
 import arrow
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes, serialization
@@ -44,7 +44,7 @@ from datetime import datetime
 from dateutil import parser
 from pyld import jsonld
 from email.utils import formatdate
-from app import db, celery
+from app import db, celery, httpx_client
 from app.constants import DATETIME_MS_FORMAT
 from app.models import utcnow, ActivityPubLog, Community, Instance, CommunityMember, User
 from sqlalchemy import text
@@ -391,21 +391,17 @@ class HttpSignature:
         # Send the request with all those headers except the pseudo one
         del headers["(request-target)"]
         try:
-            response = requests.request(
+            response = httpx_client.request(
                 method,
                 uri,
                 headers=headers,
                 data=body_bytes,
                 timeout=timeout,
-                allow_redirects=method == "GET",
+                follow_redirects=method == "GET",
             )
-        except requests.exceptions.SSLError as invalid_cert:
-            # Not our problem if the other end doesn't have proper SSL
-            current_app.logger.info(f"{uri} {invalid_cert}")
-            raise requests.exceptions.SSLError from invalid_cert
-        except ValueError as ex:
+        except httpx.HTTPError as ex:
             # Convert to a more generic error we handle
-            raise requests.exceptions.RequestException(f"InvalidCodepoint: {str(ex)}") from None
+            raise httpx.HTTPError(f"HTTP Exception for {ex.request.url} - {ex}") from None
 
         if (
                 method == "POST"

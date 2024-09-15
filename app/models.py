@@ -3,7 +3,6 @@ from time import time
 from typing import List, Union
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
-import requests
 from flask import current_app, escape, url_for, render_template_string
 from flask_login import UserMixin, current_user
 from sqlalchemy import or_, text, desc
@@ -15,7 +14,7 @@ from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.mutable import MutableList
 from flask_sqlalchemy import BaseQuery
 from sqlalchemy_searchable import SearchQueryMixin
-from app import db, login, cache, celery
+from app import db, login, cache, celery, httpx_client
 import jwt
 import os
 import math
@@ -342,7 +341,7 @@ def flush_cdn_cache_task(to_purge: Union[str, List[str]]):
             }
 
     if body:
-        response = requests.request(
+        response = httpx_client.request(
             'POST',
             f'https://api.cloudflare.com/client/v4/zones/{zone_id}/purge_cache',
             headers=headers,

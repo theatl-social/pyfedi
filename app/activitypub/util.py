@@ -6,6 +6,7 @@ from datetime import timedelta, datetime, timezone
 from random import randint
 from typing import Union, Tuple, List
 
+import httpx
 import redis
 from flask import current_app, request, g, url_for, json
 from flask_babel import _
@@ -17,10 +18,6 @@ from app.models import User, Post, Community, BannedInstances, File, PostReply, 
     Language, Tag, Poll, PollChoice, UserFollower, CommunityBan, CommunityJoinRequest, NotificationSubscription
 from app.activitypub.signature import signed_get_request, post_request
 import time
-import base64
-import requests
-from cryptography.hazmat.primitives import serialization, hashes
-from cryptography.hazmat.primitives.asymmetric import padding
 from app.constants import *
 from urllib.parse import urlparse, parse_qs
 from PIL import Image, ImageOps
@@ -91,39 +88,6 @@ def local_comments():
 
 def local_communities():
     return db.session.execute(text('SELECT COUNT(id) as c FROM "community" WHERE instance_id = 1')).scalar()
-
-
-def send_activity(sender: User, host: str, content: str):
-    date = time.strftime('%a, %d %b %Y %H:%M:%S UTC', time.gmtime())
-
-    private_key = serialization.load_pem_private_key(sender.private_key, password=None)
-
-    # todo: look up instance details to set host_inbox
-    host_inbox = '/inbox'
-
-    signed_string = f"(request-target): post {host_inbox}\nhost: {host}\ndate: " + date
-    signature = private_key.sign(signed_string.encode('utf-8'), padding.PKCS1v15(), hashes.SHA256())
-    encoded_signature = base64.b64encode(signature).decode('utf-8')
-
-    # Construct the Signature header
-    header = f'keyId="https://{current_app.config["SERVER_NAME"]}/u/{sender.user_name}",headers="(request-target) host date",signature="{encoded_signature}"'
-
-    # Create headers for the request
-    headers = {
-        'Host': host,
-        'Date': date,
-        'Signature': header
-    }
-
-    # Make the HTTP request
-    try:
-        response = requests.post(f'https://{host}{host_inbox}', headers=headers, data=content,
-                                 timeout=REQUEST_TIMEOUT)
-    except requests.exceptions.RequestException:
-        time.sleep(1)
-        response = requests.post(f'https://{host}{host_inbox}', headers=headers, data=content,
-                                 timeout=REQUEST_TIMEOUT / 2)
-    return response.status_code
 
 
 def post_to_activity(post: Post, community: Community):
@@ -341,14 +305,12 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                 if not signed_get:
                     try:
                         actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
-                    except requests.exceptions.ReadTimeout:
+                    except httpx.HTTPError:
                         time.sleep(randint(3, 10))
                         try:
                             actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
-                        except requests.exceptions.ReadTimeout:
+                        except httpx.HTTPError:
                             return None
-                    except requests.exceptions.ConnectionError:
-                        return None
                     if actor_data.status_code == 200:
                         try:
                             actor_json = actor_data.json()
@@ -379,7 +341,7 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                 try:
                     webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
                                                  params={'resource': f"acct:{address}@{server}"})
-                except requests.exceptions.ReadTimeout:
+                except httpx.HTTPError:
                     time.sleep(randint(3, 10))
                     webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
                                                  params={'resource': f"acct:{address}@{server}"})
@@ -392,7 +354,7 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                             # retrieve the activitypub profile
                             try:
                                 actor_data = get_request(links['href'], headers={'Accept': type})
-                            except requests.exceptions.ReadTimeout:
+                            except httpx.HTTPError:
                                 time.sleep(randint(3, 10))
                                 actor_data = get_request(links['href'], headers={'Accept': type})
                             # to see the structure of the json contained in actor_data, do a GET to https://lemmy.world/c/technology with header Accept: application/activity+json
@@ -487,11 +449,11 @@ def refresh_user_profile_task(user_id):
     if user and user.instance_id and user.instance.online():
         try:
             actor_data = get_request(user.ap_public_url, headers={'Accept': 'application/activity+json'})
-        except requests.exceptions.ReadTimeout:
+        except httpx.HTTPError:
             time.sleep(randint(3, 10))
             try:
                 actor_data = get_request(user.ap_public_url, headers={'Accept': 'application/activity+json'})
-            except requests.exceptions.ReadTimeout:
+            except httpx.HTTPError:
                 return
         except:
             try:
@@ -567,7 +529,7 @@ def refresh_community_profile_task(community_id):
     if community and community.instance.online() and not community.is_local():
         try:
             actor_data = get_request(community.ap_public_url, headers={'Accept': 'application/activity+json'})
-        except requests.exceptions.ReadTimeout:
+        except httpx.HTTPError:
             time.sleep(randint(3, 10))
             try:
                 actor_data = get_request(community.ap_public_url, headers={'Accept': 'application/activity+json'})
@@ -1211,7 +1173,7 @@ def new_instance_profile_task(instance_id: int):
         try:
             instance_json = instance_data.json()
             instance_data.close()
-        except requests.exceptions.JSONDecodeError as ex:
+        except Exception as ex:
             instance_json = {}
         if 'type' in instance_json and instance_json['type'] == 'Application':
             instance.inbox = instance_json['inbox']
@@ -1258,11 +1220,9 @@ def new_instance_profile_task(instance_id: int):
         instance.updated_at = utcnow()
         db.session.commit()
 
-    HEADERS = {'User-Agent': 'PieFed/1.0', 'Accept': 'application/activity+json'}
+    headers = {'User-Agent': 'PieFed/1.0', 'Accept': 'application/activity+json'}
     try:
-        nodeinfo = requests.get(f"https://{instance.domain}/.well-known/nodeinfo", headers=HEADERS,
-                                                                    timeout=5, allow_redirects=True)
-
+        nodeinfo = get_request(f"https://{instance.domain}/.well-known/nodeinfo", headers=headers)
         if nodeinfo.status_code == 200:
             nodeinfo_json = nodeinfo.json()
             for links in nodeinfo_json['links']:
@@ -1272,8 +1232,7 @@ def new_instance_profile_task(instance_id: int):
                     links['rel'] == 'http://nodeinfo.diaspora.software/ns/schema/2.1'):     # Lemmy v0.19.4+ (no 2.0 back-compat provided here)
                     try:
                         time.sleep(0.1)
-                        node = requests.get(links['href'], headers=HEADERS, timeout=5,
-                                                                allow_redirects=True)
+                        node = get_request(links['href'], headers=headers)
                         if node.status_code == 200:
                             node_json = node.json()
                             if 'software' in node_json:

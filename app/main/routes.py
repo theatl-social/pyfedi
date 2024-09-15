@@ -22,7 +22,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     ap_datetime, shorten_string, markdown_to_text, user_filters_home, \
     joined_communities, moderating_communities, markdown_to_html, allowlist_html, \
     blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
-    blocked_users, menu_topics, languages_for_form, blocked_communities
+    blocked_users, menu_topics, languages_for_form, blocked_communities, get_request
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog
 
@@ -447,6 +447,13 @@ def list_files(directory):
 
 @bp.route('/test')
 def test():
+
+    response = get_request('https://rimu.geek.nz')
+    x = ''
+    if response.status_code == 200:
+        x =response.content
+    response.close()
+    return x
 
     json = {
       "@context": "https://www.w3.org/ns/activitystreams",

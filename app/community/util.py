@@ -2,7 +2,8 @@ from datetime import datetime, timedelta
 from time import sleep
 from random import randint
 from typing import List
-import requests
+
+import httpx
 from PIL import Image, ImageOps
 from flask import request, abort, g, current_app, json
 from flask_login import current_user
@@ -47,15 +48,14 @@ def search_for_community(address: str):
         try:
             webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
                                          params={'resource': f"acct:{address[1:]}"})
-        except requests.exceptions.ReadTimeout:
+        except httpx.HTTPError:
             sleep(randint(3, 10))
             try:
                 webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
                                             params={'resource': f"acct:{address[1:]}"})
-            except requests.exceptions.RequestException:
+            except httpx.HTTPError:
                 return None
-        except requests.exceptions.RequestException:
-            return None
+
         if webfinger_data.status_code == 200:
             webfinger_json = webfinger_data.json()
             for links in webfinger_json['links']:

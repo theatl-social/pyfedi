@@ -7,7 +7,7 @@ from random import randint
 from time import sleep
 
 import flask
-import requests
+import httpx
 from flask import json, current_app
 from flask_babel import _
 from sqlalchemy import or_, desc, text
@@ -214,8 +214,7 @@ def register(app):
                                          # 'solves' this by redirecting calls for nodeinfo/2.0.json to nodeinfo/2.1
                 if not nodeinfo_href:
                     try:
-                        nodeinfo = requests.get(f"https://{instance.domain}/.well-known/nodeinfo", headers=HEADERS,
-                                                timeout=5, allow_redirects=True)
+                        nodeinfo = get_request(f"https://{instance.domain}/.well-known/nodeinfo", headers=HEADERS)
 
                         if nodeinfo.status_code == 200:
                             nodeinfo_json = nodeinfo.json()
@@ -234,16 +233,12 @@ def register(app):
                                     instance.failures += 1
                         elif nodeinfo.status_code >= 400:
                             current_app.logger.info(f"{instance.domain} has no well-known/nodeinfo response")
-                    except requests.exceptions.ReadTimeout:
+                    except httpx.HTTPError:
                         instance.failures += 1
-                    except requests.exceptions.ConnectionError:
-                        instance.failures += 1
-                    except requests.exceptions.RequestException:
-                        pass
 
                 if instance.nodeinfo_href:
                     try:
-                        node = requests.get(instance.nodeinfo_href, headers=HEADERS, timeout=5, allow_redirects=True)
+                        node = get_request(instance.nodeinfo_href, headers=HEADERS)
                         if node.status_code == 200:
                             node_json = node.json()
                             if 'software' in node_json:
@@ -254,7 +249,7 @@ def register(app):
                         elif node.status_code >= 400:
                             instance.failures += 1
                             instance.nodeinfo_href = None
-                    except requests.exceptions.RequestException:
+                    except httpx.HTTPError:
                         instance.failures += 1
                         instance.nodeinfo_href = None
                 if instance.failures > 7 and instance.dormant == True:

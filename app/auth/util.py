@@ -1,13 +1,10 @@
 import random
-from datetime import timedelta
 from unicodedata import normalize
 
-import requests
 from flask import current_app
 
-import app
 from app import cache
-from app.models import utcnow
+from app.utils import get_request
 
 
 # Return a random string of 6 letter/digits.
@@ -31,7 +28,7 @@ def ip2location(ip: str):
         if not current_app.config['IPINFO_TOKEN']:
             return {}
         url = 'http://ipinfo.io/' + ip + '?token=' + current_app.config['IPINFO_TOKEN']
-        response = requests.get(url, timeout=5)
+        response = get_request(url)
         if response.status_code == 200:
             data = response.json()
             cache.set('ip_' + ip, data, timeout=86400)
