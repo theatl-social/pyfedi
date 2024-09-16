@@ -14,7 +14,11 @@ from app.activitypub.routes import process_inbox_request, process_delete_request
 from app.activitypub.signature import post_request, default_context
 from app.activitypub.util import instance_allowed, instance_blocked, extract_domain_and_actor
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
+<<<<<<< HEAD
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, EditInstanceForm
+=======
+    EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm
+>>>>>>> bc26e9f (Adding import, export for bans)
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form
 from app.community.util import save_icon_file, save_banner_file, search_for_community
@@ -191,6 +195,7 @@ def admin_misc():
 def admin_federation():
     form = FederationForm()
     preload_form = PreLoadCommunitiesForm()
+    ban_lists_form = ImportExportBannedListsForm()
     site = Site.query.get(1)
     if site is None:
         site = Site()
@@ -308,6 +313,16 @@ def admin_federation():
 
         return redirect(url_for('admin.admin_federation'))
     
+    # this is the import bans button
+    elif ban_lists_form.import_submit.data and ban_lists_form.validate():
+        flash(_('import button clicked'))
+        return redirect(url_for('admin.admin_federation'))
+    
+    # this is the export bans button
+    elif ban_lists_form.export_submit.data and ban_lists_form.validate():
+        flash(_('export button clicked'))
+        return redirect(url_for('admin.admin_federation'))
+
     # this is the main settings form
     elif form.validate_on_submit():
         if form.use_allowlist.data:
@@ -344,7 +359,8 @@ def admin_federation():
         form.blocked_actors.data = get_setting('actor_blocked_words', '88')
 
     return render_template('admin/federation.html', title=_('Federation settings'), 
-                           form=form, preload_form=preload_form, current_app_debug=current_app.debug,
+                           form=form, preload_form=preload_form, ban_lists_form=ban_lists_form,
+                           current_app_debug=current_app.debug,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(),

@@ -57,6 +57,11 @@ class PreLoadCommunitiesForm(FlaskForm):
     pre_load_submit = SubmitField(_l('Add Communities'))
 
 
+class ImportExportBannedListsForm(FlaskForm):
+    import_submit = SubmitField(_l('Import'))
+    export_submit = SubmitField(_l('Export'))
+
+
 class EditCommunityForm(FlaskForm):
     title = StringField(_l('Title'), validators=[DataRequired()])
     url = StringField(_l('Url'), validators=[DataRequired()])
