@@ -78,6 +78,8 @@ def show_profile(user):
     # profile info
     canonical = user.ap_public_url if user.ap_public_url else None
     description = shorten_string(markdown_to_text(user.about), 150) if user.about else None
+    user.recalculate_post_stats()
+    db.session.commit()
 
     # pagination urls
     post_next_url = url_for('activitypub.user_profile', actor=user.ap_id if user.ap_id is not None else user.user_name,
