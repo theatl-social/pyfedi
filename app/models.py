@@ -1190,24 +1190,24 @@ class Post(db.Model):
                 if vote_direction == 'upvote':  # new vote is also up, so remove it
                     db.session.delete(existing_vote)
                     self.up_votes -= 1
-                    self.score -= existing_vote.effect
+                    self.score -= existing_vote.effect              # score - (+1) = score-1
                     undo = 'Like'
                 else:  # new vote is down while previous vote was up, so reverse their previous vote
                     existing_vote.effect = -1
                     self.up_votes -= 1
                     self.down_votes += 1
-                    self.score -= existing_vote.effect * 2
+                    self.score += existing_vote.effect * 2          # score + (-2) = score-2
             else:  # previous vote was down
                 if vote_direction == 'downvote':  # new vote is also down, so remove it
                     db.session.delete(existing_vote)
                     self.down_votes -= 1
-                    self.score += existing_vote.effect
+                    self.score -= existing_vote.effect              # score - (-1) = score+1
                     undo = 'Dislike'
                 else:  # new vote is up while previous vote was down, so reverse their previous vote
                     existing_vote.effect = 1
                     self.up_votes += 1
                     self.down_votes -= 1
-                    self.score += existing_vote.effect * 2
+                    self.score += existing_vote.effect * 2          # score + (+2) = score+2
         else:
             if vote_direction == 'upvote':
                 effect = Instance.weight(user.ap_domain)
@@ -1222,20 +1222,19 @@ class Post(db.Model):
                 if user.cannot_vote():
                     effect = spicy_effect = 0
                 self.up_votes += 1
-                self.score += spicy_effect
+                self.score += spicy_effect                      # score + (+1) = score+1
             else:
                 effect = -1.0
+                spicy_effect = effect
                 self.down_votes += 1
                 # Make 'hot' sort more spicy by amplifying the effect of early downvotes
                 if self.up_votes + self.down_votes <= 30:
-                    effect = current_app.config['SPICY_UNDER_30']
+                    spicy_effect *= current_app.config['SPICY_UNDER_30']
                 elif self.up_votes + self.down_votes <= 60:
-                    effect = current_app.config['SPICY_UNDER_60']
-                else:
-                    effect = -1.0
+                    spicy_effect *= current_app.config['SPICY_UNDER_60']
                 if user.cannot_vote():
-                    effect = 0
-                self.score -= effect
+                    effect = spicy_effect = 0
+                self.score += spicy_effect                      # score + (-1) = score-1
             vote = PostVote(user_id=user.id, post_id=self.id, author_id=self.author.id,
                             effect=effect)
             # upvotes do not increase reputation in low quality communities
