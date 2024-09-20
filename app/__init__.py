@@ -108,6 +108,9 @@ def create_app(config_class=Config):
     from app.dev import bp as dev_bp
     app.register_blueprint(dev_bp)
 
+    from app.api.alpha import bp as app_api_bp
+    app.register_blueprint(app_api_bp)
+
     # send error reports via email
     if app.config['MAIL_SERVER'] and app.config['MAIL_ERRORS']:
         auth = None
