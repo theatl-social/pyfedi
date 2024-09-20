@@ -989,7 +989,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                         "type": "Accept",
                                         "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)
                                     }
-                                    if post_request(user.ap_inbox_url, accept, community.private_key, f"{community.public_url()}#main-key"):
+                                    if post_request(user.ap_inbox_url, accept, community.private_key, f"{community.public_url()}#main-key") is True:
                                         activity_log.result = 'success'
                                     else:
                                         activity_log.exception_message = 'Error sending Accept'
@@ -1485,7 +1485,7 @@ def process_user_follow_request(request_json, activitypublog_id, remote_user_id)
             "type": "Accept",
             "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)
         }
-        if post_request(remote_user.ap_inbox_url, accept, local_user.private_key, f"{local_user.public_url()}#main-key"):
+        if post_request(remote_user.ap_inbox_url, accept, local_user.private_key, f"{local_user.public_url()}#main-key") is True:
             activity_log.result = 'success'
         else:
             activity_log.exception_message = 'Error sending Accept'

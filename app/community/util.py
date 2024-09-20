@@ -723,7 +723,7 @@ def send_to_remote_instance_task(instance_id: int, community_id: int, payload):
     if community:
         instance = Instance.query.get(instance_id)
         if instance.inbox and instance.online() and not instance_banned(instance.domain):
-            if post_request(instance.inbox, payload, community.private_key, community.ap_profile_id + '#main-key'):
+            if post_request(instance.inbox, payload, community.private_key, community.ap_profile_id + '#main-key') is True:
                 instance.last_successful_send = utcnow()
                 instance.failures = 0
             else:
