@@ -19,6 +19,7 @@ from functools import wraps
 import flask
 from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
 import warnings
+import jwt
 
 
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
@@ -1261,3 +1262,23 @@ def add_to_modlog_activitypub(action: str, actor: User, community_id: int = None
     db.session.add(ModLog(user_id=actor.id, community_id=community_id, type=action_type, action=action,
                           reason=reason, link=link, link_text=link_text, public=get_setting('public_modlog', False)))
     db.session.commit()
+
+
+def authorise_api_user(auth, return_type='id'):
+    token = auth[7:]     # remove 'Bearer '
+
+    try:
+        decoded = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
+        if decoded:
+            user_id = decoded['sub']
+            issued_at = decoded['iat']      # use to check against blacklisted JWTs
+            user = User.query.filter_by(id=user_id, ap_id=None, verified=True, banned=False, deleted=False).scalar()
+            if user:
+                if return_type == 'model':
+                    return user
+                else:
+                    return user_id
+            else:
+                raise Exception('incorrect_login')
+    except jwt.InvalidTokenError:
+        raise Exception('invalid_token')

@@ -1008,6 +1008,13 @@ class User(UserMixin, db.Model):
         return list(db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE entity_id = :user_id AND type = :type '),
                                   {'user_id': self.id, 'type': NOTIF_USER}).scalars())
 
+    def encode_jwt_token(self):
+        try:
+            payload = {'sub': str(self.id), 'iss': current_app.config['SERVER_NAME'], 'iat': int(time())}
+            return jwt.encode(payload, current_app.config['SECRET_KEY'], algorithm='HS256')
+        except Exception as e:
+            return str(e)
+
 
 class ActivityLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
