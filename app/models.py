@@ -1215,6 +1215,7 @@ class Post(db.Model):
                     self.up_votes += 1
                     self.down_votes -= 1
                     self.score += existing_vote.effect * 2          # score + (+2) = score+2
+            db.session.commit()
         else:
             if vote_direction == 'upvote':
                 effect = Instance.weight(user.ap_domain)
@@ -1250,7 +1251,8 @@ class Post(db.Model):
             self.author.reputation += effect
             db.session.add(vote)
 
-            user.last_seen = utcnow()
+        user.last_seen = utcnow()
+        db.session.commit()
         if not user.banned:
             self.ranking = self.post_ranking(self.score, self.created_at)
             user.recalculate_attitude()
