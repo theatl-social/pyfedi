@@ -1681,6 +1681,8 @@ def post_reply_delete(post_id: int, comment_id: int):
             post_reply.delete_dependencies()
             post_reply.deleted = True
         g.site.last_active = community.last_active = utcnow()
+        if not post_reply.author.bot:
+            post.reply_count -= 1
         post_reply.author.post_reply_count -= 1
         db.session.commit()
         flash(_('Comment deleted.'))
