@@ -29,7 +29,7 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
 from app.utils import gibberish, get_setting, render_template, \
     community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
-    community_moderators, lemmy_markdown_to_html
+    community_moderators, markdown_to_html
 
 
 @bp.route('/testredis')
@@ -508,7 +508,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                 encrypted = request_json['object']['encrypted'] if 'encrypted' in request_json['object'] else None
                                 new_message = ChatMessage(sender_id=sender.id, recipient_id=recipient.id, conversation_id=existing_conversation.id,
                                                           body=request_json['object']['source']['content'],
-                                                          body_html=lemmy_markdown_to_html(request_json['object']['source']['content']),
+                                                          body_html=markdown_to_html(request_json['object']['source']['content']),
                                                           encrypted=encrypted)
                                 db.session.add(new_message)
                                 existing_conversation.updated_at = utcnow()

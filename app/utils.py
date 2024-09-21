@@ -317,24 +317,6 @@ def markdown_to_html(markdown_text, anchors_new_tab=True) -> str:
         return ''
 
 
-# Have started process of replacing this function, and just using Lemmy's HTML 'content' field, same as other platforms that only provide that.
-# Lemmy's MD supports line breaks as SPACE-SPACE-NEWLINE or SPACE-BACKSLASH-NEWLINE but Markdown2 can't support both: without the 'breaks'
-# extra, it doesn't translate SPACE-BACKSLASH-NEWLINE to <br />, but with it it doesn't translate SPACE-SPACE-NEWLINE to <br />
-
-# done so far: post bodies (backfilled), post bodies (create), post bodies (edit), replies (create), replies (edit)
-# not done yet: user profiles, community descriptions, chat messages, over-writing with 'banned' or 'deleted by author', replies from autotl;dr bot
-
-# this is for lemmy's version of Markdown (can be removed in future - when HTML from them filtered through an allow_list is used, instead of MD)
-def lemmy_markdown_to_html(markdown_text) -> str:
-    if markdown_text:
-        raw_html = markdown2.markdown(markdown_text, safe_mode=True, extras={'middle-word-em': False, 'tables': True,
-                                                                             'fenced-code-blocks': True, 'strike': True,
-                                                                             'breaks': {'on_newline': False, 'on_backslash': True}})
-        return allowlist_html(raw_html)
-    else:
-        return ''
-
-
 def markdown_to_text(markdown_text) -> str:
     if not markdown_text or markdown_text == '':
         return ''
