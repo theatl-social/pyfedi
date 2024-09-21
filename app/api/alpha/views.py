@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from app import cache, db
 from app.constants import *
 from app.models import Community, CommunityMember, Post, PostReply, PostVote, User

@@ -102,14 +102,14 @@ def get_request(uri, params=None, headers=None) -> httpx.Response:
             response = httpx_client.get(uri, params=payload_str, headers=headers, timeout=timeout * 2, follow_redirects=True)
         except Exception as e:
             current_app.logger.info(f"{uri} {connection_error}")
-            raise httpx_client.ReadError from connection_error
+            raise httpx_client.ReadError(f"HTTPReadError: {str(e)}") from connection_error
     except httpx.HTTPError as read_timeout:
         try:    # retry, this time with a longer timeout
             sleep(random.randint(3, 10))
             response = httpx_client.get(uri, params=payload_str, headers=headers, timeout=timeout * 2, follow_redirects=True)
         except Exception as e:
             current_app.logger.info(f"{uri} {read_timeout}")
-            raise httpx.HTTPError from read_timeout
+            raise httpx.HTTPError(f"HTTPError: {str(e)}") from read_timeout
 
     return response
 
@@ -124,7 +124,7 @@ def head_request(uri, params=None, headers=None) -> httpx.Response:
         response = httpx_client.head(uri, params=params, headers=headers, timeout=5, allow_redirects=True)
     except httpx.HTTPError as er:
         current_app.logger.info(f"{uri} {er}")
-        raise httpx.HTTPError from er
+        raise httpx.HTTPError(f"HTTPError: {str(er)}") from er
 
     return response
 
