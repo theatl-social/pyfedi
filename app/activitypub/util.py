@@ -1579,17 +1579,6 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
                         return None
             post = Post.query.get(post_id)
 
-            # special case: add comment from auto-tldr bot to post body if body is empty
-            if user.ap_id == 'autotldr@lemmings.world':
-                if not post.body or (post.body and post.body.strip() == ''):
-                    if not '::: spoiler' in post_reply.body:
-                        post.body = "🤖 I'm a bot that provides automatic summaries for articles:\n::: spoiler Click here to see the summary\n" + post_reply.body + '\n:::'
-                    else:
-                        post.body = post_reply.body
-                    post.body_html = lemmy_markdown_to_html(post.body) + '\n\n<small><span class="render_username">Generated using AI by: <a href="/u/autotldr@lemmings.world" title="AutoTL;DR">AutoTL;DR</a></span></small>'
-                    db.session.commit()
-                    return None
-
             if post.comments_enabled:
                 anchor = None
                 if not parent_comment_id:
