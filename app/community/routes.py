@@ -38,7 +38,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     joined_communities, moderating_communities, blocked_domains, mimetype_from_url, blocked_instances, \
     community_moderators, communities_banned_from, show_ban_message, recently_upvoted_posts, recently_downvoted_posts, \
     blocked_users, post_ranking, languages_for_form, english_language_id, menu_topics, add_to_modlog, \
-    blocked_communities, remove_tracking_from_link
+    blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown
 from feedgen.feed import FeedGenerator
 from datetime import timezone, timedelta
 from copy import copy
@@ -60,7 +60,7 @@ def add_local():
             form.url.data = form.url.data[3:]
         form.url.data = slugify(form.url.data.strip(), separator='_').lower()
         private_key, public_key = RsaKeys.generate_keypair()
-        community = Community(title=form.community_name.data, name=form.url.data, description=form.description.data,
+        community = Community(title=form.community_name.data, name=form.url.data, description=piefed_markdown_to_lemmy_markdown(form.description.data),
                               rules=form.rules.data, nsfw=form.nsfw.data, private_key=private_key,
                               public_key=public_key, description_html=markdown_to_html(form.description.data),
                               rules_html=markdown_to_html(form.rules.data), local_only=form.local_only.data,
@@ -697,6 +697,7 @@ def federate_post(community, post):
         'cc': [],
         'content': post.body_html if post.body_html else '',
         'mediaType': 'text/html',
+        'source': {'content': post.body if post.body else '', 'mediaType': 'text/markdown'},
         'attachment': [],
         'commentsEnabled': post.comments_enabled,
         'sensitive': post.nsfw,
@@ -918,7 +919,7 @@ def community_edit(community_id: int):
         form.languages.choices = languages_for_form()
         if form.validate_on_submit():
             community.title = form.title.data
-            community.description = form.description.data
+            community.description = piefed_markdown_to_lemmy_markdown(form.description.data)
             community.description_html = markdown_to_html(form.description.data, anchors_new_tab=False)
             community.rules = form.rules.data
             community.rules_html = markdown_to_html(form.rules.data, anchors_new_tab=False)

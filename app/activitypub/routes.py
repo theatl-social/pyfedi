@@ -296,6 +296,7 @@ def user_profile(actor):
                 }
             if user.about_html and main_user_name:
                 actor_data['summary'] = user.about_html
+                actor_data['source'] = {'content': user.about, 'mediaType': 'text/markdown'}
             if user.matrix_user_id and main_user_name:
                 actor_data['matrixUserId'] = user.matrix_user_id
             resp = jsonify(actor_data)
@@ -368,6 +369,7 @@ def community_profile(actor):
             }
             if community.description_html:
                 actor_data["summary"] = community.description_html
+                actor_data['source'] = {'content': community.description, 'mediaType': 'text/markdown'}
             if community.icon_id is not None:
                 actor_data["icon"] = {
                     "type": "Image",
