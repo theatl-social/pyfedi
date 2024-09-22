@@ -1787,3 +1787,45 @@ def post_cross_posts(post_id: int):
     post = Post.query.get_or_404(post_id)
     cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
     return render_template('post/post_cross_posts.html', post=post, cross_posts=cross_posts)
+
+
+@bp.route('/post/<int:post_id>/voting_activity', methods=['GET'])
+@login_required
+def post_view_voting_activity(post_id: int):
+    post = Post.query.get_or_404(post_id)
+    if not current_user.is_admin() and not post.community.is_moderator() and not post.community.is_owner():
+        abort(404)
+
+    post_title=post.title
+    upvoters = User.query.join(PostVote, PostVote.user_id == User.id).filter_by(post_id=post_id, effect=1.0).order_by(User.ap_domain, User.user_name)
+    downvoters = User.query.join(PostVote, PostVote.user_id == User.id).filter_by(post_id=post_id, effect=-1.0).order_by(User.ap_domain, User.user_name)
+
+    # local users will be at the bottom of each list as ap_domain is empty for those.
+
+    return render_template('post/post_voting_activity.html', title=_('Voting Activity'),
+                           post_title=post_title, upvoters=upvoters, downvoters=downvoters,
+                           moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site
+                           )
+
+
+@bp.route('/comment/<int:comment_id>/voting_activity', methods=['GET'])
+@login_required
+def post_reply_view_voting_activity(comment_id: int):
+    post_reply = PostReply.query.get_or_404(comment_id)
+    if not current_user.is_admin() and not post_reply.community.is_moderator() and not post_reply.community.is_owner():
+        abort(404)
+
+    reply_text=post_reply.body
+    upvoters = User.query.join(PostReplyVote, PostReplyVote.user_id == User.id).filter_by(post_reply_id=comment_id, effect=1.0).order_by(User.ap_domain, User.user_name)
+    downvoters = User.query.join(PostReplyVote, PostReplyVote.user_id == User.id).filter_by(post_reply_id=comment_id, effect=-1.0).order_by(User.ap_domain, User.user_name)
+
+    # local users will be at the bottom of each list as ap_domain is empty for those.
+
+    return render_template('post/post_reply_voting_activity.html', title=_('Voting Activity'),
+                           reply_text=reply_text, upvoters=upvoters, downvoters=downvoters,
+                           moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site
+                           )
