@@ -13,7 +13,8 @@ from sqlalchemy import desc
 def cached_post_list(type, sort, user_id, community_id, community_name, person_id):
     if type == "All":
         if community_name:
-            posts = Post.query.filter_by(deleted=False).join(Community, Community.id == Post.community_id).filter_by(show_all=True, name=community_name)
+            name, ap_domain = community_name.split('@')
+            posts = Post.query.filter_by(deleted=False).join(Community, Community.id == Post.community_id).filter_by(show_all=True, name=name, ap_domain=ap_domain)
         elif community_id:
             posts = Post.query.filter_by(deleted=False).join(Community, Community.id == Post.community_id).filter_by(show_all=True, id=community_id)
         elif person_id:
