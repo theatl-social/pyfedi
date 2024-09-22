@@ -284,6 +284,10 @@ def allowlist_html(html: str, a_target='_blank') -> str:
 
     clean_html = str(soup)
 
+    # avoid wrapping anchors around existing anchors (e.g. if raw URL already wrapped by remote PieFed instance)
+    re_double_anchor = re.compile(r'<a href=".*?" rel="nofollow ugc" target="_blank">(<a href=".*?" rel="nofollow ugc" target="_blank">.*?<\/a>)<\/a>')
+    clean_html = re_double_anchor.sub(r'\1', clean_html)
+
     # avoid returning empty anchors
     re_empty_anchor = re.compile(r'<a href="(.*?)" rel="nofollow ugc" target="_blank"><\/a>')
     clean_html = re_empty_anchor.sub(r'<a href="\1" rel="nofollow ugc" target="_blank">\1</a>', clean_html)
@@ -310,27 +314,9 @@ def allowlist_html(html: str, a_target='_blank') -> str:
 # this is for pyfedi's version of Markdown (differs from lemmy for: newlines for soft breaks, ...)
 def markdown_to_html(markdown_text, anchors_new_tab=True) -> str:
     if markdown_text:
-        raw_html = markdown2.markdown(markdown_text, safe_mode=True,
+        raw_html = markdown2.markdown(markdown_text,
                     extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True, 'breaks': {'on_newline': True, 'on_backslash': True}})
         return allowlist_html(raw_html, a_target='_blank' if anchors_new_tab else '')
-    else:
-        return ''
-
-
-# Have started process of replacing this function, and just using Lemmy's HTML 'content' field, same as other platforms that only provide that.
-# Lemmy's MD supports line breaks as SPACE-SPACE-NEWLINE or SPACE-BACKSLASH-NEWLINE but Markdown2 can't support both: without the 'breaks'
-# extra, it doesn't translate SPACE-BACKSLASH-NEWLINE to <br />, but with it it doesn't translate SPACE-SPACE-NEWLINE to <br />
-
-# done so far: post bodies (backfilled), post bodies (create), post bodies (edit), replies (create), replies (edit)
-# not done yet: user profiles, community descriptions, chat messages, over-writing with 'banned' or 'deleted by author', replies from autotl;dr bot
-
-# this is for lemmy's version of Markdown (can be removed in future - when HTML from them filtered through an allow_list is used, instead of MD)
-def lemmy_markdown_to_html(markdown_text) -> str:
-    if markdown_text:
-        raw_html = markdown2.markdown(markdown_text, safe_mode=True, extras={'middle-word-em': False, 'tables': True,
-                                                                             'fenced-code-blocks': True, 'strike': True,
-                                                                             'breaks': {'on_newline': False, 'on_backslash': True}})
-        return allowlist_html(raw_html)
     else:
         return ''
 

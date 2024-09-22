@@ -28,7 +28,7 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     is_image_url, domain_from_url, gibberish, ensure_directory_exists, markdown_to_text, head_request, post_ranking, \
     shorten_string, reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, remove_tracking_from_link, \
     blocked_phrases, microblog_content_to_title, generate_image_from_video_url, is_video_url, reply_is_stupid, \
-    notification_subscribers, communities_banned_from, lemmy_markdown_to_html, actor_contains_blocked_words, \
+    notification_subscribers, communities_banned_from, actor_contains_blocked_words, \
     html_to_text, opengraph_parse, url_to_thumbnail_file, add_to_modlog_activitypub, joined_communities, \
     moderating_communities, is_video_hosting_site
 
@@ -476,7 +476,19 @@ def refresh_user_profile_task(user_id):
             user.user_name = activity_json['preferredUsername']
             if 'name' in activity_json:
                 user.title = activity_json['name']
-            user.about_html = parse_summary(activity_json)
+            if 'summary' in activity_json:
+                about_html = activity_json['summary']
+                if not about_html.startswith('<'):                    # PeerTube
+                    about_html = '<p>' + about_html + '</p>'
+                user.about_html = allowlist_html(about_html)
+            else:
+                user.about_html = ''
+            if 'source' in activity_json and activity_json['source'].get('mediaType') == 'text/markdown':
+                user.about = activity_json['source']['content']
+                if '::: spoiler' in user.about:
+                    user.about_html = markdown_to_html(user.about)          # overwrite as Lemmy doesn't convert spoiler contents into HTML very well
+            else:
+                user.about = html_to_text(user.about_html)
             user.ap_fetched_at = utcnow()
             user.public_key = activity_json['publicKey']['publicKeyPem']
             user.indexable = new_indexable
@@ -550,10 +562,6 @@ def refresh_community_profile_task(community_id):
             if 'nsfl' in activity_json and activity_json['nsfl']:
                 community.nsfl = activity_json['nsfl']
             community.title = activity_json['name']
-            community.description = activity_json['summary'] if 'summary' in activity_json else ''
-            community.description_html = markdown_to_html(community.description)
-            community.rules = activity_json['rules'] if 'rules' in activity_json else ''
-            community.rules_html = lemmy_markdown_to_html(activity_json['rules'] if 'rules' in activity_json else '')
             community.restricted_to_mods = activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else False
             community.new_mods_wanted = activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False
             community.private_mods = activity_json['privateMods'] if 'privateMods' in activity_json else False
@@ -561,16 +569,28 @@ def refresh_community_profile_task(community_id):
             community.ap_fetched_at = utcnow()
             community.public_key=activity_json['publicKey']['publicKeyPem']
 
-            if 'source' in activity_json and \
-                    activity_json['source']['mediaType'] == 'text/markdown':
-                community.description = activity_json['source']['content']
-                community.description_html = lemmy_markdown_to_html(community.description)
+            description_html = ''
+            if 'summary' in activity_json:
+                description_html = activity_json['summary']
             elif 'content' in activity_json:
-                community.description_html = allowlist_html(activity_json['content'])
-                community.description = ''
+                description_html = activity_json['content']
+            else:
+                description_html = ''
 
-            if community.description and community.description.startswith('<p>'):
-                community.description_html = allowlist_html(community.description)
+            if description_html != '':
+                if not description_html.startswith('<'):                    # PeerTube
+                    description_html = '<p>' + description_html + '</p>'
+                community.description_html = allowlist_html(description_html)
+                if 'source' in activity_json and activity_json['source'].get('mediaType') == 'text/markdown':
+                    community.description = activity_json['source']['content']
+                    if '::: spoiler' in community.description:
+                        community.description_html = markdown_to_html(community.description)          # overwrite as Lemmy doesn't convert spoiler contents into HTML very well
+                else:
+                    community.description = html_to_text(community.description_html)
+
+            if 'rules' in activity_json:
+                community.rules_html = allowlist_html(activity_json['rules'])
+                community.rules = html_to_text(community.rules_html)
 
             icon_changed = cover_changed = False
             if 'icon' in activity_json:
@@ -659,7 +679,6 @@ def actor_json_to_model(activity_json, address, server):
             user = User(user_name=activity_json['preferredUsername'],
                         title=activity_json['name'] if 'name' in activity_json else None,
                         email=f"{address}@{server}",
-                        about_html=parse_summary(activity_json),
                         matrix_user_id=activity_json['matrixUserId'] if 'matrixUserId' in activity_json else '',
                         indexable=activity_json['indexable'] if 'indexable' in activity_json else True,
                         searchable=activity_json['discoverable'] if 'discoverable' in activity_json else True,
@@ -681,6 +700,20 @@ def actor_json_to_model(activity_json, address, server):
         except KeyError as e:
             current_app.logger.error(f'KeyError for {address}@{server} while parsing ' + str(activity_json))
             return None
+
+        if 'summary' in activity_json:
+            about_html = activity_json['summary']
+            if not about_html.startswith('<'):                    # PeerTube
+                about_html = '<p>' + about_html + '</p>'
+            user.about_html = allowlist_html(about_html)
+        else:
+            user.about_html = ''
+        if 'source' in activity_json and activity_json['source'].get('mediaType') == 'text/markdown':
+            user.about = activity_json['source']['content']
+            if '::: spoiler' in user.about:
+                user.about_html = markdown_to_html(user.about)          # overwrite as Lemmy doesn't convert spoiler contents into HTML very well
+        else:
+            user.about = html_to_text(user.about_html)
 
         if 'icon' in activity_json and activity_json['icon'] is not None:
             if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
@@ -723,9 +756,6 @@ def actor_json_to_model(activity_json, address, server):
 
         community = Community(name=activity_json['preferredUsername'],
                               title=activity_json['name'],
-                              description=activity_json['summary'] if 'summary' in activity_json else '',
-                              rules=activity_json['rules'] if 'rules' in activity_json else '',
-                              rules_html=lemmy_markdown_to_html(activity_json['rules'] if 'rules' in activity_json else ''),
                               nsfw=activity_json['sensitive'] if 'sensitive' in activity_json else False,
                               restricted_to_mods=activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else False,
                               new_mods_wanted=activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False,
@@ -747,18 +777,30 @@ def actor_json_to_model(activity_json, address, server):
                               instance_id=find_instance_id(server),
                               low_quality='memes' in activity_json['preferredUsername']
                               )
-        if community.description.startswith('<p>'):
-            community.description_html = allowlist_html(community.description)
-        else:
-            community.description_html = markdown_to_html(community.description)
-        # parse markdown and overwrite html field with result
-        if 'source' in activity_json and \
-                activity_json['source']['mediaType'] == 'text/markdown':
-            community.description = activity_json['source']['content']
-            community.description_html = lemmy_markdown_to_html(community.description)
+
+        description_html = ''
+        if 'summary' in activity_json:
+            description_html = activity_json['summary']
         elif 'content' in activity_json:
-            community.description_html = allowlist_html(activity_json['content'])
-            community.description = ''
+            description_html = activity_json['content']
+        else:
+            description_html = ''
+
+        if description_html != '':
+            if not description_html.startswith('<'):                    # PeerTube
+                description_html = '<p>' + description_html + '</p>'
+            community.description_html = allowlist_html(description_html)
+            if 'source' in activity_json and activity_json['source'].get('mediaType') == 'text/markdown':
+                community.description = activity_json['source']['content']
+                if '::: spoiler' in community.description:
+                    community.description_html = markdown_to_html(community.description)          # overwrite as Lemmy doesn't convert spoiler contents into HTML very well
+            else:
+                community.description = html_to_text(community.description_html)
+
+        if 'rules' in activity_json:
+            community.rules_html = allowlist_html(activity_json['rules'])
+            community.rules = html_to_text(community.rules_html)
+
         if 'icon' in activity_json and activity_json['icon'] is not None:
             if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
                 icon_entry = activity_json['icon']['url']
@@ -816,6 +858,8 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
                 post.body_html = allowlist_html(post_json['content'])
                 if 'source' in post_json and post_json['source']['mediaType'] == 'text/markdown':
                     post.body = post_json['source']['content']
+                    if '::: spoiler' in post.body:
+                        post.body_html = markdown_to_html(post.body)          # overwrite as Lemmy doesn't convert spoiler contents into HTML very well
                 else:
                     post.body = html_to_text(post.body_html)
             elif post_json['mediaType'] == 'text/markdown':
@@ -1063,19 +1107,6 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                 db.session.commit()
 
 
-# create a summary from markdown if present, otherwise use html if available
-def parse_summary(user_json) -> str:
-    if 'source' in user_json and user_json['source'].get('mediaType') == 'text/markdown':
-        # Convert Markdown to HTML
-        markdown_text = user_json['source']['content']
-        html_content = lemmy_markdown_to_html(markdown_text)
-        return html_content
-    elif 'summary' in user_json:
-        return allowlist_html(user_json['summary'])
-    else:
-        return ''
-
-
 def find_reply_parent(in_reply_to: str) -> Tuple[int, int, int]:
     if 'comment' in in_reply_to:
         parent_comment = PostReply.get_by_ap_id(in_reply_to)
@@ -1290,7 +1321,7 @@ def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id
                     to_delete.post.reply_count -= 1
                 if to_delete.has_replies():
                     to_delete.body = 'Deleted by author' if to_delete.author.id == deletor.id else 'Deleted by moderator'
-                    to_delete.body_html = lemmy_markdown_to_html(to_delete.body)
+                    to_delete.body_html = markdown_to_html(to_delete.body)
                 else:
                     to_delete.delete_dependencies()
                     to_delete.deleted = True
@@ -1363,7 +1394,7 @@ def remove_data_from_banned_user_task(deletor_ap_id, user_ap_id, target):
             post_reply.post.reply_count -= 1
         if post_reply.has_replies():
             post_reply.body = 'Banned'
-            post_reply.body_html = lemmy_markdown_to_html(post_reply.body)
+            post_reply.body_html = markdown_to_html(post_reply.body)
         else:
             post_reply.delete_dependencies()
             post_reply.deleted = True
@@ -1560,6 +1591,8 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
             if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
                     'mediaType' in request_json['object']['source'] and request_json['object']['source']['mediaType'] == 'text/markdown':
                 post_reply.body = request_json['object']['source']['content']
+                if '::: spoiler' in post_reply.body:
+                    post_reply.body_html = markdown_to_html(post_reply.body)          # overwrite as Lemmy doesn't convert spoiler contents into HTML very well
             else:
                 post_reply.body = html_to_text(post_reply.body_html)
         # Language - Lemmy uses 'language' while Mastodon uses 'contentMap'
@@ -1578,17 +1611,6 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
                     if blocked_phrase in post_reply.body:
                         return None
             post = Post.query.get(post_id)
-
-            # special case: add comment from auto-tldr bot to post body if body is empty
-            if user.ap_id == 'autotldr@lemmings.world':
-                if not post.body or (post.body and post.body.strip() == ''):
-                    if not '::: spoiler' in post_reply.body:
-                        post.body = "🤖 I'm a bot that provides automatic summaries for articles:\n::: spoiler Click here to see the summary\n" + post_reply.body + '\n:::'
-                    else:
-                        post.body = post_reply.body
-                    post.body_html = lemmy_markdown_to_html(post.body) + '\n\n<small><span class="render_username">Generated using AI by: <a href="/u/autotldr@lemmings.world" title="AutoTL;DR">AutoTL;DR</a></span></small>'
-                    db.session.commit()
-                    return None
 
             if post.comments_enabled:
                 anchor = None
@@ -1689,6 +1711,8 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
             post.body_html = allowlist_html(request_json['object']['content'])
             if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and request_json['object']['source']['mediaType'] == 'text/markdown':
                 post.body = request_json['object']['source']['content']
+                if '::: spoiler' in post.body:
+                    post.body_html = markdown_to_html(post.body)          # overwrite as Lemmy doesn't convert spoiler contents into HTML very well
             else:
                 post.body = html_to_text(post.body_html)
         elif 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/markdown':
@@ -1933,6 +1957,8 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
         if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
             'mediaType' in request_json['object']['source'] and request_json['object']['source']['mediaType'] == 'text/markdown':
             reply.body = request_json['object']['source']['content']
+            if '::: spoiler' in reply.body:
+                reply.body_html = markdown_to_html(reply.body)          # overwrite as Lemmy doesn't convert spoiler contents into HTML very well
         else:
             reply.body = html_to_text(reply.body_html)
     # Language
@@ -1956,6 +1982,8 @@ def update_post_from_activity(post: Post, request_json: dict):
             post.body_html = allowlist_html(request_json['object']['content'])
             if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and request_json['object']['source']['mediaType'] == 'text/markdown':
                 post.body = request_json['object']['source']['content']
+                if '::: spoiler' in post.body:
+                    post.body_html = markdown_to_html(post.body)          # overwrite as Lemmy doesn't convert spoiler contents into HTML very well
             else:
                 post.body = html_to_text(post.body_html)
         elif 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/markdown':
