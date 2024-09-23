@@ -50,8 +50,10 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0):
         # counts - models/post/post_aggregates.dart
         counts = {'post_id': post.id, 'comments': post.reply_count, 'score': post.score, 'upvotes': post.up_votes, 'downvotes': post.down_votes,
                   'published': post.posted_at.isoformat() + 'Z', 'newest_comment_time': post.last_active.isoformat() + 'Z'}
+        bookmarked = db.session.execute(text('SELECT user_id FROM "post_bookmark" WHERE post_id = :post_id and user_id = :user_id'), {'post_id': post.id, 'user_id': user_id}).scalar()
+        saved = True if bookmarked else False
         v2 = {'post': post_view(post=post, variant=1, stub=stub), 'counts': counts, 'banned_from_community': False, 'subscribed': 'NotSubscribed',
-              'saved': False, 'read': False, 'hidden': False, 'creator_blocked': False, 'unread_comments': post.reply_count, 'my_vote': my_vote}
+              'saved': saved, 'read': False, 'hidden': False, 'creator_blocked': False, 'unread_comments': post.reply_count, 'my_vote': my_vote}
 
         try:
             creator = user_view(user=post.user_id, variant=1, stub=True)
@@ -95,7 +97,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0):
 
         return v3
 
-    # Variant 4 - models/post/post_response.dart - /post/like api endpoint
+    # Variant 4 - models/post/post_response.dart - api endpoint for /post/like and post/save
     if variant == 4:
         v4 = {'post_view': post_view(post=post, variant=2, user_id=user_id)}
 
@@ -255,8 +257,10 @@ def reply_view(reply: PostReply | int, variant, user_id=None, my_vote=0):
         # counts - models/comment/comment_aggregates.dart
         counts = {'comment_id': reply.id, 'score': reply.score, 'upvotes': reply.up_votes, 'downvotes': reply.down_votes,
                   'published': reply.posted_at.isoformat() + 'Z', 'child_count': 1 if calculate_if_has_children(reply) else 0}
+        bookmarked = db.session.execute(text('SELECT user_id FROM "post_reply_bookmark" WHERE post_reply_id = :post_reply_id and user_id = :user_id'), {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
+        saved = True if bookmarked else False
         v2 = {'comment': reply_view(reply=reply, variant=1), 'counts': counts, 'banned_from_community': False, 'subscribed': 'NotSubscribed',
-              'saved': False, 'creator_blocked': False, 'my_vote': my_vote}
+              'saved': saved, 'creator_blocked': False, 'my_vote': my_vote}
         try:
             creator = user_view(user=reply.user_id, variant=1, stub=True)
             community = community_view(community=reply.community_id, variant=1, stub=True)

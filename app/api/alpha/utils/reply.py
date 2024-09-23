@@ -1,9 +1,9 @@
 from app import cache
 from app.utils import authorise_api_user
-from app.api.alpha.utils.validators import required, integer_expected
+from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
 from app.api.alpha.views import reply_view
 from app.models import PostReply
-from app.shared.reply import vote_for_reply
+from app.shared.reply import vote_for_reply, bookmark_the_post_reply, remove_the_bookmark_from_post_reply
 
 from sqlalchemy import desc
 
@@ -88,6 +88,28 @@ def post_reply_like(auth, data):
         user_id = vote_for_reply(reply_id, direction, SRC_API, auth)
         cache.delete_memoized(cached_reply_list)
         reply_json = reply_view(reply=reply_id, variant=4, user_id=user_id, my_vote=score)
+        return reply_json
+    except:
+        raise
+
+
+def put_reply_save(auth, data):
+    try:
+        required(['comment_id', 'save'], data)
+        integer_expected(['comment_id'], data)
+        boolean_expected(['save'], data)
+    except:
+        raise
+
+    reply_id = data['comment_id']
+    save = data['save']
+
+    try:
+        if save is True:
+            user_id = bookmark_the_post_reply(reply_id, SRC_API, auth)
+        else:
+            user_id = remove_the_bookmark_from_post_reply(reply_id, SRC_API, auth)
+        reply_json = reply_view(reply=reply_id, variant=4, user_id=user_id)
         return reply_json
     except:
         raise

@@ -1,8 +1,8 @@
 from app import cache
 from app.api.alpha.views import post_view
-from app.api.alpha.utils.validators import required, integer_expected
+from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
 from app.models import Post, Community, CommunityMember, utcnow
-from app.shared.post import vote_for_post
+from app.shared.post import vote_for_post, bookmark_the_post, remove_the_bookmark_from_post
 from app.utils import authorise_api_user
 
 from datetime import timedelta
@@ -123,6 +123,28 @@ def post_post_like(auth, data):
         user_id = vote_for_post(post_id, direction, SRC_API, auth)
         cache.delete_memoized(cached_post_list)
         post_json = post_view(post=post_id, variant=4, user_id=user_id, my_vote=score)
+        return post_json
+    except:
+        raise
+
+
+def put_post_save(auth, data):
+    try:
+        required(['post_id', 'save'], data)
+        integer_expected(['post_id'], data)
+        boolean_expected(['save'], data)
+    except:
+        raise
+
+    post_id = data['post_id']
+    save = data['save']
+
+    try:
+        if save is True:
+            user_id = bookmark_the_post(post_id, SRC_API, auth)
+        else:
+            user_id = remove_the_bookmark_from_post(post_id, SRC_API, auth)
+        post_json = post_view(post=post_id, variant=4, user_id=user_id)
         return post_json
     except:
         raise

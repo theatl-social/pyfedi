@@ -1,7 +1,7 @@
 from app.api.alpha import bp
 from app.api.alpha.utils import get_site, \
-                                get_post_list, get_post, post_post_like, \
-                                get_reply_list, post_reply_like, \
+                                get_post_list, get_post, post_post_like, put_post_save, \
+                                get_reply_list, post_reply_like, put_reply_save, \
                                 get_community_list, get_community, \
                                 get_user
 from app.shared.auth import log_user_in
@@ -83,6 +83,18 @@ def post_alpha_post_like():
         return jsonify({"error": str(ex)}), 400
 
 
+@bp.route('/api/alpha/post/save', methods=['PUT'])
+def put_alpha_post_save():
+    if not current_app.debug:
+        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(put_post_save(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
 # Reply
 @bp.route('/api/alpha/comment/list', methods=['GET'])
 def get_alpha_comment_list():
@@ -104,6 +116,18 @@ def post_alpha_comment_like():
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
         return jsonify(post_reply_like(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/comment/save', methods=['PUT'])
+def put_alpha_comment_save():
+    if not current_app.debug:
+        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(put_reply_save(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
@@ -171,7 +195,6 @@ def alpha_community():
 @bp.route('/api/alpha/post/remove', methods=['POST'])
 @bp.route('/api/alpha/post/lock', methods=['POST'])
 @bp.route('/api/alpha/post/feature', methods=['POST'])
-@bp.route('/api/alpha/post/like', methods=['POST'])
 @bp.route('/api/alpha/post/save', methods=['PUT'])
 @bp.route('/api/alpha/post/report', methods=['POST'])
 @bp.route('/api/alpha/post/report/resolve', methods=['PUT'])
@@ -188,7 +211,6 @@ def alpha_post():
 @bp.route('/api/alpha/comment/remove', methods=['POST'])
 @bp.route('/api/alpha/comment/mark_as_read', methods=['POST'])
 @bp.route('/api/alpha/comment/distinguish', methods=['POST'])
-@bp.route('/api/alpha/comment/save', methods=['PUT'])
 @bp.route('/api/alpha/comment/report', methods=['POST'])
 @bp.route('/api/alpha/comment/report/resolve', methods=['PUT'])
 @bp.route('/api/alpha/comment/report/list', methods=['GET'])
