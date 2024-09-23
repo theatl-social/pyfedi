@@ -1,0 +1,25 @@
+{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
+    {% extends 'themes/' + theme() + '/base.html' %}
+{% else %}
+    {% extends "base.html" %}
+{% endif %} %}
+{% from 'bootstrap/form.html' import render_form %}
+{% set active_child = 'admin_instances' %}
+
+{% block app_content %}
+<div class="row">
+    <div class="col col-login mx-auto">
+        {% if topic %}
+            <h1>{{ _('Edit %(instance_name)s', instance_name=instance.domain) }}</h1>
+        {% endif %}
+        {{ render_form(form) }}
+    </div>
+</div>
+<hr />
+<div class="row">
+    <div class="col">
+        {% include 'admin/_nav.html' %}
+    </div>
+</div>
+<hr />
+{% endblock %}

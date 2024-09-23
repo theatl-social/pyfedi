@@ -1,8 +1,8 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileRequired, FileAllowed
 from sqlalchemy import func
-from wtforms import StringField, PasswordField, SubmitField, EmailField, HiddenField, BooleanField, TextAreaField, SelectField, \
-    FileField, IntegerField
+from wtforms import StringField, PasswordField, SubmitField, EmailField, HiddenField, BooleanField, TextAreaField, \
+    SelectField, FileField, IntegerField, FloatField
 from wtforms.fields.choices import SelectMultipleField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Optional
 from flask_babel import _, lazy_gettext as _l
@@ -113,6 +113,15 @@ class EditTopicForm(FlaskForm):
     name = StringField(_l('Name'), validators=[DataRequired()], render_kw={'title': _l('Human readable name for the topic.')})
     machine_name = StringField(_l('Slug'), validators=[DataRequired()], render_kw={'title': _l('A short and unique identifier that becomes part of the URL.')})
     parent_id = SelectField(_l('Parent topic'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
+    submit = SubmitField(_l('Save'))
+
+
+class EditInstanceForm(FlaskForm):
+    vote_weight = FloatField(_l('Vote weight'))
+    dormant = BooleanField(_l('Dormant'))
+    gone_forever = BooleanField(_l('Gone forever'))
+    trusted = BooleanField(_l('Trusted'))
+    posting_warning = TextAreaField(_l('Posting warning'))
     submit = SubmitField(_l('Save'))
 
 

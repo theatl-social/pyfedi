@@ -14,7 +14,7 @@ from app.activitypub.routes import process_inbox_request, process_delete_request
 from app.activitypub.signature import post_request, default_context
 from app.activitypub.util import instance_allowed, instance_blocked, extract_domain_and_actor
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
-    EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm
+    EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, EditInstanceForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form
 from app.community.util import save_icon_file, save_banner_file, search_for_community
@@ -1123,3 +1123,35 @@ def admin_instances():
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site)
+
+
+@bp.route('/instance/<int:instance_id>/edit', methods=['GET', 'POST'])
+@login_required
+@permission_required('administer all communities')
+def admin_instance_edit(instance_id):
+    form = EditInstanceForm()
+    instance = Instance.query.get_or_404(instance_id)
+    if form.validate_on_submit():
+        instance.vote_weight = form.vote_weight.data
+        instance.dormant = form.dormant.data
+        instance.gone_forever = form.gone_forever.data
+        instance.trusted = form.trusted.data
+        instance.posting_warning = form.posting_warning.data
+
+        db.session.commit()
+
+        flash(_('Saved'))
+        return redirect(url_for('admin.admin_instances'))
+    else:
+        form.vote_weight.data = instance.vote_weight
+        form.dormant.data = instance.dormant
+        form.gone_forever.data = instance.gone_forever
+        form.trusted.data = instance.trusted
+        form.posting_warning.data = instance.posting_warning
+
+    return render_template('admin/edit_instance.html', title=_('Edit instance'), form=form, instance=instance,
+                           moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
+                           site=g.site
+                           )
