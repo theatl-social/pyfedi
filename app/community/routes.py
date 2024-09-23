@@ -1403,6 +1403,26 @@ def community_moderate_subscribers(actor):
         abort(404)
 
 
+@bp.route('/community/<int:community_id>/<int:user_id>/kick_user_community', methods=['GET', 'POST'])
+@login_required
+def community_kick_user(community_id: int, user_id: int):
+    community = Community.query.get_or_404(community_id)
+    user = User.query.get_or_404(user_id)
+
+    if community is not None:
+        if current_user.is_admin():
+
+            db.session.query(CommunityMember).filter_by(user_id=user_id, community_id=community.id).delete()
+            db.session.commit()
+
+        else:
+            abort(401)
+    else:
+        abort(404)
+
+    return redirect(url_for('community.community_moderate_subscribers', actor=community.name))
+
+
 @bp.route('/<actor>/moderate/wiki', methods=['GET'])
 @login_required
 def community_wiki_list(actor):
