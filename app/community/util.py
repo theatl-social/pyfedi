@@ -19,7 +19,8 @@ from app.models import Community, File, BannedInstances, PostReply, PostVote, Po
     Instance, Notification, User, ActivityPubLog, NotificationSubscription, Language, Tag, PollChoice, Poll
 from app.utils import get_request, gibberish, markdown_to_html, domain_from_url, allowlist_html, \
     is_image_url, ensure_directory_exists, inbox_domain, post_ranking, shorten_string, parse_page, \
-    remove_tracking_from_link, ap_datetime, instance_banned, blocked_phrases, url_to_thumbnail_file, opengraph_parse
+    remove_tracking_from_link, ap_datetime, instance_banned, blocked_phrases, url_to_thumbnail_file, opengraph_parse, \
+    piefed_markdown_to_lemmy_markdown
 from sqlalchemy import func, desc, text
 import os
 
@@ -254,7 +255,7 @@ def save_post(form, post: Post, type: int):
     post.language_id = form.language_id.data
     current_user.language_id = form.language_id.data
     post.title = form.title.data
-    post.body = form.body.data
+    post.body = piefed_markdown_to_lemmy_markdown(form.body.data)
     post.body_html = markdown_to_html(post.body)
     if not type or type == POST_TYPE_ARTICLE:
         post.type = POST_TYPE_ARTICLE

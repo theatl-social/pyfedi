@@ -41,6 +41,10 @@
                                     {{ _("Hide every post from author's instance: %(name)s", name=post_reply.instance.domain) }}</a></li>
                                 {% endif -%}
                             {% endif -%}
+                            {% if post_reply.community.is_moderator() or post_reply.community.is_owner() or current_user.is_admin() -%}
+                            <li><a href="{{ url_for('post.post_reply_view_voting_activity', comment_id=post_reply.id) }}" class="no-underline" rel="nofollow"><span class="fe fe-sticky-left"></span>
+                                        {{ _('View Voting Activity') }}</a></li>
+                            {% endif -%}
                         {% endif -%}
                          <li><a href="{{ url_for('post.post_reply_report', post_id=post.id, comment_id=post_reply.id) }}" rel="nofollow" class="no-underline"><span class="fe fe-report"></span>
                                 {{ _('Report to moderators') }}</a></li>

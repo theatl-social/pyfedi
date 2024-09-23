@@ -172,7 +172,8 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
     if isinstance(community, int):
         community = Community.query.get(community)
     elif isinstance(community, str):
-        community = Community.query.filter_by(name=community).first()
+        name, ap_domain = community.split('@')
+        community = Community.query.filter_by(name=name, ap_domain=ap_domain).first()
     if not community:
         raise Exception('community_not_found')
 

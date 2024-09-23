@@ -321,6 +321,20 @@ def markdown_to_html(markdown_text, anchors_new_tab=True) -> str:
         return ''
 
 
+# this function lets local users use the more intuitive soft-breaks for newlines, but actually stores the Markdown in Lemmy-compatible format
+# Reasons for this:
+# 1. it's what any adapted Lemmy apps using an API would expect
+# 2. we need to revert to sending out Markdown in 'source' because:
+#    a. Lemmy doesn't convert '<details><summary>' back into its '::: spoiler' format
+#    b. anything coming from another PieFed instance would get reduced with html_to_text()
+#    c. raw 'https' strings in code blocks are being converted into <a> links for HTML that Lemmy then converts back into []()
+def piefed_markdown_to_lemmy_markdown(piefed_markdown: str):
+    # only difference is newlines for soft breaks.
+    re_breaks = re.compile(r'(\S)(\r\n)')
+    lemmy_markdown = re_breaks.sub(r'\1  \2', piefed_markdown)
+    return lemmy_markdown
+
+
 def markdown_to_text(markdown_text) -> str:
     if not markdown_text or markdown_text == '':
         return ''

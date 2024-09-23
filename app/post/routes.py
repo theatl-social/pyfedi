@@ -31,7 +31,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, moderating_communities, joined_communities, \
     blocked_instances, blocked_domains, community_moderators, blocked_phrases, show_ban_message, recently_upvoted_posts, \
     recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, reply_is_stupid, \
-    languages_for_form, menu_topics, add_to_modlog, blocked_communities
+    languages_for_form, menu_topics, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown
 
 
 def show_post(post_id: int):
@@ -103,7 +103,7 @@ def show_post(post_id: int):
                 flash(_('You have already upvoted the post, you do not need to say "this" also.'), 'error')
             return redirect(url_for('activitypub.post_ap', post_id=post_id))
 
-        reply = PostReply(user_id=current_user.id, post_id=post.id, community_id=community.id, body=form.body.data,
+        reply = PostReply(user_id=current_user.id, post_id=post.id, community_id=community.id, body=piefed_markdown_to_lemmy_markdown(form.body.data),
                           body_html=markdown_to_html(form.body.data), body_html_safe=True,
                           from_bot=current_user.bot, nsfw=post.nsfw, nsfl=post.nsfl,
                           notify_author=form.notify_author.data, language_id=form.language_id.data, instance_id=1)
@@ -162,6 +162,7 @@ def show_post(post_id: int):
             'content': reply.body_html,
             'inReplyTo': post.profile_id(),
             'mediaType': 'text/html',
+            'source': {'content': reply.body, 'mediaType': 'text/markdown'},
             'published': ap_datetime(utcnow()),
             'distinguished': False,
             'audience': community.public_url(),
@@ -594,7 +595,7 @@ def add_reply(post_id: int, comment_id: int):
         current_user.ip_address = ip_address()
         current_user.language_id = form.language_id.data
         reply = PostReply(user_id=current_user.id, post_id=post.id, parent_id=in_reply_to.id, depth=in_reply_to.depth + 1,
-                          community_id=post.community.id, body=form.body.data,
+                          community_id=post.community.id, body=piefed_markdown_to_lemmy_markdown(form.body.data),
                           body_html=markdown_to_html(form.body.data), body_html_safe=True,
                           from_bot=current_user.bot, nsfw=post.nsfw, nsfl=post.nsfl,
                           notify_author=form.notify_author.data, instance_id=1, language_id=form.language_id.data)
@@ -656,6 +657,7 @@ def add_reply(post_id: int, comment_id: int):
                 'inReplyTo': in_reply_to.profile_id(),
                 'url': reply.profile_id(),
                 'mediaType': 'text/html',
+                'source': {'content': reply.body, 'mediaType': 'text/markdown'},
                 'published': ap_datetime(utcnow()),
                 'distinguished': False,
                 'audience': post.community.public_url(),
@@ -911,6 +913,7 @@ def federate_post_update(post):
         'cc': [],
         'content': post.body_html if post.body_html else '',
         'mediaType': 'text/html',
+        'source': {'content': post.body if post.body else '', 'mediaType': 'text/markdown'},
         'attachment': [],
         'commentsEnabled': post.comments_enabled,
         'sensitive': post.nsfw,
@@ -1015,6 +1018,7 @@ def federate_post_edit_to_user_followers(post):
         ],
         'content': '',
         'mediaType': 'text/html',
+        'source': {'content': post.body if post.body else '', 'mediaType': 'text/markdown'},
         'attachment': [],
         'commentsEnabled': post.comments_enabled,
         'sensitive': post.nsfw,
@@ -1545,7 +1549,7 @@ def post_reply_edit(post_id: int, comment_id: int):
     form.language_id.choices = languages_for_form()
     if post_reply.user_id == current_user.id or post.community.is_moderator():
         if form.validate_on_submit():
-            post_reply.body = form.body.data
+            post_reply.body = piefed_markdown_to_lemmy_markdown(form.body.data)
             post_reply.body_html = markdown_to_html(form.body.data)
             post_reply.notify_author = form.notify_author.data
             post.community.last_active = utcnow()
@@ -1575,6 +1579,7 @@ def post_reply_edit(post_id: int, comment_id: int):
                     'inReplyTo': in_reply_to.profile_id(),
                     'url': post_reply.public_url(),
                     'mediaType': 'text/html',
+                    'source': {'content': post_reply.body, 'mediaType': 'text/markdown'},
                     'published': ap_datetime(post_reply.posted_at),
                     'updated': ap_datetime(post_reply.edited_at),
                     'distinguished': False,
@@ -1782,3 +1787,45 @@ def post_cross_posts(post_id: int):
     post = Post.query.get_or_404(post_id)
     cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
     return render_template('post/post_cross_posts.html', post=post, cross_posts=cross_posts)
+
+
+@bp.route('/post/<int:post_id>/voting_activity', methods=['GET'])
+@login_required
+def post_view_voting_activity(post_id: int):
+    post = Post.query.get_or_404(post_id)
+    if not current_user.is_admin() and not post.community.is_moderator() and not post.community.is_owner():
+        abort(404)
+
+    post_title=post.title
+    upvoters = User.query.join(PostVote, PostVote.user_id == User.id).filter_by(post_id=post_id, effect=1.0).order_by(User.ap_domain, User.user_name)
+    downvoters = User.query.join(PostVote, PostVote.user_id == User.id).filter_by(post_id=post_id, effect=-1.0).order_by(User.ap_domain, User.user_name)
+
+    # local users will be at the bottom of each list as ap_domain is empty for those.
+
+    return render_template('post/post_voting_activity.html', title=_('Voting Activity'),
+                           post_title=post_title, upvoters=upvoters, downvoters=downvoters,
+                           moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site
+                           )
+
+
+@bp.route('/comment/<int:comment_id>/voting_activity', methods=['GET'])
+@login_required
+def post_reply_view_voting_activity(comment_id: int):
+    post_reply = PostReply.query.get_or_404(comment_id)
+    if not current_user.is_admin() and not post_reply.community.is_moderator() and not post_reply.community.is_owner():
+        abort(404)
+
+    reply_text=post_reply.body
+    upvoters = User.query.join(PostReplyVote, PostReplyVote.user_id == User.id).filter_by(post_reply_id=comment_id, effect=1.0).order_by(User.ap_domain, User.user_name)
+    downvoters = User.query.join(PostReplyVote, PostReplyVote.user_id == User.id).filter_by(post_reply_id=comment_id, effect=-1.0).order_by(User.ap_domain, User.user_name)
+
+    # local users will be at the bottom of each list as ap_domain is empty for those.
+
+    return render_template('post/post_reply_voting_activity.html', title=_('Voting Activity'),
+                           reply_text=reply_text, upvoters=upvoters, downvoters=downvoters,
+                           moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site
+                           )

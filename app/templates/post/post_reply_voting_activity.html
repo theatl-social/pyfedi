@@ -1,0 +1,27 @@
+{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%} -%}
+{% from 'bootstrap/form.html' import render_form -%}
+
+{% block app_content -%}
+    <div class="row">
+        <h3>{{ _('Voting Activity for "%(reply_text)s"', reply_text=reply_text) }}</h3>
+            <p><details open>
+                <summary>Upvoters</summary>
+                    {% for upvoter in upvoters -%}
+                        <a href="{{ upvoter.ap_profile_id }}" rel="nofollow" class="no-underline"><span class="fe fe-external"></span>
+                                {{ upvoter.ap_profile_id }}</a><br />
+                    {% endfor -%}
+            </details>
+            </p><p><hr></p>
+            <details open>
+                <summary>Downvoters</summary>
+                    {% for downvoter in downvoters -%}
+                        <a href="{{ downvoter.ap_profile_id }}" rel="nofollow" class="no-underline"><span class="fe fe-external"></span>
+                            {{ downvoter.ap_profile_id }}</a><br />
+                    {% endfor -%}
+            </details>
+    </div>
+{% endblock -%}
