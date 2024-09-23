@@ -62,7 +62,7 @@
                         {% endif -%}
                         <li><a href="{{ url_for('post.post_report', post_id=post.id) }}" class="no-underline" rel="nofollow"><span class="fe fe-report"></span>
                                 {{ _('Report to moderators') }}</a></li>
-                        {% if post.community.is_moderator() or post.community.is_owner() or current_user.is_admin() -%}
+                        {% if current_user.is_authenticated and (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()) -%}
                             <li><a href="{{ url_for('post.post_view_voting_activity', post_id=post.id) }}" class="no-underline" rel="nofollow"><span class="fe fe-sticky-left"></span>
                                         {{ _('View Voting Activity') }}</a></li>
                         {% endif -%}
