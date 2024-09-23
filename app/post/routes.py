@@ -31,7 +31,8 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, moderating_communities, joined_communities, \
     blocked_instances, blocked_domains, community_moderators, blocked_phrases, show_ban_message, recently_upvoted_posts, \
     recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, reply_is_stupid, \
-    languages_for_form, menu_topics, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown
+    languages_for_form, menu_topics, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown, \
+    permission_required
 
 
 def show_post(post_id: int):
@@ -1791,10 +1792,9 @@ def post_cross_posts(post_id: int):
 
 @bp.route('/post/<int:post_id>/voting_activity', methods=['GET'])
 @login_required
+@permission_required('change instance settings')
 def post_view_voting_activity(post_id: int):
     post = Post.query.get_or_404(post_id)
-    if not current_user.is_admin() and not post.community.is_moderator() and not post.community.is_owner():
-        abort(404)
 
     post_title=post.title
     upvoters = User.query.join(PostVote, PostVote.user_id == User.id).filter_by(post_id=post_id, effect=1.0).order_by(User.ap_domain, User.user_name)
@@ -1812,10 +1812,9 @@ def post_view_voting_activity(post_id: int):
 
 @bp.route('/comment/<int:comment_id>/voting_activity', methods=['GET'])
 @login_required
+@permission_required('change instance settings')
 def post_reply_view_voting_activity(comment_id: int):
     post_reply = PostReply.query.get_or_404(comment_id)
-    if not current_user.is_admin() and not post_reply.community.is_moderator() and not post_reply.community.is_owner():
-        abort(404)
 
     reply_text=post_reply.body
     upvoters = User.query.join(PostReplyVote, PostReplyVote.user_id == User.id).filter_by(post_reply_id=comment_id, effect=1.0).order_by(User.ap_domain, User.user_name)
