@@ -308,6 +308,18 @@ def allowlist_html(html: str, a_target='_blank') -> str:
     re_superscript = re.compile(r'\^(\S+)\^')
     clean_html = re_superscript.sub(r'<sup>\1</sup>', clean_html)
 
+    # replace <img src> for mp4 with <video> - treat them like a GIF (autoplay, but initially muted)
+    re_embedded_mp4 = re.compile(r'<img .*?src="(https://.*?\.mp4)".*?/>')
+    clean_html = re_embedded_mp4.sub(r'<video class="responsive-video" controls preload="auto" autoplay muted loop playsinline disablepictureinpicture><source src="\1" type="video/mp4"></video>', clean_html)
+
+    # replace <img src> for webm with <video> - treat them like a GIF (autoplay, but initially muted)
+    re_embedded_webm = re.compile(r'<img .*?src="(https://.*?\.webm)".*?/>')
+    clean_html = re_embedded_webm.sub(r'<video class="responsive-video" controls preload="auto" autoplay muted loop playsinline disablepictureinpicture><source src="\1" type="video/webm"></video>', clean_html)
+
+    # replace <img src> for mp3 with <audio>
+    re_embedded_mp3 = re.compile(r'<img .*?src="(https://.*?\.mp3)".*?/>')
+    clean_html = re_embedded_mp3.sub(r'<audio controls><source src="\1" type="audio/mp3"></audio>', clean_html)
+
     return clean_html
 
 
