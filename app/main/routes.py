@@ -326,9 +326,26 @@ def list_subscribed_communities():
 def list_instances():
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
+    filter = request.args.get('filter', '')
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
     instances = Instance.query.order_by(Instance.domain)
+    if search:
+        instances = instances.filter(Instance.domain.ilike(f"%{search}%"))
+    title = _('Instances')
+    if filter:
+        if filter == 'trusted':
+            instances = instances.filter(Instance.trusted == True)
+            title = _('Trusted instances')
+        elif filter == 'online':
+            instances = instances.filter(Instance.dormant == False, Instance.gone_forever == False)
+            title = _('Online instances')
+        elif filter == 'dormant':
+            instances = instances.filter(Instance.dormant == True, Instance.gone_forever == False)
+            title = _('Dormant instances')
+        elif filter == 'gone_forever':
+            instances = instances.filter(Instance.gone_forever == True)
+            title = _('Gone forever instances')
 
     # Pagination
     instances = instances.paginate(page=page,
@@ -338,7 +355,7 @@ def list_instances():
     prev_url = url_for('main.list_instances', page=instances.prev_num) if instances.has_prev and page != 1 else None
 
     return render_template('list_instances.html', instances=instances,
-                           title=_('Instances'), search=search,
+                           title=title, search=search, filter=filter,
                            next_url=next_url, prev_url=prev_url,
                            low_bandwidth=low_bandwidth,
                            moderating_communities=moderating_communities(current_user.get_id()),

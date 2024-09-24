@@ -82,6 +82,8 @@ class Instance(db.Model):
         return role and role.role == 'admin'
 
     def votes_are_public(self):
+        if self.trusted is True:    # only vote privately with untrusted instances
+            return False
         return self.software.lower() == 'lemmy' or self.software.lower() == 'mbin' or self.software.lower() == 'kbin'
 
     def post_count(self):

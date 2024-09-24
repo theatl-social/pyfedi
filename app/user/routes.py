@@ -360,7 +360,7 @@ def export_user_settings(user):
 
 @bp.route('/user/settings', methods=['GET', 'POST'])
 @login_required
-def change_settings():
+def user_settings():
     user = User.query.filter_by(id=current_user.id, deleted=False, banned=False, ap_id=None).first()
     if user is None:
         abort(404)

@@ -9,43 +9,63 @@
 <div class="row">
     <div class="col-12 col-md-8 position-relative main_pane">
         {% if search == '' %}
-            <h1>{{ _('Instances') }}</h1>
+            <h1>{{ title }}</h1>
         {% else %}
-            <h1>{{ _('Instances containing "%(search)s"', search=search) }}</h1>
+            <h1>{{ title }}</h1>
         {% endif %}
+        <form method="get">
+            <input type="search" name="search" value="{{ search }}"> <input type="submit" name="submit" value="{{ _('Search') }}">
+        </form>
+        <a href="{{ url_for('main.list_instances', filter='online') }}">{{ _('Online') }}</a> |
+        <a href="{{ url_for('main.list_instances', filter='dormant') }}">{{ _('Dormant') }}</a> |
+        <a href="{{ url_for('main.list_instances', filter='gone_forever') }}">{{ _('Gone forever') }}</a> |
+        <a href="{{ url_for('main.list_instances', filter='trusted') }}">{{ _('Trusted') }}</a>
 
-        <div class="table-responsive-sm pt-4">
-        <table class="table table-striped">
-            <tr>
-               <th>{{ _('Instance') }}</th>
-               <th>{{ _('Software') }}</th>
-               <th>{{ _('Version') }}</th>
-               <th>{{ _('Heard from') }}</th>
-               <th>{{ _('Sent to') }}</th>
-            </tr>
-            {% for instance in instances %}
-                <tr>
-                    <td><a href="https://{{ instance.domain }}" rel="noopener nofollow noindex noreferrer">{{ instance.domain }}</a></td>
-                    <td>{{ instance.software  }}</td>
-                    <td>{{ instance.version if instance.version }}</td>
-                    <td>{{ arrow.get(instance.last_seen).humanize(locale=locale) if instance.last_seen }}</td>
-                    <td>{{ arrow.get(instance.last_successful_send).humanize(locale=locale) if instance.last_successful_send }}</td>
-                </tr>
-            {% endfor %}
-        </table>
-    </div>
-        <nav aria-label="Pagination" class="mt-4" role="navigation">
-        {% if prev_url %}
-            <a href="{{ prev_url }}" class="btn btn-primary" rel="nofollow">
-                <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
-            </a>
+        {% if instances -%}
+            <div class="table-responsive-sm pt-4">
+                <table class="table table-striped">
+                    <tr>
+                       <th>{{ _('Instance') }}</th>
+                       <th>{{ _('Software') }}</th>
+                       <th>{{ _('Version') }}</th>
+                       <th>{{ _('Heard from') }}</th>
+                       <th>{{ _('Sent to') }}</th>
+                       <th>{{ _('Online') }}</th>
+                    </tr>
+                    {% for instance in instances %}
+                        <tr>
+                            <td><a href="https://{{ instance.domain }}" rel="noopener nofollow noindex noreferrer">{{ instance.domain }}</a></td>
+                            <td>{{ instance.software  }}</td>
+                            <td>{{ instance.version if instance.version }}</td>
+                            <td>{{ arrow.get(instance.last_seen).humanize(locale=locale) if instance.last_seen }}</td>
+                            <td>{{ arrow.get(instance.last_successful_send).humanize(locale=locale) if instance.last_successful_send }}</td>
+                            <td>{% if instance.dormant and instance.gone_forever -%}
+                                    {{ _('Gone') }}
+                                {% elif instance.dormant -%}
+                                    {{ _('Dormant') }}
+                                {% else -%}
+                                    {{ _('Online') }}
+                                {% endif -%}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            <nav aria-label="Pagination" class="mt-4" role="navigation">
+            {% if prev_url %}
+                <a href="{{ prev_url }}" class="btn btn-primary" rel="nofollow">
+                    <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
+                </a>
+            {% endif %}
+            {% if next_url %}
+                <a href="{{ next_url }}" class="btn btn-primary" rel="nofollow">
+                    {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
+                </a>
+            {% endif %}
+            </nav>
+        {% else -%}
+            <p>{{ _('No results to show.') }}</p>
         {% endif %}
-        {% if next_url %}
-            <a href="{{ next_url }}" class="btn btn-primary" rel="nofollow">
-                {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
-            </a>
-        {% endif %}
-        </nav>
     </div>
 </div>
 
