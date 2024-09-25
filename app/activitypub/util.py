@@ -487,8 +487,7 @@ def refresh_user_profile_task(user_id):
                 user.about_html = ''
             if 'source' in activity_json and activity_json['source'].get('mediaType') == 'text/markdown':
                 user.about = activity_json['source']['content']
-                if '::: spoiler' in user.about:
-                    user.about_html = markdown_to_html(user.about)          # overwrite as Lemmy doesn't convert spoiler contents into HTML very well
+                user.about_html = markdown_to_html(user.about)          # prefer Markdown if provided, overwrite version obtained from HTML
             else:
                 user.about = html_to_text(user.about_html)
             user.ap_fetched_at = utcnow()
@@ -585,8 +584,7 @@ def refresh_community_profile_task(community_id):
                 community.description_html = allowlist_html(description_html)
                 if 'source' in activity_json and activity_json['source'].get('mediaType') == 'text/markdown':
                     community.description = activity_json['source']['content']
-                    if '::: spoiler' in community.description:
-                        community.description_html = markdown_to_html(community.description)          # overwrite as Lemmy doesn't convert spoiler contents into HTML very well
+                    community.description_html = markdown_to_html(community.description)          # prefer Markdown if provided, overwrite version obtained from HTML
                 else:
                     community.description = html_to_text(community.description_html)
 
@@ -712,8 +710,7 @@ def actor_json_to_model(activity_json, address, server):
             user.about_html = ''
         if 'source' in activity_json and activity_json['source'].get('mediaType') == 'text/markdown':
             user.about = activity_json['source']['content']
-            if '::: spoiler' in user.about:
-                user.about_html = markdown_to_html(user.about)          # overwrite as Lemmy doesn't convert spoiler contents into HTML very well
+            user.about_html = markdown_to_html(user.about)          # prefer Markdown if provided, overwrite version obtained from HTML
         else:
             user.about = html_to_text(user.about_html)
 
@@ -794,8 +791,7 @@ def actor_json_to_model(activity_json, address, server):
             community.description_html = allowlist_html(description_html)
             if 'source' in activity_json and activity_json['source'].get('mediaType') == 'text/markdown':
                 community.description = activity_json['source']['content']
-                if '::: spoiler' in community.description:
-                    community.description_html = markdown_to_html(community.description)          # overwrite as Lemmy doesn't convert spoiler contents into HTML very well
+                community.description_html = markdown_to_html(community.description)          # prefer Markdown if provided, overwrite version obtained from HTML
             else:
                 community.description = html_to_text(community.description_html)
 
@@ -860,8 +856,7 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
                 post.body_html = allowlist_html(post_json['content'])
                 if 'source' in post_json and post_json['source']['mediaType'] == 'text/markdown':
                     post.body = post_json['source']['content']
-                    if '::: spoiler' in post.body:
-                        post.body_html = markdown_to_html(post.body)          # overwrite as Lemmy doesn't convert spoiler contents into HTML very well
+                    post.body_html = markdown_to_html(post.body)          # prefer Markdown if provided, overwrite version obtained from HTML
                 else:
                     post.body = html_to_text(post.body_html)
             elif post_json['mediaType'] == 'text/markdown':
@@ -1593,8 +1588,7 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
             if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
                     'mediaType' in request_json['object']['source'] and request_json['object']['source']['mediaType'] == 'text/markdown':
                 post_reply.body = request_json['object']['source']['content']
-                if '::: spoiler' in post_reply.body:
-                    post_reply.body_html = markdown_to_html(post_reply.body)          # overwrite as Lemmy doesn't convert spoiler contents into HTML very well
+                post_reply.body_html = markdown_to_html(post_reply.body)          # prefer Markdown if provided, overwrite version obtained from HTML
             else:
                 post_reply.body = html_to_text(post_reply.body_html)
         # Language - Lemmy uses 'language' while Mastodon uses 'contentMap'
@@ -1713,8 +1707,7 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
             post.body_html = allowlist_html(request_json['object']['content'])
             if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and request_json['object']['source']['mediaType'] == 'text/markdown':
                 post.body = request_json['object']['source']['content']
-                if '::: spoiler' in post.body:
-                    post.body_html = markdown_to_html(post.body)          # overwrite as Lemmy doesn't convert spoiler contents into HTML very well
+                post.body_html = markdown_to_html(post.body)          # prefer Markdown if provided, overwrite version obtained from HTML
             else:
                 post.body = html_to_text(post.body_html)
         elif 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/markdown':
@@ -1959,8 +1952,7 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
         if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
             'mediaType' in request_json['object']['source'] and request_json['object']['source']['mediaType'] == 'text/markdown':
             reply.body = request_json['object']['source']['content']
-            if '::: spoiler' in reply.body:
-                reply.body_html = markdown_to_html(reply.body)          # overwrite as Lemmy doesn't convert spoiler contents into HTML very well
+            reply.body_html = markdown_to_html(reply.body)          # prefer Markdown if provided, overwrite version obtained from HTML
         else:
             reply.body = html_to_text(reply.body_html)
     # Language
@@ -1984,8 +1976,7 @@ def update_post_from_activity(post: Post, request_json: dict):
             post.body_html = allowlist_html(request_json['object']['content'])
             if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and request_json['object']['source']['mediaType'] == 'text/markdown':
                 post.body = request_json['object']['source']['content']
-                if '::: spoiler' in post.body:
-                    post.body_html = markdown_to_html(post.body)          # overwrite as Lemmy doesn't convert spoiler contents into HTML very well
+                post.body_html = markdown_to_html(post.body)          # prefer Markdown if provided, overwrite version obtained from HTML
             else:
                 post.body = html_to_text(post.body_html)
         elif 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/markdown':

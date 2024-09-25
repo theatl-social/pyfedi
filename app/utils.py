@@ -323,7 +323,8 @@ def allowlist_html(html: str, a_target='_blank') -> str:
     return clean_html
 
 
-# this is for pyfedi's version of Markdown (differs from lemmy for: newlines for soft breaks, ...)
+# use this for Markdown irrespective of origin, as it can deal with both soft break newlines ('\n' used by PieFed) and hard break newlines ('  \n' or ' \\n')
+# ' \\n' will create <br /><br /> instead of just <br />, but hopefully that's acceptable.
 def markdown_to_html(markdown_text, anchors_new_tab=True) -> str:
     if markdown_text:
         raw_html = markdown2.markdown(markdown_text,
@@ -336,7 +337,7 @@ def markdown_to_html(markdown_text, anchors_new_tab=True) -> str:
 # this function lets local users use the more intuitive soft-breaks for newlines, but actually stores the Markdown in Lemmy-compatible format
 # Reasons for this:
 # 1. it's what any adapted Lemmy apps using an API would expect
-# 2. we need to revert to sending out Markdown in 'source' because:
+# 2. we've reverted to sending out Markdown in 'source' because:
 #    a. Lemmy doesn't convert '<details><summary>' back into its '::: spoiler' format
 #    b. anything coming from another PieFed instance would get reduced with html_to_text()
 #    c. raw 'https' strings in code blocks are being converted into <a> links for HTML that Lemmy then converts back into []()
