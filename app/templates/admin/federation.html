@@ -23,12 +23,13 @@
             {
                 "banned_instances": ["banned1.social", "banned2.social"], 
                 "banned_domains": ["banned3.social"], 
-                "banned_tags": ["badtag"], 
+                "banned_tags": [{"name":"badtag","display_as":"BaDtAg"},{...}], 
                 "banned_users": ["baduser@banned4.social"] 
             }</code>
         </pre>
-        {{ render_field(ban_lists_form.import_submit) }}
-        {{ render_field(ban_lists_form.export_submit) }}
+        <!-- {{ render_field(ban_lists_form.import_submit) }} -->
+        <!-- {{ render_field(ban_lists_form.export_submit) }} -->
+        {{ render_form(ban_lists_form) }}
     </div>
 </div>
 <hr />

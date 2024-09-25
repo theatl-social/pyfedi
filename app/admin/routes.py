@@ -1,8 +1,10 @@
 import os
 from datetime import timedelta
 from time import sleep
+from io import BytesIO
+import json as python_json
 
-from flask import request, flash, json, url_for, current_app, redirect, g, abort
+from flask import request, flash, json, url_for, current_app, redirect, g, abort, send_file
 from flask_login import login_required, current_user
 from flask_babel import _
 from slugify import slugify
@@ -26,7 +28,8 @@ from app.community.routes import do_subscribe
 from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED
 from app.email import send_welcome_email
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
-    User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission
+    User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission, Domain, \
+    Tag
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
     topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request
@@ -320,8 +323,52 @@ def admin_federation():
     
     # this is the export bans button
     elif ban_lists_form.export_submit.data and ban_lists_form.validate():
+        # create the empty dict
+        ban_lists_dict = {}
+
+        # get banned_instances info
+        banned_instances = []
+        instance_bans = BannedInstances.query.all()
+        for bi in instance_bans:
+            banned_instances.append(bi.domain)
+        ban_lists_dict['banned_instances'] = banned_instances
+
+        # get banned_domains info
+        banned_domains = []
+        domain_bans = Domain.query.filter_by(banned=True).all()
+        for db in domain_bans:
+            banned_domains.append(db.name)
+        ban_lists_dict['banned_domains'] = banned_domains
+
+        # get banned_tags info
+        banned_tags = []
+        tag_bans = Tag.query.filter_by(banned=True).all()
+        for tb in tag_bans:
+            tag_dict = {}
+            tag_dict['name'] = tb.name
+            tag_dict['display_as'] = tb.display_as
+            banned_tags.append(tag_dict)
+        ban_lists_dict['banned_tags'] = banned_tags
+
+        # get banned_users info
+        banned_users = []
+        user_bans = User.query.filter_by(banned=True).all()
+        for ub in user_bans:
+            banned_users.append(ub.ap_id)
+        ban_lists_dict['banned_users'] = banned_users
+
+        # setup the BytesIO buffer
+        buffer = BytesIO()
+        buffer.write(str(python_json.dumps(ban_lists_dict)).encode('utf-8'))
+        buffer.seek(0)
+
+        # send the file to the user as a download
+        # the as_attachment=True results in flask
+        # redirecting to the current page, so no
+        # url_for needed here
         flash(_('export button clicked'))
-        return redirect(url_for('admin.admin_federation'))
+        return send_file(buffer, download_name=f'{current_app.config["SERVER_NAME"]}_bans.json', as_attachment=True,
+                         mimetype='application/json')
 
     # this is the main settings form
     elif form.validate_on_submit():
