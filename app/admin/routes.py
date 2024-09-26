@@ -339,6 +339,10 @@ def admin_federation():
                 import_bans_task.delay(final_place)
                 flash(_(f'Ban imports started in a background process.'))
                 return redirect(url_for('admin.admin_federation'))
+        else:
+            flash(_(f'Ban imports requested, but no json provided.'))
+            return redirect(url_for('admin.admin_federation'))
+
 
     # this is the export bans button
     elif ban_lists_form.export_submit.data and ban_lists_form.validate():
@@ -455,7 +459,7 @@ def import_bans_task(filename):
     if get_setting('use_allowlist'):
         # check for allowed_instances existing and being more than 0 entries
         instances_allowed = contents_json['allowed_instances']
-        if instance_allowed.isinstance(list) and len(instance_allowed) > 0:
+        if isinstance(instance_allowed, list) and len(instance_allowed) > 0:
             # get the existing allows and their domains
             already_allowed_instances = []
             already_allowed = AllowedInstances.query.all()
@@ -478,7 +482,7 @@ def import_bans_task(filename):
     else:
         # check for banned_instances existing and being more than 0 entries
         instance_bans = contents_json['banned_instances']
-        if instance_bans.isinstance(list) and len(instance_bans) > 0:
+        if isinstance(instance_bans, list) and len(instance_bans) > 0:
             # get the existing bans and their domains
             already_banned_instances = []
             already_banned = BannedInstances.query.all()
@@ -500,7 +504,7 @@ def import_bans_task(filename):
     # import banned_domains
     # check for banned_domains existing and being more than 0 entries
     domain_bans = contents_json['banned_domains']
-    if domain_bans.isinstance(list) and len(domain_bans) > 0:
+    if isinstance(domain_bans, list) and len(domain_bans) > 0:
         # get the existing bans and their domains
         already_banned_domains = []
         already_banned = Domain.query.filter_by(banned=True).all()
@@ -522,7 +526,7 @@ def import_bans_task(filename):
     # import banned_tags
     # check for banned_tags existing and being more than 0 entries
     tag_bans = contents_json['banned_tags']
-    if tag_bans.isinstance(list) and len(tag_bans) > 0:
+    if isinstance(tag_bans, list) and len(tag_bans) > 0:
         # get the existing bans and their domains
         already_banned_tags = []
         already_banned = Tag.query.filter_by(banned=True).all()
@@ -533,7 +537,7 @@ def import_bans_task(filename):
         # loop through the tag_bans
         for tb in tag_bans:
             # check if we have already banned this tag
-            if tb['name'] in already_banned_domains:
+            if tb['name'] in already_banned_tags:
                 continue
             else:
                 # ban the domain
@@ -544,7 +548,7 @@ def import_bans_task(filename):
     # import banned_users
     # check for banned_users existing and being more than 0 entries
     user_bans = contents_json['banned_users']
-    if user_bans.isinstance(list) and len(user_bans) > 0:
+    if isinstance(user_bans, list) and len(user_bans) > 0:
         # get the existing bans and their domains
         already_banned_users = []
         already_banned = User.query.filter_by(banned=True).all()
@@ -559,7 +563,7 @@ def import_bans_task(filename):
                 continue
             else:
                 # ban the user
-                db.session.add(User(name=ub.split('@')[0], ap_id=ub, banned=True))
+                db.session.add(User(user_name=ub.split('@')[0], ap_id=ub, banned=True))
         # commit to the db
         db.session.commit()
 
