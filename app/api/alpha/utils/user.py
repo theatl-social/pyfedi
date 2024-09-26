@@ -8,17 +8,23 @@ def get_user(auth, data):
     if not data or ('person_id' not in data and 'username' not in data):
         raise Exception('missing_parameters')
 
-    person_id = int(data['person_id'])           # TODO: handle 'username' (was passed on login, as a way to get subscription list, but temporarily removed)
+    # user_id = logged in user, person_id = person who's posts, comments etc are being fetched
+    # when 'username' is requested, user_id and person_id are the same
+
+    person_id = None
+    if 'person_id' in data:
+        person_id = int(data['person_id'])
 
     user_id = None
     if auth:
         try:
             user_id = authorise_api_user(auth)
-            auth = None
+            if 'username' in data:
+                data['person_id'] = user_id
+                person_id = int(user_id)
+            auth = None                 # avoid authenticating user again in get_post_list and get_reply_list
         except Exception as e:
             raise e
-
-    # user_id = logged in user, person_id = person who's posts, comments etc are being fetched
 
     # bit unusual. have to help construct the json here rather than in views, to avoid circular dependencies
     post_list = get_post_list(auth, data, user_id)
