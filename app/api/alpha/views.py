@@ -51,9 +51,30 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0):
         counts = {'post_id': post.id, 'comments': post.reply_count, 'score': post.score, 'upvotes': post.up_votes, 'downvotes': post.down_votes,
                   'published': post.posted_at.isoformat() + 'Z', 'newest_comment_time': post.last_active.isoformat() + 'Z'}
         bookmarked = db.session.execute(text('SELECT user_id FROM "post_bookmark" WHERE post_id = :post_id and user_id = :user_id'), {'post_id': post.id, 'user_id': user_id}).scalar()
+        post_sub = db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'), {'type': NOTIF_POST, 'entity_id': post.id, 'user_id': user_id}).scalar()
+        if not stub:
+            banned =  db.session.execute(text('SELECT user_id FROM "community_ban" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': post.user_id, 'community_id': post.community_id}).scalar()
+            moderator = db.session.execute(text('SELECT is_moderator FROM "community_member" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': post.user_id, 'community_id': post.community_id}).scalar()
+            admin =  db.session.execute(text('SELECT user_id FROM "user_role" WHERE user_id = :user_id and role_id = 4'), {'user_id': post.user_id}).scalar()
+        else:
+            banned = False
+            moderator = False
+            admin = False
+        if my_vote == 0 and user_id is not None:
+            post_vote =  db.session.execute(text('SELECT effect FROM "post_vote" WHERE post_id = :post_id and user_id = :user_id'), {'post_id': post.id, 'user_id': user_id}).scalar()
+            effect = post_vote if post_vote else 0
+        else:
+            effect = my_vote
+
+        my_vote = int(effect)
         saved = True if bookmarked else False
+        activity_alert = True if post_sub else False
+        creator_banned_from_community = True if banned else False
+        creator_is_moderator = True if moderator else False
+        creator_is_admin = True if admin else False
         v2 = {'post': post_view(post=post, variant=1, stub=stub), 'counts': counts, 'banned_from_community': False, 'subscribed': 'NotSubscribed',
-              'saved': saved, 'read': False, 'hidden': False, 'creator_blocked': False, 'unread_comments': post.reply_count, 'my_vote': my_vote}
+              'saved': saved, 'read': False, 'hidden': False, 'creator_blocked': False, 'unread_comments': post.reply_count, 'my_vote': my_vote, 'activity_alert': activity_alert,
+              'creator_banned_from_community': creator_banned_from_community, 'creator_is_moderator': creator_is_moderator, 'creator_is_admin': creator_is_admin}
 
         try:
             creator = user_view(user=post.user_id, variant=1, stub=True)
@@ -61,22 +82,6 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0):
             v2.update({'creator': creator, 'community': community})
         except:
             raise
-
-        if not stub:
-            banned = db.session.execute(text('SELECT user_id FROM "community_ban" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': post.user_id, 'community_id': post.community_id}).scalar()
-            creator_banned_from_community = True if banned else False
-            moderator = db.session.execute(text('SELECT is_moderator FROM "community_member" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': post.user_id, 'community_id': post.community_id}).scalar()
-            creator_is_moderator = True if moderator else False
-            admin = db.session.execute(text('SELECT user_id FROM "user_role" WHERE user_id = :user_id and role_id = 4'), {'user_id': post.user_id}).scalar()
-            creator_is_admin = True if admin else False
-            v2.update({'creator_banned_from_community': creator_banned_from_community,
-                       'creator_is_moderator': creator_is_moderator,
-                       'creator_is_admin': creator_is_admin})
-
-        if my_vote == 0 and user_id is not None:
-            effect = db.session.execute(text('SELECT effect FROM "post_vote" WHERE post_id = :post_id and user_id = :user_id'), {'post_id': post.id, 'user_id': user_id}).scalar()
-            if effect:
-                v2['my_vote'] = int(effect)
 
         return v2
 
@@ -126,7 +131,7 @@ def user_view(user: User | int, variant, stub=False):
     if isinstance(user, int):
         user = User.query.get(user)
     if not user:
-        raise Exception('user_not_found 1')
+        raise Exception('user_not_found')
 
     # Variant 1 - models/person/person.dart
     if variant == 1:
@@ -257,10 +262,28 @@ def reply_view(reply: PostReply | int, variant, user_id=None, my_vote=0):
         # counts - models/comment/comment_aggregates.dart
         counts = {'comment_id': reply.id, 'score': reply.score, 'upvotes': reply.up_votes, 'downvotes': reply.down_votes,
                   'published': reply.posted_at.isoformat() + 'Z', 'child_count': 1 if calculate_if_has_children(reply) else 0}
+
         bookmarked = db.session.execute(text('SELECT user_id FROM "post_reply_bookmark" WHERE post_reply_id = :post_reply_id and user_id = :user_id'), {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
+        reply_sub = db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'), {'type': NOTIF_REPLY, 'entity_id': reply.id, 'user_id': user_id}).scalar()
+        banned = db.session.execute(text('SELECT user_id FROM "community_ban" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': reply.user_id, 'community_id': reply.community_id}).scalar()
+        moderator = db.session.execute(text('SELECT is_moderator FROM "community_member" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': reply.user_id, 'community_id': reply.community_id}).scalar()
+        admin = db.session.execute(text('SELECT user_id FROM "user_role" WHERE user_id = :user_id and role_id = 4'), {'user_id': reply.user_id}).scalar()
+        if my_vote == 0 and user_id is not None:
+            reply_vote = db.session.execute(text('SELECT effect FROM "post_reply_vote" WHERE post_reply_id = :post_reply_id and user_id = :user_id'), {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
+            effect = reply_vote if reply_vote else 0
+        else:
+            effect = my_vote
+
+        my_vote = int(effect)
         saved = True if bookmarked else False
+        activity_alert = True if reply_sub else False
+        creator_banned_from_community = True if banned else False
+        creator_is_moderator = True if moderator else False
+        creator_is_admin = True if admin else False
+
         v2 = {'comment': reply_view(reply=reply, variant=1), 'counts': counts, 'banned_from_community': False, 'subscribed': 'NotSubscribed',
-              'saved': saved, 'creator_blocked': False, 'my_vote': my_vote}
+              'saved': saved, 'creator_blocked': False, 'my_vote': my_vote, 'activity_alert': activity_alert,
+              'creator_banned_from_community': creator_banned_from_community, 'creator_is_moderator': creator_is_moderator, 'creator_is_admin': creator_is_admin}
         try:
             creator = user_view(user=reply.user_id, variant=1, stub=True)
             community = community_view(community=reply.community_id, variant=1, stub=True)
@@ -268,19 +291,6 @@ def reply_view(reply: PostReply | int, variant, user_id=None, my_vote=0):
             v2.update({'creator': creator, 'community': community, 'post': post})
         except:
             raise
-
-        banned = db.session.execute(text('SELECT user_id FROM "community_ban" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': reply.user_id, 'community_id': reply.community_id}).scalar()
-        creator_banned_from_community = True if banned else False
-        moderator = db.session.execute(text('SELECT is_moderator FROM "community_member" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': reply.user_id, 'community_id': reply.community_id}).scalar()
-        creator_is_moderator = True if moderator else False
-        admin = db.session.execute(text('SELECT user_id FROM "user_role" WHERE user_id = :user_id and role_id = 4'), {'user_id': reply.user_id}).scalar()
-        creator_is_admin = True if admin else False
-        v2.update({'creator_banned_from_community': creator_banned_from_community, 'creator_is_moderator': creator_is_moderator, 'creator_is_admin': creator_is_admin})
-
-        if my_vote == 0 and user_id is not None:
-            effect = db.session.execute(text('SELECT effect FROM "post_reply_vote" WHERE post_reply_id = :post_reply_id and user_id = :user_id'), {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
-            if effect:
-                v2['my_vote'] = int(effect)
 
         return v2
 
