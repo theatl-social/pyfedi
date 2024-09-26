@@ -466,6 +466,8 @@ def import_bans_task(filename):
                 else:
                     # allow the instance
                     db.session.add(AllowedInstances(domain=ia))
+        # commit to the db
+        db.session.commit()
 
     # import banned_instances
     else:
@@ -487,7 +489,8 @@ def import_bans_task(filename):
                 else:
                     # ban the domain
                     db.session.add(BannedInstances(domain=ib))
-
+        # commit to the db
+        db.session.commit()
 
     # import banned_domains
     # check for banned_domains existing and being more than 0 entries
@@ -508,6 +511,8 @@ def import_bans_task(filename):
             else:
                 # ban the domain
                 db.session.add(Domain(name=domb, banned=True))
+        # commit to the db
+        db.session.commit()
     
     # import banned_tags
     # check for banned_tags existing and being more than 0 entries
@@ -528,6 +533,8 @@ def import_bans_task(filename):
             else:
                 # ban the domain
                 db.session.add(Tag(name=tb['name'], display_as=tb['display_as'], banned=True))
+        # commit to the db
+        db.session.commit()
     
     # import banned_users
     # check for banned_users existing and being more than 0 entries
@@ -543,12 +550,13 @@ def import_bans_task(filename):
         # loop through the user_bans
         for ub in user_bans:
             # check if we have already banned this user
-            if ub in already_banned_domains:
+            if ub in already_banned_users:
                 continue
             else:
                 # ban the user
-                # db.session.add(Tag(name=tb['name'], display_as=tb['display_as'], banned=True))
-                pass
+                db.session.add(User(name=ub.split('@')[0], ap_id=ub, banned=True))
+        # commit to the db
+        db.session.commit()
 
 @bp.route('/activities', methods=['GET'])
 @login_required
