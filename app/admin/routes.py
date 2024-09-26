@@ -339,7 +339,6 @@ def admin_federation():
             flash(_(f'Ban imports requested, but no json provided.'))
             return redirect(url_for('admin.admin_federation'))
 
-
     # this is the export bans button
     elif ban_lists_form.export_submit.data and ban_lists_form.validate():
         # create the empty dict
@@ -398,7 +397,6 @@ def admin_federation():
         # the as_attachment=True results in flask
         # redirecting to the current page, so no
         # url_for needed here
-        flash(_('export button clicked'))
         return send_file(buffer, download_name=f'{current_app.config["SERVER_NAME"]}_bans.json', as_attachment=True,
                          mimetype='application/json')
 
