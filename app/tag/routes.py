@@ -174,7 +174,7 @@ def tag_ban(tag):
     if tag:
         tag.banned = True
         db.session.commit()
-        tag.purge_content()
+        # tag.purge_content()
         flash(_('%(name)s banned for all users and all content deleted.', name=tag.name))
         return redirect(url_for('tag.tags'))
 
