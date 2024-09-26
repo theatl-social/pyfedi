@@ -332,23 +332,35 @@ def admin_federation():
             import_file.save(final_place)
 
             # import bans in background task
-            import_bans(final_place)
+            if current_app.debug:
+                import_bans_task(final_place)
+                return redirect(url_for('admin.admin_federation'))
+            else:
+                import_bans_task.delay(final_place)
+                flash(_(f'Ban imports started in a background process.'))
+                return redirect(url_for('admin.admin_federation'))
 
-        flash(_(f'import file: {import_file}'))
-        return redirect(url_for('admin.admin_federation'))
-    
     # this is the export bans button
     elif ban_lists_form.export_submit.data and ban_lists_form.validate():
         # create the empty dict
         ban_lists_dict = {}
 
-        # get banned_instances info
-        banned_instances = []
-        instance_bans = BannedInstances.query.all()
-        if len(instance_bans) > 0:
-            for bi in instance_bans:
-                banned_instances.append(bi.domain)
-        ban_lists_dict['banned_instances'] = banned_instances
+        if get_setting('use_allowlist'):
+            # get the allowed_instances info
+            allowed_instances = []
+            already_allowed = AllowedInstances.query.all()
+            if len(already_allowed) > 0:
+                for aa in already_allowed:
+                    allowed_instances.append(aa.domain)
+            ban_lists_dict['allowed_instances'] = banned_instances
+        else:
+            # get banned_instances info
+            banned_instances = []
+            instance_bans = BannedInstances.query.all()
+            if len(instance_bans) > 0:
+                for bi in instance_bans:
+                    banned_instances.append(bi.domain)
+            ban_lists_dict['banned_instances'] = banned_instances
 
         # get banned_domains info
         banned_domains = []
@@ -433,13 +445,6 @@ def admin_federation():
                            menu_topics=menu_topics(),
                            site=g.site
                            )
-
-
-def import_bans(filename):
-    if current_app.debug:
-        import_bans_task(filename)
-    else:
-        import_bans_task.delay(filename)
 
 @celery.task
 def import_bans_task(filename):
