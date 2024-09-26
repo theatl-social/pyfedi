@@ -1,7 +1,7 @@
 from app.api.alpha import bp
 from app.api.alpha.utils import get_site, \
-                                get_post_list, get_post, post_post_like, put_post_save, \
-                                get_reply_list, post_reply_like, put_reply_save, \
+                                get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, \
+                                get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, \
                                 get_community_list, get_community, \
                                 get_user
 from app.shared.auth import log_user_in
@@ -95,6 +95,18 @@ def put_alpha_post_save():
         return jsonify({"error": str(ex)}), 400
 
 
+@bp.route('/api/alpha/post/subscribe', methods=['PUT'])
+def put_alpha_post_subscribe():
+    if not current_app.debug:
+        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(put_post_subscribe(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
 # Reply
 @bp.route('/api/alpha/comment/list', methods=['GET'])
 def get_alpha_comment_list():
@@ -128,6 +140,18 @@ def put_alpha_comment_save():
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
         return jsonify(put_reply_save(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/comment/subscribe', methods=['PUT'])
+def put_alpha_comment_subscribe():
+    if not current_app.debug:
+        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(put_reply_subscribe(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 

@@ -3,7 +3,7 @@ from app.utils import authorise_api_user
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
 from app.api.alpha.views import reply_view
 from app.models import PostReply
-from app.shared.reply import vote_for_reply, bookmark_the_post_reply, remove_the_bookmark_from_post_reply
+from app.shared.reply import vote_for_reply, bookmark_the_post_reply, remove_the_bookmark_from_post_reply, toggle_post_reply_notification
 
 from sqlalchemy import desc
 
@@ -115,4 +115,20 @@ def put_reply_save(auth, data):
         raise
 
 
+def put_reply_subscribe(auth, data):
+    try:
+        required(['comment_id', 'subscribe'], data)
+        integer_expected(['comment_id'], data)
+        boolean_expected(['subscribe'], data)
+    except:
+        raise
 
+    reply_id = data['comment_id']
+    subscribe = data['subscribe']           # not actually processed - is just a toggle
+
+    try:
+        user_id = toggle_post_reply_notification(reply_id, SRC_API, auth)
+        reply_json = reply_view(reply=reply_id, variant=4, user_id=user_id)
+        return reply_json
+    except:
+        raise
