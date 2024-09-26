@@ -1189,8 +1189,13 @@ class Post(db.Model):
         return round(sign * order + seconds / 45000, 7)
 
     def vote(self, user: User, vote_direction: str):
-        assert vote_direction == 'upvote' or vote_direction == 'downvote'
         existing_vote = PostVote.query.filter_by(user_id=user.id, post_id=self.id).first()
+        if existing_vote and vote_direction == 'reversal':                            # api sends '1' for upvote, '-1' for downvote, and '0' for reversal
+            if existing_vote.effect == 1:
+                vote_direction = 'upvote'
+            elif existing_vote.effect == -1:
+                 vote_direction = 'downvote'
+        assert vote_direction == 'upvote' or vote_direction == 'downvote'
         undo = None
         if existing_vote:
             if not self.community.low_quality:
@@ -1409,6 +1414,12 @@ class PostReply(db.Model):
 
     def vote(self, user: User, vote_direction: str):
         existing_vote = PostReplyVote.query.filter_by(user_id=user.id, post_reply_id=self.id).first()
+        if existing_vote and vote_direction == 'reversal':                            # api sends '1' for upvote, '-1' for downvote, and '0' for reversal
+            if existing_vote.effect == 1:
+                vote_direction = 'upvote'
+            elif existing_vote.effect == -1:
+                 vote_direction = 'downvote'
+        assert vote_direction == 'upvote' or vote_direction == 'downvote'
         undo = None
         if existing_vote:
             if existing_vote.effect > 0:  # previous vote was up
