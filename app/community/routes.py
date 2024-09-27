@@ -1903,7 +1903,7 @@ def check_url_already_posted():
     url = request.args.get('link_url')
     if url:
         url = remove_tracking_from_link(url.strip())
-        communities = Community.query.filter_by(banned=False).join(Post).filter(Post.url == url).all()
+        communities = Community.query.filter_by(banned=False).join(Post).filter(Post.url == url, Post.deleted == False).all()
         return flask.render_template('community/check_url_posted.html', communities=communities)
     else:
         abort(404)
