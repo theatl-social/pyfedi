@@ -199,7 +199,7 @@ def retrieve_mods_and_backfill(community_id: int):
                                 post.ap_announce_id = activity['id']
                                 post.ranking = post_ranking(post.score, post.posted_at)
                                 if post.url:
-                                    other_posts = Post.query.filter(Post.id != post.id, Post.url == post.url,
+                                    other_posts = Post.query.filter(Post.id != post.id, Post.url == post.url, Post.deleted == False,
                                                                     Post.posted_at > post.posted_at - timedelta(days=3),
                                                                     Post.posted_at < post.posted_at + timedelta(days=3)).all()
                                     for op in other_posts:

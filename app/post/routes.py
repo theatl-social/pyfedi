@@ -839,7 +839,7 @@ def post_edit(post_id: int):
                         if ocp.cross_posts is not None:
                             ocp.cross_posts.remove(post.id)
 
-                new_cross_posts = Post.query.filter(Post.id != post.id, Post.url == post.url,
+                new_cross_posts = Post.query.filter(Post.id != post.id, Post.url == post.url, Post.deleted == False,
                                                 Post.posted_at > post.edited_at - timedelta(days=6)).all()
                 for ncp in new_cross_posts:
                     if ncp.cross_posts is None:

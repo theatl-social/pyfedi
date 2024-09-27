@@ -634,7 +634,7 @@ def add_post(actor, type):
 
         # Update list of cross posts
         if post.url:
-            other_posts = Post.query.filter(Post.id != post.id, Post.url == post.url,
+            other_posts = Post.query.filter(Post.id != post.id, Post.url == post.url, Post.deleted == False,
                                     Post.posted_at > post.posted_at - timedelta(days=6)).all()
             for op in other_posts:
                 if op.cross_posts is None:
