@@ -613,6 +613,12 @@ user_role = db.Table('user_role',
     db.PrimaryKeyConstraint('user_id', 'role_id')
 )
 
+# table to hold users' 'read' post ids
+read_posts = db.Table('read_posts',
+                        db.Column('user_id', db.Integer, db.ForeignKey('user.id'), index=True),
+                        db.Column('read_post_id', db.Integer, db.ForeignKey('post.id'), index=True),
+                        # db.PrimaryKeyConstraint('user_id', 'read_post_id')
+                      )
 
 class User(UserMixin, db.Model):
     query_class = FullTextSearchQuery
@@ -691,6 +697,12 @@ class User(UserMixin, db.Model):
     post_replies = db.relationship('PostReply', lazy='dynamic', cascade="all, delete-orphan")
 
     roles = db.relationship('Role', secondary=user_role, lazy='dynamic', cascade="all, delete")
+
+    read_post = db.relationship(
+        'Post', secondary=read_posts,
+        primaryjoin=(read_posts.c.user_id == id),
+        secondaryjoin=(read_posts.c.read_post_id == id),
+        backref=db.backref('read_by', lazy='dynamic'), lazy='dynamic')
 
     def __repr__(self):
         return '<User {}_{}>'.format(self.user_name, self.id)
@@ -1016,6 +1028,18 @@ class User(UserMixin, db.Model):
             return jwt.encode(payload, current_app.config['SECRET_KEY'], algorithm='HS256')
         except Exception as e:
             return str(e)
+
+    # mark a post as 'read' for this user
+    def mark_post_as_read(self, post_id):
+        # check if its already marked as read, if not, mark it as read
+        if not self.has_read_post(post_id):
+            self.read_post.append(post_id)
+
+    # check if post has been read by this user
+    # returns true if the post has been read, false if not
+    def has_read_post(self, post_id):
+        return self.read_post.filter(read_posts.c.read_post_id == post_id).count() > 0
+    
 
 
 class ActivityLog(db.Model):
@@ -1558,6 +1582,7 @@ class PostReply(db.Model):
         user.recalculate_attitude()
         db.session.commit()
         return undo
+
 
 
 class Domain(db.Model):

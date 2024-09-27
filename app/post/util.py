@@ -113,3 +113,7 @@ def url_needs_archive(url) -> bool:
 
 def generate_archive_link(url) -> bool:
     return 'https://archive.ph/' + url
+
+# marks the post as read for a provided user
+def mark_post_as_read(post_id: int, user_id: int):
+    pass
