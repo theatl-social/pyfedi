@@ -379,6 +379,7 @@ def user_settings():
         current_user.newsletter = form.newsletter.data
         current_user.searchable = form.searchable.data
         current_user.indexable = form.indexable.data
+        current_user.hide_read_posts = form.hide_read_posts.data
         current_user.default_sort = form.default_sort.data
         current_user.default_filter = form.default_filter.data
         current_user.theme = form.theme.data
@@ -405,6 +406,7 @@ def user_settings():
         form.email_unread.data = current_user.email_unread
         form.searchable.data = current_user.searchable
         form.indexable.data = current_user.indexable
+        form.hide_read_posts.data =  current_user.hide_read_posts
         form.default_sort.data = current_user.default_sort
         form.default_filter.data = current_user.default_filter
         form.theme.data = current_user.theme

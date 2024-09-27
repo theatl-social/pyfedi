@@ -43,6 +43,7 @@ class SettingsForm(FlaskForm):
     markdown_editor = BooleanField(_l('Use markdown editor GUI when writing'))
     searchable = BooleanField(_l('Show profile in user list'))
     indexable = BooleanField(_l('My posts appear in search results'))
+    hide_read_posts = BooleanField(_l('Do not display posts with which I have already interacted (opened/upvote/downvote)'))
     manually_approves_followers = BooleanField(_l('Manually approve followers'))
     vote_privately = BooleanField(_l('Vote privately'))
     sorts = [('hot', _l('Hot')),

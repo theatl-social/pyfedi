@@ -698,6 +698,7 @@ class User(UserMixin, db.Model):
 
     roles = db.relationship('Role', secondary=user_role, lazy='dynamic', cascade="all, delete")
 
+    hide_read_posts = db.Column(db.Boolean, default=False)
     read_post = db.relationship(
         'Post', secondary=read_posts,
         primaryjoin=(read_posts.c.user_id == id),
