@@ -699,11 +699,10 @@ class User(UserMixin, db.Model):
     roles = db.relationship('Role', secondary=user_role, lazy='dynamic', cascade="all, delete")
 
     hide_read_posts = db.Column(db.Boolean, default=False)
-    read_post = db.relationship(
-        'Post', secondary=read_posts,
-        primaryjoin=(read_posts.c.user_id == id),
-        secondaryjoin=(read_posts.c.read_post_id == id),
-        backref=db.backref('read_by', lazy='dynamic'), lazy='dynamic')
+    # db relationship tracked by the "read_posts" table
+    # this is the User side, so its referencing the Post side
+    # read_by is the corresponding Post object variable
+    read_post = db.relationship('Post', secondary=read_posts, back_populates='read_by', lazy='dynamic')
 
     def __repr__(self):
         return '<User {}_{}>'.format(self.user_name, self.id)
@@ -1031,15 +1030,15 @@ class User(UserMixin, db.Model):
             return str(e)
 
     # mark a post as 'read' for this user
-    def mark_post_as_read(self, post_id):
+    def mark_post_as_read(self, post):
         # check if its already marked as read, if not, mark it as read
-        if not self.has_read_post(post_id):
-            self.read_post.append(post_id)
+        if not self.has_read_post(post):
+            self.read_post.append(post)
 
     # check if post has been read by this user
     # returns true if the post has been read, false if not
-    def has_read_post(self, post_id):
-        return self.read_post.filter(read_posts.c.read_post_id == post_id).count() > 0
+    def has_read_post(self, post):
+        return self.read_post.filter(read_posts.c.read_post_id == post.id).count() > 0
     
 
 
@@ -1103,6 +1102,11 @@ class Post(db.Model):
     community = db.relationship('Community', lazy='joined', overlaps='posts', foreign_keys=[community_id])
     replies = db.relationship('PostReply', lazy='dynamic', backref='post')
     language = db.relationship('Language', foreign_keys=[language_id])
+
+    # db relationship tracked by the "read_posts" table
+    # this is the Post side, so its referencing the User side
+    # read_post is the corresponding User object variable
+    read_by = db.relationship('User', secondary=read_posts, back_populates='read_post', lazy='dynamic')
 
     def is_local(self):
         return self.ap_id is None or self.ap_id.startswith('https://' + current_app.config['SERVER_NAME'])
