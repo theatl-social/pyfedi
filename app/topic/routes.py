@@ -65,6 +65,13 @@ def show_topic(topic_path):
                 posts = posts.filter(Post.nsfl == False)
             if current_user.hide_nsfw == 1:
                 posts = posts.filter(Post.nsfw == False)
+            if current_user.hide_read_posts:
+                cu_rp = current_user.read_post.all()
+                cu_rp_ids = []
+                for p in cu_rp:
+                    cu_rp_ids.append(p.id)
+                for p_id in cu_rp_ids:
+                    posts = posts.filter(Post.id != p_id)
             posts = posts.filter(Post.deleted == False)
             content_filters = user_filters_posts(current_user.id)
 
