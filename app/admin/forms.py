@@ -58,7 +58,7 @@ class PreLoadCommunitiesForm(FlaskForm):
 
 
 class ImportExportBannedListsForm(FlaskForm):
-    import_file = FileField(_l('Import Ban Lists'))
+    import_file = FileField(_l('Import Bans List Json File'))
     import_submit = SubmitField(_l('Import'))
     export_submit = SubmitField(_l('Export'))
 
