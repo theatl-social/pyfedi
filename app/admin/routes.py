@@ -1,8 +1,10 @@
 import os
 from datetime import timedelta
 from time import sleep
+from io import BytesIO
+import json as python_json
 
-from flask import request, flash, json, url_for, current_app, redirect, g, abort
+from flask import request, flash, json, url_for, current_app, redirect, g, abort, send_file
 from flask_login import login_required, current_user
 from flask_babel import _
 from slugify import slugify
@@ -14,7 +16,7 @@ from app.activitypub.routes import process_inbox_request, process_delete_request
 from app.activitypub.signature import post_request, default_context
 from app.activitypub.util import instance_allowed, instance_blocked, extract_domain_and_actor
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
-    EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, EditInstanceForm
+    EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form
 from app.community.util import save_icon_file, save_banner_file, search_for_community
@@ -22,10 +24,11 @@ from app.community.routes import do_subscribe
 from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED
 from app.email import send_welcome_email
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
-    User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission
+    User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission, Domain, \
+    Tag
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
-    topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request
+    topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents
 from app.admin import bp
 
 
@@ -191,6 +194,7 @@ def admin_misc():
 def admin_federation():
     form = FederationForm()
     preload_form = PreLoadCommunitiesForm()
+    ban_lists_form = ImportExportBannedListsForm()
     site = Site.query.get(1)
     if site is None:
         site = Site()
@@ -308,6 +312,94 @@ def admin_federation():
 
         return redirect(url_for('admin.admin_federation'))
     
+    # this is the import bans button
+    elif ban_lists_form.import_submit.data and ban_lists_form.validate():
+        import_file = request.files['import_file']
+        if import_file and import_file.filename != '':
+            file_ext = os.path.splitext(import_file.filename)[1]
+            if file_ext.lower() != '.json':
+                abort(400)
+            new_filename = gibberish(15) + '.json'
+
+            directory = f'app/static/media/'
+
+            # save the file
+            final_place = os.path.join(directory, new_filename + file_ext)
+            import_file.save(final_place)
+
+            # import bans in background task
+            if current_app.debug:
+                import_bans_task(final_place)
+                return redirect(url_for('admin.admin_federation'))
+            else:
+                import_bans_task.delay(final_place)
+                flash(_(f'Ban imports started in a background process.'))
+                return redirect(url_for('admin.admin_federation'))
+        else:
+            flash(_(f'Ban imports requested, but no json provided.'))
+            return redirect(url_for('admin.admin_federation'))
+
+    # this is the export bans button
+    elif ban_lists_form.export_submit.data and ban_lists_form.validate():
+        # create the empty dict
+        ban_lists_dict = {}
+
+        if get_setting('use_allowlist'):
+            # get the allowed_instances info
+            allowed_instances = []
+            already_allowed = AllowedInstances.query.all()
+            if len(already_allowed) > 0:
+                for aa in already_allowed:
+                    allowed_instances.append(aa.domain)
+            ban_lists_dict['allowed_instances'] = banned_instances
+        else:
+            # get banned_instances info
+            banned_instances = []
+            instance_bans = BannedInstances.query.all()
+            if len(instance_bans) > 0:
+                for bi in instance_bans:
+                    banned_instances.append(bi.domain)
+            ban_lists_dict['banned_instances'] = banned_instances
+
+        # get banned_domains info
+        banned_domains = []
+        domain_bans = Domain.query.filter_by(banned=True).all()
+        if len(domain_bans) > 0:
+            for db in domain_bans:
+                banned_domains.append(db.name)
+        ban_lists_dict['banned_domains'] = banned_domains
+
+        # get banned_tags info
+        banned_tags = []
+        tag_bans = Tag.query.filter_by(banned=True).all()
+        if len(tag_bans) > 0:
+            for tb in tag_bans:
+                tag_dict = {}
+                tag_dict['name'] = tb.name
+                tag_dict['display_as'] = tb.display_as
+                banned_tags.append(tag_dict)
+        ban_lists_dict['banned_tags'] = banned_tags
+
+        # get banned_users info
+        banned_users = []
+        user_bans = User.query.filter_by(banned=True).all()
+        if len(user_bans) > 0:
+            for ub in user_bans:
+                banned_users.append(ub.ap_id)
+        ban_lists_dict['banned_users'] = banned_users
+
+        # setup the BytesIO buffer
+        buffer = BytesIO()
+        buffer.write(str(python_json.dumps(ban_lists_dict)).encode('utf-8'))
+        buffer.seek(0)
+
+        # send the file to the user as a download
+        # the as_attachment=True results in flask
+        # redirecting to the current page, so no
+        # url_for needed here
+        return send_file(buffer, download_name=f'{current_app.config["SERVER_NAME"]}_bans.json', as_attachment=True,
+                         mimetype='application/json')
+
     # this is the main settings form
     elif form.validate_on_submit():
         if form.use_allowlist.data:
@@ -344,13 +436,130 @@ def admin_federation():
         form.blocked_actors.data = get_setting('actor_blocked_words', '88')
 
     return render_template('admin/federation.html', title=_('Federation settings'), 
-                           form=form, preload_form=preload_form, current_app_debug=current_app.debug,
+                           form=form, preload_form=preload_form, ban_lists_form=ban_lists_form,
+                           current_app_debug=current_app.debug,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(),
                            site=g.site
                            )
 
+@celery.task
+def import_bans_task(filename):
+    contents = file_get_contents(filename)
+    contents_json = json.loads(contents)
+
+    # import allowed_instances
+    if get_setting('use_allowlist'):
+        # check for allowed_instances existing and being more than 0 entries
+        instances_allowed = contents_json['allowed_instances']
+        if isinstance(instance_allowed, list) and len(instance_allowed) > 0:
+            # get the existing allows and their domains
+            already_allowed_instances = []
+            already_allowed = AllowedInstances.query.all()
+            if len(already_allowed) > 0:
+                for aa in already_allowed:
+                    already_allowed_instances.append(aa.domain)
+            
+            # loop through the instances_allowed
+            for ia in instances_allowed:
+                # check if we have already allowed this instance
+                if ia in already_allowed_instances:
+                    continue
+                else:
+                    # allow the instance
+                    db.session.add(AllowedInstances(domain=ia))
+        # commit to the db
+        db.session.commit()
+
+    # import banned_instances
+    else:
+        # check for banned_instances existing and being more than 0 entries
+        instance_bans = contents_json['banned_instances']
+        if isinstance(instance_bans, list) and len(instance_bans) > 0:
+            # get the existing bans and their domains
+            already_banned_instances = []
+            already_banned = BannedInstances.query.all()
+            if len(already_banned) > 0:
+                for ab in already_banned:
+                    already_banned_instances.append(ab.domain)
+            
+            # loop through the instance_bans
+            for ib in instance_bans:
+                # check if we have already banned this instance
+                if ib in already_banned_instances:
+                    continue
+                else:
+                    # ban the domain
+                    db.session.add(BannedInstances(domain=ib))
+        # commit to the db
+        db.session.commit()
+
+    # import banned_domains
+    # check for banned_domains existing and being more than 0 entries
+    domain_bans = contents_json['banned_domains']
+    if isinstance(domain_bans, list) and len(domain_bans) > 0:
+        # get the existing bans and their domains
+        already_banned_domains = []
+        already_banned = Domain.query.filter_by(banned=True).all()
+        if len(already_banned) > 0:
+            for ab in already_banned:
+                already_banned_domains.append(ab.name)
+        
+        # loop through the domain_bans
+        for domb in domain_bans:
+            # check if we have already banned this domain
+            if domb in already_banned_domains:
+                continue
+            else:
+                # ban the domain
+                db.session.add(Domain(name=domb, banned=True))
+        # commit to the db
+        db.session.commit()
+    
+    # import banned_tags
+    # check for banned_tags existing and being more than 0 entries
+    tag_bans = contents_json['banned_tags']
+    if isinstance(tag_bans, list) and len(tag_bans) > 0:
+        # get the existing bans and their domains
+        already_banned_tags = []
+        already_banned = Tag.query.filter_by(banned=True).all()
+        if len(already_banned) > 0:
+            for ab in already_banned:
+                already_banned_tags.append(ab.name)
+
+        # loop through the tag_bans
+        for tb in tag_bans:
+            # check if we have already banned this tag
+            if tb['name'] in already_banned_tags:
+                continue
+            else:
+                # ban the domain
+                db.session.add(Tag(name=tb['name'], display_as=tb['display_as'], banned=True))
+        # commit to the db
+        db.session.commit()
+    
+    # import banned_users
+    # check for banned_users existing and being more than 0 entries
+    user_bans = contents_json['banned_users']
+    if isinstance(user_bans, list) and len(user_bans) > 0:
+        # get the existing bans and their domains
+        already_banned_users = []
+        already_banned = User.query.filter_by(banned=True).all()
+        if len(already_banned) > 0:
+            for ab in already_banned:
+                already_banned_users.append(ab.ap_id)
+
+        # loop through the user_bans
+        for ub in user_bans:
+            # check if we have already banned this user
+            if ub in already_banned_users:
+                continue
+            else:
+                # ban the user
+                db.session.add(User(user_name=ub.split('@')[0], ap_id=ub, banned=True))
+        # commit to the db
+        db.session.commit()
 
 @bp.route('/activities', methods=['GET'])
 @login_required

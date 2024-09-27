@@ -3,7 +3,7 @@
 {% else %}
     {% extends "base.html" %}
 {% endif %} %}
-{% from 'bootstrap/form.html' import render_form %}
+{% from 'bootstrap/form.html' import render_form, render_field %}
 {% set active_child = 'admin_federation' %}
 
 {% block app_content %}
@@ -12,6 +12,27 @@
     <div class="col">
         <h1>{{ _('Federation') }}</h1>
         {{ render_form(form) }}
+    </div>
+</div>
+<hr />
+<div class="row">
+    <div class="col">
+        <p>Import / Export Bans</p>
+        <p>JSON format:</p>
+        <pre><code>
+            {
+                "banned_instances": ["banned1.social", "banned2.social"], 
+                "allowed_instances": ["allowed1.social", "allowed2.social"], 
+                "banned_domains": ["banned3.social"], 
+                "banned_tags": [{"name":"badtag","display_as":"BaDtAg"},{...}], 
+                "banned_users": ["baduser@banned4.social"] 
+            }</code>
+        </pre>
+        <p>Note: only one of "banned_instances" or "allowed_instances" will be populated.</p>
+
+        <!-- {{ render_field(ban_lists_form.import_submit) }} -->
+        <!-- {{ render_field(ban_lists_form.export_submit) }} -->
+        {{ render_form(ban_lists_form) }}
     </div>
 </div>
 <hr />
