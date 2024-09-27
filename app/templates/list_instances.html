@@ -16,10 +16,10 @@
         <form method="get">
             <input type="search" name="search" value="{{ search }}"> <input type="submit" name="submit" value="{{ _('Search') }}">
         </form>
-        <a href="{{ url_for('main.list_instances', filter='online') }}">{{ _('Online') }}</a> |
-        <a href="{{ url_for('main.list_instances', filter='dormant') }}">{{ _('Dormant') }}</a> |
-        <a href="{{ url_for('main.list_instances', filter='gone_forever') }}">{{ _('Gone forever') }}</a> |
-        <a href="{{ url_for('main.list_instances', filter='trusted') }}">{{ _('Trusted') }}</a>
+        <a href="{{ url_for('main.list_instances', filter='online') }}" rel="nofollow noindex">{{ _('Online') }}</a> |
+        <a href="{{ url_for('main.list_instances', filter='dormant') }}" rel="nofollow noindex">{{ _('Dormant') }}</a> |
+        <a href="{{ url_for('main.list_instances', filter='gone_forever') }}" rel="nofollow noindex">{{ _('Gone forever') }}</a> |
+        <a href="{{ url_for('main.list_instances', filter='trusted') }}" rel="nofollow noindex">{{ _('Trusted') }}</a>
 
         {% if instances -%}
             <div class="table-responsive-sm pt-4">
