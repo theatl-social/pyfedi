@@ -617,6 +617,7 @@ user_role = db.Table('user_role',
 read_posts = db.Table('read_posts',
                         db.Column('user_id', db.Integer, db.ForeignKey('user.id'), index=True),
                         db.Column('read_post_id', db.Integer, db.ForeignKey('post.id'), index=True),
+                        db.Column('interacted_at', db.DateTime, index=True, default=utcnow)    # this is when the content is interacte with
                       )
 
 class User(UserMixin, db.Model):
