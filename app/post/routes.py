@@ -15,7 +15,7 @@ from app.community.util import save_post, send_to_remote_instance
 from app.inoculation import inoculation
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm
 from app.community.forms import CreateLinkForm, CreateImageForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm
-from app.post.util import post_replies, get_comment_branch, get_post_reply_count, tags_to_string, url_needs_archive, \
+from app.post.util import post_replies, get_comment_branch, tags_to_string, url_needs_archive, \
     generate_archive_link, body_has_no_archive_link
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
     POST_TYPE_IMAGE, \
@@ -69,82 +69,16 @@ def show_post(post_id: int):
     form.language_id.choices = languages_for_form()
     if current_user.is_authenticated and current_user.verified and form.validate_on_submit():
 
-        if not post.comments_enabled:
-            flash('Comments have been disabled.', 'warning')
+        try:
+            reply = PostReply.new(current_user, post, in_reply_to=None, body=piefed_markdown_to_lemmy_markdown(form.body.data),
+                                  body_html=markdown_to_html(form.body.data), notify_author=form.notify_author.data,
+                                  language_id=form.language_id.data)
+        except Exception as ex:
+            flash(_('Your reply was not accepted because %(reason)s', reason=str(ex)), 'error')
             return redirect(url_for('activitypub.post_ap', post_id=post_id))
 
-        if current_user.banned:
-            flash('You have been banned.', 'error')
-            logout_user()
-            resp = make_response(redirect(url_for('main.index')))
-            resp.set_cookie('sesion', '17489047567495', expires=datetime(year=2099, month=12, day=30))
-            return resp
-
-        if post.author.has_blocked_user(current_user.id):
-            flash(_('You cannot reply to %(name)s', name=post.author.display_name()))
-            return redirect(url_for('activitypub.post_ap', post_id=post_id))
-
-        # avoid duplicate replies
-        if reply_already_exists(user_id=current_user.id, post_id=post.id, parent_id=None, body=form.body.data):
-            return redirect(url_for('activitypub.post_ap', post_id=post_id))
-
-        # disallow low-effort gif reaction posts
-        if reply_is_just_link_to_gif_reaction(form.body.data):
-            current_user.reputation -= 1
-            flash(_('This type of comment is not accepted, sorry.'), 'error')
-            return redirect(url_for('activitypub.post_ap', post_id=post_id))
-
-        # respond to comments that are just variants of 'this'
-        if reply_is_stupid(form.body.data):
-            existing_vote = PostVote.query.filter_by(user_id=current_user.id, post_id=post.id).first()
-            if existing_vote is None:
-                flash(_('We have upvoted the post for you.'), 'warning')
-                post_vote(post.id, 'upvote')
-            else:
-                flash(_('You have already upvoted the post, you do not need to say "this" also.'), 'error')
-            return redirect(url_for('activitypub.post_ap', post_id=post_id))
-
-        reply = PostReply(user_id=current_user.id, post_id=post.id, community_id=community.id, body=piefed_markdown_to_lemmy_markdown(form.body.data),
-                          body_html=markdown_to_html(form.body.data), body_html_safe=True,
-                          from_bot=current_user.bot, nsfw=post.nsfw, nsfl=post.nsfl,
-                          notify_author=form.notify_author.data, language_id=form.language_id.data, instance_id=1)
-
-        post.last_active = community.last_active = utcnow()
-        post.reply_count += 1
-        community.post_reply_count += 1
-        current_user.post_reply_count += 1
         current_user.language_id = form.language_id.data
-
-        db.session.add(reply)
-        db.session.commit()
-
-        notify_about_post_reply(None, reply)
-
-        # Subscribe to own comment
-        if form.notify_author.data:
-            new_notification = NotificationSubscription(name=shorten_string(_('Replies to my comment on %(post_title)s',
-                                                                              post_title=post.title), 50),
-                                                        user_id=current_user.id, entity_id=reply.id,
-                                                        type=NOTIF_REPLY)
-            db.session.add(new_notification)
-            db.session.commit()
-
-        # upvote own reply
-        reply.score = 1
-        reply.up_votes = 1
-        reply.ranking = confidence(1, 0)
-        vote = PostReplyVote(user_id=current_user.id, post_reply_id=reply.id, author_id=current_user.id, effect=1)
-        db.session.add(vote)
-        cache.delete_memoized(recently_upvoted_post_replies, current_user.id)
-
         reply.ap_id = reply.profile_id()
-        if current_user.reputation > 100:
-            reply.up_votes += 1
-            reply.score += 1
-            reply.ranking += 1
-        elif current_user.reputation < -100:
-            reply.score -= 1
-            reply.ranking -= 1
         db.session.commit()
         form.body.data = ''
         flash('Your comment has been added.')
@@ -595,49 +529,13 @@ def add_reply(post_id: int, comment_id: int):
         current_user.last_seen = utcnow()
         current_user.ip_address = ip_address()
         current_user.language_id = form.language_id.data
-        reply = PostReply(user_id=current_user.id, post_id=post.id, parent_id=in_reply_to.id, depth=in_reply_to.depth + 1,
-                          community_id=post.community.id, body=piefed_markdown_to_lemmy_markdown(form.body.data),
-                          body_html=markdown_to_html(form.body.data), body_html_safe=True,
-                          from_bot=current_user.bot, nsfw=post.nsfw, nsfl=post.nsfl,
-                          notify_author=form.notify_author.data, instance_id=1, language_id=form.language_id.data)
-        if reply.body:
-            for blocked_phrase in blocked_phrases():
-                if blocked_phrase in reply.body:
-                    abort(401)
-        db.session.add(reply)
-        db.session.commit()
 
-        # Notify subscribers
-        notify_about_post_reply(in_reply_to, reply)
+        reply = PostReply.new(current_user, post, in_reply_to,
+                              body=piefed_markdown_to_lemmy_markdown(form.body.data),
+                              body_html=markdown_to_html(form.body.data),
+                              notify_author=form.notify_author.data,
+                              language_id=form.language_id.data)
 
-        # Subscribe to own comment
-        if form.notify_author.data:
-            new_notification = NotificationSubscription(name=shorten_string(_('Replies to my comment on %(post_title)s',
-                                                                              post_title=post.title), 50),
-                                                        user_id=current_user.id, entity_id=reply.id,
-                                                        type=NOTIF_REPLY)
-            db.session.add(new_notification)
-
-        # upvote own reply
-        reply.score = 1
-        reply.up_votes = 1
-        reply.ranking = confidence(1, 0)
-        vote = PostReplyVote(user_id=current_user.id, post_reply_id=reply.id, author_id=current_user.id, effect=1)
-        db.session.add(vote)
-        cache.delete_memoized(recently_upvoted_post_replies, current_user.id)
-
-        reply.ap_id = reply.profile_id()
-        if current_user.reputation > 100:
-            reply.up_votes += 1
-            reply.score += 1
-            reply.ranking += 1
-        elif current_user.reputation < -100:
-            reply.score -= 1
-            reply.ranking -= 1
-        post.reply_count = get_post_reply_count(post.id)
-        post.last_active = post.community.last_active = utcnow()
-        current_user.post_reply_count += 1
-        db.session.commit()
         form.body.data = ''
         flash('Your comment has been added.')
 

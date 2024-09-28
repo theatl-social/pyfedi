@@ -1565,108 +1565,45 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
         # set depth to +1 of the parent depth
         if parent_comment_id:
             parent_comment = PostReply.query.get(parent_comment_id)
-            depth = parent_comment.depth + 1
         else:
-            depth = 0
-        post_reply = PostReply(user_id=user.id, community_id=community.id,
-                               post_id=post_id, parent_id=parent_comment_id,
-                               root_id=root_id,
-                               nsfw=community.nsfw,
-                               nsfl=community.nsfl,
-                               from_bot=user.bot,
-                               up_votes=1,
-                               depth=depth,
-                               score=instance_weight(user.ap_domain),
-                               ap_id=request_json['object']['id'],
-                               ap_create_id=request_json['id'],
-                               ap_announce_id=announce_id,
-                               instance_id=user.instance_id)
+            parent_comment = None
+        if post_id is None:
+            activity_log.exception_message = 'Could not find parent post'
+            return None
+        post = Post.query.get(post_id)
+
+        body = body_html = ''
         if 'content' in request_json['object']:   # Kbin, Mastodon, etc provide their posts as html
             if not (request_json['object']['content'].startswith('<p>') or request_json['object']['content'].startswith('<blockquote>')):
                 request_json['object']['content'] = '<p>' + request_json['object']['content'] + '</p>'
-            post_reply.body_html = allowlist_html(request_json['object']['content'])
+            body_html = allowlist_html(request_json['object']['content'])
             if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
                     'mediaType' in request_json['object']['source'] and request_json['object']['source']['mediaType'] == 'text/markdown':
-                post_reply.body = request_json['object']['source']['content']
-                post_reply.body_html = markdown_to_html(post_reply.body)          # prefer Markdown if provided, overwrite version obtained from HTML
+                body = request_json['object']['source']['content']
+                body_html = markdown_to_html(body)          # prefer Markdown if provided, overwrite version obtained from HTML
             else:
-                post_reply.body = html_to_text(post_reply.body_html)
+                body = html_to_text(body_html)
+
         # Language - Lemmy uses 'language' while Mastodon uses 'contentMap'
+        language_id = None
         if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
             language = find_language_or_create(request_json['object']['language']['identifier'],
                                                request_json['object']['language']['name'])
-            post_reply.language_id = language.id
+            language_id = language.id
         elif 'contentMap' in request_json['object'] and isinstance(request_json['object']['contentMap'], dict):
             language = find_language(next(iter(request_json['object']['contentMap'])))  # Combination of next and iter gets the first key in a dict
-            post_reply.language_id = language.id if language else None
+            language_id = language.id if language else None
 
-        if post_id is not None:
-            # Discard post_reply if it contains certain phrases. Good for stopping spam floods.
-            if post_reply.body:
-                for blocked_phrase in blocked_phrases():
-                    if blocked_phrase in post_reply.body:
-                        return None
-            post = Post.query.get(post_id)
-
-            if post.comments_enabled:
-                anchor = None
-                if not parent_comment_id:
-                    notification_target = post
-                else:
-                    notification_target = PostReply.query.get(parent_comment_id)
-
-                if notification_target.author.has_blocked_user(post_reply.user_id):
-                    activity_log.exception_message = 'Replier blocked, reply discarded'
-                    activity_log.result = 'ignored'
-                    return None
-
-                if reply_already_exists(user_id=user.id, post_id=post.id, parent_id=post_reply.parent_id, body=post_reply.body):
-                    activity_log.exception_message = 'Duplicate reply'
-                    activity_log.result = 'ignored'
-                    return None
-
-                if reply_is_just_link_to_gif_reaction(post_reply.body):
-                    user.reputation -= 1
-                    activity_log.exception_message = 'gif comment ignored'
-                    activity_log.result = 'ignored'
-                    return None
-
-                if reply_is_stupid(post_reply.body):
-                    activity_log.exception_message = 'Stupid reply'
-                    activity_log.result = 'ignored'
-                    return None
-
-                db.session.add(post_reply)
-                if not user.bot:
-                    post.reply_count += 1
-                    community.post_reply_count += 1
-                    community.last_active = post.last_active = utcnow()
-                activity_log.result = 'success'
-                post_reply.ranking = confidence(post_reply.up_votes, post_reply.down_votes)
-                user.post_reply_count += 1
-                db.session.commit()
-
-                # send notification to the post/comment being replied to
-                if parent_comment_id:
-                    notify_about_post_reply(parent_comment, post_reply)
-                else:
-                    notify_about_post_reply(None, post_reply)
-
-                if user.reputation > 100:
-                    post_reply.up_votes += 1
-                    post_reply.score += 1
-                    post_reply.ranking = confidence(post_reply.up_votes, post_reply.down_votes)
-                    db.session.commit()
-            else:
-                activity_log.exception_message = 'Comments disabled, reply discarded'
-                activity_log.result = 'ignored'
-                return None
-            return post_reply
-        else:
-            activity_log.exception_message = 'Could not find parent post'
-            return None
-    else:
-        activity_log.exception_message = 'Parent not found'
+        post_reply = None
+        try:
+            post_reply = PostReply.new(user, post, parent_comment, notify_author=True, body=body, body_html=body_html,
+                                       language_id=language_id, request_json=request_json, announce_id=announce_id)
+            activity_log.result = 'success'
+        except Exception as ex:
+            activity_log.exception_message = str(ex)
+            activity_log.result = 'ignored'
+        db.session.commit()
+        return post_reply
 
 
 def create_post(activity_log: ActivityPubLog, community: Community, request_json: dict, user: User, announce_id=None) -> Union[Post, None]:

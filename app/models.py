@@ -1170,6 +1170,10 @@ class Post(db.Model):
                                  'name': f'#{tag.name}'})
         return return_value
 
+    def post_reply_count_recalculate(self):
+        self.post_reply_count = db.session.execute(text('SELECT COUNT(id) as c FROM "post_reply" WHERE post_id = :post_id AND deleted is false'),
+            {'post_id': self.id}).scalar()
+
     # All the following post/comment ranking math is explained at https://medium.com/hacking-and-gonzo/how-reddit-ranking-algorithms-work-ef111e33d0d9
     epoch = datetime(1970, 1, 1)
 
@@ -1308,6 +1312,94 @@ class PostReply(db.Model):
     community = db.relationship('Community', lazy='joined', overlaps='replies', foreign_keys=[community_id])
     language = db.relationship('Language', foreign_keys=[language_id])
 
+    @classmethod
+    def new(cls, user: User, post: Post, in_reply_to, body, body_html, notify_author, language_id, request_json: dict = None, announce_id=None):
+
+        from app.utils import shorten_string, blocked_phrases, recently_upvoted_post_replies, reply_already_exists, reply_is_just_link_to_gif_reaction, reply_is_stupid
+        from app.activitypub.util import notify_about_post_reply
+
+        if not post.comments_enabled:
+            raise Exception('Comments are disabled on this post')
+
+        if in_reply_to is not None:
+            parent_id = in_reply_to.id
+            depth = in_reply_to.depth + 1
+        else:
+            parent_id = None
+            depth = 0
+
+        reply = PostReply(user_id=user.id, post_id=post.id, parent_id=parent_id,
+                          depth=depth,
+                          community_id=post.community.id, body=body,
+                          body_html=body_html, body_html_safe=True,
+                          from_bot=user.bot, nsfw=post.nsfw, nsfl=post.nsfl,
+                          notify_author=notify_author, instance_id=user.instance_id,
+                          language_id=language_id,
+                          ap_id=request_json['object']['id'] if request_json else None,
+                          ap_create_id=request_json['id'] if request_json else None,
+                          ap_announce_id=announce_id)
+        if reply.body:
+            for blocked_phrase in blocked_phrases():
+                if blocked_phrase in reply.body:
+                    raise Exception('Blocked phrase in comment')
+        if in_reply_to is None or in_reply_to.parent_id is None:
+            notification_target = post
+        else:
+            notification_target = PostReply.query.get(in_reply_to.parent_id)
+
+        if notification_target.author.has_blocked_user(reply.user_id):
+            raise Exception('Replier blocked')
+
+        if reply_already_exists(user_id=user.id, post_id=post.id, parent_id=reply.parent_id, body=reply.body):
+            raise Exception('Duplicate reply')
+
+        if reply_is_just_link_to_gif_reaction(reply.body):
+            user.reputation -= 1
+            raise Exception('Gif comment ignored')
+
+        if reply_is_stupid(reply.body):
+            raise Exception('Stupid reply')
+
+        db.session.add(reply)
+        db.session.commit()
+
+        # Notify subscribers
+        notify_about_post_reply(in_reply_to, reply)
+
+        # Subscribe to own comment
+        if notify_author:
+            new_notification = NotificationSubscription(name=shorten_string(_('Replies to my comment on %(post_title)s',
+                                                                              post_title=post.title), 50),
+                                                        user_id=user.id, entity_id=reply.id,
+                                                        type=NOTIF_REPLY)
+            db.session.add(new_notification)
+
+        # upvote own reply
+        reply.score = 1
+        reply.up_votes = 1
+        reply.ranking = PostReply.confidence(1, 0)
+        vote = PostReplyVote(user_id=user.id, post_reply_id=reply.id, author_id=user.id, effect=1)
+        db.session.add(vote)
+        if user.is_local():
+            cache.delete_memoized(recently_upvoted_post_replies, user.id)
+
+        reply.ap_id = reply.profile_id()
+        if user.reputation > 100:
+            reply.up_votes += 1
+            reply.score += 1
+            reply.ranking += 1
+        elif user.reputation < -100:
+            reply.score -= 1
+            reply.ranking -= 1
+        if not user.bot:
+            post.reply_count += 1
+            post.community.post_reply_count += 1
+            post.community.last_active = post.last_active = utcnow()
+        user.post_reply_count += 1
+        db.session.commit()
+
+        return reply
+
     def language_code(self):
         if self.language_id:
             return self.language.code
@@ -1387,7 +1479,8 @@ class PostReply(db.Model):
         return existing_notification is not None
 
     # used for ranking comments
-    def _confidence(self, ups, downs):
+    @classmethod
+    def _confidence(cls, ups, downs):
         n = ups + downs
 
         if n == 0:
@@ -1402,7 +1495,8 @@ class PostReply(db.Model):
 
         return (left - right) / under
 
-    def confidence(self, ups, downs) -> float:
+    @classmethod
+    def confidence(cls, ups, downs) -> float:
         if ups is None or ups < 0:
             ups = 0
         if downs is None or downs < 0:
@@ -1410,7 +1504,7 @@ class PostReply(db.Model):
         if ups + downs == 0:
             return 0.0
         else:
-            return self._confidence(ups, downs)
+            return cls._confidence(ups, downs)
 
     def vote(self, user: User, vote_direction: str):
         existing_vote = PostReplyVote.query.filter_by(user_id=user.id, post_reply_id=self.id).first()
@@ -1460,7 +1554,7 @@ class PostReply(db.Model):
             self.author.reputation += effect
             db.session.add(vote)
         user.last_seen = utcnow()
-        self.ranking = self.confidence(self.up_votes, self.down_votes)
+        self.ranking = PostReply.confidence(self.up_votes, self.down_votes)
         user.recalculate_attitude()
         db.session.commit()
         return undo
