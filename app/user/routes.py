@@ -399,7 +399,7 @@ def user_settings():
         db.session.commit()
 
         flash(_('Your changes have been saved.'), 'success')
-        return redirect(url_for('user.change_settings'))
+        return redirect(url_for('user.user_settings'))
     elif request.method == 'GET':
         form.newsletter.data = current_user.newsletter
         form.email_unread.data = current_user.email_unread
