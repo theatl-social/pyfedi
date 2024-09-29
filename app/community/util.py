@@ -254,7 +254,7 @@ def save_post(form, post: Post, type: int):
     post.notify_author = form.notify_author.data
     post.language_id = form.language_id.data
     current_user.language_id = form.language_id.data
-    post.title = form.title.data
+    post.title = form.title.data.strip()
     post.body = piefed_markdown_to_lemmy_markdown(form.body.data)
     post.body_html = markdown_to_html(post.body)
     if not type or type == POST_TYPE_ARTICLE:
