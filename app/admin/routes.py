@@ -368,10 +368,10 @@ def admin_federation():
         banned_tags = []
         tag_bans = Tag.query.filter_by(banned=True).all()
         if len(tag_bans) > 0:
-            for tb in tag_bans:
+            for tag_ban in tag_bans:
                 tag_dict = {}
-                tag_dict['name'] = tb.name
-                tag_dict['display_as'] = tb.display_as
+                tag_dict['name'] = tag_ban.name
+                tag_dict['display_as'] = tag_ban.display_as
                 banned_tags.append(tag_dict)
         ban_lists_dict['banned_tags'] = banned_tags
 
@@ -379,8 +379,8 @@ def admin_federation():
         banned_users = []
         user_bans = User.query.filter_by(banned=True).all()
         if len(user_bans) > 0:
-            for ub in user_bans:
-                banned_users.append(ub.ap_id)
+            for user_ban in user_bans:
+                banned_users.append(user_ban.ap_id)
         ban_lists_dict['banned_users'] = banned_users
 
         # setup the BytesIO buffer
@@ -439,6 +439,7 @@ def admin_federation():
                            site=g.site
                            )
 
+
 @celery.task
 def import_bans_task(filename):
     contents = file_get_contents(filename)
@@ -453,17 +454,17 @@ def import_bans_task(filename):
             already_allowed_instances = []
             already_allowed = AllowedInstances.query.all()
             if len(already_allowed) > 0:
-                for aa in already_allowed:
-                    already_allowed_instances.append(aa.domain)
+                for already_allowed in already_allowed:
+                    already_allowed_instances.append(already_allowed.domain)
             
             # loop through the instances_allowed
-            for ia in instances_allowed:
+            for allowed_instance in instances_allowed:
                 # check if we have already allowed this instance
-                if ia in already_allowed_instances:
+                if allowed_instance in already_allowed_instances:
                     continue
                 else:
                     # allow the instance
-                    db.session.add(AllowedInstances(domain=ia))
+                    db.session.add(AllowedInstances(domain=allowed_instance))
         # commit to the db
         db.session.commit()
 
@@ -480,13 +481,13 @@ def import_bans_task(filename):
                     already_banned_instances.append(ab.domain)
             
             # loop through the instance_bans
-            for ib in instance_bans:
+            for instance_ban in instance_bans:
                 # check if we have already banned this instance
-                if ib in already_banned_instances:
+                if instance_ban in already_banned_instances:
                     continue
                 else:
                     # ban the domain
-                    db.session.add(BannedInstances(domain=ib))
+                    db.session.add(BannedInstances(domain=instance_ban))
         # commit to the db
         db.session.commit()
 
@@ -502,13 +503,13 @@ def import_bans_task(filename):
                 already_banned_domains.append(ab.name)
         
         # loop through the domain_bans
-        for domb in domain_bans:
+        for domain_ban in domain_bans:
             # check if we have already banned this domain
-            if domb in already_banned_domains:
+            if domain_ban in already_banned_domains:
                 continue
             else:
                 # ban the domain
-                db.session.add(Domain(name=domb, banned=True))
+                db.session.add(Domain(name=domain_ban, banned=True))
         # commit to the db
         db.session.commit()
     
@@ -524,13 +525,13 @@ def import_bans_task(filename):
                 already_banned_tags.append(ab.name)
 
         # loop through the tag_bans
-        for tb in tag_bans:
+        for tag_ban in tag_bans:
             # check if we have already banned this tag
-            if tb['name'] in already_banned_tags:
+            if tag_ban['name'] in already_banned_tags:
                 continue
             else:
                 # ban the domain
-                db.session.add(Tag(name=tb['name'], display_as=tb['display_as'], banned=True))
+                db.session.add(Tag(name=tag_ban['name'], display_as=tag_ban['display_as'], banned=True))
         # commit to the db
         db.session.commit()
     
@@ -546,15 +547,16 @@ def import_bans_task(filename):
                 already_banned_users.append(ab.ap_id)
 
         # loop through the user_bans
-        for ub in user_bans:
+        for user_ban in user_bans:
             # check if we have already banned this user
-            if ub in already_banned_users:
+            if user_ban in already_banned_users:
                 continue
             else:
                 # ban the user
-                db.session.add(User(user_name=ub.split('@')[0], ap_id=ub, banned=True))
+                db.session.add(User(user_name=user_ban.split('@')[0], ap_id=user_ban, banned=True))
         # commit to the db
         db.session.commit()
+
 
 @bp.route('/activities', methods=['GET'])
 @login_required
