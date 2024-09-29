@@ -195,11 +195,6 @@ def admin_federation():
     form = FederationForm()
     preload_form = PreLoadCommunitiesForm()
     ban_lists_form = ImportExportBannedListsForm()
-    site = Site.query.get(1)
-    if site is None:
-        site = Site()
-
-    site.updated = utcnow()
 
     # this is the pre-load communities button
     if preload_form.pre_load_submit.data and preload_form.validate():
@@ -341,7 +336,7 @@ def admin_federation():
 
     # this is the export bans button
     elif ban_lists_form.export_submit.data and ban_lists_form.validate():
-        # create the empty dict
+
         ban_lists_dict = {}
 
         if get_setting('use_allowlist'):
@@ -351,7 +346,7 @@ def admin_federation():
             if len(already_allowed) > 0:
                 for aa in already_allowed:
                     allowed_instances.append(aa.domain)
-            ban_lists_dict['allowed_instances'] = banned_instances
+            ban_lists_dict['allowed_instances'] = allowed_instances
         else:
             # get banned_instances info
             banned_instances = []
@@ -365,8 +360,8 @@ def admin_federation():
         banned_domains = []
         domain_bans = Domain.query.filter_by(banned=True).all()
         if len(domain_bans) > 0:
-            for db in domain_bans:
-                banned_domains.append(db.name)
+            for domain in domain_bans:
+                banned_domains.append(domain.name)
         ban_lists_dict['banned_domains'] = banned_domains
 
         # get banned_tags info
@@ -416,7 +411,7 @@ def admin_federation():
                 if banned.strip():
                     db.session.add(BannedInstances(domain=banned.strip()))
                     cache.delete_memoized(instance_blocked, banned.strip())
-        site.blocked_phrases = form.blocked_phrases.data
+        g.site.blocked_phrases = form.blocked_phrases.data
         set_setting('actor_blocked_words', form.blocked_actors.data)
         cache.delete_memoized(blocked_phrases)
         cache.delete_memoized(get_setting, 'actor_blocked_words')
@@ -432,7 +427,7 @@ def admin_federation():
         form.blocklist.data = '\n'.join([instance.domain for instance in instances])
         instances = AllowedInstances.query.all()
         form.allowlist.data = '\n'.join([instance.domain for instance in instances])
-        form.blocked_phrases.data = site.blocked_phrases
+        form.blocked_phrases.data = g.site.blocked_phrases
         form.blocked_actors.data = get_setting('actor_blocked_words', '88')
 
     return render_template('admin/federation.html', title=_('Federation settings'), 
