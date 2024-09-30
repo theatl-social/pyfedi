@@ -40,7 +40,7 @@ def show_domain(domain_id):
             content_filters = {}
         
         # don't show posts a user has already interacted with
-        if current_user.hide_read_posts:
+        if current_user.is_authenticated and current_user.hide_read_posts:
             posts = posts.outerjoin(read_posts, (Post.id == read_posts.c.read_post_id) & (read_posts.c.user_id == current_user.id))
             posts = posts.filter(read_posts.c.read_post_id.is_(None))  # Filter where there is no corresponding read post for the current user
         
