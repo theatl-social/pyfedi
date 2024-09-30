@@ -613,6 +613,12 @@ user_role = db.Table('user_role',
     db.PrimaryKeyConstraint('user_id', 'role_id')
 )
 
+# table to hold users' 'read' post ids
+read_posts = db.Table('read_posts',
+                        db.Column('user_id', db.Integer, db.ForeignKey('user.id'), index=True),
+                        db.Column('read_post_id', db.Integer, db.ForeignKey('post.id'), index=True),
+                        db.Column('interacted_at', db.DateTime, index=True, default=utcnow)    # this is when the content is interacte with
+                      )
 
 class User(UserMixin, db.Model):
     query_class = FullTextSearchQuery
@@ -691,6 +697,12 @@ class User(UserMixin, db.Model):
     post_replies = db.relationship('PostReply', lazy='dynamic', cascade="all, delete-orphan")
 
     roles = db.relationship('Role', secondary=user_role, lazy='dynamic', cascade="all, delete")
+
+    hide_read_posts = db.Column(db.Boolean, default=False)
+    # db relationship tracked by the "read_posts" table
+    # this is the User side, so its referencing the Post side
+    # read_by is the corresponding Post object variable
+    read_post = db.relationship('Post', secondary=read_posts, back_populates='read_by', lazy='dynamic')
 
     def __repr__(self):
         return '<User {}_{}>'.format(self.user_name, self.id)
@@ -1017,6 +1029,18 @@ class User(UserMixin, db.Model):
         except Exception as e:
             return str(e)
 
+    # mark a post as 'read' for this user
+    def mark_post_as_read(self, post):
+        # check if its already marked as read, if not, mark it as read
+        if not self.has_read_post(post):
+            self.read_post.append(post)
+
+    # check if post has been read by this user
+    # returns true if the post has been read, false if not
+    def has_read_post(self, post):
+        return self.read_post.filter(read_posts.c.read_post_id == post.id).count() > 0
+    
+
 
 class ActivityLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -1078,6 +1102,11 @@ class Post(db.Model):
     community = db.relationship('Community', lazy='joined', overlaps='posts', foreign_keys=[community_id])
     replies = db.relationship('PostReply', lazy='dynamic', backref='post')
     language = db.relationship('Language', foreign_keys=[language_id])
+
+    # db relationship tracked by the "read_posts" table
+    # this is the Post side, so its referencing the User side
+    # read_post is the corresponding User object variable
+    read_by = db.relationship('User', secondary=read_posts, back_populates='read_post', lazy='dynamic')
 
     def is_local(self):
         return self.ap_id is None or self.ap_id.startswith('https://' + current_app.config['SERVER_NAME'])
@@ -1558,6 +1587,7 @@ class PostReply(db.Model):
         user.recalculate_attitude()
         db.session.commit()
         return undo
+
 
 
 class Domain(db.Model):

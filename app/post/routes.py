@@ -247,6 +247,12 @@ def show_post(post_id: int):
     if post.type == POST_TYPE_LINK and body_has_no_archive_link(post.body_html) and url_needs_archive(post.url):
         archive_link = generate_archive_link(post.url)
 
+    # for logged in users who have the 'hide read posts' function enabled
+    # mark this post as read
+    if current_user.is_authenticated and current_user.hide_read_posts:
+        current_user.mark_post_as_read(post)
+        db.session.commit()
+
     response = render_template('post/post.html', title=post.title, post=post, is_moderator=is_moderator, is_owner=community.is_owner(),
                            community=post.community,
                            breadcrumbs=breadcrumbs, related_communities=related_communities, mods=mod_list,
@@ -329,6 +335,12 @@ def post_vote(post_id: int, vote_direction):
         recently_downvoted = [post_id]
     cache.delete_memoized(recently_upvoted_posts, current_user.id)
     cache.delete_memoized(recently_downvoted_posts, current_user.id)
+
+    # for logged in users who have the 'hide read posts' function enabled
+    # mark this post as read
+    if current_user.is_authenticated and current_user.hide_read_posts:
+        current_user.mark_post_as_read(post)
+        db.session.commit()
 
     template = 'post/_post_voting_buttons.html' if request.args.get('style', '') == '' else 'post/_post_voting_buttons_masonry.html'
     return render_template(template, post=post, community=post.community, recently_upvoted=recently_upvoted,

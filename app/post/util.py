@@ -113,3 +113,4 @@ def url_needs_archive(url) -> bool:
 
 def generate_archive_link(url) -> bool:
     return 'https://archive.ph/' + url
+

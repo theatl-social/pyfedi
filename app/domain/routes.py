@@ -38,6 +38,16 @@ def show_domain(domain_id):
             content_filters = user_filters_posts(current_user.id)
         else:
             content_filters = {}
+        
+        # don't show posts a user has already interacted with
+        if current_user.hide_read_posts:
+            cu_rp = current_user.read_post.all()
+            cu_rp_ids = []
+            for p in cu_rp:
+                cu_rp_ids.append(p.id)
+            for p_id in cu_rp_ids:
+                posts = posts.filter(Post.id != p_id)
+        
         # pagination
         posts = posts.paginate(page=page, per_page=100, error_out=False)
         next_url = url_for('domain.show_domain', domain_id=domain_id, page=posts.next_num) if posts.has_next else None

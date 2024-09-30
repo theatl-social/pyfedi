@@ -71,6 +71,13 @@ def home_page(sort, view_filter):
             posts = posts.filter(Post.nsfl == False)
         if current_user.hide_nsfw == 1:
             posts = posts.filter(Post.nsfw == False)
+        if current_user.hide_read_posts:
+            cu_rp = current_user.read_post.all()
+            cu_rp_ids = []
+            for p in cu_rp:
+                cu_rp_ids.append(p.id)
+            for p_id in cu_rp_ids:
+                posts = posts.filter(Post.id != p_id)
 
         domains_ids = blocked_domains(current_user.id)
         if domains_ids:
