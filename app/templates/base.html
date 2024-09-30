@@ -197,7 +197,9 @@
                                   <li><a class="dropdown-item{% if active_child == 'edit_profile' %} active{% endif %}" href="/user/settings">{{ _('Edit profile & settings') }}</a></li>
                                   <li><a class="dropdown-item{% if active_child == 'chats' %} active{% endif %}" href="/chat">{{ _('Chats') }}</a></li>
                                   <li><a class="dropdown-item{% if active_child == 'bookmarks' %} active{% endif %}" href="/bookmarks">{{ _('Bookmarks') }}</a></li>
-                                  <li><a class="dropdown-item{% if active_child == 'read_posts' %} active{% endif %}" href="/read-posts">{{ _('Read Posts') }}</a></li>
+                                  {% if current_user.is_authenticated and current_user.hide_read_posts -%}
+                                    <li><a class="dropdown-item{% if active_child == 'read_posts' %} active{% endif %}" href="/read-posts">{{ _('Read Posts') }}</a></li>
+                                  {% endif -%}
                                 </ul>
                             </li>
                             <li class="nav-item"><a class="nav-link" href="/donate">{{ _('Donate') }}</a></li>
