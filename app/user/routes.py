@@ -1173,6 +1173,7 @@ def fediverse_redirect(actor):
                 form.instance_url.data = send_to
             return render_template('user/fediverse_redirect.html', form=form, user=user, send_to=send_to, current_app=current_app)
 
+
 @bp.route('/read-posts')
 @login_required
 def user_read_posts():
@@ -1203,3 +1204,12 @@ def user_read_posts():
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
                            next_url=next_url, prev_url=prev_url)
+
+
+@bp.route('/read-posts/delete')
+@login_required
+def user_read_posts_delete():
+    db.session.execute(text('DELETE FROM "read_posts" WHERE user_id = :user_id'), {'user_id': current_user.id})
+    db.session.commit()
+    flash(_('Reading history has been deleted'))
+    return redirect(url_for('user.user_read_posts'))

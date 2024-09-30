@@ -16,11 +16,15 @@
           </ol>
         </nav>
         <h1>{{ _('Read posts') }}</h1>
-        <div class="post_list">
-            {% for post in posts.items -%}
-                {% include 'post/_post_teaser.html' %}
-            {% endfor -%}
-        </div>
+        {% if posts %}
+            <div class="post_list">
+                {% for post in posts.items -%}
+                    {% include 'post/_post_teaser.html' %}
+                {% endfor -%}
+            </div>
+        {% else %}
+            <p>{{ _('No posts yet.') }}</p>
+        {% endif -%}
 
         <nav aria-label="Pagination" class="mt-4" role="navigation">
                 {% if prev_url %}
@@ -35,5 +39,24 @@
                 {% endif %}
         </nav>
     </div>
+    <aside id="side_pane" class="col-12 col-md-4 side_pane" role="complementary">
+        {% if current_user.is_authenticated and current_user.id == user.id %}
+            <div class="card mb-3">
+                <div class="card-header">
+                     <h2>{{ _('Manage') }}</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <a href="{{ url_for('user.user_read_posts_delete') }}" class="btn btn-primary" style="float: right;">{{ _('Delete history') }}</a>
+                        </div>
+                        <div class="col-6">
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </aside>
 </div>
 {% endblock %}
