@@ -481,7 +481,7 @@ def refresh_user_profile_task(user_id):
                 user.title = activity_json['name']
             if 'summary' in activity_json:
                 about_html = activity_json['summary']
-                if not about_html.startswith('<'):                    # PeerTube
+                if about_html is not None and not about_html.startswith('<'):                    # PeerTube
                     about_html = '<p>' + about_html + '</p>'
                 user.about_html = allowlist_html(about_html)
             else:
@@ -579,7 +579,7 @@ def refresh_community_profile_task(community_id):
             else:
                 description_html = ''
 
-            if description_html != '':
+            if description_html is not None and description_html != '':
                 if not description_html.startswith('<'):                    # PeerTube
                     description_html = '<p>' + description_html + '</p>'
                 community.description_html = allowlist_html(description_html)
@@ -704,7 +704,7 @@ def actor_json_to_model(activity_json, address, server):
 
         if 'summary' in activity_json:
             about_html = activity_json['summary']
-            if not about_html.startswith('<'):                    # PeerTube
+            if about_html is not None and not about_html.startswith('<'):                    # PeerTube
                 about_html = '<p>' + about_html + '</p>'
             user.about_html = allowlist_html(about_html)
         else:
@@ -786,7 +786,7 @@ def actor_json_to_model(activity_json, address, server):
         else:
             description_html = ''
 
-        if description_html != '':
+        if description_html is not None and description_html != '':
             if not description_html.startswith('<'):                    # PeerTube
                 description_html = '<p>' + description_html + '</p>'
             community.description_html = allowlist_html(description_html)
