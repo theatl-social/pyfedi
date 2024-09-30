@@ -460,7 +460,7 @@ def shared_inbox():
                 return '', 400
         else:
             actor_name = request_json['actor'] if 'actor' in request_json else ''
-            activity_log.exception_message = f'Actor could not be found: {actor_name}'
+            activity_log.exception_message = f'Actor could not be found 1: {actor_name}'
 
         if activity_log.exception_message is not None:
             activity_log.result = 'failure'
@@ -1446,7 +1446,7 @@ def user_inbox(actor):
             return '', 400
     else:
         actor_name = request_json['actor'] if 'actor' in request_json else ''
-        activity_log.exception_message = f'Actor could not be found: {actor_name}'
+        activity_log.exception_message = f'Actor could not be found 2: {actor_name}'
 
     if activity_log.exception_message is not None:
         activity_log.result = 'failure'

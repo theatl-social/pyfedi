@@ -311,7 +311,8 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                         time.sleep(randint(3, 10))
                         try:
                             actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
-                        except httpx.HTTPError:
+                        except httpx.HTTPError as e:
+                            raise e
                             return None
                     if actor_data.status_code == 200:
                         try:

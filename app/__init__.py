@@ -42,7 +42,7 @@ bootstrap = Bootstrap5()
 babel = Babel(locale_selector=get_locale)
 cache = Cache()
 celery = Celery(__name__, broker=Config.CELERY_BROKER_URL)
-httpx_client = httpx.Client(http2=True, limits=httpx.Limits(max_connections=20))
+httpx_client = httpx.Client(http2=True)
 
 
 def create_app(config_class=Config):
