@@ -17,7 +17,7 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_PENDING, NOTIF_USER,
 from app.email import send_verification_email
 from app.models import Post, Community, CommunityMember, User, PostReply, PostVote, Notification, utcnow, File, Site, \
     Instance, Report, UserBlock, CommunityBan, CommunityJoinRequest, CommunityBlock, Filter, Domain, DomainBlock, \
-    InstanceBlock, NotificationSubscription, PostBookmark, PostReplyBookmark
+    InstanceBlock, NotificationSubscription, PostBookmark, PostReplyBookmark, read_posts
 from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, \
     FilterForm, KeywordFilterEditForm, RemoteFollowForm, ImportExportForm
@@ -1190,20 +1190,14 @@ def user_read_posts():
 
     # get the list of post.ids that the 
     # current_user has already read/voted on
-    cu_rp = current_user.read_post.all()
-    cu_rp_ids = []
-    for p in cu_rp:
-        cu_rp_ids.append(p.id)
-
-    # filter for just those post.ids
-    posts = posts.filter(Post.id.in_(cu_rp_ids))
+    posts = posts.join(read_posts, read_posts.c.read_post_id == Post.id).filter(read_posts.c.user_id == current_user.id)
 
     posts = posts.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50,
                            error_out=False)
     next_url = url_for('user.user_read_posts', page=posts.next_num) if posts.has_next else None
     prev_url = url_for('user.user_read_posts', page=posts.prev_num) if posts.has_prev and page != 1 else None
 
-    return render_template('user/read_posts.html', title=_('Read Posts'), posts=posts, show_post_community=True,
+    return render_template('user/read_posts.html', title=_('Read posts'), posts=posts, show_post_community=True,
                            low_bandwidth=low_bandwidth, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
