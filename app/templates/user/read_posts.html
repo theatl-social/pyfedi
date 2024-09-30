@@ -12,10 +12,10 @@
           <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
             <li class="breadcrumb-item"><a href="/u/{{ user.link() }}">{{ user.display_name() }}</a></li>
-            <li class="breadcrumb-item active">{{ _('Read Posts') }}</li>
+            <li class="breadcrumb-item active">{{ _('Read posts') }}</li>
           </ol>
         </nav>
-        <h1>{{ _('Read Posts') }}</h1>
+        <h1>{{ _('Read posts') }}</h1>
         <div class="post_list">
             {% for post in posts.items -%}
                 {% include 'post/_post_teaser.html' %}

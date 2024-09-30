@@ -24,7 +24,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
     blocked_users, menu_topics, languages_for_form, blocked_communities, get_request
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
-    Notification, Language, community_language, ModLog
+    Notification, Language, community_language, ModLog, read_posts
 
 
 @bp.route('/', methods=['HEAD', 'GET', 'POST'])
@@ -72,12 +72,8 @@ def home_page(sort, view_filter):
         if current_user.hide_nsfw == 1:
             posts = posts.filter(Post.nsfw == False)
         if current_user.hide_read_posts:
-            cu_rp = current_user.read_post.all()
-            cu_rp_ids = []
-            for p in cu_rp:
-                cu_rp_ids.append(p.id)
-            for p_id in cu_rp_ids:
-                posts = posts.filter(Post.id != p_id)
+            posts = posts.outerjoin(read_posts, (Post.id == read_posts.c.read_post_id) & (read_posts.c.user_id == current_user.id))
+            posts = posts.filter(read_posts.c.read_post_id.is_(None))  # Filter where there is no corresponding read post for the current user
 
         domains_ids = blocked_domains(current_user.id)
         if domains_ids:

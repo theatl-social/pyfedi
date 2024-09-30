@@ -6,7 +6,7 @@ from flask_babel import _
 
 from app import db, constants, cache
 from app.inoculation import inoculation
-from app.models import Post, Domain, Community, DomainBlock
+from app.models import Post, Domain, Community, DomainBlock, read_posts
 from app.domain import bp
 from app.utils import render_template, permission_required, joined_communities, moderating_communities, \
     user_filters_posts, blocked_domains, blocked_instances, menu_topics
@@ -41,12 +41,8 @@ def show_domain(domain_id):
         
         # don't show posts a user has already interacted with
         if current_user.hide_read_posts:
-            cu_rp = current_user.read_post.all()
-            cu_rp_ids = []
-            for p in cu_rp:
-                cu_rp_ids.append(p.id)
-            for p_id in cu_rp_ids:
-                posts = posts.filter(Post.id != p_id)
+            posts = posts.outerjoin(read_posts, (Post.id == read_posts.c.read_post_id) & (read_posts.c.user_id == current_user.id))
+            posts = posts.filter(read_posts.c.read_post_id.is_(None))  # Filter where there is no corresponding read post for the current user
         
         # pagination
         posts = posts.paginate(page=page, per_page=100, error_out=False)

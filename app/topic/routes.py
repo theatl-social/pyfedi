@@ -14,7 +14,7 @@ from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTI
     POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_TOPIC
 from app.inoculation import inoculation
 from app.models import Topic, Community, Post, utcnow, CommunityMember, CommunityJoinRequest, User, \
-    NotificationSubscription
+    NotificationSubscription, read_posts
 from app.topic import bp
 from app.email import send_email, send_topic_suggestion
 from app import db, celery, cache
@@ -66,12 +66,8 @@ def show_topic(topic_path):
             if current_user.hide_nsfw == 1:
                 posts = posts.filter(Post.nsfw == False)
             if current_user.hide_read_posts:
-                cu_rp = current_user.read_post.all()
-                cu_rp_ids = []
-                for p in cu_rp:
-                    cu_rp_ids.append(p.id)
-                for p_id in cu_rp_ids:
-                    posts = posts.filter(Post.id != p_id)
+                posts = posts.outerjoin(read_posts, (Post.id == read_posts.c.read_post_id) & (read_posts.c.user_id == current_user.id))
+                posts = posts.filter(read_posts.c.read_post_id.is_(None))  # Filter where there is no corresponding read post for the current user
             posts = posts.filter(Post.deleted == False)
             content_filters = user_filters_posts(current_user.id)
 
