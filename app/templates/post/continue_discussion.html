@@ -21,7 +21,7 @@
                                     {{ render_username(comment['comment'].author) }}
                                 {% endwith -%}
                                 {% if comment['comment'].author.id == post.author.id %}<span title="Submitter of original post" aria-label="submitter" class="small">[OP] </span>{% endif %}
-                                <span class="text-muted small">{{ arrow.get(comment['comment'].posted_at).humanize(locale=locale) }}{% if comment['comment'].edited_at %}, edited {{ arrow.get(comment['comment'].edited_at).humanize(locale=locale) }} {% endif %}</span>
+                                <span class="text-muted small">{{ comment['comment'].posted_at_localized(locale) }}{% if comment['comment'].edited_at %}, edited {{ arrow.get(comment['comment'].edited_at).humanize(locale=locale) }} {% endif %}</span>
                                 <a class="unhide" href="#"><span class="fe fe-expand"></span></a>
                                 {% if comment['comment'].reports and current_user.is_authenticated and post.community.is_moderator(current_user)%}
                                     <span class="red fe fe-report" title="{{ _('Reported. Check comment for issues.') }}"></span>

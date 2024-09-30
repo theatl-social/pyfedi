@@ -11,7 +11,7 @@
         {% if post.sticky -%}<span class="fe fe-sticky-right"></span>{% endif -%}
     </h3>
     <span class="author small">{% if show_post_community -%}<a href="/c/{{ post.community.link() }}" aria-label="{{ _('Go to community %(name)s', name=post.community.name) }}">c/{{ post.community.name }}</a>{% endif -%}
-                    by {{ render_username(post.author) }} <time datetime="{{ post.last_active }}">{{ arrow.get(post.last_active if sort == 'active' else post.posted_at).humanize(locale=locale) }}</time></span>
+                    by {{ render_username(post.author) }} <time datetime="{{ post.last_active }}">{{ post.posted_at_localized(sort, locale) }}</time></span>
     {% if post.image_id and not low_bandwidth -%}
         <div class="post_teaser_image_preview">
             <a href="{{ post.image.view_url() }}" rel="nofollow ugc" aria-label="{{ _('View image') }}" target="_blank"><img src="{{ post.image.medium_url() }}"

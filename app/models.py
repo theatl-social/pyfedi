@@ -3,6 +3,7 @@ from time import time
 from typing import List, Union
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
+import arrow
 from flask import current_app, escape, url_for, render_template_string
 from flask_login import UserMixin, current_user
 from sqlalchemy import or_, text, desc
@@ -1174,6 +1175,13 @@ class Post(db.Model):
                     return name
         return False
 
+    def posted_at_localized(self, sort, locale):
+        # some locales do not have a definition for 'weeks' so are unable to display some dates in some languages. Fall back to english for those languages.
+        try:
+            return arrow.get(self.last_active if sort == 'active' else self.posted_at).humanize(locale=locale)
+        except ValueError as v:
+            return arrow.get(self.last_active if sort == 'active' else self.posted_at).humanize(locale='en')
+
     def notify_new_replies(self, user_id: int) -> bool:
         existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == self.id,
                                                                       NotificationSubscription.user_id == user_id,
@@ -1457,6 +1465,12 @@ class PostReply(db.Model):
 
     def public_url(self):
         return self.profile_id()
+
+    def posted_at_localized(self, locale):
+        try:
+            return arrow.get(self.posted_at).humanize(locale=locale)
+        except ValueError as v:
+            return arrow.get(self.posted_at).humanize(locale='en')
 
     # the ap_id of the parent object, whether it's another PostReply or a Post
     def in_reply_to(self):
