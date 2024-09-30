@@ -340,16 +340,18 @@ def save_post(form, post: Post, type: int):
                 img = Image.open(final_place)
                 if '.' + img.format.lower() in allowed_extensions:
                     img = ImageOps.exif_transpose(img)
+
+                    # limit full sized version to 2000px
                     img_width = img.width
                     img_height = img.height
                     img.thumbnail((2000, 2000))
                     img.save(final_place)
-                    if img.width > 512 or img.height > 512:
-                        img.thumbnail((512, 512))
-                        img.save(final_place_medium, format="WebP", quality=93)
-                        img_width = img.width
-                        img_height = img.height
-                    # save a second, smaller, version as a thumbnail
+
+                    # medium sized version
+                    img.thumbnail((512, 512))
+                    img.save(final_place_medium, format="WebP", quality=93)
+
+                    # save a third, smaller, version as a thumbnail
                     img.thumbnail((170, 170))
                     img.save(final_place_thumbnail, format="WebP", quality=93)
                     thumbnail_width = img.width
