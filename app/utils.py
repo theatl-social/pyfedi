@@ -765,9 +765,13 @@ def inbox_domain(inbox: str) -> str:
 def awaken_dormant_instance(instance):
     if instance and not instance.gone_forever:
         if instance.dormant:
-            if instance.start_trying_again < utcnow():
-                instance.dormant = False
+            if instance.start_trying_again is None:
+                instance.start_trying_again = utcnow() + timedelta(seconds=instance.failures ** 4)
                 db.session.commit()
+            else:
+                if instance.start_trying_again < utcnow():
+                    instance.dormant = False
+                    db.session.commit()
         # give up after ~5 days of trying
         if instance.start_trying_again and utcnow() + timedelta(days=5) < instance.start_trying_again:
             instance.gone_forever = True
