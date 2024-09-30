@@ -379,6 +379,7 @@ def user_settings():
         current_user.newsletter = form.newsletter.data
         current_user.searchable = form.searchable.data
         current_user.indexable = form.indexable.data
+        current_user.hide_read_posts = form.hide_read_posts.data
         current_user.default_sort = form.default_sort.data
         current_user.default_filter = form.default_filter.data
         current_user.theme = form.theme.data
@@ -405,6 +406,7 @@ def user_settings():
         form.email_unread.data = current_user.email_unread
         form.searchable.data = current_user.searchable
         form.indexable.data = current_user.indexable
+        form.hide_read_posts.data =  current_user.hide_read_posts
         form.default_sort.data = current_user.default_sort
         form.default_filter.data = current_user.default_filter
         form.theme.data = current_user.theme
@@ -1170,3 +1172,40 @@ def fediverse_redirect(actor):
                 send_to = request.cookies.get('remote_instance_url')
                 form.instance_url.data = send_to
             return render_template('user/fediverse_redirect.html', form=form, user=user, send_to=send_to, current_app=current_app)
+
+@bp.route('/read-posts')
+@login_required
+def user_read_posts():
+    page = request.args.get('page', 1, type=int)
+    low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+
+    posts = Post.query.filter(Post.deleted == False)
+
+    if current_user.ignore_bots == 1:
+        posts = posts.filter(Post.from_bot == False)
+    if current_user.hide_nsfl == 1:
+        posts = posts.filter(Post.nsfl == False)
+    if current_user.hide_nsfw == 1:
+        posts = posts.filter(Post.nsfw == False)
+
+    # get the list of post.ids that the 
+    # current_user has already read/voted on
+    cu_rp = current_user.read_post.all()
+    cu_rp_ids = []
+    for p in cu_rp:
+        cu_rp_ids.append(p.id)
+
+    # filter for just those post.ids
+    posts = posts.filter(Post.id.in_(cu_rp_ids))
+
+    posts = posts.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50,
+                           error_out=False)
+    next_url = url_for('user.user_read_posts', page=posts.next_num) if posts.has_next else None
+    prev_url = url_for('user.user_read_posts', page=posts.prev_num) if posts.has_prev and page != 1 else None
+
+    return render_template('user/read_posts.html', title=_('Read Posts'), posts=posts, show_post_community=True,
+                           low_bandwidth=low_bandwidth, user=current_user,
+                           moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site,
+                           next_url=next_url, prev_url=prev_url)
