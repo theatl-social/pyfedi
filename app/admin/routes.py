@@ -592,7 +592,7 @@ def admin_activities():
 def activity_json(activity_id):
     activity = ActivityPubLog.query.get_or_404(activity_id)
     return render_template('admin/activity_json.html', title=_('Activity JSON'),
-                           activity_json_data=json.loads(activity.activity_json), activity=activity,
+                           activity_json_data=activity.activity_json, activity=activity,
                            current_app=current_app,
                            site=g.site)
 
