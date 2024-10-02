@@ -478,6 +478,9 @@ In your `.env` you need to set the AWS region you're using for SES. Something li
 
 A CDN like Cloudflare is recommended for instances with more than a handful of users. [Recommended caching settings](https://join.piefed.social/2024/02/20/how-much-difference-does-a-cdn-make-to-a-fediverse-instance/).
 
+Ensure you exclude the URL "/inbox" from the Cloudflare WAF [as shown here](https://join.piefed.social/wp-content/uploads/2024/10/disable-waf-on-inbox.png).
+Paying careful attention to the caching settings can sharply reduce the load on your server - see [these Cloudflare caching tips](https://join.piefed.social/2024/02/20/how-much-difference-does-a-cdn-make-to-a-fediverse-instance/).
+
 PieFed has the capability to automatically remove file copies from the Cloudflare cache whenever
  those files are deleted from the server. To enable this, set these variables in your `.env` file:
 
