@@ -263,23 +263,19 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
         alt_user_name = actor_url.rsplit('/', 1)[-1]
         user = User.query.filter(or_(User.ap_profile_id == actor, User.alt_user_name == alt_user_name)).filter_by(ap_id=None, banned=False).first()  # finds local users
         if user is None:
-            current_app.logger.info(f'find_actor_or_create(): Local user not found for {actor}')
             return None
     elif actor.startswith('https://'):
         server, address = extract_domain_and_actor(actor)
         if get_setting('use_allowlist', False):
             if not instance_allowed(server):
-                current_app.logger.info(f'find_actor_or_create(): Instance not allowed for {actor}')
                 return None
         else:
             if instance_blocked(server):
-                current_app.logger.info(f'find_actor_or_create(): Instance blocked for {actor}')
                 return None
         if actor_contains_blocked_words(actor):
             return None
         user = User.query.filter(User.ap_profile_id == actor).first()  # finds users formatted like https://kbin.social/u/tables
-        if (user and user.banned) or (user and user.deleted):
-            current_app.logger.info(f'find_actor_or_create(): User banned or deleted for {actor}')
+        if (user and user.banned) or (user and user.deleted) :
             return None
         if user is None:
             user = Community.query.filter(Community.ap_profile_id == actor).first()
@@ -287,7 +283,6 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                 # Try to find a non-banned copy of the community. Sometimes duplicates happen and one copy is banned.
                 user = Community.query.filter(Community.ap_profile_id == actor).filter(Community.banned == False).first()
                 if user is None:    # no un-banned version of this community exists, only the banned one. So it was banned for being bad, not for being a duplicate.
-                    current_app.logger.info(f'find_actor_or_create(): Banned community for {actor}')
                     return None
 
     if user is not None:
@@ -304,7 +299,6 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                     refresh_community_profile(user.id)
                     # refresh_instance_profile(user.instance_id) # disable in favour of cron job - see app.cli.daily_maintenance()
         if community_only and not isinstance(user, Community):
-            current_app.logger.info(f'find_actor_or_create(): User found instead of community {actor}')
             return None
         return user
     else:   # User does not exist in the DB, it's going to need to be created from it's remote home instance
@@ -314,12 +308,10 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                     try:
                         actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
                     except httpx.HTTPError:
-                        current_app.logger.info(f'find_actor_or_create(): http error {actor}, retrying...')
                         time.sleep(randint(3, 10))
                         try:
                             actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
                         except httpx.HTTPError as e:
-                            current_app.logger.info(f'find_actor_or_create(): http error {actor}, giving up.')
                             raise e
                             return None
                     if actor_data.status_code == 200:
@@ -327,7 +319,6 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                             actor_json = actor_data.json()
                         except JSONDecodeError as e:
                             actor_data.close()
-                            current_app.logger.info(f'find_actor_or_create(): json decoding error for {actor}')
                             return None
                         actor_data.close()
                         actor_model = actor_json_to_model(actor_json, address, server)
@@ -347,7 +338,6 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                                 return None
                             return actor_model
                     except Exception:
-                        current_app.logger.info(f'find_actor_or_create(): exception doing signed request for {actor}')
                         return None
             else:
                 # retrieve user details via webfinger, etc
@@ -368,7 +358,6 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                             try:
                                 actor_data = get_request(links['href'], headers={'Accept': type})
                             except httpx.HTTPError:
-                                current_app.logger.info(f'find_actor_or_create(): http error {actor} during webfinger, retrying...')
                                 time.sleep(randint(3, 10))
                                 actor_data = get_request(links['href'], headers={'Accept': type})
                             # to see the structure of the json contained in actor_data, do a GET to https://lemmy.world/c/technology with header Accept: application/activity+json
@@ -379,7 +368,6 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                                 if community_only and not isinstance(actor_model, Community):
                                     return None
                                 return actor_model
-    current_app.logger.info(f'find_actor_or_create(): got to end, failed to find {actor}')
     return None
 
 
