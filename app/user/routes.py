@@ -12,12 +12,11 @@ from app.activitypub.signature import post_request, default_context
 from app.activitypub.util import find_actor_or_create
 from app.auth.util import random_token
 from app.community.util import save_icon_file, save_banner_file, retrieve_mods_and_backfill
-from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_PENDING, NOTIF_USER, POST_TYPE_VIDEO, POST_TYPE_LINK, \
-    POST_TYPE_IMAGE, POST_TYPE_POLL
+from app.constants import *
 from app.email import send_verification_email
 from app.models import Post, Community, CommunityMember, User, PostReply, PostVote, Notification, utcnow, File, Site, \
     Instance, Report, UserBlock, CommunityBan, CommunityJoinRequest, CommunityBlock, Filter, Domain, DomainBlock, \
-    InstanceBlock, NotificationSubscription, PostBookmark, PostReplyBookmark, read_posts
+    InstanceBlock, NotificationSubscription, PostBookmark, PostReplyBookmark, read_posts, Topic
 from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, \
     FilterForm, KeywordFilterEditForm, RemoteFollowForm, ImportExportForm
@@ -1137,6 +1136,86 @@ def user_bookmarks_comments():
 
     return render_template('user/bookmarks_comments.html', title=_('Comment bookmarks'), post_replies=post_replies, show_post_community=True,
                            low_bandwidth=low_bandwidth, user=current_user,
+                           moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site,
+                           next_url=next_url, prev_url=prev_url)
+
+
+@bp.route('/alerts')
+@bp.route('/alerts/<type>/<filter>')
+@login_required
+def user_alerts(type='posts', filter='all'):
+    page = request.args.get('page', 1, type=int)
+    low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+
+    if type == 'comments':
+        if filter == 'mine':
+            entities = PostReply.query.filter_by(deleted=False, user_id=current_user.id).\
+                        join(NotificationSubscription, NotificationSubscription.entity_id == PostReply.id).\
+                        filter_by(type=NOTIF_REPLY, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+        elif filter == 'others':
+            entities = PostReply.query.filter(PostReply.deleted == False, PostReply.user_id != current_user.id).\
+                        join(NotificationSubscription, NotificationSubscription.entity_id == PostReply.id).\
+                        filter_by(type=NOTIF_REPLY, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+        else:   # default to 'all' filter
+            entities = PostReply.query.filter_by(deleted=False).\
+                        join(NotificationSubscription, NotificationSubscription.entity_id == PostReply.id).\
+                        filter_by(type=NOTIF_REPLY, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+        title = _('Reply Alerts')
+
+    elif type == 'communities':
+        if filter == 'mine':
+            entities = Community.query.\
+                        join(CommunityMember, CommunityMember.community_id == Community.id).\
+                        filter_by(user_id=current_user.id, is_moderator=True).\
+                        join(NotificationSubscription, NotificationSubscription.entity_id == CommunityMember.community_id).\
+                        filter_by(type=NOTIF_COMMUNITY, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+        elif filter == 'others':
+            entities = Community.query.\
+                        join(CommunityMember, CommunityMember.community_id == Community.id).\
+                        filter_by(user_id=current_user.id, is_moderator=False).\
+                        join(NotificationSubscription, NotificationSubscription.entity_id == CommunityMember.community_id).\
+                        filter_by(type=NOTIF_COMMUNITY, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+        else:   # default to 'all' filter
+            entities = Community.query.\
+                        join(NotificationSubscription, NotificationSubscription.entity_id == Community.id).\
+                        filter_by(type=NOTIF_COMMUNITY, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+        title = _('Community Alerts')
+
+    elif type == 'topics':
+        # ignore filter
+        entities = Topic.query.join(NotificationSubscription, NotificationSubscription.entity_id == Topic.id).\
+                        filter_by(type=NOTIF_TOPIC, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+        title = _('Topic Alerts')
+
+    elif type == 'users':
+        # ignore filter
+        entities = User.query.join(NotificationSubscription, NotificationSubscription.entity_id == User.id).\
+                        filter_by(type=NOTIF_USER, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+        title = _('User Alerts')
+
+    else:   # default to 'posts' type
+        if filter == 'mine':
+            entities = Post.query.filter_by(deleted=False, user_id=current_user.id).\
+                        join(NotificationSubscription, NotificationSubscription.entity_id == Post.id).\
+                        filter_by(type=NOTIF_POST, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+        elif filter == 'others':
+            entities = Post.query.filter(Post.deleted == False, Post.user_id != current_user.id).\
+                        join(NotificationSubscription, NotificationSubscription.entity_id == Post.id).\
+                        filter_by(type=NOTIF_POST, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+        else:   # default to 'all' filter
+            entities = Post.query.filter_by(deleted=False).\
+                        join(NotificationSubscription, NotificationSubscription.entity_id == Post.id).\
+                        filter_by(type=NOTIF_POST, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+        title = _('Post Alerts')
+
+    entities = entities.paginate(page=page, per_page=100 if not low_bandwidth else 50, error_out=False)
+    next_url = url_for('user.user_alerts', page=entities.next_num, type=type, filter=filter) if entities.has_next else None
+    prev_url = url_for('user.user_alerts', page=entities.prev_num, type=type, filter=filter) if entities.has_prev and page != 1 else None
+
+    return render_template('user/alerts.html', title=title, entities=entities,
+                           low_bandwidth=low_bandwidth, user=current_user, type=type, filter=filter,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
