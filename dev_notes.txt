@@ -30,4 +30,4 @@ after changes to the files in app/translations/* are mode, they need to be compi
 pybabel compile -d app/translations
 
 
-
+sass is used to compile .scss files into .css files. https://sass-lang.com/dart-sass/
