@@ -359,7 +359,8 @@ h1 .fe-bell, h1 .fe-no-bell {
   top: 2px;
 }
 .fe-poll:before {
-  content: "\e91b"; /* possibly e985 */
+  content: "\e91b";
+  /* possibly e985 */
 }
 
 .fe-sticky-left::before {
@@ -512,20 +513,25 @@ a {
 
 .skip-link {
   position: absolute;
-  top: -40px; /* Adjust as needed to hide the link off-screen */
+  top: -40px;
+  /* Adjust as needed to hide the link off-screen */
   left: 0;
-  background-color: #fff; /* Background color to cover the link for screen readers */
-  z-index: 1060; /* Ensure it's above other content */
+  background-color: #fff;
+  /* Background color to cover the link for screen readers */
+  z-index: 1060;
+  /* Ensure it's above other content */
 }
 
 .skip-link:focus {
-  top: 0; /* Bring the link back into view when it receives focus */
+  top: 0;
+  /* Bring the link back into view when it receives focus */
 }
 
 #outer_container a:not(.btn):hover, footer a:not(.btn):hover {
   text-decoration: underline;
 }
-#outer_container a:not(.btn):has(span.fe):hover, footer a:not(.btn):has(span.fe):hover { /* do not have underlines on icons */
+#outer_container a:not(.btn):has(span.fe):hover, footer a:not(.btn):has(span.fe):hover {
+  /* do not have underlines on icons */
   text-decoration: none;
 }
 #outer_container a:not(.btn):active, footer a:not(.btn):active {
@@ -654,7 +660,8 @@ div.navbar {
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;
-  border-radius: 5px 5px 0 0; /* top-left | top-right | bottom-right | bottom-left */
+  border-radius: 5px 5px 0 0;
+  /* top-left | top-right | bottom-right | bottom-left */
   height: 176px;
   margin-left: -12px;
   margin-right: -12px;
@@ -871,7 +878,8 @@ div.navbar {
   margin: 0;
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2; /* Limits the text to a specific number of lines */
+  -webkit-line-clamp: 2;
+  /* Limits the text to a specific number of lines */
   line-clamp: 2;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -911,7 +919,8 @@ div.navbar {
 }
 .post_teaser_video_preview .video-wrapper {
   position: relative;
-  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+  padding-bottom: 56.25%;
+  /* 16:9 aspect ratio */
   height: 0;
   overflow: hidden;
 }
@@ -1013,7 +1022,8 @@ div.navbar {
 #masonry .item img {
   width: 100%;
   display: block;
-  height: auto; /* Ensure aspect ratio is maintained */
+  height: auto;
+  /* Ensure aspect ratio is maintained */
 }
 #masonry .item .masonry_thumb a, #masonry .item .masonry_thumb a:active {
   border: none;
@@ -1185,7 +1195,8 @@ div.navbar {
   display: inline-block;
 }
 .voting_buttons_new .upvote_button, .voting_buttons_new .downvote_button {
-  position: relative; /* so the htmx-indicators can be position: absolute */
+  position: relative;
+  /* so the htmx-indicators can be position: absolute */
   display: inline-block;
   text-align: center;
   cursor: pointer;
@@ -1951,6 +1962,7 @@ form h5 {
     --bs-link-color-rgb: black;
     --bs-link-hover-color-rgb: #333;
   }
+
   [data-bs-theme=dark] {
     --bs-body-bg: black;
     --bs-link-color: white;
@@ -1960,65 +1972,84 @@ form h5 {
     --bs-body-color: white;
     --bs-body-color-rgb: white;
   }
+
   .btn-primary {
     --bs-btn-bg: black;
     --bs-btn-border-color: black;
     --bs-btn-hover-bg: #333;
   }
+
   [data-bs-theme=dark] .btn-primary {
     --bs-btn-bg: white;
     --bs-btn-border-color: white;
     --bs-btn-hover-bg: white;
     --bs-btn-color: black;
   }
+
   [data-bs-theme=dark] .btn-primary:hover {
     --bs-btn-hover-color: black;
   }
+
   .btn-outline-secondary {
     --bs-btn-color: black;
   }
+
   [data-bs-theme=dark] .btn-outline-secondary {
     --bs-btn-color: white;
   }
+
   .post_list .post_teaser {
     border-bottom: solid 1px black;
   }
+
   [data-bs-theme=dark] .post_list .post_teaser {
     border-bottom: solid 1px white;
   }
+
   .domain_link, .domain_link a {
     color: black;
   }
+
   [data-bs-theme=dark] .domain_link, [data-bs-theme=dark] .domain_link a {
     color: ghostwhite;
   }
+
   .main_pane, .voting_buttons div {
     border: solid 1px #333;
   }
+
   [data-bs-theme=dark] .main_pane, [data-bs-theme=dark] .voting_buttons div {
     border: solid 1px #eee;
   }
+
   div.navbar {
     border-bottom: solid 1px #333;
   }
+
   [data-bs-theme=dark] div.navbar {
     border-bottom: solid 1px #fff;
   }
+
   .nav-link {
     color: black;
   }
+
   [data-bs-theme=dark] .nav-link {
     color: white;
   }
+
   .card {
     --bs-card-border-color: #333;
   }
+
   [data-bs-theme=dark] .card {
     --bs-card-border-color: #fff;
   }
+
   .coolfieldset.collapsed legend, .coolfieldset legend, .coolfieldset.expanded legend {
     background-color: white;
   }
+
   [data-bs-theme=dark] .coolfieldset.collapsed legend, [data-bs-theme=dark] .coolfieldset legend, [data-bs-theme=dark] .coolfieldset.expanded legend {
     background-color: black;
   }
@@ -2029,16 +2060,19 @@ form h5 {
 
 @media print {
   #navbarSupportedContent, #side_pane, .voting_buttons, .comment_actions, footer, .post_reply_form, #post_replies .btn-group,
-  .navbar .nav-link, .post_utilities_bar, .community_header, .community_icon_big, .mobile_create_post {
+.navbar .nav-link, .post_utilities_bar, .community_header, .community_icon_big, .mobile_create_post {
     display: none;
   }
+
   .navbar {
     padding-top: 0;
     padding-bottom: 0;
   }
+
   .comments > .comment, .post_teaser {
     break-inside: avoid;
   }
+
   .main_pane {
     border: none;
     padding: 0;
@@ -2046,13 +2080,16 @@ form h5 {
   .main_pane > .btn-group {
     display: none;
   }
+
   .div.navbar {
     border-bottom: none;
   }
+
   .limit_height {
     overflow: visible !important;
     max-height: initial;
   }
+
   .comment .show-more {
     display: none;
   }
