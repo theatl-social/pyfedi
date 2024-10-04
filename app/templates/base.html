@@ -30,7 +30,7 @@
     <span class="render_community">
         <a href="/c/{{ community.link() }}" aria-label="{{ _('Go to community %(name)s', name=community.name) }}">
             {% if community.icon_id and not low_bandwidth and not collapsed -%}
-                <img src="{{ community.icon_image() }}" class="community_icon rounded-circle" alt="" loading="lazy" />
+                <img src="{{ community.icon_image('tiny') }}" class="community_icon rounded-circle" alt="" loading="lazy" />
             {% endif -%}
             c/{{ community.display_name() }}
         </a>
