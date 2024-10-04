@@ -943,6 +943,18 @@ div.navbar {
   border: 0;
 }
 
+time {
+  white-space: nowrap;
+}
+
+.author {
+  padding-left: 3px;
+  display: inline-block;
+}
+.author a {
+  border-left: 0;
+}
+
 .max_width_512 {
   max-width: 512px;
   display: inline-block;
