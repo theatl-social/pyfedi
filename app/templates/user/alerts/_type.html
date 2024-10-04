@@ -1,0 +1,17 @@
+<div class="btn-group mt-1 mb-2" aria-label="{{ _('Alert type: ') }}">
+    <a href="/alerts/posts/{{ filter }}" class="btn {{ 'btn-primary' if type == 'posts' else 'btn-outline-secondary' }}">
+        {{ _('Posts') }}
+    </a>
+    <a href="/alerts/comments/{{ filter }}" class="btn {{ 'btn-primary' if type == 'comments' else 'btn-outline-secondary' }}">
+        {{ _('Comments') }}
+    </a>
+    <a href="/alerts/communities/{{ filter }}" class="btn {{ 'btn-primary' if type == 'communities' else 'btn-outline-secondary' }}">
+        {{ _('Communities') }}
+    </a>
+    <a href="/alerts/topics/{{ filter }}" class="btn {{ 'btn-primary' if type == 'topics' else 'btn-outline-secondary' }}">
+        {{ _('Topics') }}
+    </a>    
+    <a href="/alerts/users/{{ filter }}" class="btn {{ 'btn-primary' if type == 'users' else 'btn-outline-secondary' }}">
+           {{ _('Users') }}
+    </a>
+</div>

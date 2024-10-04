@@ -1,0 +1,11 @@
+<div class="view_filter btn-group mt-1 mb-2" aria-label="{{ _('Alert filters: ') }}">
+    <a href="/alerts/{{ type }}/all" class="btn {{ 'btn-primary' if filter == 'all' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('All authors') }}">
+        {{ _('All') }}
+    </a>
+    <a href="/alerts/{{ type }}/mine" class="btn {{ 'btn-primary' if filter == 'mine' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Only Mine') }}">
+        {{ _('Mine') }}
+    </a>
+    <a href="/alerts/{{ type }}/others" class="btn {{ 'btn-primary' if filter == 'others' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Only Others') }}">
+        {{ _('Others') }}
+    </a>
+</div>
