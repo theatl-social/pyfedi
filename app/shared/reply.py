@@ -19,7 +19,7 @@ SRC_API = 3
 # comment_vote in app/post/routes would just need to do 'return vote_for_reply(reply_id, vote_direction, SRC_WEB)'
 
 def vote_for_reply(reply_id: int, vote_direction, src, auth=None):
-    if src == SRC_API and auth is not None:
+    if src == SRC_API:
         reply = PostReply.query.get(reply_id)
         if not reply:
             raise Exception('reply_not_found')
@@ -99,7 +99,7 @@ def vote_for_reply(reply_id: int, vote_direction, src, auth=None):
 # function can be shared between WEB and API (only API calls it for now)
 # post_reply_bookmark in app/post/routes would just need to do 'return bookmark_the_post_reply(comment_id, SRC_WEB)'
 def bookmark_the_post_reply(comment_id: int, src, auth=None):
-    if src == SRC_API and auth is not None:
+    if src == SRC_API:
         post_reply = PostReply.query.get(comment_id)
         if not post_reply or post_reply.deleted:
             raise Exception('comment_not_found')
@@ -133,7 +133,7 @@ def bookmark_the_post_reply(comment_id: int, src, auth=None):
 # function can be shared between WEB and API (only API calls it for now)
 # post_reply_remove_bookmark in app/post/routes would just need to do 'return remove_the_bookmark_from_post_reply(comment_id, SRC_WEB)'
 def remove_the_bookmark_from_post_reply(comment_id: int, src, auth=None):
-    if src == SRC_API and auth is not None:
+    if src == SRC_API:
         post_reply = PostReply.query.get(comment_id)
         if not post_reply or post_reply.deleted:
             raise Exception('comment_not_found')
@@ -165,7 +165,7 @@ def remove_the_bookmark_from_post_reply(comment_id: int, src, auth=None):
 # post_reply_notification in app/post/routes would just need to do 'return toggle_post_reply_notification(post_reply_id, SRC_WEB)'
 def toggle_post_reply_notification(post_reply_id: int, src, auth=None):
     # Toggle whether the current user is subscribed to notifications about replies to this reply or not
-    if src == SRC_API and auth is not None:
+    if src == SRC_API:
         post_reply = PostReply.query.get(post_reply_id)
         if not post_reply or post_reply.deleted:
             raise Exception('comment_not_found')

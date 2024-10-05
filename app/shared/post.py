@@ -19,7 +19,7 @@ SRC_API = 3
 # post_vote in app/post/routes would just need to do 'return vote_for_post(post_id, vote_direction, SRC_WEB)'
 
 def vote_for_post(post_id: int, vote_direction, src, auth=None):
-    if src == SRC_API and auth is not None:
+    if src == SRC_API:
         post = Post.query.get(post_id)
         if not post:
             raise Exception('post_not_found')
@@ -99,7 +99,7 @@ def vote_for_post(post_id: int, vote_direction, src, auth=None):
 # function can be shared between WEB and API (only API calls it for now)
 # post_bookmark in app/post/routes would just need to do 'return bookmark_the_post(post_id, SRC_WEB)'
 def bookmark_the_post(post_id: int, src, auth=None):
-    if src == SRC_API and auth is not None:
+    if src == SRC_API:
         post = Post.query.get(post_id)
         if not post or post.deleted:
             raise Exception('post_not_found')
@@ -132,7 +132,7 @@ def bookmark_the_post(post_id: int, src, auth=None):
 # function can be shared between WEB and API (only API calls it for now)
 # post_remove_bookmark in app/post/routes would just need to do 'return remove_the_bookmark_from_post(post_id, SRC_WEB)'
 def remove_the_bookmark_from_post(post_id: int, src, auth=None):
-    if src == SRC_API and auth is not None:
+    if src == SRC_API:
         post = Post.query.get(post_id)
         if not post or post.deleted:
             raise Exception('post_not_found')
@@ -164,7 +164,7 @@ def remove_the_bookmark_from_post(post_id: int, src, auth=None):
 # post_notification in app/post/routes would just need to do 'return toggle_post_notification(post_id, SRC_WEB)'
 def toggle_post_notification(post_id: int, src, auth=None):
     # Toggle whether the current user is subscribed to notifications about top-level replies to this post or not
-    if src == SRC_API and auth is not None:
+    if src == SRC_API:
         post = Post.query.get(post_id)
         if not post or post.deleted:
             raise Exception('post_not_found')
