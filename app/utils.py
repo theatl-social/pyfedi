@@ -1296,7 +1296,7 @@ def authorise_api_user(auth, return_type='id'):
                 if return_type == 'model':
                     return user
                 else:
-                    return user_id
+                    return user.id
             else:
                 raise Exception('incorrect_login')
     except jwt.InvalidTokenError:
