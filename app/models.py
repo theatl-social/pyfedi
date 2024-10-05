@@ -1154,6 +1154,19 @@ class Post(db.Model):
 
         return ''
 
+    def youtube_video_id(self) -> str:
+        if self.url:
+            parsed_url = urlparse(self.url)
+            query_params = parse_qs(parsed_url.query)
+
+            if 'v' in query_params:
+                return query_params['v'][0]
+            if '/shorts/' in parsed_url.path:
+                video_id = parsed_url.path.split('/shorts/')[1].split('/')[0]
+                return f'{video_id}'
+
+        return ''
+
     def peertube_embed(self):
         if self.url:
             return self.url.replace('watch', 'embed')
