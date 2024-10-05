@@ -1,19 +1,24 @@
 from app import cache
-from app.utils import authorise_api_user
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
 from app.api.alpha.views import reply_view
 from app.models import PostReply
 from app.shared.reply import vote_for_reply, bookmark_the_post_reply, remove_the_bookmark_from_post_reply, toggle_post_reply_notification
+from app.utils import authorise_api_user, blocked_users
 
 from sqlalchemy import desc
 
-
+# person_id param: the author of the reply; user_id param: the current logged-in user
 @cache.memoize(timeout=3)
-def cached_reply_list(post_id, person_id, sort, max_depth):
+def cached_reply_list(post_id, person_id, sort, max_depth, user_id):
     if post_id:
         replies = PostReply.query.filter(PostReply.deleted == False, PostReply.post_id == post_id, PostReply.depth <= max_depth)
     if person_id:
         replies = PostReply.query.filter_by(deleted=False, user_id=person_id)
+
+    if user_id is not None:
+        blocked_person_ids = blocked_users(user_id)
+        if blocked_person_ids:
+            replies = replies.filter(PostReply.user_id.not_in(blocked_person_ids))
 
     if sort == "Hot":
         replies = replies.order_by(desc(PostReply.ranking)).order_by(desc(PostReply.posted_at))
@@ -36,13 +41,12 @@ def get_reply_list(auth, data, user_id=None):
     if data and not post_id and not person_id:
         raise Exception('missing_parameters')
     else:
-        replies = cached_reply_list(post_id, person_id, sort, max_depth)
-
-    if auth:
-        try:
-            user_id = authorise_api_user(auth)
-        except Exception as e:
-            raise e
+        if auth:
+            try:
+                user_id = authorise_api_user(auth)
+            except:
+                raise
+        replies = cached_reply_list(post_id, person_id, sort, max_depth, user_id)
 
     # user_id: the logged in user
     # person_id: the author of the posts being requested

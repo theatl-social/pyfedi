@@ -3,7 +3,7 @@ from app.api.alpha.utils import get_site, \
                                 get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, \
                                 get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, \
                                 get_community_list, get_community, \
-                                get_user
+                                get_user, post_user_block
 from app.shared.auth import log_user_in
 
 from flask import current_app, jsonify, request
@@ -170,13 +170,25 @@ def get_alpha_user():
 
 
 @bp.route('/api/alpha/user/login', methods=['POST'])
-def post_alpha_login():
+def post_alpha_user_login():
     if not current_app.debug:
         return jsonify({'error': 'alpha api routes only available in debug mode'})
     try:
         SRC_API = 3                                     # would be in app.constants
         data = request.get_json(force=True) or {}
         return jsonify(log_user_in(data, SRC_API))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/user/block', methods=['POST'])
+def post_alpha_user_block():
+    if not current_app.debug:
+        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(post_user_block(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
@@ -219,7 +231,6 @@ def alpha_community():
 @bp.route('/api/alpha/post/remove', methods=['POST'])
 @bp.route('/api/alpha/post/lock', methods=['POST'])
 @bp.route('/api/alpha/post/feature', methods=['POST'])
-@bp.route('/api/alpha/post/save', methods=['PUT'])
 @bp.route('/api/alpha/post/report', methods=['POST'])
 @bp.route('/api/alpha/post/report/resolve', methods=['PUT'])
 @bp.route('/api/alpha/post/report/list', methods=['GET'])
@@ -261,7 +272,6 @@ def alpha_chat():
 @bp.route('/api/alpha/user/replies', methods=['GET'])
 @bp.route('/api/alpha/user/ban', methods=['POST'])
 @bp.route('/api/alpha/user/banned', methods=['GET'])
-@bp.route('/api/alpha/user/block', methods=['POST'])
 @bp.route('/api/alpha/user/delete_account', methods=['POST'])
 @bp.route('/api/alpha/user/password_reset', methods=['POST'])
 @bp.route('/api/alpha/user/password_change', methods=['POST'])
