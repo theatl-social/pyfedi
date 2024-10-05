@@ -672,6 +672,19 @@ def add_post(actor, type):
             form.finish_in.data = '3d'
         if community.posting_warning:
             flash(community.posting_warning)
+
+        # The source query parameter is used when cross-posting - load the source post's content into the form
+        if post_type == POST_TYPE_LINK and request.args.get('source'):
+            source_post = Post.query.get(request.args.get('source'))
+            if source_post.deleted:
+                abort(404)
+            form.title.data = source_post.title
+            form.body.data = source_post.body
+            form.nsfw.data = source_post.nsfw
+            form.nsfl.data = source_post.nsfl
+            form.language_id.data = source_post.language_id
+            form.link_url.data = source_post.url
+
     
     # empty post to pass since add_post.html extends edit_post.html 
     # and that one checks for a post.image_id for editing image posts

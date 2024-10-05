@@ -314,6 +314,10 @@ h1 .fe-bell, h1 .fe-no-bell {
   content: "\e9be";
 }
 
+.fe-cross-post::before {
+  content: "\e9ba";
+}
+
 .fe-image {
   position: relative;
   top: 2px;
@@ -1003,7 +1007,7 @@ time {
   justify-content: center;
   align-items: center;
 }
-.post_utilities_bar .post_options_link, .post_utilities_bar .preview_image {
+.post_utilities_bar .post_cross_post_link, .post_utilities_bar .post_options_link, .post_utilities_bar .preview_image {
   display: flex;
   width: 44px;
   height: 44px;

@@ -286,6 +286,10 @@ h1 {
   content: "\e9be";
 }
 
+.fe-cross-post::before {
+  content: "\e9ba";
+}
+
 .fe-image {
   position: relative;
   top: 2px;

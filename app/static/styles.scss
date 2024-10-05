@@ -600,7 +600,7 @@ time {
     align-items: center;
   }
 
-  .post_options_link, .preview_image {
+   .post_cross_post_link, .post_options_link, .preview_image {
     display: flex;
     width: $min-touch-target;
     height: $min-touch-target;

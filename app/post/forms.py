@@ -42,3 +42,8 @@ class ReportPostForm(FlaskForm):
 
 class MeaCulpaForm(FlaskForm):
     submit = SubmitField(_l('I changed my mind'))
+
+
+class CrossPostForm(FlaskForm):
+    which_community = SelectField(_l('Community to post this link to'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
+    submit = SubmitField(_l('Next'))

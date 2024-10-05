@@ -1,0 +1,25 @@
+{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
+    {% extends 'themes/' + theme() + '/base.html' %}
+{% else %}
+    {% extends "base.html" %}
+{% endif %} %}
+{% from 'bootstrap/form.html' import render_form %}
+
+{% block app_content %}
+<div class="row">
+    <div class="col-12 col-md-8 position-relative main_pane">
+        <nav aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
+          <ol class="breadcrumb">
+            {% for breadcrumb in breadcrumbs -%}
+              <li class="breadcrumb-item">{% if breadcrumb.url -%}<a href="{{ breadcrumb.url }}">{% endif -%}{{ breadcrumb.text }}{% if breadcrumb.url -%}</a>{% endif -%}</li>
+            {% endfor -%}
+            <li class="breadcrumb-item"><a href="/c/{{ post.community.link() }}" title="{{ post.community.ap_domain }}">{{ post.community.title }}@{{ post.community.ap_domain }}</a></li>
+            <li class="breadcrumb-item active">{{ post.title|shorten(15) }}</li>
+          </ol>
+        </nav>
+        <h1 class="mt-2">{{ _('Cross-post %(post_name)s', post_name=post.title) }}</h1>
+        {{ render_form(form) }}
+    </div>
+</div>
+
+{% endblock %}

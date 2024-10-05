@@ -11,6 +11,9 @@
                 <a href="{{ post.url }}" rel="nofollow ugc" class="preview_image" target="_blank" aria-label="{{ _('View image') }}" aria-hidden="true"><span class="fe fe-magnify"></span></a>
             {% endif -%}
         {% endif -%}
+        {% if current_user.is_authenticated and post.type == POST_TYPE_LINK and post.author.bot and (post.cross_posts is none or len(post.cross_posts) == 0) -%}
+            <a class="post_cross_post_link" rel="nofollow" aria-label="{{ _('Cross-post') }}" href="{{ url_for('post.post_cross_post', post_id=post.id) }}"><span class="fe fe-cross-post"></span></a>
+        {% endif -%}
         <a class="post_options_link" href="{{ url_for('post.post_options', post_id=post.id) }}" rel="nofollow" aria-label="{{ _('Options') }}"><span class="fe fe-options" title="Options"> </span></a>
     </div>
 </div>

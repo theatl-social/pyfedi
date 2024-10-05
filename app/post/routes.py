@@ -13,7 +13,7 @@ from app.activitypub.signature import HttpSignature, post_request, default_conte
 from app.activitypub.util import notify_about_post_reply, inform_followers_of_post_update
 from app.community.util import save_post, send_to_remote_instance
 from app.inoculation import inoculation
-from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm
+from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm
 from app.community.forms import CreateLinkForm, CreateImageForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm
 from app.post.util import post_replies, get_comment_branch, tags_to_string, url_needs_archive, \
     generate_archive_link, body_has_no_archive_link
@@ -1738,3 +1738,50 @@ def post_reply_view_voting_activity(comment_id: int):
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site
                            )
+
+
+@bp.route('/post/<int:post_id>/cross-post', methods=['GET', 'POST'])
+@login_required
+def post_cross_post(post_id: int):
+    post = Post.query.get_or_404(post_id)
+    form = CrossPostForm()
+    which_community = {}
+    joined = joined_communities(current_user.get_id())
+    moderating = moderating_communities(current_user.get_id())
+    comms = []
+    already_added = set()
+    for community in moderating:
+        if community.id not in already_added:
+            comms.append((community.id, community.display_name()))
+            already_added.add(community.id)
+    if len(comms) > 0:
+        which_community['Moderating'] = comms
+    comms = []
+    for community in joined:
+        if community.id not in already_added:
+            comms.append((community.id, community.display_name()))
+            already_added.add(community.id)
+    if len(comms) > 0:
+        which_community['Joined communities'] = comms
+
+    form.which_community.choices = which_community
+    if form.validate_on_submit():
+        community = Community.query.get_or_404(form.which_community.data)
+        return redirect(url_for('community.add_post', actor=community.link(), type='link', source=str(post.id)))
+    else:
+        breadcrumbs = []
+        breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+        breadcrumb.text = _('Home')
+        breadcrumb.url = '/'
+        breadcrumbs.append(breadcrumb)
+        breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+        breadcrumb.text = _('Communities')
+        breadcrumb.url = '/communities'
+        breadcrumbs.append(breadcrumb)
+
+        return render_template('post/post_cross_post.html', title=_('Cross post'), form=form, post=post,
+                               breadcrumbs=breadcrumbs,
+                               moderating_communities=moderating,
+                               joined_communities=joined,
+                               menu_topics=menu_topics(), site=g.site
+                               )
