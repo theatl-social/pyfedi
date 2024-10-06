@@ -53,8 +53,9 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0):
         if user_id:
             bookmarked = db.session.execute(text('SELECT user_id FROM "post_bookmark" WHERE post_id = :post_id and user_id = :user_id'), {'post_id': post.id, 'user_id': user_id}).scalar()
             post_sub = db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'), {'type': NOTIF_POST, 'entity_id': post.id, 'user_id': user_id}).scalar()
+            followed = db.session.execute(text('SELECT user_id FROM "community_member" WHERE community_id = :community_id and user_id = :user_id'), {"community_id": post.community_id, "user_id": user_id}).scalar()
         else:
-            bookmarked = post_sub = False
+            bookmarked = post_sub = followed = False
         if not stub:
             banned =  db.session.execute(text('SELECT user_id FROM "community_ban" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': post.user_id, 'community_id': post.community_id}).scalar()
             moderator = db.session.execute(text('SELECT is_moderator FROM "community_member" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': post.user_id, 'community_id': post.community_id}).scalar()
@@ -75,7 +76,8 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0):
         creator_banned_from_community = True if banned else False
         creator_is_moderator = True if moderator else False
         creator_is_admin = True if admin else False
-        v2 = {'post': post_view(post=post, variant=1, stub=stub), 'counts': counts, 'banned_from_community': False, 'subscribed': 'NotSubscribed',
+        subscribe_type = 'Subscribed' if followed else 'NotSubscribed'
+        v2 = {'post': post_view(post=post, variant=1, stub=stub), 'counts': counts, 'banned_from_community': False, 'subscribed': subscribe_type,
               'saved': saved, 'read': False, 'hidden': False, 'unread_comments': post.reply_count, 'my_vote': my_vote, 'activity_alert': activity_alert,
               'creator_banned_from_community': creator_banned_from_community, 'creator_is_moderator': creator_is_moderator, 'creator_is_admin': creator_is_admin}
 
@@ -207,14 +209,19 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
         include = ['id', 'subscriptions_count', 'post_count', 'post_reply_count']
         counts = {column.name: getattr(community, column.name) for column in community.__table__.columns if column.name in include}
         counts.update({'published': community.created_at.isoformat() + 'Z'})
-        v2 = {'community': community_view(community=community, variant=1, stub=stub), 'subscribed': 'NotSubscribed', 'blocked': False, 'counts': counts}
+        if user_id:
+            followed = db.session.execute(text('SELECT user_id FROM "community_member" WHERE community_id = :community_id and user_id = :user_id'), {"community_id": community.id, "user_id": user_id}).scalar()
+        else:
+            followed = False
+        subscribe_type = 'Subscribed' if followed else 'NotSubscribed'
+        v2 = {'community': community_view(community=community, variant=1, stub=stub), 'subscribed': subscribe_type, 'blocked': False, 'counts': counts}
         return v2
 
     # Variant 3 - models/community/get_community_response.dart - /community api endpoint
     if variant == 3:
         modlist = cached_modlist_for_community(community.id)
 
-        v3  = {'community_view': community_view(community=community, variant=2),
+        v3  = {'community_view': community_view(community=community, variant=2, stub=False, user_id=user_id),
                'moderators': modlist,
                'discussion_languages': []}
         return v3

@@ -55,8 +55,16 @@ def get_community(auth, data):
     elif 'name' in data:
         community = data['name']
 
+    if auth:
+        try:
+            user_id = authorise_api_user(auth)
+        except Exception as e:
+            raise e
+    else:
+        user_id = None
+
     try:
-        community_json = community_view(community=community, variant=3)
+        community_json = community_view(community=community, variant=3, stub=False, user_id=user_id)
         return community_json
     except:
         raise

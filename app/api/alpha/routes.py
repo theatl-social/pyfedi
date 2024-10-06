@@ -27,7 +27,7 @@ def get_alpha_community():
     if not current_app.debug:
         return jsonify({'error': 'alpha api routes only available in debug mode'})
     try:
-        auth = None
+        auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
         return jsonify(get_community(auth, data))
     except Exception as ex:
