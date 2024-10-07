@@ -1699,8 +1699,8 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
                     image = File(source_url=request_json['object']['image']['url'])
                 else:
                     image = File(source_url=post.url)
-                    if alt_text:
-                        image.alt_text = alt_text
+                if alt_text:
+                    image.alt_text = alt_text
                 db.session.add(image)
                 post.image = image
             elif is_video_url(post.url):    # youtube is detected later
