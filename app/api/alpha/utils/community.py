@@ -1,7 +1,9 @@
 from app import cache
 from app.api.alpha.views import community_view
+from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
 from app.utils import authorise_api_user
 from app.models import Community, CommunityMember
+from app.shared.community import join_community, leave_community
 from app.utils import communities_banned_from
 
 
@@ -26,8 +28,8 @@ def get_community_list(auth, data):
     if auth:
         try:
             user_id = authorise_api_user(auth)
-        except Exception as e:
-            raise e
+        except:
+            raise
     else:
         user_id = None
 
@@ -58,13 +60,46 @@ def get_community(auth, data):
     if auth:
         try:
             user_id = authorise_api_user(auth)
-        except Exception as e:
-            raise e
+        except:
+            raise
     else:
         user_id = None
 
     try:
         community_json = community_view(community=community, variant=3, stub=False, user_id=user_id)
+        return community_json
+    except:
+        raise
+
+
+# would be in app/constants.py
+SRC_API = 3
+
+def post_community_follow(auth, data):
+    try:
+        required(['community_id', 'follow'], data)
+        integer_expected(['community_id'], data)
+        boolean_expected(['follow'], data)
+    except:
+        raise
+
+    community_id = data['community_id']
+    follow = data['follow']
+
+    if auth:
+        try:
+            user_id = authorise_api_user(auth)
+        except:
+            raise
+    else:
+        user_id = None
+
+    try:
+        if follow == True:
+            user_id = join_community(community_id, SRC_API, auth)
+        else:
+            user_id = leave_community(community_id, SRC_API, auth)
+        community_json = community_view(community=community_id, variant=4, stub=False, user_id=user_id)
         return community_json
     except:
         raise

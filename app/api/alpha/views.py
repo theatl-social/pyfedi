@@ -226,6 +226,11 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
                'discussion_languages': []}
         return v3
 
+    # Variant 4 - models/community/community_response.dart - /community/follow api endpoint
+    if variant == 4:
+        v4  = {'community_view': community_view(community=community, variant=2, stub=False, user_id=user_id),
+               'discussion_languages': []}
+        return v4
 
 
 # would be better to incrementally add to a post_reply.path field

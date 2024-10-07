@@ -2,7 +2,7 @@ from app.api.alpha import bp
 from app.api.alpha.utils import get_site, \
                                 get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, \
                                 get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, \
-                                get_community_list, get_community, \
+                                get_community_list, get_community, post_community_follow, \
                                 get_user, post_user_block
 from app.shared.auth import log_user_in
 
@@ -42,6 +42,18 @@ def get_alpha_community_list():
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
         return jsonify(get_community_list(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/community/follow', methods=['POST'])
+def post_alpha_community_follow():
+    if not current_app.debug:
+        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(post_community_follow(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
@@ -214,7 +226,6 @@ def alpha_miscellaneous():
 @bp.route('/api/alpha/community', methods=['POST'])
 @bp.route('/api/alpha/community', methods=['PUT'])
 @bp.route('/api/alpha/community/hide', methods=['PUT'])
-@bp.route('/api/alpha/community/follow', methods=['POST'])
 @bp.route('/api/alpha/community/block', methods=['POST'])
 @bp.route('/api/alpha/community/delete', methods=['POST'])
 @bp.route('/api/alpha/community/remove', methods=['POST'])
