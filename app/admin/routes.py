@@ -662,6 +662,7 @@ def admin_communities_no_topic():
 def admin_community_edit(community_id):
     form = EditCommunityForm()
     community = Community.query.get_or_404(community_id)
+    old_topic_id = community.topic_id if community.topic_id else None
     form.topic.choices = topics_for_form(0)
     form.languages.choices = languages_for_form()
     if form.validate_on_submit():
@@ -708,11 +709,17 @@ def admin_community_edit(community_id):
             community.languages.append(Language.query.get(language_choice))
         # Always include the undetermined language, so posts with no language will be accepted
         community.languages.append(Language.query.filter(Language.code == 'und').first())
+        db.session.commit()
 
-        db.session.commit()
-        if community.topic_id:
-            community.topic.num_communities = community.topic.communities.count()
-        db.session.commit()
+        if community.topic_id != old_topic_id:
+            if community.topic_id:
+                community.topic.num_communities = community.topic.communities.count()
+            if old_topic_id:
+                topic = Topic.query.get(old_topic_id)
+                if topic:
+                    topic.num_communities = topic.communities.count()
+            db.session.commit()
+
         flash(_('Saved'))
         return redirect(url_for('admin.admin_communities'))
     else:
