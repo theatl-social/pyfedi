@@ -32,7 +32,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     blocked_instances, blocked_domains, community_moderators, blocked_phrases, show_ban_message, recently_upvoted_posts, \
     recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, reply_is_stupid, \
     languages_for_form, menu_topics, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown, \
-    permission_required
+    permission_required, blocked_users
 
 
 def show_post(post_id: int):
@@ -1258,6 +1258,7 @@ def post_block_user(post_id: int):
         db.session.add(UserBlock(blocker_id=current_user.id, blocked_id=post.author.id))
         db.session.commit()
     flash(_('%(name)s has been blocked.', name=post.author.user_name))
+    cache.delete_memoized(blocked_users, current_user.id)
 
     # todo: federate block to post author instance
 
@@ -1428,6 +1429,7 @@ def post_reply_block_user(post_id: int, comment_id: int):
         db.session.add(UserBlock(blocker_id=current_user.id, blocked_id=post_reply.author.id))
         db.session.commit()
     flash(_('%(name)s has been blocked.', name=post_reply.author.user_name))
+    cache.delete_memoized(blocked_users, current_user.id)
 
     # todo: federate block to post_reply author instance
 

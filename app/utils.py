@@ -1282,6 +1282,8 @@ def add_to_modlog_activitypub(action: str, actor: User, community_id: int = None
 
 
 def authorise_api_user(auth, return_type='id'):
+    if not auth:
+        raise Exception('incorrect_login')
     token = auth[7:]     # remove 'Bearer '
 
     try:
@@ -1294,7 +1296,7 @@ def authorise_api_user(auth, return_type='id'):
                 if return_type == 'model':
                     return user
                 else:
-                    return user_id
+                    return user.id
             else:
                 raise Exception('incorrect_login')
     except jwt.InvalidTokenError:

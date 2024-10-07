@@ -1,4 +1,5 @@
 from app import db
+from app.api.alpha.views import user_view, community_view
 from app.utils import authorise_api_user
 from app.models import Language
 
@@ -69,9 +70,9 @@ def get_site(auth):
           },
           #"moderates": [],
           #"follows": [],
-          "community_blocks": [],           # TODO
+          "community_blocks": [],
           "instance_blocks": [],            # TODO
-          "person_blocks": [],              # TODO
+          "person_blocks": [],
           "discussion_languages": []        # TODO
         }
         """
@@ -83,7 +84,12 @@ def get_site(auth):
         for cm in cms:
             my_user['follows'].append({'community': Community.api_json(variant=1, id=cm.community_id, stub=True), 'follower': User.api_json(variant=1, id=user_id, stub=True)})
         """
-
+        blocked_ids = db.session.execute(text('SELECT blocked_id FROM "user_block" WHERE blocker_id = :blocker_id'), {"blocker_id": user.id}).scalars()
+        for blocked_id in blocked_ids:
+            my_user['person_blocks'].append({'person': user_view(user, variant=1, stub=True), 'target': user_view(blocked_id, variant=1, stub=True)})
+        blocked_ids = db.session.execute(text('SELECT community_id FROM "community_block" WHERE user_id = :user_id'), {"user_id": user.id}).scalars()
+        for blocked_id in blocked_ids:
+            my_user['community_blocks'].append({'person': user_view(user, variant=1, stub=True), 'community': community_view(blocked_id, variant=1, stub=True)})
     data = {
       "version": "1.0.0",
       "site": site

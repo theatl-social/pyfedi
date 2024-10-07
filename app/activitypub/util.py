@@ -945,6 +945,7 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
                 post.image = image
             db.session.add(post)
             community.post_count += 1
+            user.post_count += 1
             activity_log.result = 'success'
             db.session.commit()
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 from app import cache, db
 from app.constants import *
 from app.models import Community, CommunityMember, Post, PostReply, PostVote, User
+from app.utils import blocked_communities
 
 from sqlalchemy import text
 
@@ -50,8 +51,12 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0):
         # counts - models/post/post_aggregates.dart
         counts = {'post_id': post.id, 'comments': post.reply_count, 'score': post.score, 'upvotes': post.up_votes, 'downvotes': post.down_votes,
                   'published': post.posted_at.isoformat() + 'Z', 'newest_comment_time': post.last_active.isoformat() + 'Z'}
-        bookmarked = db.session.execute(text('SELECT user_id FROM "post_bookmark" WHERE post_id = :post_id and user_id = :user_id'), {'post_id': post.id, 'user_id': user_id}).scalar()
-        post_sub = db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'), {'type': NOTIF_POST, 'entity_id': post.id, 'user_id': user_id}).scalar()
+        if user_id:
+            bookmarked = db.session.execute(text('SELECT user_id FROM "post_bookmark" WHERE post_id = :post_id and user_id = :user_id'), {'post_id': post.id, 'user_id': user_id}).scalar()
+            post_sub = db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'), {'type': NOTIF_POST, 'entity_id': post.id, 'user_id': user_id}).scalar()
+            followed = db.session.execute(text('SELECT user_id FROM "community_member" WHERE community_id = :community_id and user_id = :user_id'), {"community_id": post.community_id, "user_id": user_id}).scalar()
+        else:
+            bookmarked = post_sub = followed = False
         if not stub:
             banned =  db.session.execute(text('SELECT user_id FROM "community_ban" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': post.user_id, 'community_id': post.community_id}).scalar()
             moderator = db.session.execute(text('SELECT is_moderator FROM "community_member" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': post.user_id, 'community_id': post.community_id}).scalar()
@@ -72,8 +77,9 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0):
         creator_banned_from_community = True if banned else False
         creator_is_moderator = True if moderator else False
         creator_is_admin = True if admin else False
-        v2 = {'post': post_view(post=post, variant=1, stub=stub), 'counts': counts, 'banned_from_community': False, 'subscribed': 'NotSubscribed',
-              'saved': saved, 'read': False, 'hidden': False, 'creator_blocked': False, 'unread_comments': post.reply_count, 'my_vote': my_vote, 'activity_alert': activity_alert,
+        subscribe_type = 'Subscribed' if followed else 'NotSubscribed'
+        v2 = {'post': post_view(post=post, variant=1, stub=stub), 'counts': counts, 'banned_from_community': False, 'subscribed': subscribe_type,
+              'saved': saved, 'read': False, 'hidden': False, 'unread_comments': post.reply_count, 'my_vote': my_vote, 'activity_alert': activity_alert,
               'creator_banned_from_community': creator_banned_from_community, 'creator_is_moderator': creator_is_moderator, 'creator_is_admin': creator_is_admin}
 
         try:
@@ -127,7 +133,8 @@ def cached_user_view_variant_1(user: User, stub=False):
     return v1
 
 
-def user_view(user: User | int, variant, stub=False):
+# 'user' param can be anyone (including the logged in user), 'user_id' param belongs to the user making the request
+def user_view(user: User | int, variant, stub=False, user_id=None):
     if isinstance(user, int):
         user = User.query.get(user)
     if not user:
@@ -144,13 +151,22 @@ def user_view(user: User | int, variant, stub=False):
         return v2
 
     # Variant 3 - models/user/get_person_details.dart - /user?person_id api endpoint
-    modlist = cached_modlist_for_user(user)
+    if variant == 3:
+        modlist = cached_modlist_for_user(user)
 
-    v3 = {'person_view': user_view(user=user, variant=2),
-          'moderates': modlist,
-          'posts': [],
-          'comments': []}
-    return v3
+        v3 = {'person_view': user_view(user=user, variant=2),
+              'moderates': modlist,
+              'posts': [],
+              'comments': []}
+        return v3
+
+    # Variant 4 - models/user/block_person_response.dart - /user/block api endpoint
+    if variant == 4:
+        block = db.session.execute(text('SELECT blocker_id FROM "user_block" WHERE blocker_id = :blocker_id and blocked_id = :blocked_id'), {'blocker_id': user_id, 'blocked_id': user.id}).scalar()
+        blocked = True if block else False
+        v4 = {'person_view': user_view(user=user, variant=2),
+              'blocked': blocked}
+        return v4
 
 
 @cache.memoize(timeout=600)
@@ -194,18 +210,37 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
         include = ['id', 'subscriptions_count', 'post_count', 'post_reply_count']
         counts = {column.name: getattr(community, column.name) for column in community.__table__.columns if column.name in include}
         counts.update({'published': community.created_at.isoformat() + 'Z'})
-        v2 = {'community': community_view(community=community, variant=1, stub=stub), 'subscribed': 'NotSubscribed', 'blocked': False, 'counts': counts}
+        if user_id:
+            followed = db.session.execute(text('SELECT user_id FROM "community_member" WHERE community_id = :community_id and user_id = :user_id'), {"community_id": community.id, "user_id": user_id}).scalar()
+            blocked = True if community.id in blocked_communities(user_id) else False
+        else:
+            followed = blocked = False
+        subscribe_type = 'Subscribed' if followed else 'NotSubscribed'
+        v2 = {'community': community_view(community=community, variant=1, stub=stub), 'subscribed': subscribe_type, 'blocked': blocked, 'counts': counts}
         return v2
 
     # Variant 3 - models/community/get_community_response.dart - /community api endpoint
     if variant == 3:
         modlist = cached_modlist_for_community(community.id)
 
-        v3  = {'community_view': community_view(community=community, variant=2),
+        v3  = {'community_view': community_view(community=community, variant=2, stub=False, user_id=user_id),
                'moderators': modlist,
                'discussion_languages': []}
         return v3
 
+    # Variant 4 - models/community/community_response.dart - /community/follow api endpoint
+    if variant == 4:
+        v4  = {'community_view': community_view(community=community, variant=2, stub=False, user_id=user_id),
+               'discussion_languages': []}
+        return v4
+
+    # Variant 5 - models/community/block_community_response.dart - /community/block api endpoint
+    if variant == 5:
+        block = db.session.execute(text('SELECT user_id FROM "community_block" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': user_id, 'community_id': community.id}).scalar()
+        blocked = True if block else False
+        v5 = {'community_view': community_view(community=community, variant=2, stub=False, user_id=user_id),
+              'blocked': blocked}
+        return v5
 
 
 # would be better to incrementally add to a post_reply.path field

@@ -3,7 +3,7 @@ from app.api.alpha.views import post_view
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
 from app.models import Post, Community, CommunityMember, utcnow
 from app.shared.post import vote_for_post, bookmark_the_post, remove_the_bookmark_from_post, toggle_post_notification
-from app.utils import authorise_api_user
+from app.utils import authorise_api_user, blocked_users, blocked_communities
 
 from datetime import timedelta
 from sqlalchemy import desc
@@ -28,6 +28,14 @@ def cached_post_list(type, sort, user_id, community_id, community_name, person_i
     else:
         posts = Post.query.filter_by(deleted=False)
 
+    if user_id is not None:
+        blocked_person_ids = blocked_users(user_id)
+        if blocked_person_ids:
+            posts = posts.filter(Post.user_id.not_in(blocked_person_ids))
+        blocked_community_ids = blocked_communities(user_id)
+        if blocked_community_ids:
+            posts = posts.filter(Post.community_id.not_in(blocked_community_ids))
+
     if sort == "Hot":
         posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
     elif sort == "TopDay":
@@ -49,8 +57,8 @@ def get_post_list(auth, data, user_id=None):
     if auth:
         try:
             user_id = authorise_api_user(auth)
-        except Exception as e:
-            raise e
+        except:
+            raise
 
     # user_id: the logged in user
     # person_id: the author of the posts being requested

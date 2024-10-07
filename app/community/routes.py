@@ -929,6 +929,7 @@ def community_edit(community_id: int):
     if current_user.banned:
         return show_ban_message()
     community = Community.query.get_or_404(community_id)
+    old_topic_id = community.topic_id if community.topic_id else None
     if community.is_owner() or current_user.is_admin():
         form = EditCommunityForm()
         form.topic.choices = topics_for_form(0)
@@ -970,11 +971,16 @@ def community_edit(community_id: int):
                 community.languages.append(Language.query.get(language_choice))
             # Always include the undetermined language, so posts with no language will be accepted
             community.languages.append(Language.query.filter(Language.code == 'und').first())
+            db.session.commit()
 
-            db.session.commit()
-            if community.topic:
-                community.topic.num_communities = community.topic.communities.count()
-            db.session.commit()
+            if community.topic_id != old_topic_id:
+                if community.topic_id:
+                    community.topic.num_communities = community.topic.communities.count()
+                if old_topic_id:
+                    topic = Topic.query.get(old_topic_id)
+                    if topic:
+                        topic.num_communities = topic.communities.count()
+                db.session.commit()
             flash(_('Saved'))
             return redirect(url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not None else community.name))
         else:
