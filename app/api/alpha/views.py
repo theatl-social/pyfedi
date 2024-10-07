@@ -3,6 +3,7 @@ from __future__ import annotations
 from app import cache, db
 from app.constants import *
 from app.models import Community, CommunityMember, Post, PostReply, PostVote, User
+from app.utils import blocked_communities
 
 from sqlalchemy import text
 
@@ -211,10 +212,11 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
         counts.update({'published': community.created_at.isoformat() + 'Z'})
         if user_id:
             followed = db.session.execute(text('SELECT user_id FROM "community_member" WHERE community_id = :community_id and user_id = :user_id'), {"community_id": community.id, "user_id": user_id}).scalar()
+            blocked = True if community.id in blocked_communities(user_id) else False
         else:
-            followed = False
+            followed = blocked = False
         subscribe_type = 'Subscribed' if followed else 'NotSubscribed'
-        v2 = {'community': community_view(community=community, variant=1, stub=stub), 'subscribed': subscribe_type, 'blocked': False, 'counts': counts}
+        v2 = {'community': community_view(community=community, variant=1, stub=stub), 'subscribed': subscribe_type, 'blocked': blocked, 'counts': counts}
         return v2
 
     # Variant 3 - models/community/get_community_response.dart - /community api endpoint
@@ -231,6 +233,14 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
         v4  = {'community_view': community_view(community=community, variant=2, stub=False, user_id=user_id),
                'discussion_languages': []}
         return v4
+
+    # Variant 5 - models/community/block_community_response.dart - /community/block api endpoint
+    if variant == 5:
+        block = db.session.execute(text('SELECT user_id FROM "community_block" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': user_id, 'community_id': community.id}).scalar()
+        blocked = True if block else False
+        v5 = {'community_view': community_view(community=community, variant=2, stub=False, user_id=user_id),
+              'blocked': blocked}
+        return v5
 
 
 # would be better to incrementally add to a post_reply.path field

@@ -1,8 +1,8 @@
 from app import db, cache
 from app.activitypub.signature import post_request
 from app.constants import *
-from app.models import Community, CommunityBan, CommunityJoinRequest, CommunityMember
-from app.utils import authorise_api_user, community_membership, joined_communities, gibberish
+from app.models import Community, CommunityBan, CommunityBlock, CommunityJoinRequest, CommunityMember
+from app.utils import authorise_api_user, blocked_communities, community_membership, joined_communities, gibberish
 
 from flask import abort, current_app, flash
 from flask_babel import _
@@ -181,13 +181,43 @@ def leave_community(community_id: int, src, auth=None):
         return
 
 
+def block_community(community_id, src, auth=None):
+    if src == SRC_API:
+        try:
+            user_id = authorise_api_user(auth)
+        except:
+            raise
+    else:
+        user_id = current_user.id
+
+    existing = CommunityBlock.query.filter_by(user_id=user_id, community_id=community_id).first()
+    if not existing:
+        db.session.add(CommunityBlock(user_id=user_id, community_id=community_id))
+        db.session.commit()
+        cache.delete_memoized(blocked_communities, user_id)
+
+    if src == SRC_API:
+        return user_id
+    else:
+        return              # let calling function handle confirmation flash message and redirect
 
 
+def unblock_community(community_id, src, auth=None):
+    if src == SRC_API:
+        try:
+            user_id = authorise_api_user(auth)
+        except:
+            raise
+    else:
+        user_id = current_user.id
 
+    existing_block = CommunityBlock.query.filter_by(user_id=user_id, community_id=community_id).first()
+    if existing_block:
+        db.session.delete(existing_block)
+        db.session.commit()
+        cache.delete_memoized(blocked_communities, user_id)
 
-
-
-
-
-
-
+    if src == SRC_API:
+        return user_id
+    else:
+        return              # let calling function handle confirmation flash message and redirect

@@ -3,7 +3,7 @@ from app.api.alpha.views import community_view
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
 from app.utils import authorise_api_user
 from app.models import Community, CommunityMember
-from app.shared.community import join_community, leave_community
+from app.shared.community import join_community, leave_community, block_community, unblock_community
 from app.utils import communities_banned_from
 
 
@@ -100,6 +100,28 @@ def post_community_follow(auth, data):
         else:
             user_id = leave_community(community_id, SRC_API, auth)
         community_json = community_view(community=community_id, variant=4, stub=False, user_id=user_id)
+        return community_json
+    except:
+        raise
+
+
+def post_community_block(auth, data):
+    try:
+        required(['community_id', 'block'], data)
+        integer_expected(['community_id'], data)
+        boolean_expected(['block'], data)
+    except:
+        raise
+
+    community_id = data['community_id']
+    block = data['block']
+
+    try:
+        if block == True:
+            user_id = block_community(community_id, SRC_API, auth)
+        else:
+            user_id = unblock_community(community_id, SRC_API, auth)
+        community_json = community_view(community=community_id, variant=5, user_id=user_id)
         return community_json
     except:
         raise
