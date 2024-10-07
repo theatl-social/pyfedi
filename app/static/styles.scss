@@ -1258,6 +1258,11 @@ h1 .warning_badge {
   }
 }
 
+.form-control-file {
+  width: 100%;
+  overflow: hidden;
+}
+
 #post_reply_markdown_editor_enabler {
   display: none;
   position: absolute;
