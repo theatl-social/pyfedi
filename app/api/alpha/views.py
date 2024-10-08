@@ -82,12 +82,9 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0):
               'saved': saved, 'read': False, 'hidden': False, 'unread_comments': post.reply_count, 'my_vote': my_vote, 'activity_alert': activity_alert,
               'creator_banned_from_community': creator_banned_from_community, 'creator_is_moderator': creator_is_moderator, 'creator_is_admin': creator_is_admin}
 
-        try:
-            creator = user_view(user=post.user_id, variant=1, stub=True)
-            community = community_view(community=post.community_id, variant=1, stub=True)
-            v2.update({'creator': creator, 'community': community})
-        except:
-            raise
+        creator = user_view(user=post.user_id, variant=1, stub=True)
+        community = community_view(community=post.community_id, variant=1, stub=True)
+        v2.update({'creator': creator, 'community': community})
 
         return v2
 
@@ -319,13 +316,10 @@ def reply_view(reply: PostReply | int, variant, user_id=None, my_vote=0):
         v2 = {'comment': reply_view(reply=reply, variant=1), 'counts': counts, 'banned_from_community': False, 'subscribed': 'NotSubscribed',
               'saved': saved, 'creator_blocked': False, 'my_vote': my_vote, 'activity_alert': activity_alert,
               'creator_banned_from_community': creator_banned_from_community, 'creator_is_moderator': creator_is_moderator, 'creator_is_admin': creator_is_admin}
-        try:
-            creator = user_view(user=reply.user_id, variant=1, stub=True)
-            community = community_view(community=reply.community_id, variant=1, stub=True)
-            post = post_view(post=reply.post_id, variant=1)
-            v2.update({'creator': creator, 'community': community, 'post': post})
-        except:
-            raise
+        creator = user_view(user=reply.user_id, variant=1, stub=True)
+        community = community_view(community=reply.community_id, variant=1, stub=True)
+        post = post_view(post=reply.post_id, variant=1)
+        v2.update({'creator': creator, 'community': community, 'post': post})
 
         return v2
 

@@ -20,10 +20,7 @@ def join_community(community_id: int, src, auth=None, user_id=None, main_user_na
         community = Community.query.get(community_id)
         if not community:
             raise Exception('community_not_found')
-        try:
-            user = authorise_api_user(auth, return_type='model')
-        except:
-            raise
+        user = authorise_api_user(auth, return_type='model')
     else:
         community = Community.query.get_or_404(community_id)
         if not user_id:
@@ -118,10 +115,7 @@ def leave_community(community_id: int, src, auth=None):
         community = Community.query.get(community_id)
         if not community:
             raise Exception('community_not_found')
-        try:
-            user = authorise_api_user(auth, return_type='model')
-        except:
-            raise
+        user = authorise_api_user(auth, return_type='model')
     else:
         community = Community.query.get_or_404(community_id)
         user = current_user
@@ -183,10 +177,7 @@ def leave_community(community_id: int, src, auth=None):
 
 def block_community(community_id, src, auth=None):
     if src == SRC_API:
-        try:
-            user_id = authorise_api_user(auth)
-        except:
-            raise
+        user_id = authorise_api_user(auth)
     else:
         user_id = current_user.id
 
@@ -204,10 +195,7 @@ def block_community(community_id, src, auth=None):
 
 def unblock_community(community_id, src, auth=None):
     if src == SRC_API:
-        try:
-            user_id = authorise_api_user(auth)
-        except:
-            raise
+        user_id = authorise_api_user(auth)
     else:
         user_id = current_user.id
 

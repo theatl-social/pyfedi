@@ -21,10 +21,7 @@ SRC_API = 3
 
 def block_another_user(person_id, src, auth=None):
     if src == SRC_API:
-        try:
-            user_id = authorise_api_user(auth)
-        except:
-            raise
+        user_id = authorise_api_user(auth)
     else:
         user_id = current_user.id
 
@@ -63,10 +60,7 @@ def block_another_user(person_id, src, auth=None):
 
 def unblock_another_user(person_id, src, auth=None):
     if src == SRC_API:
-        try:
-            user_id = authorise_api_user(auth)
-        except:
-            raise
+        user_id = authorise_api_user(auth)
     else:
         user_id = current_user.id
 

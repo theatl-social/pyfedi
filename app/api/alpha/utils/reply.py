@@ -42,10 +42,7 @@ def get_reply_list(auth, data, user_id=None):
         raise Exception('missing_parameters')
     else:
         if auth:
-            try:
-                user_id = authorise_api_user(auth)
-            except:
-                raise
+            user_id = authorise_api_user(auth)
         replies = cached_reply_list(post_id, person_id, sort, max_depth, user_id)
 
     # user_id: the logged in user
@@ -72,11 +69,8 @@ def get_reply_list(auth, data, user_id=None):
 SRC_API = 3
 
 def post_reply_like(auth, data):
-    try:
-        required(['comment_id', 'score'], data)
-        integer_expected(['comment_id', 'score'], data)
-    except:
-        raise
+    required(['comment_id', 'score'], data)
+    integer_expected(['comment_id', 'score'], data)
 
     score = data['score']
     reply_id = data['comment_id']
@@ -88,51 +82,33 @@ def post_reply_like(auth, data):
         score = 0
         direction = 'reversal'
 
-    try:
-        user_id = vote_for_reply(reply_id, direction, SRC_API, auth)
-        cache.delete_memoized(cached_reply_list)
-        reply_json = reply_view(reply=reply_id, variant=4, user_id=user_id, my_vote=score)
-        return reply_json
-    except:
-        raise
+    user_id = vote_for_reply(reply_id, direction, SRC_API, auth)
+    cache.delete_memoized(cached_reply_list)
+    reply_json = reply_view(reply=reply_id, variant=4, user_id=user_id, my_vote=score)
+    return reply_json
 
 
 def put_reply_save(auth, data):
-    try:
-        required(['comment_id', 'save'], data)
-        integer_expected(['comment_id'], data)
-        boolean_expected(['save'], data)
-    except:
-        raise
+    required(['comment_id', 'save'], data)
+    integer_expected(['comment_id'], data)
+    boolean_expected(['save'], data)
 
     reply_id = data['comment_id']
     save = data['save']
 
-    try:
-        if save is True:
-            user_id = bookmark_the_post_reply(reply_id, SRC_API, auth)
-        else:
-            user_id = remove_the_bookmark_from_post_reply(reply_id, SRC_API, auth)
-        reply_json = reply_view(reply=reply_id, variant=4, user_id=user_id)
-        return reply_json
-    except:
-        raise
+    user_id = bookmark_the_post_reply(reply_id, SRC_API, auth) if save else remove_the_bookmark_from_post_reply(reply_id, SRC_API, auth)
+    reply_json = reply_view(reply=reply_id, variant=4, user_id=user_id)
+    return reply_json
 
 
 def put_reply_subscribe(auth, data):
-    try:
-        required(['comment_id', 'subscribe'], data)
-        integer_expected(['comment_id'], data)
-        boolean_expected(['subscribe'], data)
-    except:
-        raise
+    required(['comment_id', 'subscribe'], data)
+    integer_expected(['comment_id'], data)
+    boolean_expected(['subscribe'], data)
 
     reply_id = data['comment_id']
     subscribe = data['subscribe']           # not actually processed - is just a toggle
 
-    try:
-        user_id = toggle_post_reply_notification(reply_id, SRC_API, auth)
-        reply_json = reply_view(reply=reply_id, variant=4, user_id=user_id)
-        return reply_json
-    except:
-        raise
+    user_id = toggle_post_reply_notification(reply_id, SRC_API, auth)
+    reply_json = reply_view(reply=reply_id, variant=4, user_id=user_id)
+    return reply_json
