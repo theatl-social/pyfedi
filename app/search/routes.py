@@ -33,7 +33,7 @@ def run_search():
     sort_by = request.args.get('sort_by', '')
 
     if q is not None or type != 0 or language_id != 0 or community_id != 0:
-        posts = Post.query
+        posts = Post.query.filter(Post.deleted == False)
         if current_user.is_authenticated:
             if current_user.ignore_bots == 1:
                 posts = posts.filter(Post.from_bot == False)
