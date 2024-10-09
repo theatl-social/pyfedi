@@ -332,6 +332,17 @@ def reply_view(reply: PostReply | int, variant, user_id=None, my_vote=0):
         return v4
 
 
+def search_view(type):
+    v1 = {
+      'type_': type,
+      'comments': [],
+      'posts': [],
+      'communities': [],
+      'users': []
+    }
+    return v1
+
+
 @cache.memoize(timeout=86400)
 def cached_modlist_for_community(community_id):
     moderator_ids = db.session.execute(text('SELECT user_id FROM "community_member" WHERE community_id = :community_id and is_moderator = True'), {'community_id': community_id}).scalars()
