@@ -22,11 +22,8 @@ def log_user_in(input, src):
         username = input.user_name.data
         password = input.password.data
     elif src == SRC_API:
-        try:
-            required(["username_or_email", "password"], input)
-            string_expected(["username_or_email", "password"], input)
-        except Exception:
-            raise
+        required(["username_or_email", "password"], input)
+        string_expected(["username_or_email", "password"], input)
 
         username = input['username_or_email']
         password = input['password']

@@ -23,10 +23,7 @@ def vote_for_post(post_id: int, vote_direction, src, auth=None):
         post = Post.query.get(post_id)
         if not post:
             raise Exception('post_not_found')
-        try:
-            user = authorise_api_user(auth, return_type='model')
-        except:
-            raise
+        user = authorise_api_user(auth, return_type='model')
     else:
         post = Post.query.get_or_404(post_id)
         user = current_user
@@ -103,10 +100,7 @@ def bookmark_the_post(post_id: int, src, auth=None):
         post = Post.query.get(post_id)
         if not post or post.deleted:
             raise Exception('post_not_found')
-        try:
-            user_id = authorise_api_user(auth)
-        except:
-            raise
+        user_id = authorise_api_user(auth)
     else:
         post = Post.query.get_or_404(post_id)
         if post.deleted:
@@ -136,10 +130,7 @@ def remove_the_bookmark_from_post(post_id: int, src, auth=None):
         post = Post.query.get(post_id)
         if not post or post.deleted:
             raise Exception('post_not_found')
-        try:
-            user_id = authorise_api_user(auth)
-        except:
-            raise
+        user_id = authorise_api_user(auth)
     else:
         post = Post.query.get_or_404(post_id)
         if post.deleted:
@@ -168,10 +159,7 @@ def toggle_post_notification(post_id: int, src, auth=None):
         post = Post.query.get(post_id)
         if not post or post.deleted:
             raise Exception('post_not_found')
-        try:
-            user_id = authorise_api_user(auth)
-        except:
-            raise
+        user_id = authorise_api_user(auth)
     else:
         post = Post.query.get_or_404(post_id)
         if post.deleted:

@@ -13,10 +13,7 @@ def users_total():
 
 def get_site(auth):
     if auth:
-        try:
-            user = authorise_api_user(auth, return_type='model')
-        except Exception as e:
-            raise e
+        user = authorise_api_user(auth, return_type='model')
     else:
         user = None
 

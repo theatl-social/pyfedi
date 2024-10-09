@@ -25,13 +25,7 @@ def get_community_list(auth, data):
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 10
 
-    if auth:
-        try:
-            user_id = authorise_api_user(auth)
-        except:
-            raise
-    else:
-        user_id = None
+    user_id = authorise_api_user(auth) if auth else None
 
     communities = cached_community_list(type, user_id)
 
@@ -57,71 +51,36 @@ def get_community(auth, data):
     elif 'name' in data:
         community = data['name']
 
-    if auth:
-        try:
-            user_id = authorise_api_user(auth)
-        except:
-            raise
-    else:
-        user_id = None
+    user_id = authorise_api_user(auth) if auth else None
 
-    try:
-        community_json = community_view(community=community, variant=3, stub=False, user_id=user_id)
-        return community_json
-    except:
-        raise
+    community_json = community_view(community=community, variant=3, stub=False, user_id=user_id)
+    return community_json
 
 
 # would be in app/constants.py
 SRC_API = 3
 
 def post_community_follow(auth, data):
-    try:
-        required(['community_id', 'follow'], data)
-        integer_expected(['community_id'], data)
-        boolean_expected(['follow'], data)
-    except:
-        raise
+    required(['community_id', 'follow'], data)
+    integer_expected(['community_id'], data)
+    boolean_expected(['follow'], data)
 
     community_id = data['community_id']
     follow = data['follow']
 
-    if auth:
-        try:
-            user_id = authorise_api_user(auth)
-        except:
-            raise
-    else:
-        user_id = None
-
-    try:
-        if follow == True:
-            user_id = join_community(community_id, SRC_API, auth)
-        else:
-            user_id = leave_community(community_id, SRC_API, auth)
-        community_json = community_view(community=community_id, variant=4, stub=False, user_id=user_id)
-        return community_json
-    except:
-        raise
+    user_id = join_community(community_id, SRC_API, auth) if follow else leave_community(community_id, SRC_API, auth)
+    community_json = community_view(community=community_id, variant=4, stub=False, user_id=user_id)
+    return community_json
 
 
 def post_community_block(auth, data):
-    try:
-        required(['community_id', 'block'], data)
-        integer_expected(['community_id'], data)
-        boolean_expected(['block'], data)
-    except:
-        raise
+    required(['community_id', 'block'], data)
+    integer_expected(['community_id'], data)
+    boolean_expected(['block'], data)
 
     community_id = data['community_id']
     block = data['block']
 
-    try:
-        if block == True:
-            user_id = block_community(community_id, SRC_API, auth)
-        else:
-            user_id = unblock_community(community_id, SRC_API, auth)
-        community_json = community_view(community=community_id, variant=5, user_id=user_id)
-        return community_json
-    except:
-        raise
+    user_id = block_community(community_id, SRC_API, auth) if block else unblock_community(community_id, SRC_API, auth)
+    community_json = community_view(community=community_id, variant=5, user_id=user_id)
+    return community_json

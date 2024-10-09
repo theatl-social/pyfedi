@@ -23,10 +23,7 @@ def vote_for_reply(reply_id: int, vote_direction, src, auth=None):
         reply = PostReply.query.get(reply_id)
         if not reply:
             raise Exception('reply_not_found')
-        try:
-            user = authorise_api_user(auth, return_type='model')
-        except:
-            raise
+        user = authorise_api_user(auth, return_type='model')
     else:
         reply = PostReply.query.get_or_404(post_id)
         user = current_user
@@ -103,10 +100,7 @@ def bookmark_the_post_reply(comment_id: int, src, auth=None):
         post_reply = PostReply.query.get(comment_id)
         if not post_reply or post_reply.deleted:
             raise Exception('comment_not_found')
-        try:
-            user_id = authorise_api_user(auth)
-        except:
-            raise
+        user_id = authorise_api_user(auth)
     else:
         post_reply = PostReply.query.get_or_404(comment_id)
         if post_reply.deleted:
@@ -137,10 +131,7 @@ def remove_the_bookmark_from_post_reply(comment_id: int, src, auth=None):
         post_reply = PostReply.query.get(comment_id)
         if not post_reply or post_reply.deleted:
             raise Exception('comment_not_found')
-        try:
-            user_id = authorise_api_user(auth)
-        except:
-            raise
+        user_id = authorise_api_user(auth)
     else:
         post_reply = PostReply.query.get_or_404(comment_id)
         if post_reply.deleted:
@@ -169,10 +160,7 @@ def toggle_post_reply_notification(post_reply_id: int, src, auth=None):
         post_reply = PostReply.query.get(post_reply_id)
         if not post_reply or post_reply.deleted:
             raise Exception('comment_not_found')
-        try:
-            user_id = authorise_api_user(auth)
-        except:
-            raise
+        user_id = authorise_api_user(auth)
     else:
         post_reply = PostReply.query.get_or_404(post_reply_id)
         if post_reply.deleted:

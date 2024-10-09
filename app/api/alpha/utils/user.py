@@ -19,48 +19,33 @@ def get_user(auth, data):
 
     user_id = None
     if auth:
-        try:
-            user_id = authorise_api_user(auth)
-            if 'username' in data:
-                data['person_id'] = user_id
-                person_id = int(user_id)
-            auth = None                 # avoid authenticating user again in get_post_list and get_reply_list
-        except Exception as e:
-            raise e
+        user_id = authorise_api_user(auth)
+        if 'username' in data:
+            data['person_id'] = user_id
+            person_id = int(user_id)
+        auth = None                 # avoid authenticating user again in get_post_list and get_reply_list
 
     # bit unusual. have to help construct the json here rather than in views, to avoid circular dependencies
     post_list = get_post_list(auth, data, user_id)
     reply_list = get_reply_list(auth, data, user_id)
 
-    try:
-        user_json = user_view(user=person_id, variant=3)
-        user_json['posts'] = post_list['posts']
-        user_json['comments'] = reply_list['comments']
-        return user_json
-    except:
-        raise
+    user_json = user_view(user=person_id, variant=3)
+    user_json['posts'] = post_list['posts']
+    user_json['comments'] = reply_list['comments']
+    return user_json
 
 
 # would be in app/constants.py
 SRC_API = 3
 
 def post_user_block(auth, data):
-    try:
-        required(['person_id', 'block'], data)
-        integer_expected(['post_id'], data)
-        boolean_expected(['block'], data)
-    except:
-        raise
+    required(['person_id', 'block'], data)
+    integer_expected(['post_id'], data)
+    boolean_expected(['block'], data)
 
     person_id = data['person_id']
     block = data['block']
 
-    try:
-        if block == True:
-            user_id = block_another_user(person_id, SRC_API, auth)
-        else:
-            user_id = unblock_another_user(person_id, SRC_API, auth)
-        user_json = user_view(user=person_id, variant=4, user_id=user_id)
-        return user_json
-    except:
-        raise
+    user_id = block_another_user(person_id, SRC_API, auth) if block else unblock_another_user(person_id, SRC_API, auth)
+    user_json = user_view(user=person_id, variant=4, user_id=user_id)
+    return user_json
