@@ -4,7 +4,7 @@ from app.api.alpha.utils.validators import required, integer_expected, boolean_e
 from app.utils import authorise_api_user
 from app.models import Community, CommunityMember
 from app.shared.community import join_community, leave_community, block_community, unblock_community
-from app.utils import communities_banned_from
+from app.utils import communities_banned_from, blocked_instances
 
 
 @cache.memoize(timeout=3)
@@ -16,6 +16,15 @@ def cached_community_list(type, user_id):
             communities = communities.filter(Community.id.not_in(banned_from))
     else:
         communities = Community.query.filter_by(banned=False)
+
+    print(len(communities.all()))
+
+    if user_id is not None:
+        blocked_instance_ids = blocked_instances(user_id)
+        if blocked_instance_ids:
+            communities = communities.filter(Community.instance_id.not_in(blocked_instance_ids))
+
+    print(len(communities.all()))
 
     return communities.all()
 

@@ -1301,3 +1301,9 @@ def authorise_api_user(auth, return_type='id'):
                 raise Exception('incorrect_login')
     except jwt.InvalidTokenError:
         raise Exception('invalid_token')
+
+
+@cache.memoize(timeout=86400)
+def community_ids_from_instances(instance_ids) -> List[int]:
+    communities = Community.query.join(Instance, Instance.id == Community.instance_id).filter(Instance.id.in_(instance_ids))
+    return [community.id for community in communities]
