@@ -476,9 +476,9 @@ def refresh_user_profile_task(user_id):
                                    {'user_id': user.id,
                                     'indexable': new_indexable})
 
-            user.user_name = activity_json['preferredUsername']
+            user.user_name = activity_json['preferredUsername'].strip()
             if 'name' in activity_json:
-                user.title = activity_json['name']
+                user.title = activity_json['name'].strip()
             if 'summary' in activity_json:
                 about_html = activity_json['summary']
                 if about_html is not None and not about_html.startswith('<'):                    # PeerTube
@@ -565,7 +565,7 @@ def refresh_community_profile_task(community_id):
             community.nsfw = activity_json['sensitive'] if 'sensitive' in activity_json else False
             if 'nsfl' in activity_json and activity_json['nsfl']:
                 community.nsfl = activity_json['nsfl']
-            community.title = activity_json['name']
+            community.title = activity_json['name'].strip()
             community.restricted_to_mods = activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else False
             community.new_mods_wanted = activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False
             community.private_mods = activity_json['privateMods'] if 'privateMods' in activity_json else False
@@ -679,8 +679,8 @@ def refresh_community_profile_task(community_id):
 def actor_json_to_model(activity_json, address, server):
     if activity_json['type'] == 'Person' or activity_json['type'] == 'Service':
         try:
-            user = User(user_name=activity_json['preferredUsername'],
-                        title=activity_json['name'] if 'name' in activity_json else None,
+            user = User(user_name=activity_json['preferredUsername'].strip(),
+                        title=activity_json['name'].strip() if 'name' in activity_json else None,
                         email=f"{address}@{server}",
                         matrix_user_id=activity_json['matrixUserId'] if 'matrixUserId' in activity_json else '',
                         indexable=activity_json['indexable'] if 'indexable' in activity_json else True,
@@ -756,8 +756,8 @@ def actor_json_to_model(activity_json, address, server):
         if 'nsfl' in activity_json and activity_json['nsfl'] and not site.enable_nsfl:
             return None
 
-        community = Community(name=activity_json['preferredUsername'],
-                              title=activity_json['name'],
+        community = Community(name=activity_json['preferredUsername'].strip(),
+                              title=activity_json['name'].strip(),
                               nsfw=activity_json['sensitive'] if 'sensitive' in activity_json else False,
                               restricted_to_mods=activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else False,
                               new_mods_wanted=activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False,
