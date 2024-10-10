@@ -1,7 +1,9 @@
 from app import db
-from app.api.alpha.views import user_view, community_view
+from app.api.alpha.views import user_view, community_view, instance_view
+from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
 from app.utils import authorise_api_user
-from app.models import Language
+from app.models import InstanceBlock, Language
+from app.shared.site import block_remote_instance, unblock_remote_instance
 
 from flask import current_app, g
 
@@ -68,7 +70,7 @@ def get_site(auth):
           #"moderates": [],
           #"follows": [],
           "community_blocks": [],
-          "instance_blocks": [],            # TODO
+          "instance_blocks": [],
           "person_blocks": [],
           "discussion_languages": []        # TODO
         }
@@ -87,6 +89,9 @@ def get_site(auth):
         blocked_ids = db.session.execute(text('SELECT community_id FROM "community_block" WHERE user_id = :user_id'), {"user_id": user.id}).scalars()
         for blocked_id in blocked_ids:
             my_user['community_blocks'].append({'person': user_view(user, variant=1, stub=True), 'community': community_view(blocked_id, variant=1, stub=True)})
+        blocked_ids = db.session.execute(text('SELECT instance_id FROM "instance_block" WHERE user_id = :user_id'), {"user_id": user.id}).scalars()
+        for blocked_id in blocked_ids:
+            my_user['instance_blocks'].append({'person': user_view(user, variant=1, stub=True), 'instance': instance_view(blocked_id, variant=1)})
     data = {
       "version": "1.0.0",
       "site": site
@@ -96,3 +101,21 @@ def get_site(auth):
 
     return data
 
+
+SRC_API = 3
+
+def post_site_block(auth, data):
+    required(['instance_id', 'block'], data)
+    integer_expected(['instance_id'], data)
+    boolean_expected(['block'], data)
+
+    instance_id = data['instance_id']
+    block = data['block']
+
+    user_id = block_remote_instance(instance_id, SRC_API, auth) if block else unblock_remote_instance(instance_id, SRC_API, auth)
+    blocked = InstanceBlock.query.filter_by(user_id=user_id, instance_id=instance_id).first()
+    block = True if blocked else False
+    data = {
+      "blocked": block
+    }
+    return data

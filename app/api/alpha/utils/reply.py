@@ -3,7 +3,7 @@ from app.api.alpha.utils.validators import required, integer_expected, boolean_e
 from app.api.alpha.views import reply_view
 from app.models import PostReply
 from app.shared.reply import vote_for_reply, bookmark_the_post_reply, remove_the_bookmark_from_post_reply, toggle_post_reply_notification
-from app.utils import authorise_api_user, blocked_users
+from app.utils import authorise_api_user, blocked_users, blocked_instances
 
 from sqlalchemy import desc
 
@@ -19,6 +19,9 @@ def cached_reply_list(post_id, person_id, sort, max_depth, user_id):
         blocked_person_ids = blocked_users(user_id)
         if blocked_person_ids:
             replies = replies.filter(PostReply.user_id.not_in(blocked_person_ids))
+        blocked_instance_ids = blocked_instances(user_id)
+        if blocked_instance_ids:
+            replies = replies.filter(PostReply.instance_id.not_in(blocked_instance_ids))
 
     if sort == "Hot":
         replies = replies.order_by(desc(PostReply.ranking)).order_by(desc(PostReply.posted_at))

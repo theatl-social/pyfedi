@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from app import cache, db
 from app.constants import *
-from app.models import Community, CommunityMember, Post, PostReply, PostVote, User
+from app.models import Community, CommunityMember, Instance, Post, PostReply, PostVote, User
 from app.utils import blocked_communities
 
 from sqlalchemy import text
@@ -330,6 +330,33 @@ def reply_view(reply: PostReply | int, variant, user_id=None, my_vote=0):
         v4 = {'comment_view': reply_view(reply=reply, variant=2, user_id=user_id)}
 
         return v4
+
+
+def search_view(type):
+    v1 = {
+      'type_': type,
+      'comments': [],
+      'posts': [],
+      'communities': [],
+      'users': []
+    }
+    return v1
+
+
+def instance_view(instance: Instance | int, variant):
+    if isinstance(instance, int):
+        instance = Instance.query.get(instance)
+    if not instance:
+        raise Exception('instance_not_found')
+
+    if variant == 1:
+        include = ['id', 'domain', 'software', 'version']
+        v1 = {column.name: getattr(instance, column.name) for column in instance.__table__.columns if column.name in include}
+        if not v1['version']:
+            v1.update({'version': '0.0.1'})
+        v1.update({'published': instance.created_at.isoformat() + 'Z', 'updated': instance.updated_at.isoformat() + 'Z'})
+
+        return v1
 
 
 @cache.memoize(timeout=86400)

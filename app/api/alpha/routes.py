@@ -1,5 +1,6 @@
 from app.api.alpha import bp
-from app.api.alpha.utils import get_site, \
+from app.api.alpha.utils import get_site, post_site_block, \
+                                get_search, \
                                 get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, \
                                 get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, \
                                 get_community_list, get_community, post_community_follow, post_community_block, \
@@ -17,6 +18,31 @@ def get_alpha_site():
     try:
         auth = request.headers.get('Authorization')
         return jsonify(get_site(auth))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/site/block', methods=['POST'])
+def get_alpha_site_block():
+    if not current_app.debug:
+        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(post_site_block(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+# Misc
+@bp.route('/api/alpha/search', methods=['GET'])
+def get_alpha_search():
+    if not current_app.debug:
+        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.args.to_dict() or None
+        return jsonify(get_search(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
@@ -222,13 +248,11 @@ def post_alpha_user_block():
 # Site - not yet implemented
 @bp.route('/api/alpha/site', methods=['POST'])
 @bp.route('/api/alpha/site', methods=['PUT'])
-@bp.route('/api/alpha/site/block', methods=['POST'])
 def alpha_site():
     return jsonify({"error": "not_yet_implemented"}), 400
 
 # Miscellaneous - not yet implemented
 @bp.route('/api/alpha/modlog', methods=['GET'])
-@bp.route('/api/alpha/search', methods=['GET'])
 @bp.route('/api/alpha/resolve_object', methods=['GET'])
 @bp.route('/api/alpha/federated_instances', methods=['GET'])
 def alpha_miscellaneous():
