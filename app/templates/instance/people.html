@@ -25,7 +25,7 @@
                     <th>{{ _('Posts') }}</th>
                     <th>{{ _('Comments') }}</th>
                 </tr>
-                {% for person in people %}
+                {% for person in people.items %}
                     <tr>
                         <td valign="top">{{ render_username(person) }}</td>
                         <td>{{ person.about_html | safe if person.about_html }}</td>
@@ -34,6 +34,18 @@
                     </tr>
                 {% endfor %}
             </table>
+            <nav aria-label="Pagination" class="mt-4" role="navigation">
+                {% if prev_url -%}
+                    <a href="{{ prev_url }}" class="btn btn-primary" rel='nofollow'>
+                        <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
+                    </a>
+                {% endif -%}
+                {% if next_url -%}
+                    <a href="{{ next_url }}" class="btn btn-primary" rel='nofollow'>
+                        {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
+                    </a>
+                {% endif -%}
+            </nav>
         {% else %}
             <p>{{ _('No people to show') }}</p>
         {% endif %}

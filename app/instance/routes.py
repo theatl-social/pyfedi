@@ -80,11 +80,16 @@ def instance_people(instance_domain):
         abort(404)
 
     if current_user.is_admin():
-        people = User.query.filter_by(instance_id=instance.id, deleted=False, banned=False).order_by(desc(User.last_seen)).all()
+        people = User.query.filter_by(instance_id=instance.id, deleted=False, banned=False).order_by(desc(User.last_seen))
     else:
-        people = User.query.filter_by(instance_id=instance.id, deleted=False, banned=False, searchable=True).order_by(desc(User.last_seen)).all()
+        people = User.query.filter_by(instance_id=instance.id, deleted=False, banned=False, searchable=True).order_by(desc(User.last_seen))
 
-    return render_template('instance/people.html', people=people, instance=instance,
+    # Pagination
+    people = people.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50, error_out=False)
+    next_url = url_for('instance.instance_people', page=people.next_num, instance_domain=instance_domain) if people.has_next else None
+    prev_url = url_for('instance.instance_people', page=people.prev_num, instance_domain=instance_domain) if people.has_prev and page != 1 else None
+
+    return render_template('instance/people.html', people=people, instance=instance, next_url=next_url, prev_url=prev_url,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
