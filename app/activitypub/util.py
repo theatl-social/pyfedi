@@ -1777,6 +1777,9 @@ def create_post(activity_log: ActivityPubLog, community: Community, request_json
                     post.image = file
                     db.session.add(file)
 
+        if 'searchableBy' in request_json['object'] and request_json['object']['searchableBy'] != 'https://www.w3.org/ns/activitystreams#Public':
+            post.indexable = False
+
         if post.url:
             post.url = remove_tracking_from_link(post.url)      # moved here as changes youtu.be to youtube.com
             if is_video_hosting_site(post.url):
