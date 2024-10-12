@@ -23,6 +23,8 @@ def cached_post_list(type, sort, user_id, community_id, community_name, person_i
             posts = Post.query.filter_by(deleted=False).join(Community, Community.id == Post.community_id).filter_by(show_all=True)
     elif type == "Local":
         posts = Post.query.filter_by(deleted=False).join(Community, Community.id == Post.community_id).filter_by(ap_id=None)
+    elif type == "Popular":
+        posts = Post.query.filter_by(deleted=False).join(Community, Community.id == Post.community_id).filter(Community.show_popular == True, Post.score > 100)
     elif type == "Subscribed" and user_id is not None:
         posts = Post.query.filter_by(deleted=False).join(CommunityMember, Post.community_id == CommunityMember.community_id).filter_by(is_banned=False, user_id=user_id)
     else:
