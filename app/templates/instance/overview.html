@@ -1,0 +1,37 @@
+{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
+    {% extends 'themes/' + theme() + '/base.html' %}
+{% else %}
+    {% extends "base.html" %}
+{% endif %} %}
+{% from 'bootstrap/form.html' import render_form %}
+
+{% block app_content %}
+<div class="row">
+    <div class="col-12 col-md-8 position-relative main_pane">
+        <nav aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
+            <li class="breadcrumb-item"><a href="/instances">{{ _('Instances') }}</a></li>
+            <li class="breadcrumb-item active">{{ instance.domain }}</li>
+          </ol>
+        </nav>
+        <h1 class="mt-2">{{ _('%(instance)s overview', instance=instance.domain) }}</h1>
+        <p>{{ _('This is a %(software)s instance.', software=instance.software) }}</p>
+        <p><a href="{{ url_for('instance.instance_people', instance_domain=instance.domain) }}">{{ _('People') }}</a><br />
+                                <a href="{{ url_for('instance.instance_posts', instance_domain=instance.domain) }}">{{ _('Posts') }}</a></p>
+        <p><a href="https://{{ instance.domain }}" rel="noopener nofollow noindex noreferrer">{{ _('Go to instance') }}</a></p>
+    </div>
+
+    <aside id="side_pane" class="col-12 col-md-4 side_pane" role="complementary">
+
+        <div class="card">
+            <div class="card-header">
+                 <h2> </h2>
+            </div>
+            <div class="card-body">
+
+            </div>
+        </div>
+    </aside>
+</div>
+{% endblock %}
