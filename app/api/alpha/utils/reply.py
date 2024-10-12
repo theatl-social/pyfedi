@@ -2,7 +2,7 @@ from app import cache
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
 from app.api.alpha.views import reply_view
 from app.models import PostReply, Post
-from app.shared.reply import vote_for_reply, bookmark_the_post_reply, remove_the_bookmark_from_post_reply, toggle_post_reply_notification, make_reply
+from app.shared.reply import vote_for_reply, bookmark_the_post_reply, remove_the_bookmark_from_post_reply, toggle_post_reply_notification, make_reply, edit_reply
 from app.utils import authorise_api_user, blocked_users, blocked_instances
 
 from sqlalchemy import desc
@@ -117,7 +117,7 @@ def put_reply_subscribe(auth, data):
     return reply_json
 
 
-def post_reply(auth,data):
+def post_reply(auth, data):
     required(['body', 'post_id'], data)
     string_expected(['body',], data)
     integer_expected(['post_id', 'parent_id', 'language_id'], data)
@@ -133,6 +133,29 @@ def post_reply(auth,data):
         raise Exception('parent_not_found')
 
     user_id, reply = make_reply(input, post, parent_id, SRC_API, auth)
+
+    reply_json = reply_view(reply=reply, variant=4, user_id=user_id)
+    return reply_json
+
+
+def put_reply(auth, data):
+    required(['comment_id'], data)
+    string_expected(['body',], data)
+    integer_expected(['comment_id', 'language_id'], data)
+
+    reply_id = data['comment_id']
+    body = data['body'] if 'body' in data else ''
+    language_id = data['language_id'] if 'language_id' in data else 2
+
+    input = {'body': body, 'notify_author': True, 'language_id': language_id}
+    reply = PostReply.query.get(reply_id)
+    if not reply:
+        raise Exception('reply_not_found')
+    post = Post.query.get(reply.post_id)
+    if not post:
+        raise Exception('post_not_found')
+
+    user_id, reply = edit_reply(input, reply, post, SRC_API, auth)
 
     reply_json = reply_view(reply=reply, variant=4, user_id=user_id)
     return reply_json

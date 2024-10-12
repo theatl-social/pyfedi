@@ -280,6 +280,8 @@ def reply_view(reply: PostReply | int, variant, user_id=None, my_vote=0):
         v1 = {column.name: getattr(reply, column.name) for column in reply.__table__.columns if column.name in include}
 
         v1['path'] = calculate_path(reply)
+        if reply.edited_at:
+            v1['edited_at'] = reply.edited_at.isoformat() + 'Z'
 
         v1.update({'published': reply.posted_at.isoformat() + 'Z',
                    'ap_id': reply.profile_id(),
@@ -287,6 +289,7 @@ def reply_view(reply: PostReply | int, variant, user_id=None, my_vote=0):
                    'language_id': reply.language_id if reply.language_id else 0,
                    'removed': reply.deleted,
                    'distinguished': False})
+
         return v1
 
     # Variant 2 - views/comment_view.dart - /comment/list api endpoint

@@ -26,7 +26,7 @@ def vote_for_reply(reply_id: int, vote_direction, src, auth=None):
             raise Exception('reply_not_found')
         user = authorise_api_user(auth, return_type='model')
     else:
-        reply = PostReply.query.get_or_404(post_id)
+        reply = PostReply.query.get_or_404(reply_id)
         user = current_user
 
     undo = reply.vote(user, vote_direction)
@@ -241,6 +241,9 @@ def make_reply(input, post, parent_id, src, auth=None):
     user.language_id = language_id
     reply.ap_id = reply.profile_id()
     db.session.commit()
+    if src == SRC_WEB:
+        input.body.data = ''
+        flash('Your comment has been added.')
 
     # federation
     if parent_id:
@@ -270,6 +273,10 @@ def make_reply(input, post, parent_id, src, auth=None):
           'audience': post.community.public_url(),
           'contentMap': {
             'en': reply.body_html
+          },
+          'language': {
+            'identifier': reply.language_code(),
+            'name': reply.language_name()
           }
         }
         create_json = {
@@ -305,7 +312,7 @@ def make_reply(input, post, parent_id, src, auth=None):
         if not post.community.is_local():    # this is a remote community, send it to the instance that hosts it
             success = post_request(post.community.ap_inbox_url, create_json, user.private_key,
                                     user.public_url() + '#main-key')
-            if src != SRC_API:
+            if src == SRC_WEB:
                 if success is False or isinstance(success, str):
                     flash('Failed to send reply', 'error')
         else:                                # local community - send it to followers on remote instances
@@ -341,3 +348,133 @@ def make_reply(input, post, parent_id, src, auth=None):
         return user.id, reply
     else:
         return reply
+
+
+def edit_reply(input, reply, post, src, auth=None):
+    if src == SRC_API:
+        user = authorise_api_user(auth, return_type='model')
+        content = input['body']
+        notify_author = input['notify_author']
+        language_id = input['language_id']
+    else:
+        user = current_user
+        content = input.body.data
+        notify_author = input.notify_author.data
+        language_id = input.language_id.data
+
+    reply.body = piefed_markdown_to_lemmy_markdown(content)
+    reply.body_html = markdown_to_html(content)
+    reply.notify_author = notify_author
+    reply.community.last_active = utcnow()
+    reply.edited_at = utcnow()
+    reply.language_id = language_id
+    db.session.commit()
+
+
+    if src == SRC_WEB:
+        flash(_('Your changes have been saved.'), 'success')
+
+    if reply.parent_id:
+        in_reply_to = PostReply.query.get(reply.parent_id)
+    else:
+        in_reply_to = post
+
+    # federate edit
+    if not post.community.local_only:
+        reply_json = {
+          'type': 'Note',
+          'id': reply.public_url(),
+          'attributedTo': user.public_url(),
+          'to': [
+            'https://www.w3.org/ns/activitystreams#Public'
+          ],
+          'cc': [
+            post.community.public_url(),
+            in_reply_to.author.public_url()
+          ],
+          'content': reply.body_html,
+          'inReplyTo': in_reply_to.profile_id(),
+          'url': reply.public_url(),
+          'mediaType': 'text/html',
+          'source': {'content': reply.body, 'mediaType': 'text/markdown'},
+          'published': ap_datetime(reply.posted_at),
+          'updated': ap_datetime(reply.edited_at),
+          'distinguished': False,
+          'audience': post.community.public_url(),
+          'contentMap': {
+            'en': reply.body_html
+          },
+          'language': {
+            'identifier': reply.language_code(),
+            'name': reply.language_name()
+          }
+        }
+        update_json = {
+          '@context': default_context(),
+          'type': 'Update',
+          'actor': user.public_url(),
+          'audience': post.community.public_url(),
+          'to': [
+            'https://www.w3.org/ns/activitystreams#Public'
+          ],
+          'cc': [
+            post.community.public_url(),
+            in_reply_to.author.public_url()
+          ],
+          'object': reply_json,
+          'id': f"https://{current_app.config['SERVER_NAME']}/activities/update/{gibberish(15)}"
+        }
+        if in_reply_to.notify_author and in_reply_to.author.ap_id is not None:
+            reply_json['tag'] = [
+              {
+                'href': in_reply_to.author.public_url(),
+                'name': in_reply_to.author.mention_tag(),
+                'type': 'Mention'
+              }
+            ]
+            update_json['tag'] = [
+              {
+                'href': in_reply_to.author.public_url(),
+                'name': in_reply_to.author.mention_tag(),
+                'type': 'Mention'
+              }
+            ]
+        if not post.community.is_local():    # this is a remote community, send it to the instance that hosts it
+            success = post_request(post.community.ap_inbox_url, update_json, user.private_key,
+                                                               user.public_url() + '#main-key')
+            if src == SRC_WEB:
+                if success is False or isinstance(success, str):
+                    flash('Failed to send send edit to remote server', 'error')
+        else:                                # local community - send it to followers on remote instances
+            del update_json['@context']
+            announce = {
+              'id': f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+              'type': 'Announce',
+              'to': [
+                'https://www.w3.org/ns/activitystreams#Public'
+              ],
+              'actor': post.community.public_url(),
+              'cc': [
+                post.community.ap_followers_url
+              ],
+              '@context': default_context(),
+              'object': update_json
+            }
+
+            for instance in post.community.following_instances():
+                if instance.inbox and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
+                    send_to_remote_instance(instance.id, post.community.id, announce)
+
+        # send copy of Note to post author (who won't otherwise get it if no-one else on their instance is subscribed to the community)
+        if not in_reply_to.author.is_local() and in_reply_to.author.ap_domain != reply.community.ap_domain:
+            if not post.community.is_local() or (post.community.is_local and not post.community.has_followers_from_domain(in_reply_to.author.ap_domain)):
+                success = post_request(in_reply_to.author.ap_inbox_url, update_json, user.private_key, user.public_url() + '#main-key')
+                if success is False or isinstance(success, str):
+                    # sending to shared inbox is good enough for Mastodon, but Lemmy will reject it the local community has no followers
+                    personal_inbox = in_reply_to.author.public_url() + '/inbox'
+                    post_request(personal_inbox, update_json, user.private_key, user.public_url() + '#main-key')
+
+    if src == SRC_API:
+        return user.id, reply
+    else:
+        return
