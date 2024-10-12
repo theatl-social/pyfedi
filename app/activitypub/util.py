@@ -176,6 +176,8 @@ def post_to_page(post: Post):
         activity_data[mode] = choices
         activity_data['endTime'] = ap_datetime(poll.end_poll)
         activity_data['votersCount'] = poll.total_votes()
+    if post.indexable:
+        activity_data['searchableBy'] = 'https://www.w3.org/ns/activitystreams#Public'
     return activity_data
 
 
