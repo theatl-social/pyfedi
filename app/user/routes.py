@@ -34,14 +34,7 @@ import json as python_json
 @bp.route('/people', methods=['GET', 'POST'])
 @login_required
 def show_people():
-    if current_user.is_admin():
-        people = User.query.filter_by(ap_id=None, deleted=False, banned=False).all()
-    else:
-        people = User.query.filter_by(ap_id=None, deleted=False, banned=False, searchable=True).all()
-    return render_template('user/people.html', people=people, moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site,
-                           title=_('People'))
+    return redirect(url_for('instance.instance_people', instance_domain=current_app.config['SERVER_NAME']))
 
 
 @bp.route('/user/<int:user_id>', methods=['GET'])

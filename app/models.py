@@ -847,6 +847,14 @@ class User(UserMixin, db.Model):
         else:
             return self.public_url() + '/followers'
 
+    def instance_domain(self):
+        if self.ap_domain:
+            return self.ap_domain
+        if self.is_local():
+            return current_app.config['SERVER_NAME']
+        else:
+            return self.instance.domain
+
     def get_reset_password_token(self, expires_in=600):
         return jwt.encode(
             {'reset_password': self.id, 'exp': time() + expires_in},

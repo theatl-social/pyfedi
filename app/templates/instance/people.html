@@ -20,13 +20,17 @@
         {% if people %}
             <table class="table table-striped">
                 <tr>
-                    <th>Name</th>
-                    <th>About</th>
+                    <th>{{ _('Name') }}</th>
+                    <th>{{ _('About') }}</th>
+                    <th>{{ _('Posts') }}</th>
+                    <th>{{ _('Comments') }}</th>
                 </tr>
                 {% for person in people %}
                     <tr>
-                        <td>{{ render_username(person) }}</td>
+                        <td valign="top">{{ render_username(person) }}</td>
                         <td>{{ person.about_html | safe if person.about_html }}</td>
+                        <td valign="top">{{ person.post_count }}</td>
+                        <td valign="top">{{ person.post_reply_count }}</td>
                     </tr>
                 {% endfor %}
             </table>
