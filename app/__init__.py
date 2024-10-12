@@ -93,6 +93,9 @@ def create_app(config_class=Config):
     from app.domain import bp as domain_bp
     app.register_blueprint(domain_bp)
 
+    from app.instance import bp as instance_bp
+    app.register_blueprint(instance_bp)
+
     from app.topic import bp as topic_bp
     app.register_blueprint(topic_bp)
 
