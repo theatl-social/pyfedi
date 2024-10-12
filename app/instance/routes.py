@@ -53,6 +53,21 @@ def list_instances():
                            menu_topics=menu_topics(), site=g.site)
 
 
+@bp.route('/instance/<instance_domain>', methods=['GET'])
+def instance_overview(instance_domain):
+    low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+
+    instance = Instance.query.filter(Instance.domain == instance_domain).first()
+    if instance is None:
+        abort(404)
+
+    return render_template('instance/overview.html', instance=instance,
+                           moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site,
+                           title=_('%(instance)s overview', instance=instance.domain))
+
+
 @bp.route('/instance/<instance_domain>/people', methods=['GET'])
 def instance_people(instance_domain):
     page = request.args.get('page', 1, type=int)
@@ -69,7 +84,8 @@ def instance_people(instance_domain):
     else:
         people = User.query.filter_by(instance_id=instance.id, deleted=False, banned=False, searchable=True).order_by(desc(User.last_seen)).all()
 
-    return render_template('user/people.html', people=people, moderating_communities=moderating_communities(current_user.get_id()),
+    return render_template('instance/people.html', people=people, instance=instance,
+                           moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
                            title=_('People from %(instance)s', instance=instance.domain))
