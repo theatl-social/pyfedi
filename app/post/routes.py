@@ -324,7 +324,11 @@ def post_vote(post_id: int, vote_direction):
                 if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
                     send_to_remote_instance(instance.id, post.community.id, announce)
         else:
-            post_request_in_background(post.community.ap_inbox_url, action_json, current_user.private_key,
+            inbox = post.community.ap_inbox_url
+            if (post.community.ap_domain and post.author.ap_inbox_url and                    # sanity check these fields aren't null
+                post.community.ap_domain == 'a.gup.pe' and vote_direction == 'upvote'):      # send upvotes to post author's instance instead of a.gup.pe (who reject them)
+                inbox = post.author.ap_inbox_url
+            post_request_in_background(inbox, action_json, current_user.private_key,
                                        current_user.public_url(not(post.community.instance.votes_are_public() and current_user.vote_privately())) + '#main-key')
 
     recently_upvoted = []

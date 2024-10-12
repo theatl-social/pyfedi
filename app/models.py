@@ -85,7 +85,7 @@ class Instance(db.Model):
     def votes_are_public(self):
         if self.trusted is True:    # only vote privately with untrusted instances
             return False
-        return self.software.lower() == 'lemmy' or self.software.lower() == 'mbin' or self.software.lower() == 'kbin'
+        return self.software.lower() == 'lemmy' or self.software.lower() == 'mbin' or self.software.lower() == 'kbin' or self.software.lower() == 'guppe groups'
 
     def post_count(self):
         return db.session.execute(text('SELECT COUNT(id) as c FROM "post" WHERE instance_id = :instance_id'),
