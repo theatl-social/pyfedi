@@ -1206,6 +1206,7 @@ def admin_user_delete(user_id):
 
     user.banned = True  # Unsubscribing everyone could take a long time so until that is completed hide this user from the UI by banning it.
     user.last_active = utcnow()
+    user.deleted_by = current_user.id
     db.session.commit()
 
     if user.is_local():

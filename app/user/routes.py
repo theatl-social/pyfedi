@@ -667,6 +667,7 @@ def delete_profile(actor):
         else:
             user.banned = True
             user.deleted = True
+            user.deleted_by = current_user.id
             user.delete_dependencies()
             db.session.commit()
 
@@ -728,6 +729,7 @@ def delete_account():
         # to verify the deletes, remote servers will GET /u/<actor> so we can't fully delete the account until the POSTs are done
         current_user.banned = True
         current_user.email = f'deleted_{current_user.id}@deleted.com'
+        current_user.deleted_by = current_user.id
         db.session.commit()
 
         if current_app.debug:
@@ -803,10 +805,12 @@ def ban_purge_profile(actor):
 
             # federate deletion
             if user.is_local():
+                user.deleted_by = current_user.id
                 purge_user_then_delete(user.id)
                 flash(f'{actor} has been banned, deleted and all their content deleted. This might take a few minutes.')
             else:
                 user.deleted = True
+                user.deleted_by = current_user.id
                 user.delete_dependencies()
                 user.purge_content()
                 db.session.commit()

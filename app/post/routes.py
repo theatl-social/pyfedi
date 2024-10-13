@@ -1016,6 +1016,7 @@ def post_delete_post(community: Community, post: Post, user_id: int, federate_al
                     ocp.cross_posts.remove(post.id)
     post.delete_dependencies()
     post.deleted = True
+    post.deleted_by = user_id
     post.author.post_count -= 1
     community.post_count -= 1
     if hasattr(g, 'site'):  # g.site is invalid when running from cli
@@ -1606,6 +1607,7 @@ def post_reply_delete(post_id: int, comment_id: int):
         if not post_reply.author.bot:
             post.reply_count -= 1
         post_reply.author.post_reply_count -= 1
+        post_reply.deleted_by = current_user.id
         db.session.commit()
         flash(_('Comment deleted.'))
         # federate delete

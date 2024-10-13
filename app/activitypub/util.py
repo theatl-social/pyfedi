@@ -1315,6 +1315,7 @@ def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id
                 to_delete.deleted = True
                 community.post_count -= 1
                 to_delete.author.post_count -= 1
+                to_delete.deleted_by = deletor.id
                 db.session.commit()
                 if to_delete.author.id != deletor.id:
                     add_to_modlog_activitypub('delete_post', deletor, community_id=community.id,
@@ -1329,6 +1330,7 @@ def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id
                     to_delete.delete_dependencies()
                     to_delete.deleted = True
                 to_delete.author.post_reply_count -= 1
+                to_delete.deleted_by = deletor.id
                 db.session.commit()
                 if to_delete.author.id != deletor.id:
                     add_to_modlog_activitypub('delete_post_reply', deletor, community_id=community.id,
@@ -1354,6 +1356,7 @@ def restore_post_or_comment_task(object_json):
             if isinstance(to_restore, Post):
                 # TODO: restore_dependencies()
                 to_restore.deleted = False
+                to_restore.deleted_by = None
                 community.post_count += 1
                 to_restore.author.post_count += 1
                 db.session.commit()
