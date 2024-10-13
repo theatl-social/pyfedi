@@ -125,7 +125,9 @@ def post_reply(auth, data):
     body = data['body']
     post_id = data['post_id']
     parent_id = data['parent_id'] if 'parent_id' in data else None
-    language_id = data['language_id'] if 'language_id' in data else 2
+    language_id = data['language_id'] if 'language_id' in data else 2       # FIXME: use site language
+    if language_id < 2:
+        language_id = 2                                                     # FIXME: use site language
 
     input = {'body': body, 'notify_author': True, 'language_id': language_id}
     post = Post.query.get(post_id)
@@ -145,7 +147,9 @@ def put_reply(auth, data):
 
     reply_id = data['comment_id']
     body = data['body'] if 'body' in data else ''
-    language_id = data['language_id'] if 'language_id' in data else 2
+    language_id = data['language_id'] if 'language_id' in data else 2       # FIXME: use site language
+    if language_id < 2:
+        language_id = 2                                                     # FIXME: use site language
 
     input = {'body': body, 'notify_author': True, 'language_id': language_id}
     reply = PostReply.query.get(reply_id)
