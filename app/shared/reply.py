@@ -352,7 +352,7 @@ def make_reply(input, post, parent_id, src, auth=None):
 
 def edit_reply(input, reply, post, src, auth=None):
     if src == SRC_API:
-        user = authorise_api_user(auth, return_type='model')
+        user = authorise_api_user(auth, return_type='model', id_match=reply.user_id)
         content = input['body']
         notify_author = input['notify_author']
         language_id = input['language_id']
