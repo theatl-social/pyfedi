@@ -634,6 +634,7 @@ class User(UserMixin, db.Model):
     verification_token = db.Column(db.String(16), index=True)
     banned = db.Column(db.Boolean, default=False)
     deleted = db.Column(db.Boolean, default=False)
+    deleted_by = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
     about = db.Column(db.Text)      # markdown
     about_html = db.Column(db.Text) # html
     keywords = db.Column(db.String(256))
@@ -1077,6 +1078,7 @@ class Post(db.Model):
     microblog = db.Column(db.Boolean, default=False)
     comments_enabled = db.Column(db.Boolean, default=True)
     deleted = db.Column(db.Boolean, default=False, index=True)
+    deleted_by = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
     mea_culpa = db.Column(db.Boolean, default=False)
     has_embed = db.Column(db.Boolean, default=False)
     reply_count = db.Column(db.Integer, default=0)
@@ -1352,6 +1354,7 @@ class PostReply(db.Model):
     created_at = db.Column(db.DateTime, index=True, default=utcnow)
     posted_at = db.Column(db.DateTime, index=True, default=utcnow)
     deleted = db.Column(db.Boolean, default=False, index=True)
+    deleted_by = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
     ip = db.Column(db.String(50))
     from_bot = db.Column(db.Boolean, default=False)
     up_votes = db.Column(db.Integer, default=0)
