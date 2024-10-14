@@ -2,7 +2,8 @@ from app import cache
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
 from app.api.alpha.views import reply_view
 from app.models import PostReply, Post
-from app.shared.reply import vote_for_reply, bookmark_the_post_reply, remove_the_bookmark_from_post_reply, toggle_post_reply_notification, make_reply, edit_reply
+from app.shared.reply import vote_for_reply, bookmark_the_post_reply, remove_the_bookmark_from_post_reply, toggle_post_reply_notification, make_reply, edit_reply, \
+                             delete_reply, restore_reply
 from app.utils import authorise_api_user, blocked_users, blocked_instances
 
 from sqlalchemy import desc
@@ -11,9 +12,9 @@ from sqlalchemy import desc
 @cache.memoize(timeout=3)
 def cached_reply_list(post_id, person_id, sort, max_depth, user_id):
     if post_id:
-        replies = PostReply.query.filter(PostReply.deleted == False, PostReply.post_id == post_id, PostReply.depth <= max_depth)
+        replies = PostReply.query.filter(PostReply.post_id == post_id, PostReply.depth <= max_depth)
     if person_id:
-        replies = PostReply.query.filter_by(deleted=False, user_id=person_id)
+        replies = PostReply.query.filter_by(user_id=person_id)
 
     if user_id is not None:
         blocked_person_ids = blocked_users(user_id)
@@ -163,3 +164,22 @@ def put_reply(auth, data):
 
     reply_json = reply_view(reply=reply, variant=4, user_id=user_id)
     return reply_json
+
+
+def post_reply_delete(auth, data):
+    required(['comment_id', 'deleted'], data)
+    integer_expected(['comment_id'], data)
+    boolean_expected(['deleted'], data)
+
+    reply_id = data['comment_id']
+    deleted = data['deleted']
+
+    if deleted == True:
+        user_id, reply = delete_reply(reply_id, SRC_API, auth)
+    else:
+        user_id, reply = restore_reply(reply_id, SRC_API, auth)
+
+    reply_json = reply_view(reply=reply, variant=4, user_id=user_id)
+    return reply_json
+
+    return {}

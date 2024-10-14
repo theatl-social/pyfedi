@@ -2,7 +2,7 @@ from app import cache, db
 from app.activitypub.signature import default_context, post_request_in_background, post_request
 from app.community.util import send_to_remote_instance
 from app.constants import *
-from app.models import NotificationSubscription, PostReply, PostReplyBookmark, User, utcnow
+from app.models import NotificationSubscription, Post, PostReply, PostReplyBookmark, User, utcnow
 from app.utils import gibberish, instance_banned, render_template, authorise_api_user, recently_upvoted_post_replies, recently_downvoted_post_replies, shorten_string, \
                       piefed_markdown_to_lemmy_markdown, markdown_to_html, ap_datetime
 
@@ -473,6 +473,170 @@ def edit_reply(input, reply, post, src, auth=None):
                     # sending to shared inbox is good enough for Mastodon, but Lemmy will reject it the local community has no followers
                     personal_inbox = in_reply_to.author.public_url() + '/inbox'
                     post_request(personal_inbox, update_json, user.private_key, user.public_url() + '#main-key')
+
+    if src == SRC_API:
+        return user.id, reply
+    else:
+        return
+
+
+# just for deletes by owner (mod deletes are classed as 'remove')
+# just for API for now, as WEB version needs attention to ensure that replies can be 'undeleted'
+def delete_reply(reply_id, src, auth):
+    if src == SRC_API:
+        reply = PostReply.query.filter_by(id=reply_id, deleted=False).one()
+        post = Post.query.filter_by(id=reply.post_id).one()
+        user = authorise_api_user(auth, return_type='model', id_match=reply.user_id)
+    else:
+        reply = PostReply.query.get_or_404(reply_id)
+        post = Post.query.get_or_404(reply.post_id)
+        user = current_user
+
+    reply.deleted = True
+    reply.deleted_by = user.id
+    # everything else (votes, body, reports, bookmarks, subscriptions, etc) only wants deleting when it's properly purged after 7 days
+    # reply_view will return '' in body if reply.deleted == True
+
+    if not reply.author.bot:
+        post.reply_count -= 1
+    reply.author.post_reply_count -= 1
+    db.session.commit()
+    if src == SRC_WEB:
+        flash(_('Comment deleted.'))
+
+    # federate delete
+    if not post.community.local_only:
+        delete_json = {
+          'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+          'type': 'Delete',
+          'actor': user.public_url(),
+          'audience': post.community.public_url(),
+          'to': [
+            'https://www.w3.org/ns/activitystreams#Public'
+          ],
+          'published': ap_datetime(utcnow()),
+          'cc': [
+            post.community.public_url(),
+            user.followers_url()
+          ],
+          'object': reply.ap_id,
+          '@context': default_context()
+        }
+
+        if not post.community.is_local():   # this is a remote community, send it to the instance that hosts it
+            success = post_request(post.community.ap_inbox_url, delete_json, user.private_key,
+                                        user.public_url() + '#main-key')
+            if src == SRC_WEB:
+                if success is False or isinstance(success, str):
+                    flash('Failed to send delete to remote server', 'error')
+
+        else:                               # local community - send it to followers on remote instances
+            del delete_json['@context']
+            announce = {
+              'id': f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+              'type': 'Announce',
+              'to': [
+                'https://www.w3.org/ns/activitystreams#Public'
+              ],
+              'actor': post.community.public_url(),
+              'cc': [
+                post.community.public_url() + '/followers'
+              ],
+              '@context': default_context(),
+              'object': delete_json
+            }
+
+            for instance in post.community.following_instances():
+                if instance.inbox:
+                    send_to_remote_instance(instance.id, post.community.id, announce)
+
+    if src == SRC_API:
+        return user.id, reply
+    else:
+        return
+
+
+def restore_reply(reply_id, src, auth):
+    if src == SRC_API:
+        reply = PostReply.query.filter_by(id=reply_id, deleted=True).one()
+        post = Post.query.filter_by(id=reply.post_id).one()
+        user = authorise_api_user(auth, return_type='model', id_match=reply.user_id)
+        if reply.deleted_by and reply.user_id != reply.deleted_by:
+            raise Exception('incorrect_login')
+    else:
+        reply = PostReply.query.get_or_404(reply_id)
+        post = Post.query.get_or_404(reply.post_id)
+        user = current_user
+
+    reply.deleted = False
+    reply.deleted_by = None
+
+    if not reply.author.bot:
+        post.reply_count += 1
+    reply.author.post_reply_count += 1
+    db.session.commit()
+    if src == SRC_WEB:
+        flash(_('Comment restored.'))
+
+    # federate undelete
+    if not post.community.local_only:
+        delete_json = {
+          'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+          'type': 'Delete',
+          'actor': user.public_url(),
+          'audience': post.community.public_url(),
+          'to': [
+            'https://www.w3.org/ns/activitystreams#Public'
+          ],
+          'published': ap_datetime(utcnow()),
+          'cc': [
+            post.community.public_url(),
+            user.followers_url()
+          ],
+          'object': reply.ap_id
+        }
+        undo_json = {
+          'id': f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}",
+          'type': 'Undo',
+          'actor': user.public_url(),
+          'audience': post.community.public_url(),
+          'to': [
+            'https://www.w3.org/ns/activitystreams#Public'
+          ],
+          'cc': [
+            post.community.public_url(),
+            user.followers_url()
+          ],
+          'object': delete_json,
+          '@context': default_context()
+        }
+
+        if not post.community.is_local():   # this is a remote community, send it to the instance that hosts it
+            success = post_request(post.community.ap_inbox_url, undo_json, user.private_key,
+                                        user.public_url() + '#main-key')
+            if src == SRC_WEB:
+                if success is False or isinstance(success, str):
+                    flash('Failed to send delete to remote server', 'error')
+
+        else:                               # local community - send it to followers on remote instances
+            del undo_json['@context']
+            announce = {
+              'id': f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+              'type': 'Announce',
+              'to': [
+                'https://www.w3.org/ns/activitystreams#Public'
+              ],
+              'actor': post.community.public_url(),
+              'cc': [
+                post.community.public_url() + '/followers'
+              ],
+              '@context': default_context(),
+              'object': undo_json
+            }
+
+            for instance in post.community.following_instances():
+                if instance.inbox:
+                    send_to_remote_instance(instance.id, post.community.id, announce)
 
     if src == SRC_API:
         return user.id, reply
