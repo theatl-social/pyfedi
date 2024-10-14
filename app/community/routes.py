@@ -623,37 +623,31 @@ def add_post(actor, type):
         community = Community.query.get_or_404(form.communities.data)
         if not can_create_post(current_user, community):
             abort(401)
-        post = Post(user_id=current_user.id, community_id=form.communities.data, instance_id=1)
-        save_post(form, post, post_type)
+
+        request_json = {
+            'id': None,
+            'object': {
+                'name': form.title.data,
+                'sticky': form.sticky.data,
+                'nsfw': form.nsfw.data,
+                'nsfl': form.nsfl.data,
+                'id': gibberish(),   # this will  be updated once we have the post.id
+                'mediaType': 'text/markdown',
+                'content': form.body.data,
+            }
+        }
+        # todo: add try..except
+        post = Post.new(current_user, community, request_json)
+
         community.post_count += 1
         current_user.post_count += 1
         community.last_active = g.site.last_active = utcnow()
-        db.session.commit()
         post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
         db.session.commit()
 
-        if post.image_id and post.image.file_path is None:
-            make_image_sizes(post.image_id, 170, 512, 'posts')  # the 512 sized image is for masonry view
-
-        # Update list of cross posts
-        if post.url:
-            other_posts = Post.query.filter(Post.id != post.id, Post.url == post.url, Post.deleted == False,
-                                    Post.posted_at > post.posted_at - timedelta(days=6)).all()
-            for op in other_posts:
-                if op.cross_posts is None:
-                    op.cross_posts = [post.id]
-                else:
-                    op.cross_posts.append(post.id)
-                if post.cross_posts is None:
-                    post.cross_posts = [op.id]
-                else:
-                    post.cross_posts.append(op.id)
-            db.session.commit()
-
         upvote_own_post(post)
-        notify_about_post(post)
 
-        if post_type == POST_TYPE_POLL:
+        if post.type == POST_TYPE_POLL:
             poll = Poll.query.filter_by(post_id=post.id).first()
             if not poll.local_only:
                 federate_post_to_user_followers(post)
@@ -665,7 +659,7 @@ def add_post(actor, type):
                 federate_post(community, post)
 
         return redirect(f"/post/{post.id}")
-    else:
+    else: # GET
         form.communities.data = community.id
         form.notify_author.data = True
         if post_type == POST_TYPE_POLL:

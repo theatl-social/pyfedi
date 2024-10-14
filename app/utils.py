@@ -898,51 +898,8 @@ def topic_tree() -> List:
     return [topic for topic in topics_dict.values() if topic['topic'].parent_id is None]
 
 
-# All the following post/comment ranking math is explained at https://medium.com/hacking-and-gonzo/how-reddit-ranking-algorithms-work-ef111e33d0d9
-epoch = datetime(1970, 1, 1)
-
-def epoch_seconds(date):
-    td = date - epoch
-    return td.days * 86400 + td.seconds + (float(td.microseconds) / 1000000)
-
-
 def post_ranking(score, date: datetime):
-    if date is None:
-        date = datetime.utcnow()
-    if score is None:
-        score = 1
-    order = math.log(max(abs(score), 1), 10)
-    sign = 1 if score > 0 else -1 if score < 0 else 0
-    seconds = epoch_seconds(date) - 1685766018
-    return round(sign * order + seconds / 45000, 7)
-
-
-# used for ranking comments
-def _confidence(ups, downs):
-    n = ups + downs
-
-    if n == 0:
-        return 0.0
-
-    z = 1.281551565545
-    p = float(ups) / n
-
-    left = p + 1 / (2 * n) * z * z
-    right = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n))
-    under = 1 + 1 / n * z * z
-
-    return (left - right) / under
-
-
-def confidence(ups, downs) -> float:
-    if ups is None or ups < 0:
-        ups = 0
-    if downs is None or downs < 0:
-        downs = 0
-    if ups + downs == 0:
-        return 0.0
-    else:
-        return _confidence(ups, downs)
+    return Post.post_ranking(score, date)
 
 
 def opengraph_parse(url):

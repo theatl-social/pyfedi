@@ -28,7 +28,7 @@ from app.post import bp
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
     request_etag_matches, ip_address, user_ip_banned, instance_banned, can_downvote, can_upvote, post_ranking, \
-    reply_already_exists, reply_is_just_link_to_gif_reaction, confidence, moderating_communities, joined_communities, \
+    reply_already_exists, reply_is_just_link_to_gif_reaction, moderating_communities, joined_communities, \
     blocked_instances, blocked_domains, community_moderators, blocked_phrases, show_ban_message, recently_upvoted_posts, \
     recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, reply_is_stupid, \
     languages_for_form, menu_topics, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown, \
@@ -546,11 +546,18 @@ def add_reply(post_id: int, comment_id: int):
         current_user.ip_address = ip_address()
         current_user.language_id = form.language_id.data
 
-        reply = PostReply.new(current_user, post, in_reply_to,
-                              body=piefed_markdown_to_lemmy_markdown(form.body.data),
-                              body_html=markdown_to_html(form.body.data),
-                              notify_author=form.notify_author.data,
-                              language_id=form.language_id.data)
+        try:
+            reply = PostReply.new(current_user, post, in_reply_to,
+                                  body=piefed_markdown_to_lemmy_markdown(form.body.data),
+                                  body_html=markdown_to_html(form.body.data),
+                                  notify_author=form.notify_author.data,
+                                  language_id=form.language_id.data)
+        except Exception as ex:
+            flash(_('Your reply was not accepted because %(reason)s', reason=str(ex)), 'error')
+            if in_reply_to.depth <= constants.THREAD_CUTOFF_DEPTH:
+                return redirect(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{in_reply_to.id}'))
+            else:
+                return redirect(url_for('post.continue_discussion', post_id=post_id, comment_id=in_reply_to.parent_id))
 
         form.body.data = ''
         flash('Your comment has been added.')
