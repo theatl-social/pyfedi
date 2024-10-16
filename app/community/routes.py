@@ -21,7 +21,7 @@ from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, Cre
     EditCommunityWikiPageForm
 from app.community.util import search_for_community, actor_to_community, \
     save_post, save_icon_file, save_banner_file, send_to_remote_instance, \
-    delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users
+    delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users, tags_from_string
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
     REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, POST_TYPE_POLL, MICROBLOG_APPS
@@ -624,6 +624,8 @@ def add_post(actor, type):
         if not can_create_post(current_user, community):
             abort(401)
 
+        language = Language.query.get(form.language_id.data)
+
         request_json = {
             'id': None,
             'object': {
@@ -634,13 +636,33 @@ def add_post(actor, type):
                 'id': gibberish(),   # this will  be updated once we have the post.id
                 'mediaType': 'text/markdown',
                 'content': form.body.data,
+                'tag': tags_from_string(form.tags.data),
+                'language': {'identifier': language.code, 'name': language.name}
             }
         }
+        if type == 'link':
+            request_json['object']['attachment'] = {'type': 'Link', 'href': form.link_url.data}
+        elif type == 'image':
+            request_json['object']['attachment'] = {'type': 'Image', 'url': image_url, 'name': form.image_alt_text}
+        elif type == 'video':
+            request_json['object']['attachment'] = {'type': 'Document', 'url': form.video_url.data}
+        elif type == 'poll':
+            request_json['object']['type'] = 'Question'
+            choices = [form.choice_1, form.choice_2, form.choice_3, form.choice_4, form.choice_5,
+                       form.choice_6, form.choice_7, form.choice_8, form.choice_9, form.choice_10]
+            key = 'oneOf' if form.mode.data == 'single' else 'anyOf'
+            request_json['object'][key] = []
+            for choice in choices:
+                choice_data = choice.data.strip()
+                if choice_data:
+                    request_json['object'][key].append({'name': choice_data})
+
         # todo: add try..except
         post = Post.new(current_user, community, request_json)
 
         community.post_count += 1
         current_user.post_count += 1
+        current_user.language_id = form.language_id.data
         community.last_active = g.site.last_active = utcnow()
         post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
         db.session.commit()
