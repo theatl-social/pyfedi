@@ -270,25 +270,28 @@ def calculate_if_has_children(reply):    # result used as True / False
 def reply_view(reply: PostReply | int, variant, user_id=None, my_vote=0):
     if isinstance(reply, int):
         reply = PostReply.query.get(reply)
-    if not reply or reply.deleted:
+    if not reply:
         raise Exception('reply_not_found')
-
 
     # Variant 1 - models/comment/comment.dart
     if variant == 1:
         include = ['id', 'user_id', 'post_id', 'body', 'deleted']
         v1 = {column.name: getattr(reply, column.name) for column in reply.__table__.columns if column.name in include}
 
-        v1['path'] = calculate_path(reply)
-        if reply.edited_at:
-            v1['edited_at'] = reply.edited_at.isoformat() + 'Z'
-
         v1.update({'published': reply.posted_at.isoformat() + 'Z',
                    'ap_id': reply.profile_id(),
                    'local': reply.is_local(),
                    'language_id': reply.language_id if reply.language_id else 0,
-                   'removed': reply.deleted,
-                   'distinguished': False})
+                   'distinguished': False,
+                   'removed': False})
+
+        v1['path'] = calculate_path(reply)
+        if reply.edited_at:
+            v1['edited_at'] = reply.edited_at.isoformat() + 'Z'
+        if reply.deleted == True:
+            v1['body'] = ''
+            if reply.deleted_by and reply.user_id != reply.deleted_by:
+                v1['removed'] = True
 
         return v1
 

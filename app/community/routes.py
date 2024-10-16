@@ -499,13 +499,18 @@ def unsubscribe(actor):
                 if '@' in actor:    # this is a remote community, so activitypub is needed
                     success = True
                     if not community.instance.gone_forever:
+                        follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
+                        if community.instance.domain == 'a.gup.pe':
+                            join_request = CommunityJoinRequest.query.filter_by(user_id=current_user.id, community_id=community.id).first()
+                            if join_request:
+                                follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
                         undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
                         follow = {
                           "actor": current_user.public_url(),
                           "to": [community.public_url()],
                           "object": community.public_url(),
                           "type": "Follow",
-                          "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
+                          "id": follow_id
                         }
                         undo = {
                           'actor': current_user.public_url(),
