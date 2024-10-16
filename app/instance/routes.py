@@ -79,7 +79,7 @@ def instance_people(instance_domain):
     if instance is None:
         abort(404)
 
-    if current_user.is_admin():
+    if current_user.is_authenticated and current_user.is_admin():
         people = User.query.filter_by(instance_id=instance.id, deleted=False, banned=False).order_by(desc(User.last_seen))
     else:
         people = User.query.filter_by(instance_id=instance.id, deleted=False, banned=False, searchable=True).order_by(desc(User.last_seen))

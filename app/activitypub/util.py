@@ -319,7 +319,7 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                     if actor_data.status_code == 200:
                         try:
                             actor_json = actor_data.json()
-                        except JSONDecodeError as e:
+                        except Exception as e:
                             actor_data.close()
                             return None
                         actor_data.close()
@@ -480,7 +480,7 @@ def refresh_user_profile_task(user_id):
 
             user.user_name = activity_json['preferredUsername'].strip()
             if 'name' in activity_json:
-                user.title = activity_json['name'].strip()
+                user.title = activity_json['name'].strip() if activity_json['name'] else ''
             if 'summary' in activity_json:
                 about_html = activity_json['summary']
                 if about_html is not None and not about_html.startswith('<'):                    # PeerTube
@@ -682,7 +682,7 @@ def actor_json_to_model(activity_json, address, server):
     if activity_json['type'] == 'Person' or activity_json['type'] == 'Service':
         try:
             user = User(user_name=activity_json['preferredUsername'].strip(),
-                        title=activity_json['name'].strip() if 'name' in activity_json else None,
+                        title=activity_json['name'].strip() if 'name' in activity_json and activity_json['name'] else None,
                         email=f"{address}@{server}",
                         matrix_user_id=activity_json['matrixUserId'] if 'matrixUserId' in activity_json else '',
                         indexable=activity_json['indexable'] if 'indexable' in activity_json else True,
@@ -918,29 +918,29 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
                         domain.post_count += 1
                         post.domain = domain
 
-        if post_json['type'] == 'Video':
-            post.type = POST_TYPE_VIDEO
-            post.url = post_json['id']
-            if 'icon' in post_json and isinstance(post_json['icon'], list):
-                icon = File(source_url=post_json['icon'][-1]['url'])
-                db.session.add(icon)
-                post.image = icon
-
-        if 'language' in post_json:
-            language = find_language_or_create(post_json['language']['identifier'], post_json['language']['name'])
-            if language:
-                post.language_id = language.id
-
-        if 'tag' in post_json:
-            for json_tag in post_json['tag']:
-                if json_tag['type'] == 'Hashtag':
-                    # Lemmy adds the community slug as a hashtag on every post in the community, which we want to ignore
-                    if json_tag['name'][1:].lower() != community.name.lower():
-                        hashtag = find_hashtag_or_create(json_tag['name'])
-                        if hashtag:
-                            post.tags.append(hashtag)
-
         if post is not None:
+            if post_json['type'] == 'Video':
+                post.type = POST_TYPE_VIDEO
+                post.url = post_json['id']
+                if 'icon' in post_json and isinstance(post_json['icon'], list):
+                    icon = File(source_url=post_json['icon'][-1]['url'])
+                    db.session.add(icon)
+                    post.image = icon
+
+            if 'language' in post_json:
+                language = find_language_or_create(post_json['language']['identifier'], post_json['language']['name'])
+                if language:
+                    post.language_id = language.id
+
+            if 'tag' in post_json:
+                for json_tag in post_json['tag']:
+                    if json_tag['type'] == 'Hashtag':
+                        # Lemmy adds the community slug as a hashtag on every post in the community, which we want to ignore
+                        if json_tag['name'][1:].lower() != community.name.lower():
+                            hashtag = find_hashtag_or_create(json_tag['name'])
+                            if hashtag:
+                                post.tags.append(hashtag)
+
             if 'image' in post_json and post.image is None:
                 image = File(source_url=post_json['image']['url'])
                 db.session.add(image)

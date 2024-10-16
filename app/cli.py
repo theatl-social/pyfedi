@@ -10,6 +10,7 @@ import flask
 import httpx
 from flask import json, current_app
 from flask_babel import _
+from requests import JSONDecodeError
 from sqlalchemy import or_, desc, text
 from sqlalchemy.orm import configure_mappers
 
@@ -217,7 +218,12 @@ def register(app):
                         nodeinfo = get_request(f"https://{instance.domain}/.well-known/nodeinfo", headers=HEADERS)
 
                         if nodeinfo.status_code == 200:
-                            nodeinfo_json = nodeinfo.json()
+                            try:
+                                nodeinfo_json = nodeinfo.json()
+                            except Exception as e:
+                                nodeinfo_json = {}
+                            finally:
+                                nodeinfo.close()
                             for links in nodeinfo_json['links']:
                                 if isinstance(links, dict) and 'rel' in links and (
                                         links['rel'] == 'http://nodeinfo.diaspora.software/ns/schema/2.0' or
@@ -240,7 +246,12 @@ def register(app):
                     try:
                         node = get_request(instance.nodeinfo_href, headers=HEADERS)
                         if node.status_code == 200:
-                            node_json = node.json()
+                            try:
+                                node_json = node.json()
+                            except Exception as e:
+                                node_json = {}
+                            finally:
+                                node.close()
                             if 'software' in node_json:
                                 instance.software = node_json['software']['name'].lower()
                                 instance.version = node_json['software']['version']
