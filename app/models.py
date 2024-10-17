@@ -1513,9 +1513,18 @@ class PostReply(db.Model):
             return parent.author.public_url()
 
     def delete_dependencies(self):
+        """
+        The first loop doesn't seem to ever be invoked with the current behaviour.
+        For replies with their own replies: functions which deal with removal don't set reply.deleted and don't call this, and
+        because reply.deleted isn't set, the cli task 7 days later doesn't call this either.
+
+        The plan is to set reply.deleted whether there's child replies or not (as happens with the API call), so I've commented
+        it out so the current behaviour isn't changed.
+
         for child_reply in self.child_replies():
             child_reply.delete_dependencies()
             db.session.delete(child_reply)
+        """
 
         db.session.query(PostReplyBookmark).filter(PostReplyBookmark.post_reply_id == self.id).delete()
         db.session.query(Report).filter(Report.suspect_post_reply_id == self.id).delete()
