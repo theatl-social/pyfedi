@@ -1653,6 +1653,71 @@ def post_reply_delete(post_id: int, comment_id: int):
     return redirect(url_for('activitypub.post_ap', post_id=post.id))
 
 
+@bp.route('/post/<int:post_id>/comment/<int:comment_id>/restore', methods=['GET', 'POST'])
+@login_required
+def post_reply_restore(post_id: int, comment_id: int):
+    post = Post.query.get_or_404(post_id)
+    post_reply = PostReply.query.get_or_404(comment_id)
+    community = post.community
+    if post_reply.user_id == current_user.id or post.community.is_moderator() or current_user.is_admin():
+        post_reply.deleted = False
+        post_reply.deleted_by = None
+        if not post_reply.author.bot:
+            post.reply_count += 1
+        post_reply.author.post_reply_count += 1
+        db.session.commit()
+        flash(_('Comment restored.'))
+
+        # Federate un-delete
+        if post.is_local():
+            delete_json = {
+              "actor": current_user.public_url(),
+              "to": ["https://www.w3.org/ns/activitystreams#Public"],
+              "object": {
+                  'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+                  'type': 'Delete',
+                  'actor': current_user.public_url(),
+                  'audience': post.community.public_url(),
+                  'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
+                  'published': ap_datetime(utcnow()),
+                  'cc': [
+                      current_user.followers_url()
+                  ],
+                  'object': post_reply.ap_id,
+                  'uri': post_reply.ap_id,
+                  "summary": "bad post reply",
+              },
+              "cc": [post.community.public_url()],
+              "audience": post.community.public_url(),
+              "type": "Undo",
+              "id": f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}"
+            }
+
+            announce = {
+                "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+                "type": 'Announce',
+                "to": [
+                    "https://www.w3.org/ns/activitystreams#Public"
+                ],
+                "actor": post.community.public_url(),
+                "cc": [
+                    post.community.ap_followers_url
+                ],
+                '@context': default_context(),
+                'object': delete_json
+            }
+
+            for instance in post.community.following_instances():
+                if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
+                    send_to_remote_instance(instance.id, post.community.id, announce)
+
+        if post_reply.user_id != current_user.id:
+            add_to_modlog('restore_post_reply', community_id=post.community.id, link_text=f'comment on {shorten_string(post.title)}',
+                          link=f'post/{post.id}#comment_{post_reply.id}')
+
+    return redirect(url_for('activitypub.post_ap', post_id=post.id))
+
+
 @bp.route('/post/<int:post_id>/notification', methods=['GET', 'POST'])
 @login_required
 def post_notification(post_id: int):
