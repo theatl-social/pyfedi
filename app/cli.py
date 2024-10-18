@@ -195,7 +195,8 @@ def register(app):
             for post_reply in PostReply.query.filter(PostReply.deleted == True,
                                                      PostReply.posted_at < utcnow() - timedelta(days=7)).all():
                 post_reply.delete_dependencies()
-                db.session.delete(post_reply)
+                if not post_reply.has_replies():
+                    db.session.delete(post_reply)
             db.session.commit()
 
             for post in Post.query.filter(Post.deleted == True,
