@@ -1597,17 +1597,12 @@ def post_reply_delete(post_id: int, comment_id: int):
     post_reply = PostReply.query.get_or_404(comment_id)
     community = post.community
     if post_reply.user_id == current_user.id or community.is_moderator() or current_user.is_admin():
-        if post_reply.has_replies():
-            post_reply.body = 'Deleted by author' if post_reply.author.id == current_user.id else 'Deleted by moderator'
-            post_reply.body_html = markdown_to_html(post_reply.body)
-        else:
-            post_reply.delete_dependencies()
-            post_reply.deleted = True
+        post_reply.deleted = True
+        post_reply.deleted_by = current_user.id
         g.site.last_active = community.last_active = utcnow()
         if not post_reply.author.bot:
             post.reply_count -= 1
         post_reply.author.post_reply_count -= 1
-        post_reply.deleted_by = current_user.id
         db.session.commit()
         flash(_('Comment deleted.'))
         # federate delete
