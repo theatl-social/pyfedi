@@ -1722,6 +1722,29 @@ def post_reply_restore(post_id: int, comment_id: int):
     return redirect(url_for('activitypub.post_ap', post_id=post.id))
 
 
+@bp.route('/post/<int:post_id>/comment/<int:comment_id>/purge', methods=['GET', 'POST'])
+@login_required
+def post_reply_purge(post_id: int, comment_id: int):
+    post = Post.query.get_or_404(post_id)
+    post_reply = PostReply.query.get_or_404(comment_id)
+    if not post_reply.deleted:
+        abort(404)
+    if post_reply.user_id == current_user.id and (post_reply.deleted_by is None or post_reply.deleted_by != post_reply.user_id):
+        abort(401)
+    if post_reply.user_id == current_user.id or post.community.is_moderator() or current_user.is_admin():
+        if not post_reply.has_replies():
+            post_reply.delete_dependencies()
+            db.session.delete(post_reply)
+            db.session.commit()
+            flash(_('Comment purged.'))
+        else:
+            flash(_('Comments that have been replied to cannot be purged.'))
+    else:
+        abort(401)
+
+    return redirect(url_for('activitypub.post_ap', post_id=post.id))
+
+
 @bp.route('/post/<int:post_id>/notification', methods=['GET', 'POST'])
 @login_required
 def post_notification(post_id: int):
