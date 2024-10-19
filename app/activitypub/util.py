@@ -220,6 +220,13 @@ def comment_model_to_json(reply: PostReply) -> dict:
     }
     if reply.edited_at:
         reply_data['updated'] = ap_datetime(reply.edited_at)
+    if reply.deleted:
+        if reply.deleted_by == reply.user_id:
+            reply_data['content'] = '<p>Deleted by author</p>'
+            reply_data['source']['content'] = 'Deleted by author'
+        else:
+            reply_data['content'] = '<p>Deleted by moderator</p>'
+            reply_data['source']['content'] = 'Deleted by moderator'
     return reply_data
 
 
@@ -1295,18 +1302,24 @@ def is_activitypub_request():
     return 'application/ld+json' in request.headers.get('Accept', '') or 'application/activity+json' in request.headers.get('Accept', '')
 
 
-def delete_post_or_comment(user_ap_id, community_ap_id, to_be_deleted_ap_id):
+def delete_post_or_comment(user_ap_id, community_ap_id, to_be_deleted_ap_id, aplog_id):
     if current_app.debug:
-        delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id)
+        delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id, aplog_id)
     else:
-        delete_post_or_comment_task.delay(user_ap_id, community_ap_id, to_be_deleted_ap_id)
+        delete_post_or_comment_task.delay(user_ap_id, community_ap_id, to_be_deleted_ap_id, aplog_id)
 
 
 @celery.task
-def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id):
+def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id, aplog_id):
     deletor = find_actor_or_create(user_ap_id)
     community = find_actor_or_create(community_ap_id, community_only=True)
     to_delete = find_liked_object(to_be_deleted_ap_id)
+    if to_delete.deleted:
+        aplog = ActivityPubLog.query.get(aplog_id)
+        if aplog:
+            aplog.result = 'ignored'
+            aplog.exception_message = 'Activity about local content which is already present'
+        return
 
     if deletor and community and to_delete:
         if deletor.is_admin() or community.is_moderator(deletor) or community.is_instance_admin(deletor) or to_delete.author.id == deletor.id:
@@ -1323,12 +1336,8 @@ def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id
             elif isinstance(to_delete, PostReply):
                 if not to_delete.author.bot:
                     to_delete.post.reply_count -= 1
-                if to_delete.has_replies():
-                    to_delete.body = 'Deleted by author' if to_delete.author.id == deletor.id else 'Deleted by moderator'
-                    to_delete.body_html = markdown_to_html(to_delete.body)
-                else:
-                    to_delete.delete_dependencies()
-                    to_delete.deleted = True
+                to_delete.deleted = True
+                to_delete.deleted_by = deletor.id
                 to_delete.author.post_reply_count -= 1
                 to_delete.deleted_by = deletor.id
                 db.session.commit()
@@ -1398,12 +1407,8 @@ def remove_data_from_banned_user_task(deletor_ap_id, user_ap_id, target):
     for post_reply in post_replies:
         if not user.bot:
             post_reply.post.reply_count -= 1
-        if post_reply.has_replies():
-            post_reply.body = 'Banned'
-            post_reply.body_html = markdown_to_html(post_reply.body)
-        else:
-            post_reply.delete_dependencies()
-            post_reply.deleted = True
+        post_reply.deleted = True
+        post_reply.deleted_by = deletor.id
     db.session.commit()
 
     for post in posts:

@@ -11,7 +11,7 @@ from app.utils import blocked_instances, blocked_users
 
 # replies to a post, in a tree, sorted by a variety of methods
 def post_replies(post_id: int, sort_by: str, show_first: int = 0) -> List[PostReply]:
-    comments = PostReply.query.filter_by(post_id=post_id).filter(PostReply.deleted == False)
+    comments = PostReply.query.filter_by(post_id=post_id)
     if current_user.is_authenticated:
         instance_ids = blocked_instances(current_user.id)
         if instance_ids:
@@ -52,7 +52,7 @@ def get_comment_branch(post_id: int, comment_id: int, sort_by: str) -> List[Post
     if parent_comment is None:
         return []
 
-    comments = PostReply.query.filter(PostReply.post_id == post_id, PostReply.deleted == False)
+    comments = PostReply.query.filter(PostReply.post_id == post_id)
     if current_user.is_authenticated:
         instance_ids = blocked_instances(current_user.id)
         if instance_ids:

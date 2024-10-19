@@ -28,7 +28,15 @@
                                 {% endif %}
                             </div>
                             <div class="comment_body hidable {% if comment['comment'].reports and current_user.is_authenticated and post.community.is_moderator(current_user) %}reported{% endif %}">
-                                {{ comment['comment'].body_html | safe }}
+                                {% if comment['comment'].deleted -%}
+                                  {% if comment['comment'].deleted_by is none or comment['comment'].deleted_by != comment['comment'].user_id -%}
+                                    <p>Deleted by moderator</p>
+                                  {% else -%}
+                                    <p>Deleted by author</p>
+                                  {% endif -%}
+                                {% else -%}
+                                  {{ comment['comment'].body_html | community_links | safe }}
+                                {% endif -%}
                             </div>
                         </div>
                         <div class="comment_actions hidable">

@@ -4,7 +4,7 @@
   no_collapse: Don't collapse for admin and moderator views
 #}
 {% if current_user.is_authenticated -%}
-    {% set collapsed = (post_reply.score <= current_user.reply_collapse_threshold)
+    {% set collapsed = ((post_reply.score <= current_user.reply_collapse_threshold) or post_reply.deleted)
                        and not no_collapse -%}
 {% else -%}
     {% set collapsed = (post_reply.score <= -10) and not no_collapse -%}
@@ -34,6 +34,11 @@
         <div class="col-auto">
             {% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) -%}
                 <span class="red fe fe-report" title="{{ _('Reported. Check comment for issues.') }}"></span>
+            {% endif -%}
+        </div>
+        <div class="col-auto">
+            {% if post_reply.deleted -%}
+                <span class="red fe fe-delete" title="{{ _('Comment deleted') }}"></span>
             {% endif -%}
         </div>
         <div class="col-auto">

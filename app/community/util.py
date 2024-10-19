@@ -566,12 +566,8 @@ def delete_post_reply_from_community_task(post_reply_id):
     post = post_reply.post
     community = post.community
     if post_reply.user_id == current_user.id or community.is_moderator():
-        if post_reply.has_replies():
-            post_reply.body = 'Deleted by author' if post_reply.author.id == current_user.id else 'Deleted by moderator'
-            post_reply.body_html = markdown_to_html(post_reply.body)
-        else:
-            post_reply.delete_dependencies()
-            post_reply.deleted = True
+        post_reply.deleted = True
+        post_reply.deleted_by = current_user.id
         db.session.commit()
 
         # federate delete
