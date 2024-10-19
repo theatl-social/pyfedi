@@ -220,6 +220,13 @@ def comment_model_to_json(reply: PostReply) -> dict:
     }
     if reply.edited_at:
         reply_data['updated'] = ap_datetime(reply.edited_at)
+    if reply.deleted:
+        if reply.deleted_by == reply.user_id:
+            reply_data['content'] = '<p>Deleted by author</p>'
+            reply_data['source']['content'] = 'Deleted by author'
+        else:
+            reply_data['content'] = '<p>Deleted by moderator</p>'
+            reply_data['source']['content'] = 'Deleted by moderator'
     return reply_data
 
 
