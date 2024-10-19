@@ -1626,11 +1626,12 @@ def post_reply_delete(post_id: int, comment_id: int):
             if post_reply.user_id != current_user.id:
                 delete_json['summary'] = 'Deleted by mod'
 
-            if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
-                success = post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
-                                       current_user.public_url() + '#main-key')
-                if success is False or isinstance(success, str):
-                    flash('Failed to send delete to remote server', 'error')
+            if not post.community.is_local():
+                if post_reply.user_id == current_user.id or post.community.is_moderator(current_user):
+                    success = post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
+                                           current_user.public_url() + '#main-key')
+                    if success is False or isinstance(success, str):
+                        flash('Failed to send delete to remote server', 'error')
             else:  # local community - send it to followers on remote instances
                 announce = {
                     "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
@@ -1664,6 +1665,10 @@ def post_reply_restore(post_id: int, comment_id: int):
     post_reply = PostReply.query.get_or_404(comment_id)
     community = post.community
     if post_reply.user_id == current_user.id or post.community.is_moderator() or current_user.is_admin():
+        if post_reply.deleted_by == post_reply.user_id:
+            was_mod_deletion = False
+        else:
+            was_mod_deletion = True
         post_reply.deleted = False
         post_reply.deleted_by = None
         if not post_reply.author.bot:
@@ -1673,7 +1678,7 @@ def post_reply_restore(post_id: int, comment_id: int):
         flash(_('Comment restored.'))
 
         # Federate un-delete
-        if post.is_local():
+        if not post.community.local_only:
             delete_json = {
               "actor": current_user.public_url(),
               "to": ["https://www.w3.org/ns/activitystreams#Public"],
@@ -1689,31 +1694,40 @@ def post_reply_restore(post_id: int, comment_id: int):
                   ],
                   'object': post_reply.ap_id,
                   'uri': post_reply.ap_id,
-                  "summary": "bad post reply",
               },
               "cc": [post.community.public_url()],
               "audience": post.community.public_url(),
               "type": "Undo",
               "id": f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}"
             }
+            if was_mod_deletion:
+                delete_json['object']['summary'] = "Deleted by mod"
 
-            announce = {
-                "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
-                "type": 'Announce',
-                "to": [
-                    "https://www.w3.org/ns/activitystreams#Public"
-                ],
-                "actor": post.community.public_url(),
-                "cc": [
-                    post.community.ap_followers_url
-                ],
-                '@context': default_context(),
-                'object': delete_json
-            }
+            if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
+                if not was_mod_deletion or (was_mod_deletion and post.community.is_moderator(current_user)):
+                    success = post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
+                                           current_user.public_url() + '#main-key')
+                    if success is False or isinstance(success, str):
+                        flash('Failed to send delete to remote server', 'error')
 
-            for instance in post.community.following_instances():
-                if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
-                    send_to_remote_instance(instance.id, post.community.id, announce)
+            else:  # local community - send it to followers on remote instances
+                announce = {
+                  "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+                  "type": 'Announce',
+                  "to": [
+                      "https://www.w3.org/ns/activitystreams#Public"
+                  ],
+                  "actor": post.community.public_url(),
+                  "cc": [
+                      post.community.ap_followers_url
+                  ],
+                  '@context': default_context(),
+                  'object': delete_json
+                }
+
+                for instance in post.community.following_instances():
+                    if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
+                        send_to_remote_instance(instance.id, post.community.id, announce)
 
         if post_reply.user_id != current_user.id:
             add_to_modlog('restore_post_reply', community_id=post.community.id, link_text=f'comment on {shorten_string(post.title)}',

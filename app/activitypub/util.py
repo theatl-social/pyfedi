@@ -1295,18 +1295,24 @@ def is_activitypub_request():
     return 'application/ld+json' in request.headers.get('Accept', '') or 'application/activity+json' in request.headers.get('Accept', '')
 
 
-def delete_post_or_comment(user_ap_id, community_ap_id, to_be_deleted_ap_id):
+def delete_post_or_comment(user_ap_id, community_ap_id, to_be_deleted_ap_id, aplog_id):
     if current_app.debug:
-        delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id)
+        delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id, aplog_id)
     else:
-        delete_post_or_comment_task.delay(user_ap_id, community_ap_id, to_be_deleted_ap_id)
+        delete_post_or_comment_task.delay(user_ap_id, community_ap_id, to_be_deleted_ap_id, aplog_id)
 
 
 @celery.task
-def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id):
+def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id, aplog_id):
     deletor = find_actor_or_create(user_ap_id)
     community = find_actor_or_create(community_ap_id, community_only=True)
     to_delete = find_liked_object(to_be_deleted_ap_id)
+    if to_delete.deleted:
+        aplog = ActivityPubLog.query.get(aplog_id)
+        if aplog:
+            aplog.result = 'ignored'
+            aplog.exception_message = 'Activity about local content which is already present'
+        return
 
     if deletor and community and to_delete:
         if deletor.is_admin() or community.is_moderator(deletor) or community.is_instance_admin(deletor) or to_delete.author.id == deletor.id:

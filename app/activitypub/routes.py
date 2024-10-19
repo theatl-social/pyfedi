@@ -835,8 +835,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                 for ocp in old_cross_posts:
                                     if ocp.cross_posts is not None and post.id in ocp.cross_posts:
                                         ocp.cross_posts.remove(post.id)
-                            delete_post_or_comment(user_ap_id, community_ap_id, to_be_deleted_ap_id)
-                            activity_log.result = 'success'
+                            delete_post_or_comment(user_ap_id, community_ap_id, to_be_deleted_ap_id, activity_log.id)
                     elif request_json['object']['type'] == 'Page': # Sent for Mastodon's benefit
                         activity_log.result = 'ignored'
                         activity_log.exception_message = 'Intended for Mastodon'
