@@ -46,36 +46,30 @@
             {{ post_reply.body_html | community_links | safe }}
         </div>
     </div>
-    <div class="row comment_actions hidable">
-        <div class="col-auto">
+    <div class="comment_actions hidable">
             {% if post_reply.post.comments_enabled -%}
                 <a href="{{ url_for('post.add_reply', post_id=post_reply.post.id, comment_id=post_reply.id) }}" class="" rel="nofollow noindex"><span class="fe fe-reply"></span> reply</a>
             {% endif -%}
+        <div class="voting_buttons_new">
+            {% with comment=post_reply, community=post_reply.post.community -%}
+                {% include "post/_comment_voting_buttons.html" -%}
+            {% endwith -%}
         </div>
-        <div class="col-auto voting_buttons_new">
-            {% if not disable_voting -%}
-                {% with comment=post_reply, community=post_reply.post.community -%}
-                    {% include "post/_comment_voting_buttons.html" -%}
-                {% endwith -%}
-            {% endif -%}
-        </div>
-        <div class="col-auto hide_button">
+        <div class="hide_button">
             {% if collapsed -%}
                 <a href='#' class=""><span class="fe fe-expand"></span></a>
             {% else -%}
                 <a href='#' class=""><span class="fe fe-collapse"></span></a>
             {% endif -%}
         </div>
-        <div class="col-auto ms-auto">
+        <div class="notify_toggle">
             {% if current_user.is_authenticated -%}
                 {% with comment=dict(comment=post_reply) -%}
                     {% include "post/_reply_notification_toggle.html" -%}
                 {% endwith -%}
             {% endif -%}
         </div>
-        <div class="col-auto">
-            <a href="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) }}" class="" rel="nofollow noindex" aria-label="{{ _('Comment options') }}"><span class="fe fe-options" title="Options"> </span></a>
-        </div>
+        <a href="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) }}" class="comment_actions_link" rel="nofollow noindex" aria-label="{{ _('Comment options') }}"><span class="fe fe-options" title="Options"> </span></a>
     </div>
     {% if not post_reply.author.indexable -%}<!--googleon all-->{% endif -%}
     {% if collapsed -%}
