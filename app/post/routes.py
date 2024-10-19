@@ -681,9 +681,13 @@ def post_options(post_id: int):
 def post_reply_options(post_id: int, comment_id: int):
     post = Post.query.get_or_404(post_id)
     post_reply = PostReply.query.get_or_404(comment_id)
-    if current_user.is_anonymous or not current_user.is_admin():
-        if post.deleted or post_reply.deleted:
+    if post.deleted or post_reply.deleted:
+        if current_user.is_anonymous:
             abort(404)
+        if (not post.community.is_moderator() and
+            not current_user.is_admin() and
+            (post_reply.deleted_by is not None and post_reply.deleted_by != current_user.id)):
+            abort(401)
 
     existing_bookmark = []
     if current_user.is_authenticated:
