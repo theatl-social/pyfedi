@@ -1314,11 +1314,11 @@ def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id
     deletor = find_actor_or_create(user_ap_id)
     community = find_actor_or_create(community_ap_id, community_only=True)
     to_delete = find_liked_object(to_be_deleted_ap_id)
-    if to_delete.deleted:
+    if to_delete and to_delete.deleted:
         aplog = ActivityPubLog.query.get(aplog_id)
         if aplog:
             aplog.result = 'ignored'
-            aplog.exception_message = 'Activity about local content which is already present'
+            aplog.exception_message = 'Activity about local content which is already deleted'
         return
 
     if deletor and community and to_delete:
