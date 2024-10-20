@@ -1,12 +1,16 @@
+import base64
+import os
 from collections import namedtuple
 from io import BytesIO
 from random import randint
 
 import flask
+from PIL import Image, ImageOps
 from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, g, json, \
     jsonify
 from flask_login import current_user, login_required
 from flask_babel import _
+from pillow_heif import register_heif_opener
 from slugify import slugify
 from sqlalchemy import or_, desc, text
 
@@ -21,7 +25,8 @@ from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, Cre
     EditCommunityWikiPageForm
 from app.community.util import search_for_community, actor_to_community, \
     save_post, save_icon_file, save_banner_file, send_to_remote_instance, \
-    delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users, tags_from_string
+    delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users, tags_from_string, \
+    allowed_extensions, end_poll_date
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
     REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, POST_TYPE_POLL, MICROBLOG_APPS
@@ -38,7 +43,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     joined_communities, moderating_communities, blocked_domains, mimetype_from_url, blocked_instances, \
     community_moderators, communities_banned_from, show_ban_message, recently_upvoted_posts, recently_downvoted_posts, \
     blocked_users, post_ranking, languages_for_form, english_language_id, menu_topics, add_to_modlog, \
-    blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown
+    blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, ensure_directory_exists
 from feedgen.feed import FeedGenerator
 from datetime import timezone, timedelta
 from copy import copy
@@ -581,8 +586,8 @@ def add_post(actor, type):
         return show_ban_message()
     community = actor_to_community(actor)
 
+    post_type = POST_TYPE_ARTICLE
     if type == 'discussion':
-        post_type = POST_TYPE_ARTICLE
         form = CreateDiscussionForm()
     elif type == 'link':
         post_type = POST_TYPE_LINK
@@ -630,6 +635,7 @@ def add_post(actor, type):
             'id': None,
             'object': {
                 'name': form.title.data,
+                'type': 'Page',
                 'sticky': form.sticky.data,
                 'nsfw': form.nsfw.data,
                 'nsfl': form.nsfl.data,
@@ -641,11 +647,42 @@ def add_post(actor, type):
             }
         }
         if type == 'link':
-            request_json['object']['attachment'] = {'type': 'Link', 'href': form.link_url.data}
+            request_json['object']['attachment'] = [{'type': 'Link', 'href': form.link_url.data}]
         elif type == 'image':
-            request_json['object']['attachment'] = {'type': 'Image', 'url': image_url, 'name': form.image_alt_text}
+            uploaded_file = request.files['image_file']
+            if uploaded_file and uploaded_file.filename != '':
+                # check if this is an allowed type of file
+                file_ext = os.path.splitext(uploaded_file.filename)[1]
+                if file_ext.lower() not in allowed_extensions:
+                    abort(400, description="Invalid image type.")
+
+                new_filename = gibberish(15)
+                # set up the storage directory
+                directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
+                ensure_directory_exists(directory)
+
+                final_place = os.path.join(directory, new_filename + file_ext)
+                uploaded_file.seek(0)
+                uploaded_file.save(final_place)
+
+                if file_ext.lower() == '.heic':
+                    register_heif_opener()
+
+                Image.MAX_IMAGE_PIXELS = 89478485
+
+                # resize if necessary
+                img = Image.open(final_place)
+                if '.' + img.format.lower() in allowed_extensions:
+                    img = ImageOps.exif_transpose(img)
+
+                    # limit full sized version to 2000px
+                    img.thumbnail((2000, 2000))
+                    img.save(final_place)
+
+                request_json['object']['attachment'] = [{'type': 'Image', 'url': f'https://{current_app.config["SERVER_NAME"]}/{final_place.replace("app/", "")}',
+                                                        'name': form.image_alt_text.data}]
         elif type == 'video':
-            request_json['object']['attachment'] = {'type': 'Document', 'url': form.video_url.data}
+            request_json['object']['attachment'] = [{'type': 'Document', 'url': form.video_url.data}]
         elif type == 'poll':
             request_json['object']['type'] = 'Question'
             choices = [form.choice_1, form.choice_2, form.choice_3, form.choice_4, form.choice_5,
@@ -656,6 +693,7 @@ def add_post(actor, type):
                 choice_data = choice.data.strip()
                 if choice_data:
                     request_json['object'][key].append({'name': choice_data})
+            request_json['object']['endTime'] = end_poll_date(form.finish_in.data)
 
         # todo: add try..except
         post = Post.new(current_user, community, request_json)
@@ -1950,7 +1988,7 @@ def check_url_already_posted():
 def upvote_own_post(post):
         post.score = 1
         post.up_votes = 1
-        post.ranking = post_ranking(post.score, utcnow())
+        post.ranking = post.post_ranking(post.score, utcnow())
         vote = PostVote(user_id=current_user.id, post_id=post.id, author_id=current_user.id, effect=1)
         db.session.add(vote)
         db.session.commit()

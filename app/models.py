@@ -1130,7 +1130,7 @@ class Post(db.Model):
 
     @classmethod
     def new(cls, user: User, community: Community, request_json: dict, announce_id=None):
-        from activitypub.util import instance_weight, find_language_or_create, find_language, find_hashtag_or_create, \
+        from app.activitypub.util import instance_weight, find_language_or_create, find_language, find_hashtag_or_create, \
             make_image_sizes, notify_about_post
         from app.utils import allowlist_html, markdown_to_html, html_to_text, microblog_content_to_title, blocked_phrases, \
             is_image_url, is_video_url, domain_from_url, opengraph_parse, shorten_string, remove_tracking_from_link, \
@@ -1160,7 +1160,8 @@ class Post(db.Model):
                     score=instance_weight(user.ap_domain),
                     instance_id=user.instance_id,
                     indexable=user.indexable,
-                    microblog=microblog
+                    microblog=microblog,
+                    posted_at=utcnow()
                     )
 
         if 'content' in request_json['object'] and request_json['object']['content'] is not None:
@@ -1305,7 +1306,7 @@ class Post(db.Model):
                 if is_video_hosting_site(post.url):
                     post.type = constants.POST_TYPE_VIDEO
             db.session.add(post)
-            post.ranking = post_ranking(post.score, post.posted_at)
+            post.ranking = post.post_ranking(post.score, post.posted_at)
             community.post_count += 1
             community.last_active = utcnow()
             user.post_count += 1
@@ -1351,7 +1352,7 @@ class Post(db.Model):
             if user.reputation > 100:
                 post.up_votes += 1
                 post.score += 1
-                post.ranking = Post.post_ranking(post.score, post.posted_at)
+                post.ranking = post.post_ranking(post.score, post.posted_at)
                 db.session.commit()
 
         return post
@@ -1363,17 +1364,6 @@ class Post(db.Model):
     def epoch_seconds(self, date):
         td = date - self.epoch
         return td.days * 86400 + td.seconds + (float(td.microseconds) / 1000000)
-
-    @classmethod
-    def post_ranking(cls, score, date: datetime):
-        if date is None:
-            date = datetime.utcnow()
-        if score is None:
-            score = 1
-        order = math.log(max(abs(score), 1), 10)
-        sign = 1 if score > 0 else -1 if score < 0 else 0
-        seconds = Post.epoch_seconds(date) - 1685766018
-        return round(sign * order + seconds / 45000, 7)
 
     def delete_dependencies(self):
         db.session.query(PostBookmark).filter(PostBookmark.post_id == self.id).delete()
