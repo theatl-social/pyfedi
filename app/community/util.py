@@ -484,7 +484,7 @@ def end_poll_date(end_choice):
         raise ValueError("Invalid choice")
 
 
-def tags_from_string(tags: str) -> List[Tag]:
+def tags_from_string(tags: str) -> List[dict]:
     return_value = []
     tags = tags.strip()
     if tags == '':
@@ -496,7 +496,7 @@ def tags_from_string(tags: str) -> List[Tag]:
             tag = tag[1:]
         tag_to_append = find_hashtag_or_create(tag)
         if tag_to_append:
-            return_value.append(tag_to_append)
+            return_value.append({'type': 'Hashtag', 'name': tag_to_append.name})
     return return_value
 
 
