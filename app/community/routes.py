@@ -698,10 +698,8 @@ def add_post(actor, type):
         # todo: add try..except
         post = Post.new(current_user, community, request_json)
 
-        community.post_count += 1
-        current_user.post_count += 1
         current_user.language_id = form.language_id.data
-        community.last_active = g.site.last_active = utcnow()
+        g.site.last_active = utcnow()
         post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
         db.session.commit()
 
