@@ -1314,8 +1314,9 @@ def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id
     deletor = find_actor_or_create(user_ap_id)
     community = find_actor_or_create(community_ap_id, community_only=True)
     to_delete = find_liked_object(to_be_deleted_ap_id)
+    aplog = ActivityPubLog.query.get(aplog_id)
+
     if to_delete and to_delete.deleted:
-        aplog = ActivityPubLog.query.get(aplog_id)
         if aplog:
             aplog.result = 'ignored'
             aplog.exception_message = 'Activity about local content which is already deleted'
@@ -1345,6 +1346,16 @@ def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id
                     add_to_modlog_activitypub('delete_post_reply', deletor, community_id=community.id,
                                               link_text=f'comment on {shorten_string(to_delete.post.title)}',
                                               link=f'post/{to_delete.post.id}#comment_{to_delete.id}')
+            if aplog:
+                aplog.result = 'success'
+        else:
+           if aplog:
+                aplog.result = 'failure'
+                aplog.exception_message = 'Deletor did not have permission'
+    else:
+       if aplog:
+            aplog.result = 'failure'
+            aplog.exception_message = 'Unable to resolve deletor, community, or target'
 
 
 def restore_post_or_comment(object_json):
