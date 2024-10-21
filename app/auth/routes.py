@@ -9,7 +9,7 @@ from wtforms import Label
 from app import db, cache
 from app.auth import bp
 from app.auth.forms import LoginForm, RegistrationForm, ResetPasswordRequestForm, ResetPasswordForm
-from app.auth.util import random_token, normalize_utf, ip2location
+from app.auth.util import random_token, normalize_utf, ip2location, no_admins_logged_in_recently
 from app.email import send_verification_email, send_password_reset_email
 from app.models import User, utcnow, IpBan, UserRegistration, Notification, Site
 from app.utils import render_template, ip_address, user_ip_banned, user_cookie_banned, banned_ip_addresses, \
@@ -91,6 +91,11 @@ def register():
     disallowed_usernames = ['admin']
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
+
+    # Abandoned open instances automatically close registrations after one week
+    if g.site.registration_mode == 'Open' and no_admins_logged_in_recently():
+        g.site.registration_mode = 'Closed'
+
     form = RegistrationForm()
     # Recaptcha is optional
     if not current_app.config['RECAPTCHA_PUBLIC_KEY'] or not current_app.config['RECAPTCHA_PRIVATE_KEY']:

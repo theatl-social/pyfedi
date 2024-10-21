@@ -1,9 +1,11 @@
 import random
+from datetime import timedelta
 from unicodedata import normalize
 
 from flask import current_app
 
 from app import cache
+from app.models import Site, utcnow
 from app.utils import get_request
 
 
@@ -41,3 +43,16 @@ def ip2location(ip: str):
         postal = ''
     return {'city': data['city'], 'region': data['region'], 'country': data['country'], 'postal': postal,
             'timezone': data['timezone']}
+
+
+def no_admins_logged_in_recently():
+    a_week_ago = utcnow() - timedelta(days=7)
+    for user in Site.admins():
+        if user.last_seen > a_week_ago:
+            return False
+
+    for user in Site.staff():
+        if user.last_seen > a_week_ago:
+            return False
+
+    return True
