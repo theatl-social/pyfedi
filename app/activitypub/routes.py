@@ -1107,18 +1107,21 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                         # Delete PostReply
                         reply = PostReply.query.filter_by(ap_id=ap_id).first()
                         if reply:
-                            if can_delete(request_json['actor'], reply):
-                                reply.body_html = '<p><em>deleted</em></p>'
-                                reply.body = 'deleted'
-                                if not reply.author.bot:
-                                    reply.post.reply_count -= 1
-                                reply.deleted = True
-                                announce_activity_to_followers(reply.community, reply.author, request_json)
-                                reply.author.post_reply_count -= 1
-                                db.session.commit()
-                                activity_log.result = 'success'
+                            deletor = find_actor_or_create(request_json['actor'], create_if_not_found=False)
+                            if deletor:
+                                if reply.author.id == deletor.id or reply.community.is_moderator(deletor) or reply.community.is_instance_admin(deletor):
+                                    reply.deleted = True
+                                    reply.deleted_by = deletor.id
+                                    if not reply.author.bot:
+                                        reply.post.reply_count -= 1
+                                    reply.author.post_reply_count -= 1
+                                    announce_activity_to_followers(reply.community, reply.author, request_json)
+                                    db.session.commit()
+                                    activity_log.result = 'success'
+                                else:
+                                    activity_log.exception_message = 'Delete attempt denied'
                             else:
-                                activity_log.exception_message = 'Delete attempt denied'
+                                activity_log.exception_message = 'Deletor did not already exist'
                         else:
                             # Delete User
                             user = find_actor_or_create(ap_id, create_if_not_found=False)
