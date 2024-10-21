@@ -10,9 +10,7 @@ import flask
 import httpx
 from flask import json, current_app
 from flask_babel import _
-from requests import JSONDecodeError
 from sqlalchemy import or_, desc, text
-from sqlalchemy.orm import configure_mappers
 
 from app import db
 import click
@@ -203,7 +201,11 @@ def register(app):
                                           Post.posted_at < utcnow() - timedelta(days=7)).all():
                 post.delete_dependencies()
                 db.session.delete(post)
+            db.session.commit()
 
+            # Delete voting data after 6 months
+            db.session.execute(text('DELETE FROM "post_vote" WHERE created_at < :cutoff'), {'cutoff': utcnow() - timedelta(days=28 * 6)})
+            db.session.execute(text('DELETE FROM "post_reply_vote" WHERE created_at < :cutoff'), {'cutoff': utcnow() - timedelta(days=28 * 6)})
             db.session.commit()
 
             # Check for dormant or dead instances
