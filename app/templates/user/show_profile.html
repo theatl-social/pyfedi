@@ -99,7 +99,9 @@
             {{ _('Posts') }}: {{ user.post_count }}<br />
             {{ _('Comments') }}: {{ user.post_reply_count }}<br />
         </p>
-        {{ user.about_html|safe }}
+        <div class="profile_bio">
+            {{ user.about_html|safe }}
+        </div>
         {% if posts %}
             <h2 class="mt-4">Posts</h2>
             <div class="post_list">

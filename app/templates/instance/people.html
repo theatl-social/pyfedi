@@ -28,7 +28,7 @@
                 {% for person in people.items %}
                     <tr>
                         <td valign="top">{{ render_username(person) }}</td>
-                        <td>{{ person.about_html | safe if person.about_html }}</td>
+                        <td class="profile_bio">{{ person.about_html | safe if person.about_html }}</td>
                         <td valign="top">{{ person.post_count }}</td>
                         <td valign="top">{{ person.post_reply_count }}</td>
                     </tr>
