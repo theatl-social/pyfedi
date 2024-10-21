@@ -853,8 +853,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             post = undo_vote(activity_log, comment, post, target_ap_id, user)
                         elif request_json['object']['object']['type'] == 'Delete':
                             if 'object' in request_json and 'object' in request_json['object']:
-                                restore_post_or_comment(request_json['object']['object'])
-                                activity_log.result = 'success'
+                                restore_post_or_comment(request_json['object']['object'], activity_log.id)
                         elif request_json['object']['object']['type'] == 'Block':
                             activity_log.activity_type = 'Undo User Ban'
                             deletor_ap_id = request_json['object']['object']['actor']
@@ -1080,6 +1079,27 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                         if user_ap_id.startswith('https://' + current_app.config['SERVER_NAME']):
                             unban_local_user(deletor_ap_id, user_ap_id, target)
                         activity_log.result = 'success'
+                    elif request_json['object']['type'] == 'Delete':    # undoing a delete
+                        activity_log.activity_type = 'Restore'
+                        reply = PostReply.query.filter_by(ap_id=request_json['object']['object']).first()
+                        if reply:
+                            deletor = find_actor_or_create(request_json['object']['actor'], create_if_not_found=False)
+                            if deletor:
+                                if reply.author.id == deletor.id or reply.community.is_moderator(deletor) or reply.community.is_instance_admin(deletor):
+                                    reply.deleted = False
+                                    reply.deleted_by = None
+                                    if not reply.author.bot:
+                                        reply.post.reply_count += 1
+                                    reply.author.post_reply_count += 1
+                                    announce_activity_to_followers(reply.community, reply.author, request_json)
+                                    db.session.commit()
+                                    activity_log.result = 'success'
+                                else:
+                                    activity_log.exception_message = 'Restore attempt denied'
+                            else:
+                                activity_log.exception_message = 'Restorer did not already exist'
+                        else:
+                            activity_log.exception_message = 'Reply not found, or object was not a reply'
                 elif request_json['type'] == 'Delete':
                     if isinstance(request_json['object'], str):
                         ap_id = request_json['object']  # lemmy

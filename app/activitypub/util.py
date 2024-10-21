@@ -1358,21 +1358,30 @@ def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id
             aplog.exception_message = 'Unable to resolve deletor, community, or target'
 
 
-def restore_post_or_comment(object_json):
+def restore_post_or_comment(object_json, aplog_id):
     if current_app.debug:
-        restore_post_or_comment_task(object_json)
+        restore_post_or_comment_task(object_json, aplog_id)
     else:
-        restore_post_or_comment_task.delay(object_json)
+        restore_post_or_comment_task.delay(object_json, aplog_id)
 
 
 @celery.task
-def restore_post_or_comment_task(object_json):
+def restore_post_or_comment_task(object_json, aplog_id):
     restorer = find_actor_or_create(object_json['actor']) if 'actor' in object_json else None
     community = find_actor_or_create(object_json['audience'], community_only=True)  if 'audience' in object_json else None
     to_restore = find_liked_object(object_json['object']) if 'object' in object_json else None
+    if to_restore and not community:
+        community = to_restore.community
+    aplog = ActivityPubLog.query.get(aplog_id)
+
+    if to_restore and not to_restore.deleted:
+        if aplog:
+            aplog.result = 'ignored'
+            aplog.exception_message = 'Activity about local content which is already restored'
+        return
 
     if restorer and community and to_restore:
-        if restorer.is_admin() or community.is_moderator(restorer) or community.is_instance_admin(restorer) or to_restore.author.id == restorer.id:
+        if to_restore.author.id == restorer.id or restorer.is_admin() or community.is_moderator(restorer) or community.is_instance_admin(restorer):
             if isinstance(to_restore, Post):
                 # TODO: restore_dependencies()
                 to_restore.deleted = False
@@ -1384,7 +1393,28 @@ def restore_post_or_comment_task(object_json):
                     add_to_modlog_activitypub('restore_post', restorer, community_id=community.id,
                                               link_text=shorten_string(to_restore.title), link=f'post/{to_restore.id}')
 
-            # TODO: if isinstance(to_restore, PostReply):
+            elif isinstance(to_restore, PostReply):
+                to_restore.deleted = False
+                to_restore.deleted_by = None
+                if not to_restore.author.bot:
+                    to_restore.post.reply_count += 1
+                to_restore.author.post_reply_count += 1
+                db.session.commit()
+                if to_restore.author.id != restorer.id:
+                    add_to_modlog_activitypub('restore_post_reply', restorer, community_id=community.id,
+                                              link_text=f'comment on {shorten_string(to_restore.post.title)}',
+                                              link=f'post/{to_restore.post_id}#comment_{to_restore.id}')
+
+            if aplog:
+                aplog.result = 'success'
+        else:
+           if aplog:
+                aplog.result = 'failure'
+                aplog.exception_message = 'Restorer did not have permission'
+    else:
+       if aplog:
+            aplog.result = 'failure'
+            aplog.exception_message = 'Unable to resolve restorer, community, or target'
 
 
 def remove_data_from_banned_user(deletor_ap_id, user_ap_id, target):
