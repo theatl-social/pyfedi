@@ -15,10 +15,10 @@ from app.activitypub.util import find_actor_or_create, actor_json_to_model, post
     find_hashtag_or_create
 from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO, NOTIF_POST, \
     POST_TYPE_POLL
-from app.models import Community, File, BannedInstances, PostReply, PostVote, Post, utcnow, CommunityMember, Site, \
-    Instance, Notification, User, ActivityPubLog, NotificationSubscription, Language, Tag, PollChoice, Poll
-from app.utils import get_request, gibberish, markdown_to_html, domain_from_url, allowlist_html, \
-    is_image_url, ensure_directory_exists, inbox_domain, post_ranking, shorten_string, parse_page, \
+from app.models import Community, File, BannedInstances, PostReply, Post, utcnow, CommunityMember, Site, \
+    Instance, Notification, User, ActivityPubLog, NotificationSubscription, PollChoice, Poll
+from app.utils import get_request, gibberish, markdown_to_html, domain_from_url, \
+    is_image_url, ensure_directory_exists, shorten_string, \
     remove_tracking_from_link, ap_datetime, instance_banned, blocked_phrases, url_to_thumbnail_file, opengraph_parse, \
     piefed_markdown_to_lemmy_markdown
 from sqlalchemy import func, desc, text
@@ -133,7 +133,7 @@ def retrieve_peertube_mods_and_backfill(community_id: int, mods: list):
                                 if user:
                                     post = post_json_to_model(activity_log, video_data, user, community)
                                     post.ap_announce_id = activity['id']
-                                    post.ranking = post_ranking(post.score, post.posted_at)
+                                    post.ranking = post.post_ranking(post.score, post.posted_at)
                                 else:
                                     activity_log.exception_message = 'Could not find or create actor'
                                     db.session.commit()
@@ -197,7 +197,7 @@ def retrieve_mods_and_backfill(community_id: int):
                             if post:
                                 post.ap_create_id = activity['object']['id']
                                 post.ap_announce_id = activity['id']
-                                post.ranking = post_ranking(post.score, post.posted_at)
+                                post.ranking = post.post_ranking(post.score, post.posted_at)
                                 if post.url:
                                     other_posts = Post.query.filter(Post.id != post.id, Post.url == post.url, Post.deleted == False,
                                                                     Post.posted_at > post.posted_at - timedelta(days=3),
@@ -409,7 +409,7 @@ def save_post(form, post: Post, type: int):
             post.score = 1
         if current_user.reputation < -100:
             post.score = -1
-        post.ranking = post_ranking(post.score, utcnow())
+        post.ranking = post.post_ranking(post.score, utcnow())
 
         # Filter by phrase
         blocked_phrases_list = blocked_phrases()

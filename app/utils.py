@@ -898,10 +898,6 @@ def topic_tree() -> List:
     return [topic for topic in topics_dict.values() if topic['topic'].parent_id is None]
 
 
-def post_ranking(score, date: datetime):
-    return Post.post_ranking(score, date)
-
-
 def opengraph_parse(url):
     if '?' in url:
         url = url.split('?')

@@ -42,7 +42,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     request_etag_matches, return_304, instance_banned, can_create_post, can_upvote, can_downvote, user_filters_posts, \
     joined_communities, moderating_communities, blocked_domains, mimetype_from_url, blocked_instances, \
     community_moderators, communities_banned_from, show_ban_message, recently_upvoted_posts, recently_downvoted_posts, \
-    blocked_users, post_ranking, languages_for_form, english_language_id, menu_topics, add_to_modlog, \
+    blocked_users, languages_for_form, menu_topics, add_to_modlog, \
     blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, ensure_directory_exists
 from feedgen.feed import FeedGenerator
 from datetime import timezone, timedelta

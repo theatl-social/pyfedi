@@ -1134,7 +1134,7 @@ class Post(db.Model):
             make_image_sizes, notify_about_post
         from app.utils import allowlist_html, markdown_to_html, html_to_text, microblog_content_to_title, blocked_phrases, \
             is_image_url, is_video_url, domain_from_url, opengraph_parse, shorten_string, remove_tracking_from_link, \
-            is_video_hosting_site, post_ranking, communities_banned_from
+            is_video_hosting_site, communities_banned_from
 
         microblog = False
         if 'name' not in request_json['object']:  # Microblog posts

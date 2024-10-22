@@ -27,7 +27,7 @@ from app.models import Post, PostReply, \
 from app.post import bp
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
-    request_etag_matches, ip_address, user_ip_banned, instance_banned, can_downvote, can_upvote, post_ranking, \
+    request_etag_matches, ip_address, user_ip_banned, instance_banned, \
     reply_already_exists, reply_is_just_link_to_gif_reaction, moderating_communities, joined_communities, \
     blocked_instances, blocked_domains, community_moderators, blocked_phrases, show_ban_message, recently_upvoted_posts, \
     recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, reply_is_stupid, \
