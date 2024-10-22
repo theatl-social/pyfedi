@@ -213,7 +213,7 @@ def register(app):
             HEADERS = {'User-Agent': 'PieFed/1.0', 'Accept': 'application/activity+json'}
             for instance in instances:
                 nodeinfo_href = instance.nodeinfo_href
-                if instance.software == 'lemmy' and instance.version == '0.19.4' and instance.nodeinfo_href.endswith('nodeinfo/2.0.json'):
+                if instance.software == 'lemmy' and instance.version >= '0.19.4' and instance.nodeinfo_href and instance.nodeinfo_href.endswith('nodeinfo/2.0.json'):
                     nodeinfo_href = None # Lemmy v0.19.4 no longer provides .well-known/nodeinfo response for 2.0, and
                                          # 'solves' this by redirecting calls for nodeinfo/2.0.json to nodeinfo/2.1
                 if not nodeinfo_href:
