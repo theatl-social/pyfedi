@@ -29,7 +29,7 @@ from app.community.util import search_for_community, actor_to_community, \
     allowed_extensions, end_poll_date
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
-    REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, POST_TYPE_POLL, MICROBLOG_APPS
+    REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, NOTIF_POST, POST_TYPE_POLL, MICROBLOG_APPS
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, \
     File, PostVote, utcnow, Report, Notification, InstanceBlock, ActivityPubLog, Topic, Conversation, PostReply, \
@@ -703,6 +703,9 @@ def add_post(actor, type):
         # todo: add try..except
         post = Post.new(current_user, community, request_json)
 
+        if form.notify_author.data:
+            new_notification = NotificationSubscription(name=post.title, user_id=current_user.id, entity_id=post.id, type=NOTIF_POST)
+            db.session.add(new_notification)
         current_user.language_id = form.language_id.data
         g.site.last_active = utcnow()
         post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
