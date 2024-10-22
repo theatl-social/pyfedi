@@ -104,6 +104,12 @@ class Instance(db.Model):
         return db.session.execute(text('SELECT COUNT(id) as c FROM "user" WHERE instance_id = :instance_id'),
                                   {'instance_id': self.id}).scalar()
 
+    def update_dormant_gone(self):
+        if self.failures > 7 and self.dormant == True:
+            self.gone_forever = True
+        elif self.failures > 2 and self.dormant == False:
+            self.dormant = True
+
     @classmethod
     def weight(cls, domain: str):
         if domain:

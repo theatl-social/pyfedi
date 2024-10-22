@@ -26,7 +26,8 @@ from app.models import Settings, BannedInstances, Interest, Role, User, RolePerm
     Tag, InstanceRole, Community
 from app.post.routes import post_delete_post
 from app.utils import file_get_contents, retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
-    shorten_string, get_request, html_to_text, blocked_communities, ap_datetime, gibberish
+    shorten_string, get_request, html_to_text, blocked_communities, ap_datetime, gibberish, get_request_instance, \
+    instance_banned
 
 
 def register(app):
@@ -209,105 +210,106 @@ def register(app):
             db.session.commit()
 
             # Check for dormant or dead instances
-            instances = Instance.query.filter(Instance.gone_forever == False, Instance.id != 1).all()
-            HEADERS = {'User-Agent': 'PieFed/1.0', 'Accept': 'application/activity+json'}
-            for instance in instances:
-                nodeinfo_href = instance.nodeinfo_href
-                if instance.software == 'lemmy' and instance.version >= '0.19.4' and instance.nodeinfo_href and instance.nodeinfo_href.endswith('nodeinfo/2.0.json'):
-                    nodeinfo_href = None # Lemmy v0.19.4 no longer provides .well-known/nodeinfo response for 2.0, and
-                                         # 'solves' this by redirecting calls for nodeinfo/2.0.json to nodeinfo/2.1
-                if not nodeinfo_href:
-                    try:
-                        nodeinfo = get_request(f"https://{instance.domain}/.well-known/nodeinfo", headers=HEADERS)
+            try:
+                # Check for dormant or dead instances
+                instances = Instance.query.filter(Instance.gone_forever == False, Instance.id != 1).all()
+                HEADERS = {'User-Agent': 'PieFed/1.0', 'Accept': 'application/activity+json'}
 
-                        if nodeinfo.status_code == 200:
-                            try:
+                for instance in instances:
+                    if instance_banned(instance.domain) or instance.domain == 'flipboard.com':
+                        continue
+                    nodeinfo_href = instance.nodeinfo_href
+                    if instance.software == 'lemmy' and instance.version >= '0.19.4' and instance.nodeinfo_href and instance.nodeinfo_href.endswith(
+                            'nodeinfo/2.0.json'):
+                        nodeinfo_href = None
+
+                    if not nodeinfo_href:
+                        try:
+                            nodeinfo = get_request_instance(f"https://{instance.domain}/.well-known/nodeinfo",
+                                                            headers=HEADERS, instance=instance)
+
+                            if nodeinfo.status_code == 200:
                                 nodeinfo_json = nodeinfo.json()
-                            except Exception as e:
-                                nodeinfo_json = {}
-                            finally:
-                                nodeinfo.close()
-                            for links in nodeinfo_json['links']:
-                                if isinstance(links, dict) and 'rel' in links and (
-                                        links['rel'] == 'http://nodeinfo.diaspora.software/ns/schema/2.0' or
-                                        links['rel'] == 'https://nodeinfo.diaspora.software/ns/schema/2.0' or
-                                        links['rel'] == 'http://nodeinfo.diaspora.software/ns/schema/2.1'):
-                                    instance.nodeinfo_href = links['href']
+                                for links in nodeinfo_json['links']:
+                                    if isinstance(links, dict) and 'rel' in links and links['rel'] in [
+                                        'http://nodeinfo.diaspora.software/ns/schema/2.0',
+                                        'https://nodeinfo.diaspora.software/ns/schema/2.0',
+                                        'http://nodeinfo.diaspora.software/ns/schema/2.1']:
+                                        instance.nodeinfo_href = links['href']
+                                        instance.failures = 0
+                                        instance.dormant = False
+                                        break
+                                    else:
+                                        instance.failures += 1
+                            elif nodeinfo.status_code >= 400:
+                                current_app.logger.info(f"{instance.domain} has no well-known/nodeinfo response")
+                        except Exception as e:
+                            db.session.rollback()
+                            current_app.logger.error(f"Error processing instance {instance.domain}: {e}")
+                        finally:
+                            nodeinfo.close()
+
+                    if instance.nodeinfo_href:
+                        try:
+                            node = get_request_instance(instance.nodeinfo_href, headers=HEADERS, instance=instance)
+                            if node.status_code == 200:
+                                node_json = node.json()
+                                if 'software' in node_json:
+                                    instance.software = node_json['software']['name'].lower()[:50]
+                                    instance.version = node_json['software']['version'][:50]
                                     instance.failures = 0
                                     instance.dormant = False
-                                    db.session.commit()
-                                    sleep(0.1)
-                                    break
-                                else:
-                                    instance.failures += 1
-                        elif nodeinfo.status_code >= 400:
-                            current_app.logger.info(f"{instance.domain} has no well-known/nodeinfo response")
-                    except httpx.HTTPError:
-                        instance.failures += 1
-
-                if instance.nodeinfo_href:
-                    try:
-                        node = get_request(instance.nodeinfo_href, headers=HEADERS)
-                        if node.status_code == 200:
-                            try:
-                                node_json = node.json()
-                            except Exception as e:
-                                node_json = {}
-                            finally:
-                                node.close()
-                            if 'software' in node_json:
-                                instance.software = node_json['software']['name'].lower()
-                                instance.version = node_json['software']['version']
-                                instance.failures = 0
-                                instance.dormant = False
-                        elif node.status_code >= 400:
-                            instance.failures += 1
-                            instance.nodeinfo_href = None
-                    except httpx.HTTPError:
-                        instance.failures += 1
-                        instance.nodeinfo_href = None
-                if instance.failures > 7 and instance.dormant == True:
-                    instance.gone_forever = True
-                elif instance.failures > 2 and instance.dormant == False:
-                    instance.dormant = True
-                db.session.commit()
-
-                # retrieve list of Admins from /api/v3/site, update InstanceRole
-                if instance.online() and (instance.software == 'lemmy' or instance.software == 'piefed'):
-                    try:
-                        response = get_request(f'https://{instance.domain}/api/v3/site')
-                    except:
-                        response = None
-
-                    if response and response.status_code == 200:
-                        try:
-                            instance_data = response.json()
-                        except:
-                            instance_data = None
+                            elif node.status_code >= 400:
+                                instance.nodeinfo_href = None
+                        except Exception as e:
+                            db.session.rollback()
+                            current_app.logger.error(f"Error processing nodeinfo for {instance.domain}: {e}")
                         finally:
-                            response.close()
+                            node.close()
 
-                        if instance_data:
-                            if 'admins' in instance_data:
+                    # Handle admin roles
+                    if instance.online() and (instance.software == 'lemmy' or instance.software == 'piefed'):
+                        try:
+                            response = get_request(f'https://{instance.domain}/api/v3/site')
+                            if response and response.status_code == 200:
+                                instance_data = response.json()
                                 admin_profile_ids = []
                                 for admin in instance_data['admins']:
-                                    if admin['person']['actor_id'].startswith('http://'):
-                                        continue # suppo.fi has rogue entry in its v3/site
                                     admin_profile_ids.append(admin['person']['actor_id'].lower())
                                     user = find_actor_or_create(admin['person']['actor_id'])
                                     if user and not instance.user_is_admin(user.id):
                                         new_instance_role = InstanceRole(instance_id=instance.id, user_id=user.id,
                                                                          role='admin')
                                         db.session.add(new_instance_role)
-                                        db.session.commit()
                                 # remove any InstanceRoles that are no longer part of instance-data['admins']
                                 for instance_admin in InstanceRole.query.filter_by(instance_id=instance.id):
-                                    if instance_admin.user.profile_id() not in admin_profile_ids:
-                                        db.session.query(InstanceRole).filter(
-                                            InstanceRole.user_id == instance_admin.user.id,
-                                            InstanceRole.instance_id == instance.id,
-                                            InstanceRole.role == 'admin').delete()
-                                        db.session.commit()
+                                   if instance_admin.user.profile_id() not in admin_profile_ids:
+                                       db.session.query(InstanceRole).filter(
+                                           InstanceRole.user_id == instance_admin.user.id,
+                                           InstanceRole.instance_id == instance.id,
+                                           InstanceRole.role == 'admin').delete()
+                        except Exception as e:
+                            db.session.rollback()
+                            current_app.logger.error(f"Error updating admins for {instance.domain}: {e}")
+                        finally:
+                            if response:
+                                response.close()
+
+                # Commit all changes at once
+                db.session.commit()
+
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.error(f"Error in daily maintenance: {e}")
+
+                                # remove any InstanceRoles that are no longer part of instance-data['admins']
+                                #for instance_admin in InstanceRole.query.filter_by(instance_id=instance.id):
+                                #    if instance_admin.user.profile_id() not in admin_profile_ids:
+                                #        db.session.query(InstanceRole).filter(
+                                #            InstanceRole.user_id == instance_admin.user.id,
+                                #            InstanceRole.instance_id == instance.id,
+                                #            InstanceRole.role == 'admin').delete()
+                                #        db.session.commit()
 
     @app.cli.command("spaceusage")
     def spaceusage():

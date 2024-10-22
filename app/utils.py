@@ -114,6 +114,17 @@ def get_request(uri, params=None, headers=None) -> httpx.Response:
     return response
 
 
+# Same as get_request except updates instance on failure and does not raise any exceptions
+def get_request_instance(uri, instance: Instance, params=None, headers=None) -> httpx.Response:
+    try:
+        return get_request(uri, params, headers)
+    except:
+        instance.failures += 1
+        instance.update_dormant_gone()
+        db.session.commit()
+        return httpx.Response(status_code=500)
+
+
 # do a HEAD request to a uri, return the result
 def head_request(uri, params=None, headers=None) -> httpx.Response:
     if headers is None:
