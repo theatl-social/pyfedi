@@ -7,7 +7,7 @@
             {% if user.avatar_id and not low_bandwidth and not collapsed -%}
                 <img src="{{ user.avatar_thumbnail() }}" alt="" loading="lazy" />
             {% endif -%}
-            {{ user.display_name() }}
+            {{ user.display_name() }}{% if not user.is_local() %}<span class="text-muted">@{{ user.ap_domain }}</span>{% endif %}
         </a>
         {% if user.created_recently() -%}
             <span class="fe fe-new-account" title="New account"> </span>

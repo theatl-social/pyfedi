@@ -1150,6 +1150,9 @@ time {
   border-radius: 50%;
   vertical-align: bottom;
 }
+.render_username .text-muted {
+  font-size: 13px;
+}
 
 .comments > .comment {
   margin-left: 0;

@@ -736,9 +736,9 @@ class User(UserMixin, db.Model):
     def display_name(self):
         if self.deleted is False:
             if self.title:
-                return self.title
+                return self.title.strip()
             else:
-                return self.user_name
+                return self.user_name.strip()
         else:
             return '[deleted]'
 
