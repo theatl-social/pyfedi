@@ -199,6 +199,9 @@ def list_communities():
             communities = communities.filter(Community.nsfw == False)
         if current_user.hide_nsfl == 1:
             communities = communities.filter(Community.nsfl == False)
+        instance_ids = blocked_instances(current_user.id)
+        if instance_ids:
+            communities = communities.filter(or_(Community.instance_id.not_in(instance_ids), Community.instance_id == None))
     else:
         communities = communities.filter(and_(Community.nsfw == False, Community.nsfl == False))
 
