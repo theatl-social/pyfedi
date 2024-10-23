@@ -153,7 +153,7 @@ def nodeinfo2():
                     "localPosts": local_posts(),
                     "localComments": local_comments()
                 },
-                "openRegistrations": g.site.registration_mode == 'Open'
+                "openRegistrations": g.site.registration_mode != 'Closed'
             }
     return jsonify(nodeinfo_data)
 
