@@ -706,21 +706,6 @@ def delete_profile(actor):
     return redirect(goto)
 
 
-@bp.route('/instance/<int:instance_id>/unblock', methods=['GET'])
-@login_required
-def instance_unblock(instance_id):
-    instance = Instance.query.get_or_404(instance_id)
-    existing_block = InstanceBlock.query.filter_by(user_id=current_user.id, instance_id=instance.id).first()
-    if existing_block:
-        db.session.delete(existing_block)
-        db.session.commit()
-        cache.delete_memoized(blocked_instances, current_user.id)
-        flash(f'{instance.domain} has been unblocked.')
-
-    goto = request.args.get('redirect') if 'redirect' in request.args else url_for('user.user_settings_filters')
-    return redirect(goto)
-
-
 @bp.route('/user/community/<int:community_id>/unblock', methods=['GET'])
 @login_required
 def user_community_unblock(community_id):

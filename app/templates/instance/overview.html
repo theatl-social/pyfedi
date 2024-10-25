@@ -19,17 +19,20 @@
         <p>{{ _('This is a %(software)s instance.', software=instance.software) }}</p>
         <p><a href="{{ url_for('instance.instance_people', instance_domain=instance.domain) }}">{{ _('People') }}</a><br />
                                 <a href="{{ url_for('instance.instance_posts', instance_domain=instance.domain) }}">{{ _('Posts') }}</a></p>
-        <p><a href="https://{{ instance.domain }}" rel="noopener nofollow noindex noreferrer">{{ _('Go to instance') }}</a></p>
+        <p><a href="https://{{ instance.domain }}" rel="noopener nofollow noindex noreferrer">{{ _('Go to instance') }} <span class="fe fe-external"></span></a></p>
     </div>
 
     <aside id="side_pane" class="col-12 col-md-4 side_pane" role="complementary">
 
         <div class="card">
-            <div class="card-header">
-                 <h2> </h2>
-            </div>
             <div class="card-body">
-
+                {% if current_user.is_authenticated -%}
+                    {% if current_user.has_blocked_instance(instance.id) -%}
+                        <a class="btn btn-primary" href="{{ url_for('instance.instance_unblock', instance_id=instance.id, redirect='/instance/' + instance.domain) }}" rel="nofollow">{{ _('Unblock %(instance_name)s', instance_name=instance.domain) }}</a>
+                    {% else %}
+                        <a class="btn btn-primary confirm_first" href="{{ url_for('instance.instance_block', instance_id=instance.id, redirect='/instance/' + instance.domain) }}" rel="nofollow">{{ _('Block everyone from %(instance_name)s', instance_name=instance.domain) }}</a>
+                    {% endif -%}
+                {% endif -%}
             </div>
         </div>
     </aside>

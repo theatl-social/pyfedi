@@ -1,12 +1,13 @@
 from collections import namedtuple
 
-from flask import request, url_for, g, abort
-from flask_login import current_user
+from flask import request, url_for, g, abort, flash, redirect
+from flask_login import current_user, login_required
 from flask_babel import _
 from sqlalchemy import or_, desc
 
+from app import db, cache
 from app.instance import bp
-from app.models import Instance, User, Post, read_posts
+from app.models import Instance, User, Post, read_posts, InstanceBlock
 from app.utils import render_template, moderating_communities, joined_communities, menu_topics, blocked_domains, \
     blocked_instances, blocked_communities, blocked_users, user_filters_home, recently_upvoted_posts, \
     recently_downvoted_posts
@@ -179,3 +180,32 @@ def instance_posts(instance_domain):
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,)
 
+
+@bp.route('/instance/<int:instance_id>/block', methods=['GET'])
+@login_required
+def instance_block(instance_id):
+    instance = Instance.query.get_or_404(instance_id)
+    existing_block = InstanceBlock.query.filter_by(user_id=current_user.id, instance_id=instance.id).first()
+    if not existing_block:
+        db.session.add(InstanceBlock(user_id=current_user.id, instance_id=instance.id))
+        db.session.commit()
+        cache.delete_memoized(blocked_instances, current_user.id)
+        flash(f'{instance.domain} has been blocked.')
+
+    goto = request.args.get('redirect') if 'redirect' in request.args else url_for('user.user_settings_filters')
+    return redirect(goto)
+
+
+@bp.route('/instance/<int:instance_id>/unblock', methods=['GET'])
+@login_required
+def instance_unblock(instance_id):
+    instance = Instance.query.get_or_404(instance_id)
+    existing_block = InstanceBlock.query.filter_by(user_id=current_user.id, instance_id=instance.id).first()
+    if existing_block:
+        db.session.delete(existing_block)
+        db.session.commit()
+        cache.delete_memoized(blocked_instances, current_user.id)
+        flash(f'{instance.domain} has been unblocked.')
+
+    goto = request.args.get('redirect') if 'redirect' in request.args else url_for('user.user_settings_filters')
+    return redirect(goto)
