@@ -1323,24 +1323,22 @@ def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id
         return
 
     if deletor and community and to_delete:
-        if deletor.is_admin() or community.is_moderator(deletor) or community.is_instance_admin(deletor) or to_delete.author.id == deletor.id:
+        if to_delete.author.id == deletor.id or deletor.is_admin() or community.is_moderator(deletor) or community.is_instance_admin(deletor):
             if isinstance(to_delete, Post):
-                to_delete.delete_dependencies()
                 to_delete.deleted = True
+                to_delete.deleted_by = deletor.id
                 community.post_count -= 1
                 to_delete.author.post_count -= 1
-                to_delete.deleted_by = deletor.id
                 db.session.commit()
                 if to_delete.author.id != deletor.id:
                     add_to_modlog_activitypub('delete_post', deletor, community_id=community.id,
                                               link_text=shorten_string(to_delete.title), link=f'post/{to_delete.id}')
             elif isinstance(to_delete, PostReply):
-                if not to_delete.author.bot:
-                    to_delete.post.reply_count -= 1
                 to_delete.deleted = True
                 to_delete.deleted_by = deletor.id
                 to_delete.author.post_reply_count -= 1
-                to_delete.deleted_by = deletor.id
+                if not to_delete.author.bot:
+                    to_delete.post.reply_count -= 1
                 db.session.commit()
                 if to_delete.author.id != deletor.id:
                     add_to_modlog_activitypub('delete_post_reply', deletor, community_id=community.id,

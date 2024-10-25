@@ -1108,21 +1108,26 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                     post = Post.query.filter_by(ap_id=ap_id).first()
                     # Delete post
                     if post:
-                        if can_delete(request_json['actor'], post):
-                            if post.url and post.cross_posts is not None:
-                                old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
-                                post.cross_posts.clear()
-                                for ocp in old_cross_posts:
-                                    if ocp.cross_posts is not None:
-                                        ocp.cross_posts.remove(post.id)
-                            post.delete_dependencies()
-                            announce_activity_to_followers(post.community, post.author, request_json)
-                            post.deleted = True
-                            post.author.post_count -= 1
-                            db.session.commit()
-                            activity_log.result = 'success'
+                        deletor = find_actor_or_create(request_json['actor'], create_if_not_found=False)
+                        if deletor:
+                            if post.author.id == deletor.id or post.community.is_moderator(deletor) or post.community.is_instance_admin(deletor):
+                                post.deleted = True
+                                post.delted_by = deletor.id
+                                post.author.post_count -= 1
+                                post.community.post_count -= 1
+                                if post.url and post.cross_posts is not None:
+                                    old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
+                                    post.cross_posts.clear()
+                                    for ocp in old_cross_posts:
+                                        if ocp.cross_posts is not None:
+                                            ocp.cross_posts.remove(post.id)
+                                announce_activity_to_followers(post.community, post.author, request_json)
+                                db.session.commit()
+                                activity_log.result = 'success'
+                            else:
+                                activity_log.exception_message = 'Delete attempt denied'
                         else:
-                            activity_log.exception_message = 'Delete attempt denied'
+                            activity_log.exception_message = 'Deletor did not already exist'
                     else:
                         # Delete PostReply
                         reply = PostReply.query.filter_by(ap_id=ap_id).first()

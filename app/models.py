@@ -1377,10 +1377,16 @@ class Post(db.Model):
         db.session.query(PollChoice).filter(PollChoice.post_id == self.id).delete()
         db.session.query(Poll).filter(Poll.post_id == self.id).delete()
         db.session.query(Report).filter(Report.suspect_post_id == self.id).delete()
-        db.session.execute(text('DELETE FROM "post_reply_vote" WHERE post_reply_id IN (SELECT id FROM post_reply WHERE post_id = :post_id)'),
-                           {'post_id': self.id})
-        db.session.execute(text('DELETE FROM "post_reply" WHERE post_id = :post_id'), {'post_id': self.id})
         db.session.execute(text('DELETE FROM "post_vote" WHERE post_id = :post_id'), {'post_id': self.id})
+
+        reply_ids = db.session.execute(text('SELECT id FROM "post_reply" WHERE post_id = :post_id'), {'post_id': self.id}).scalars()
+        reply_ids = tuple(reply_ids)
+        if reply_ids:
+            db.session.execute(text('DELETE FROM "post_reply_vote" WHERE post_reply_id IN :reply_ids'), {'reply_ids': reply_ids})
+            db.session.execute(text('DELETE FROM "post_reply_bookmark" WHERE post_reply_id IN :reply_ids'), {'reply_ids': reply_ids})
+            db.session.execute(text('DELETE FROM "report" WHERE suspect_post_reply_id IN :reply_ids'), {'reply_ids': reply_ids})
+            db.session.execute(text('DELETE FROM "post_reply" WHERE post_id = :post_id'), {'post_id': self.id})
+
         if self.image_id:
             file = File.query.get(self.image_id)
             file.delete_from_disk()

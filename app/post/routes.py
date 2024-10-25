@@ -1025,7 +1025,6 @@ def post_delete_post(community: Community, post: Post, user_id: int, federate_al
             for ocp in old_cross_posts:
                 if ocp.cross_posts is not None and post.id in ocp.cross_posts:
                     ocp.cross_posts.remove(post.id)
-    post.delete_dependencies()
     post.deleted = True
     post.deleted_by = user_id
     post.author.post_count -= 1
