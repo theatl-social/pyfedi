@@ -55,7 +55,6 @@ def show_profile(user):
     post_page = request.args.get('post_page', 1, type=int)
     replies_page = request.args.get('replies_page', 1, type=int)
 
-    posts = Post.query.filter_by(user_id=user.id).filter(Post.deleted == False).order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=50, error_out=False)
     moderates = Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == user.id)\
         .filter(or_(CommunityMember.is_moderator, CommunityMember.is_owner))
     if current_user.is_authenticated and (user.id == current_user.get_id() or current_user.is_admin()):
@@ -65,10 +64,13 @@ def show_profile(user):
     subscribed = Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == user.id).all()
     if current_user.is_anonymous or (user.id != current_user.id and not current_user.is_admin()):
         moderates = moderates.filter(Community.private_mods == False)
+        posts = Post.query.filter_by(user_id=user.id).filter(Post.deleted == False).order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=50, error_out=False)
         post_replies = PostReply.query.filter_by(user_id=user.id, deleted=False).order_by(desc(PostReply.posted_at)).paginate(page=replies_page, per_page=50, error_out=False)
     elif current_user.is_admin():
+        posts = Post.query.filter_by(user_id=user.id).order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=50, error_out=False)
         post_replies = PostReply.query.filter_by(user_id=user.id).order_by(desc(PostReply.posted_at)).paginate(page=replies_page, per_page=50, error_out=False)
     elif current_user.id == user.id:
+        posts = Post.query.filter_by(user_id=user.id).filter(or_(Post.deleted == False, Post.deleted_by == user.id)).order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=50, error_out=False)
         post_replies = PostReply.query.filter_by(user_id=user.id).filter(or_(PostReply.deleted == False, PostReply.deleted_by == user.id)).order_by(desc(PostReply.posted_at)).paginate(page=replies_page, per_page=50, error_out=False)
 
     # profile info
