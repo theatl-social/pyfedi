@@ -77,17 +77,32 @@
                 {% if user.matrix_user_id %}
                     <a class="btn btn-primary" href="https://matrix.to/#/{{ user.matrix_user_id }}" rel="nofollow" aria-label="{{ _('Send message with matrix chat') }}">{{ _('Send message using Matrix') }}</a>
                 {% endif %}
-                {% if current_user.has_blocked_user(user.id) %}
-                    <a class="btn btn-primary" href="{{ url_for('user.unblock_profile', actor=user.link()) }}" rel="nofollow">{{ _('Unblock') }}</a>
-                {% else %}
-                    <a class="btn btn-primary confirm_first" href="{{ url_for('user.block_profile', actor=user.link()) }}" rel="nofollow">{{ _('Block') }}</a>
-                {% endif %}
-                <a class="btn btn-primary" href="{{ url_for('user.report_profile', actor=user.link()) }}" rel="nofollow">{{ _('Report') }}</a>
-        {% endif %}
-        {% if user.is_local() %}
-               <a class="btn btn-primary" href="{{ url_for('user.fediverse_redirect', actor=user.link()) }}" rel="nofollow"><img src="/static/images/fediverse_logo.svg" width="25" height="25"> {{ _('Follow') }}</a>
-        {% endif %}
 
+                {% if user.is_local() -%}
+                    <a class="btn btn-primary" href="{{ url_for('user.fediverse_redirect', actor=user.link()) }}" rel="nofollow"><img src="/static/images/fediverse_logo.svg" width="22" height="22"> {{ _('Follow') }}</a>
+                {% endif -%}
+
+                <div class="dropdown display-inline">
+                  <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    {{ _('More') }}
+                  </button>
+                  <ul class="dropdown-menu">
+                    {% if current_user.has_blocked_user(user.id) -%}
+                        <a class="dropdown-item" href="{{ url_for('user.unblock_profile', actor=user.link()) }}" rel="nofollow">{{ _('Unblock') }}</a>
+                    {% else -%}
+                        <a class="dropdown-item confirm_first" href="{{ url_for('user.block_profile', actor=user.link()) }}" rel="nofollow">{{ _('Block %(user_name)s', user_name=user.display_name()) }}</a>
+                    {% endif -%}
+                    {% if not user.is_local() -%}
+                        {% if current_user.has_blocked_instance(user.instance_id) -%}
+                            <a class="dropdown-item" href="{{ url_for('user.instance_unblock', instance_id=user.instance_id, redirect='/u/' + user.link()) }}" rel="nofollow">{{ _('Unblock %(instance_name)s', instance_name=user.ap_domain) }}</a>
+                        {% else %}
+                            <a class="dropdown-item confirm_first" href="{{ url_for('user.user_block_instance', actor=user.link()) }}" rel="nofollow">{{ _('Block everyone from %(instance_name)s', instance_name=user.ap_domain) }}</a>
+                        {% endif -%}
+                    {% endif -%}
+                    <li><a class="dropdown-item" href="{{ url_for('user.report_profile', actor=user.link()) }}" rel="nofollow">{{ _('Report') }}</a></li>
+                  </ul>
+                </div>
+        {% endif %}
         </div>
         <p class="small">{{ _('Instance') }}: <a href="{{ url_for('instance.instance_overview', instance_domain=user.instance_domain()) }}">{{ user.instance_domain() }}</a><br />
             {{ _('Joined') }}: {{ arrow.get(user.created).humanize(locale=locale) }}<br />
