@@ -6,6 +6,8 @@ RUN apk update
 RUN apk add pkgconfig
 RUN apk add --virtual build-deps gcc python3-dev musl-dev tesseract-ocr tesseract-ocr-data-eng ffmpeg
 
+RUN adduser --disabled-password --gecos "" python
+
 WORKDIR /app
 COPY . /app
 
@@ -19,4 +21,7 @@ RUN adduser -D python
 RUN chown -R python:python /app
 
 USER python
+
+EXPOSE 5000
+
 ENTRYPOINT ["./entrypoint.sh"]
