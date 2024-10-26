@@ -619,6 +619,7 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                                                 post = create_post(activity_log, community, request_json, user)
                                                 if post:
                                                     announce_activity_to_followers(community, user, request_json)
+                                                    activity_log.result = 'success'
                                             except TypeError as e:
                                                 activity_log.exception_message = 'TypeError. See log file.'
                                                 current_app.logger.error('TypeError: ' + str(request_json))
@@ -1081,17 +1082,16 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                         activity_log.result = 'success'
                     elif request_json['object']['type'] == 'Delete':    # undoing a delete
                         activity_log.activity_type = 'Restore'
-                        reply = PostReply.query.filter_by(ap_id=request_json['object']['object']).first()
-                        if reply:
+                        post = Post.query.filter_by(ap_id=request_json['object']['object']).first()
+                        if post:
                             deletor = find_actor_or_create(request_json['object']['actor'], create_if_not_found=False)
                             if deletor:
-                                if reply.author.id == deletor.id or reply.community.is_moderator(deletor) or reply.community.is_instance_admin(deletor):
-                                    reply.deleted = False
-                                    reply.deleted_by = None
-                                    if not reply.author.bot:
-                                        reply.post.reply_count += 1
-                                    reply.author.post_reply_count += 1
-                                    announce_activity_to_followers(reply.community, reply.author, request_json)
+                                if post.author.id == deletor.id or post.community.is_moderator(deletor) or post.community.is_instance_admin(deletor):
+                                    post.deleted = False
+                                    post.deleted_by = None
+                                    post.author.post_count += 1
+                                    post.community.post_count += 1
+                                    announce_activity_to_followers(post.community, post.author, request_json)
                                     db.session.commit()
                                     activity_log.result = 'success'
                                 else:
@@ -1099,7 +1099,25 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             else:
                                 activity_log.exception_message = 'Restorer did not already exist'
                         else:
-                            activity_log.exception_message = 'Reply not found, or object was not a reply'
+                            reply = PostReply.query.filter_by(ap_id=request_json['object']['object']).first()
+                            if reply:
+                                deletor = find_actor_or_create(request_json['object']['actor'], create_if_not_found=False)
+                                if deletor:
+                                    if reply.author.id == deletor.id or reply.community.is_moderator(deletor) or reply.community.is_instance_admin(deletor):
+                                        reply.deleted = False
+                                        reply.deleted_by = None
+                                        if not reply.author.bot:
+                                            reply.post.reply_count += 1
+                                        reply.author.post_reply_count += 1
+                                        announce_activity_to_followers(reply.community, reply.author, request_json)
+                                        db.session.commit()
+                                        activity_log.result = 'success'
+                                    else:
+                                        activity_log.exception_message = 'Restore attempt denied'
+                                else:
+                                    activity_log.exception_message = 'Restorer did not already exist'
+                            else:
+                                activity_log.exception_message = 'Object not found, or object was not a post or a reply'
                 elif request_json['type'] == 'Delete':
                     if isinstance(request_json['object'], str):
                         ap_id = request_json['object']  # lemmy

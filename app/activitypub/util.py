@@ -1381,7 +1381,6 @@ def restore_post_or_comment_task(object_json, aplog_id):
     if restorer and community and to_restore:
         if to_restore.author.id == restorer.id or restorer.is_admin() or community.is_moderator(restorer) or community.is_instance_admin(restorer):
             if isinstance(to_restore, Post):
-                # TODO: restore_dependencies()
                 to_restore.deleted = False
                 to_restore.deleted_by = None
                 community.post_count += 1
