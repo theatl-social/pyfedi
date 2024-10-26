@@ -1387,6 +1387,9 @@ class Post(db.Model):
             db.session.execute(text('DELETE FROM "report" WHERE suspect_post_reply_id IN :reply_ids'), {'reply_ids': reply_ids})
             db.session.execute(text('DELETE FROM "post_reply" WHERE post_id = :post_id'), {'post_id': self.id})
 
+            self.community.post_reply_count = db.session.execute(text('SELECT COUNT(id) as c FROM "post_reply" WHERE community_id = :community_id AND deleted = false'),
+                                                                {'community_id': self.community_id}).scalar()
+
         if self.image_id:
             file = File.query.get(self.image_id)
             file.delete_from_disk()
