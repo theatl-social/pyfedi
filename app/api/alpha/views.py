@@ -338,6 +338,48 @@ def reply_view(reply: PostReply | int, variant, user_id=None, my_vote=0):
         return v4
 
 
+def reply_report_view(report, reply_id, user_id):
+    # views/comment_report_view.dart - /comment/report api endpoint
+    reply_json = reply_view(reply=reply_id, variant=2, user_id=user_id)
+    post_json = post_view(post=reply_json['comment']['post_id'], variant=1, stub=True)
+    community_json = community_view(community=post_json['community_id'], variant=1, stub=True)
+
+    banned = db.session.execute(text('SELECT user_id FROM "community_ban" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': report.reporter_id, 'community_id': community_json['id']}).scalar()
+    moderator = db.session.execute(text('SELECT is_moderator FROM "community_member" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': report.reporter_id, 'community_id': community_json['id']}).scalar()
+    admin = db.session.execute(text('SELECT user_id FROM "user_role" WHERE user_id = :user_id and role_id = 4'), {'user_id': report.reporter_id}).scalar()
+
+    creator_banned_from_community = True if banned else False
+    creator_is_moderator = True if moderator else False
+    creator_is_admin = True if admin else False
+
+    v1 = {
+      'comment_report_view': {
+        'comment_report': {
+          'id': report.id,
+          'creator_id': report.reporter_id,
+          'comment_id': report.suspect_post_reply_id,
+          'original_comment_text': reply_json['comment']['body'],
+          'reason': report.reasons,
+          'resolved': report.status == 3,
+          'published': report.created_at.isoformat() + 'Z'
+        },
+        'comment': reply_json['comment'],
+        'post': post_json,
+        'community': community_json,
+        'creator': user_view(user=user_id, variant=1, stub=True),
+        'comment_creator': user_view(user=report.suspect_user_id, variant=1, stub=True),
+        'counts': reply_json['counts'],
+        'creator_banned_from_community': creator_banned_from_community,
+        'creator_is_moderator': creator_is_moderator,
+        'creator_is_admin': creator_is_admin,
+        'creator_blocked': False,
+        'subscribed': reply_json['subscribed'],
+        'saved': reply_json['saved']
+      }
+    }
+    return v1
+
+
 def search_view(type):
     v1 = {
       'type_': type,
