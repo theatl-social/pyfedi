@@ -1250,23 +1250,17 @@ def authorise_api_user(auth, return_type=None, id_match=None):
         raise Exception('incorrect_login')
     token = auth[7:]     # remove 'Bearer '
 
-    try:
-        decoded = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
-        if decoded:
-            user_id = decoded['sub']
-            issued_at = decoded['iat']      # use to check against blacklisted JWTs
-            user = User.query.filter_by(id=user_id, ap_id=None, verified=True, banned=False, deleted=False).scalar()
-            if user:
-                if id_match and user.id != id_match:
-                    raise Exception('incorrect_login')
-                if return_type and return_type == 'model':
-                    return user
-                else:
-                    return user.id
-            else:
-                raise Exception('incorrect_login')
-    except jwt.InvalidTokenError:
-        raise Exception('invalid_token')
+    decoded = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
+    if decoded:
+        user_id = decoded['sub']
+        issued_at = decoded['iat']      # use to check against blacklisted JWTs
+        user = User.query.filter_by(id=user_id, ap_id=None, verified=True, banned=False, deleted=False).one()
+        if id_match and user.id != id_match:
+            raise Exception('incorrect_login')
+        if return_type and return_type == 'model':
+            return user
+        else:
+            return user.id
 
 
 @cache.memoize(timeout=86400)

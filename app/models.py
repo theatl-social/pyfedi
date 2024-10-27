@@ -1041,11 +1041,8 @@ class User(UserMixin, db.Model):
                                   {'user_id': self.id, 'type': NOTIF_USER}).scalars())
 
     def encode_jwt_token(self):
-        try:
-            payload = {'sub': str(self.id), 'iss': current_app.config['SERVER_NAME'], 'iat': int(time())}
-            return jwt.encode(payload, current_app.config['SECRET_KEY'], algorithm='HS256')
-        except Exception as e:
-            return str(e)
+        payload = {'sub': str(self.id), 'iss': current_app.config['SERVER_NAME'], 'iat': int(time())}
+        return jwt.encode(payload, current_app.config['SECRET_KEY'], algorithm='HS256')
 
     # mark a post as 'read' for this user
     def mark_post_as_read(self, post):

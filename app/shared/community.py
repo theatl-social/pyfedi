@@ -17,9 +17,7 @@ SRC_API = 3
 # call from admin.federation not tested
 def join_community(community_id: int, src, auth=None, user_id=None, main_user_name=True):
     if src == SRC_API:
-        community = Community.query.get(community_id)
-        if not community:
-            raise Exception('community_not_found')
+        community = Community.query.filter_by(id=community_id).one()
         user = authorise_api_user(auth, return_type='model')
     else:
         community = Community.query.get_or_404(community_id)
@@ -112,9 +110,7 @@ def join_community(community_id: int, src, auth=None, user_id=None, main_user_na
 # function can be shared between WEB and API (only API calls it for now)
 def leave_community(community_id: int, src, auth=None):
     if src == SRC_API:
-        community = Community.query.get(community_id)
-        if not community:
-            raise Exception('community_not_found')
+        community = Community.query.filter_by(id=community_id).one()
         user = authorise_api_user(auth, return_type='model')
     else:
         community = Community.query.get_or_404(community_id)

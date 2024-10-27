@@ -21,9 +21,7 @@ SRC_API = 3
 
 def vote_for_reply(reply_id: int, vote_direction, src, auth=None):
     if src == SRC_API:
-        reply = PostReply.query.get(reply_id)
-        if not reply:
-            raise Exception('reply_not_found')
+        reply = PostReply.query.filter_by(id=reply_id).one()
         user = authorise_api_user(auth, return_type='model')
     else:
         reply = PostReply.query.get_or_404(reply_id)
@@ -98,9 +96,7 @@ def vote_for_reply(reply_id: int, vote_direction, src, auth=None):
 # post_reply_bookmark in app/post/routes would just need to do 'return bookmark_the_post_reply(comment_id, SRC_WEB)'
 def bookmark_the_post_reply(comment_id: int, src, auth=None):
     if src == SRC_API:
-        post_reply = PostReply.query.get(comment_id)
-        if not post_reply or post_reply.deleted:
-            raise Exception('comment_not_found')
+        post_reply = PostReply.query.filter_by(id=comment_id, deleted=False).one()
         user_id = authorise_api_user(auth)
     else:
         post_reply = PostReply.query.get_or_404(comment_id)
@@ -129,9 +125,7 @@ def bookmark_the_post_reply(comment_id: int, src, auth=None):
 # post_reply_remove_bookmark in app/post/routes would just need to do 'return remove_the_bookmark_from_post_reply(comment_id, SRC_WEB)'
 def remove_the_bookmark_from_post_reply(comment_id: int, src, auth=None):
     if src == SRC_API:
-        post_reply = PostReply.query.get(comment_id)
-        if not post_reply or post_reply.deleted:
-            raise Exception('comment_not_found')
+        post_reply = PostReply.query.filter_by(id=comment_id, deleted=False).one()
         user_id = authorise_api_user(auth)
     else:
         post_reply = PostReply.query.get_or_404(comment_id)
@@ -158,9 +152,7 @@ def remove_the_bookmark_from_post_reply(comment_id: int, src, auth=None):
 def toggle_post_reply_notification(post_reply_id: int, src, auth=None):
     # Toggle whether the current user is subscribed to notifications about replies to this reply or not
     if src == SRC_API:
-        post_reply = PostReply.query.get(post_reply_id)
-        if not post_reply or post_reply.deleted:
-            raise Exception('comment_not_found')
+        post_reply = PostReply.query.filter_by(id=post_reply_id, deleted=False).one()
         user_id = authorise_api_user(auth)
     else:
         post_reply = PostReply.query.get_or_404(post_reply_id)
@@ -226,9 +218,7 @@ def make_reply(input, post, parent_id, src, auth=None):
         language_id = input.language_id.data
 
     if parent_id:
-        parent_reply = PostReply.query.get(parent_id)
-        if not parent_reply:
-            raise Exception('parent_reply_not_found')
+        parent_reply = PostReply.query.filter_by(id=parent_id).one()
     else:
         parent_reply = None
 
@@ -375,7 +365,7 @@ def edit_reply(input, reply, post, src, auth=None):
         flash(_('Your changes have been saved.'), 'success')
 
     if reply.parent_id:
-        in_reply_to = PostReply.query.get(reply.parent_id)
+        in_reply_to = PostReply.query.filter_by(id=reply.parent_id).one()
     else:
         in_reply_to = post
 

@@ -131,9 +131,7 @@ def post_reply(auth, data):
         language_id = 2                                                     # FIXME: use site language
 
     input = {'body': body, 'notify_author': True, 'language_id': language_id}
-    post = Post.query.get(post_id)
-    if not post:
-        raise Exception('parent_not_found')
+    post = Post.query.filter_by(id=post_id).one()
 
     user_id, reply = make_reply(input, post, parent_id, SRC_API, auth)
 
@@ -153,12 +151,8 @@ def put_reply(auth, data):
         language_id = 2                                                     # FIXME: use site language
 
     input = {'body': body, 'notify_author': True, 'language_id': language_id}
-    reply = PostReply.query.get(reply_id)
-    if not reply:
-        raise Exception('reply_not_found')
-    post = Post.query.get(reply.post_id)
-    if not post:
-        raise Exception('post_not_found')
+    reply = PostReply.query.filter_by(id=reply_id).one()
+    post = Post.query.filter_by(id=reply.post_id).one()
 
     user_id, reply = edit_reply(input, reply, post, SRC_API, auth)
 

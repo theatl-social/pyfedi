@@ -12,9 +12,7 @@ from sqlalchemy import text
 
 def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0):
     if isinstance(post, int):
-        post = Post.query.get(post)
-    if not post or post.deleted:
-        raise Exception('post_not_found')
+        post = Post.query.filter_by(id=post, deleted=False).one()
 
     # Variant 1 - models/post/post.dart
     if variant == 1:
@@ -133,9 +131,7 @@ def cached_user_view_variant_1(user: User, stub=False):
 # 'user' param can be anyone (including the logged in user), 'user_id' param belongs to the user making the request
 def user_view(user: User | int, variant, stub=False, user_id=None):
     if isinstance(user, int):
-        user = User.query.get(user)
-    if not user:
-        raise Exception('user_not_found')
+        user = User.query.filter_by(id=user).one()
 
     # Variant 1 - models/person/person.dart
     if variant == 1:
@@ -190,12 +186,10 @@ def cached_community_view_variant_1(community: Community, stub=False):
 
 def community_view(community: Community | int | str, variant, stub=False, user_id=None):
     if isinstance(community, int):
-        community = Community.query.get(community)
+        community = Community.query.filter_by(id=community).one()
     elif isinstance(community, str):
         name, ap_domain = community.split('@')
-        community = Community.query.filter_by(name=name, ap_domain=ap_domain).first()
-    if not community:
-        raise Exception('community_not_found')
+        community = Community.query.filter_by(name=name, ap_domain=ap_domain).one()
 
     # Variant 1 - models/community/community.dart
     if variant == 1:
@@ -269,9 +263,7 @@ def calculate_if_has_children(reply):    # result used as True / False
 
 def reply_view(reply: PostReply | int, variant, user_id=None, my_vote=0):
     if isinstance(reply, int):
-        reply = PostReply.query.get(reply)
-    if not reply:
-        raise Exception('reply_not_found')
+        reply = PostReply.query.filter_by(id=reply).one()
 
     # Variant 1 - models/comment/comment.dart
     if variant == 1:
@@ -393,9 +385,7 @@ def search_view(type):
 
 def instance_view(instance: Instance | int, variant):
     if isinstance(instance, int):
-        instance = Instance.query.get(instance)
-    if not instance:
-        raise Exception('instance_not_found')
+        instance = Instance.query.filter_by(id=instance).one()
 
     if variant == 1:
         include = ['id', 'domain', 'software', 'version']
