@@ -206,17 +206,18 @@ def lemmy_federated_instances():
     linked = []
     allowed = []
     blocked = []
+    for instance in AllowedInstances.query.all():
+        allowed.append({"id": instance.id, "domain": instance.domain, "published": utcnow(), "updated": utcnow()})
+    for instance in BannedInstances.query.all():
+        blocked.append({"id": instance.id, "domain": instance.domain, "published": utcnow(), "updated": utcnow()})
     for instance in instances:
         instance_data = {"id": instance.id, "domain": instance.domain, "published": instance.created_at.isoformat(), "updated": instance.updated_at.isoformat()}
         if instance.software:
             instance_data['software'] = instance.software
         if instance.version:
             instance_data['version'] = instance.version
-        linked.append(instance_data)
-    for instance in AllowedInstances.query.all():
-        allowed.append({"id": instance.id, "domain": instance.domain, "published": utcnow(), "updated": utcnow()})
-    for instance in BannedInstances.query.all():
-        blocked.append({"id": instance.id, "domain": instance.domain, "published": utcnow(), "updated": utcnow()})
+        if not any(blocked_instance.get('domain') == instance.domain for blocked_instance in blocked):
+            linked.append(instance_data)
     return jsonify({
         "federated_instances": {
             "linked": linked,
