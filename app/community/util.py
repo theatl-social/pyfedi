@@ -16,7 +16,7 @@ from app.activitypub.util import find_actor_or_create, actor_json_to_model, post
 from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO, NOTIF_POST, \
     POST_TYPE_POLL
 from app.models import Community, File, BannedInstances, PostReply, Post, utcnow, CommunityMember, Site, \
-    Instance, Notification, User, ActivityPubLog, NotificationSubscription, PollChoice, Poll
+    Instance, Notification, User, ActivityPubLog, NotificationSubscription, PollChoice, Poll, Tag
 from app.utils import get_request, gibberish, markdown_to_html, domain_from_url, \
     is_image_url, ensure_directory_exists, shorten_string, \
     remove_tracking_from_link, ap_datetime, instance_banned, blocked_phrases, url_to_thumbnail_file, opengraph_parse, \
