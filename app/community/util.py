@@ -426,7 +426,7 @@ def save_post(form, post: Post, type: int):
         db.session.add(post)
     else:
         db.session.execute(text('DELETE FROM "post_tag" WHERE post_id = :post_id'), {'post_id': post.id})
-    post.tags = tags_from_string(form.tags.data)
+    post.tags = tags_from_string_old(form.tags.data)
     db.session.commit()
 
     # Save poll choices. NB this will delete all votes whenever a poll is edited. Partially because it's easier to code but also to stop malicious alterations to polls after people have already voted
@@ -497,6 +497,22 @@ def tags_from_string(tags: str) -> List[dict]:
         tag_to_append = find_hashtag_or_create(tag)
         if tag_to_append:
             return_value.append({'type': 'Hashtag', 'name': tag_to_append.name})
+    return return_value
+
+
+def tags_from_string_old(tags: str) -> List[Tag]:
+    return_value = []
+    tags = tags.strip()
+    if tags == '':
+        return []
+    tag_list = tags.split(',')
+    tag_list = [tag.strip() for tag in tag_list]
+    for tag in tag_list:
+        if tag[0] == '#':
+            tag = tag[1:]
+        tag_to_append = find_hashtag_or_create(tag)
+        if tag_to_append:
+            return_value.append(tag_to_append)
     return return_value
 
 
