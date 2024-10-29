@@ -670,14 +670,18 @@ def add_reply(post_id: int, comment_id: int):
 @bp.route('/post/<int:post_id>/options', methods=['GET'])
 def post_options(post_id: int):
     post = Post.query.get_or_404(post_id)
-    if current_user.is_anonymous or not current_user.is_admin():
-        if post.deleted:
+    if post.deleted:
+        if current_user.is_anonymous:
             abort(404)
+        if (not post.community.is_moderator() and
+            not current_user.is_admin() and
+            (post.deleted_by is not None and post.deleted_by != current_user.id)):
+            abort(401)
 
     existing_bookmark = []
     if current_user.is_authenticated:
         existing_bookmark = PostBookmark.query.filter(PostBookmark.post_id == post_id, PostBookmark.user_id == current_user.id).first()
-    
+
     return render_template('post/post_options.html', post=post, existing_bookmark=existing_bookmark,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
@@ -1025,7 +1029,6 @@ def post_delete_post(community: Community, post: Post, user_id: int, federate_al
             for ocp in old_cross_posts:
                 if ocp.cross_posts is not None and post.id in ocp.cross_posts:
                     ocp.cross_posts.remove(post.id)
-    post.delete_dependencies()
     post.deleted = True
     post.deleted_by = user_id
     post.author.post_count -= 1
@@ -1093,14 +1096,19 @@ def post_delete_post(community: Community, post: Post, user_id: int, federate_al
 @login_required
 def post_restore(post_id: int):
     post = Post.query.get_or_404(post_id)
-    if post.community.is_moderator() or post.community.is_owner() or current_user.is_admin():
+    if post.user_id == current_user.id or post.community.is_moderator() or post.community.is_owner() or current_user.is_admin():
+        if post.deleted_by == post.user_id:
+            was_mod_deletion = False
+        else:
+            was_mod_deletion = True
         post.deleted = False
+        post.deleted_by = None
         post.author.post_count += 1
         post.community.post_count += 1
         db.session.commit()
 
         # Federate un-delete
-        if post.is_local():
+        if not post.community.local_only:
             delete_json = {
               "actor": current_user.public_url(),
               "to": ["https://www.w3.org/ns/activitystreams#Public"],
@@ -1116,31 +1124,40 @@ def post_restore(post_id: int):
                   ],
                   'object': post.ap_id,
                   'uri': post.ap_id,
-                  "summary": "bad post",
               },
               "cc": [post.community.public_url()],
-              "audience": post.author.public_url(),
+              "audience": post.community.public_url(),
               "type": "Undo",
               "id": f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}"
             }
+            if was_mod_deletion:
+                delete_json['object']['summary'] = "Deleted by mod"
 
-            announce = {
-                "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
-                "type": 'Announce',
-                "to": [
-                    "https://www.w3.org/ns/activitystreams#Public"
-                ],
-                "actor": post.community.public_url(),
-                "cc": [
-                    post.community.ap_followers_url
-                ],
-                '@context': default_context(),
-                'object': delete_json
-            }
+            if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
+                if not was_mod_deletion or (was_mod_deletion and post.community.is_moderator(current_user)):
+                    success = post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
+                                           current_user.public_url() + '#main-key')
+                    if success is False or isinstance(success, str):
+                        flash('Failed to send delete to remote server', 'error')
 
-            for instance in post.community.following_instances():
-                if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
-                    send_to_remote_instance(instance.id, post.community.id, announce)
+            else:  # local community - send it to followers on remote instances
+                announce = {
+                  "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+                  "type": 'Announce',
+                  "to": [
+                      "https://www.w3.org/ns/activitystreams#Public"
+                  ],
+                  "actor": post.community.public_url(),
+                  "cc": [
+                      post.community.ap_followers_url
+                  ],
+                  '@context': default_context(),
+                  'object': delete_json
+              }
+
+                for instance in post.community.following_instances():
+                    if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
+                        send_to_remote_instance(instance.id, post.community.id, announce)
 
         if post.user_id != current_user.id:
             add_to_modlog('restore_post', community_id=post.community.id, link_text=shorten_string(post.title),
@@ -1148,6 +1165,23 @@ def post_restore(post_id: int):
 
         flash(_('Post has been restored.'))
     return redirect(url_for('activitypub.post_ap', post_id=post.id))
+
+
+@bp.route('/post/<int:post_id>/purge', methods=['GET', 'POST'])
+@login_required
+def post_purge(post_id: int):
+    post = Post.query.get_or_404(post_id)
+    if not post.deleted:
+        abort(404)
+    if post.deleted_by == current_user.id or post.community.is_moderator() or current_user.is_admin():
+        post.delete_dependencies()
+        db.session.delete(post)
+        db.session.commit()
+        flash(_('Post purged.'))
+    else:
+        abort(401)
+
+    return redirect(url_for('user.show_profile_by_id', user_id=post.user_id))
 
 
 @bp.route('/post/<int:post_id>/bookmark', methods=['GET', 'POST'])
@@ -1750,9 +1784,7 @@ def post_reply_purge(post_id: int, comment_id: int):
     post_reply = PostReply.query.get_or_404(comment_id)
     if not post_reply.deleted:
         abort(404)
-    if post_reply.user_id == current_user.id and (post_reply.deleted_by is None or post_reply.deleted_by != post_reply.user_id):
-        abort(401)
-    if post_reply.user_id == current_user.id or post.community.is_moderator() or current_user.is_admin():
+    if post_reply.deleted_by == current_user.id or post.community.is_moderator() or current_user.is_admin():
         if not post_reply.has_replies():
             post_reply.delete_dependencies()
             db.session.delete(post_reply)

@@ -19,8 +19,10 @@
                             {% endif -%}
                             {% if post.user_id == current_user.id or post.community.is_moderator() or post.community.is_owner() or current_user.is_admin() -%}
                                 {% if post.deleted -%}
-                                    <li><a href="{{ url_for('post.post_restore', post_id=post.id) }}" class="no-underline confirm_first" rel="nofollow"><span class="fe fe-delete"></span>
+                                    <li><a href="{{ url_for('post.post_restore', post_id=post.id) }}" class="no-underline confirm_first" rel="nofollow"><span class="fe fe-arrow-up"></span>
                                         {{ _('Restore') }}</a></li>
+                                    <li><a href="{{ url_for('post.post_purge', post_id=post.id) }}" class="no-underline confirm_first" rel="nofollow"><span class="fe fe-delete red"></span>
+                                        {{ _('Purge') }}</a></li>
                                 {% else -%}
                                     <li><a href="{{ url_for('post.post_delete', post_id=post.id) }}" class="no-underline confirm_first" rel="nofollow"><span class="fe fe-delete"></span>
                                         {{ _('Delete') }}</a></li>

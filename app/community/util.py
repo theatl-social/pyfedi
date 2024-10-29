@@ -527,8 +527,8 @@ def delete_post_from_community(post_id):
 def delete_post_from_community_task(post_id):
     post = Post.query.get(post_id)
     community = post.community
-    post.delete_dependencies()
     post.deleted = True
+    post.deleted_by = current_user.id
     db.session.commit()
 
     if not community.local_only:

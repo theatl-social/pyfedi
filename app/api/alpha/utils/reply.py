@@ -1,9 +1,9 @@
 from app import cache
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
-from app.api.alpha.views import reply_view
+from app.api.alpha.views import reply_view, reply_report_view
 from app.models import PostReply, Post
 from app.shared.reply import vote_for_reply, bookmark_the_post_reply, remove_the_bookmark_from_post_reply, toggle_post_reply_notification, make_reply, edit_reply, \
-                             delete_reply, restore_reply
+                             delete_reply, restore_reply, report_reply
 from app.utils import authorise_api_user, blocked_users, blocked_instances
 
 from sqlalchemy import desc
@@ -131,9 +131,7 @@ def post_reply(auth, data):
         language_id = 2                                                     # FIXME: use site language
 
     input = {'body': body, 'notify_author': True, 'language_id': language_id}
-    post = Post.query.get(post_id)
-    if not post:
-        raise Exception('parent_not_found')
+    post = Post.query.filter_by(id=post_id).one()
 
     user_id, reply = make_reply(input, post, parent_id, SRC_API, auth)
 
@@ -153,12 +151,8 @@ def put_reply(auth, data):
         language_id = 2                                                     # FIXME: use site language
 
     input = {'body': body, 'notify_author': True, 'language_id': language_id}
-    reply = PostReply.query.get(reply_id)
-    if not reply:
-        raise Exception('reply_not_found')
-    post = Post.query.get(reply.post_id)
-    if not post:
-        raise Exception('post_not_found')
+    reply = PostReply.query.filter_by(id=reply_id).one()
+    post = Post.query.filter_by(id=reply.post_id).one()
 
     user_id, reply = edit_reply(input, reply, post, SRC_API, auth)
 
@@ -182,4 +176,18 @@ def post_reply_delete(auth, data):
     reply_json = reply_view(reply=reply, variant=4, user_id=user_id)
     return reply_json
 
-    return {}
+
+def post_reply_report(auth, data):
+    required(['comment_id', 'reason'], data)
+    integer_expected(['comment_id'], data)
+    string_expected(['reason'], data)
+
+    reply_id = data['comment_id']
+    reason = data['reason']
+    input = {'reason': reason, 'description': '', 'report_remote': True}
+
+    user_id, report = report_reply(reply_id, input, SRC_API, auth)
+
+    reply_json = reply_report_view(report=report, reply_id=reply_id, user_id=user_id)
+    return reply_json
+

@@ -14,7 +14,11 @@
     {% if teaser -%}
     <div class="row">
         <div class="col-12 hidable">
-            reply to: <a href="{{ url_for('activitypub.post_ap', post_id=post_reply.post.id, _anchor='comment_' + str(post_reply.id)) }}">{{ post_reply.post.title | truncate(80, True) }}</a>
+            {% if post_reply.post.deleted: -%}
+                reply to: [deleted post]
+            {% else -%}
+                reply to: <a href="{{ url_for('activitypub.post_ap', post_id=post_reply.post.id, _anchor='comment_' + str(post_reply.id)) }}">{{ post_reply.post.title | truncate(80, True) }}</a>
+            {% endif -%}
             <span class="comment_community">in {{ render_communityname(post_reply.post.community) }}</span>
         </div>
     </div>
@@ -53,7 +57,11 @@
     </div>
     <div class="comment_actions hidable">
             {% if post_reply.post.comments_enabled -%}
-                <a href="{{ url_for('post.add_reply', post_id=post_reply.post.id, comment_id=post_reply.id) }}" class="" rel="nofollow noindex"><span class="fe fe-reply"></span> reply</a>
+                {% if not post_reply.post.deleted and not post_reply.deleted -%}
+                    <a href="{{ url_for('post.add_reply', post_id=post_reply.post.id, comment_id=post_reply.id) }}" class="" rel="nofollow noindex"><span class="fe fe-reply"></span> reply</a>
+                {% else -%}
+                    <span class="fe fe-reply"></span> reply
+                {% endif -%}
             {% endif -%}
         <div class="voting_buttons_new">
             {% with comment=post_reply, community=post_reply.post.community -%}
@@ -74,7 +82,9 @@
                 {% endwith -%}
             {% endif -%}
         </div>
-        <a href="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) }}" class="comment_actions_link" rel="nofollow noindex" aria-label="{{ _('Comment options') }}"><span class="fe fe-options" title="Options"> </span></a>
+        {% if not post_reply.post.deleted -%}
+            <a href="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) }}" class="comment_actions_link" rel="nofollow noindex" aria-label="{{ _('Comment options') }}"><span class="fe fe-options" title="Options"> </span></a>
+        {% endif -%}
     </div>
     {% if not post_reply.author.indexable -%}<!--googleon all-->{% endif -%}
     {% if collapsed -%}

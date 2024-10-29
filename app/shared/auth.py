@@ -21,23 +21,21 @@ def log_user_in(input, src):
     if src == SRC_WEB:
         username = input.user_name.data
         password = input.password.data
+        user = User.query.filter_by(user_name=username, ap_id=None).first()
     elif src == SRC_API:
         required(["username_or_email", "password"], input)
         string_expected(["username_or_email", "password"], input)
 
         username = input['username_or_email']
         password = input['password']
+        user = User.query.filter_by(user_name=username, ap_id=None, deleted=False).one()
     else:
         return None
 
-    user = User.query.filter_by(user_name=username, ap_id=None).first()
-
-    if user is None or user.deleted:
-        if src == SRC_WEB:
+    if src == SRC_WEB:
+        if user is None or user.deleted:
             flash(_('No account exists with that user name.'), 'error')
             return redirect(url_for('auth.login'))
-        elif src == SRC_API:
-            raise Exception('incorrect_login')
 
     if not user.check_password(password):
         if src == SRC_WEB:
@@ -96,13 +94,9 @@ def log_user_in(input, src):
             response.set_cookie('low_bandwidth', '0', expires=datetime(year=2099, month=12, day=30))
         return response
     elif src == SRC_API:
-        token = user.encode_jwt_token()
-        if token:
-            login_json = {
-              "jwt": token,
-              "registration_created": user.verified,
-              "verify_email_sent": True
-            }
-            return login_json
-        else:
-            raise Exception('could_not_generate_token')
+        login_json = {
+          'jwt': user.encode_jwt_token(),
+          'registration_created': user.verified,
+          'verify_email_sent': True
+        }
+        return login_json

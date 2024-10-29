@@ -12,9 +12,7 @@ from sqlalchemy import text
 
 def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0):
     if isinstance(post, int):
-        post = Post.query.get(post)
-    if not post or post.deleted:
-        raise Exception('post_not_found')
+        post = Post.query.filter_by(id=post, deleted=False).one()
 
     # Variant 1 - models/post/post.dart
     if variant == 1:
@@ -133,9 +131,7 @@ def cached_user_view_variant_1(user: User, stub=False):
 # 'user' param can be anyone (including the logged in user), 'user_id' param belongs to the user making the request
 def user_view(user: User | int, variant, stub=False, user_id=None):
     if isinstance(user, int):
-        user = User.query.get(user)
-    if not user:
-        raise Exception('user_not_found')
+        user = User.query.filter_by(id=user).one()
 
     # Variant 1 - models/person/person.dart
     if variant == 1:
@@ -190,12 +186,10 @@ def cached_community_view_variant_1(community: Community, stub=False):
 
 def community_view(community: Community | int | str, variant, stub=False, user_id=None):
     if isinstance(community, int):
-        community = Community.query.get(community)
+        community = Community.query.filter_by(id=community).one()
     elif isinstance(community, str):
         name, ap_domain = community.split('@')
-        community = Community.query.filter_by(name=name, ap_domain=ap_domain).first()
-    if not community:
-        raise Exception('community_not_found')
+        community = Community.query.filter_by(name=name, ap_domain=ap_domain).one()
 
     # Variant 1 - models/community/community.dart
     if variant == 1:
@@ -269,9 +263,7 @@ def calculate_if_has_children(reply):    # result used as True / False
 
 def reply_view(reply: PostReply | int, variant, user_id=None, my_vote=0):
     if isinstance(reply, int):
-        reply = PostReply.query.get(reply)
-    if not reply:
-        raise Exception('reply_not_found')
+        reply = PostReply.query.filter_by(id=reply).one()
 
     # Variant 1 - models/comment/comment.dart
     if variant == 1:
@@ -338,6 +330,48 @@ def reply_view(reply: PostReply | int, variant, user_id=None, my_vote=0):
         return v4
 
 
+def reply_report_view(report, reply_id, user_id):
+    # views/comment_report_view.dart - /comment/report api endpoint
+    reply_json = reply_view(reply=reply_id, variant=2, user_id=user_id)
+    post_json = post_view(post=reply_json['comment']['post_id'], variant=1, stub=True)
+    community_json = community_view(community=post_json['community_id'], variant=1, stub=True)
+
+    banned = db.session.execute(text('SELECT user_id FROM "community_ban" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': report.reporter_id, 'community_id': community_json['id']}).scalar()
+    moderator = db.session.execute(text('SELECT is_moderator FROM "community_member" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': report.reporter_id, 'community_id': community_json['id']}).scalar()
+    admin = db.session.execute(text('SELECT user_id FROM "user_role" WHERE user_id = :user_id and role_id = 4'), {'user_id': report.reporter_id}).scalar()
+
+    creator_banned_from_community = True if banned else False
+    creator_is_moderator = True if moderator else False
+    creator_is_admin = True if admin else False
+
+    v1 = {
+      'comment_report_view': {
+        'comment_report': {
+          'id': report.id,
+          'creator_id': report.reporter_id,
+          'comment_id': report.suspect_post_reply_id,
+          'original_comment_text': reply_json['comment']['body'],
+          'reason': report.reasons,
+          'resolved': report.status == 3,
+          'published': report.created_at.isoformat() + 'Z'
+        },
+        'comment': reply_json['comment'],
+        'post': post_json,
+        'community': community_json,
+        'creator': user_view(user=user_id, variant=1, stub=True),
+        'comment_creator': user_view(user=report.suspect_user_id, variant=1, stub=True),
+        'counts': reply_json['counts'],
+        'creator_banned_from_community': creator_banned_from_community,
+        'creator_is_moderator': creator_is_moderator,
+        'creator_is_admin': creator_is_admin,
+        'creator_blocked': False,
+        'subscribed': reply_json['subscribed'],
+        'saved': reply_json['saved']
+      }
+    }
+    return v1
+
+
 def search_view(type):
     v1 = {
       'type_': type,
@@ -351,9 +385,7 @@ def search_view(type):
 
 def instance_view(instance: Instance | int, variant):
     if isinstance(instance, int):
-        instance = Instance.query.get(instance)
-    if not instance:
-        raise Exception('instance_not_found')
+        instance = Instance.query.filter_by(id=instance).one()
 
     if variant == 1:
         include = ['id', 'domain', 'software', 'version']

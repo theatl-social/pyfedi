@@ -2,7 +2,7 @@ from app import cache, db
 from app.activitypub.signature import default_context, post_request_in_background, post_request
 from app.community.util import send_to_remote_instance
 from app.constants import *
-from app.models import NotificationSubscription, Post, PostReply, PostReplyBookmark, User, utcnow
+from app.models import Instance, Notification, NotificationSubscription, Post, PostReply, PostReplyBookmark, Report, Site, User, utcnow
 from app.utils import gibberish, instance_banned, render_template, authorise_api_user, recently_upvoted_post_replies, recently_downvoted_post_replies, shorten_string, \
                       piefed_markdown_to_lemmy_markdown, markdown_to_html, ap_datetime
 
@@ -21,9 +21,7 @@ SRC_API = 3
 
 def vote_for_reply(reply_id: int, vote_direction, src, auth=None):
     if src == SRC_API:
-        reply = PostReply.query.get(reply_id)
-        if not reply:
-            raise Exception('reply_not_found')
+        reply = PostReply.query.filter_by(id=reply_id).one()
         user = authorise_api_user(auth, return_type='model')
     else:
         reply = PostReply.query.get_or_404(reply_id)
@@ -98,9 +96,7 @@ def vote_for_reply(reply_id: int, vote_direction, src, auth=None):
 # post_reply_bookmark in app/post/routes would just need to do 'return bookmark_the_post_reply(comment_id, SRC_WEB)'
 def bookmark_the_post_reply(comment_id: int, src, auth=None):
     if src == SRC_API:
-        post_reply = PostReply.query.get(comment_id)
-        if not post_reply or post_reply.deleted:
-            raise Exception('comment_not_found')
+        post_reply = PostReply.query.filter_by(id=comment_id, deleted=False).one()
         user_id = authorise_api_user(auth)
     else:
         post_reply = PostReply.query.get_or_404(comment_id)
@@ -129,9 +125,7 @@ def bookmark_the_post_reply(comment_id: int, src, auth=None):
 # post_reply_remove_bookmark in app/post/routes would just need to do 'return remove_the_bookmark_from_post_reply(comment_id, SRC_WEB)'
 def remove_the_bookmark_from_post_reply(comment_id: int, src, auth=None):
     if src == SRC_API:
-        post_reply = PostReply.query.get(comment_id)
-        if not post_reply or post_reply.deleted:
-            raise Exception('comment_not_found')
+        post_reply = PostReply.query.filter_by(id=comment_id, deleted=False).one()
         user_id = authorise_api_user(auth)
     else:
         post_reply = PostReply.query.get_or_404(comment_id)
@@ -158,9 +152,7 @@ def remove_the_bookmark_from_post_reply(comment_id: int, src, auth=None):
 def toggle_post_reply_notification(post_reply_id: int, src, auth=None):
     # Toggle whether the current user is subscribed to notifications about replies to this reply or not
     if src == SRC_API:
-        post_reply = PostReply.query.get(post_reply_id)
-        if not post_reply or post_reply.deleted:
-            raise Exception('comment_not_found')
+        post_reply = PostReply.query.filter_by(id=post_reply_id, deleted=False).one()
         user_id = authorise_api_user(auth)
     else:
         post_reply = PostReply.query.get_or_404(post_reply_id)
@@ -226,9 +218,7 @@ def make_reply(input, post, parent_id, src, auth=None):
         language_id = input.language_id.data
 
     if parent_id:
-        parent_reply = PostReply.query.get(parent_id)
-        if not parent_reply:
-            raise Exception('parent_reply_not_found')
+        parent_reply = PostReply.query.filter_by(id=parent_id).one()
     else:
         parent_reply = None
 
@@ -375,7 +365,7 @@ def edit_reply(input, reply, post, src, auth=None):
         flash(_('Your changes have been saved.'), 'success')
 
     if reply.parent_id:
-        in_reply_to = PostReply.query.get(reply.parent_id)
+        in_reply_to = PostReply.query.filter_by(id=reply.parent_id).one()
     else:
         in_reply_to = post
 
@@ -640,5 +630,79 @@ def restore_reply(reply_id, src, auth):
 
     if src == SRC_API:
         return user.id, reply
+    else:
+        return
+
+
+def report_reply(reply_id, input, src, auth=None):
+    if src == SRC_API:
+        reply = PostReply.query.filter_by(id=reply_id).one()
+        user = authorise_api_user(auth, return_type='model')
+        reason = input['reason']
+        description = input['description']
+        report_remote = input['report_remote']
+    else:
+        reply = PostReply.query.get_or_404(reply_id)
+        user = current_user
+        reason = input.reasons_to_string(input.reasons.data)
+        description = input.description.data
+        report_remote = input.report_remote.data
+
+    if reply.reports == -1:  # When a mod decides to ignore future reports, reply.reports is set to -1
+        if src == SRC_API:
+            raise Exception('already_reported')
+        else:
+            flash(_('Comment has already been reported, thank you!'))
+            return
+
+    report = Report(reasons=reason, description=description, type=2, reporter_id=user.id, suspect_post_id=reply.post.id, suspect_community_id=reply.community.id,
+                    suspect_user_id=reply.author.id, suspect_post_reply_id=reply.id, in_community_id=reply.community.id, source_instance_id=1)
+    db.session.add(report)
+
+    # Notify moderators
+    already_notified = set()
+    for mod in reply.community.moderators():
+        moderator = User.query.get(mod.user_id)
+        if moderator and moderator.is_local():
+            notification = Notification(user_id=mod.user_id, title=_('A comment has been reported'),
+                                        url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
+                                        author_id=user.id)
+            db.session.add(notification)
+            already_notified.add(mod.user_id)
+    reply.reports += 1
+    # todo: only notify admins for certain types of report
+    for admin in Site.admins():
+        if admin.id not in already_notified:
+            notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, author_id=user.id)
+            db.session.add(notify)
+            admin.unread_notifications += 1
+    db.session.commit()
+
+    # federate report to originating instance
+    if not reply.community.is_local() and report_remote:
+        summary = reason
+        if description:
+            summary += ' - ' + description
+        report_json = {
+          'actor': user.public_url(),
+          'audience': reply.community.public_url(),
+          'content': None,
+          'id': f"https://{current_app.config['SERVER_NAME']}/activities/flag/{gibberish(15)}",
+          'object': reply.ap_id,
+          'summary': summary,
+          'to': [
+            reply.community.public_url()
+          ],
+          'type': 'Flag'
+        }
+        instance = Instance.query.get(reply.community.instance_id)
+        if reply.community.ap_inbox_url and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
+            success = post_request(reply.community.ap_inbox_url, report_json, user.private_key, user.public_url() + '#main-key')
+            if success is False or isinstance(success, str):
+                if src == SRC_WEB:
+                    flash('Failed to send report to remote server', 'error')
+
+    if src == SRC_API:
+        return user.id, report
     else:
         return

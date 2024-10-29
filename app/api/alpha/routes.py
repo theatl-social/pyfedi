@@ -2,7 +2,7 @@ from app.api.alpha import bp
 from app.api.alpha.utils import get_site, post_site_block, \
                                 get_search, \
                                 get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, \
-                                get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, put_reply, post_reply_delete, \
+                                get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, put_reply, post_reply_delete, post_reply_report, \
                                 get_community_list, get_community, post_community_follow, post_community_block, \
                                 get_user, post_user_block
 from app.shared.auth import log_user_in
@@ -242,6 +242,18 @@ def post_alpha_comment_delete():
         return jsonify({"error": str(ex)}), 400
 
 
+@bp.route('/api/alpha/comment/report', methods=['POST'])
+def post_alpha_comment_report():
+    if not current_app.debug:
+        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(post_reply_report(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
 # User
 @bp.route('/api/alpha/user', methods=['GET'])
 def get_alpha_user():
@@ -325,7 +337,6 @@ def alpha_post():
 @bp.route('/api/alpha/comment/remove', methods=['POST'])
 @bp.route('/api/alpha/comment/mark_as_read', methods=['POST'])
 @bp.route('/api/alpha/comment/distinguish', methods=['POST'])
-@bp.route('/api/alpha/comment/report', methods=['POST'])
 @bp.route('/api/alpha/comment/report/resolve', methods=['PUT'])
 @bp.route('/api/alpha/comment/report/list', methods=['GET'])
 def alpha_reply():

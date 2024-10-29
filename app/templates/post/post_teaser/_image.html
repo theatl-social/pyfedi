@@ -9,6 +9,7 @@
             <span class="red fe fe-report" title="{{ _('Reported. Check post for issues.') }}"></span>
         {% endif -%}
         {% if post.sticky -%}<span class="fe fe-sticky-right"></span>{% endif -%}
+        {% if post.deleted -%}<span class="red fe fe-delete" title="{{ _('Post deleted') }}"></span>{% endif -%}
     </h3>
     <span class="author small">{% if show_post_community -%}<a href="/c/{{ post.community.link() }}" aria-label="{{ _('Go to community %(name)s', name=post.community.name) }}">
         {% if post.community.icon_id and not low_bandwidth %}<img class="community_icon_small rounded-circle" src="{{ post.community.icon_image('tiny') }}" alt="Community icon" />{% endif -%}

@@ -20,9 +20,7 @@ SRC_API = 3
 
 def vote_for_post(post_id: int, vote_direction, src, auth=None):
     if src == SRC_API:
-        post = Post.query.get(post_id)
-        if not post:
-            raise Exception('post_not_found')
+        post = Post.query.filter_by(id=post_id).one()
         user = authorise_api_user(auth, return_type='model')
     else:
         post = Post.query.get_or_404(post_id)
@@ -97,9 +95,7 @@ def vote_for_post(post_id: int, vote_direction, src, auth=None):
 # post_bookmark in app/post/routes would just need to do 'return bookmark_the_post(post_id, SRC_WEB)'
 def bookmark_the_post(post_id: int, src, auth=None):
     if src == SRC_API:
-        post = Post.query.get(post_id)
-        if not post or post.deleted:
-            raise Exception('post_not_found')
+        post = Post.query.filter_by(id=post_id, deleted=False).one()
         user_id = authorise_api_user(auth)
     else:
         post = Post.query.get_or_404(post_id)
@@ -127,9 +123,7 @@ def bookmark_the_post(post_id: int, src, auth=None):
 # post_remove_bookmark in app/post/routes would just need to do 'return remove_the_bookmark_from_post(post_id, SRC_WEB)'
 def remove_the_bookmark_from_post(post_id: int, src, auth=None):
     if src == SRC_API:
-        post = Post.query.get(post_id)
-        if not post or post.deleted:
-            raise Exception('post_not_found')
+        post = Post.query.filter_by(id=post_id, deleted=False).one()
         user_id = authorise_api_user(auth)
     else:
         post = Post.query.get_or_404(post_id)
@@ -156,9 +150,7 @@ def remove_the_bookmark_from_post(post_id: int, src, auth=None):
 def toggle_post_notification(post_id: int, src, auth=None):
     # Toggle whether the current user is subscribed to notifications about top-level replies to this post or not
     if src == SRC_API:
-        post = Post.query.get(post_id)
-        if not post or post.deleted:
-            raise Exception('post_not_found')
+        post = Post.query.filter_by(id=post_id, deleted=False).one()
         user_id = authorise_api_user(auth)
     else:
         post = Post.query.get_or_404(post_id)
@@ -173,10 +165,8 @@ def toggle_post_notification(post_id: int, src, auth=None):
         db.session.delete(existing_notification)
         db.session.commit()
     else:  # no subscription yet, so make one
-        new_notification = NotificationSubscription(name=shorten_string(_('Replies to my post %(post_title)s',
-                                                                              post_title=post.title)),
-                                                    user_id=user_id, entity_id=post.id,
-                                                    type=NOTIF_POST)
+        new_notification = NotificationSubscription(name=shorten_string(_('Replies to my post %(post_title)s', post_title=post.title)),
+                                                    user_id=user_id, entity_id=post.id, type=NOTIF_POST)
         db.session.add(new_notification)
         db.session.commit()
 

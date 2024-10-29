@@ -98,10 +98,7 @@ def get_post(auth, data):
     user_id = authorise_api_user(auth) if auth else None
 
     post_json = post_view(post=id, variant=3, user_id=user_id)
-    if post_json:
-        return post_json
-    else:
-        raise Exception('post_not_found')
+    return post_json
 
 
 # would be in app/constants.py

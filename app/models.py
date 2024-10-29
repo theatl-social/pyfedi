@@ -1041,11 +1041,8 @@ class User(UserMixin, db.Model):
                                   {'user_id': self.id, 'type': NOTIF_USER}).scalars())
 
     def encode_jwt_token(self):
-        try:
-            payload = {'sub': str(self.id), 'iss': current_app.config['SERVER_NAME'], 'iat': int(time())}
-            return jwt.encode(payload, current_app.config['SECRET_KEY'], algorithm='HS256')
-        except Exception as e:
-            return str(e)
+        payload = {'sub': str(self.id), 'iss': current_app.config['SERVER_NAME'], 'iat': int(time())}
+        return jwt.encode(payload, current_app.config['SECRET_KEY'], algorithm='HS256')
 
     # mark a post as 'read' for this user
     def mark_post_as_read(self, post):
@@ -1377,10 +1374,19 @@ class Post(db.Model):
         db.session.query(PollChoice).filter(PollChoice.post_id == self.id).delete()
         db.session.query(Poll).filter(Poll.post_id == self.id).delete()
         db.session.query(Report).filter(Report.suspect_post_id == self.id).delete()
-        db.session.execute(text('DELETE FROM "post_reply_vote" WHERE post_reply_id IN (SELECT id FROM post_reply WHERE post_id = :post_id)'),
-                           {'post_id': self.id})
-        db.session.execute(text('DELETE FROM "post_reply" WHERE post_id = :post_id'), {'post_id': self.id})
         db.session.execute(text('DELETE FROM "post_vote" WHERE post_id = :post_id'), {'post_id': self.id})
+
+        reply_ids = db.session.execute(text('SELECT id FROM "post_reply" WHERE post_id = :post_id'), {'post_id': self.id}).scalars()
+        reply_ids = tuple(reply_ids)
+        if reply_ids:
+            db.session.execute(text('DELETE FROM "post_reply_vote" WHERE post_reply_id IN :reply_ids'), {'reply_ids': reply_ids})
+            db.session.execute(text('DELETE FROM "post_reply_bookmark" WHERE post_reply_id IN :reply_ids'), {'reply_ids': reply_ids})
+            db.session.execute(text('DELETE FROM "report" WHERE suspect_post_reply_id IN :reply_ids'), {'reply_ids': reply_ids})
+            db.session.execute(text('DELETE FROM "post_reply" WHERE post_id = :post_id'), {'post_id': self.id})
+
+            self.community.post_reply_count = db.session.execute(text('SELECT COUNT(id) as c FROM "post_reply" WHERE community_id = :community_id AND deleted = false'),
+                                                                {'community_id': self.community_id}).scalar()
+
         if self.image_id:
             file = File.query.get(self.image_id)
             file.delete_from_disk()

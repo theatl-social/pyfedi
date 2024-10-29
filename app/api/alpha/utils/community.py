@@ -17,14 +17,10 @@ def cached_community_list(type, user_id):
     else:
         communities = Community.query.filter_by(banned=False)
 
-    print(len(communities.all()))
-
     if user_id is not None:
         blocked_instance_ids = blocked_instances(user_id)
         if blocked_instance_ids:
             communities = communities.filter(Community.instance_id.not_in(blocked_instance_ids))
-
-    print(len(communities.all()))
 
     return communities.all()
 
