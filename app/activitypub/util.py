@@ -1302,9 +1302,8 @@ def is_activitypub_request():
     return 'application/ld+json' in request.headers.get('Accept', '') or 'application/activity+json' in request.headers.get('Accept', '')
 
 
-def delete_post_or_comment(user_ap_id, community_ap_id, to_be_deleted_ap_id, aplog_id):
+def delete_post_or_comment(user_ap_id, to_be_deleted_ap_id, aplog_id):
     deletor = find_actor_or_create(user_ap_id)
-    community = find_actor_or_create(community_ap_id, community_only=True)
     to_delete = find_liked_object(to_be_deleted_ap_id)
     aplog = ActivityPubLog.query.get(aplog_id)
 
@@ -1314,7 +1313,8 @@ def delete_post_or_comment(user_ap_id, community_ap_id, to_be_deleted_ap_id, apl
             aplog.exception_message = 'Activity about local content which is already deleted'
         return
 
-    if deletor and community and to_delete:
+    if deletor and to_delete:
+        community = to_delete.community
         if to_delete.author.id == deletor.id or deletor.is_admin() or community.is_moderator(deletor) or community.is_instance_admin(deletor):
             if isinstance(to_delete, Post):
                 to_delete.deleted = True
@@ -1351,15 +1351,12 @@ def delete_post_or_comment(user_ap_id, community_ap_id, to_be_deleted_ap_id, apl
     else:
        if aplog:
             aplog.result = 'failure'
-            aplog.exception_message = 'Unable to resolve deletor, community, or target'
+            aplog.exception_message = 'Unable to resolve deletor, or target'
 
 
 def restore_post_or_comment(object_json, aplog_id):
     restorer = find_actor_or_create(object_json['actor']) if 'actor' in object_json else None
-    community = find_actor_or_create(object_json['audience'], community_only=True)  if 'audience' in object_json else None
     to_restore = find_liked_object(object_json['object']) if 'object' in object_json else None
-    if to_restore and not community:
-        community = to_restore.community
     aplog = ActivityPubLog.query.get(aplog_id)
 
     if to_restore and not to_restore.deleted:
@@ -1368,7 +1365,8 @@ def restore_post_or_comment(object_json, aplog_id):
             aplog.exception_message = 'Activity about local content which is already restored'
         return
 
-    if restorer and community and to_restore:
+    if restorer and to_restore:
+        community = to_restore.community
         if to_restore.author.id == restorer.id or restorer.is_admin() or community.is_moderator(restorer) or community.is_instance_admin(restorer):
             if isinstance(to_restore, Post):
                 to_restore.deleted = False
@@ -1412,7 +1410,7 @@ def restore_post_or_comment(object_json, aplog_id):
     else:
        if aplog:
             aplog.result = 'failure'
-            aplog.exception_message = 'Unable to resolve restorer, community, or target'
+            aplog.exception_message = 'Unable to resolve restorer or target'
 
 
 def remove_data_from_banned_user(deletor_ap_id, user_ap_id, target):

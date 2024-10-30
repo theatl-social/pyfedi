@@ -824,13 +824,12 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                     elif request_json['object']['type'] == 'Delete':
                         activity_log.activity_type = request_json['object']['type']
                         user_ap_id = request_json['object']['actor']
-                        community_ap_id = request_json['object']['audience'] if 'audience' in request_json['object'] else request_json['actor']
                         to_be_deleted_ap_id = request_json['object']['object']
                         if isinstance(to_be_deleted_ap_id, dict):
                             activity_log.result = 'failure'
                             activity_log.exception_message = 'dict instead of string ' + str(to_be_deleted_ap_id)
                         else:
-                            delete_post_or_comment(user_ap_id, community_ap_id, to_be_deleted_ap_id, activity_log.id)
+                            delete_post_or_comment(user_ap_id, to_be_deleted_ap_id, activity_log.id)
                     elif request_json['object']['type'] == 'Page': # Sent for Mastodon's benefit
                         activity_log.result = 'ignored'
                         activity_log.exception_message = 'Intended for Mastodon'
