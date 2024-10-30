@@ -830,13 +830,6 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
                             activity_log.result = 'failure'
                             activity_log.exception_message = 'dict instead of string ' + str(to_be_deleted_ap_id)
                         else:
-                            post = Post.query.filter_by(ap_id=to_be_deleted_ap_id).first()
-                            if post and post.url and post.cross_posts is not None:
-                                old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
-                                post.cross_posts.clear()
-                                for ocp in old_cross_posts:
-                                    if ocp.cross_posts is not None and post.id in ocp.cross_posts:
-                                        ocp.cross_posts.remove(post.id)
                             delete_post_or_comment(user_ap_id, community_ap_id, to_be_deleted_ap_id, activity_log.id)
                     elif request_json['object']['type'] == 'Page': # Sent for Mastodon's benefit
                         activity_log.result = 'ignored'
