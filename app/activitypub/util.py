@@ -1303,14 +1303,6 @@ def is_activitypub_request():
 
 
 def delete_post_or_comment(user_ap_id, community_ap_id, to_be_deleted_ap_id, aplog_id):
-    if current_app.debug:
-        delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id, aplog_id)
-    else:
-        delete_post_or_comment_task.delay(user_ap_id, community_ap_id, to_be_deleted_ap_id, aplog_id)
-
-
-@celery.task
-def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id, aplog_id):
     deletor = find_actor_or_create(user_ap_id)
     community = find_actor_or_create(community_ap_id, community_only=True)
     to_delete = find_liked_object(to_be_deleted_ap_id)
@@ -1357,14 +1349,6 @@ def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id
 
 
 def restore_post_or_comment(object_json, aplog_id):
-    if current_app.debug:
-        restore_post_or_comment_task(object_json, aplog_id)
-    else:
-        restore_post_or_comment_task.delay(object_json, aplog_id)
-
-
-@celery.task
-def restore_post_or_comment_task(object_json, aplog_id):
     restorer = find_actor_or_create(object_json['actor']) if 'actor' in object_json else None
     community = find_actor_or_create(object_json['audience'], community_only=True)  if 'audience' in object_json else None
     to_restore = find_liked_object(object_json['object']) if 'object' in object_json else None
