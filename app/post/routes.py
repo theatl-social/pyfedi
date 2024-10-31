@@ -109,6 +109,9 @@ def show_post(post_id: int):
             'language': {
                 'identifier': reply.language_code(),
                 'name': reply.language_name()
+            },
+            'contentMap': {
+                'en': reply.body_html
             }
         }
         create_json = {
@@ -583,6 +586,10 @@ def add_reply(post_id: int, comment_id: int):
                 'published': ap_datetime(utcnow()),
                 'distinguished': False,
                 'audience': post.community.public_url(),
+                'language': {
+                    'identifier': reply.language_code(),
+                    'name': reply.language_name()
+                },
                 'contentMap': {
                     'en': reply.body_html
                 }
