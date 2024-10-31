@@ -210,94 +210,101 @@ def admin_federation():
         community_json = resp.json()
         resp.close()
 
-        # sort out the nsfw communities
-        safe_for_work_communities = []
-        for community in community_json:
-            if community['nsfw']:
-                continue
-            else:
-                safe_for_work_communities.append(community)
-
-        # sort out any that have less than 100 posts
-        communities_with_lots_of_content = []
-        for community in safe_for_work_communities:
-            if community['counts']['posts'] < 100:
-                continue
-            else:
-                communities_with_lots_of_content.append(community)
-
-        # sort out any that do not have greater than 500 active users over the past week
-        communities_with_lots_of_activity = []
-        for community in communities_with_lots_of_content:
-            if community['counts']['users_active_week'] < 500:
-                continue
-            else:
-                communities_with_lots_of_activity.append(community)
-
-        # sort out any instances we have already banned
-        banned_instances = BannedInstances.query.all()
-        banned_urls = []
-        communities_not_banned = []
-        for bi in banned_instances:
-            banned_urls.append(bi.domain)
-        for community in communities_with_lots_of_activity:
-            if community['baseurl'] in banned_urls:
-                continue
-            else:
-                communities_not_banned.append(community)
-
-        # sort out the 'seven things you can't say on tv' names (cursewords, ie sh*t), plus some
-        # "low effort" communities
-        # I dont know why, but some of them slip through on the first pass, so I just 
-        # ran the list again and filter out more
-        #
-        # TO-DO: fix the need for the double filter
+        already_known = list(db.session.execute(text('SELECT ap_public_url FROM "community"')).scalars())
+        banned_urls = list(db.session.execute(text('SELECT domain FROM "banned_instances"')).scalars())
         seven_things_plus = [
-            'shit', 'piss', 'fuck', 
-            'cunt', 'cocksucker', 'motherfucker', 'tits', 
+            'shit', 'piss', 'fuck',
+            'cunt', 'cocksucker', 'motherfucker', 'tits',
             'memes', 'piracy', '196', 'greentext', 'usauthoritarianism',
             'enoughmuskspam', 'political_weirdos', '4chan'
             ]
-        for community in communities_not_banned:
-            for word in seven_things_plus:
-                if word in community['name']:
-                    communities_not_banned.remove(community)
-        for community in communities_not_banned:
-            for word in seven_things_plus:
-                if word in community['name']:
-                    communities_not_banned.remove(community)
+
+        total_count = already_known_count = nsfw_count = low_content_count = low_active_users_count = banned_count = bad_words_count = 0
+        candidate_communities = []
+
+        for community in community_json:
+            total_count += 1
+
+            # sort out already known communities
+            if community['url'] in already_known:
+                already_known_count += 1
+                continue
+
+            # sort out the nsfw communities
+            elif community['nsfw']:
+                nsfw_count += 1
+                continue
+
+            # sort out any that have less than 100 posts
+            elif community['counts']['posts'] < 100:
+                low_content_count += 1
+                continue
+
+            # sort out any that do not have greater than 500 active users over the past week
+            elif community['counts']['users_active_week'] < 500:
+                low_active_users_count += 1
+                continue
+
+            # sort out any instances we have already banned
+            elif community['baseurl'] in banned_urls:
+                banned_count += 1
+                continue
+
+            # sort out the 'seven things you can't say on tv' names (cursewords), plus some
+            # "low effort" communities
+            if any(badword in community['name'].lower() for badword in seven_things_plus):
+                bad_words_count += 1
+                continue
+
+            else:
+                candidate_communities.append(community)
+
+        filtered_count = already_known_count + nsfw_count + low_content_count + low_active_users_count + banned_count + bad_words_count
+        flash(_('%d out of %d communities were excluded using current filters' % (filtered_count, total_count)))
 
         # sort the list based on the users_active_week key
-        parsed_communities_sorted = sorted(communities_not_banned, key=lambda c: c['counts']['users_active_week'], reverse=True)
+        parsed_communities_sorted = sorted(candidate_communities, key=lambda c: c['counts']['users_active_week'], reverse=True)
 
         # get the community urls to join
         community_urls_to_join = []
-        
+
         # if the admin user wants more added than we have, then just add all of them
         if communities_to_add > len(parsed_communities_sorted):
-            communities_to_add = len(parsed_communities_sorted) 
-        
+            communities_to_add = len(parsed_communities_sorted)
+
         # make the list of urls
         for i in range(communities_to_add):
-            community_urls_to_join.append(parsed_communities_sorted[i]['url'])
+            community_urls_to_join.append(parsed_communities_sorted[i]['url'].lower())
 
         # loop through the list and send off the follow requests
         # use User #1, the first instance admin
+
+        # NOTE: Subscribing using the admin's alt_profile causes problems:
+        # 1. 'Leave' will use the main user name so unsubscribe won't succeed.
+        # 2. De-selecting and re-selecting 'vote privately' generates a new alt_user_name every time,
+        #    so the username needed for a successful unsubscribe might get lost
+        # 3. If the admin doesn't have 'vote privately' selected, the federation JSON will populate
+        #    with a blank space for the name, so the subscription won't succeed.
+        # 4. Membership is based on user id, so using the alt_profile doesn't decrease the admin's joined communities
+        #
+        # Therefore, 'main_user_name=False' has been changed to 'admin_preload=True' below
+
         user = User.query.get(1)
         pre_load_messages = []
         for community in community_urls_to_join:
-            # get the relevant url bits 
+            # get the relevant url bits
             server, community = extract_domain_and_actor(community)
+
             # find the community
             new_community = search_for_community('!' + community + '@' + server)
-            # subscribe to the community using alt_profile
+            # subscribe to the community
             # capture the messages returned by do_subscibe
             # and show to user if instance is in debug mode
             if current_app.debug:
-                message = do_subscribe(new_community.ap_id, user.id, main_user_name=False)
+                message = do_subscribe(new_community.ap_id, user.id, admin_preload=True)
                 pre_load_messages.append(message)
             else:
-                message_we_wont_do_anything_with = do_subscribe.delay(new_community.ap_id, user.id, main_user_name=False)
+                message_we_wont_do_anything_with = do_subscribe.delay(new_community.ap_id, user.id, admin_preload=True)
 
         if current_app.debug:
             flash(_('Results: %(results)s', results=str(pre_load_messages)))
@@ -307,7 +314,7 @@ def admin_federation():
                   communities_to_add=communities_to_add, parsed_communities_sorted=len(parsed_communities_sorted)))
 
         return redirect(url_for('admin.admin_federation'))
-    
+
     # this is the import bans button
     elif ban_lists_form.import_submit.data and ban_lists_form.validate():
         import_file = request.files['import_file']

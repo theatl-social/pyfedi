@@ -409,7 +409,7 @@ def subscribe(actor):
 # this is separated out from the subscribe route so it can be used by the 
 # admin.admin_federation.preload_form as well
 @celery.task
-def do_subscribe(actor, user_id, main_user_name=True):
+def do_subscribe(actor, user_id, admin_preload=False):
     remote = False
     actor = actor.strip()
     user = User.query.get(user_id)
@@ -423,14 +423,14 @@ def do_subscribe(actor, user_id, main_user_name=True):
     if community is not None:
         pre_load_message['community'] = community.ap_id
         if community.id in communities_banned_from(user.id):
-            if main_user_name:
+            if not admin_preload:
                 abort(401)
             else:
                 pre_load_message['user_banned'] = True
         if community_membership(user, community) != SUBSCRIPTION_MEMBER and community_membership(user, community) != SUBSCRIPTION_PENDING:
             banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
             if banned:
-                if main_user_name:
+                if not admin_preload:
                     flash(_('You cannot join this community'))
                 else:
                     pre_load_message['community_banned_by_local_instance'] = True
@@ -442,24 +442,24 @@ def do_subscribe(actor, user_id, main_user_name=True):
                 db.session.commit()
                 if community.instance.online():
                     follow = {
-                      "actor": user.public_url(main_user_name=main_user_name),
+                      "actor": user.public_url(),
                       "to": [community.public_url()],
                       "object": community.public_url(),
                       "type": "Follow",
                       "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
                     }
                     success = post_request(community.ap_inbox_url, follow, user.private_key,
-                                                           user.public_url(main_user_name=main_user_name) + '#main-key', timeout=10)
+                                                           user.public_url() + '#main-key', timeout=10)
                 if success is False or isinstance(success, str):
                     if 'is not in allowlist' in success:
                         msg_to_user = f'{community.instance.domain} does not allow us to join their communities.'
-                        if main_user_name:
+                        if not admin_preload:
                             flash(_(msg_to_user), 'error')
                         else:
                             pre_load_message['status'] = msg_to_user
                     else:
                         msg_to_user = "There was a problem while trying to communicate with remote server. If other people have already joined this community it won't matter."
-                        if main_user_name:
+                        if not admin_preload:
                             flash(_(msg_to_user), 'error')
                         else:
                             pre_load_message['status'] = msg_to_user
@@ -469,20 +469,20 @@ def do_subscribe(actor, user_id, main_user_name=True):
             db.session.add(member)
             db.session.commit()
             if success is True:
-                if main_user_name:
+                if not admin_preload:
                     flash('You joined ' + community.title)
                 else:
                     pre_load_message['status'] = 'joined'
         else:
-            if not main_user_name:
+            if admin_preload:
                 pre_load_message['status'] = 'already subscribed, or subsciption pending'
-        
+
         cache.delete_memoized(community_membership, user, community)
         cache.delete_memoized(joined_communities, user.id)
-        if not main_user_name:
+        if admin_preload:
             return pre_load_message
     else:
-        if main_user_name:
+        if not admin_preload:
             abort(404)
         else:
             pre_load_message['community'] = actor
