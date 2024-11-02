@@ -1,0 +1,108 @@
+from app import cache, celery
+from app.activitypub.signature import default_context, post_request
+from app.models import CommunityBan, Post, PostReply, User
+from app.utils import gibberish, instance_banned, recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies
+
+from flask import current_app
+
+
+""" JSON format
+{
+  'id':
+  'type':
+  'actor':
+  'object':
+  '@context':   (outer object only)
+  'audience':   (inner object only)
+  'to': []      (announce only)
+  'cc': []      (announce only)
+}
+"""
+
+@celery.task
+def vote_for_post(send_async, user_id, post_id, vote_to_undo, vote_direction):
+    post = Post.query.filter_by(id=post_id).one()
+    cache.delete_memoized(recently_upvoted_posts, user_id)
+    cache.delete_memoized(recently_downvoted_posts, user_id)
+    send_vote(user_id, post, vote_to_undo, vote_direction)
+
+
+@celery.task
+def vote_for_reply(send_async, user_id, reply_id, vote_to_undo, vote_direction):
+    reply = PostReply.query.filter_by(id=reply_id).one()
+    cache.delete_memoized(recently_upvoted_post_replies, user_id)
+    cache.delete_memoized(recently_downvoted_post_replies, user_id)
+    send_vote(user_id, reply, vote_to_undo, vote_direction)
+
+
+def send_vote(user_id, object, vote_to_undo, vote_direction):
+    user = User.query.filter_by(id=user_id).one()
+    community = object.community
+    if community.local_only or not community.instance.online():
+        return
+
+    banned = CommunityBan.query.filter_by(user_id=user_id, community_id=community.id).first()
+    if banned:
+        return
+    if not community.is_local():
+        if user.has_blocked_instance(community.instance.id) or instance_banned(community.instance.domain):
+            return
+
+    if vote_to_undo:
+        type=vote_to_undo
+    else:
+        type = 'Like' if vote_direction == 'upvote' else 'Dislike'
+    vote_id = f"https://{current_app.config['SERVER_NAME']}/activities/{type.lower()}/{gibberish(15)}"
+    actor = user.public_url(not(community.instance.votes_are_public() and user.vote_privately()))
+
+    vote = {
+      'id': vote_id,
+      'type': type,
+      'actor': actor,
+      'object': object.public_url(),
+      '@context': default_context(),
+      'audience': community.public_url()
+    }
+
+    if vote_to_undo:
+        del vote['@context']
+        undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}"
+        undo = {
+          'id': undo_id,
+          'type': 'Undo',
+          'actor': actor,
+          'object': vote,
+          '@context': default_context(),
+          'audience': community.public_url()
+        }
+
+    if community.is_local():
+        if vote_to_undo:
+            del undo['@context']
+            object=undo
+        else:
+            del vote['@context']
+            object=vote
+
+        announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+        actor = community.public_url()
+        to = ["https://www.w3.org/ns/activitystreams#Public"]
+        cc = [community.ap_followers_url]
+        announce = {
+          'id': announce_id,
+          'type': 'Announce',
+          'actor': actor,
+          'object': object,
+          '@context': default_context(),
+          'to': to,
+          'cc': cc
+        }
+        for instance in community.following_instances():
+            if instance.inbox and instance.online() and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
+               post_request(instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
+    else:
+        payload = undo if vote_to_undo else vote
+        post_request(community.ap_inbox_url, payload, user.private_key,
+                     user.public_url(not(community.instance.votes_are_public() and user.vote_privately())) + '#main-key')
+
+
