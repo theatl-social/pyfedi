@@ -219,8 +219,8 @@ def register(app):
                     if instance_banned(instance.domain) or instance.domain == 'flipboard.com':
                         continue
                     nodeinfo_href = instance.nodeinfo_href
-                    if instance.software == 'lemmy' and instance.version >= '0.19.4' and instance.nodeinfo_href and instance.nodeinfo_href.endswith(
-                            'nodeinfo/2.0.json'):
+                    if instance.software == 'lemmy' and instance.version is not None and instance.version >= '0.19.4' and \
+                            instance.nodeinfo_href and instance.nodeinfo_href.endswith('nodeinfo/2.0.json'):
                         nodeinfo_href = None
 
                     if not nodeinfo_href:
