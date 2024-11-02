@@ -1124,7 +1124,7 @@ class Post(db.Model):
     community = db.relationship('Community', lazy='joined', overlaps='posts', foreign_keys=[community_id])
     replies = db.relationship('PostReply', lazy='dynamic', backref='post')
     language = db.relationship('Language', foreign_keys=[language_id])
-    licence = db.relationship('Licence', foreign_keys=[language_id], lazy='dynamic')
+    licence = db.relationship('Licence', foreign_keys=[licence_id])
 
     # db relationship tracked by the "read_posts" table
     # this is the Post side, so its referencing the User side
@@ -1141,7 +1141,7 @@ class Post(db.Model):
     @classmethod
     def new(cls, user: User, community: Community, request_json: dict, announce_id=None):
         from app.activitypub.util import instance_weight, find_language_or_create, find_language, find_hashtag_or_create, \
-            make_image_sizes, notify_about_post
+            find_licence_or_create, make_image_sizes, notify_about_post
         from app.utils import allowlist_html, markdown_to_html, html_to_text, microblog_content_to_title, blocked_phrases, \
             is_image_url, is_video_url, domain_from_url, opengraph_parse, shorten_string, remove_tracking_from_link, \
             is_video_hosting_site, communities_banned_from
@@ -1279,10 +1279,13 @@ class Post(db.Model):
             if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
                 language = find_language_or_create(request_json['object']['language']['identifier'],
                                                    request_json['object']['language']['name'])
-                post.language_id = language.id
+                post.language = language
             elif 'contentMap' in request_json['object'] and isinstance(request_json['object']['contentMap'], dict):
                 language = find_language(next(iter(request_json['object']['contentMap'])))
                 post.language_id = language.id if language else None
+            if 'licence' in request_json['object'] and isinstance(request_json['object']['licence'], dict):
+                licence = find_licence_or_create(request_json['object']['licence']['name'])
+                post.licence = licence
             if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
                 for json_tag in request_json['object']['tag']:
                     if json_tag and json_tag['type'] == 'Hashtag':

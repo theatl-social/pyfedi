@@ -46,6 +46,9 @@
             </div>
             <div class="post_body mt-2"{% if post.language_id and post.language.code != 'en' %} lang="{{ post.language.code }}"{% endif %}>
                 {{ post.body_html|community_links|safe if post.body_html else '' }}
+                {% if post.licence_id -%}
+                    <p>Licence: {{ post.licence.name }}</p>
+                {% endif -%}
             </div>
         </div>
     {% else -%}
@@ -140,6 +143,9 @@
                 {{ post.body_html|community_links|safe if post.body_html else '' }}
                 {% if archive_link -%}
                     <p><a href="{{ archive_link }}" rel="nofollow ucg noindex" target="_blank">{{ _('Archive.ph link') }} <span class="fe fe-external"></span></a></p>
+                {% endif -%}
+                {% if post.licence_id -%}
+                    <p>Licence: {{ post.licence.name }}</p>
                 {% endif -%}
             </div>
             {% if post.type == POST_TYPE_POLL -%}

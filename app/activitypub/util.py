@@ -15,7 +15,7 @@ from sqlalchemy import text, func, desc
 from app import db, cache, constants, celery
 from app.models import User, Post, Community, BannedInstances, File, PostReply, AllowedInstances, Instance, utcnow, \
     PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation, \
-    Language, Tag, Poll, PollChoice, UserFollower, CommunityBan, CommunityJoinRequest, NotificationSubscription
+    Language, Tag, Poll, PollChoice, UserFollower, CommunityBan, CommunityJoinRequest, NotificationSubscription, Licence
 from app.activitypub.signature import signed_get_request, post_request
 import time
 from app.constants import *
@@ -396,6 +396,16 @@ def find_language_or_create(code: str, name: str) -> Language:
         new_language = Language(code=code, name=name)
         db.session.add(new_language)
         return new_language
+
+
+def find_licence_or_create(name: str) -> Licence:
+    existing_licence = Licence.query.filter(Licence.name == name.strip()).first()
+    if existing_licence:
+        return existing_licence
+    else:
+        new_licence = Licence(name=name.strip())
+        db.session.add(new_licence)
+        return new_licence
 
 
 def find_hashtag_or_create(hashtag: str) -> Tag:
