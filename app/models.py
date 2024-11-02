@@ -895,20 +895,21 @@ class User(UserMixin, db.Model):
 
     def recalculate_attitude(self):
         upvotes = downvotes = 0
-        last_50_votes = PostVote.query.filter(PostVote.user_id == self.id).order_by(-PostVote.id).limit(50)
-        for vote in last_50_votes:
-            if vote.effect > 0:
-                upvotes += 1
-            if vote.effect < 0:
-                downvotes += 1
+        with db.session.no_autoflush:  # Avoid StaleDataError exception
+            last_50_votes = PostVote.query.filter(PostVote.user_id == self.id).order_by(-PostVote.id).limit(50)
+            for vote in last_50_votes:
+                if vote.effect > 0:
+                    upvotes += 1
+                if vote.effect < 0:
+                    downvotes += 1
 
-        comment_upvotes = comment_downvotes = 0
-        last_50_votes = PostReplyVote.query.filter(PostReplyVote.user_id == self.id).order_by(-PostReplyVote.id).limit(50)
-        for vote in last_50_votes:
-            if vote.effect > 0:
-                comment_upvotes += 1
-            if vote.effect < 0:
-                comment_downvotes += 1
+            comment_upvotes = comment_downvotes = 0
+            last_50_votes = PostReplyVote.query.filter(PostReplyVote.user_id == self.id).order_by(-PostReplyVote.id).limit(50)
+            for vote in last_50_votes:
+                if vote.effect > 0:
+                    comment_upvotes += 1
+                if vote.effect < 0:
+                    comment_downvotes += 1
 
         total_upvotes = upvotes + comment_upvotes
         total_downvotes = downvotes + comment_downvotes
