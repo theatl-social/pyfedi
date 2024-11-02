@@ -1891,6 +1891,7 @@ class PostReply(db.Model):
                                  effect=effect)
             self.author.reputation += effect
             db.session.add(vote)
+        db.session.commit()
         user.last_seen = utcnow()
         self.ranking = PostReply.confidence(self.up_votes, self.down_votes)
         user.recalculate_attitude()
