@@ -262,6 +262,7 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
     actor_url = actor.strip()
     actor = actor.strip().lower()
     user = None
+    server = ''
     # actor parameter must be formatted as https://server/u/actor or https://server/c/actor
 
     # Initially, check if the user exists in the local DB already
