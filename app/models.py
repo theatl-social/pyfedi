@@ -225,6 +225,11 @@ class Tag(db.Model):
     banned = db.Column(db.Boolean, default=False, index=True)
 
 
+class Licence(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50))
+
+
 class Language(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     code = db.Column(db.String(5), index=True)
@@ -1073,6 +1078,7 @@ class Post(db.Model):
     image_id = db.Column(db.Integer, db.ForeignKey('file.id'), index=True)
     domain_id = db.Column(db.Integer, db.ForeignKey('domain.id'), index=True)
     instance_id = db.Column(db.Integer, db.ForeignKey('instance.id'), index=True)
+    licence_id = db.Column(db.Integer, db.ForeignKey('licence.id'), index=True)
     slug = db.Column(db.String(255))
     title = db.Column(db.String(255))
     url = db.Column(db.String(2048))
@@ -1118,6 +1124,7 @@ class Post(db.Model):
     community = db.relationship('Community', lazy='joined', overlaps='posts', foreign_keys=[community_id])
     replies = db.relationship('PostReply', lazy='dynamic', backref='post')
     language = db.relationship('Language', foreign_keys=[language_id])
+    licence = db.relationship('Licence', foreign_keys=[language_id], lazy='dynamic')
 
     # db relationship tracked by the "read_posts" table
     # this is the Post side, so its referencing the User side

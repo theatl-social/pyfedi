@@ -111,7 +111,7 @@ def show_post(post_id: int):
                 'name': reply.language_name()
             },
             'contentMap': {
-                'en': reply.body_html
+                reply.language_code(): reply.body_html
             }
         }
         create_json = {
