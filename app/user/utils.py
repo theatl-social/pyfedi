@@ -113,6 +113,8 @@ def unsubscribe_from_community(community, user):
 
 
 def search_for_user(address: str):
+    if address.startswith('@'):
+        address = address[1:]
     if '@' in address:
         name, server = address.lower().split('@')
     else:
@@ -126,14 +128,17 @@ def search_for_user(address: str):
             raise Exception(f"{server} is blocked.{reason}")
         already_exists = User.query.filter_by(ap_id=address).first()
     else:
-        already_exists = User.query.filter_by(user_name=name).first()
+        already_exists = User.query.filter_by(user_name=name, ap_id=None).first()
     if already_exists:
         return already_exists
+
+    if not server:
+        return None
 
     # Look up the profile address of the user using WebFinger
     # todo: try, except block around every get_request
     webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
-                                 params={'resource': f"acct:{address[1:]}"})
+                                 params={'resource': f"acct:{address}"})
     if webfinger_data.status_code == 200:
         webfinger_json = webfinger_data.json()
         for links in webfinger_json['links']:

@@ -1,11 +1,10 @@
-from app import cache, db
-from app.activitypub.signature import default_context, post_request_in_background
-from app.community.util import send_to_remote_instance
+from app import db
 from app.constants import *
-from app.models import NotificationSubscription, Post, PostBookmark, User
-from app.utils import gibberish, instance_banned, render_template, authorise_api_user, recently_upvoted_posts, recently_downvoted_posts, shorten_string
+from app.models import NotificationSubscription, Post, PostBookmark
+from app.shared.tasks import task_selector
+from app.utils import render_template, authorise_api_user, shorten_string
 
-from flask import abort, current_app, flash, redirect, request, url_for
+from flask import abort, flash, redirect, request, url_for
 from flask_babel import _
 from flask_login import current_user
 
@@ -28,51 +27,7 @@ def vote_for_post(post_id: int, vote_direction, src, auth=None):
 
     undo = post.vote(user, vote_direction)
 
-    if not post.community.local_only:
-        if undo:
-            action_json = {
-                'actor': user.public_url(not(post.community.instance.votes_are_public() and user.vote_privately())),
-                'type': 'Undo',
-                'id': f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}",
-                'audience': post.community.public_url(),
-                'object': {
-                    'actor': user.public_url(not(post.community.instance.votes_are_public() and user.vote_privately())),
-                    'object': post.public_url(),
-                    'type': undo,
-                    'id': f"https://{current_app.config['SERVER_NAME']}/activities/{undo.lower()}/{gibberish(15)}",
-                    'audience': post.community.public_url()
-                }
-            }
-        else:
-            action_type = 'Like' if vote_direction == 'upvote' else 'Dislike'
-            action_json = {
-                'actor': user.public_url(not(post.community.instance.votes_are_public() and user.vote_privately())),
-                'object': post.profile_id(),
-                'type': action_type,
-                'id': f"https://{current_app.config['SERVER_NAME']}/activities/{action_type.lower()}/{gibberish(15)}",
-                'audience': post.community.public_url()
-            }
-        if post.community.is_local():
-            announce = {
-                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
-                    "type": 'Announce',
-                    "to": [
-                        "https://www.w3.org/ns/activitystreams#Public"
-                    ],
-                    "actor": post.community.public_url(),
-                    "cc": [
-                        post.community.ap_followers_url
-                    ],
-                    '@context': default_context(),
-                    'object': action_json
-            }
-            for instance in post.community.following_instances():
-                if instance.inbox and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
-                    send_to_remote_instance(instance.id, post.community.id, announce)
-        else:
-            post_request_in_background(post.community.ap_inbox_url, action_json, user.private_key,
-                                       user.public_url(not(post.community.instance.votes_are_public() and user.vote_privately())) + '#main-key')
-
+    task_selector('vote_for_post', user_id=user.id, post_id=post_id, vote_to_undo=undo, vote_direction=vote_direction)
 
     if src == SRC_API:
         return user.id
@@ -83,8 +38,6 @@ def vote_for_post(post_id: int, vote_direction, src, auth=None):
             recently_upvoted = [post_id]
         elif vote_direction == 'downvote' and undo is None:
             recently_downvoted = [post_id]
-        cache.delete_memoized(recently_upvoted_posts, user.id)
-        cache.delete_memoized(recently_downvoted_posts, user.id)
 
         template = 'post/_post_voting_buttons.html' if request.args.get('style', '') == '' else 'post/_post_voting_buttons_masonry.html'
         return render_template(template, post=post, community=post.community, recently_upvoted=recently_upvoted,

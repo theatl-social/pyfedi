@@ -3,6 +3,7 @@ from app.activitypub.signature import default_context, post_request_in_backgroun
 from app.community.util import send_to_remote_instance
 from app.constants import *
 from app.models import Instance, Notification, NotificationSubscription, Post, PostReply, PostReplyBookmark, Report, Site, User, utcnow
+from app.shared.tasks import task_selector
 from app.utils import gibberish, instance_banned, render_template, authorise_api_user, recently_upvoted_post_replies, recently_downvoted_post_replies, shorten_string, \
                       piefed_markdown_to_lemmy_markdown, markdown_to_html, ap_datetime
 
@@ -18,7 +19,6 @@ SRC_API = 3
 
 # function can be shared between WEB and API (only API calls it for now)
 # comment_vote in app/post/routes would just need to do 'return vote_for_reply(reply_id, vote_direction, SRC_WEB)'
-
 def vote_for_reply(reply_id: int, vote_direction, src, auth=None):
     if src == SRC_API:
         reply = PostReply.query.filter_by(id=reply_id).one()
@@ -29,50 +29,7 @@ def vote_for_reply(reply_id: int, vote_direction, src, auth=None):
 
     undo = reply.vote(user, vote_direction)
 
-    if not reply.community.local_only:
-        if undo:
-            action_json = {
-                'actor': user.public_url(not(reply.community.instance.votes_are_public() and user.vote_privately())),
-                'type': 'Undo',
-                'id': f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}",
-                'audience': reply.community.public_url(),
-                'object': {
-                    'actor': user.public_url(not(reply.community.instance.votes_are_public() and user.vote_privately())),
-                    'object': reply.public_url(),
-                    'type': undo,
-                    'id': f"https://{current_app.config['SERVER_NAME']}/activities/{undo.lower()}/{gibberish(15)}",
-                    'audience': reply.community.public_url()
-                }
-            }
-        else:
-            action_type = 'Like' if vote_direction == 'upvote' else 'Dislike'
-            action_json = {
-                'actor': user.public_url(not(reply.community.instance.votes_are_public() and user.vote_privately())),
-                'object': reply.public_url(),
-                'type': action_type,
-                'id': f"https://{current_app.config['SERVER_NAME']}/activities/{action_type.lower()}/{gibberish(15)}",
-                'audience': reply.community.public_url()
-            }
-        if reply.community.is_local():
-            announce = {
-                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
-                    "type": 'Announce',
-                    "to": [
-                        "https://www.w3.org/ns/activitystreams#Public"
-                    ],
-                    "actor": reply.community.ap_profile_id,
-                    "cc": [
-                        reply.community.ap_followers_url
-                    ],
-                    '@context': default_context(),
-                    'object': action_json
-            }
-            for instance in reply.community.following_instances():
-                if instance.inbox and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
-                    send_to_remote_instance(instance.id, reply.community.id, announce)
-        else:
-            post_request_in_background(reply.community.ap_inbox_url, action_json, user.private_key,
-                                       user.public_url(not(reply.community.instance.votes_are_public() and user.vote_privately())) + '#main-key')
+    task_selector('vote_for_reply', user_id=user.id, reply_id=reply_id, vote_to_undo=undo, vote_direction=vote_direction)
 
     if src == SRC_API:
         return user.id
@@ -83,8 +40,6 @@ def vote_for_reply(reply_id: int, vote_direction, src, auth=None):
             recently_upvoted = [reply_id]
         elif vote_direction == 'downvote' and undo is None:
             recently_downvoted = [reply_id]
-        cache.delete_memoized(recently_upvoted_post_replies, user.id)
-        cache.delete_memoized(recently_downvoted_post_replies, user.id)
 
         return render_template('post/_reply_voting_buttons.html', comment=reply,
                                recently_upvoted_replies=recently_upvoted,
@@ -206,8 +161,8 @@ def basic_rate_limit_check(user):
 def make_reply(input, post, parent_id, src, auth=None):
     if src == SRC_API:
         user = authorise_api_user(auth, return_type='model')
-        if not basic_rate_limit_check(user):
-            raise Exception('rate_limited')
+        #if not basic_rate_limit_check(user):
+        #    raise Exception('rate_limited')
         content = input['body']
         notify_author = input['notify_author']
         language_id = input['language_id']
@@ -235,104 +190,7 @@ def make_reply(input, post, parent_id, src, auth=None):
         input.body.data = ''
         flash('Your comment has been added.')
 
-    # federation
-    if parent_id:
-        in_reply_to = parent_reply
-    else:
-        in_reply_to = post
-
-    if not post.community.local_only:
-        reply_json = {
-          'type': 'Note',
-          'id': reply.public_url(),
-          'attributedTo': user.public_url(),
-          'to': [
-            'https://www.w3.org/ns/activitystreams#Public'
-          ],
-          'cc': [
-            post.community.public_url(),
-            in_reply_to.author.public_url()
-          ],
-          'content': reply.body_html,
-          'inReplyTo': in_reply_to.profile_id(),
-          'url': reply.profile_id(),
-          'mediaType': 'text/html',
-          'source': {'content': reply.body, 'mediaType': 'text/markdown'},
-          'published': ap_datetime(utcnow()),
-          'distinguished': False,
-          'audience': post.community.public_url(),
-          'contentMap': {
-            'en': reply.body_html
-          },
-          'language': {
-            'identifier': reply.language_code(),
-            'name': reply.language_name()
-          }
-        }
-        create_json = {
-          '@context': default_context(),
-          'type': 'Create',
-          'actor': user.public_url(),
-          'audience': post.community.public_url(),
-          'to': [
-            'https://www.w3.org/ns/activitystreams#Public'
-          ],
-          'cc': [
-            post.community.public_url(),
-            in_reply_to.author.public_url()
-          ],
-          'object': reply_json,
-          'id': f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}"
-        }
-        if in_reply_to.notify_author and in_reply_to.author.ap_id is not None:
-            reply_json['tag'] = [
-              {
-                'href': in_reply_to.author.public_url(),
-                'name': in_reply_to.author.mention_tag(),
-                'type': 'Mention'
-              }
-            ]
-            create_json['tag'] = [
-              {
-                'href': in_reply_to.author.public_url(),
-                'name': in_reply_to.author.mention_tag(),
-                'type': 'Mention'
-              }
-            ]
-        if not post.community.is_local():    # this is a remote community, send it to the instance that hosts it
-            success = post_request(post.community.ap_inbox_url, create_json, user.private_key,
-                                    user.public_url() + '#main-key')
-            if src == SRC_WEB:
-                if success is False or isinstance(success, str):
-                    flash('Failed to send reply', 'error')
-        else:                                # local community - send it to followers on remote instances
-            del create_json['@context']
-            announce = {
-              'id': f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
-              'type': 'Announce',
-              'to': [
-                'https://www.w3.org/ns/activitystreams#Public'
-              ],
-              'actor': post.community.public_url(),
-              'cc': [
-                post.community.ap_followers_url
-              ],
-              '@context': default_context(),
-              'object': create_json
-            }
-            for instance in post.community.following_instances():
-                if instance.inbox and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
-                    send_to_remote_instance(instance.id, post.community.id, announce)
-
-        # send copy of Note to comment author (who won't otherwise get it if no-one else on their instance is subscribed to the community)
-        if not in_reply_to.author.is_local() and in_reply_to.author.ap_domain != reply.community.ap_domain:
-            if not post.community.is_local() or (post.community.is_local and not post.community.has_followers_from_domain(in_reply_to.author.ap_domain)):
-                success = post_request(in_reply_to.author.ap_inbox_url, create_json, user.private_key, user.public_url() + '#main-key')
-                if success is False or isinstance(success, str):
-                    # sending to shared inbox is good enough for Mastodon, but Lemmy will reject it the local community has no followers
-                    personal_inbox = in_reply_to.author.public_url() + '/inbox'
-                    post_request(personal_inbox, create_json, user.private_key, user.public_url() + '#main-key')
-
+    task_selector('make_reply', user_id=user.id, reply_id=reply.id, parent_id=parent_id)
 
     if src == SRC_API:
         return user.id, reply
@@ -364,105 +222,7 @@ def edit_reply(input, reply, post, src, auth=None):
     if src == SRC_WEB:
         flash(_('Your changes have been saved.'), 'success')
 
-    if reply.parent_id:
-        in_reply_to = PostReply.query.filter_by(id=reply.parent_id).one()
-    else:
-        in_reply_to = post
-
-    # federate edit
-    if not post.community.local_only:
-        reply_json = {
-          'type': 'Note',
-          'id': reply.public_url(),
-          'attributedTo': user.public_url(),
-          'to': [
-            'https://www.w3.org/ns/activitystreams#Public'
-          ],
-          'cc': [
-            post.community.public_url(),
-            in_reply_to.author.public_url()
-          ],
-          'content': reply.body_html,
-          'inReplyTo': in_reply_to.profile_id(),
-          'url': reply.public_url(),
-          'mediaType': 'text/html',
-          'source': {'content': reply.body, 'mediaType': 'text/markdown'},
-          'published': ap_datetime(reply.posted_at),
-          'updated': ap_datetime(reply.edited_at),
-          'distinguished': False,
-          'audience': post.community.public_url(),
-          'contentMap': {
-            'en': reply.body_html
-          },
-          'language': {
-            'identifier': reply.language_code(),
-            'name': reply.language_name()
-          }
-        }
-        update_json = {
-          '@context': default_context(),
-          'type': 'Update',
-          'actor': user.public_url(),
-          'audience': post.community.public_url(),
-          'to': [
-            'https://www.w3.org/ns/activitystreams#Public'
-          ],
-          'cc': [
-            post.community.public_url(),
-            in_reply_to.author.public_url()
-          ],
-          'object': reply_json,
-          'id': f"https://{current_app.config['SERVER_NAME']}/activities/update/{gibberish(15)}"
-        }
-        if in_reply_to.notify_author and in_reply_to.author.ap_id is not None:
-            reply_json['tag'] = [
-              {
-                'href': in_reply_to.author.public_url(),
-                'name': in_reply_to.author.mention_tag(),
-                'type': 'Mention'
-              }
-            ]
-            update_json['tag'] = [
-              {
-                'href': in_reply_to.author.public_url(),
-                'name': in_reply_to.author.mention_tag(),
-                'type': 'Mention'
-              }
-            ]
-        if not post.community.is_local():    # this is a remote community, send it to the instance that hosts it
-            success = post_request(post.community.ap_inbox_url, update_json, user.private_key,
-                                                               user.public_url() + '#main-key')
-            if src == SRC_WEB:
-                if success is False or isinstance(success, str):
-                    flash('Failed to send send edit to remote server', 'error')
-        else:                                # local community - send it to followers on remote instances
-            del update_json['@context']
-            announce = {
-              'id': f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
-              'type': 'Announce',
-              'to': [
-                'https://www.w3.org/ns/activitystreams#Public'
-              ],
-              'actor': post.community.public_url(),
-              'cc': [
-                post.community.ap_followers_url
-              ],
-              '@context': default_context(),
-              'object': update_json
-            }
-
-            for instance in post.community.following_instances():
-                if instance.inbox and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
-                    send_to_remote_instance(instance.id, post.community.id, announce)
-
-        # send copy of Note to post author (who won't otherwise get it if no-one else on their instance is subscribed to the community)
-        if not in_reply_to.author.is_local() and in_reply_to.author.ap_domain != reply.community.ap_domain:
-            if not post.community.is_local() or (post.community.is_local and not post.community.has_followers_from_domain(in_reply_to.author.ap_domain)):
-                success = post_request(in_reply_to.author.ap_inbox_url, update_json, user.private_key, user.public_url() + '#main-key')
-                if success is False or isinstance(success, str):
-                    # sending to shared inbox is good enough for Mastodon, but Lemmy will reject it the local community has no followers
-                    personal_inbox = in_reply_to.author.public_url() + '/inbox'
-                    post_request(personal_inbox, update_json, user.private_key, user.public_url() + '#main-key')
+    task_selector('edit_reply', user_id=user.id, reply_id=reply.id, parent_id=reply.parent_id)
 
     if src == SRC_API:
         return user.id, reply
@@ -471,77 +231,28 @@ def edit_reply(input, reply, post, src, auth=None):
 
 
 # just for deletes by owner (mod deletes are classed as 'remove')
-# just for API for now, as WEB version needs attention to ensure that replies can be 'undeleted'
 def delete_reply(reply_id, src, auth):
     if src == SRC_API:
         reply = PostReply.query.filter_by(id=reply_id, deleted=False).one()
-        post = Post.query.filter_by(id=reply.post_id).one()
-        user = authorise_api_user(auth, return_type='model', id_match=reply.user_id)
+        user_id = authorise_api_user(auth, id_match=reply.user_id)
     else:
         reply = PostReply.query.get_or_404(reply_id)
-        post = Post.query.get_or_404(reply.post_id)
-        user = current_user
+        user_id = current_user.id
 
     reply.deleted = True
-    reply.deleted_by = user.id
-    # everything else (votes, body, reports, bookmarks, subscriptions, etc) only wants deleting when it's properly purged after 7 days
-    # reply_view will return '' in body if reply.deleted == True
+    reply.deleted_by = user_id
 
     if not reply.author.bot:
-        post.reply_count -= 1
+        reply.post.reply_count -= 1
     reply.author.post_reply_count -= 1
     db.session.commit()
     if src == SRC_WEB:
         flash(_('Comment deleted.'))
 
-    # federate delete
-    if not post.community.local_only:
-        delete_json = {
-          'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
-          'type': 'Delete',
-          'actor': user.public_url(),
-          'audience': post.community.public_url(),
-          'to': [
-            'https://www.w3.org/ns/activitystreams#Public'
-          ],
-          'published': ap_datetime(utcnow()),
-          'cc': [
-            post.community.public_url(),
-            user.followers_url()
-          ],
-          'object': reply.ap_id,
-          '@context': default_context()
-        }
-
-        if not post.community.is_local():   # this is a remote community, send it to the instance that hosts it
-            success = post_request(post.community.ap_inbox_url, delete_json, user.private_key,
-                                        user.public_url() + '#main-key')
-            if src == SRC_WEB:
-                if success is False or isinstance(success, str):
-                    flash('Failed to send delete to remote server', 'error')
-
-        else:                               # local community - send it to followers on remote instances
-            del delete_json['@context']
-            announce = {
-              'id': f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
-              'type': 'Announce',
-              'to': [
-                'https://www.w3.org/ns/activitystreams#Public'
-              ],
-              'actor': post.community.public_url(),
-              'cc': [
-                post.community.public_url() + '/followers'
-              ],
-              '@context': default_context(),
-              'object': delete_json
-            }
-
-            for instance in post.community.following_instances():
-                if instance.inbox:
-                    send_to_remote_instance(instance.id, post.community.id, announce)
+    task_selector('delete_reply', user_id=user_id, reply_id=reply.id)
 
     if src == SRC_API:
-        return user.id, reply
+        return user_id, reply
     else:
         return
 
@@ -549,87 +260,27 @@ def delete_reply(reply_id, src, auth):
 def restore_reply(reply_id, src, auth):
     if src == SRC_API:
         reply = PostReply.query.filter_by(id=reply_id, deleted=True).one()
-        post = Post.query.filter_by(id=reply.post_id).one()
-        user = authorise_api_user(auth, return_type='model', id_match=reply.user_id)
-        if reply.deleted_by and reply.user_id != reply.deleted_by:
+        user_id = authorise_api_user(auth, id_match=reply.user_id)
+        if reply.user_id != reply.deleted_by:
             raise Exception('incorrect_login')
     else:
         reply = PostReply.query.get_or_404(reply_id)
-        post = Post.query.get_or_404(reply.post_id)
-        user = current_user
+        user_id = current_user.id
 
     reply.deleted = False
     reply.deleted_by = None
 
     if not reply.author.bot:
-        post.reply_count += 1
+        reply.post.reply_count += 1
     reply.author.post_reply_count += 1
     db.session.commit()
     if src == SRC_WEB:
         flash(_('Comment restored.'))
 
-    # federate undelete
-    if not post.community.local_only:
-        delete_json = {
-          'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
-          'type': 'Delete',
-          'actor': user.public_url(),
-          'audience': post.community.public_url(),
-          'to': [
-            'https://www.w3.org/ns/activitystreams#Public'
-          ],
-          'published': ap_datetime(utcnow()),
-          'cc': [
-            post.community.public_url(),
-            user.followers_url()
-          ],
-          'object': reply.ap_id
-        }
-        undo_json = {
-          'id': f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}",
-          'type': 'Undo',
-          'actor': user.public_url(),
-          'audience': post.community.public_url(),
-          'to': [
-            'https://www.w3.org/ns/activitystreams#Public'
-          ],
-          'cc': [
-            post.community.public_url(),
-            user.followers_url()
-          ],
-          'object': delete_json,
-          '@context': default_context()
-        }
-
-        if not post.community.is_local():   # this is a remote community, send it to the instance that hosts it
-            success = post_request(post.community.ap_inbox_url, undo_json, user.private_key,
-                                        user.public_url() + '#main-key')
-            if src == SRC_WEB:
-                if success is False or isinstance(success, str):
-                    flash('Failed to send delete to remote server', 'error')
-
-        else:                               # local community - send it to followers on remote instances
-            del undo_json['@context']
-            announce = {
-              'id': f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
-              'type': 'Announce',
-              'to': [
-                'https://www.w3.org/ns/activitystreams#Public'
-              ],
-              'actor': post.community.public_url(),
-              'cc': [
-                post.community.public_url() + '/followers'
-              ],
-              '@context': default_context(),
-              'object': undo_json
-            }
-
-            for instance in post.community.following_instances():
-                if instance.inbox:
-                    send_to_remote_instance(instance.id, post.community.id, announce)
+    task_selector('restore_reply', user_id=user_id, reply_id=reply.id)
 
     if src == SRC_API:
-        return user.id, reply
+        return user_id, reply
     else:
         return
 
@@ -637,13 +288,13 @@ def restore_reply(reply_id, src, auth):
 def report_reply(reply_id, input, src, auth=None):
     if src == SRC_API:
         reply = PostReply.query.filter_by(id=reply_id).one()
-        user = authorise_api_user(auth, return_type='model')
+        user_id = authorise_api_user(auth)
         reason = input['reason']
         description = input['description']
         report_remote = input['report_remote']
     else:
         reply = PostReply.query.get_or_404(reply_id)
-        user = current_user
+        user_id = current_user.id
         reason = input.reasons_to_string(input.reasons.data)
         description = input.description.data
         report_remote = input.report_remote.data
@@ -655,7 +306,7 @@ def report_reply(reply_id, input, src, auth=None):
             flash(_('Comment has already been reported, thank you!'))
             return
 
-    report = Report(reasons=reason, description=description, type=2, reporter_id=user.id, suspect_post_id=reply.post.id, suspect_community_id=reply.community.id,
+    report = Report(reasons=reason, description=description, type=2, reporter_id=user_id, suspect_post_id=reply.post.id, suspect_community_id=reply.community.id,
                     suspect_user_id=reply.author.id, suspect_post_reply_id=reply.id, in_community_id=reply.community.id, source_instance_id=1)
     db.session.add(report)
 
@@ -666,14 +317,14 @@ def report_reply(reply_id, input, src, auth=None):
         if moderator and moderator.is_local():
             notification = Notification(user_id=mod.user_id, title=_('A comment has been reported'),
                                         url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
-                                        author_id=user.id)
+                                        author_id=user_id)
             db.session.add(notification)
             already_notified.add(mod.user_id)
     reply.reports += 1
     # todo: only notify admins for certain types of report
     for admin in Site.admins():
         if admin.id not in already_notified:
-            notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, author_id=user.id)
+            notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, author_id=user_id)
             db.session.add(notify)
             admin.unread_notifications += 1
     db.session.commit()
@@ -683,26 +334,10 @@ def report_reply(reply_id, input, src, auth=None):
         summary = reason
         if description:
             summary += ' - ' + description
-        report_json = {
-          'actor': user.public_url(),
-          'audience': reply.community.public_url(),
-          'content': None,
-          'id': f"https://{current_app.config['SERVER_NAME']}/activities/flag/{gibberish(15)}",
-          'object': reply.ap_id,
-          'summary': summary,
-          'to': [
-            reply.community.public_url()
-          ],
-          'type': 'Flag'
-        }
-        instance = Instance.query.get(reply.community.instance_id)
-        if reply.community.ap_inbox_url and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
-            success = post_request(reply.community.ap_inbox_url, report_json, user.private_key, user.public_url() + '#main-key')
-            if success is False or isinstance(success, str):
-                if src == SRC_WEB:
-                    flash('Failed to send report to remote server', 'error')
+
+        task_selector('report_reply', user_id=user_id, reply_id=reply_id, summary=summary)
 
     if src == SRC_API:
-        return user.id, report
+        return user_id, report
     else:
         return
