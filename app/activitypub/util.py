@@ -1384,7 +1384,7 @@ def restore_post_or_comment(object_json, aplog_id):
                 to_restore.deleted_by = None
                 community.post_count += 1
                 to_restore.author.post_count += 1
-                new_cross_posts = Post.query.filter(Post.id != to_restore.id, Post.url == to_restore.url, Post.deleted == False,
+                new_cross_posts = Post.query.filter(Post.id != to_restore.id, Post.url == to_restore.url, Post.deleted == False, Post.url != None, Post.url != '',
                                                                 Post.posted_at > utcnow() - timedelta(days=6)).all()
                 for ncp in new_cross_posts:
                     if ncp.cross_posts is None:
@@ -1872,7 +1872,7 @@ def update_post_from_activity(post: Post, request_json: dict):
                 if ocp.cross_posts is not None and post.id in ocp.cross_posts:
                     ocp.cross_posts.remove(post.id)
 
-        new_cross_posts = Post.query.filter(Post.id != post.id, Post.url == post.url, Post.deleted == False,
+        new_cross_posts = Post.query.filter(Post.id != post.id, Post.url == post.url, Post.deleted == False, Post.url != None, Post.url != '',
                                     Post.posted_at > utcnow() - timedelta(days=6)).all()
         for ncp in new_cross_posts:
             if ncp.cross_posts is None:
