@@ -1384,17 +1384,18 @@ def restore_post_or_comment(object_json, aplog_id):
                 to_restore.deleted_by = None
                 community.post_count += 1
                 to_restore.author.post_count += 1
-                new_cross_posts = Post.query.filter(Post.id != to_restore.id, Post.url == to_restore.url, Post.deleted == False, Post.url != None, Post.url != '',
-                                                                Post.posted_at > utcnow() - timedelta(days=6)).all()
-                for ncp in new_cross_posts:
-                    if ncp.cross_posts is None:
-                        ncp.cross_posts = [to_restore.id]
-                    else:
-                        ncp.cross_posts.append(to_restore.id)
-                    if to_restore.cross_posts is None:
-                        to_restore.cross_posts = [ncp.id]
-                    else:
-                        to_restore.cross_posts.append(ncp.id)
+                if to_restore.url:
+                    new_cross_posts = Post.query.filter(Post.id != to_restore.id, Post.url == to_restore.url, Post.deleted == False,
+                                                                    Post.posted_at > utcnow() - timedelta(days=6)).all()
+                    for ncp in new_cross_posts:
+                        if ncp.cross_posts is None:
+                            ncp.cross_posts = [to_restore.id]
+                        else:
+                            ncp.cross_posts.append(to_restore.id)
+                        if to_restore.cross_posts is None:
+                            to_restore.cross_posts = [ncp.id]
+                        else:
+                            to_restore.cross_posts.append(ncp.id)
                 db.session.commit()
                 if to_restore.author.id != restorer.id:
                     add_to_modlog_activitypub('restore_post', restorer, community_id=community.id,
@@ -1872,7 +1873,7 @@ def update_post_from_activity(post: Post, request_json: dict):
                 if ocp.cross_posts is not None and post.id in ocp.cross_posts:
                     ocp.cross_posts.remove(post.id)
 
-        new_cross_posts = Post.query.filter(Post.id != post.id, Post.url == post.url, Post.deleted == False, Post.url != None, Post.url != '',
+        new_cross_posts = Post.query.filter(Post.id != post.id, Post.url == post.url, Post.deleted == False,
                                     Post.posted_at > utcnow() - timedelta(days=6)).all()
         for ncp in new_cross_posts:
             if ncp.cross_posts is None:
