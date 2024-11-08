@@ -119,6 +119,7 @@ class EditTopicForm(FlaskForm):
     name = StringField(_l('Name'), validators=[DataRequired()], render_kw={'title': _l('Human readable name for the topic.')})
     machine_name = StringField(_l('Slug'), validators=[DataRequired()], render_kw={'title': _l('A short and unique identifier that becomes part of the URL.')})
     parent_id = SelectField(_l('Parent topic'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
+    show_posts_in_children = BooleanField(_l('Show posts from child topics'), validators=[Optional()])
     submit = SubmitField(_l('Save'))
 
 

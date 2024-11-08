@@ -1,6 +1,7 @@
 from collections import namedtuple
 from datetime import timedelta, timezone
 from random import randint
+from typing import List
 
 from feedgen.feed import FeedGenerator
 from flask import request, flash, json, url_for, current_app, redirect, abort, make_response, g
@@ -52,7 +53,12 @@ def show_topic(topic_path):
 
     if current_topic:
         # get posts from communities in that topic
-        posts = Post.query.join(Community, Post.community_id == Community.id).filter(Community.topic_id == current_topic.id, Community.banned == False)
+        if current_topic.show_posts_in_children:    # include posts from child topics
+            topic_ids = get_all_child_topic_ids(current_topic)
+        else:
+            topic_ids = [current_topic.id]
+        posts = Post.query.join(Community, Post.community_id == Community.id).filter(Community.topic_id.in_(topic_ids),
+                                                                                     Community.banned == False)
 
         # filter out nsfw and nsfl if desired
         if current_user.is_anonymous:
@@ -272,6 +278,13 @@ def suggest_topics():
 def suggestion_denied():
     return render_template('topic/suggestion_denied.html')
 
+
+def get_all_child_topic_ids(topic: Topic) -> List[int]:
+    # recurse down the topic tree, gathering all the topic IDs found
+    topic_ids = [topic.id]
+    for child_topic in Topic.query.filter(Topic.parent_id == topic.id):
+        topic_ids.extend(get_all_child_topic_ids(child_topic))
+    return topic_ids
 
 def topics_for_form():
     topics = Topic.query.filter_by(parent_id=None).order_by(Topic.name).all()

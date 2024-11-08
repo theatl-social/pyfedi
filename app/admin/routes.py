@@ -825,7 +825,8 @@ def admin_topic_add():
     form = EditTopicForm()
     form.parent_id.choices = topics_for_form(0)
     if form.validate_on_submit():
-        topic = Topic(name=form.name.data, machine_name=slugify(form.machine_name.data.strip()), num_communities=0)
+        topic = Topic(name=form.name.data, machine_name=slugify(form.machine_name.data.strip()), num_communities=0,
+                      show_posts_in_children=form.show_posts_in_children.data)
         if form.parent_id.data:
             topic.parent_id = form.parent_id.data
         else:
@@ -855,6 +856,7 @@ def admin_topic_edit(topic_id):
         topic.name = form.name.data
         topic.num_communities = topic.communities.count()
         topic.machine_name = form.machine_name.data
+        topic.show_posts_in_children = form.show_posts_in_children.data
         if form.parent_id.data:
             topic.parent_id = form.parent_id.data
         else:
@@ -867,6 +869,7 @@ def admin_topic_edit(topic_id):
         form.name.data = topic.name
         form.machine_name.data = topic.machine_name
         form.parent_id.data = topic.parent_id
+        form.show_posts_in_children.data = topic.show_posts_in_children
     return render_template('admin/edit_topic.html', title=_('Edit topic'), form=form, topic=topic,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),

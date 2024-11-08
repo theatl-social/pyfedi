@@ -371,6 +371,7 @@ class Topic(db.Model):
     name = db.Column(db.String(50))
     num_communities = db.Column(db.Integer, default=0)
     parent_id = db.Column(db.Integer)
+    show_posts_in_children = db.Column(db.Boolean, default=False)
     communities = db.relationship('Community', lazy='dynamic', backref='topic', cascade="all, delete-orphan")
 
     def path(self):
