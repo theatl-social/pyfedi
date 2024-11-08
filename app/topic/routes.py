@@ -151,7 +151,11 @@ def show_topic_rss(topic_path):
     topic = Topic.query.filter(Topic.machine_name == last_topic_machine_name.strip().lower()).first()
 
     if topic:
-        posts = Post.query.join(Community, Post.community_id == Community.id).filter(Community.topic_id == topic.id,
+        if topic.show_posts_in_children:    # include posts from child topics
+            topic_ids = get_all_child_topic_ids(topic)
+        else:
+            topic_ids = [topic.id]
+        posts = Post.query.join(Community, Post.community_id == Community.id).filter(Community.topic_id.in_(topic_ids),
                                                                                      Community.banned == False)
         posts = posts.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
         posts = posts.order_by(desc(Post.created_at)).limit(100).all()
