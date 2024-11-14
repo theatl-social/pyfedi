@@ -28,6 +28,7 @@ from flask import current_app, json, redirect, url_for, request, make_response, 
 from flask_babel import _
 from flask_login import current_user, logout_user
 from sqlalchemy import text, or_
+from sqlalchemy.orm import Session
 from wtforms.fields  import SelectField, SelectMultipleField
 from wtforms.widgets import Select, html_params, ListWidget, CheckboxInput
 from app import db, cache, httpx_client
@@ -1267,3 +1268,9 @@ def authorise_api_user(auth, return_type=None, id_match=None):
 def community_ids_from_instances(instance_ids) -> List[int]:
     communities = Community.query.join(Instance, Instance.id == Community.instance_id).filter(Instance.id.in_(instance_ids))
     return [community.id for community in communities]
+
+
+# Set up a new SQLAlchemy session specifically for Celery tasks
+def get_task_session() -> Session:
+    # Use the same engine as the main app, but create an independent session
+    return Session(bind=db.engine)

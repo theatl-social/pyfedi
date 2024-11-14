@@ -20,7 +20,7 @@ from app.models import Community, File, BannedInstances, PostReply, Post, utcnow
 from app.utils import get_request, gibberish, markdown_to_html, domain_from_url, \
     is_image_url, ensure_directory_exists, shorten_string, \
     remove_tracking_from_link, ap_datetime, instance_banned, blocked_phrases, url_to_thumbnail_file, opengraph_parse, \
-    piefed_markdown_to_lemmy_markdown
+    piefed_markdown_to_lemmy_markdown, get_task_session
 from sqlalchemy import func, desc, text
 import os
 
@@ -734,9 +734,10 @@ def send_to_remote_instance(instance_id: int, community_id: int, payload):
 
 @celery.task
 def send_to_remote_instance_task(instance_id: int, community_id: int, payload):
-    community = Community.query.get(community_id)
+    session = get_task_session()
+    community: Community = session.query(Community).get(community_id)
     if community:
-        instance = Instance.query.get(instance_id)
+        instance: Instance = session.query(Instance).get(instance_id)
         if instance.inbox and instance.online() and not instance_banned(instance.domain):
             if post_request(instance.inbox, payload, community.private_key, community.ap_profile_id + '#main-key') is True:
                 instance.last_successful_send = utcnow()
@@ -747,7 +748,8 @@ def send_to_remote_instance_task(instance_id: int, community_id: int, payload):
                 instance.start_trying_again = utcnow() + timedelta(seconds=instance.failures ** 4)
                 if instance.failures > 10:
                     instance.dormant = True
-            db.session.commit()
+            session.commit()
+    session.close()
 
 
 def community_in_list(community_id, community_list):
