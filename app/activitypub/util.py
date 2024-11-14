@@ -544,7 +544,6 @@ def refresh_user_profile_task(user_id):
                     cover_changed = True
             user.recalculate_post_stats()
             session.commit()
-            session.close()
             if user.avatar_id and avatar_changed:
                 make_image_sizes(user.avatar_id, 40, 250, 'users')
                 cache.delete_memoized(User.avatar_image, user)
@@ -552,6 +551,7 @@ def refresh_user_profile_task(user_id):
             if user.cover_id and cover_changed:
                 make_image_sizes(user.cover_id, 700, 1600, 'users')
                 cache.delete_memoized(User.cover_image, user)
+            session.close()
 
 
 def refresh_community_profile(community_id):
@@ -658,7 +658,7 @@ def refresh_community_profile_task(community_id):
             if instance and instance.software == 'peertube':
                 community.restricted_to_mods = True
             session.commit()
-            session.close()
+
             if community.icon_id and icon_changed:
                 make_image_sizes(community.icon_id, 60, 250, 'communities')
             if community.image_id and cover_changed:
@@ -698,6 +698,7 @@ def refresh_community_profile_task(community_id):
                                                                             user_id=member_user.id,
                                                                             is_moderator=True).delete()
                                 db.session.commit()
+    session.close()
 
 
 def actor_json_to_model(activity_json, address, server):
