@@ -389,13 +389,19 @@ def find_language(code: str) -> Language | None:
         return None
 
 
-def find_language_or_create(code: str, name: str) -> Language:
-    existing_language = Language.query.filter(Language.code == code).first()
+def find_language_or_create(code: str, name: str, session=None) -> Language:
+    if session:
+        existing_language: Language = session.query(Language).filter(Language.code == code).first()
+    else:
+        existing_language = Language.query.filter(Language.code == code).first()
     if existing_language:
         return existing_language
     else:
         new_language = Language(code=code, name=name)
-        db.session.add(new_language)
+        if session:
+            session.add(new_language)
+        else:
+            db.session.add(new_language)
         return new_language
 
 
@@ -651,10 +657,10 @@ def refresh_community_profile_task(community_id):
                         cover_changed = True
             if 'language' in activity_json and isinstance(activity_json['language'], list) and not community.ignore_remote_language:
                 for ap_language in activity_json['language']:
-                    new_language = find_language_or_create(ap_language['identifier'], ap_language['name'])
+                    new_language = find_language_or_create(ap_language['identifier'], ap_language['name'], session)
                     if new_language not in community.languages:
                         community.languages.append(new_language)
-            instance = Instance.query.get(community.instance_id)
+            instance = session.query(Instance).get(community.instance_id)
             if instance and instance.software == 'peertube':
                 community.restricted_to_mods = True
             session.commit()
