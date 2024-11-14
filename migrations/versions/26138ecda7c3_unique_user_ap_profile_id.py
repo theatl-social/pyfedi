@@ -70,6 +70,7 @@ def upgrade():
                 conn.execute(text('UPDATE "notification_subscription" SET user_id = :new_id WHERE user_id = :old_id'), {"new_id": new_id, "old_id": old_id})
                 conn.execute(text('DELETE FROM "community_member" WHERE user_id = :old_id'), {"new_id": new_id, "old_id": old_id})
                 conn.execute(text('DELETE FROM "instance_role" WHERE user_id = :old_id'), {"old_id": old_id})
+                conn.execute(text('DELETE FROM "mod_log" WHERE user_id = :old_id'), {"old_id": old_id})
                 conn.execute(text('UPDATE "chat_message" SET sender_id = :new_id WHERE sender_id = :old_id'), {"new_id": new_id, "old_id": old_id})
                 conn.execute(text('UPDATE "chat_message" SET recipient_id = :new_id WHERE recipient_id = :old_id'), {"new_id": new_id, "old_id": old_id})
                 conn.execute(text('UPDATE "community" SET user_id = :new_id WHERE user_id = :old_id'), {"new_id": new_id, "old_id": old_id})
