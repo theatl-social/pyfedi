@@ -697,7 +697,7 @@ class User(UserMixin, db.Model):
     conversations = db.relationship('Conversation', lazy='dynamic', secondary=conversation_member, backref=db.backref('members', lazy='joined'))
 
     ap_id = db.Column(db.String(255), index=True)           # e.g. username@server
-    ap_profile_id = db.Column(db.String(255), index=True)   # e.g. https://server/u/username
+    ap_profile_id = db.Column(db.String(255), index=True, unique=True)   # e.g. https://server/u/username
     ap_public_url = db.Column(db.String(255))               # e.g. https://server/u/UserName
     ap_fetched_at = db.Column(db.DateTime)
     ap_followers_url = db.Column(db.String(255))

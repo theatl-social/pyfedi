@@ -12,6 +12,8 @@ from flask import current_app, request, g, url_for, json
 from flask_babel import _
 from requests import JSONDecodeError
 from sqlalchemy import text, func, desc
+from sqlalchemy.exc import IntegrityError
+
 from app import db, cache, constants, celery
 from app.models import User, Post, Community, BannedInstances, File, PostReply, AllowedInstances, Instance, utcnow, \
     PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation, \
@@ -765,8 +767,12 @@ def actor_json_to_model(activity_json, address, server):
             cover = File(source_url=activity_json['image']['url'])
             user.cover = cover
             db.session.add(cover)
-        db.session.add(user)
-        db.session.commit()
+        try:
+            db.session.add(user)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            return User.query.filter_by(ap_profile_id=activity_json['id'].lower()).one()
         if user.avatar_id:
             make_image_sizes(user.avatar_id, 40, 250, 'users')
         if user.cover_id:
@@ -860,8 +866,12 @@ def actor_json_to_model(activity_json, address, server):
         if 'language' in activity_json and isinstance(activity_json['language'], list):
             for ap_language in activity_json['language']:
                 community.languages.append(find_language_or_create(ap_language['identifier'], ap_language['name']))
-        db.session.add(community)
-        db.session.commit()
+        try:
+            db.session.add(community)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            return Community.query.filter_by(ap_profile_id=activity_json['id'].lower()).one()
         if community.icon_id:
             make_image_sizes(community.icon_id, 60, 250, 'communities')
         if community.image_id:
