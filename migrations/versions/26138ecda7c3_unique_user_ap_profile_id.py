@@ -44,6 +44,8 @@ def upgrade():
         new_id = users[0].id
         old_ids = [user.id for user in users[1:]]
 
+        print(profile_id)
+
         if old_ids:
             # Update tables with batch IN clause
             conn.execute(text('UPDATE "post" SET user_id = :new_id WHERE user_id IN :old_ids'), {"new_id": new_id, "old_ids": tuple(old_ids)})
@@ -81,6 +83,7 @@ def upgrade():
 
     # Finalize by dropping and recreating the unique index on ap_profile_id
     with op.batch_alter_table('user', schema=None) as batch_op:
+        print('Adding unique index...')
         batch_op.drop_index('ix_user_ap_profile_id')
         batch_op.create_index(batch_op.f('ix_user_ap_profile_id'), ['ap_profile_id'], unique=True)
 
