@@ -838,7 +838,7 @@ def federate_post(community, post):
         page['oneOf' if poll.mode == 'single' else 'anyOf'] = choices
     if not community.is_local():  # this is a remote community - send the post to the instance that hosts it
         post_request_in_background(community.ap_inbox_url, create, current_user.private_key,
-                               current_user.public_url() + '#main-key')
+                               current_user.public_url() + '#main-key', timeout=10)
         flash(_('Your post to %(name)s has been made.', name=community.title))
     else:  # local community - send (announce) post out to followers
         announce = {

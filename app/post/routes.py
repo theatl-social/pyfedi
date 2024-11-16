@@ -133,8 +133,8 @@ def show_post(post_id: int):
             }]
         }
         if not community.is_local():    # this is a remote community, send it to the instance that hosts it
-            success = post_request(community.ap_inbox_url, create_json, current_user.private_key,
-                                                       current_user.public_url() + '#main-key')
+            success = post_request_in_background(community.ap_inbox_url, create_json, current_user.private_key,
+                                                 current_user.public_url() + '#main-key', timeout=10)
             if success is False or isinstance(success, str):
                 flash('Failed to send to remote instance', 'error')
         else:                       # local community - send it to followers on remote instances
@@ -159,13 +159,13 @@ def show_post(post_id: int):
         # send copy of Note to post author (who won't otherwise get it if no-one else on their instance is subscribed to the community)
         if not post.author.is_local() and post.author.ap_domain != community.ap_domain:
             if not community.is_local() or (community.is_local and not community.has_followers_from_domain(post.author.ap_domain)):
-                success = post_request(post.author.ap_inbox_url, create_json, current_user.private_key,
-                                                       current_user.public_url() + '#main-key')
+                success = post_request_in_background(post.author.ap_inbox_url, create_json, current_user.private_key,
+                                                     current_user.public_url() + '#main-key', timeout=10)
                 if success is False or isinstance(success, str):
                     # sending to shared inbox is good enough for Mastodon, but Lemmy will reject it the local community has no followers
                     personal_inbox = post.author.public_url() + '/inbox'
-                    post_request(personal_inbox, create_json, current_user.private_key,
-                                                       current_user.public_url() + '#main-key')
+                    post_request_in_background(personal_inbox, create_json, current_user.private_key,
+                                               current_user.public_url() + '#main-key', timeout=10)
 
         return redirect(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{reply.id}'))
     else:
