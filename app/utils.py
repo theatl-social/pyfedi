@@ -332,6 +332,10 @@ def allowlist_html(html: str, a_target='_blank') -> str:
     re_embedded_mp3 = re.compile(r'<img .*?src="(https://.*?\.mp3)".*?/>')
     clean_html = re_embedded_mp3.sub(r'<audio controls><source src="\1" type="audio/mp3"></audio>', clean_html)
 
+    # replace the 'static' for images hotlinked to fandom sites with 'vignette'
+    re_fandom_hotlink = re.compile(r'<img alt="(.*?)" loading="lazy" src="https://static.wikia.nocookie.net')
+    clean_html = re_fandom_hotlink.sub(r'<img alt="\1" loading="lazy" src="https://vignette.wikia.nocookie.net', clean_html)
+
     return clean_html
 
 
