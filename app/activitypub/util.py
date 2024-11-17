@@ -917,12 +917,9 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
             if post.url:
                 if is_image_url(post.url):
                     post.type = POST_TYPE_IMAGE
-                    if 'image' in post_json and 'url' in post_json['image']:
-                        image = File(source_url=post_json['image']['url'])
-                    else:
-                        image = File(source_url=post.url)
-                        if alt_text:
-                            image.alt_text = alt_text
+                    image = File(source_url=post.url)
+                    if alt_text:
+                        image.alt_text = alt_text
                     db.session.add(image)
                     post.image = image
                 elif is_video_url(post.url):

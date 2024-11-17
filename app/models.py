@@ -1233,10 +1233,7 @@ class Post(db.Model):
             if post.url:
                 if is_image_url(post.url):
                     post.type = constants.POST_TYPE_IMAGE
-                    if 'image' in request_json['object'] and 'url' in request_json['object']['image']:
-                        image = File(source_url=request_json['object']['image']['url'])
-                    else:
-                        image = File(source_url=post.url)
+                    image = File(source_url=post.url)
                     if alt_text:
                         image.alt_text = alt_text
                     db.session.add(image)
