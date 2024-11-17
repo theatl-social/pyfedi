@@ -267,7 +267,8 @@ class File(db.Model):
                 return self.source_url
         elif self.file_path:
             file_path = self.file_path[4:] if self.file_path.startswith('app/') else self.file_path
-            return f"https://{current_app.config['SERVER_NAME']}/{file_path}"
+            scheme = 'http' if current_app.config['SERVER_NAME'] == '127.0.0.1:5000' else 'https'
+            return f"{scheme}://{current_app.config['SERVER_NAME']}/{file_path}"
         else:
             return ''
 
@@ -275,7 +276,8 @@ class File(db.Model):
         if self.file_path is None:
             return self.thumbnail_url()
         file_path = self.file_path[4:] if self.file_path.startswith('app/') else self.file_path
-        return f"https://{current_app.config['SERVER_NAME']}/{file_path}"
+        scheme = 'http' if current_app.config['SERVER_NAME'] == '127.0.0.1:5000' else 'https'
+        return f"{scheme}://{current_app.config['SERVER_NAME']}/{file_path}"
 
     def thumbnail_url(self):
         if self.thumbnail_path is None:
@@ -284,7 +286,8 @@ class File(db.Model):
             else:
                 return ''
         thumbnail_path = self.thumbnail_path[4:] if self.thumbnail_path.startswith('app/') else self.thumbnail_path
-        return f"https://{current_app.config['SERVER_NAME']}/{thumbnail_path}"
+        scheme = 'http' if current_app.config['SERVER_NAME'] == '127.0.0.1:5000' else 'https'
+        return f"{scheme}://{current_app.config['SERVER_NAME']}/{thumbnail_path}"
 
     def delete_from_disk(self):
         purge_from_cache = []
