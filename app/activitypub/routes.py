@@ -302,6 +302,7 @@ def user_profile(actor):
                 actor_data['matrixUserId'] = user.matrix_user_id
             resp = jsonify(actor_data)
             resp.content_type = 'application/activity+json'
+            resp.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/u/{actor}>; rel="alternate"; type="text/html"')
             return resp
         else:
             if main_user_name:
@@ -383,6 +384,7 @@ def community_profile(actor):
                 }
             resp = jsonify(actor_data)
             resp.content_type = 'application/activity+json'
+            resp.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/c/{actor}>; rel="alternate"; type="text/html"')
             return resp
         else:   # browser request - return html
             return show_community(community)
@@ -1596,6 +1598,7 @@ def comment_ap(comment_id):
         resp = jsonify(reply_data)
         resp.content_type = 'application/activity+json'
         resp.headers.set('Vary', 'Accept')
+        resp.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/comment/{reply.id}>; rel="alternate"; type="text/html"')
         return resp
     else:
         reply = PostReply.query.get_or_404(comment_id)
@@ -1616,6 +1619,7 @@ def post_ap(post_id):
         resp = jsonify(post_data)
         resp.content_type = 'application/activity+json'
         resp.headers.set('Vary', 'Accept')
+        resp.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/post/{post.id}>; rel="alternate"; type="text/html"')
         return resp
     else:
         return show_post(post_id)

@@ -275,6 +275,7 @@ def show_post(post_id: int):
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
                            )
     response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
+    response.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/post/{post.id}>; rel="alternate"; type="application/activity+json"')
     return response
 
 
