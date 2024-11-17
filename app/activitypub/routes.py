@@ -1590,11 +1590,11 @@ def user_followers(actor):
         abort(404)
 
 
-@bp.route('/comment/<int:comment_id>', methods=['GET'])
+@bp.route('/comment/<int:comment_id>', methods=['GET', 'HEAD'])
 def comment_ap(comment_id):
     if is_activitypub_request():
         reply = PostReply.query.get_or_404(comment_id)
-        reply_data = comment_model_to_json(reply)
+        reply_data = comment_model_to_json(reply) if request.method == 'GET' else []
         resp = jsonify(reply_data)
         resp.content_type = 'application/activity+json'
         resp.headers.set('Vary', 'Accept')
@@ -1605,17 +1605,20 @@ def comment_ap(comment_id):
         return continue_discussion(reply.post.id, comment_id)
 
 
-@bp.route('/post/<int:post_id>/', methods=['GET'])
+@bp.route('/post/<int:post_id>/', methods=['GET', 'HEAD'])
 def post_ap2(post_id):
     return redirect(url_for('activitypub.post_ap', post_id=post_id))
 
 
-@bp.route('/post/<int:post_id>', methods=['GET', 'POST'])
+@bp.route('/post/<int:post_id>', methods=['GET', 'HEAD', 'POST'])
 def post_ap(post_id):
-    if request.method == 'GET' and is_activitypub_request():
+    if (request.method == 'GET' or request.method == 'HEAD') and is_activitypub_request():
         post = Post.query.get_or_404(post_id)
-        post_data = post_to_page(post)
-        post_data['@context'] = default_context()
+        if request.method == 'GET':
+            post_data = post_to_page(post)
+            post_data['@context'] = default_context()
+        else:  # HEAD request
+            post_data = []
         resp = jsonify(post_data)
         resp.content_type = 'application/activity+json'
         resp.headers.set('Vary', 'Accept')
