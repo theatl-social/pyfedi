@@ -425,6 +425,11 @@ def shared_inbox():
         return '', 400
     redis_client.set(id, 1, ex=90)              # Save the activity ID into redis, to avoid duplicate activities
 
+    # Ignore unutilised PeerTube activity
+    if request_json['actor'].endswith('accounts/peertube'):
+        log_incoming_ap(request_json['id'], APLOG_PT_VIEW, APLOG_IGNORED, request_json if store_ap_json else None, 'PeerTube View or CacheFile activity')
+        return ''
+
     if request.method == 'POST':
         # save all incoming data to aid in debugging and development. Set result to 'success' if things go well
         activity_log = ActivityPubLog(direction='in', result='failure')
@@ -443,13 +448,6 @@ def shared_inbox():
                     process_delete_request(request_json, activity_log.id, ip_address())
                 else:
                     process_delete_request.delay(request_json, activity_log.id, ip_address())
-                return ''
-            # Ignore unutilised PeerTube activity
-            if 'actor' in request_json and request_json['actor'].endswith('accounts/peertube'):
-                activity_log.result = 'ignored'
-                activity_log.exception_message = 'PeerTube View or CacheFile activity'
-                db.session.add(activity_log)
-                db.session.commit()
                 return ''
 
         actor = find_actor_or_create(request_json['actor']) if 'actor' in request_json else None
