@@ -611,7 +611,24 @@ def process_inbox_request(request_json, store_ap_json):
                 log_incoming_ap(request_json['id'], APLOG_ACCEPT, APLOG_SUCCESS, request_json if store_ap_json else None)
             return
 
-
+        # Reject: remote server is rejecting our previous follow request
+        if request_json['type'] == 'Reject':
+            if request_json['object']['type'] == 'Follow':
+                user_ap_id = request_json['object']['actor']
+                user = find_actor_or_create(user_ap_id, create_if_not_found=False)
+                if not user:
+                    log_incoming_ap(request_json['id'], APLOG_ACCEPT, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not find recipient of Reject')
+                    return
+                join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
+                if join_request:
+                    db.session.delete(join_request)
+                existing_membership = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
+                if existing_membership:
+                    db.session.delete(existing_membership)
+                    cache.delete_memoized(community_membership, user, community)
+                db.session.commit()
+                log_incoming_ap(request_json['id'], APLOG_ACCEPT, APLOG_SUCCESS, request_json if store_ap_json else None)
+            return
 
 
         # -- below this point is code that will be incrementally replaced to use log_incoming_ap() instead --
