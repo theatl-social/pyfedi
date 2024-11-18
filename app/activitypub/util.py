@@ -2565,3 +2565,16 @@ def inform_followers_of_post_update_task(post_id: int, sending_instance_id: int)
                 post_request(i.inbox, update_json, post.author.private_key, post.author.public_url() + '#main-key')
             except Exception:
                 pass
+
+
+def log_incoming_ap(id, aplog_type, aplog_result, request_json, message=None):
+    aplog_in = APLOG_IN
+
+    if aplog_in and aplog_type[0] and aplog_result[0]:
+        activity_log = ActivityPubLog(direction='in', activity_id=id, activity_type=aplog_type[1], result=aplog_result[1])
+        if message:
+            activity_log.exception_message = message
+        if request_json:
+            activity_log.activity_json = json.dumps(request_json)
+        db.session.add(activity_log)
+        db.session.commit()
