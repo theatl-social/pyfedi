@@ -585,6 +585,32 @@ def process_inbox_request(request_json, store_ap_json):
                     log_incoming_ap(request_json['id'], APLOG_FOLLOW, APLOG_SUCCESS, request_json if store_ap_json else None)
             return
 
+        # Accept: remote server is accepting our previous follow request
+        if request_json['type'] == 'Accept':
+            user = None
+            if isinstance(request_json['object'], str): # a.gup.pe accepts using a string with the ID of the follow request
+                join_request_parts = request_json['object'].split('/')
+                join_request = CommunityJoinRequest.query.get(join_request_parts[-1])
+                if join_request:
+                    user = User.query.get(join_request.user_id)
+            elif request_json['object']['type'] == 'Follow':
+                user_ap_id = request_json['object']['actor']
+                user = find_actor_or_create(user_ap_id, create_if_not_found=False)
+            if not user:
+                log_incoming_ap(request_json['id'], APLOG_ACCEPT, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not find recipient of Accept')
+                return
+            join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
+            if join_request:
+                existing_membership = CommunityMember.query.filter_by(user_id=join_request.user_id, community_id=join_request.community_id).first()
+                if not existing_membership:
+                    member = CommunityMember(user_id=join_request.user_id, community_id=join_request.community_id)
+                    db.session.add(member)
+                    community.subscriptions_count += 1
+                    db.session.commit()
+                    cache.delete_memoized(community_membership, user, community)
+                log_incoming_ap(request_json['id'], APLOG_ACCEPT, APLOG_SUCCESS, request_json if store_ap_json else None)
+            return
+
 
 
 

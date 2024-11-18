@@ -435,6 +435,10 @@ def do_subscribe(actor, user_id, admin_preload=False):
                 else:
                     pre_load_message['community_banned_by_local_instance'] = True
             success = True
+            # for local communities, joining is instant
+            member = CommunityMember(user_id=user.id, community_id=community.id)
+            db.session.add(member)
+            db.session.commit()
             if remote:
                 # send ActivityPub message to remote community, asking to follow. Accept message will be sent to our shared inbox
                 join_request = CommunityJoinRequest(user_id=user.id, community_id=community.id)
@@ -464,10 +468,6 @@ def do_subscribe(actor, user_id, admin_preload=False):
                         else:
                             pre_load_message['status'] = msg_to_user
 
-            # for local communities, joining is instant
-            member = CommunityMember(user_id=user.id, community_id=community.id)
-            db.session.add(member)
-            db.session.commit()
             if success is True:
                 if not admin_preload:
                     flash('You joined ' + community.title)
