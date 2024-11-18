@@ -9,7 +9,7 @@ import werkzeug.exceptions
 from app import db, constants, cache, celery
 from app.activitypub import bp
 
-from app.activitypub.signature import HttpSignature, post_request, VerificationError, default_context
+from app.activitypub.signature import HttpSignature, post_request, VerificationError, default_context, LDSignature
 from app.community.routes import show_community
 from app.community.util import send_to_remote_instance
 from app.post.routes import continue_discussion, show_post
@@ -459,6 +459,19 @@ def shared_inbox():
         actor.instance.ip_address = ip_address()
         db.session.commit()
 
+    try:
+        HttpSignature.verify_request(request, actor.public_key, skip_date=True)
+    except VerificationError as e:
+        if not 'signature' in request_json:
+            log_incoming_ap(request_json['id'], APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not verify HTTP signature: ' + str(e))
+            return '', 400
+        # HTTP sig will fail if a.gup.pe or PeerTube have bounced a request, so check LD sig instead
+        try:
+            LDSignature.verify_signature(request_json, actor.public_key)
+        except VerificationError as e:
+            log_incoming_ap(request_json['id'], APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not verify LD signature: ' + str(e))
+            return '', 400
+
     if request.method == 'POST':
         # save all incoming data to aid in debugging and development. Set result to 'success' if things go well
         activity_log = ActivityPubLog(direction='in', result='failure')
@@ -480,18 +493,11 @@ def shared_inbox():
                 return ''
 
         if actor is not None:
-            try:
-                HttpSignature.verify_request(request, actor.public_key, skip_date=True)
-                if current_app.debug:
-                    process_inbox_request(request_json, activity_log.id, ip_address())
-                else:
-                    process_inbox_request.delay(request_json, activity_log.id, ip_address())
-                return ''
-            except VerificationError as e:
-                activity_log.exception_message = 'Could not verify signature: ' + str(e)
-                activity_log.result = 'failure'
-                db.session.commit()
-                return '', 400
+            if current_app.debug:
+                process_inbox_request(request_json, activity_log.id, ip_address())
+            else:
+                process_inbox_request.delay(request_json, activity_log.id, ip_address())
+            return ''
 
         if activity_log.exception_message is not None:
             activity_log.result = 'failure'
