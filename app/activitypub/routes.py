@@ -14,7 +14,7 @@ from app.community.routes import show_community
 from app.community.util import send_to_remote_instance
 from app.post.routes import continue_discussion, show_post
 from app.user.routes import show_profile
-from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, SUBSCRIPTION_MEMBER
+from app.constants import *
 from app.models import User, Community, CommunityJoinRequest, CommunityMember, CommunityBan, ActivityPubLog, Post, \
     PostReply, Instance, PostVote, PostReplyVote, File, AllowedInstances, BannedInstances, utcnow, Site, Notification, \
     ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice
@@ -390,20 +390,38 @@ def community_profile(actor):
         abort(404)
 
 
-@bp.route('/inbox', methods=['GET', 'POST'])
+@bp.route('/inbox', methods=['POST'])
 def shared_inbox():
+    try:
+        request_json = request.get_json(force=True)
+    except werkzeug.exceptions.BadRequest as e:
+        log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, None, 'Unable to parse json body: ' + e.description)
+        return '', 400
+
+    g.site = Site.query.get(1)                      # g.site is not initialized by @app.before_request when request.path == '/inbox'
+    store_ap_json = g.site.log_activitypub_json
+
+    if not 'id' in request_json or not 'type' in request_json or not 'actor' in request_json or not 'object' in request_json:
+        log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'Missing minimum expected fields in JSON')
+        return '', 400
+
+    id = request_json['id']
+    if request_json['type'] == 'Announce' and isinstance(request_json['object'], dict):
+        object = request_json['object']
+        if not 'id' in object or not 'type' in object or not 'actor' in object or not 'object' in object:
+            if 'type' in object and (object['type'] == 'Page' or object['type'] == 'Note'):
+                log_incoming_ap(request_json['id'], APLOG_ANNOUNCE, APLOG_IGNORED, request_json if store_ap_json else None, 'Intended for Mastodon')
+            else:
+                log_incoming_ap(request_json['id'], APLOG_ANNOUNCE, APLOG_FAILURE, request_json if store_ap_json else None, 'Missing minimum expected fields in JSON Announce object')
+            return '', 400
+
+        if object['actor'].startswith('https://' + current_app.config['SERVER_NAME']):
+            log_incoming_ap(object['id'], APLOG_DUPLICATE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already present')
+            return '', 400
+
     if request.method == 'POST':
         # save all incoming data to aid in debugging and development. Set result to 'success' if things go well
         activity_log = ActivityPubLog(direction='in', result='failure')
-
-        try:
-            request_json = request.get_json(force=True)
-        except werkzeug.exceptions.BadRequest as e:
-            activity_log.exception_message = 'Unable to parse json body: ' + e.description
-            activity_log.result = 'failure'
-            db.session.add(activity_log)
-            db.session.commit()
-            return ''
 
         if 'id' in request_json:
             redis_client = get_redis_connection()
@@ -416,7 +434,6 @@ def shared_inbox():
 
             redis_client.set(request_json['id'], 1, ex=90)  # Save the activity ID into redis, to avoid duplicate activities that Lemmy sometimes sends
             activity_log.activity_id = request_json['id']
-            g.site = Site.query.get(1)                      # g.site is not initialized by @app.before_request when request.path == '/inbox'
             if g.site.log_activitypub_json:
                 activity_log.activity_json = json.dumps(request_json)
             activity_log.result = 'processing'
@@ -437,13 +454,6 @@ def shared_inbox():
                 db.session.add(activity_log)
                 db.session.commit()
                 return ''
-
-        else:
-            activity_log.activity_id = ''
-            if g.site.log_activitypub_json:
-                activity_log.activity_json = json.dumps(request_json)
-            db.session.add(activity_log)
-            db.session.commit()
 
         actor = find_actor_or_create(request_json['actor']) if 'actor' in request_json else None
         if actor is not None:
