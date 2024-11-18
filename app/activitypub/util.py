@@ -1334,56 +1334,39 @@ def is_activitypub_request():
     return 'application/ld+json' in request.headers.get('Accept', '') or 'application/activity+json' in request.headers.get('Accept', '')
 
 
-def delete_post_or_comment(user_ap_id, to_be_deleted_ap_id, aplog_id):
-    deletor = find_actor_or_create(user_ap_id)
-    to_delete = find_liked_object(to_be_deleted_ap_id)
-    aplog = ActivityPubLog.query.get(aplog_id)
-
-    if to_delete and to_delete.deleted:
-        if aplog:
-            aplog.result = 'ignored'
-            aplog.exception_message = 'Activity about local content which is already deleted'
-        return
-
-    if deletor and to_delete:
-        community = to_delete.community
-        if to_delete.author.id == deletor.id or deletor.is_admin() or community.is_moderator(deletor) or community.is_instance_admin(deletor):
-            if isinstance(to_delete, Post):
-                to_delete.deleted = True
-                to_delete.deleted_by = deletor.id
-                community.post_count -= 1
-                to_delete.author.post_count -= 1
-                if to_delete.url and to_delete.cross_posts is not None:
-                    old_cross_posts = Post.query.filter(Post.id.in_(to_delete.cross_posts)).all()
-                    to_delete.cross_posts.clear()
-                    for ocp in old_cross_posts:
-                        if ocp.cross_posts is not None and to_delete.id in ocp.cross_posts:
-                            ocp.cross_posts.remove(to_delete.id)
-                db.session.commit()
-                if to_delete.author.id != deletor.id:
-                    add_to_modlog_activitypub('delete_post', deletor, community_id=community.id,
-                                              link_text=shorten_string(to_delete.title), link=f'post/{to_delete.id}')
-            elif isinstance(to_delete, PostReply):
-                to_delete.deleted = True
-                to_delete.deleted_by = deletor.id
-                to_delete.author.post_reply_count -= 1
-                if not to_delete.author.bot:
-                    to_delete.post.reply_count -= 1
-                db.session.commit()
-                if to_delete.author.id != deletor.id:
-                    add_to_modlog_activitypub('delete_post_reply', deletor, community_id=community.id,
-                                              link_text=f'comment on {shorten_string(to_delete.post.title)}',
-                                              link=f'post/{to_delete.post.id}#comment_{to_delete.id}')
-            if aplog:
-                aplog.result = 'success'
-        else:
-           if aplog:
-                aplog.result = 'failure'
-                aplog.exception_message = 'Deletor did not have permission'
+def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json):
+    community = to_delete.community
+    if to_delete.user_id == deletor.id or deletor.is_admin() or community.is_moderator(deletor) or community.is_instance_admin(deletor):
+        if isinstance(to_delete, Post):
+            to_delete.deleted = True
+            to_delete.deleted_by = deletor.id
+            community.post_count -= 1
+            to_delete.author.post_count -= 1
+            if to_delete.url and to_delete.cross_posts is not None:
+                old_cross_posts = Post.query.filter(Post.id.in_(to_delete.cross_posts)).all()
+                to_delete.cross_posts.clear()
+                for ocp in old_cross_posts:
+                    if ocp.cross_posts is not None and to_delete.id in ocp.cross_posts:
+                        ocp.cross_posts.remove(to_delete.id)
+            db.session.commit()
+            if to_delete.author.id != deletor.id:
+                add_to_modlog_activitypub('delete_post', deletor, community_id=community.id,
+                                          link_text=shorten_string(to_delete.title), link=f'post/{to_delete.id}')
+        elif isinstance(to_delete, PostReply):
+            to_delete.deleted = True
+            to_delete.deleted_by = deletor.id
+            to_delete.author.post_reply_count -= 1
+            community.post_reply_count -= 1
+            if not to_delete.author.bot:
+                to_delete.post.reply_count -= 1
+            db.session.commit()
+            if to_delete.author.id != deletor.id:
+                add_to_modlog_activitypub('delete_post_reply', deletor, community_id=community.id,
+                                          link_text=f'comment on {shorten_string(to_delete.post.title)}',
+                                          link=f'post/{to_delete.post.id}#comment_{to_delete.id}')
+        log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_SUCCESS, request_json if store_ap_json else None)
     else:
-       if aplog:
-            aplog.result = 'failure'
-            aplog.exception_message = 'Unable to resolve deletor, or target'
+        log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Deletor did not have permisson')
 
 
 def restore_post_or_comment(object_json, aplog_id):
