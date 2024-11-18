@@ -25,11 +25,11 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
     update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection, find_reported_object, \
     process_report, ensure_domains_match, can_edit, can_delete, remove_data_from_banned_user, resolve_remote_post, \
     inform_followers_of_post_update, comment_model_to_json, restore_post_or_comment, ban_local_user, unban_local_user, \
-    lock_post, log_incoming_ap
+    lock_post, log_incoming_ap, find_community_ap_id
 from app.utils import gibberish, get_setting, render_template, \
     community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
-    community_moderators, markdown_to_html
+    community_moderators, markdown_to_html, html_to_text
 
 
 @bp.route('/testredis')
@@ -628,6 +628,97 @@ def process_inbox_request(request_json, store_ap_json):
                     cache.delete_memoized(community_membership, user, community)
                 db.session.commit()
                 log_incoming_ap(request_json['id'], APLOG_ACCEPT, APLOG_SUCCESS, request_json if store_ap_json else None)
+            return
+
+        # Create is new content. Update is often an edit, but Updates from Lemmy can also be new content
+        if request_json['type'] == 'Create' or request_json['type'] == 'Update':
+            if request_json['object']['type'] == 'ChatMessage':
+                sender = user
+                recipient_ap_id = request_json['object']['to'][0]
+                recipient = find_actor_or_create(recipient_ap_id, create_if_not_found=False)
+                if recipient and recipient.is_local():
+                    if sender.created_recently() or sender.reputation <= -10:
+                        log_incoming_ap(request_json['id'], APLOG_CHATMESSAGE, APLOG_FAILURE, request_json if store_ap_json else None, 'Sender not eligible to send')
+                        return
+                    elif recipient.has_blocked_user(sender.id) or recipient.has_blocked_instance(sender.instance_id):
+                        log_incoming_ap(request_json['id'], APLOG_CHATMESSAGE, APLOG_FAILURE, request_json if store_ap_json else None, 'Sender blocked by recipient')
+                        return
+                    else:
+                        # Find existing conversation to add to
+                        existing_conversation = Conversation.find_existing_conversation(recipient=recipient, sender=sender)
+                        if not existing_conversation:
+                            existing_conversation = Conversation(user_id=sender.id)
+                            existing_conversation.members.append(recipient)
+                            existing_conversation.members.append(sender)
+                            db.session.add(existing_conversation)
+                            db.session.commit()
+                        # Save ChatMessage to DB
+                        encrypted = request_json['object']['encrypted'] if 'encrypted' in request_json['object'] else None
+                        new_message = ChatMessage(sender_id=sender.id, recipient_id=recipient.id, conversation_id=existing_conversation.id,
+                                                  body_html=request_json['object']['content'],
+                                                  body=html_to_text(request_json['object']['content']),
+                                                  encrypted=encrypted)
+                        db.session.add(new_message)
+                        existing_conversation.updated_at = utcnow()
+                        db.session.commit()
+
+                        # Notify recipient
+                        notify = Notification(title=shorten_string('New message from ' + sender.display_name()),
+                                              url=f'/chat/{existing_conversation.id}#message_{new_message}', user_id=recipient.id,
+                                              author_id=sender.id)
+                        db.session.add(notify)
+                        recipient.unread_notifications += 1
+                        existing_conversation.read = False
+                        db.session.commit()
+                        log_incoming_ap(request_json['id'], APLOG_CHATMESSAGE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                return
+            # inner object of Create is not a ChatMessage
+            else:
+                if (request_json['object']['type'] == 'Note' and 'name' in request_json['object'] and                           # Poll Votes
+                    'inReplyTo' in request_json['object'] and 'attributedTo' in request_json['object']):
+                    post_being_replied_to = Post.query.filter_by(ap_id=request_json['object']['inReplyTo']).first()
+                    if post_being_replied_to:
+                        poll_data = Poll.query.get(post_being_replied_to.id)
+                        choice = PollChoice.query.filter_by(post_id=post_being_replied_to.id, choice_text=request_json['object']['name']).first()
+                        if poll_data and choice:
+                            poll_data.vote_for_choice(choice.id, user.id)
+                            db.session.commit()
+                            log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                        if post_being_replied_to.author.is_local():
+                            inform_followers_of_post_update(post_being_replied_to.id, user.instance_id)
+                    return
+                community_ap_id = find_community_ap_id(request_json)
+                if not ensure_domains_match(request_json['object']):
+                    log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Domains do not match')
+                    return
+                community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False) if community_ap_id else None
+                if community and community.local_only:
+                    log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Remote Create in local_only community')
+                    return
+                if not community:
+                    log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Blocked or unfound community')
+                    return
+
+                object_type = request_json['object']['type']
+                new_content_types = ['Page', 'Article', 'Link', 'Note', 'Question']
+                if object_type in new_content_types:  # create or update a post
+                    process_new_content(user, community, store_ap_json, request_json, announced=False)
+                    return
+                elif object_type == 'Video':  # PeerTube: editing a video (PT doesn't Announce these)
+                    post = Post.query.filter_by(ap_id=request_json['object']['id']).first()
+                    if post:
+                        if user.id == post.user_id:
+                            update_post_from_activity(post, request_json)
+                            log_incoming_ap(request_json['id'], APLOG_UPDATE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                            return
+                        else:
+                            log_incoming_ap(request_json['id'], APLOG_UPDATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Edit attempt denied')
+                            return
+                    else:
+                        log_incoming_ap(request_json['id'], APLOG_UPDATE, APLOG_FAILURE, request_json if store_ap_json else None, 'PeerTube post not found')
+                        return
+                else:
+                    log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unacceptable type (create): ' + object_type)
             return
 
 
@@ -1794,3 +1885,79 @@ def activity_result(id):
             return jsonify({'error': activity.result, 'message': activity.exception_message})
     else:
         abort(404)
+
+
+def process_new_content(user, community, store_ap_json, request_json, announced=True):
+    if not announced:
+        in_reply_to = request_json['object']['inReplyTo'] if 'inReplyTo' in request_json['object'] else None
+        ap_id = request_json['object']['id']
+        announce_id = None
+        activity_json = request_json
+    else:
+        in_reply_to = request_json['object']['object']['inReplyTo'] if 'inReplyTo' in request_json['object']['object'] else None
+        ap_id = request_json['object']['object']['id']
+        announce_id = request_json['id']
+        activity_json = request_json['object']
+
+    if not in_reply_to: # Creating a new post
+        post = Post.query.filter_by(ap_id=ap_id).first()
+        if post:
+            if activity_json['type'] == 'Create':
+                log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Create processed after Update')
+                return
+            if user.id == post.user_id:
+                update_post_from_activity(post, activity_json)
+                log_incoming_ap(request_json['id'], APLOG_UPDATE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                if not announced:
+                    announce_activity_to_followers(post.community, post.author, request_json)
+                return
+            else:
+                log_incoming_ap(request_json['id'], APLOG_UPDATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Edit attempt denied')
+                return
+        else:
+            if can_create_post(user, community):
+                try:
+                    post = create_post(store_ap_json, community, activity_json, user, announce_id=announce_id)
+                    if post:
+                        log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                        if not announced:
+                            announce_activity_to_followers(community, user, request_json)
+                        return
+                except TypeError as e:
+                    current_app.logger.error('TypeError: ' + str(request_json))
+                    log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'TypeError. See log file.')
+                    return
+            else:
+                log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'User cannot create post in Community')
+                return
+    else:   # Creating a reply / comment
+        reply = PostReply.query.filter_by(ap_id=ap_id).first()
+        if reply:
+            if activity_json['type'] == 'Create':
+                log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Create processed after Update')
+                return
+            if user.id == reply.user_id:
+                update_post_reply_from_activity(reply, activity_json)
+                log_incoming_ap(request_json['id'], APLOG_UPDATE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                if not announced:
+                    announce_activity_to_followers(reply.community, reply.author, request_json)
+                return
+            else:
+                log_incoming_ap(request_json['id'], APLOG_UPDATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Edit attempt denied')
+                return
+        else:
+            if can_create_post_reply(user, community):
+                try:
+                    reply = create_post_reply(store_ap_json, community, in_reply_to, activity_json, user, announce_id=announce_id)
+                    if reply:
+                        log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                        if not announced:
+                            announce_activity_to_followers(community, user, request_json)
+                    return
+                except TypeError as e:
+                    current_app.logger.error('TypeError: ' + str(request_json))
+                    log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'TypeError. See log file.')
+                    return
+            else:
+                log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'User cannot create reply in Community')
+                return

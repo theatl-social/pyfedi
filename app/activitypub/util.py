@@ -1638,10 +1638,9 @@ def lock_post_task(mod_ap_id, post_id, comments_enabled):
             db.session.commit()
 
 
-def create_post_reply(activity_log: ActivityPubLog, community: Community, in_reply_to, request_json: dict, user: User, announce_id=None) -> Union[PostReply, None]:
+def create_post_reply(store_ap_json, community: Community, in_reply_to, request_json: dict, user: User, announce_id=None) -> Union[PostReply, None]:
     if community.local_only:
-        activity_log.exception_message = 'Community is local only, reply discarded'
-        activity_log.result = 'ignored'
+        log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Community is local only, reply discarded')
         return None
     post_id, parent_comment_id, root_id = find_reply_parent(in_reply_to)
 
@@ -1652,7 +1651,7 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
         else:
             parent_comment = None
         if post_id is None:
-            activity_log.exception_message = 'Could not find parent post'
+            log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not find parent post')
             return None
         post = Post.query.get(post_id)
 
@@ -1678,30 +1677,28 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
             language = find_language(next(iter(request_json['object']['contentMap'])))  # Combination of next and iter gets the first key in a dict
             language_id = language.id if language else None
 
-        post_reply = None
         try:
             post_reply = PostReply.new(user, post, parent_comment, notify_author=True, body=body, body_html=body_html,
                                        language_id=language_id, request_json=request_json, announce_id=announce_id)
-            activity_log.result = 'success'
+            return post_reply
         except Exception as ex:
-            activity_log.exception_message = str(ex)
-            activity_log.result = 'ignored'
-        db.session.commit()
-        return post_reply
+            log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, str(ex))
+            return None
+    else:
+        log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unable to find parent post/comment')
+        return None
 
 
-def create_post(activity_log: ActivityPubLog, community: Community, request_json: dict, user: User, announce_id=None) -> Union[Post, None]:
+def create_post(store_ap_json, community: Community, request_json: dict, user: User, announce_id=None) -> Union[Post, None]:
     if community.local_only:
-        activity_log.exception_message = 'Community is local only, post discarded'
-        activity_log.result = 'ignored'
+        log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Community is local only, post discarded')
         return None
     try:
         post = Post.new(user, community, request_json, announce_id)
+        return post
     except Exception as ex:
-        activity_log.exception_message = str(ex)
+        log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, str(ex))
         return None
-
-    return post
 
 
 def notify_about_post(post: Post):
@@ -2578,3 +2575,46 @@ def log_incoming_ap(id, aplog_type, aplog_result, request_json, message=None):
             activity_log.activity_json = json.dumps(request_json)
         db.session.add(activity_log)
         db.session.commit()
+
+
+def find_community_ap_id(request_json):
+    locations = ['audience', 'cc', 'to']
+    if 'object' in request_json and isinstance(request_json['object'], dict):
+        rjs = [request_json, request_json['object']]
+    else:
+        rjs = [request_json]
+    for rj in rjs:
+        for location in locations:
+            if location in rj:
+                potential_id = rj[location]
+                if isinstance(potential_id, str):
+                    if not potential_id.startswith('https://www.w3.org') and not potential_id.endswith('/followers'):
+                        potential_community = Community.query.filter_by(ap_profile_id=potential_id.lower()).first()
+                        if potential_community:
+                            return potential_id
+                if isinstance(potential_id, list):
+                    for c in potential_id:
+                        if not c.startswith('https://www.w3.org') and not c.endswith('/followers'):
+                            potential_community = Community.query.filter_by(ap_profile_id=c.lower()).first()
+                            if potential_community:
+                                return c
+
+    if not 'object' in request_json:
+        return None
+
+    if 'inReplyTo' in request_json['object'] and request_json['object']['inReplyTo'] is not None:
+        post_being_replied_to = Post.query.filter_by(ap_id=request_json['object']['inReplyTo']).first()
+        if post_being_replied_to:
+            return post_being_replied_to.community.ap_profile_id
+        else:
+            comment_being_replied_to = PostReply.query.filter_by(ap_id=request_json['object']['inReplyTo']).first()
+            if comment_being_replied_to:
+                return comment_being_replied_to.community.ap_profile_id
+
+    if request_json['object']['type'] == 'Video': # PeerTube
+        if 'attributedTo' in request_json['object'] and isinstance(request_json['object']['attributedTo'], list):
+            for a in request_json['object']['attributedTo']:
+                if a['type'] == 'Group':
+                    return a['id']
+
+    return None
