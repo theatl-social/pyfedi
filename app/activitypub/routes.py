@@ -483,28 +483,11 @@ def shared_inbox():
                 process_delete_request.delay(request_json, store_ap_json)
             return ''
 
-    if request.method == 'POST':
-        # save all incoming data to aid in debugging and development. Set result to 'success' if things go well
-        activity_log = ActivityPubLog(direction='in', result='failure')
+    if current_app.debug:
+        process_inbox_request(request_json, store_ap_json)
+    else:
+        process_inbox_request.delay(request_json, store_ap_json)
 
-        if 'id' in request_json:
-            activity_log.activity_id = request_json['id']
-            if g.site.log_activitypub_json:
-                activity_log.activity_json = json.dumps(request_json)
-            activity_log.result = 'processing'
-            db.session.add(activity_log)
-            db.session.commit()
-
-        if actor is not None:
-            if current_app.debug:
-                process_inbox_request(request_json, activity_log.id, ip_address())
-            else:
-                process_inbox_request.delay(request_json, activity_log.id, ip_address())
-            return ''
-
-        if activity_log.exception_message is not None:
-            activity_log.result = 'failure'
-        db.session.commit()
     return ''
 
 
@@ -514,10 +497,110 @@ def site_inbox():
 
 
 @celery.task
-def process_inbox_request(request_json, activitypublog_id, ip_address):
+def process_inbox_request(request_json, store_ap_json):
     with current_app.app_context():
-        activity_log = ActivityPubLog.query.get(activitypublog_id)
         site = Site.query.get(1)    # can't use g.site because celery doesn't use Flask's g variable
+
+        # For an Announce, Accept, or Reject, we have the community, and need to find the user
+        # For everything else, we have the user, and need to find the community
+        # Benefits of always using request_json['actor']:
+        #   It's the actor who signed the request, and whose signature has been verified
+        #   Because of the earlier check, we know that they already exist, and so don't need to check again
+        #   Using actors from inner objects has a vulnerability to spoofing attacks (e.g. if 'attributedTo' doesn't match the 'Create' actor)
+
+        if request_json['type'] == 'Announce' or request_json['type'] == 'Accept' or request_json['type'] == 'Reject':
+            community_ap_id = request_json['actor']
+            community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False)
+            if not community or not isinstance(community, Community):
+                log_incoming_ap(announce_id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'Actor was not a community')
+                return
+            user_ap_id = None               # found in 'if request_json['type'] == 'Announce', or it's a local user (for 'Accept'/'Reject')
+        else:
+            user_ap_id = request_json['actor']
+            user = find_actor_or_create(user_ap_id, create_if_not_found=False)
+            if not user or not isinstance(user, User):
+                log_incoming_ap(announce_id, APLOG_NOTYPE, APLOG_FAILURE, request_json, 'Actor was not a user')
+                return
+            user.last_seen = site.last_active = utcnow()
+            db.session.commit()
+            community = None                # found as needed
+
+        # Follow: remote user wants to join/follow one of our users or communities
+        if request_json['type'] == 'Follow':
+            target_ap_id = request_json['object']
+            follow_id = request_json['id']
+            target = find_actor_or_create(target_ap_id, create_if_not_found=False)
+            if not target:
+                log_incoming_ap(request_json['id'], APLOG_FOLLOW, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not find target of Follow')
+                return
+            if isinstance(target, Community):
+                community = target
+                reject_follow = False
+                if community.local_only:
+                    log_incoming_ap(request_json['id'], APLOG_FOLLOW, APLOG_FAILURE, request_json if store_ap_json else None, 'Local only cannot be followed by remote users')
+                    reject_follow = True
+                else:
+                    # check if user is banned from this community
+                    user_banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
+                    if user_banned:
+                        log_incoming_ap(request_json['id'], APLOG_FOLLOW, APLOG_FAILURE, request_json if store_ap_json else None, 'Remote user has been banned')
+                        reject_follow = True
+                if reject_follow:
+                    # send reject message to deny the follow
+                    reject = {"@context": default_context(), "actor": community.public_url(), "to": [user.public_url()],
+                              "object": {"actor": user.public_url(), "to": None, "object": community.public_url(), "type": "Follow", "id": follow_id},
+                              "type": "Reject", "id": f"https://{current_app.config['SERVER_NAME']}/activities/reject/" + gibberish(32)}
+                    post_request(user.ap_inbox_url, reject, community.private_key, f"{community.public_url()}#main-key")
+                else:
+                    if community_membership(user, community) != SUBSCRIPTION_MEMBER:
+                        member = CommunityMember(user_id=user.id, community_id=community.id)
+                        db.session.add(member)
+                        db.session.commit()
+                        cache.delete_memoized(community_membership, user, community)
+                        # send accept message to acknowledge the follow
+                        accept = {"@context": default_context(), "actor": community.public_url(), "to": [user.public_url()],
+                                  "object": {"actor": user.public_url(), "to": None, "object": community.public_url(), "type": "Follow", "id": follow_id},
+                                  "type": "Accept", "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)}
+                        post_request(user.ap_inbox_url, accept, community.private_key, f"{community.public_url()}#main-key")
+                        log_incoming_ap(request_json['id'], APLOG_FOLLOW, APLOG_SUCCESS, request_json if store_ap_json else None)
+                return
+            elif isinstance(target, User):
+                local_user = target
+                remote_user = user
+                if not local_user.is_local():
+                    log_incoming_ap(request_json['id'], APLOG_FOLLOW, APLOG_FAILURE, request_json if store_ap_json else None, 'Follow request for remote user received')
+                    return
+                existing_follower = UserFollower.query.filter_by(local_user_id=local_user.id, remote_user_id=remote_user.id).first()
+                if not existing_follower:
+                    auto_accept = not local_user.ap_manually_approves_followers
+                    new_follower = UserFollower(local_user_id=local_user.id, remote_user_id=remote_user.id, is_accepted=auto_accept)
+                    if not local_user.ap_followers_url:
+                        local_user.ap_followers_url = local_user.public_url() + '/followers'
+                    db.session.add(new_follower)
+                    db.session.commit()
+                    accept = {"@context": default_context(), "actor": local_user.public_url(), "to": [remote_user.public_url()],
+                              "object": {"actor": remote_user.public_url(), "to": None, "object": local_user.public_url(), "type": "Follow", "id": follow_id},
+                              "type": "Accept", "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)}
+                    post_request(remote_user.ap_inbox_url, accept, local_user.private_key, f"{local_user.public_url()}#main-key")
+                    log_incoming_ap(request_json['id'], APLOG_FOLLOW, APLOG_SUCCESS, request_json if store_ap_json else None)
+            return
+
+
+
+
+        # -- below this point is code that will be incrementally replaced to use log_incoming_ap() instead --
+
+        # save all incoming data to aid in debugging and development. Set result to 'success' if things go well
+        activity_log = ActivityPubLog(direction='in', result='failure')
+
+        if 'id' in request_json:
+            activity_log.activity_id = request_json['id']
+            if site.log_activitypub_json:
+                activity_log.activity_json = json.dumps(request_json)
+            activity_log.result = 'processing'
+            db.session.add(activity_log)
+            db.session.commit()
+
         if 'type' in request_json:
             activity_log.activity_type = request_json['type']
             if not instance_blocked(request_json['id']):
