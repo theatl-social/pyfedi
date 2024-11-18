@@ -430,6 +430,18 @@ def shared_inbox():
         log_incoming_ap(request_json['id'], APLOG_PT_VIEW, APLOG_IGNORED, request_json if store_ap_json else None, 'PeerTube View or CacheFile activity')
         return ''
 
+    # Ignore delete requests from uses that do not already exist here
+    if request_json['type'] == 'Delete':
+        if (request_json['id'].endswith('#delete') or                                                                                       # Mastodon / PieFed
+            ('object' in request_json and isinstance(request_json['object'], str) and request_json['actor'] == request_json['object'])):    # Lemmy
+            actor = User.query.filter_by(ap_profile_id=request_json['actor'].lower()).first()
+            if not actor:
+                log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
+                return '', 400
+            else:
+                actor.ap_fetched_at = utcnow()                  # use stored pubkey, don't try to re-fetch for next step (signature verification)
+                db.session.commit()
+
     if request.method == 'POST':
         # save all incoming data to aid in debugging and development. Set result to 'success' if things go well
         activity_log = ActivityPubLog(direction='in', result='failure')
@@ -1308,9 +1320,6 @@ def process_delete_request(request_json, activitypublog_id, ip_address):
                     else:
                         activity_log.result = 'ignored'
                         activity_log.exception_message = 'Only remote users can be deleted remotely'
-                else:
-                    activity_log.result = 'ignored'
-                    activity_log.exception_message = 'Does not exist here'
                 db.session.commit()
 
 
