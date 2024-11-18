@@ -442,6 +442,23 @@ def shared_inbox():
                 actor.ap_fetched_at = utcnow()                  # use stored pubkey, don't try to re-fetch for next step (signature verification)
                 db.session.commit()
 
+    actor = find_actor_or_create(request_json['actor'])
+    if not actor:
+        actor_name = request_json['actor']
+        log_incoming_ap(request_json['id'], APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, f'Actor could not be found 1: {actor_name}')
+        return '', 400
+
+    if actor.is_local():        # should be impossible (can be Announced back, but not sent without access to privkey)
+        log_incoming_ap(request_json['id'], APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'ActivityPub activity from a local actor')
+        return '', 400
+    else:
+        actor.instance.last_seen = utcnow()
+        actor.instance.dormant = False
+        actor.instance.gone_forever = False
+        actor.instance.failures = 0
+        actor.instance.ip_address = ip_address()
+        db.session.commit()
+
     if request.method == 'POST':
         # save all incoming data to aid in debugging and development. Set result to 'success' if things go well
         activity_log = ActivityPubLog(direction='in', result='failure')
@@ -462,7 +479,6 @@ def shared_inbox():
                     process_delete_request.delay(request_json, activity_log.id, ip_address())
                 return ''
 
-        actor = find_actor_or_create(request_json['actor']) if 'actor' in request_json else None
         if actor is not None:
             try:
                 HttpSignature.verify_request(request, actor.public_key, skip_date=True)
@@ -476,9 +492,6 @@ def shared_inbox():
                 activity_log.result = 'failure'
                 db.session.commit()
                 return '', 400
-        else:
-            actor_name = request_json['actor'] if 'actor' in request_json else ''
-            activity_log.exception_message = f'Actor could not be found 1: {actor_name}'
 
         if activity_log.exception_message is not None:
             activity_log.result = 'failure'
