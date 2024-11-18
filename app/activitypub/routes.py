@@ -472,6 +472,17 @@ def shared_inbox():
             log_incoming_ap(request_json['id'], APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not verify LD signature: ' + str(e))
             return '', 400
 
+    # When a user is deleted, the only way to be fairly sure they get deleted everywhere is to tell the whole fediverse.
+    # Earlier check means this is only for users that already exist, repeating it here means that http signature will have been verified
+    if request_json['type'] == 'Delete':
+        if (request_json['id'].endswith('#delete') or                                                                                       # Mastodon / PieFed
+            ('object' in request_json and isinstance(request_json['object'], str) and request_json['actor'] == request_json['object'])):    # Lemmy
+            if current_app.debug:
+                process_delete_request(request_json, store_ap_json)
+            else:
+                process_delete_request.delay(request_json, store_ap_json)
+            return ''
+
     if request.method == 'POST':
         # save all incoming data to aid in debugging and development. Set result to 'success' if things go well
         activity_log = ActivityPubLog(direction='in', result='failure')
@@ -483,14 +494,6 @@ def shared_inbox():
             activity_log.result = 'processing'
             db.session.add(activity_log)
             db.session.commit()
-
-            # When a user is deleted, the only way to be fairly sure they get deleted everywhere is to tell the whole fediverse.
-            if 'type' in request_json and request_json['type'] == 'Delete' and request_json['id'].endswith('#delete'):
-                if current_app.debug:
-                    process_delete_request(request_json, activity_log.id, ip_address())
-                else:
-                    process_delete_request.delay(request_json, activity_log.id, ip_address())
-                return ''
 
         if actor is not None:
             if current_app.debug:
@@ -1305,41 +1308,24 @@ def process_inbox_request(request_json, activitypublog_id, ip_address):
 
 
 @celery.task
-def process_delete_request(request_json, activitypublog_id, ip_address):
+def process_delete_request(request_json, store_ap_json):
     with current_app.app_context():
-        activity_log = ActivityPubLog.query.get(activitypublog_id)
-        if 'type' in request_json and request_json['type'] == 'Delete':
-            if isinstance(request_json['object'], dict):
-                # wafrn sends invalid delete requests
-                return
-            else:
-                actor_to_delete = request_json['object'].lower()
-                user = User.query.filter_by(ap_profile_id=actor_to_delete).first()
-                if user:
-                    # check that the user really has been deleted, to avoid spoofing attacks
-                    if not user.is_local():
-                        if user_removed_from_remote_server(actor_to_delete, is_piefed=user.instance.software == 'PieFed'):
-                            # Delete all their images to save moderators from having to see disgusting stuff.
-                            files = File.query.join(Post).filter(Post.user_id == user.id).all()
-                            for file in files:
-                                file.delete_from_disk()
-                                file.source_url = ''
-                            if user.avatar_id:
-                                user.avatar.delete_from_disk()
-                                user.avatar.source_url = ''
-                            if user.cover_id:
-                                user.cover.delete_from_disk()
-                                user.cover.source_url = ''
-                            user.banned = True
-                            user.deleted = True
-                            activity_log.result = 'success'
-                        else:
-                            activity_log.result = 'ignored'
-                            activity_log.exception_message = 'User not actually deleted.'
-                    else:
-                        activity_log.result = 'ignored'
-                        activity_log.exception_message = 'Only remote users can be deleted remotely'
+        # this function processes self-deletes (retain case here, as user_removed_from_remote_server() uses a JSON request)
+        user_ap_id = request_json['actor']
+        user = User.query.filter_by(ap_profile_id=user_ap_id.lower()).first()
+        if user:
+            # check that the user really has been deleted, to avoid spoofing attacks
+            if user_removed_from_remote_server(user_ap_id, is_piefed=user.instance.software == 'PieFed'):
+                # soft self-delete
+                user.deleted = True
+                user.deleted_by = user.id
                 db.session.commit()
+                log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_SUCCESS, request_json if store_ap_json else None)
+            else:
+                log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'User not actually deleted.')
+        # TODO: process self-undeletes from Lemmy
+        # TODO: acknowledge 'removeData' field from Lemmy
+        # TODO: hard-delete in 7 days (should purge avatar and cover images, but keep posts and replies unless already soft-deleted by removeData = True)
 
 
 def announce_activity_to_followers(community, creator, activity):
