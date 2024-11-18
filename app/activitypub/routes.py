@@ -419,20 +419,17 @@ def shared_inbox():
             log_incoming_ap(object['id'], APLOG_DUPLICATE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already present')
             return '', 400
 
+    redis_client = get_redis_connection()
+    if redis_client.exists(id):                 # Something is sending same activity multiple times, or Announcing as well as sending the same content
+        log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, request_json if store_ap_json else None, 'Unnecessary retry attempt')
+        return '', 400
+    redis_client.set(id, 1, ex=90)              # Save the activity ID into redis, to avoid duplicate activities
+
     if request.method == 'POST':
         # save all incoming data to aid in debugging and development. Set result to 'success' if things go well
         activity_log = ActivityPubLog(direction='in', result='failure')
 
         if 'id' in request_json:
-            redis_client = get_redis_connection()
-            if redis_client.get(request_json['id']) is not None:   # Lemmy has an extremely short POST timeout and tends to retry unnecessarily. Ignore their retries.
-                activity_log.result = 'ignored'
-                activity_log.exception_message = 'Unnecessary retry attempt'
-                db.session.add(activity_log)
-                db.session.commit()
-                return ''
-
-            redis_client.set(request_json['id'], 1, ex=90)  # Save the activity ID into redis, to avoid duplicate activities that Lemmy sometimes sends
             activity_log.activity_id = request_json['id']
             if g.site.log_activitypub_json:
                 activity_log.activity_json = json.dumps(request_json)
