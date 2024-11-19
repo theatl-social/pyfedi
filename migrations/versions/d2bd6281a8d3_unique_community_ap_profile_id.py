@@ -57,6 +57,7 @@ def upgrade():
             conn.execute(text('DELETE FROM "community_member" WHERE community_id IN :old_ids'), {"old_ids": tuple(old_ids)})
             conn.execute(text('DELETE FROM "community_ban" WHERE community_id IN :old_ids'), {"old_ids": tuple(old_ids)})
             conn.execute(text('DELETE FROM "community_join_request" WHERE community_id IN :old_ids'), {"old_ids": tuple(old_ids)})
+            conn.execute(text('DELETE FROM "community_langage" WHERE community_id IN :old_ids'), {"old_ids": tuple(old_ids)})
 
             # Delete the duplicate users
             conn.execute(text('DELETE FROM "community" WHERE id IN :old_ids'), {"old_ids": tuple(old_ids)})
