@@ -738,6 +738,17 @@ def process_inbox_request(request_json, store_ap_json):
                 log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Delete: cannot find ' + ap_id)
             return
 
+        if request_json['type'] == 'Like' or request_json['type'] == 'EmojiReact':  # Upvote
+            process_upvote(user, store_ap_json, request_json, announced=False)
+            return
+
+        if request_json['type'] == 'Dislike':  # Downvote
+            if site.enable_downvotes is False:
+                log_incoming_ap(request_json['id'], APLOG_DISLIKE, APLOG_IGNORED, request_json if store_ap_json else None, 'Dislike ignored because of allow_dislike setting')
+                return
+            process_downvote(user, store_ap_json, request_json, announced=False)
+            return
+
 
         # -- below this point is code that will be incrementally replaced to use log_incoming_ap() instead --
 
@@ -1978,3 +1989,35 @@ def process_new_content(user, community, store_ap_json, request_json, announced=
             else:
                 log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'User cannot create reply in Community')
                 return
+
+
+def process_upvote(user, store_ap_json, request_json, announced=True):
+    ap_id = request_json['object'] if not announced else request_json['object']['object']
+    liked = find_liked_object(ap_id)
+    if liked is None:
+        log_incoming_ap(request_json['id'], APLOG_LIKE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound object ' + ap_id)
+        return
+    if can_upvote(user, liked.community):
+        if isinstance(liked, (Post, PostReply)):
+            liked.vote(user, 'upvote')
+            log_incoming_ap(request_json['id'], APLOG_LIKE, APLOG_SUCCESS, request_json if store_ap_json else None)
+            if not announced:
+                announce_activity_to_followers(liked.community, user, request_json)
+    else:
+        log_incoming_ap(request_json['id'], APLOG_LIKE, APLOG_IGNORED, request_json if store_ap_json else None, 'Cannot upvote this')
+
+
+def process_downvote(user, store_ap_json, request_json, announced=True):
+    ap_id = request_json['object'] if not announced else request_json['object']['object']
+    liked = find_liked_object(ap_id)
+    if liked is None:
+        log_incoming_ap(request_json['id'], APLOG_DISLIKE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound object ' + ap_id)
+        return
+    if can_downvote(user, liked.community):
+        if isinstance(liked, (Post, PostReply)):
+            liked.vote(user, 'downvote')
+            log_incoming_ap(request_json['id'], APLOG_DISLIKE, APLOG_SUCCESS, request_json if store_ap_json else None)
+            if not announced:
+                announce_activity_to_followers(liked.community, user, request_json)
+    else:
+        log_incoming_ap(request_json['id'], APLOG_DISLIKE, APLOG_IGNORED, request_json if store_ap_json else None, 'Cannot downvote this')
