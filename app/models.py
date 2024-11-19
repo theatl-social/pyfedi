@@ -267,7 +267,8 @@ class File(db.Model):
                 return self.source_url
         elif self.file_path:
             file_path = self.file_path[4:] if self.file_path.startswith('app/') else self.file_path
-            return f"https://{current_app.config['SERVER_NAME']}/{file_path}"
+            scheme = 'http' if current_app.config['SERVER_NAME'] == '127.0.0.1:5000' else 'https'
+            return f"{scheme}://{current_app.config['SERVER_NAME']}/{file_path}"
         else:
             return ''
 
@@ -275,7 +276,8 @@ class File(db.Model):
         if self.file_path is None:
             return self.thumbnail_url()
         file_path = self.file_path[4:] if self.file_path.startswith('app/') else self.file_path
-        return f"https://{current_app.config['SERVER_NAME']}/{file_path}"
+        scheme = 'http' if current_app.config['SERVER_NAME'] == '127.0.0.1:5000' else 'https'
+        return f"{scheme}://{current_app.config['SERVER_NAME']}/{file_path}"
 
     def thumbnail_url(self):
         if self.thumbnail_path is None:
@@ -284,7 +286,8 @@ class File(db.Model):
             else:
                 return ''
         thumbnail_path = self.thumbnail_path[4:] if self.thumbnail_path.startswith('app/') else self.thumbnail_path
-        return f"https://{current_app.config['SERVER_NAME']}/{thumbnail_path}"
+        scheme = 'http' if current_app.config['SERVER_NAME'] == '127.0.0.1:5000' else 'https'
+        return f"{scheme}://{current_app.config['SERVER_NAME']}/{thumbnail_path}"
 
     def delete_from_disk(self):
         purge_from_cache = []
@@ -1230,10 +1233,7 @@ class Post(db.Model):
             if post.url:
                 if is_image_url(post.url):
                     post.type = constants.POST_TYPE_IMAGE
-                    if 'image' in request_json['object'] and 'url' in request_json['object']['image']:
-                        image = File(source_url=request_json['object']['image']['url'])
-                    else:
-                        image = File(source_url=post.url)
+                    image = File(source_url=post.url)
                     if alt_text:
                         image.alt_text = alt_text
                     db.session.add(image)
