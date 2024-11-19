@@ -423,7 +423,7 @@ class Community(db.Model):
     posting_warning = db.Column(db.String(512))
 
     ap_id = db.Column(db.String(255), index=True)
-    ap_profile_id = db.Column(db.String(255), index=True)
+    ap_profile_id = db.Column(db.String(255), index=True, unique=True)
     ap_followers_url = db.Column(db.String(255))
     ap_preferred_username = db.Column(db.String(255))
     ap_discoverable = db.Column(db.Boolean, default=False)
