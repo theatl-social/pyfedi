@@ -1987,7 +1987,7 @@ def undo_vote(activity_log, comment, post, target_ap_id, user):
     return None
 
 
-def process_report(user, reported, request_json, activity_log):
+def process_report(user, reported, request_json):
     if len(request_json['summary']) < 15:
         reasons = request_json['summary']
         description = ''
