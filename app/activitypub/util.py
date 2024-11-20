@@ -1429,6 +1429,48 @@ def restore_post_or_comment(object_json, aplog_id):
             aplog.exception_message = 'Unable to resolve restorer or target'
 
 
+def site_ban_remove_data(blocker_id, blocked):
+    replies = PostReply.query.filter_by(user_id=blocked.id, deleted=False)
+    for reply in replies:
+        reply.deleted = True
+        reply.deleted_by = blocker_id
+        if not blocked.bot:
+            reply.post.reply_count -= 1
+        reply.community.post_reply_count -= 1
+    blocked.reply_count = 0
+    db.session.commit()
+
+    posts = Post.query.filter_by(user_id=blocked.id, deleted=False)
+    for post in posts:
+        post.deleted = True
+        post.deleted_by = blocker_id
+        post.community.post_count -= 1
+        if post.url and post.cross_posts is not None:
+            old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
+            post.cross_posts.clear()
+            for ocp in old_cross_posts:
+                if ocp.cross_posts is not None and post.id in ocp.cross_posts:
+                    ocp.cross_posts.remove(post.id)
+    blocked.post_count = 0
+    db.session.commit()
+
+    # Delete all their images to save moderators from having to see disgusting stuff.
+    # Images attached to posts can't be restored, but site ban reversals don't have a 'removeData' field anyway.
+    files = File.query.join(Post).filter(Post.user_id == blocked.id).all()
+    for file in files:
+        file.delete_from_disk()
+        file.source_url = ''
+    if blocked.avatar_id:
+        blocked.avatar.delete_from_disk()
+        blocked.avatar.source_url = ''
+    if blocked.cover_id:
+        blocked.cover.delete_from_disk()
+        blocked.cover.source_url = ''
+    # blocked.banned = True                     # uncommented until there's a mechanism for processing ban expiry date
+
+    db.session.commit()
+
+
 def remove_data_from_banned_user(deletor_ap_id, user_ap_id, target):
     if current_app.debug:
         remove_data_from_banned_user_task(deletor_ap_id, user_ap_id, target)
