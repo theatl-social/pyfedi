@@ -382,11 +382,16 @@ div.navbar {
     .thumbnail {
 
       text-align: center;
-      height: 100%;
       align-content: center;
       display: flex;
+      height: 60px;
+      width: 60px;
+      overflow: hidden;
       @include breakpoint(tablet) {
         align-items: center;
+        height: 90px;
+        width: 170px;
+        max-width: 100%;
       }
 
       a {
