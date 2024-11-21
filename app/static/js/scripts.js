@@ -33,7 +33,19 @@ document.addEventListener("DOMContentLoaded", function () {
     setupShowElementLinks();
     setupLightboxTeaser();
     setupLightboxPostBody();
+    setupPostTeaserHandler();
 });
+
+function setupPostTeaserHandler() {
+    document.querySelectorAll('.post_teaser_clickable').forEach(div => {
+        div.onclick = function() {
+            const firstAnchor = this.querySelector('a');
+            if (firstAnchor) {
+                window.location.href = firstAnchor.href;
+            }
+        };
+    });
+}
 
 function setupYouTubeLazyLoad() {
     const lazyVideos = document.querySelectorAll(".video-wrapper");

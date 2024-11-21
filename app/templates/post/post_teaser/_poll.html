@@ -1,4 +1,4 @@
-<div class="col post_teaser_body">
+<div class="col post_teaser_body post_teaser_clickable">
     <h3>{% if post.sticky -%}<span class="fe fe-sticky-left"></span>{% endif -%}<a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None) }}" class="post_teaser_title_a">{{ post.title }}</a>
         <span class="fe fe-poll" aria-hidden="true"> </span>
         {% if post.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif -%}
