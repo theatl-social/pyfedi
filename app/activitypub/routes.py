@@ -789,6 +789,36 @@ def process_inbox_request(request_json, store_ap_json):
                 log_incoming_ap(request_json['id'], APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Banned, but content retained')
             return
 
+        if request_json['type'] == 'Undo':
+            if request_json['object']['type'] == 'Follow':                      # Unsubscribe from a community or user
+                target_ap_id = request_json['object']['object']
+                target = find_actor_or_create(target_ap_id, create_if_not_found=False)
+                if isinstance(target, Community):
+                    community = target
+                    member = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
+                    join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
+                    if member:
+                        db.session.delete(member)
+                        community.subscriptions_count -= 1
+                    if join_request:
+                        db.session.delete(join_request)
+                    db.session.commit()
+                    cache.delete_memoized(community_membership, user, community)
+                    log_incoming_ap(request_json['id'], APLOG_UNDO_FOLLOW, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    return
+                if isinstance(target, User):
+                    local_user = target
+                    remote_user = user
+                    follower = UserFollower.query.filter_by(local_user_id=local_user.id, remote_user_id=remote_user.id, is_accepted=True).first()
+                    if follower:
+                        db.session.delete(follower)
+                        db.session.commit()
+                        log_incoming_ap(request_json['id'], APLOG_UNDO_FOLLOW, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    return
+                if not target:
+                    log_incoming_ap(request_json['id'], APLOG_UNDO_FOLLOW, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound target')
+                return
+
 
         # -- below this point is code that will be incrementally replaced to use log_incoming_ap() instead --
 
