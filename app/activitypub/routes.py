@@ -874,6 +874,43 @@ def process_inbox_request(request_json, store_ap_json):
                 log_incoming_ap(request_json['id'], APLOG_UNDO_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
                 return
 
+        # Announce is new content and votes that happened on a remote server.
+        if request_json['type'] == 'Announce':
+            if isinstance(request_json['object'], str):  # Mastodon, PeerTube, A.gup.pe
+                post = resolve_remote_post(request_json['object'], community.id, announce_actor=community.ap_profile_id, store_ap_json=store_ap_json)
+                if post:
+                    log_incoming_ap(request_json['id'], APLOG_ANNOUNCE, APLOG_SUCCESS, request_json)
+                else:
+                    log_incoming_ap(request_json['id'], APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'Could not resolve post')
+                return
+
+            user_ap_id = request_json['object']['actor']
+            user = find_actor_or_create(user_ap_id)
+            if not user or not isinstance(user, User):
+                log_incoming_ap(request_json['id'], APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'Blocked or unfound user for Announce object actor ' + user_ap_id)
+                return
+
+            user.last_seen = site.last_active = utcnow()
+            user.instance.last_seen = utcnow()
+            user.instance.dormant = False
+            user.instance.gone_forever = False
+            user.instance.failures = 0
+            db.session.commit()
+
+            if request_json['object']['type'] == 'Create' or request_json['object']['type'] == 'Update':
+                object_type = request_json['object']['object']['type']
+                new_content_types = ['Page', 'Article', 'Link', 'Note', 'Question']
+                if object_type in new_content_types:  # create or update a post
+                    process_new_content(user, community, store_ap_json, request_json)
+                elif request_json['object']['type'] == 'Update' and request_json['object']['object']['type'] == 'Group':
+                    # force refresh next time community is heard from
+                    community.ap_fetched_at = None
+                    db.session.commit()
+                    log_incoming_ap(request_json['id'], APLOG_UPDATE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                else:
+                    log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unacceptable type (create): ' + object_type)
+                return
+
 
         # -- below this point is code that will be incrementally replaced to use log_incoming_ap() instead --
 

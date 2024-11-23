@@ -2291,7 +2291,7 @@ def can_delete(user_ap_id, post):
     return can_edit(user_ap_id, post)
 
 
-def resolve_remote_post(uri: str, community_id: int, announce_actor=None) -> Union[Post, PostReply, None]:
+def resolve_remote_post(uri: str, community_id: int, announce_actor=None, store_ap_json=False) -> Union[Post, PostReply, None]:
     post = Post.query.filter_by(ap_id=uri).first()
     if post:
         return post
@@ -2371,18 +2371,14 @@ def resolve_remote_post(uri: str, community_id: int, announce_actor=None) -> Uni
                 if not community_found:
                     return None
 
-        activity_log = ActivityPubLog(direction='in', activity_id=post_data['id'], activity_type='Resolve Post', result='failure')
-        if site.log_activitypub_json:
-            activity_log.activity_json = json.dumps(post_data)
-        db.session.add(activity_log)
         user = find_actor_or_create(actor)
         if user and community and post_data:
             request_json = {
-              'id': f"https://{uri_domain}/activities/create/gibberish(15)",
+              'id': f"https://{uri_domain}/activities/create/{gibberish(15)}",
               'object': post_data
             }
             if 'inReplyTo' in request_json['object'] and request_json['object']['inReplyTo']:
-                post_reply = create_post_reply(activity_log, community, request_json['object']['inReplyTo'], request_json, user)
+                post_reply = create_post_reply(store_ap_json, community, request_json['object']['inReplyTo'], request_json, user)
                 if post_reply:
                     if 'published' in post_data:
                         post_reply.posted_at = post_data['published']
@@ -2391,7 +2387,7 @@ def resolve_remote_post(uri: str, community_id: int, announce_actor=None) -> Uni
                         db.session.commit()
                     return post_reply
             else:
-                post = create_post(activity_log, community, request_json, user)
+                post = create_post(store_ap_json, community, request_json, user)
                 if post:
                     if 'published' in post_data:
                         post.posted_at=post_data['published']
