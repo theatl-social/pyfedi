@@ -938,6 +938,15 @@ def process_inbox_request(request_json, store_ap_json):
                 process_downvote(user, store_ap_json, request_json)
                 return
 
+            if request_json['object']['type'] == 'Flag':                                                            # Announce of reported content
+                reported = find_reported_object(request_json['object']['object'])
+                if reported:
+                    process_report(user, reported, request_json['object'])
+                    log_incoming_ap(request_json['id'], APLOG_REPORT, APLOG_SUCCESS, request_json if store_ap_json else None)
+                else:
+                    log_incoming_ap(request_json['id'], APLOG_REPORT, APLOG_IGNORED, request_json if store_ap_json else None, 'Report ignored due to missing content')
+                return
+
 
         # -- below this point is code that will be incrementally replaced to use log_incoming_ap() instead --
 
