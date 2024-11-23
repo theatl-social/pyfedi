@@ -852,6 +852,28 @@ def process_inbox_request(request_json, store_ap_json):
                     log_incoming_ap(request_json['id'], APLOG_UNDO_VOTE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound object ' + target_ap_id)
                 return
 
+            if request_json['object']['type'] == 'Block':     # remote site is unbanning one of their users
+                unblocker = user
+                unblocked_ap_id = request_json['object']['object'].lower()
+                unblocked = User.query.filter_by(ap_profile_id=unblocked_ap_id).first()
+                if store_ap_json:
+                    request_json['cc'] = []                                         # cut very long list of instances
+                    request_json['object']['cc'] = []
+                if not unblocked:
+                    log_incoming_ap(request_json['id'], APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
+                    return
+                unblock_from_ap_id = request_json['object']['target']
+
+                if not unblocker.is_instance_admin() and not unblocked.instance_id == blocker.instance_id:
+                    log_incoming_ap(request_json['id'], APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
+                    return
+
+                # (no removeData field in an undo/ban - cannot restore without knowing if deletion was part of ban, or different moderator action)
+                #unblocked.banned = False                   # uncommented until there's a mechanism for processing ban expiry date
+                #db.session.commit()
+                log_incoming_ap(request_json['id'], APLOG_UNDO_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
+                return
+
 
         # -- below this point is code that will be incrementally replaced to use log_incoming_ap() instead --
 
