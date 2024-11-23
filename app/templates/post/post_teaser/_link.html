@@ -1,4 +1,4 @@
-<div class="col post_teaser_body post_teaser_clickable">
+<div class="col post_teaser_body">
     <h3>{% if post.sticky -%}<span class="fe fe-sticky-left"></span>{% endif -%}<a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None) }}" class="post_teaser_title_a">{{ post.title }}</a>
         {% if post.domain_id -%}
             {% if post.url.endswith('.mp3') -%}
@@ -19,7 +19,7 @@
         c/{{ post.community.name }}</a>{% endif -%}
         by {{ render_username(post.author) }} <time datetime="{{ post.last_active }}">{{ post.posted_at_localized(sort, locale) }}</time></span>
     {% if post.body_html -%}
-        <div class="post_teaser_link_preview small">
+        <div class="post_teaser_link_preview small post_teaser_clickable">
             {{ first_paragraph(post.body_html) | safe }}
         </div>
     {% endif -%}
