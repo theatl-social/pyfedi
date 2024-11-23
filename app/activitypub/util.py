@@ -1369,64 +1369,45 @@ def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json):
         log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Deletor did not have permisson')
 
 
-def restore_post_or_comment(object_json, aplog_id):
-    restorer = find_actor_or_create(object_json['actor']) if 'actor' in object_json else None
-    to_restore = find_liked_object(object_json['object']) if 'object' in object_json else None
-    aplog = ActivityPubLog.query.get(aplog_id)
+def restore_post_or_comment(restorer, to_restore, store_ap_json, request_json):
+    community = to_restore.community
+    if to_restore.user_id == restorer.id or restorer.is_admin() or community.is_moderator(restorer) or community.is_instance_admin(restorer):
+        if isinstance(to_restore, Post):
+            to_restore.deleted = False
+            to_restore.deleted_by = None
+            community.post_count += 1
+            to_restore.author.post_count += 1
+            if to_restore.url:
+                new_cross_posts = Post.query.filter(Post.id != to_restore.id, Post.url == to_restore.url, Post.deleted == False,
+                                                                Post.posted_at > utcnow() - timedelta(days=6)).all()
+                for ncp in new_cross_posts:
+                    if ncp.cross_posts is None:
+                        ncp.cross_posts = [to_restore.id]
+                    else:
+                        ncp.cross_posts.append(to_restore.id)
+                    if to_restore.cross_posts is None:
+                        to_restore.cross_posts = [ncp.id]
+                    else:
+                        to_restore.cross_posts.append(ncp.id)
+            db.session.commit()
+            if to_restore.author.id != restorer.id:
+                add_to_modlog_activitypub('restore_post', restorer, community_id=community.id,
+                                          link_text=shorten_string(to_restore.title), link=f'post/{to_restore.id}')
 
-    if to_restore and not to_restore.deleted:
-        if aplog:
-            aplog.result = 'ignored'
-            aplog.exception_message = 'Activity about local content which is already restored'
-        return
-
-    if restorer and to_restore:
-        community = to_restore.community
-        if to_restore.author.id == restorer.id or restorer.is_admin() or community.is_moderator(restorer) or community.is_instance_admin(restorer):
-            if isinstance(to_restore, Post):
-                to_restore.deleted = False
-                to_restore.deleted_by = None
-                community.post_count += 1
-                to_restore.author.post_count += 1
-                if to_restore.url:
-                    new_cross_posts = Post.query.filter(Post.id != to_restore.id, Post.url == to_restore.url, Post.deleted == False,
-                                                                    Post.posted_at > utcnow() - timedelta(days=6)).all()
-                    for ncp in new_cross_posts:
-                        if ncp.cross_posts is None:
-                            ncp.cross_posts = [to_restore.id]
-                        else:
-                            ncp.cross_posts.append(to_restore.id)
-                        if to_restore.cross_posts is None:
-                            to_restore.cross_posts = [ncp.id]
-                        else:
-                            to_restore.cross_posts.append(ncp.id)
-                db.session.commit()
-                if to_restore.author.id != restorer.id:
-                    add_to_modlog_activitypub('restore_post', restorer, community_id=community.id,
-                                              link_text=shorten_string(to_restore.title), link=f'post/{to_restore.id}')
-
-            elif isinstance(to_restore, PostReply):
-                to_restore.deleted = False
-                to_restore.deleted_by = None
-                if not to_restore.author.bot:
-                    to_restore.post.reply_count += 1
-                to_restore.author.post_reply_count += 1
-                db.session.commit()
-                if to_restore.author.id != restorer.id:
-                    add_to_modlog_activitypub('restore_post_reply', restorer, community_id=community.id,
-                                              link_text=f'comment on {shorten_string(to_restore.post.title)}',
-                                              link=f'post/{to_restore.post_id}#comment_{to_restore.id}')
-
-            if aplog:
-                aplog.result = 'success'
-        else:
-           if aplog:
-                aplog.result = 'failure'
-                aplog.exception_message = 'Restorer did not have permission'
+        elif isinstance(to_restore, PostReply):
+            to_restore.deleted = False
+            to_restore.deleted_by = None
+            if not to_restore.author.bot:
+                to_restore.post.reply_count += 1
+            to_restore.author.post_reply_count += 1
+            db.session.commit()
+            if to_restore.author.id != restorer.id:
+                add_to_modlog_activitypub('restore_post_reply', restorer, community_id=community.id,
+                                          link_text=f'comment on {shorten_string(to_restore.post.title)}',
+                                          link=f'post/{to_restore.post_id}#comment_{to_restore.id}')
+        log_incoming_ap(request_json['id'], APLOG_UNDO_DELETE, APLOG_SUCCESS, request_json if store_ap_json else None)
     else:
-       if aplog:
-            aplog.result = 'failure'
-            aplog.exception_message = 'Unable to resolve restorer or target'
+        log_incoming_ap(request_json['id'], APLOG_UNDO_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Restorer did not have permisson')
 
 
 def site_ban_remove_data(blocker_id, blocked):

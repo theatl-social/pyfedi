@@ -819,6 +819,28 @@ def process_inbox_request(request_json, store_ap_json):
                     log_incoming_ap(request_json['id'], APLOG_UNDO_FOLLOW, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound target')
                 return
 
+            if request_json['object']['type'] == 'Delete':                      # Restore something previously deleted
+                if isinstance(request_json['object']['object'], str):
+                    ap_id = request_json['object']['object']  # lemmy
+                else:
+                    ap_id = request_json['object']['object']['id']  # kbin
+                if user.ap_profile_id == ap_id.lower():
+                    # a user is undoing a self-delete
+                    # will never get here, because find_actor_or_create() in shared_inbox() will return None if user.deleted
+                    return
+
+                restorer = user
+                to_restore = find_liked_object(ap_id)                           # a user or a mod/admin is undoing the delete of a post or reply
+                if to_restore:
+                    if not to_restore.deleted:
+                        log_incoming_ap(request_json['id'], APLOG_UNDO_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already restored')
+                    else:
+                        restore_post_or_comment(restorer, to_restore, store_ap_json, request_json)
+                        announce_activity_to_followers(to_restore.community, user, request_json)
+                else:
+                    log_incoming_ap(request_json['id'], APLOG_UNDO_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Undo delete: cannot find ' + ap_id)
+                return
+
 
         # -- below this point is code that will be incrementally replaced to use log_incoming_ap() instead --
 
