@@ -927,6 +927,17 @@ def process_inbox_request(request_json, store_ap_json):
                     log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Delete: cannot find ' + ap_id)
                 return
 
+            if request_json['object']['type'] == 'Like' or request_json['object']['type'] == 'EmojiReact':  # Announced Upvote
+                process_upvote(user, store_ap_json, request_json)
+                return
+
+            if request_json['object']['type'] == 'Dislike':                                                 # Announced Downvote
+                if site.enable_downvotes is False:
+                    log_incoming_ap(request_json['id'], APLOG_DISLIKE, APLOG_IGNORED, request_json if store_ap_json else None, 'Dislike ignored because of allow_dislike setting')
+                    return
+                process_downvote(user, store_ap_json, request_json)
+                return
+
 
         # -- below this point is code that will be incrementally replaced to use log_incoming_ap() instead --
 
