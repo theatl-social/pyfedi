@@ -911,6 +911,22 @@ def process_inbox_request(request_json, store_ap_json):
                     log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unacceptable type (create): ' + object_type)
                 return
 
+            if request_json['object']['type'] == 'Delete':                                                  # Announced Delete
+                if isinstance(request_json['object']['object'], str):
+                    ap_id = request_json['object']['object']  # lemmy
+                else:
+                    ap_id = request_json['object']['object']['id']  # kbin
+                to_delete = find_liked_object(ap_id)                                # Just for Posts and Replies (User deletes aren't announced)
+
+                if to_delete:
+                    if to_delete.deleted:
+                        log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already deleted')
+                    else:
+                        delete_post_or_comment(user, to_delete, store_ap_json, request_json)
+                else:
+                    log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Delete: cannot find ' + ap_id)
+                return
+
 
         # -- below this point is code that will be incrementally replaced to use log_incoming_ap() instead --
 
