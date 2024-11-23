@@ -1969,11 +1969,10 @@ def undo_downvote(activity_log, comment, post, target_ap_id, user):
     return post
 
 
-def undo_vote(activity_log, comment, post, target_ap_id, user):
+def undo_vote(comment, post, target_ap_id, user):
     voted_on = find_liked_object(target_ap_id)
-    if (user and not user.is_local()) and isinstance(voted_on, Post):
+    if isinstance(voted_on, Post):
         post = voted_on
-        user.last_seen = utcnow()
         existing_vote = PostVote.query.filter_by(user_id=user.id, post_id=post.id).first()
         if existing_vote:
             post.author.reputation -= existing_vote.effect
@@ -1983,8 +1982,9 @@ def undo_vote(activity_log, comment, post, target_ap_id, user):
                 post.up_votes -= 1
             post.score -= existing_vote.effect
             db.session.delete(existing_vote)
-            activity_log.result = 'success'
-    if (user and not user.is_local()) and isinstance(voted_on, PostReply):
+            db.session.commit()
+        return post
+    if isinstance(voted_on, PostReply):
         comment = voted_on
         existing_vote = PostReplyVote.query.filter_by(user_id=user.id, post_reply_id=comment.id).first()
         if existing_vote:
@@ -1995,18 +1995,9 @@ def undo_vote(activity_log, comment, post, target_ap_id, user):
                 comment.up_votes -= 1
             comment.score -= existing_vote.effect
             db.session.delete(existing_vote)
-            activity_log.result = 'success'
-
-    if user is None or (post is None and comment is None):
-        activity_log.exception_message = 'Blocked or unfound user or comment'
-    if user and user.is_local():
-        activity_log.exception_message = 'Activity about local content which is already present'
-        activity_log.result = 'ignored'
-
-    if post:
-        return post
-    if comment:
+            db.session.commit()
         return comment
+
     return None
 
 
