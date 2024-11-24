@@ -506,6 +506,64 @@ def community_inbox(actor):
     return shared_inbox()
 
 
+def replay_inbox_request(request_json):
+    if not 'id' in request_json or not 'type' in request_json or not 'actor' in request_json or not 'object' in request_json:
+        log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, request_json, 'REPLAY: Missing minimum expected fields in JSON')
+        return
+
+    id = request_json['id']
+    if request_json['type'] == 'Announce' and isinstance(request_json['object'], dict):
+        object = request_json['object']
+        if not 'id' in object or not 'type' in object or not 'actor' in object or not 'object' in object:
+            if object['type'] == 'Page':
+                log_incoming_ap(request_json['id'], APLOG_ANNOUNCE, APLOG_IGNORED, request_json, 'REPLAY: Intended for Mastodon')
+            elif object['type'] == 'Note':          # Lemmy has Announced Note out from Mastodon, but will also announce Create/Note
+                log_incoming_ap(request_json['id'], APLOG_ANNOUNCE, APLOG_IGNORED, request_json, 'REPLAY: Intended for Mastodon')
+            else:
+                log_incoming_ap(request_json['id'], APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'REPLAY: Missing minimum expected fields in JSON Announce object')
+            return
+
+        actor = User.query.filter_by(ap_profile_id=object['actor'].lower()).first()
+        if actor and actor.is_local():
+            log_incoming_ap(object['id'], APLOG_DUPLICATE, APLOG_IGNORED, request_json, 'REPLAY: Activity about local content which is already present')
+
+    # Ignore unutilised PeerTube activity
+    if request_json['actor'].endswith('accounts/peertube'):
+        log_incoming_ap(request_json['id'], APLOG_PT_VIEW, APLOG_IGNORED, request_json, 'REPLAY: PeerTube View or CacheFile activity')
+        return
+
+    # Ignore delete requests from uses that do not already exist here
+    if request_json['type'] == 'Delete':
+        if (request_json['id'].endswith('#delete') or                                                                                       # Mastodon / PieFed
+            ('object' in request_json and isinstance(request_json['object'], str) and request_json['actor'] == request_json['object'])):    # Lemmy
+            actor = User.query.filter_by(ap_profile_id=request_json['actor'].lower()).first()
+            if not actor:
+                log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_IGNORED, request_json, 'REPLAY: Does not exist here')
+                return
+
+    actor = find_actor_or_create(request_json['actor'])
+    if not actor:
+        actor_name = request_json['actor']
+        log_incoming_ap(request_json['id'], APLOG_NOTYPE, APLOG_FAILURE, request_json, f'REPLAY: Actor could not be found 1: {actor_name}')
+        return
+
+    if actor.is_local():        # should be impossible (can be Announced back, but not sent back without access to privkey)
+        log_incoming_ap(request_json['id'], APLOG_NOTYPE, APLOG_FAILURE, request_json, 'REPLAY: ActivityPub activity from a local actor')
+        return
+
+    # When a user is deleted, the only way to be fairly sure they get deleted everywhere is to tell the whole fediverse.
+    # Earlier check means this is only for users that already exist, repeating it here means that http signature will have been verified
+    if request_json['type'] == 'Delete':
+        if (request_json['id'].endswith('#delete') or                                                                                       # Mastodon / PieFed
+            ('object' in request_json and isinstance(request_json['object'], str) and request_json['actor'] == request_json['object'])):    # Lemmy
+            process_delete_request(request_json, True)
+            return
+
+    process_inbox_request(request_json, True)
+
+    return
+
+
 @celery.task
 def process_inbox_request(request_json, store_ap_json):
     with current_app.app_context():
