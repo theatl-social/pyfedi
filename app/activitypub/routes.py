@@ -962,6 +962,36 @@ def process_inbox_request(request_json, store_ap_json):
                     log_incoming_ap(request_json['id'], APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: post not found')
                 return
 
+            if request_json['object']['type'] == 'Add':                                                             # Announce of adding mods or stickying a post
+                target = request_json['object']['target']
+                featured_url = community.ap_featured_url
+                moderators_url = community.ap_moderators_url
+                if target == featured_url:
+                    post = Post.query.filter_by(ap_id=request_json['object']['object']).first()
+                    if post:
+                        post.sticky = True
+                        db.session.commit()
+                        log_incoming_ap(request_json['id'], APLOG_ADD, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    else:
+                        log_incoming_ap(request_json['id'], APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' +  request_json['object']['object'])
+                    return
+                if target == moderators_url:
+                    user = find_actor_or_create(request_json['object']['object'])
+                    if user:
+                        existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=user.id).first()
+                        if existing_membership:
+                            existing_membership.is_moderator = True
+                        else:
+                            new_membership = CommunityMember(community_id=community.id, user_id=user.id, is_moderator=True)
+                            db.session.add(new_membership)
+                        db.session.commit()
+                        log_incoming_ap(request_json['id'], APLOG_ADD, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    else:
+                        log_incoming_ap(request_json['id'], APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + request_json['object']['object'])
+                    return
+                log_incoming_ap(request_json['id'], APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Add')
+                return
+
 
 
         # -- below this point is code that will be incrementally replaced to use log_incoming_ap() instead --
