@@ -1631,7 +1631,7 @@ class PostReply(db.Model):
     edited_at = db.Column(db.DateTime)
     reports = db.Column(db.Integer, default=0)  # how many times this post has been reported. Set to -1 to ignore reports
 
-    ap_id = db.Column(db.String(255), index=True)
+    ap_id = db.Column(db.String(255), index=True, unique=True)
     ap_create_id = db.Column(db.String(100))
     ap_announce_id = db.Column(db.String(100))
 
@@ -1664,7 +1664,7 @@ class PostReply(db.Model):
                           from_bot=user.bot, nsfw=post.nsfw, nsfl=post.nsfl,
                           notify_author=notify_author, instance_id=user.instance_id,
                           language_id=language_id,
-                          ap_id=request_json['object']['id'] if request_json else None,
+                          ap_id=request_json['object']['id'].lower() if request_json else None,
                           ap_create_id=request_json['id'] if request_json else None,
                           ap_announce_id=announce_id)
         if reply.body:
@@ -1689,8 +1689,12 @@ class PostReply(db.Model):
         if reply_is_stupid(reply.body):
             raise Exception('Low quality reply')
 
-        db.session.add(reply)
-        db.session.commit()
+        try:
+            db.session.add(reply)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            return PostReply.query.filter_by(ap_id=request_json['object']['id'].lower()).one()
 
         # Notify subscribers
         notify_about_post_reply(in_reply_to, reply)
