@@ -8,6 +8,7 @@ import arrow
 from flask import current_app, escape, url_for, render_template_string
 from flask_login import UserMixin, current_user
 from sqlalchemy import or_, text, desc
+from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_babel import _, lazy_gettext as _l
 from sqlalchemy.orm import backref
@@ -1167,7 +1168,7 @@ class Post(db.Model):
                     sticky=request_json['object']['stickied'] if 'stickied' in request_json['object'] else False,
                     nsfw=request_json['object']['sensitive'] if 'sensitive' in request_json['object'] else False,
                     nsfl=request_json['object']['nsfl'] if 'nsfl' in request_json['object'] else nsfl_in_title,
-                    ap_id=request_json['object']['id'],
+                    ap_id=request_json['object']['id'].lower(),
                     ap_create_id=request_json['id'],
                     ap_announce_id=announce_id,
                     up_votes=1,
@@ -1325,7 +1326,11 @@ class Post(db.Model):
             community.post_count += 1
             community.last_active = utcnow()
             user.post_count += 1
-            db.session.commit()
+            try:
+                db.session.commit()
+            except IntegrityError:
+                db.session.rollback()
+                return Post.query.filter_by(ap_id=request_json['object']['id'].lower()).one()
 
             # Polls need to be processed quite late because they need a post_id to refer to
             if request_json['object']['type'] == 'Question':
