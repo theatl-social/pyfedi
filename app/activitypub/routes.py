@@ -1042,6 +1042,24 @@ def process_inbox_request(request_json, store_ap_json):
                     ban_local_user(blocker, blocked, community, request_json)
                 return
 
+            if request_json['object']['type'] == 'Undo':
+                if request_json['object']['object']['type'] == 'Delete':                                                                    # Announce of undo of Delete
+                    if isinstance(request_json['object']['object']['object'], str):
+                        ap_id = request_json['object']['object']['object']  # lemmy
+                    else:
+                        ap_id = request_json['object']['object']['object']['id']  # kbin
+
+                    restorer = user
+                    to_restore = find_liked_object(ap_id)                           # a user or a mod/admin is undoing the delete of a post or reply
+                    if to_restore:
+                        if not to_restore.deleted:
+                            log_incoming_ap(request_json['id'], APLOG_UNDO_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Content was not deleted')
+                        else:
+                            restore_post_or_comment(restorer, to_restore, store_ap_json, request_json)
+                    else:
+                        log_incoming_ap(request_json['id'], APLOG_UNDO_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Undo delete: cannot find ' + ap_id)
+                    return
+
 
 
         # -- below this point is code that will be incrementally replaced to use log_incoming_ap() instead --
