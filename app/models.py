@@ -52,7 +52,7 @@ class AllowedInstances(db.Model):
 
 class Instance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    domain = db.Column(db.String(256), index=True)
+    domain = db.Column(db.String(256), index=True, unique=True)
     inbox = db.Column(db.String(256))
     shared_inbox = db.Column(db.String(256))
     outbox = db.Column(db.String(256))

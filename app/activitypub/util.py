@@ -1208,7 +1208,7 @@ def find_reported_object(ap_id) -> Union[User, Post, PostReply, None]:
 
 
 def find_instance_id(server):
-    server = server.strip()
+    server = server.strip().lower()
     instance = Instance.query.filter_by(domain=server).first()
     if instance:
         return instance.id
@@ -1216,8 +1216,11 @@ def find_instance_id(server):
         # Our instance does not know about {server} yet. Initially, create a sparse row in the 'instance' table and spawn a background
         # task to update the row with more details later
         new_instance = Instance(domain=server, software='unknown', created_at=utcnow(), trusted=server == 'piefed.social')
-        db.session.add(new_instance)
-        db.session.commit()
+        try:
+            db.session.add(new_instance)
+            db.session.commit()
+        except IntegrityError:
+            return Instance.query.filter_by(domain=server).one()
 
         # Spawn background task to fill in more details
         new_instance_profile(new_instance.id)
