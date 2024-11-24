@@ -172,6 +172,8 @@ flask run
 (open web browser at http://127.0.0.1:5000)          
 (log in with username and password from admin account)
 
+For development purposes, that should be enough - see ./dev_notes.txt for a few more bits and pieces. Most of what follows is for running PieFed in production.
+
 <div id="database-management"></div>
 
 ## Database Management
@@ -250,7 +252,7 @@ automatically discovered by using [the ipinfo service](https://ipinfo.io/) - reg
 
 ### Background services
 
-Gunicorn and Celery need to run as background services:
+In production, Gunicorn and Celery need to run as background services:
 
 #### Gunicorn
 
