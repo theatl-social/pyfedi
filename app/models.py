@@ -1117,7 +1117,7 @@ class Post(db.Model):
     cross_posts = db.Column(MutableList.as_mutable(ARRAY(db.Integer)))
     tags = db.relationship('Tag', lazy='dynamic', secondary=post_tag, backref=db.backref('posts', lazy='dynamic'))
 
-    ap_id = db.Column(db.String(255), index=True)
+    ap_id = db.Column(db.String(255), index=True, unique=True)
     ap_create_id = db.Column(db.String(100))
     ap_announce_id = db.Column(db.String(100))
 
