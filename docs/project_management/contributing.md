@@ -31,6 +31,8 @@ which will guide them through the process of building a simple social media app.
 very similar to Flask so developers familiar with that framework will have an easier
 time of things.
 
+[An introduction to the PieFed codebase - screencast](https://join.piefed.social/2024/01/22/an-introduction-to-the-piefed-codebase/)
+
 # Coding Standards / Guidelines
 
 **[PEP 8](https://peps.python.org/pep-0008/)** covers the basics. PyCharm encourages this by default - 
