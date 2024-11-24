@@ -1085,6 +1085,24 @@ def process_inbox_request(request_json, store_ap_json):
                         log_incoming_ap(request_json['id'], APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: post not found')
                     return
 
+                if request_json['object']['object']['type'] == 'Block':                         # Announce of undo of user ban. Mod is unbanning a user from a community,
+                    blocker = user                                                              # or an admin is unbanning a user from all the site's communities as part of a site unban
+                    blocked_ap_id = request_json['object']['object']['object'].lower()
+                    blocked = User.query.filter_by(ap_profile_id=blocked_ap_id).first()
+                    if not blocked:
+                        log_incoming_ap(request_json['id'], APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
+                        return
+
+                    if not community.is_moderator(blocker) and not community.is_instance_admin(blocker):
+                        log_incoming_ap(request_json['id'], APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
+                        return
+
+                    if blocked.is_local():
+                        unban_local_user(blocker, blocked, community, request_json)
+                    log_incoming_ap(request_json['id'], APLOG_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
+
+                    return
+
 
         # -- below this point is code that will be incrementally replaced to use log_incoming_ap() instead --
 

@@ -1571,60 +1571,26 @@ def ban_local_user(blocker, blocked, community, request_json):
         add_to_modlog_activitypub('ban_user', blocker, community_id=community.id, link_text=blocked.display_name(), link=blocked.link())
 
 
-def unban_local_user(deletor_ap_id, user_ap_id, target):
-    if current_app.debug:
-        unban_local_user_task(deletor_ap_id, user_ap_id, target)
-    else:
-        unban_local_user_task.delay(deletor_ap_id, user_ap_id, target)
+def unban_local_user(blocker, blocked, community, request_json):
+    db.session.query(CommunityBan).filter(CommunityBan.community_id == community.id, CommunityBan.user_id == blocked.id).delete()
+    community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=blocked.id).first()
+    if community_membership_record:
+        community_membership_record.is_banned = False
 
+    # Notify unbanned person
+    notify = Notification(title=shorten_string('You have been unbanned from ' + community.title),
+                          url=f'/notifications', user_id=blocked.id, author_id=blocker.id)
+    db.session.add(notify)
+    if not current_app.debug:                           # user.unread_notifications += 1 hangs app if 'user' is the same person
+        blocked.unread_notifications += 1               # who pressed 'Re-submit this activity'.
 
-@celery.task
-def unban_local_user_task(deletor_ap_id, user_ap_id, target):
-    # same info in 'Block' and 'Announce/Block' can be sent at same time, and both call this function
-    unban_in_progress = cache.get(f'{deletor_ap_id} is undoing ban of {user_ap_id} from {target}')
-    if not unban_in_progress:
-        cache.set(f'{deletor_ap_id} is undoing ban of {user_ap_id} from {target}', True, timeout=60)
-    else:
-        return
+    db.session.commit()
 
-    deletor = find_actor_or_create(deletor_ap_id, create_if_not_found=False)
-    user = find_actor_or_create(user_ap_id, create_if_not_found=False)
-    community = Community.query.filter_by(ap_profile_id=target).first()
+    cache.delete_memoized(communities_banned_from, blocked.id)
+    cache.delete_memoized(joined_communities, blocked.id)
+    cache.delete_memoized(moderating_communities, blocked.id)
 
-    if not deletor or not user:
-        return
-
-    # site undo bans by admins
-    if deletor.instance.user_is_admin(deletor.id) and target == f"https://{deletor.instance.domain}/":
-        # need instance_ban table?
-        ...
-
-    # community undo bans by mods or admins
-    elif community and (community.is_moderator(deletor) or community.is_instance_admin(deletor)):
-        existing_ban = CommunityBan.query.filter_by(community_id=community.id, user_id=user.id).first()
-        if existing_ban:
-            db.session.delete(existing_ban)
-            db.session.commit()
-
-        community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=user.id).first()
-        if community_membership_record:
-            community_membership_record.is_banned = False
-            db.session.commit()
-
-        cache.delete_memoized(communities_banned_from, user.id)
-        cache.delete_memoized(joined_communities, user.id)
-        cache.delete_memoized(moderating_communities, user.id)
-
-        # Notify previously banned person
-        notify = Notification(title=shorten_string('You have been un-banned from ' + community.title),
-                                      url=f'/notifications', user_id=user.id,
-                                      author_id=deletor.id)
-        db.session.add(notify)
-        if not current_app.debug:                       # user.unread_notifications += 1 hangs app if 'user' is the same person
-            user.unread_notifications += 1              # who pressed 'Re-submit this activity'.
-        db.session.commit()
-
-        add_to_modlog_activitypub('unban_user', deletor, community_id=community.id, link_text=user.display_name(), link=user.link())
+    add_to_modlog_activitypub('unban_user', blocker, community_id=community.id, link_text=blocked.display_name(), link=blocked.link())
 
 
 def lock_post(mod_ap_id, post_id, comments_enabled):
