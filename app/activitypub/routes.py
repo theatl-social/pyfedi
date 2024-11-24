@@ -25,7 +25,7 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
     update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection, find_reported_object, \
     process_report, ensure_domains_match, can_edit, can_delete, remove_data_from_banned_user, resolve_remote_post, \
     inform_followers_of_post_update, comment_model_to_json, restore_post_or_comment, ban_local_user, unban_local_user, \
-    lock_post, log_incoming_ap, find_community_ap_id, site_ban_remove_data
+    lock_post, log_incoming_ap, find_community_ap_id, site_ban_remove_data, community_ban_remove_data
 from app.utils import gibberish, get_setting, render_template, \
     community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
@@ -1017,6 +1017,29 @@ def process_inbox_request(request_json, store_ap_json):
                         log_incoming_ap(request_json['id'], APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + request_json['object']['object'])
                     return
                 log_incoming_ap(request_json['id'], APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Remove')
+                return
+
+            if request_json['object']['type'] == 'Block':                               # Announce of user ban. Mod is banning a user from a community,
+                blocker = user                                                          # or an admin is banning a user from all the site's communities as part of a site ban
+                blocked_ap_id = request_json['object']['object'].lower()
+                blocked = User.query.filter_by(ap_profile_id=blocked_ap_id).first()
+                if not blocked:
+                    log_incoming_ap(request_json['id'], APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
+                    return
+                remove_data = request_json['object']['removeData'] if 'removeData' in request_json['object'] else False
+
+                if not community.is_moderator(blocker) and not community.is_instance_admin(blocker):
+                    log_incoming_ap(request_json['id'], APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
+                    return
+
+                if remove_data == True:
+                    community_ban_remove_data(blocker.id, community.id, blocked)
+                    log_incoming_ap(request_json['id'], APLOG_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
+                else:
+                    log_incoming_ap(request_json['id'], APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Banned, but content retained')
+
+                if blocked.is_local():
+                    ban_local_user(blocker, blocked, community, request_json)
                 return
 
 

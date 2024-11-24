@@ -1499,76 +1499,76 @@ def remove_data_from_banned_user_task(deletor_ap_id, user_ap_id, target):
     db.session.commit()
 
 
-def ban_local_user(deletor_ap_id, user_ap_id, target, request_json):
-    if current_app.debug:
-        ban_local_user_task(deletor_ap_id, user_ap_id, target, request_json)
-    else:
-        ban_local_user_task.delay(deletor_ap_id, user_ap_id, target, request_json)
+def community_ban_remove_data(blocker_id, community_id, blocked):
+    replies = PostReply.query.filter_by(user_id=blocked.id, deleted=False, community_id=community_id)
+    for reply in replies:
+        reply.deleted = True
+        reply.deleted_by = blocker_id
+        if not blocked.bot:
+            reply.post.reply_count -= 1
+        reply.community.post_reply_count -= 1
+        blocked.post_reply_count -= 1
+    db.session.commit()
+
+    posts = Post.query.filter_by(user_id=blocked.id, deleted=False, community_id=community_id)
+    for post in posts:
+        post.deleted = True
+        post.deleted_by = blocker_id
+        post.community.post_count -= 1
+        if post.url and post.cross_posts is not None:
+            old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
+            post.cross_posts.clear()
+            for ocp in old_cross_posts:
+                if ocp.cross_posts is not None and post.id in ocp.cross_posts:
+                    ocp.cross_posts.remove(post.id)
+        blocked.post_count -= 1
+    db.session.commit()
+
+    # Delete attached images to save moderators from having to see disgusting stuff.
+    files = File.query.join(Post).filter(Post.user_id == blocked.id, Post.community_id == community_id).all()
+    for file in files:
+        file.delete_from_disk()
+        file.source_url = ''
+    db.session.commit()
 
 
-@celery.task
-def ban_local_user_task(deletor_ap_id, user_ap_id, target, request_json):
-    # same info in 'Block' and 'Announce/Block' can be sent at same time, and both call this function
-    ban_in_progress = cache.get(f'{deletor_ap_id} is banning {user_ap_id} from {target}')
-    if not ban_in_progress:
-        cache.set(f'{deletor_ap_id} is banning {user_ap_id} from {target}', True, timeout=60)
-    else:
-        return
+def ban_local_user(blocker, blocked, community, request_json):
+    existing = CommunityBan.query.filter_by(community_id=community.id, user_id=blocked.id).first()
+    if not existing:
+        new_ban = CommunityBan(community_id=community.id, user_id=blocked.id, banned_by=blocker.id)
+        if 'summary' in request_json:
+            new_ban.reason=request_json['object']['summary']
+        if 'expires' in request_json and datetime.fromisoformat(request_json['object']['expires']) > datetime.now(timezone.utc):
+            new_ban.ban_until = datetime.fromisoformat(request_json['object']['expires'])
+        elif 'endTime' in request_json and datetime.fromisoformat(request_json['object']['endTime']) > datetime.now(timezone.utc):
+            new_ban.ban_until = datetime.fromisoformat(request_json['object']['endTime'])
+        db.session.add(new_ban)
+        db.session.commit()
 
-    deletor = find_actor_or_create(deletor_ap_id, create_if_not_found=False)
-    user = find_actor_or_create(user_ap_id, create_if_not_found=False)
-    community = Community.query.filter_by(ap_profile_id=target).first()
-
-    if not deletor or not user:
-        return
-
-    # site bans by admins
-    if deletor.instance.user_is_admin(deletor.id) and target == f"https://{deletor.instance.domain}/":
-        # need instance_ban table?
-        ...
-
-    # community bans by mods or admins
-    elif community and (community.is_moderator(deletor) or community.is_instance_admin(deletor)):
-        existing = CommunityBan.query.filter_by(community_id=community.id, user_id=user.id).first()
-
-        if not existing:
-            new_ban = CommunityBan(community_id=community.id, user_id=user.id, banned_by=deletor.id)
-            if 'summary' in request_json:
-                new_ban.reason=request_json['summary']
-
-            if 'expires' in request_json and datetime.fromisoformat(request_json['expires']) > datetime.now(timezone.utc):
-                new_ban.ban_until = datetime.fromisoformat(request_json['expires'])
-            elif 'endTime' in request_json and datetime.fromisoformat(request_json['endTime']) > datetime.now(timezone.utc):
-                new_ban.ban_until = datetime.fromisoformat(request_json['endTime'])
-
-            db.session.add(new_ban)
-            db.session.commit()
-
-        db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == community.id, CommunityJoinRequest.user_id == user.id).delete()
-
-        community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=user.id).first()
+        db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == community.id, CommunityJoinRequest.user_id == blocked.id).delete()
+        community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=blocked.id).first()
         if community_membership_record:
             community_membership_record.is_banned = True
 
-        cache.delete_memoized(communities_banned_from, user.id)
-        cache.delete_memoized(joined_communities, user.id)
-        cache.delete_memoized(moderating_communities, user.id)
-
         # Notify banned person
         notify = Notification(title=shorten_string('You have been banned from ' + community.title),
-                                      url=f'/notifications', user_id=user.id,
-                                      author_id=deletor.id)
+                                      url=f'/notifications', user_id=blocked.id,
+                                      author_id=blocker.id)
         db.session.add(notify)
-        if not current_app.debug:                       # user.unread_notifications += 1 hangs app if 'user' is the same person
-            user.unread_notifications += 1              # who pressed 'Re-submit this activity'.
-        db.session.commit()
+        if not current_app.debug:                           # user.unread_notifications += 1 hangs app if 'user' is the same person
+            blocked.unread_notifications += 1               # who pressed 'Re-submit this activity'.
 
         # Remove their notification subscription,  if any
         db.session.query(NotificationSubscription).filter(NotificationSubscription.entity_id == community.id,
-                                                          NotificationSubscription.user_id == user.id,
+                                                          NotificationSubscription.user_id == blocked.id,
                                                           NotificationSubscription.type == NOTIF_COMMUNITY).delete()
+        db.session.commit()
 
-        add_to_modlog_activitypub('ban_user', deletor, community_id=community.id, link_text=user.display_name(), link=user.link())
+        cache.delete_memoized(communities_banned_from, blocked.id)
+        cache.delete_memoized(joined_communities, blocked.id)
+        cache.delete_memoized(moderating_communities, blocked.id)
+
+        add_to_modlog_activitypub('ban_user', blocker, community_id=community.id, link_text=blocked.display_name(), link=blocked.link())
 
 
 def unban_local_user(deletor_ap_id, user_ap_id, target):
