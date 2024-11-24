@@ -491,8 +491,18 @@ def shared_inbox():
     return ''
 
 
-@bp.route('/site_inbox', methods=['GET', 'POST'])
+@bp.route('/site_inbox', methods=['POST'])
 def site_inbox():
+    return shared_inbox()
+
+
+@bp.route('/u/<actor>/inbox', methods=['POST'])
+def user_inbox(actor):
+    return shared_inbox()
+
+
+@bp.route('/c/<actor>/inbox', methods=['POST'])
+def community_inbox(actor):
     return shared_inbox()
 
 
@@ -1225,93 +1235,6 @@ def community_moderators_route(actor):
         return jsonify(community_data)
 
 
-@bp.route('/u/<actor>/inbox', methods=['POST'])
-def user_inbox(actor):
-    site = Site.query.get(1)
-    activity_log = ActivityPubLog(direction='in', result='failure')
-    activity_log.result = 'processing'
-    db.session.add(activity_log)
-    db.session.commit()
-
-    try:
-        request_json = request.get_json(force=True)
-    except werkzeug.exceptions.BadRequest as e:
-        activity_log.exception_message = 'Unable to parse json body: ' + e.description
-        activity_log.result = 'failure'
-        db.session.commit()
-        return '', 400
-
-    if 'id' in request_json:
-        activity_log.activity_id = request_json['id']
-    if site.log_activitypub_json:
-        activity_log.activity_json = json.dumps(request_json)
-
-    actor = find_actor_or_create(request_json['actor'], signed_get=True) if 'actor' in request_json else None
-    if actor is not None:
-        if (('type' in request_json and request_json['type'] == 'Like') or
-                ('type' in request_json and request_json['type'] == 'Undo' and
-                'object' in request_json and request_json['object']['type'] == 'Like')):
-            return shared_inbox()
-        if 'type' in request_json and request_json['type'] == 'Accept':
-            return shared_inbox()
-        try:
-            HttpSignature.verify_request(request, actor.public_key, skip_date=True)
-            if 'type' in request_json:
-                if request_json['type'] == 'Follow':
-                    if current_app.debug:
-                        process_user_follow_request(request_json, activity_log.id, actor.id)
-                    else:
-                        process_user_follow_request.delay(request_json, activity_log.id, actor.id)
-                elif request_json['type'] == 'Undo' and 'object' in request_json and request_json['object']['type'] == 'Follow':
-                    local_user_ap_id = request_json['object']['object']
-                    local_user = find_actor_or_create(local_user_ap_id, create_if_not_found=False)
-                    remote_user = User.query.get(actor.id)
-                    if local_user:
-                        db.session.query(UserFollower).filter_by(local_user_id=local_user.id, remote_user_id=remote_user.id, is_accepted=True).delete()
-                        activity_log.result = 'success'
-                    else:
-                        activity_log.exception_message = 'Could not find local user'
-                        activity_log.result = 'failure'
-                    db.session.commit()
-                elif ('type' in request_json and request_json['type'] == 'Create' and
-                    'object' in request_json and request_json['object']['type'] == 'Note' and
-                    'name' in request_json['object']):                                              # poll votes
-                    in_reply_to = request_json['object']['inReplyTo'] if 'inReplyTo' in request_json['object'] else None
-                    if in_reply_to:
-                        post_being_replied_to = Post.query.filter_by(ap_id=request_json['object']['inReplyTo']).first()
-                        if post_being_replied_to:
-                            community_ap_id = post_being_replied_to.community.ap_profile_id
-                            community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False)
-                            user_ap_id = request_json['object']['attributedTo']
-                            user = find_actor_or_create(user_ap_id, create_if_not_found=False)
-                            if can_create_post_reply(user, community):
-                                poll_data = Poll.query.get(post_being_replied_to.id)
-                                choice = PollChoice.query.filter_by(post_id=post_being_replied_to.id, choice_text=request_json['object']['name']).first()
-                                if poll_data and choice:
-                                    poll_data.vote_for_choice(choice.id, user.id)
-                                    activity_log.activity_type = 'Poll Vote'
-                                    activity_log.result = 'success'
-                                    db.session.commit()
-                                    if post_being_replied_to.author.is_local():
-                                        inform_followers_of_post_update(post_being_replied_to.id, user.instance_id)
-
-        except VerificationError:
-            activity_log.result = 'failure'
-            activity_log.exception_message = 'Could not verify signature'
-            db.session.commit()
-            return '', 400
-    else:
-        actor_name = request_json['actor'] if 'actor' in request_json else ''
-        activity_log.exception_message = f'Actor could not be found 2: {actor_name}'
-
-    if activity_log.exception_message is not None:
-        activity_log.result = 'failure'
-        db.session.commit()
-    resp = jsonify('ok')
-    resp.content_type = 'application/activity+json'
-    return resp
-
-
 @celery.task
 def process_user_follow_request(request_json, activitypublog_id, remote_user_id):
     activity_log = ActivityPubLog.query.get(activitypublog_id)
@@ -1352,11 +1275,6 @@ def process_user_follow_request(request_json, activitypublog_id, remote_user_id)
         activity_log.result = 'failure'
 
     db.session.commit()
-
-
-@bp.route('/c/<actor>/inbox', methods=['GET', 'POST'])
-def community_inbox(actor):
-    return shared_inbox()
 
 
 @bp.route('/c/<actor>/followers', methods=['GET'])
