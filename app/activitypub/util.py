@@ -258,7 +258,7 @@ def instance_allowed(host: str) -> bool:
     return instance is not None
 
 
-def find_actor_or_create(actor: str, create_if_not_found=True, community_only=False, signed_get=False) -> Union[User, Community, None]:
+def find_actor_or_create(actor: str, create_if_not_found=True, community_only=False) -> Union[User, Community, None]:
     if isinstance(actor, dict):     # Discourse does this
         actor = actor['id']
     actor_url = actor.strip()
@@ -316,34 +316,37 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
     else:   # User does not exist in the DB, it's going to need to be created from it's remote home instance
         if create_if_not_found:
             if actor.startswith('https://'):
-                if not signed_get:
+                try:
+                    actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
+                except httpx.HTTPError:
+                    time.sleep(randint(3, 10))
                     try:
                         actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
-                    except httpx.HTTPError:
-                        time.sleep(randint(3, 10))
-                        try:
-                            actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
-                        except httpx.HTTPError as e:
-                            raise e
-                            return None
-                    if actor_data.status_code == 200:
-                        try:
-                            actor_json = actor_data.json()
-                        except Exception as e:
-                            actor_data.close()
-                            return None
+                    except httpx.HTTPError as e:
+                        raise e
+                        return None
+                if actor_data.status_code == 200:
+                    try:
+                        actor_json = actor_data.json()
+                    except Exception as e:
                         actor_data.close()
-                        actor_model = actor_json_to_model(actor_json, address, server)
-                        if community_only and not isinstance(actor_model, Community):
-                            return None
-                        return actor_model
-                else:
+                        return None
+                    actor_data.close()
+                    actor_model = actor_json_to_model(actor_json, address, server)
+                    if community_only and not isinstance(actor_model, Community):
+                        return None
+                    return actor_model
+                elif actor_data.status_code == 401:
                     try:
                         site = Site.query.get(1)
                         actor_data = signed_get_request(actor_url, site.private_key,
                                         f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
                         if actor_data.status_code == 200:
-                            actor_json = actor_data.json()
+                            try:
+                                actor_json = actor_data.json()
+                            except Exception as e:
+                                actor_data.close()
+                                return None
                             actor_data.close()
                             actor_model = actor_json_to_model(actor_json, address, server)
                             if community_only and not isinstance(actor_model, Community):
