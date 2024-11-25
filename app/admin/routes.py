@@ -1034,12 +1034,12 @@ def admin_content_deleted():
 
     posts = Post.query.\
         filter(Post.deleted == True).\
-        order_by(Post.posted_at)
+        order_by(desc(Post.posted_at))
     posts = posts.paginate(page=page, per_page=100, error_out=False)
 
     post_replies = PostReply.query. \
         filter(PostReply.deleted == True). \
-        order_by(PostReply.posted_at)
+        order_by(desc(PostReply.posted_at))
     post_replies = post_replies.paginate(page=replies_page, per_page=100, error_out=False)
 
     next_url = url_for('admin.admin_content_deleted', page=posts.next_num) if posts.has_next else None
