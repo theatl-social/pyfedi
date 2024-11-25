@@ -44,8 +44,8 @@
                             {{ user.last_seen }}
                         {% endif %}
                     </td>
-                    <td>{{ user.attitude * 100 if user.attitude != 1 }}</td>
-                    <td>{{ 'R ' + str(user.reputation) if user.reputation }}</td>
+                    <td>{% if user.attitude != 1 %}{{ (user.attitude * 100) | round | int }}{% endif %}</td>
+                    <td>{% if user.reputation %}R {{ user.reputation | round | int }}{% endif %}</td>
                     <td>{{ '<span class="red">Banned</span>'|safe if user.banned }} </td>
                     <td>{{ user.reports if user.reports > 0 }} </td>
                     <td>{{ user.ip_address if user.ip_address }} </td>
