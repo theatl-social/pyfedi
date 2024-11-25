@@ -972,7 +972,7 @@ def admin_content_trash():
 
     page = request.args.get('page', 1, type=int)
 
-    posts = Post.query.filter(Post.posted_at > utcnow() - timedelta(days=3), Post.deleted == False).order_by(Post.score)
+    posts = Post.query.filter(Post.posted_at > utcnow() - timedelta(days=3), Post.deleted == False, Post.down_votes > 0).order_by(Post.score)
     posts = posts.paginate(page=page, per_page=100, error_out=False)
 
     next_url = url_for('admin.admin_content_trash', page=posts.next_num) if posts.has_next else None
@@ -1034,12 +1034,12 @@ def admin_content_deleted():
 
     posts = Post.query.\
         filter(Post.deleted == True).\
-        order_by(Post.posted_at)
+        order_by(desc(Post.posted_at))
     posts = posts.paginate(page=page, per_page=100, error_out=False)
 
     post_replies = PostReply.query. \
         filter(PostReply.deleted == True). \
-        order_by(PostReply.posted_at)
+        order_by(desc(PostReply.posted_at))
     post_replies = post_replies.paginate(page=replies_page, per_page=100, error_out=False)
 
     next_url = url_for('admin.admin_content_deleted', page=posts.next_num) if posts.has_next else None
