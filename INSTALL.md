@@ -248,6 +248,8 @@ also [see this](https://pganalyze.com/blog/5mins-postgres-tuning-huge-pages).
 To assess whether to accept a registration application it can be helpful to know the country of the applicant. This can be
 automatically discovered by using [the ipinfo service](https://ipinfo.io/) - register with them to get an API token and put it into your .env file.
 
+If the search function is not returning any results, you need to [add some database triggers](https://codeberg.org/rimu/pyfedi/issues/358#issuecomment-2475019).
+
 <div id="background-services"></div>
 
 ### Background services
