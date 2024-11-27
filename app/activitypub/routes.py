@@ -829,6 +829,65 @@ def process_inbox_request(request_json, store_ap_json):
                 log_incoming_ap(announce_id, APLOG_REPORT, APLOG_IGNORED, request_json if store_ap_json else None, 'Report ignored due to missing content')
             return
 
+        if request_json['type'] == 'Add':       # remote site is adding a local user as a moderator, and is sending directly rather than announcing (happens if not subscribed)
+            mod = user
+            community_ap_id = find_community_ap_id(request_json)
+            community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False) if community_ap_id else None
+            if community:
+                if not community.is_moderator(mod) and not community.is_instance_admin(mod):
+                    log_incoming_ap(announce_id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
+                    return
+                target = request_json['target']
+                moderators_url = community.ap_moderators_url
+                if target == moderators_url:
+                    new_mod = find_actor_or_create(request_json['object'], create_if_not_found=False)
+                    if new_mod and new_mod.is_local():
+                        existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=new_mod.id).first()
+                        if existing_membership:
+                            existing_membership.is_moderator = True
+                        else:
+                            new_membership = CommunityMember(community_id=community.id, user_id=new_mod.id, is_moderator=True)
+                            db.session.add(new_membership)
+                        db.session.commit()
+                        log_incoming_ap(announce_id, APLOG_ADD, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    else:
+                        log_incoming_ap(announce_id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + request_json['object'])
+                    return
+                else:
+                    # Lemmy might not send anything directly to sticky a post if no-one is subscribed (could not get it to generate the activity)
+                    log_incoming_ap(announce_id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Add')
+            else:
+                log_incoming_ap(announce_id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Add: cannot find community')
+            return
+
+        if request_json['type'] == 'Remove':       # remote site is removing a local user as a moderator, and is sending directly rather than announcing (happens if not subscribed)
+            mod = user
+            community_ap_id = find_community_ap_id(request_json)
+            community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False) if community_ap_id else None
+            if community:
+                if not community.is_moderator(mod) and not community.is_instance_admin(mod):
+                    log_incoming_ap(announce_id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
+                    return
+                target = request_json['target']
+                moderators_url = community.ap_moderators_url
+                if target == moderators_url:
+                    old_mod = find_actor_or_create(request_json['object'], create_if_not_found=False)
+                    if old_mod and old_mod.is_local():
+                        existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=old_mod.id).first()
+                        if existing_membership:
+                            existing_membership.is_moderator = False
+                            db.session.commit()
+                            log_incoming_ap(announce_id, APLOG_REMOVE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    else:
+                        log_incoming_ap(announce_id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + request_json['object'])
+                    return
+                else:
+                    # Lemmy might not send anything directly to unsticky a post if no-one is subscribed (could not get it to generate the activity)
+                    log_incoming_ap(announce_id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Remove')
+            else:
+                log_incoming_ap(announce_id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Remove: cannot find community')
+            return
+
         if request_json['type'] == 'Block':     # remote site is banning one of their users
             blocker = user
             blocked_ap_id = request_json['object'].lower()
