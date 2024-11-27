@@ -26,7 +26,7 @@ from app.utils import get_setting, render_template, markdown_to_html, user_acces
     user_filters_posts, user_filters_replies, moderating_communities, joined_communities, theme_list, blocked_instances, \
     allowlist_html, recently_upvoted_posts, recently_downvoted_posts, blocked_users, menu_topics, add_to_modlog, \
     blocked_communities, piefed_markdown_to_lemmy_markdown
-from sqlalchemy import desc, or_, text
+from sqlalchemy import desc, or_, text, asc
 import os
 import json as python_json
 
@@ -1264,8 +1264,11 @@ def fediverse_redirect(actor):
 
 
 @bp.route('/read-posts')
+@bp.route('/read-posts/<sort>', methods=['GET', 'POST'])
 @login_required
-def user_read_posts():
+def user_read_posts(sort=None):
+    if sort is None:
+        sort = current_user.default_sort if current_user.is_authenticated else 'hot'
     page = request.args.get('page', 1, type=int)
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
@@ -1282,13 +1285,25 @@ def user_read_posts():
     # current_user has already read/voted on
     posts = posts.join(read_posts, read_posts.c.read_post_id == Post.id).filter(read_posts.c.user_id == current_user.id)
 
+    # sort the posts
+    if sort == 'hot':
+        posts = posts.order_by(desc(Post.sticky)).order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
+    elif sort == 'top':
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=7)).order_by(desc(Post.sticky)).order_by(desc(Post.up_votes - Post.down_votes))
+    elif sort == 'newest':
+        posts = posts.order_by(desc(Post.posted_at))
+    elif sort == 'oldest':
+        posts = posts.order_by(asc(Post.posted_at))
+    elif sort == 'active':
+        posts = posts.order_by(desc(Post.sticky)).order_by(desc(Post.last_active))
+
     posts = posts.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50,
                            error_out=False)
     next_url = url_for('user.user_read_posts', page=posts.next_num) if posts.has_next else None
     prev_url = url_for('user.user_read_posts', page=posts.prev_num) if posts.has_prev and page != 1 else None
 
     return render_template('user/read_posts.html', title=_('Read posts'), posts=posts, show_post_community=True,
-                           low_bandwidth=low_bandwidth, user=current_user,
+                           sort=sort, low_bandwidth=low_bandwidth, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
