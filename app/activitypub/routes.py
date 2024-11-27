@@ -947,6 +947,9 @@ def process_inbox_request(request_json, store_ap_json):
         # Announce is new content and votes that happened on a remote server.
         if request_json['type'] == 'Announce':
             if isinstance(request_json['object'], str):  # Mastodon, PeerTube, A.gup.pe
+                if request_json['object'].startswith('https://' + current_app.config['SERVER_NAME']):
+                    log_incoming_ap(announce_id, APLOG_DUPLICATE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already present')
+                    return
                 post = resolve_remote_post(request_json['object'], community.id, announce_actor=community.ap_profile_id, store_ap_json=store_ap_json)
                 if post:
                     log_incoming_ap(announce_id, APLOG_ANNOUNCE, APLOG_SUCCESS, request_json)
