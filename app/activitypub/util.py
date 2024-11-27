@@ -258,7 +258,7 @@ def instance_allowed(host: str) -> bool:
     return instance is not None
 
 
-def find_actor_or_create(actor: str, create_if_not_found=True, community_only=False, signed_get=False) -> Union[User, Community, None]:
+def find_actor_or_create(actor: str, create_if_not_found=True, community_only=False) -> Union[User, Community, None]:
     if isinstance(actor, dict):     # Discourse does this
         actor = actor['id']
     actor_url = actor.strip()
@@ -316,34 +316,37 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
     else:   # User does not exist in the DB, it's going to need to be created from it's remote home instance
         if create_if_not_found:
             if actor.startswith('https://'):
-                if not signed_get:
+                try:
+                    actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
+                except httpx.HTTPError:
+                    time.sleep(randint(3, 10))
                     try:
                         actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
-                    except httpx.HTTPError:
-                        time.sleep(randint(3, 10))
-                        try:
-                            actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
-                        except httpx.HTTPError as e:
-                            raise e
-                            return None
-                    if actor_data.status_code == 200:
-                        try:
-                            actor_json = actor_data.json()
-                        except Exception as e:
-                            actor_data.close()
-                            return None
+                    except httpx.HTTPError as e:
+                        raise e
+                        return None
+                if actor_data.status_code == 200:
+                    try:
+                        actor_json = actor_data.json()
+                    except Exception as e:
                         actor_data.close()
-                        actor_model = actor_json_to_model(actor_json, address, server)
-                        if community_only and not isinstance(actor_model, Community):
-                            return None
-                        return actor_model
-                else:
+                        return None
+                    actor_data.close()
+                    actor_model = actor_json_to_model(actor_json, address, server)
+                    if community_only and not isinstance(actor_model, Community):
+                        return None
+                    return actor_model
+                elif actor_data.status_code == 401:
                     try:
                         site = Site.query.get(1)
                         actor_data = signed_get_request(actor_url, site.private_key,
                                         f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
                         if actor_data.status_code == 200:
-                            actor_json = actor_data.json()
+                            try:
+                                actor_json = actor_data.json()
+                            except Exception as e:
+                                actor_data.close()
+                                return None
                             actor_data.close()
                             actor_model = actor_json_to_model(actor_json, address, server)
                             if community_only and not isinstance(actor_model, Community):
@@ -1337,116 +1340,122 @@ def is_activitypub_request():
     return 'application/ld+json' in request.headers.get('Accept', '') or 'application/activity+json' in request.headers.get('Accept', '')
 
 
-def delete_post_or_comment(user_ap_id, to_be_deleted_ap_id, aplog_id):
-    deletor = find_actor_or_create(user_ap_id)
-    to_delete = find_liked_object(to_be_deleted_ap_id)
-    aplog = ActivityPubLog.query.get(aplog_id)
-
-    if to_delete and to_delete.deleted:
-        if aplog:
-            aplog.result = 'ignored'
-            aplog.exception_message = 'Activity about local content which is already deleted'
-        return
-
-    if deletor and to_delete:
-        community = to_delete.community
-        if to_delete.author.id == deletor.id or deletor.is_admin() or community.is_moderator(deletor) or community.is_instance_admin(deletor):
-            if isinstance(to_delete, Post):
-                to_delete.deleted = True
-                to_delete.deleted_by = deletor.id
-                community.post_count -= 1
-                to_delete.author.post_count -= 1
-                if to_delete.url and to_delete.cross_posts is not None:
-                    old_cross_posts = Post.query.filter(Post.id.in_(to_delete.cross_posts)).all()
-                    to_delete.cross_posts.clear()
-                    for ocp in old_cross_posts:
-                        if ocp.cross_posts is not None and to_delete.id in ocp.cross_posts:
-                            ocp.cross_posts.remove(to_delete.id)
-                db.session.commit()
-                if to_delete.author.id != deletor.id:
-                    add_to_modlog_activitypub('delete_post', deletor, community_id=community.id,
-                                              link_text=shorten_string(to_delete.title), link=f'post/{to_delete.id}')
-            elif isinstance(to_delete, PostReply):
-                to_delete.deleted = True
-                to_delete.deleted_by = deletor.id
-                to_delete.author.post_reply_count -= 1
-                if not to_delete.author.bot:
-                    to_delete.post.reply_count -= 1
-                db.session.commit()
-                if to_delete.author.id != deletor.id:
-                    add_to_modlog_activitypub('delete_post_reply', deletor, community_id=community.id,
-                                              link_text=f'comment on {shorten_string(to_delete.post.title)}',
-                                              link=f'post/{to_delete.post.id}#comment_{to_delete.id}')
-            if aplog:
-                aplog.result = 'success'
-        else:
-           if aplog:
-                aplog.result = 'failure'
-                aplog.exception_message = 'Deletor did not have permission'
+def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json):
+    community = to_delete.community
+    if to_delete.user_id == deletor.id or deletor.is_admin() or community.is_moderator(deletor) or community.is_instance_admin(deletor):
+        if isinstance(to_delete, Post):
+            to_delete.deleted = True
+            to_delete.deleted_by = deletor.id
+            community.post_count -= 1
+            to_delete.author.post_count -= 1
+            if to_delete.url and to_delete.cross_posts is not None:
+                old_cross_posts = Post.query.filter(Post.id.in_(to_delete.cross_posts)).all()
+                to_delete.cross_posts.clear()
+                for ocp in old_cross_posts:
+                    if ocp.cross_posts is not None and to_delete.id in ocp.cross_posts:
+                        ocp.cross_posts.remove(to_delete.id)
+            db.session.commit()
+            if to_delete.author.id != deletor.id:
+                add_to_modlog_activitypub('delete_post', deletor, community_id=community.id,
+                                          link_text=shorten_string(to_delete.title), link=f'post/{to_delete.id}')
+        elif isinstance(to_delete, PostReply):
+            to_delete.deleted = True
+            to_delete.deleted_by = deletor.id
+            to_delete.author.post_reply_count -= 1
+            community.post_reply_count -= 1
+            if not to_delete.author.bot:
+                to_delete.post.reply_count -= 1
+            db.session.commit()
+            if to_delete.author.id != deletor.id:
+                add_to_modlog_activitypub('delete_post_reply', deletor, community_id=community.id,
+                                          link_text=f'comment on {shorten_string(to_delete.post.title)}',
+                                          link=f'post/{to_delete.post.id}#comment_{to_delete.id}')
+        log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_SUCCESS, request_json if store_ap_json else None)
     else:
-       if aplog:
-            aplog.result = 'failure'
-            aplog.exception_message = 'Unable to resolve deletor, or target'
+        log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Deletor did not have permisson')
 
 
-def restore_post_or_comment(object_json, aplog_id):
-    restorer = find_actor_or_create(object_json['actor']) if 'actor' in object_json else None
-    to_restore = find_liked_object(object_json['object']) if 'object' in object_json else None
-    aplog = ActivityPubLog.query.get(aplog_id)
+def restore_post_or_comment(restorer, to_restore, store_ap_json, request_json):
+    community = to_restore.community
+    if to_restore.user_id == restorer.id or restorer.is_admin() or community.is_moderator(restorer) or community.is_instance_admin(restorer):
+        if isinstance(to_restore, Post):
+            to_restore.deleted = False
+            to_restore.deleted_by = None
+            community.post_count += 1
+            to_restore.author.post_count += 1
+            if to_restore.url:
+                new_cross_posts = Post.query.filter(Post.id != to_restore.id, Post.url == to_restore.url, Post.deleted == False,
+                                                                Post.posted_at > utcnow() - timedelta(days=6)).all()
+                for ncp in new_cross_posts:
+                    if ncp.cross_posts is None:
+                        ncp.cross_posts = [to_restore.id]
+                    else:
+                        ncp.cross_posts.append(to_restore.id)
+                    if to_restore.cross_posts is None:
+                        to_restore.cross_posts = [ncp.id]
+                    else:
+                        to_restore.cross_posts.append(ncp.id)
+            db.session.commit()
+            if to_restore.author.id != restorer.id:
+                add_to_modlog_activitypub('restore_post', restorer, community_id=community.id,
+                                          link_text=shorten_string(to_restore.title), link=f'post/{to_restore.id}')
 
-    if to_restore and not to_restore.deleted:
-        if aplog:
-            aplog.result = 'ignored'
-            aplog.exception_message = 'Activity about local content which is already restored'
-        return
-
-    if restorer and to_restore:
-        community = to_restore.community
-        if to_restore.author.id == restorer.id or restorer.is_admin() or community.is_moderator(restorer) or community.is_instance_admin(restorer):
-            if isinstance(to_restore, Post):
-                to_restore.deleted = False
-                to_restore.deleted_by = None
-                community.post_count += 1
-                to_restore.author.post_count += 1
-                if to_restore.url:
-                    new_cross_posts = Post.query.filter(Post.id != to_restore.id, Post.url == to_restore.url, Post.deleted == False,
-                                                                    Post.posted_at > utcnow() - timedelta(days=6)).all()
-                    for ncp in new_cross_posts:
-                        if ncp.cross_posts is None:
-                            ncp.cross_posts = [to_restore.id]
-                        else:
-                            ncp.cross_posts.append(to_restore.id)
-                        if to_restore.cross_posts is None:
-                            to_restore.cross_posts = [ncp.id]
-                        else:
-                            to_restore.cross_posts.append(ncp.id)
-                db.session.commit()
-                if to_restore.author.id != restorer.id:
-                    add_to_modlog_activitypub('restore_post', restorer, community_id=community.id,
-                                              link_text=shorten_string(to_restore.title), link=f'post/{to_restore.id}')
-
-            elif isinstance(to_restore, PostReply):
-                to_restore.deleted = False
-                to_restore.deleted_by = None
-                if not to_restore.author.bot:
-                    to_restore.post.reply_count += 1
-                to_restore.author.post_reply_count += 1
-                db.session.commit()
-                if to_restore.author.id != restorer.id:
-                    add_to_modlog_activitypub('restore_post_reply', restorer, community_id=community.id,
-                                              link_text=f'comment on {shorten_string(to_restore.post.title)}',
-                                              link=f'post/{to_restore.post_id}#comment_{to_restore.id}')
-
-            if aplog:
-                aplog.result = 'success'
-        else:
-           if aplog:
-                aplog.result = 'failure'
-                aplog.exception_message = 'Restorer did not have permission'
+        elif isinstance(to_restore, PostReply):
+            to_restore.deleted = False
+            to_restore.deleted_by = None
+            if not to_restore.author.bot:
+                to_restore.post.reply_count += 1
+            to_restore.author.post_reply_count += 1
+            db.session.commit()
+            if to_restore.author.id != restorer.id:
+                add_to_modlog_activitypub('restore_post_reply', restorer, community_id=community.id,
+                                          link_text=f'comment on {shorten_string(to_restore.post.title)}',
+                                          link=f'post/{to_restore.post_id}#comment_{to_restore.id}')
+        log_incoming_ap(request_json['id'], APLOG_UNDO_DELETE, APLOG_SUCCESS, request_json if store_ap_json else None)
     else:
-       if aplog:
-            aplog.result = 'failure'
-            aplog.exception_message = 'Unable to resolve restorer or target'
+        log_incoming_ap(request_json['id'], APLOG_UNDO_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Restorer did not have permisson')
+
+
+def site_ban_remove_data(blocker_id, blocked):
+    replies = PostReply.query.filter_by(user_id=blocked.id, deleted=False)
+    for reply in replies:
+        reply.deleted = True
+        reply.deleted_by = blocker_id
+        if not blocked.bot:
+            reply.post.reply_count -= 1
+        reply.community.post_reply_count -= 1
+    blocked.reply_count = 0
+    db.session.commit()
+
+    posts = Post.query.filter_by(user_id=blocked.id, deleted=False)
+    for post in posts:
+        post.deleted = True
+        post.deleted_by = blocker_id
+        post.community.post_count -= 1
+        if post.url and post.cross_posts is not None:
+            old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
+            post.cross_posts.clear()
+            for ocp in old_cross_posts:
+                if ocp.cross_posts is not None and post.id in ocp.cross_posts:
+                    ocp.cross_posts.remove(post.id)
+    blocked.post_count = 0
+    db.session.commit()
+
+    # Delete all their images to save moderators from having to see disgusting stuff.
+    # Images attached to posts can't be restored, but site ban reversals don't have a 'removeData' field anyway.
+    files = File.query.join(Post).filter(Post.user_id == blocked.id).all()
+    for file in files:
+        file.delete_from_disk()
+        file.source_url = ''
+    if blocked.avatar_id:
+        blocked.avatar.delete_from_disk()
+        blocked.avatar.source_url = ''
+    if blocked.cover_id:
+        blocked.cover.delete_from_disk()
+        blocked.cover.source_url = ''
+    # blocked.banned = True                     # uncommented until there's a mechanism for processing ban expiry date
+
+    db.session.commit()
 
 
 def remove_data_from_banned_user(deletor_ap_id, user_ap_id, target):
@@ -1496,132 +1505,98 @@ def remove_data_from_banned_user_task(deletor_ap_id, user_ap_id, target):
     db.session.commit()
 
 
-def ban_local_user(deletor_ap_id, user_ap_id, target, request_json):
-    if current_app.debug:
-        ban_local_user_task(deletor_ap_id, user_ap_id, target, request_json)
-    else:
-        ban_local_user_task.delay(deletor_ap_id, user_ap_id, target, request_json)
+def community_ban_remove_data(blocker_id, community_id, blocked):
+    replies = PostReply.query.filter_by(user_id=blocked.id, deleted=False, community_id=community_id)
+    for reply in replies:
+        reply.deleted = True
+        reply.deleted_by = blocker_id
+        if not blocked.bot:
+            reply.post.reply_count -= 1
+        reply.community.post_reply_count -= 1
+        blocked.post_reply_count -= 1
+    db.session.commit()
+
+    posts = Post.query.filter_by(user_id=blocked.id, deleted=False, community_id=community_id)
+    for post in posts:
+        post.deleted = True
+        post.deleted_by = blocker_id
+        post.community.post_count -= 1
+        if post.url and post.cross_posts is not None:
+            old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
+            post.cross_posts.clear()
+            for ocp in old_cross_posts:
+                if ocp.cross_posts is not None and post.id in ocp.cross_posts:
+                    ocp.cross_posts.remove(post.id)
+        blocked.post_count -= 1
+    db.session.commit()
+
+    # Delete attached images to save moderators from having to see disgusting stuff.
+    files = File.query.join(Post).filter(Post.user_id == blocked.id, Post.community_id == community_id).all()
+    for file in files:
+        file.delete_from_disk()
+        file.source_url = ''
+    db.session.commit()
 
 
-@celery.task
-def ban_local_user_task(deletor_ap_id, user_ap_id, target, request_json):
-    # same info in 'Block' and 'Announce/Block' can be sent at same time, and both call this function
-    ban_in_progress = cache.get(f'{deletor_ap_id} is banning {user_ap_id} from {target}')
-    if not ban_in_progress:
-        cache.set(f'{deletor_ap_id} is banning {user_ap_id} from {target}', True, timeout=60)
-    else:
-        return
+def ban_local_user(blocker, blocked, community, request_json):
+    existing = CommunityBan.query.filter_by(community_id=community.id, user_id=blocked.id).first()
+    if not existing:
+        new_ban = CommunityBan(community_id=community.id, user_id=blocked.id, banned_by=blocker.id)
+        if 'summary' in request_json:
+            new_ban.reason=request_json['object']['summary']
+        if 'expires' in request_json and datetime.fromisoformat(request_json['object']['expires']) > datetime.now(timezone.utc):
+            new_ban.ban_until = datetime.fromisoformat(request_json['object']['expires'])
+        elif 'endTime' in request_json and datetime.fromisoformat(request_json['object']['endTime']) > datetime.now(timezone.utc):
+            new_ban.ban_until = datetime.fromisoformat(request_json['object']['endTime'])
+        db.session.add(new_ban)
+        db.session.commit()
 
-    deletor = find_actor_or_create(deletor_ap_id, create_if_not_found=False)
-    user = find_actor_or_create(user_ap_id, create_if_not_found=False)
-    community = Community.query.filter_by(ap_profile_id=target).first()
-
-    if not deletor or not user:
-        return
-
-    # site bans by admins
-    if deletor.instance.user_is_admin(deletor.id) and target == f"https://{deletor.instance.domain}/":
-        # need instance_ban table?
-        ...
-
-    # community bans by mods or admins
-    elif community and (community.is_moderator(deletor) or community.is_instance_admin(deletor)):
-        existing = CommunityBan.query.filter_by(community_id=community.id, user_id=user.id).first()
-
-        if not existing:
-            new_ban = CommunityBan(community_id=community.id, user_id=user.id, banned_by=deletor.id)
-            if 'summary' in request_json:
-                new_ban.reason=request_json['summary']
-
-            if 'expires' in request_json and datetime.fromisoformat(request_json['expires']) > datetime.now(timezone.utc):
-                new_ban.ban_until = datetime.fromisoformat(request_json['expires'])
-            elif 'endTime' in request_json and datetime.fromisoformat(request_json['endTime']) > datetime.now(timezone.utc):
-                new_ban.ban_until = datetime.fromisoformat(request_json['endTime'])
-
-            db.session.add(new_ban)
-            db.session.commit()
-
-        db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == community.id, CommunityJoinRequest.user_id == user.id).delete()
-
-        community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=user.id).first()
+        db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == community.id, CommunityJoinRequest.user_id == blocked.id).delete()
+        community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=blocked.id).first()
         if community_membership_record:
             community_membership_record.is_banned = True
 
-        cache.delete_memoized(communities_banned_from, user.id)
-        cache.delete_memoized(joined_communities, user.id)
-        cache.delete_memoized(moderating_communities, user.id)
-
         # Notify banned person
         notify = Notification(title=shorten_string('You have been banned from ' + community.title),
-                                      url=f'/notifications', user_id=user.id,
-                                      author_id=deletor.id)
+                                      url=f'/notifications', user_id=blocked.id,
+                                      author_id=blocker.id)
         db.session.add(notify)
-        if not current_app.debug:                       # user.unread_notifications += 1 hangs app if 'user' is the same person
-            user.unread_notifications += 1              # who pressed 'Re-submit this activity'.
-        db.session.commit()
+        if not current_app.debug:                           # user.unread_notifications += 1 hangs app if 'user' is the same person
+            blocked.unread_notifications += 1               # who pressed 'Re-submit this activity'.
 
         # Remove their notification subscription,  if any
         db.session.query(NotificationSubscription).filter(NotificationSubscription.entity_id == community.id,
-                                                          NotificationSubscription.user_id == user.id,
+                                                          NotificationSubscription.user_id == blocked.id,
                                                           NotificationSubscription.type == NOTIF_COMMUNITY).delete()
-
-        add_to_modlog_activitypub('ban_user', deletor, community_id=community.id, link_text=user.display_name(), link=user.link())
-
-
-def unban_local_user(deletor_ap_id, user_ap_id, target):
-    if current_app.debug:
-        unban_local_user_task(deletor_ap_id, user_ap_id, target)
-    else:
-        unban_local_user_task.delay(deletor_ap_id, user_ap_id, target)
-
-
-@celery.task
-def unban_local_user_task(deletor_ap_id, user_ap_id, target):
-    # same info in 'Block' and 'Announce/Block' can be sent at same time, and both call this function
-    unban_in_progress = cache.get(f'{deletor_ap_id} is undoing ban of {user_ap_id} from {target}')
-    if not unban_in_progress:
-        cache.set(f'{deletor_ap_id} is undoing ban of {user_ap_id} from {target}', True, timeout=60)
-    else:
-        return
-
-    deletor = find_actor_or_create(deletor_ap_id, create_if_not_found=False)
-    user = find_actor_or_create(user_ap_id, create_if_not_found=False)
-    community = Community.query.filter_by(ap_profile_id=target).first()
-
-    if not deletor or not user:
-        return
-
-    # site undo bans by admins
-    if deletor.instance.user_is_admin(deletor.id) and target == f"https://{deletor.instance.domain}/":
-        # need instance_ban table?
-        ...
-
-    # community undo bans by mods or admins
-    elif community and (community.is_moderator(deletor) or community.is_instance_admin(deletor)):
-        existing_ban = CommunityBan.query.filter_by(community_id=community.id, user_id=user.id).first()
-        if existing_ban:
-            db.session.delete(existing_ban)
-            db.session.commit()
-
-        community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=user.id).first()
-        if community_membership_record:
-            community_membership_record.is_banned = False
-            db.session.commit()
-
-        cache.delete_memoized(communities_banned_from, user.id)
-        cache.delete_memoized(joined_communities, user.id)
-        cache.delete_memoized(moderating_communities, user.id)
-
-        # Notify previously banned person
-        notify = Notification(title=shorten_string('You have been un-banned from ' + community.title),
-                                      url=f'/notifications', user_id=user.id,
-                                      author_id=deletor.id)
-        db.session.add(notify)
-        if not current_app.debug:                       # user.unread_notifications += 1 hangs app if 'user' is the same person
-            user.unread_notifications += 1              # who pressed 'Re-submit this activity'.
         db.session.commit()
 
-        add_to_modlog_activitypub('unban_user', deletor, community_id=community.id, link_text=user.display_name(), link=user.link())
+        cache.delete_memoized(communities_banned_from, blocked.id)
+        cache.delete_memoized(joined_communities, blocked.id)
+        cache.delete_memoized(moderating_communities, blocked.id)
+
+        add_to_modlog_activitypub('ban_user', blocker, community_id=community.id, link_text=blocked.display_name(), link=blocked.link())
+
+
+def unban_local_user(blocker, blocked, community, request_json):
+    db.session.query(CommunityBan).filter(CommunityBan.community_id == community.id, CommunityBan.user_id == blocked.id).delete()
+    community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=blocked.id).first()
+    if community_membership_record:
+        community_membership_record.is_banned = False
+
+    # Notify unbanned person
+    notify = Notification(title=shorten_string('You have been unbanned from ' + community.title),
+                          url=f'/notifications', user_id=blocked.id, author_id=blocker.id)
+    db.session.add(notify)
+    if not current_app.debug:                           # user.unread_notifications += 1 hangs app if 'user' is the same person
+        blocked.unread_notifications += 1               # who pressed 'Re-submit this activity'.
+
+    db.session.commit()
+
+    cache.delete_memoized(communities_banned_from, blocked.id)
+    cache.delete_memoized(joined_communities, blocked.id)
+    cache.delete_memoized(moderating_communities, blocked.id)
+
+    add_to_modlog_activitypub('unban_user', blocker, community_id=community.id, link_text=blocked.display_name(), link=blocked.link())
 
 
 def lock_post(mod_ap_id, post_id, comments_enabled):
@@ -1641,10 +1616,9 @@ def lock_post_task(mod_ap_id, post_id, comments_enabled):
             db.session.commit()
 
 
-def create_post_reply(activity_log: ActivityPubLog, community: Community, in_reply_to, request_json: dict, user: User, announce_id=None) -> Union[PostReply, None]:
+def create_post_reply(store_ap_json, community: Community, in_reply_to, request_json: dict, user: User, announce_id=None) -> Union[PostReply, None]:
     if community.local_only:
-        activity_log.exception_message = 'Community is local only, reply discarded'
-        activity_log.result = 'ignored'
+        log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Community is local only, reply discarded')
         return None
     post_id, parent_comment_id, root_id = find_reply_parent(in_reply_to)
 
@@ -1655,7 +1629,7 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
         else:
             parent_comment = None
         if post_id is None:
-            activity_log.exception_message = 'Could not find parent post'
+            log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not find parent post')
             return None
         post = Post.query.get(post_id)
 
@@ -1681,30 +1655,28 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
             language = find_language(next(iter(request_json['object']['contentMap'])))  # Combination of next and iter gets the first key in a dict
             language_id = language.id if language else None
 
-        post_reply = None
         try:
             post_reply = PostReply.new(user, post, parent_comment, notify_author=True, body=body, body_html=body_html,
                                        language_id=language_id, request_json=request_json, announce_id=announce_id)
-            activity_log.result = 'success'
+            return post_reply
         except Exception as ex:
-            activity_log.exception_message = str(ex)
-            activity_log.result = 'ignored'
-        db.session.commit()
-        return post_reply
+            log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, str(ex))
+            return None
+    else:
+        log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unable to find parent post/comment')
+        return None
 
 
-def create_post(activity_log: ActivityPubLog, community: Community, request_json: dict, user: User, announce_id=None) -> Union[Post, None]:
+def create_post(store_ap_json, community: Community, request_json: dict, user: User, announce_id=None) -> Union[Post, None]:
     if community.local_only:
-        activity_log.exception_message = 'Community is local only, post discarded'
-        activity_log.result = 'ignored'
+        log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Community is local only, post discarded')
         return None
     try:
         post = Post.new(user, community, request_json, announce_id)
+        return post
     except Exception as ex:
-        activity_log.exception_message = str(ex)
+        log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, str(ex))
         return None
-
-    return post
 
 
 def notify_about_post(post: Post):
@@ -1969,11 +1941,10 @@ def undo_downvote(activity_log, comment, post, target_ap_id, user):
     return post
 
 
-def undo_vote(activity_log, comment, post, target_ap_id, user):
+def undo_vote(comment, post, target_ap_id, user):
     voted_on = find_liked_object(target_ap_id)
-    if (user and not user.is_local()) and isinstance(voted_on, Post):
+    if isinstance(voted_on, Post):
         post = voted_on
-        user.last_seen = utcnow()
         existing_vote = PostVote.query.filter_by(user_id=user.id, post_id=post.id).first()
         if existing_vote:
             post.author.reputation -= existing_vote.effect
@@ -1983,8 +1954,9 @@ def undo_vote(activity_log, comment, post, target_ap_id, user):
                 post.up_votes -= 1
             post.score -= existing_vote.effect
             db.session.delete(existing_vote)
-            activity_log.result = 'success'
-    if (user and not user.is_local()) and isinstance(voted_on, PostReply):
+            db.session.commit()
+        return post
+    if isinstance(voted_on, PostReply):
         comment = voted_on
         existing_vote = PostReplyVote.query.filter_by(user_id=user.id, post_reply_id=comment.id).first()
         if existing_vote:
@@ -1995,22 +1967,13 @@ def undo_vote(activity_log, comment, post, target_ap_id, user):
                 comment.up_votes -= 1
             comment.score -= existing_vote.effect
             db.session.delete(existing_vote)
-            activity_log.result = 'success'
-
-    if user is None or (post is None and comment is None):
-        activity_log.exception_message = 'Blocked or unfound user or comment'
-    if user and user.is_local():
-        activity_log.exception_message = 'Activity about local content which is already present'
-        activity_log.result = 'ignored'
-
-    if post:
-        return post
-    if comment:
+            db.session.commit()
         return comment
+
     return None
 
 
-def process_report(user, reported, request_json, activity_log):
+def process_report(user, reported, request_json):
     if len(request_json['summary']) < 15:
         reasons = request_json['summary']
         description = ''
@@ -2300,7 +2263,7 @@ def can_delete(user_ap_id, post):
     return can_edit(user_ap_id, post)
 
 
-def resolve_remote_post(uri: str, community_id: int, announce_actor=None) -> Union[Post, PostReply, None]:
+def resolve_remote_post(uri: str, community_id: int, announce_actor=None, store_ap_json=False) -> Union[Post, PostReply, None]:
     post = Post.query.filter_by(ap_id=uri).first()
     if post:
         return post
@@ -2380,18 +2343,14 @@ def resolve_remote_post(uri: str, community_id: int, announce_actor=None) -> Uni
                 if not community_found:
                     return None
 
-        activity_log = ActivityPubLog(direction='in', activity_id=post_data['id'], activity_type='Resolve Post', result='failure')
-        if site.log_activitypub_json:
-            activity_log.activity_json = json.dumps(post_data)
-        db.session.add(activity_log)
         user = find_actor_or_create(actor)
         if user and community and post_data:
             request_json = {
-              'id': f"https://{uri_domain}/activities/create/gibberish(15)",
+              'id': f"https://{uri_domain}/activities/create/{gibberish(15)}",
               'object': post_data
             }
             if 'inReplyTo' in request_json['object'] and request_json['object']['inReplyTo']:
-                post_reply = create_post_reply(activity_log, community, request_json['object']['inReplyTo'], request_json, user)
+                post_reply = create_post_reply(store_ap_json, community, request_json['object']['inReplyTo'], request_json, user)
                 if post_reply:
                     if 'published' in post_data:
                         post_reply.posted_at = post_data['published']
@@ -2400,7 +2359,7 @@ def resolve_remote_post(uri: str, community_id: int, announce_actor=None) -> Uni
                         db.session.commit()
                     return post_reply
             else:
-                post = create_post(activity_log, community, request_json, user)
+                post = create_post(store_ap_json, community, request_json, user)
                 if post:
                     if 'published' in post_data:
                         post.posted_at=post_data['published']
@@ -2568,3 +2527,59 @@ def inform_followers_of_post_update_task(post_id: int, sending_instance_id: int)
                 post_request(i.inbox, update_json, post.author.private_key, post.author.public_url() + '#main-key')
             except Exception:
                 pass
+
+
+def log_incoming_ap(id, aplog_type, aplog_result, request_json, message=None):
+    aplog_in = APLOG_IN
+
+    if aplog_in and aplog_type[0] and aplog_result[0]:
+        activity_log = ActivityPubLog(direction='in', activity_id=id, activity_type=aplog_type[1], result=aplog_result[1])
+        if message:
+            activity_log.exception_message = message
+        if request_json:
+            activity_log.activity_json = json.dumps(request_json)
+        db.session.add(activity_log)
+        db.session.commit()
+
+
+def find_community_ap_id(request_json):
+    locations = ['audience', 'cc', 'to']
+    if 'object' in request_json and isinstance(request_json['object'], dict):
+        rjs = [request_json, request_json['object']]
+    else:
+        rjs = [request_json]
+    for rj in rjs:
+        for location in locations:
+            if location in rj:
+                potential_id = rj[location]
+                if isinstance(potential_id, str):
+                    if not potential_id.startswith('https://www.w3.org') and not potential_id.endswith('/followers'):
+                        potential_community = Community.query.filter_by(ap_profile_id=potential_id.lower()).first()
+                        if potential_community:
+                            return potential_id
+                if isinstance(potential_id, list):
+                    for c in potential_id:
+                        if not c.startswith('https://www.w3.org') and not c.endswith('/followers'):
+                            potential_community = Community.query.filter_by(ap_profile_id=c.lower()).first()
+                            if potential_community:
+                                return c
+
+    if not 'object' in request_json:
+        return None
+
+    if 'inReplyTo' in request_json['object'] and request_json['object']['inReplyTo'] is not None:
+        post_being_replied_to = Post.query.filter_by(ap_id=request_json['object']['inReplyTo']).first()
+        if post_being_replied_to:
+            return post_being_replied_to.community.ap_profile_id
+        else:
+            comment_being_replied_to = PostReply.query.filter_by(ap_id=request_json['object']['inReplyTo']).first()
+            if comment_being_replied_to:
+                return comment_being_replied_to.community.ap_profile_id
+
+    if request_json['object']['type'] == 'Video': # PeerTube
+        if 'attributedTo' in request_json['object'] and isinstance(request_json['object']['attributedTo'], list):
+            for a in request_json['object']['attributedTo']:
+                if a['type'] == 'Group':
+                    return a['id']
+
+    return None

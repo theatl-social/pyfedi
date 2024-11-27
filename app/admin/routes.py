@@ -12,7 +12,7 @@ from sqlalchemy import text, desc, or_
 from PIL import Image
 
 from app import db, celery, cache
-from app.activitypub.routes import process_inbox_request, process_delete_request
+from app.activitypub.routes import process_inbox_request, process_delete_request, replay_inbox_request
 from app.activitypub.signature import post_request, default_context
 from app.activitypub.util import instance_allowed, instance_blocked, extract_domain_and_actor
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
@@ -611,10 +611,8 @@ def activity_json(activity_id):
 def activity_replay(activity_id):
     activity = ActivityPubLog.query.get_or_404(activity_id)
     request_json = json.loads(activity.activity_json)
-    if 'type' in request_json and request_json['type'] == 'Delete' and request_json['id'].endswith('#delete'):
-        process_delete_request(request_json, activity.id, None)
-    else:
-        process_inbox_request(request_json, activity.id, None)
+    replay_inbox_request(request_json)
+
     return 'Ok'
 
 

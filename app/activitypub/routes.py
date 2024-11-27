@@ -9,12 +9,12 @@ import werkzeug.exceptions
 from app import db, constants, cache, celery
 from app.activitypub import bp
 
-from app.activitypub.signature import HttpSignature, post_request, VerificationError, default_context
+from app.activitypub.signature import HttpSignature, post_request, VerificationError, default_context, LDSignature
 from app.community.routes import show_community
 from app.community.util import send_to_remote_instance
 from app.post.routes import continue_discussion, show_post
 from app.user.routes import show_profile
-from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, SUBSCRIPTION_MEMBER
+from app.constants import *
 from app.models import User, Community, CommunityJoinRequest, CommunityMember, CommunityBan, ActivityPubLog, Post, \
     PostReply, Instance, PostVote, PostReplyVote, File, AllowedInstances, BannedInstances, utcnow, Site, Notification, \
     ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice
@@ -25,11 +25,11 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
     update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection, find_reported_object, \
     process_report, ensure_domains_match, can_edit, can_delete, remove_data_from_banned_user, resolve_remote_post, \
     inform_followers_of_post_update, comment_model_to_json, restore_post_or_comment, ban_local_user, unban_local_user, \
-    lock_post
+    lock_post, log_incoming_ap, find_community_ap_id, site_ban_remove_data, community_ban_remove_data
 from app.utils import gibberish, get_setting, render_template, \
     community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
-    community_moderators, markdown_to_html
+    community_moderators, markdown_to_html, html_to_text
 
 
 @bp.route('/testredis')
@@ -392,923 +392,809 @@ def community_profile(actor):
         abort(404)
 
 
-@bp.route('/inbox', methods=['GET', 'POST'])
+@bp.route('/inbox', methods=['POST'])
 def shared_inbox():
-    if request.method == 'POST':
-        # save all incoming data to aid in debugging and development. Set result to 'success' if things go well
-        activity_log = ActivityPubLog(direction='in', result='failure')
+    try:
+        request_json = request.get_json(force=True)
+    except werkzeug.exceptions.BadRequest as e:
+        log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, None, 'Unable to parse json body: ' + e.description)
+        return '', 400
 
+    g.site = Site.query.get(1)                      # g.site is not initialized by @app.before_request when request.path == '/inbox'
+    store_ap_json = g.site.log_activitypub_json
+
+    if not 'id' in request_json or not 'type' in request_json or not 'actor' in request_json or not 'object' in request_json:
+        log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'Missing minimum expected fields in JSON')
+        return '', 400
+
+    id = request_json['id']
+    if request_json['type'] == 'Announce' and isinstance(request_json['object'], dict):
+        object = request_json['object']
+        if not 'id' in object or not 'type' in object or not 'actor' in object or not 'object' in object:
+            if 'type' in object and (object['type'] == 'Page' or object['type'] == 'Note'):
+                log_incoming_ap(request_json['id'], APLOG_ANNOUNCE, APLOG_IGNORED, request_json if store_ap_json else None, 'Intended for Mastodon')
+            else:
+                log_incoming_ap(request_json['id'], APLOG_ANNOUNCE, APLOG_FAILURE, request_json if store_ap_json else None, 'Missing minimum expected fields in JSON Announce object')
+            return '', 400
+
+        if object['actor'].startswith('https://' + current_app.config['SERVER_NAME']):
+            log_incoming_ap(object['id'], APLOG_DUPLICATE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already present')
+            return '', 400
+
+    redis_client = get_redis_connection()
+    if redis_client.exists(id):                 # Something is sending same activity multiple times, or Announcing as well as sending the same content
+        log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, request_json if store_ap_json else None, 'Unnecessary retry attempt')
+        return '', 400
+    redis_client.set(id, 1, ex=90)              # Save the activity ID into redis, to avoid duplicate activities
+
+    # Ignore unutilised PeerTube activity
+    if request_json['actor'].endswith('accounts/peertube'):
+        log_incoming_ap(request_json['id'], APLOG_PT_VIEW, APLOG_IGNORED, request_json if store_ap_json else None, 'PeerTube View or CacheFile activity')
+        return ''
+
+    # Ignore delete requests from uses that do not already exist here
+    if request_json['type'] == 'Delete':
+        if (request_json['id'].endswith('#delete') or                                                                                       # Mastodon / PieFed
+            ('object' in request_json and isinstance(request_json['object'], str) and request_json['actor'] == request_json['object'])):    # Lemmy
+            actor = User.query.filter_by(ap_profile_id=request_json['actor'].lower()).first()
+            if not actor:
+                log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
+                return '', 400
+            else:
+                actor.ap_fetched_at = utcnow()                  # use stored pubkey, don't try to re-fetch for next step (signature verification)
+                db.session.commit()
+
+    actor = find_actor_or_create(request_json['actor'])
+    if not actor:
+        actor_name = request_json['actor']
+        log_incoming_ap(request_json['id'], APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, f'Actor could not be found 1: {actor_name}')
+        return '', 400
+
+    if actor.is_local():        # should be impossible (can be Announced back, but not sent without access to privkey)
+        log_incoming_ap(request_json['id'], APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'ActivityPub activity from a local actor')
+        return '', 400
+    else:
+        actor.instance.last_seen = utcnow()
+        actor.instance.dormant = False
+        actor.instance.gone_forever = False
+        actor.instance.failures = 0
+        actor.instance.ip_address = ip_address()
+        db.session.commit()
+
+    try:
+        HttpSignature.verify_request(request, actor.public_key, skip_date=True)
+    except VerificationError as e:
+        if not 'signature' in request_json:
+            log_incoming_ap(request_json['id'], APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not verify HTTP signature: ' + str(e))
+            return '', 400
+        # HTTP sig will fail if a.gup.pe or PeerTube have bounced a request, so check LD sig instead
         try:
-            request_json = request.get_json(force=True)
-        except werkzeug.exceptions.BadRequest as e:
-            activity_log.exception_message = 'Unable to parse json body: ' + e.description
-            activity_log.result = 'failure'
-            db.session.add(activity_log)
-            db.session.commit()
+            LDSignature.verify_signature(request_json, actor.public_key)
+        except VerificationError as e:
+            log_incoming_ap(request_json['id'], APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not verify LD signature: ' + str(e))
+            return '', 400
+
+    # When a user is deleted, the only way to be fairly sure they get deleted everywhere is to tell the whole fediverse.
+    # Earlier check means this is only for users that already exist, repeating it here means that http signature will have been verified
+    if request_json['type'] == 'Delete':
+        if (request_json['id'].endswith('#delete') or                                                                                       # Mastodon / PieFed
+            ('object' in request_json and isinstance(request_json['object'], str) and request_json['actor'] == request_json['object'])):    # Lemmy
+            if current_app.debug:
+                process_delete_request(request_json, store_ap_json)
+            else:
+                process_delete_request.delay(request_json, store_ap_json)
             return ''
 
-        if 'id' in request_json:
-            redis_client = get_redis_connection()
-            if redis_client.get(request_json['id']) is not None:   # Lemmy has an extremely short POST timeout and tends to retry unnecessarily. Ignore their retries.
-                activity_log.result = 'ignored'
-                activity_log.exception_message = 'Unnecessary retry attempt'
-                db.session.add(activity_log)
-                db.session.commit()
-                return ''
+    if current_app.debug:
+        process_inbox_request(request_json, store_ap_json)
+    else:
+        process_inbox_request.delay(request_json, store_ap_json)
 
-            redis_client.set(request_json['id'], 1, ex=90)  # Save the activity ID into redis, to avoid duplicate activities that Lemmy sometimes sends
-            activity_log.activity_id = request_json['id']
-            g.site = Site.query.get(1)                      # g.site is not initialized by @app.before_request when request.path == '/inbox'
-            if g.site.log_activitypub_json:
-                activity_log.activity_json = json.dumps(request_json)
-            activity_log.result = 'processing'
-            db.session.add(activity_log)
-            db.session.commit()
-
-            # When a user is deleted, the only way to be fairly sure they get deleted everywhere is to tell the whole fediverse.
-            if 'type' in request_json and request_json['type'] == 'Delete' and request_json['id'].endswith('#delete'):
-                if current_app.debug:
-                    process_delete_request(request_json, activity_log.id, ip_address())
-                else:
-                    process_delete_request.delay(request_json, activity_log.id, ip_address())
-                return ''
-            # Ignore unutilised PeerTube activity
-            if 'actor' in request_json and request_json['actor'].endswith('accounts/peertube'):
-                activity_log.result = 'ignored'
-                activity_log.exception_message = 'PeerTube View or CacheFile activity'
-                db.session.add(activity_log)
-                db.session.commit()
-                return ''
-
-        else:
-            activity_log.activity_id = ''
-            if g.site.log_activitypub_json:
-                activity_log.activity_json = json.dumps(request_json)
-            db.session.add(activity_log)
-            db.session.commit()
-
-        actor = find_actor_or_create(request_json['actor']) if 'actor' in request_json else None
-        if actor is not None:
-            try:
-                HttpSignature.verify_request(request, actor.public_key, skip_date=True)
-                if current_app.debug:
-                    process_inbox_request(request_json, activity_log.id, ip_address())
-                else:
-                    process_inbox_request.delay(request_json, activity_log.id, ip_address())
-                return ''
-            except VerificationError as e:
-                activity_log.exception_message = 'Could not verify signature: ' + str(e)
-                activity_log.result = 'failure'
-                db.session.commit()
-                return '', 400
-        else:
-            actor_name = request_json['actor'] if 'actor' in request_json else ''
-            activity_log.exception_message = f'Actor could not be found 1: {actor_name}'
-
-        if activity_log.exception_message is not None:
-            activity_log.result = 'failure'
-        db.session.commit()
     return ''
 
 
-@bp.route('/site_inbox', methods=['GET', 'POST'])
+@bp.route('/site_inbox', methods=['POST'])
 def site_inbox():
     return shared_inbox()
 
 
-@celery.task
-def process_inbox_request(request_json, activitypublog_id, ip_address):
-    with current_app.app_context():
-        activity_log = ActivityPubLog.query.get(activitypublog_id)
-        site = Site.query.get(1)    # can't use g.site because celery doesn't use Flask's g variable
-        if 'type' in request_json:
-            activity_log.activity_type = request_json['type']
-            if not instance_blocked(request_json['id']):
-                # Create is new content. Update is often an edit, but Updates from Lemmy can also be new content
-                if request_json['type'] == 'Create' or request_json['type'] == 'Update':
-                    activity_log.activity_type = 'Create'
-                    user_ap_id = request_json['object']['attributedTo'] if 'attributedTo' in request_json['object'] and isinstance(request_json['object']['attributedTo'], str) else None
-                    if user_ap_id is None:  # if there is no attributedTo, fall back to the actor on the parent object
-                        user_ap_id = request_json['actor'] if 'actor' in request_json and isinstance(request_json['actor'], str) else None
-                    if request_json['object']['type'] == 'ChatMessage':
-                        activity_log.activity_type = 'Create ChatMessage'
-                        sender = find_actor_or_create(user_ap_id)
-                        recipient_ap_id = request_json['object']['to'][0]
-                        recipient = find_actor_or_create(recipient_ap_id)
-                        if sender and recipient and recipient.is_local():
-                            if sender.created_recently() or sender.reputation <= -10:
-                                activity_log.exception_message = "Sender not eligible to send"
-                            elif recipient.has_blocked_user(sender.id) or recipient.has_blocked_instance(sender.instance_id):
-                                activity_log.exception_message = "Sender blocked by recipient"
-                            else:
-                                # Find existing conversation to add to
-                                existing_conversation = Conversation.find_existing_conversation(recipient=recipient, sender=sender)
-                                if not existing_conversation:
-                                    existing_conversation = Conversation(user_id=sender.id)
-                                    existing_conversation.members.append(recipient)
-                                    existing_conversation.members.append(sender)
-                                    db.session.add(existing_conversation)
-                                    db.session.commit()
-                                # Save ChatMessage to DB
-                                encrypted = request_json['object']['encrypted'] if 'encrypted' in request_json['object'] else None
-                                new_message = ChatMessage(sender_id=sender.id, recipient_id=recipient.id, conversation_id=existing_conversation.id,
-                                                          body=request_json['object']['source']['content'],
-                                                          body_html=markdown_to_html(request_json['object']['source']['content']),
-                                                          encrypted=encrypted)
-                                db.session.add(new_message)
-                                existing_conversation.updated_at = utcnow()
-                                db.session.commit()
+@bp.route('/u/<actor>/inbox', methods=['POST'])
+def user_inbox(actor):
+    return shared_inbox()
 
-                                # Notify recipient
-                                notify = Notification(title=shorten_string('New message from ' + sender.display_name()),
-                                                      url=f'/chat/{existing_conversation.id}#message_{new_message}', user_id=recipient.id,
-                                                      author_id=sender.id)
-                                db.session.add(notify)
-                                recipient.unread_notifications += 1
-                                existing_conversation.read = False
-                                db.session.commit()
-                                activity_log.result = 'success'
-                    else:
-                        try:
-                            community_ap_id = ''
-                            locations = ['audience', 'cc', 'to']
-                            if 'object' in request_json:
-                                rjs = [request_json, request_json['object']]
-                            else:
-                                rjs = [request_json]
-                            followers_suffix = '/followers'
-                            for rj in rjs:
-                                for location in locations:
-                                    if location in rj:
-                                        potential_id = rj[location]
-                                        if isinstance(potential_id, str):
-                                            if not potential_id.startswith('https://www.w3.org') and not potential_id.endswith(followers_suffix):
-                                                community_ap_id = potential_id
-                                        if isinstance(potential_id, list):
-                                            for c in potential_id:
-                                                if not c.startswith('https://www.w3.org') and not c.endswith(followers_suffix):
-                                                    community_ap_id = c
-                                                    break
-                                    if community_ap_id:
-                                        break
-                                if community_ap_id:
-                                    break
-                            if not community_ap_id and 'object' in request_json and \
-                                    'inReplyTo' in request_json['object'] and request_json['object']['inReplyTo'] is not None:
-                                post_being_replied_to = Post.query.filter_by(ap_id=request_json['object']['inReplyTo']).first()
-                                if post_being_replied_to:
-                                    community_ap_id = post_being_replied_to.community.ap_profile_id
-                                else:
-                                    comment_being_replied_to = PostReply.query.filter_by(ap_id=request_json['object']['inReplyTo']).first()
-                                    if comment_being_replied_to:
-                                        community_ap_id = comment_being_replied_to.community.ap_profile_id
-                            if not community_ap_id and 'object' in request_json and request_json['object']['type'] == 'Video': # PeerTube
-                                if 'attributedTo' in request_json['object'] and isinstance(request_json['object']['attributedTo'], list):
-                                    for a in request_json['object']['attributedTo']:
-                                        if a['type'] == 'Group':
-                                            community_ap_id = a['id']
-                                        if a['type'] == 'Person':
-                                            user_ap_id = a['id']
-                            if not community_ap_id:
-                                activity_log.result = 'failure'
-                                activity_log.exception_message = 'Unable to extract community'
-                                db.session.commit()
-                                return
-                        except:
-                            activity_log.activity_type = 'exception'
-                            db.session.commit()
-                            return
-                        if 'object' in request_json:
-                            if not ensure_domains_match(request_json['object']):
-                                activity_log.result = 'failure'
-                                activity_log.exception_message = 'Domains do not match'
-                                db.session.commit()
-                                return
-                        community = find_actor_or_create(community_ap_id, community_only=True)
-                        if community and community.local_only:
-                            activity_log.exception_message = 'Remote Create in local_only community'
-                            activity_log.result = 'ignored'
-                            db.session.commit()
-                            return
-                        user = find_actor_or_create(user_ap_id)
-                        if user and not user.is_local():
-                            if community:
-                                user.last_seen = community.last_active = site.last_active = utcnow()
-                            else:
-                                user.last_seen = site.last_active = utcnow()
-                            object_type = request_json['object']['type']
-                            new_content_types = ['Page', 'Article', 'Link', 'Note', 'Question']
-                            if object_type in new_content_types:  # create or update a post
-                                in_reply_to = request_json['object']['inReplyTo'] if 'inReplyTo' in request_json['object'] else None
-                                if not in_reply_to: # Creating a new post
-                                    post = Post.query.filter_by(ap_id=request_json['object']['id']).first()
-                                    if post:
-                                        if request_json['type'] == 'Create':
-                                            activity_log.result = 'ignored'
-                                            activity_log.exception_message = 'Create received for already known object'
-                                            db.session.commit()
-                                            return
-                                        else:
-                                            activity_log.activity_type = 'Update'
-                                            if can_edit(request_json['actor'], post):
-                                                update_post_from_activity(post, request_json)
-                                                announce_activity_to_followers(post.community, post.author, request_json)
-                                                activity_log.result = 'success'
-                                            else:
-                                                activity_log.exception_message = 'Edit attempt denied'
-                                    else:
-                                        if can_create_post(user, community):
-                                            try:
-                                                post = create_post(activity_log, community, request_json, user)
-                                                if post:
-                                                    announce_activity_to_followers(community, user, request_json)
-                                                    activity_log.result = 'success'
-                                            except TypeError as e:
-                                                activity_log.exception_message = 'TypeError. See log file.'
-                                                current_app.logger.error('TypeError: ' + str(request_json))
-                                                post = None
-                                        else:
-                                            post = None
-                                else:   # Creating a reply / comment
-                                    reply = PostReply.query.filter_by(ap_id=request_json['object']['id']).first()
-                                    if reply:
-                                        if request_json['type'] == 'Create':
-                                            activity_log.result = 'ignored'
-                                            activity_log.exception_message = 'Create received for already known object'
-                                            db.session.commit()
-                                            return
-                                        else:
-                                            activity_log.activity_type = 'Update'
-                                            if can_edit(request_json['actor'], reply):
-                                                update_post_reply_from_activity(reply, request_json)
-                                                announce_activity_to_followers(reply.community, reply.author, request_json)
-                                                activity_log.result = 'success'
-                                            else:
-                                                activity_log.exception_message = 'Edit attempt denied'
-                                    else:
-                                        if community is None:   # Mastodon: replies do not specify the community they're in. Attempt to find out the community by looking at the parent object
-                                            parent_post_id, parent_comment_id, _ = find_reply_parent(in_reply_to)
-                                            if parent_comment_id:
-                                                community = PostReply.query.get(parent_comment_id).community
-                                            elif parent_post_id:
-                                                community = Post.query.get(parent_post_id).community
-                                        if can_create_post_reply(user, community):
-                                            try:
-                                                post_reply = create_post_reply(activity_log, community, in_reply_to, request_json, user)
-                                                if post_reply:
-                                                    announce_activity_to_followers(community, user, request_json)
-                                            except TypeError as e:
-                                                activity_log.exception_message = 'TypeError. See log file.'
-                                                current_app.logger.error('TypeError: ' + str(request_json))
-                                                post = None
-                                        else:
-                                            post = None
-                            elif object_type == 'Video':  # PeerTube: editing a video (PT doesn't seem to Announce these)
-                                post = Post.query.filter_by(ap_id=request_json['object']['id']).first()
-                                activity_log.activity_type = 'Update'
-                                if post:
-                                    if can_edit(request_json['actor'], post):
-                                        update_post_from_activity(post, request_json)
-                                        activity_log.result = 'success'
-                                    else:
-                                        activity_log.exception_message = 'Edit attempt denied'
-                                else:
-                                    activity_log.exception_message = 'Post not found'
-                            else:
-                                activity_log.exception_message = 'Unacceptable type (create): ' + object_type
-                        else:
-                            if user is None or community is None:
-                                activity_log.exception_message = 'Blocked or unfound user or community'
-                            if user and user.is_local():
-                                activity_log.exception_message = 'Activity about local content which is already present'
-                                activity_log.result = 'ignored'
 
-                # Announce is new content and votes that happened on a remote server.
-                if request_json['type'] == 'Announce':
-                    if isinstance(request_json['object'], str):  # Mastodon, PeerTube, A.gup.pe
-                        activity_log.activity_json = json.dumps(request_json)
-                        activity_log.exception_message = 'invalid json?'
-                        if 'actor' in request_json:
-                            community = find_actor_or_create(request_json['actor'], community_only=True, create_if_not_found=False)
-                            if community:
-                                post = resolve_remote_post(request_json['object'], community.id, request_json['actor'])
-                    elif request_json['object']['type'] == 'Create' or request_json['object']['type'] == 'Update':
-                        activity_log.activity_type = request_json['object']['type']
-                        if 'object' in request_json and 'object' in request_json['object']:
-                            if not ensure_domains_match(request_json['object']['object']):
-                                activity_log.exception_message = 'Domains do not match'
-                                activity_log.result = 'failure'
-                                db.session.commit()
-                                return
-                        user_ap_id = request_json['object']['object']['attributedTo']
-                        try:
-                            community_ap_id = request_json['object']['audience'] if 'audience' in request_json['object'] else request_json['actor']
-                        except KeyError:
-                            activity_log.activity_type = 'exception'
-                            db.session.commit()
-                            return
-                        community = find_actor_or_create(community_ap_id, community_only=True)
-                        user = find_actor_or_create(user_ap_id)
-                        if (user and not user.is_local()) and community:
-                            user.last_seen = community.last_active = site.last_active = utcnow()
-                            object_type = request_json['object']['object']['type']
-                            new_content_types = ['Page', 'Article', 'Link', 'Note']
-                            if object_type in new_content_types:  # create a new post
-                                in_reply_to = request_json['object']['object']['inReplyTo'] if 'inReplyTo' in \
-                                                                                               request_json['object']['object'] else None
-                                if not in_reply_to:
-                                    post = Post.query.filter_by(ap_id=request_json['object']['object']['id']).first()
-                                    if post:
-                                        if request_json['object']['type'] == 'Create':
-                                            activity_log.result = 'ignored'
-                                            activity_log.exception_message = 'Create received for already known object'
-                                            db.session.commit()
-                                            return
-                                        else:
-                                            try:
-                                                update_post_from_activity(post, request_json['object'])
-                                            except KeyError:
-                                                activity_log.result = 'exception'
-                                                db.session.commit()
-                                                return
-                                            activity_log.result = 'success'
-                                    else: # activity was a Create, or an Update sent instead of a Create
-                                        if can_create_post(user, community):
-                                            post = create_post(activity_log, community, request_json['object'], user, announce_id=request_json['id'])
-                                        else:
-                                            post = None
-                                else:
-                                    reply = PostReply.query.filter_by(ap_id=request_json['object']['object']['id']).first()
-                                    if reply:
-                                        if request_json['object']['type'] == 'Create':
-                                            activity_log.result = 'ignored'
-                                            activity_log.exception_message = 'Create received for already known object'
-                                            db.session.commit()
-                                            return
-                                        else:
-                                            try:
-                                                update_post_reply_from_activity(reply, request_json['object'])
-                                            except KeyError:
-                                                activity_log.result = 'exception'
-                                                db.session.commit()
-                                                return
-                                            activity_log.result = 'success'
-                                    else: # activity was a Create, or an Update sent instead of a Create
-                                        if can_create_post_reply(user, community):
-                                            post = create_post_reply(activity_log, community, in_reply_to, request_json['object'], user, announce_id=request_json['id'])
-                                        else:
-                                            post = None
-                            else:
-                                activity_log.exception_message = 'Unacceptable type: ' + object_type
-                        else:
-                            if user is None or community is None:
-                                activity_log.exception_message = 'Blocked or unfound user or community'
-                            if user and user.is_local():
-                                activity_log.exception_message = 'Activity about local content which is already present'
-                                activity_log.result = 'ignored'
+@bp.route('/c/<actor>/inbox', methods=['POST'])
+def community_inbox(actor):
+    return shared_inbox()
 
-                    elif request_json['object']['type'] == 'Like' or request_json['object']['type'] == 'EmojiReact':
-                        activity_log.activity_type = request_json['object']['type']
-                        user_ap_id = request_json['object']['actor']
-                        liked_ap_id = request_json['object']['object']
-                        user = find_actor_or_create(user_ap_id)
-                        liked = find_liked_object(liked_ap_id)
 
-                        if user is None:
-                            activity_log.exception_message = 'Blocked or unfound user'
-                        elif liked is None:
-                            activity_log.exception_message = 'Unfound object ' + liked_ap_id
-                        elif user.is_local():
-                            activity_log.exception_message = 'Activity about local content which is already present'
-                            activity_log.result = 'ignored'
-                        elif can_upvote(user, liked.community):
-                            # insert into voted table
-                            if liked is None:
-                                activity_log.exception_message = 'Liked object not found'
-                            elif liked is not None and isinstance(liked, (Post, PostReply)):
-                                liked.vote(user, 'upvote')
-                                activity_log.result = 'success'
-                            else:
-                                activity_log.exception_message = 'Could not detect type of like'
-                        else:
-                            activity_log.exception_message = 'Cannot upvote this'
-                            activity_log.result = 'ignored'
+def replay_inbox_request(request_json):
+    if not 'id' in request_json or not 'type' in request_json or not 'actor' in request_json or not 'object' in request_json:
+        log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, request_json, 'REPLAY: Missing minimum expected fields in JSON')
+        return
 
-                    elif request_json['object']['type'] == 'Dislike':
-                        activity_log.activity_type = request_json['object']['type']
-                        if site.enable_downvotes is False:
-                            activity_log.exception_message = 'Dislike ignored because of allow_dislike setting'
-                        else:
-                            user_ap_id = request_json['object']['actor']
-                            liked_ap_id = request_json['object']['object']
-                            user = find_actor_or_create(user_ap_id)
-                            disliked = find_liked_object(liked_ap_id)
-                            if user is None:
-                                activity_log.exception_message = 'Blocked or unfound user'
-                            elif disliked is None:
-                                activity_log.exception_message = 'Unfound object ' + liked_ap_id
-                            elif user.is_local():
-                                activity_log.exception_message = 'Activity about local content which is already present'
-                                activity_log.result = 'ignored'
-                            elif can_downvote(user, disliked.community, site):
-                                # insert into voted table
-                                if disliked is None:
-                                    activity_log.exception_message = 'Liked object not found'
-                                elif isinstance(disliked, (Post, PostReply)):
-                                    disliked.vote(user, 'downvote')
-                                    activity_log.result = 'success'
-                                    # todo: recalculate 'hotness' of liked post/reply
-                                else:
-                                    activity_log.exception_message = 'Could not detect type of like'
-                            else:
-                                activity_log.exception_message = 'Cannot downvote this'
-                                activity_log.result = 'ignored'
-                    elif request_json['object']['type'] == 'Delete':
-                        activity_log.activity_type = request_json['object']['type']
-                        user_ap_id = request_json['object']['actor']
-                        to_be_deleted_ap_id = request_json['object']['object']
-                        if isinstance(to_be_deleted_ap_id, dict):
-                            activity_log.result = 'failure'
-                            activity_log.exception_message = 'dict instead of string ' + str(to_be_deleted_ap_id)
-                        else:
-                            delete_post_or_comment(user_ap_id, to_be_deleted_ap_id, activity_log.id)
-                    elif request_json['object']['type'] == 'Page': # Sent for Mastodon's benefit
-                        activity_log.result = 'ignored'
-                        activity_log.exception_message = 'Intended for Mastodon'
-                    elif request_json['object']['type'] == 'Note':  # Never sent?
-                        activity_log.result = 'ignored'
-                        activity_log.exception_message = 'Intended for Mastodon'
-                    elif request_json['object']['type'] == 'Undo':
-                        if request_json['object']['object']['type'] == 'Like' or request_json['object']['object']['type'] == 'Dislike':
-                            activity_log.activity_type = request_json['object']['object']['type']
-                            user_ap_id = request_json['object']['actor']
-                            user = find_actor_or_create(user_ap_id)
-                            post = None
-                            comment = None
-                            target_ap_id = request_json['object']['object']['object']           # object object object!
-                            post = undo_vote(activity_log, comment, post, target_ap_id, user)
-                        elif request_json['object']['object']['type'] == 'Delete':
-                            if 'object' in request_json and 'object' in request_json['object']:
-                                restore_post_or_comment(request_json['object']['object'], activity_log.id)
-                        elif request_json['object']['object']['type'] == 'Block':
-                            activity_log.activity_type = 'Undo User Ban'
-                            deletor_ap_id = request_json['object']['object']['actor']
-                            user_ap_id = request_json['object']['object']['object']
-                            target = request_json['object']['object']['target']
-                            if target == request_json['actor'] and user_ap_id.startswith('https://' + current_app.config['SERVER_NAME']):
-                                unban_local_user(deletor_ap_id, user_ap_id, target)
-                            activity_log.result = 'success'
-                        elif request_json['object']['object']['type'] == 'Lock' and 'object' in request_json['object']['object']:
-                            activity_log.activity_type = 'Post Unlock'
-                            mod_ap_id = request_json['object']['object']['actor']
-                            post_id = request_json['object']['object']['object']
-                            lock_post(mod_ap_id, post_id, True)
-                            activity_log.result = 'success'
-                    elif request_json['object']['type'] == 'Add' and 'target' in request_json['object']:
-                        activity_log.activity_type = request_json['object']['type']
-                        target = request_json['object']['target']
-                        community = Community.query.filter_by(ap_public_url=request_json['actor']).first()
-                        if community:
-                            featured_url = community.ap_featured_url
-                            moderators_url = community.ap_moderators_url
-                            if target == featured_url:
-                                post = Post.query.filter_by(ap_id=request_json['object']['object']).first()
-                                if post:
-                                    post.sticky = True
-                                    activity_log.result = 'success'
-                            if target == moderators_url:
-                                user = find_actor_or_create(request_json['object']['object'])
-                                if user:
-                                    existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=user.id).first()
-                                    if existing_membership:
-                                        existing_membership.is_moderator = True
-                                    else:
-                                        new_membership = CommunityMember(community_id=community.id, user_id=user.id, is_moderator=True)
-                                        db.session.add(new_membership)
-                                        db.session.commit()
-                                    activity_log.result = 'success'
-                    elif request_json['object']['type'] == 'Remove' and 'target' in request_json['object']:
-                        activity_log.activity_type = request_json['object']['type']
-                        target = request_json['object']['target']
-                        community = Community.query.filter_by(ap_public_url=request_json['actor']).first()
-                        if community:
-                            featured_url = community.ap_featured_url
-                            moderators_url = community.ap_moderators_url
-                            if target == featured_url:
-                                post = Post.query.filter_by(ap_id=request_json['object']['object']).first()
-                                if post:
-                                    post.sticky = False
-                                    activity_log.result = 'success'
-                            if target == moderators_url:
-                                user = find_actor_or_create(request_json['object']['object'], create_if_not_found=False)
-                                if user:
-                                    existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=user.id).first()
-                                    if existing_membership:
-                                        existing_membership.is_moderator = False
-                                    activity_log.result = 'success'
-                    elif request_json['object']['type'] == 'Block' and 'target' in request_json['object']:
-                        activity_log.activity_type = 'User Ban'
-                        deletor_ap_id = request_json['object']['actor']
-                        user_ap_id = request_json['object']['object']
-                        target = request_json['object']['target']
-                        remove_data = request_json['object']['removeData']
-                        if target == request_json['actor']:
-                            if remove_data == True:
-                                remove_data_from_banned_user(deletor_ap_id, user_ap_id, target)
-                            if user_ap_id.startswith('https://' + current_app.config['SERVER_NAME']):
-                                ban_local_user(deletor_ap_id, user_ap_id, target, request_json['object'])
-                        activity_log.result = 'success'
-                    elif request_json['object']['type'] == 'Lock' and 'object' in request_json['object']:
-                        activity_log.activity_type = 'Post Lock'
-                        mod_ap_id = request_json['object']['actor']
-                        post_id = request_json['object']['object']
-                        lock_post(mod_ap_id, post_id, False)
-                        activity_log.result = 'success'
-                    else:
-                        activity_log.exception_message = 'Invalid type for Announce'
-
-                        # Follow: remote user wants to join/follow one of our communities
-                elif request_json['type'] == 'Follow':  # Follow is when someone wants to join a community
-                    user_ap_id = request_json['actor']
-                    community_ap_id = request_json['object']
-                    follow_id = request_json['id']
-                    user = find_actor_or_create(user_ap_id)
-                    community = find_actor_or_create(community_ap_id, community_only=True)
-                    if isinstance(community, Community):
-                        if community and community.local_only and user:
-                            activity_log.exception_message = 'Local only cannot be followed by remote users'
-
-                            # send reject message to deny the follow
-                            reject = {
-                                "@context": default_context(),
-                                "actor": community.public_url(),
-                                "to": [
-                                    user.public_url()
-                                ],
-                                "object": {
-                                    "actor": user.public_url(),
-                                    "to": None,
-                                    "object": community.public_url(),
-                                    "type": "Follow",
-                                    "id": follow_id
-                                },
-                                    "type": "Reject",
-                                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/reject/" + gibberish(32)
-                            }
-                            # Lemmy doesn't yet understand Reject/Follow, so send without worrying about response for now.
-                            post_request(user.ap_inbox_url, reject, community.private_key, f"{community.public_url()}#main-key")
-                        else:
-                            if user is not None and community is not None:
-                                # check if user is banned from this community
-                                banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
-                                if banned is None:
-                                    user.last_seen = utcnow()
-                                    if community_membership(user, community) != SUBSCRIPTION_MEMBER:
-                                        member = CommunityMember(user_id=user.id, community_id=community.id)
-                                        db.session.add(member)
-                                        db.session.commit()
-                                        cache.delete_memoized(community_membership, user, community)
-                                    # send accept message to acknowledge the follow
-                                    accept = {
-                                        "@context": default_context(),
-                                        "actor": community.public_url(),
-                                        "to": [
-                                            user.public_url()
-                                        ],
-                                        "object": {
-                                            "actor": user.public_url(),
-                                            "to": None,
-                                            "object": community.public_url(),
-                                            "type": "Follow",
-                                            "id": follow_id
-                                        },
-                                        "type": "Accept",
-                                        "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)
-                                    }
-                                    if post_request(user.ap_inbox_url, accept, community.private_key, f"{community.public_url()}#main-key") is True:
-                                        activity_log.result = 'success'
-                                    else:
-                                        activity_log.exception_message = 'Error sending Accept'
-                                else:
-                                    activity_log.exception_message = 'user is banned from this community'
-                    elif isinstance(community, User):   # Pixelfed sends follow requests to the shared inbox, not the user inbox...
-                        if current_app.debug:
-                            process_user_follow_request(request_json, activity_log.id, user.id)
-                        else:
-                            process_user_follow_request.delay(request_json, activity_log.id, user.id)
-                # Accept: remote server is accepting our previous follow request
-                elif request_json['type'] == 'Accept':
-                    if isinstance(request_json['object'], str): # a.gup.pe accepts using a string with the ID of the follow request
-                        join_request_parts = request_json['object'].split('/')
-                        join_request = CommunityJoinRequest.query.get(join_request_parts[-1])
-                        existing_membership = CommunityMember.query.filter_by(user_id=join_request.user_id,
-                                                                              community_id=join_request.community_id).first()
-                        if not existing_membership:
-                            member = CommunityMember(user_id=join_request.user_id, community_id=join_request.community_id)
-                            db.session.add(member)
-                            community.subscriptions_count += 1
-                            db.session.commit()
-                            cache.delete_memoized(community_membership, User.query.get(join_request.user_id), Community.query.get(join_request.community_id))
-                        activity_log.result = 'success'
-                    elif request_json['object']['type'] == 'Follow':
-                        community_ap_id = request_json['actor']
-                        user_ap_id = request_json['object']['actor']
-                        user = find_actor_or_create(user_ap_id)
-                        community = find_actor_or_create(community_ap_id, community_only=True)
-                        if user and community:
-                            join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
-                            if join_request:
-                                existing_membership = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
-                                if not existing_membership:
-                                    member = CommunityMember(user_id=user.id, community_id=community.id)
-                                    db.session.add(member)
-                                    community.subscriptions_count += 1
-                                    db.session.commit()
-                                activity_log.result = 'success'
-                                cache.delete_memoized(community_membership, user, community)
-
-                elif request_json['type'] == 'Undo':
-                    if request_json['object']['type'] == 'Follow':  # Unsubscribe from a community
-                        community_ap_id = request_json['object']['object']
-                        user_ap_id = request_json['object']['actor']
-                        user = find_actor_or_create(user_ap_id)
-                        community = find_actor_or_create(community_ap_id, community_only=True)
-                        if user and community:
-                            user.last_seen = utcnow()
-                            member = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
-                            join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
-                            if member:
-                                db.session.delete(member)
-                                community.subscriptions_count -= 1
-                            if join_request:
-                                db.session.delete(join_request)
-                            db.session.commit()
-                            cache.delete_memoized(community_membership, user, community)
-                            activity_log.result = 'success'
-                    elif request_json['object']['type'] == 'Like':  # Undoing an upvote or downvote
-                        activity_log.activity_type = request_json['object']['type']
-                        user_ap_id = request_json['actor']
-                        user = find_actor_or_create(user_ap_id)
-                        post = None
-                        comment = None
-                        target_ap_id = request_json['object']['object']
-                        post_or_comment = undo_vote(activity_log, comment, post, target_ap_id, user)
-                        if post_or_comment:
-                            announce_activity_to_followers(post_or_comment.community, user, request_json)
-                        activity_log.result = 'success'
-                    elif request_json['object']['type'] == 'Dislike':  # Undoing a downvote - probably unused
-                        activity_log.activity_type = request_json['object']['type']
-                        user_ap_id = request_json['actor']
-                        user = find_actor_or_create(user_ap_id)
-                        post = None
-                        comment = None
-                        target_ap_id = request_json['object']['object']
-                        post_or_comment = undo_downvote(activity_log, comment, post, target_ap_id, user)
-                        if post_or_comment:
-                            announce_activity_to_followers(post_or_comment.community, user, request_json)
-                        activity_log.result = 'success'
-                    elif request_json['object']['type'] == 'Block':  # Undoing a ban
-                        activity_log.activity_type = 'Undo User Ban'
-                        deletor_ap_id = request_json['object']['actor']
-                        user_ap_id = request_json['object']['object']
-                        target = request_json['object']['target']
-                        if user_ap_id.startswith('https://' + current_app.config['SERVER_NAME']):
-                            unban_local_user(deletor_ap_id, user_ap_id, target)
-                        activity_log.result = 'success'
-                    elif request_json['object']['type'] == 'Delete':    # undoing a delete
-                        activity_log.activity_type = 'Restore'
-                        post = Post.query.filter_by(ap_id=request_json['object']['object']).first()
-                        if post:
-                            deletor = find_actor_or_create(request_json['object']['actor'], create_if_not_found=False)
-                            if deletor:
-                                if post.author.id == deletor.id or post.community.is_moderator(deletor) or post.community.is_instance_admin(deletor):
-                                    post.deleted = False
-                                    post.deleted_by = None
-                                    post.author.post_count += 1
-                                    post.community.post_count += 1
-                                    announce_activity_to_followers(post.community, post.author, request_json)
-                                    db.session.commit()
-                                    activity_log.result = 'success'
-                                else:
-                                    activity_log.exception_message = 'Restore attempt denied'
-                            else:
-                                activity_log.exception_message = 'Restorer did not already exist'
-                        else:
-                            reply = PostReply.query.filter_by(ap_id=request_json['object']['object']).first()
-                            if reply:
-                                deletor = find_actor_or_create(request_json['object']['actor'], create_if_not_found=False)
-                                if deletor:
-                                    if reply.author.id == deletor.id or reply.community.is_moderator(deletor) or reply.community.is_instance_admin(deletor):
-                                        reply.deleted = False
-                                        reply.deleted_by = None
-                                        if not reply.author.bot:
-                                            reply.post.reply_count += 1
-                                        reply.author.post_reply_count += 1
-                                        announce_activity_to_followers(reply.community, reply.author, request_json)
-                                        db.session.commit()
-                                        activity_log.result = 'success'
-                                    else:
-                                        activity_log.exception_message = 'Restore attempt denied'
-                                else:
-                                    activity_log.exception_message = 'Restorer did not already exist'
-                            else:
-                                activity_log.exception_message = 'Object not found, or object was not a post or a reply'
-                elif request_json['type'] == 'Delete':
-                    if isinstance(request_json['object'], str):
-                        ap_id = request_json['object']  # lemmy
-                    else:
-                        ap_id = request_json['object']['id']  # kbin
-                    post = Post.query.filter_by(ap_id=ap_id).first()
-                    # Delete post
-                    if post:
-                        deletor = find_actor_or_create(request_json['actor'], create_if_not_found=False)
-                        if deletor:
-                            if post.author.id == deletor.id or post.community.is_moderator(deletor) or post.community.is_instance_admin(deletor):
-                                post.deleted = True
-                                post.delted_by = deletor.id
-                                post.author.post_count -= 1
-                                post.community.post_count -= 1
-                                if post.url and post.cross_posts is not None:
-                                    old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
-                                    post.cross_posts.clear()
-                                    for ocp in old_cross_posts:
-                                        if ocp.cross_posts is not None:
-                                            ocp.cross_posts.remove(post.id)
-                                announce_activity_to_followers(post.community, post.author, request_json)
-                                db.session.commit()
-                                activity_log.result = 'success'
-                            else:
-                                activity_log.exception_message = 'Delete attempt denied'
-                        else:
-                            activity_log.exception_message = 'Deletor did not already exist'
-                    else:
-                        # Delete PostReply
-                        reply = PostReply.query.filter_by(ap_id=ap_id).first()
-                        if reply:
-                            deletor = find_actor_or_create(request_json['actor'], create_if_not_found=False)
-                            if deletor:
-                                if reply.author.id == deletor.id or reply.community.is_moderator(deletor) or reply.community.is_instance_admin(deletor):
-                                    reply.deleted = True
-                                    reply.deleted_by = deletor.id
-                                    if not reply.author.bot:
-                                        reply.post.reply_count -= 1
-                                    reply.author.post_reply_count -= 1
-                                    announce_activity_to_followers(reply.community, reply.author, request_json)
-                                    db.session.commit()
-                                    activity_log.result = 'success'
-                                else:
-                                    activity_log.exception_message = 'Delete attempt denied'
-                            else:
-                                activity_log.exception_message = 'Deletor did not already exist'
-                        else:
-                            # Delete User
-                            user = find_actor_or_create(ap_id, create_if_not_found=False)
-                            if user:
-                                user.deleted = True
-                                user.delete_dependencies()
-                                db.session.commit()
-                                activity_log.result = 'success'
-                            else:
-                                activity_log.exception_message = 'Delete: cannot find ' + ap_id
-
-                elif request_json['type'] == 'Like' or request_json['type'] == 'EmojiReact':  # Upvote
-                    activity_log.activity_type = request_json['type']
-                    user_ap_id = request_json['actor']
-                    user = find_actor_or_create(user_ap_id)
-                    liked = find_liked_object(request_json['object'])
-                    if user is None:
-                        activity_log.exception_message = 'Blocked or unfound user'
-                    elif liked is None:
-                        activity_log.exception_message = 'Unfound object ' + request_json['object']
-                    elif user.is_local():
-                        activity_log.exception_message = 'Activity about local content which is already present'
-                        activity_log.result = 'ignored'
-                    elif can_upvote(user, liked.community):
-                        # insert into voted table
-                        if liked is None:
-                            activity_log.exception_message = 'Liked object not found'
-                        elif liked is not None and isinstance(liked, (Post, PostReply)):
-                            liked.vote(user, 'upvote')
-                            activity_log.result = 'success'
-                        else:
-                            activity_log.exception_message = 'Could not detect type of like'
-                        if activity_log.result == 'success':
-                            announce_activity_to_followers(liked.community, user, request_json)
-                    else:
-                        activity_log.exception_message = 'Cannot upvote this'
-                        activity_log.result = 'ignored'
-                elif request_json['type'] == 'Dislike':  # Downvote
-                    if get_setting('allow_dislike', True) is False:
-                        activity_log.exception_message = 'Dislike ignored because of allow_dislike setting'
-                    else:
-                        activity_log.activity_type = request_json['type']
-                        user_ap_id = request_json['actor']
-                        user = find_actor_or_create(user_ap_id)
-                        target_ap_id = request_json['object']
-                        disliked = find_liked_object(target_ap_id)
-                        if user is None:
-                            activity_log.exception_message = 'Blocked or unfound user'
-                        elif disliked is None:
-                            activity_log.exception_message = 'Unfound object' + target_ap_id
-                        elif user.is_local():
-                            activity_log.exception_message = 'Activity about local content which is already present'
-                            activity_log.result = 'ignored'
-                        elif can_downvote(user, disliked.community, site):
-                            # insert into voted table
-                            if disliked is None:
-                                activity_log.exception_message = 'Liked object not found'
-                            elif isinstance(disliked, (Post, PostReply)):
-                                disliked.vote(user, 'downvote')
-                                activity_log.result = 'success'
-                            else:
-                                activity_log.exception_message = 'Could not detect type of like'
-                            if activity_log.result == 'success':
-                                announce_activity_to_followers(disliked.community, user, request_json)
-                        else:
-                            activity_log.exception_message = 'Cannot downvote this'
-                            activity_log.result = 'ignored'
-                elif request_json['type'] == 'Flag':    # Reported content
-                    activity_log.activity_type = 'Report'
-                    user_ap_id = request_json['actor']
-                    user = find_actor_or_create(user_ap_id)
-                    target_ap_id = request_json['object']
-                    reported = find_reported_object(target_ap_id)
-                    if user and reported:
-                        process_report(user, reported, request_json, activity_log)
-                        announce_activity_to_followers(reported.community, user, request_json)
-                        activity_log.result = 'success'
-                    else:
-                        activity_log.exception_message = 'Report ignored due to missing user or content'
-                elif request_json['type'] == 'Block':
-                    activity_log.activity_type = 'User Ban'
-                    deletor_ap_id = request_json['actor']
-                    user_ap_id = request_json['object']
-                    target = request_json['target']
-                    remove_data = request_json['removeData']
-                    if remove_data == True:
-                        remove_data_from_banned_user(deletor_ap_id, user_ap_id, target)
-                    if user_ap_id.startswith('https://' + current_app.config['SERVER_NAME']):
-                        ban_local_user(deletor_ap_id, user_ap_id, target, request_json)
-                    activity_log.result = 'success'
-
-                    # Flush the caches of any major object that was created. To be sure.
-                if 'user' in vars() and user is not None:
-                    if user.instance_id and user.instance_id != 1:
-                        user.instance.last_seen = utcnow()
-                        # user.instance.ip_address = ip_address
-                        user.instance.dormant = False
-                        user.instance.gone_forever = False
-                        user.instance.failures = 0
+    id = request_json['id']
+    if request_json['type'] == 'Announce' and isinstance(request_json['object'], dict):
+        object = request_json['object']
+        if not 'id' in object or not 'type' in object or not 'actor' in object or not 'object' in object:
+            if object['type'] == 'Page':
+                log_incoming_ap(request_json['id'], APLOG_ANNOUNCE, APLOG_IGNORED, request_json, 'REPLAY: Intended for Mastodon')
+            elif object['type'] == 'Note':          # Lemmy has Announced Note out from Mastodon, but will also announce Create/Note
+                log_incoming_ap(request_json['id'], APLOG_ANNOUNCE, APLOG_IGNORED, request_json, 'REPLAY: Intended for Mastodon')
             else:
-                activity_log.exception_message = 'Instance blocked'
+                log_incoming_ap(request_json['id'], APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'REPLAY: Missing minimum expected fields in JSON Announce object')
+            return
 
-            if activity_log.exception_message is not None and activity_log.result == 'processing':
-                activity_log.result = 'failure'
-            # Don't log successful json - save space
-            if site.log_activitypub_json and activity_log.result == 'success' and not current_app.debug:
-                activity_log.activity_json = ''
+        actor = User.query.filter_by(ap_profile_id=object['actor'].lower()).first()
+        if actor and actor.is_local():
+            log_incoming_ap(object['id'], APLOG_DUPLICATE, APLOG_IGNORED, request_json, 'REPLAY: Activity about local content which is already present')
+
+    # Ignore unutilised PeerTube activity
+    if request_json['actor'].endswith('accounts/peertube'):
+        log_incoming_ap(request_json['id'], APLOG_PT_VIEW, APLOG_IGNORED, request_json, 'REPLAY: PeerTube View or CacheFile activity')
+        return
+
+    # Ignore delete requests from uses that do not already exist here
+    if request_json['type'] == 'Delete':
+        if (request_json['id'].endswith('#delete') or                                                                                       # Mastodon / PieFed
+            ('object' in request_json and isinstance(request_json['object'], str) and request_json['actor'] == request_json['object'])):    # Lemmy
+            actor = User.query.filter_by(ap_profile_id=request_json['actor'].lower()).first()
+            if not actor:
+                log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_IGNORED, request_json, 'REPLAY: Does not exist here')
+                return
+
+    actor = find_actor_or_create(request_json['actor'])
+    if not actor:
+        actor_name = request_json['actor']
+        log_incoming_ap(request_json['id'], APLOG_NOTYPE, APLOG_FAILURE, request_json, f'REPLAY: Actor could not be found 1: {actor_name}')
+        return
+
+    if actor.is_local():        # should be impossible (can be Announced back, but not sent back without access to privkey)
+        log_incoming_ap(request_json['id'], APLOG_NOTYPE, APLOG_FAILURE, request_json, 'REPLAY: ActivityPub activity from a local actor')
+        return
+
+    # When a user is deleted, the only way to be fairly sure they get deleted everywhere is to tell the whole fediverse.
+    # Earlier check means this is only for users that already exist, repeating it here means that http signature will have been verified
+    if request_json['type'] == 'Delete':
+        if (request_json['id'].endswith('#delete') or                                                                                       # Mastodon / PieFed
+            ('object' in request_json and isinstance(request_json['object'], str) and request_json['actor'] == request_json['object'])):    # Lemmy
+            process_delete_request(request_json, True)
+            return
+
+    process_inbox_request(request_json, True)
+
+    return
+
+
+@celery.task
+def process_inbox_request(request_json, store_ap_json):
+    with current_app.app_context():
+        site = Site.query.get(1)    # can't use g.site because celery doesn't use Flask's g variable
+
+        # For an Announce, Accept, or Reject, we have the community, and need to find the user
+        # For everything else, we have the user, and need to find the community
+        # Benefits of always using request_json['actor']:
+        #   It's the actor who signed the request, and whose signature has been verified
+        #   Because of the earlier check, we know that they already exist, and so don't need to check again
+        #   Using actors from inner objects has a vulnerability to spoofing attacks (e.g. if 'attributedTo' doesn't match the 'Create' actor)
+
+        if request_json['type'] == 'Announce' or request_json['type'] == 'Accept' or request_json['type'] == 'Reject':
+            community_ap_id = request_json['actor']
+            community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False)
+            if not community or not isinstance(community, Community):
+                log_incoming_ap(announce_id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'Actor was not a community')
+                return
+            user_ap_id = None               # found in 'if request_json['type'] == 'Announce', or it's a local user (for 'Accept'/'Reject')
+        else:
+            user_ap_id = request_json['actor']
+            user = find_actor_or_create(user_ap_id, create_if_not_found=False)
+            if not user or not isinstance(user, User):
+                log_incoming_ap(announce_id, APLOG_NOTYPE, APLOG_FAILURE, request_json, 'Actor was not a user')
+                return
+            user.last_seen = site.last_active = utcnow()
+            db.session.commit()
+            community = None                # found as needed
+
+        # Follow: remote user wants to join/follow one of our users or communities
+        if request_json['type'] == 'Follow':
+            target_ap_id = request_json['object']
+            follow_id = request_json['id']
+            target = find_actor_or_create(target_ap_id, create_if_not_found=False)
+            if not target:
+                log_incoming_ap(request_json['id'], APLOG_FOLLOW, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not find target of Follow')
+                return
+            if isinstance(target, Community):
+                community = target
+                reject_follow = False
+                if community.local_only:
+                    log_incoming_ap(request_json['id'], APLOG_FOLLOW, APLOG_FAILURE, request_json if store_ap_json else None, 'Local only cannot be followed by remote users')
+                    reject_follow = True
+                else:
+                    # check if user is banned from this community
+                    user_banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
+                    if user_banned:
+                        log_incoming_ap(request_json['id'], APLOG_FOLLOW, APLOG_FAILURE, request_json if store_ap_json else None, 'Remote user has been banned')
+                        reject_follow = True
+                if reject_follow:
+                    # send reject message to deny the follow
+                    reject = {"@context": default_context(), "actor": community.public_url(), "to": [user.public_url()],
+                              "object": {"actor": user.public_url(), "to": None, "object": community.public_url(), "type": "Follow", "id": follow_id},
+                              "type": "Reject", "id": f"https://{current_app.config['SERVER_NAME']}/activities/reject/" + gibberish(32)}
+                    post_request(user.ap_inbox_url, reject, community.private_key, f"{community.public_url()}#main-key")
+                else:
+                    if community_membership(user, community) != SUBSCRIPTION_MEMBER:
+                        member = CommunityMember(user_id=user.id, community_id=community.id)
+                        db.session.add(member)
+                        db.session.commit()
+                        cache.delete_memoized(community_membership, user, community)
+                        # send accept message to acknowledge the follow
+                        accept = {"@context": default_context(), "actor": community.public_url(), "to": [user.public_url()],
+                                  "object": {"actor": user.public_url(), "to": None, "object": community.public_url(), "type": "Follow", "id": follow_id},
+                                  "type": "Accept", "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)}
+                        post_request(user.ap_inbox_url, accept, community.private_key, f"{community.public_url()}#main-key")
+                        log_incoming_ap(request_json['id'], APLOG_FOLLOW, APLOG_SUCCESS, request_json if store_ap_json else None)
+                return
+            elif isinstance(target, User):
+                local_user = target
+                remote_user = user
+                if not local_user.is_local():
+                    log_incoming_ap(request_json['id'], APLOG_FOLLOW, APLOG_FAILURE, request_json if store_ap_json else None, 'Follow request for remote user received')
+                    return
+                existing_follower = UserFollower.query.filter_by(local_user_id=local_user.id, remote_user_id=remote_user.id).first()
+                if not existing_follower:
+                    auto_accept = not local_user.ap_manually_approves_followers
+                    new_follower = UserFollower(local_user_id=local_user.id, remote_user_id=remote_user.id, is_accepted=auto_accept)
+                    if not local_user.ap_followers_url:
+                        local_user.ap_followers_url = local_user.public_url() + '/followers'
+                    db.session.add(new_follower)
+                    db.session.commit()
+                    accept = {"@context": default_context(), "actor": local_user.public_url(), "to": [remote_user.public_url()],
+                              "object": {"actor": remote_user.public_url(), "to": None, "object": local_user.public_url(), "type": "Follow", "id": follow_id},
+                              "type": "Accept", "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)}
+                    post_request(remote_user.ap_inbox_url, accept, local_user.private_key, f"{local_user.public_url()}#main-key")
+                    log_incoming_ap(request_json['id'], APLOG_FOLLOW, APLOG_SUCCESS, request_json if store_ap_json else None)
+            return
+
+        # Accept: remote server is accepting our previous follow request
+        if request_json['type'] == 'Accept':
+            user = None
+            if isinstance(request_json['object'], str): # a.gup.pe accepts using a string with the ID of the follow request
+                join_request_parts = request_json['object'].split('/')
+                join_request = CommunityJoinRequest.query.get(join_request_parts[-1])
+                if join_request:
+                    user = User.query.get(join_request.user_id)
+            elif request_json['object']['type'] == 'Follow':
+                user_ap_id = request_json['object']['actor']
+                user = find_actor_or_create(user_ap_id, create_if_not_found=False)
+            if not user:
+                log_incoming_ap(request_json['id'], APLOG_ACCEPT, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not find recipient of Accept')
+                return
+            join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
+            if join_request:
+                existing_membership = CommunityMember.query.filter_by(user_id=join_request.user_id, community_id=join_request.community_id).first()
+                if not existing_membership:
+                    member = CommunityMember(user_id=join_request.user_id, community_id=join_request.community_id)
+                    db.session.add(member)
+                    community.subscriptions_count += 1
+                    db.session.commit()
+                    cache.delete_memoized(community_membership, user, community)
+                log_incoming_ap(request_json['id'], APLOG_ACCEPT, APLOG_SUCCESS, request_json if store_ap_json else None)
+            return
+
+        # Reject: remote server is rejecting our previous follow request
+        if request_json['type'] == 'Reject':
+            if request_json['object']['type'] == 'Follow':
+                user_ap_id = request_json['object']['actor']
+                user = find_actor_or_create(user_ap_id, create_if_not_found=False)
+                if not user:
+                    log_incoming_ap(request_json['id'], APLOG_ACCEPT, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not find recipient of Reject')
+                    return
+                join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
+                if join_request:
+                    db.session.delete(join_request)
+                existing_membership = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
+                if existing_membership:
+                    db.session.delete(existing_membership)
+                    cache.delete_memoized(community_membership, user, community)
+                db.session.commit()
+                log_incoming_ap(request_json['id'], APLOG_ACCEPT, APLOG_SUCCESS, request_json if store_ap_json else None)
+            return
+
+        # Create is new content. Update is often an edit, but Updates from Lemmy can also be new content
+        if request_json['type'] == 'Create' or request_json['type'] == 'Update':
+            if request_json['object']['type'] == 'ChatMessage':
+                sender = user
+                recipient_ap_id = request_json['object']['to'][0]
+                recipient = find_actor_or_create(recipient_ap_id, create_if_not_found=False)
+                if recipient and recipient.is_local():
+                    if sender.created_recently() or sender.reputation <= -10:
+                        log_incoming_ap(request_json['id'], APLOG_CHATMESSAGE, APLOG_FAILURE, request_json if store_ap_json else None, 'Sender not eligible to send')
+                        return
+                    elif recipient.has_blocked_user(sender.id) or recipient.has_blocked_instance(sender.instance_id):
+                        log_incoming_ap(request_json['id'], APLOG_CHATMESSAGE, APLOG_FAILURE, request_json if store_ap_json else None, 'Sender blocked by recipient')
+                        return
+                    else:
+                        # Find existing conversation to add to
+                        existing_conversation = Conversation.find_existing_conversation(recipient=recipient, sender=sender)
+                        if not existing_conversation:
+                            existing_conversation = Conversation(user_id=sender.id)
+                            existing_conversation.members.append(recipient)
+                            existing_conversation.members.append(sender)
+                            db.session.add(existing_conversation)
+                            db.session.commit()
+                        # Save ChatMessage to DB
+                        encrypted = request_json['object']['encrypted'] if 'encrypted' in request_json['object'] else None
+                        new_message = ChatMessage(sender_id=sender.id, recipient_id=recipient.id, conversation_id=existing_conversation.id,
+                                                  body_html=request_json['object']['content'],
+                                                  body=html_to_text(request_json['object']['content']),
+                                                  encrypted=encrypted)
+                        db.session.add(new_message)
+                        existing_conversation.updated_at = utcnow()
+                        db.session.commit()
+
+                        # Notify recipient
+                        notify = Notification(title=shorten_string('New message from ' + sender.display_name()),
+                                              url=f'/chat/{existing_conversation.id}#message_{new_message}', user_id=recipient.id,
+                                              author_id=sender.id)
+                        db.session.add(notify)
+                        recipient.unread_notifications += 1
+                        existing_conversation.read = False
+                        db.session.commit()
+                        log_incoming_ap(request_json['id'], APLOG_CHATMESSAGE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                return
+            # inner object of Create is not a ChatMessage
+            else:
+                if (request_json['object']['type'] == 'Note' and 'name' in request_json['object'] and                           # Poll Votes
+                    'inReplyTo' in request_json['object'] and 'attributedTo' in request_json['object']):
+                    post_being_replied_to = Post.query.filter_by(ap_id=request_json['object']['inReplyTo']).first()
+                    if post_being_replied_to:
+                        poll_data = Poll.query.get(post_being_replied_to.id)
+                        choice = PollChoice.query.filter_by(post_id=post_being_replied_to.id, choice_text=request_json['object']['name']).first()
+                        if poll_data and choice:
+                            poll_data.vote_for_choice(choice.id, user.id)
+                            db.session.commit()
+                            log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                        if post_being_replied_to.author.is_local():
+                            inform_followers_of_post_update(post_being_replied_to.id, user.instance_id)
+                    return
+                community_ap_id = find_community_ap_id(request_json)
+                if not ensure_domains_match(request_json['object']):
+                    log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Domains do not match')
+                    return
+                community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False) if community_ap_id else None
+                if community and community.local_only:
+                    log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Remote Create in local_only community')
+                    return
+                if not community:
+                    log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Blocked or unfound community')
+                    return
+
+                object_type = request_json['object']['type']
+                new_content_types = ['Page', 'Article', 'Link', 'Note', 'Question']
+                if object_type in new_content_types:  # create or update a post
+                    process_new_content(user, community, store_ap_json, request_json, announced=False)
+                    return
+                elif object_type == 'Video':  # PeerTube: editing a video (PT doesn't Announce these)
+                    post = Post.query.filter_by(ap_id=request_json['object']['id']).first()
+                    if post:
+                        if user.id == post.user_id:
+                            update_post_from_activity(post, request_json)
+                            log_incoming_ap(request_json['id'], APLOG_UPDATE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                            return
+                        else:
+                            log_incoming_ap(request_json['id'], APLOG_UPDATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Edit attempt denied')
+                            return
+                    else:
+                        log_incoming_ap(request_json['id'], APLOG_UPDATE, APLOG_FAILURE, request_json if store_ap_json else None, 'PeerTube post not found')
+                        return
+                else:
+                    log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unacceptable type (create): ' + object_type)
+            return
+
+        if request_json['type'] == 'Delete':
+            if isinstance(request_json['object'], str):
+                ap_id = request_json['object']  # lemmy
+            else:
+                ap_id = request_json['object']['id']  # kbin
+            to_delete = find_liked_object(ap_id)                        # Just for Posts and Replies (User deletes go through process_delete_request())
+
+            if to_delete:
+                if to_delete.deleted:
+                    log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already deleted')
+                else:
+                    delete_post_or_comment(user, to_delete, store_ap_json, request_json)
+                    announce_activity_to_followers(to_delete.community, user, request_json)
+            else:
+                log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Delete: cannot find ' + ap_id)
+            return
+
+        if request_json['type'] == 'Like' or request_json['type'] == 'EmojiReact':  # Upvote
+            process_upvote(user, store_ap_json, request_json, announced=False)
+            return
+
+        if request_json['type'] == 'Dislike':  # Downvote
+            if site.enable_downvotes is False:
+                log_incoming_ap(request_json['id'], APLOG_DISLIKE, APLOG_IGNORED, request_json if store_ap_json else None, 'Dislike ignored because of allow_dislike setting')
+                return
+            process_downvote(user, store_ap_json, request_json, announced=False)
+            return
+
+        if request_json['type'] == 'Flag':    # Reported content
+            reported = find_reported_object(request_json['object'])
+            if reported:
+                process_report(user, reported, request_json)
+                log_incoming_ap(request_json['id'], APLOG_REPORT, APLOG_SUCCESS, request_json if store_ap_json else None)
+                announce_activity_to_followers(reported.community, user, request_json)
+            else:
+                log_incoming_ap(request_json['id'], APLOG_REPORT, APLOG_IGNORED, request_json if store_ap_json else None, 'Report ignored due to missing content')
+            return
+
+        if request_json['type'] == 'Block':     # remote site is banning one of their users
+            blocker = user
+            blocked_ap_id = request_json['object'].lower()
+            blocked = User.query.filter_by(ap_profile_id=blocked_ap_id).first()
+            if store_ap_json:
+                request_json['cc'] = []                                         # cut very long list of instances
+            if not blocked:
+                log_incoming_ap(request_json['id'], APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
+                return
+            block_from_ap_id = request_json['target']
+            remove_data = request_json['removeData'] if 'removeData' in request_json else False
+
+            # Lemmy currently only sends userbans for admins banning local users
+            # Banning remote users is hacked by banning them from every community of which they are a part
+            # There's plans to change this in the future though.
+            if not blocker.is_instance_admin() and not blocked.instance_id == blocker.instance_id:
+                log_incoming_ap(request_json['id'], APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
+                return
+
+            # request_json includes 'expires' and 'endTime' (same thing) but nowhere to record this and check in future for end in ban.
+
+            if remove_data == True:
+                site_ban_remove_data(blocker.id, blocked)
+                log_incoming_ap(request_json['id'], APLOG_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
+            else:
+                #blocked.banned = True         # uncommented until there's a mechanism for processing ban expiry date
+                #db.session.commit()
+                log_incoming_ap(request_json['id'], APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Banned, but content retained')
+            return
+
+        if request_json['type'] == 'Undo':
+            if request_json['object']['type'] == 'Follow':                      # Unsubscribe from a community or user
+                target_ap_id = request_json['object']['object']
+                target = find_actor_or_create(target_ap_id, create_if_not_found=False)
+                if isinstance(target, Community):
+                    community = target
+                    member = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
+                    join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
+                    if member:
+                        db.session.delete(member)
+                        community.subscriptions_count -= 1
+                    if join_request:
+                        db.session.delete(join_request)
+                    db.session.commit()
+                    cache.delete_memoized(community_membership, user, community)
+                    log_incoming_ap(request_json['id'], APLOG_UNDO_FOLLOW, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    return
+                if isinstance(target, User):
+                    local_user = target
+                    remote_user = user
+                    follower = UserFollower.query.filter_by(local_user_id=local_user.id, remote_user_id=remote_user.id, is_accepted=True).first()
+                    if follower:
+                        db.session.delete(follower)
+                        db.session.commit()
+                        log_incoming_ap(request_json['id'], APLOG_UNDO_FOLLOW, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    return
+                if not target:
+                    log_incoming_ap(request_json['id'], APLOG_UNDO_FOLLOW, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound target')
+                return
+
+            if request_json['object']['type'] == 'Delete':                      # Restore something previously deleted
+                if isinstance(request_json['object']['object'], str):
+                    ap_id = request_json['object']['object']  # lemmy
+                else:
+                    ap_id = request_json['object']['object']['id']  # kbin
+                if user.ap_profile_id == ap_id.lower():
+                    # a user is undoing a self-delete
+                    # will never get here, because find_actor_or_create() in shared_inbox() will return None if user.deleted
+                    return
+
+                restorer = user
+                to_restore = find_liked_object(ap_id)                           # a user or a mod/admin is undoing the delete of a post or reply
+                if to_restore:
+                    if not to_restore.deleted:
+                        log_incoming_ap(request_json['id'], APLOG_UNDO_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already restored')
+                    else:
+                        restore_post_or_comment(restorer, to_restore, store_ap_json, request_json)
+                        announce_activity_to_followers(to_restore.community, user, request_json)
+                else:
+                    log_incoming_ap(request_json['id'], APLOG_UNDO_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Undo delete: cannot find ' + ap_id)
+                return
+
+            if request_json['object']['type'] == 'Like' or request_json['object']['type'] == 'Dislike':                        # Undoing an upvote or downvote
+                post = comment = None
+                target_ap_id = request_json['object']['object']
+                post_or_comment = undo_vote(comment, post, target_ap_id, user)
+                if post_or_comment:
+                    log_incoming_ap(request_json['id'], APLOG_UNDO_VOTE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    announce_activity_to_followers(post_or_comment.community, user, request_json)
+                else:
+                    log_incoming_ap(request_json['id'], APLOG_UNDO_VOTE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound object ' + target_ap_id)
+                return
+
+            if request_json['object']['type'] == 'Block':     # remote site is unbanning one of their users
+                unblocker = user
+                unblocked_ap_id = request_json['object']['object'].lower()
+                unblocked = User.query.filter_by(ap_profile_id=unblocked_ap_id).first()
+                if store_ap_json:
+                    request_json['cc'] = []                                         # cut very long list of instances
+                    request_json['object']['cc'] = []
+                if not unblocked:
+                    log_incoming_ap(request_json['id'], APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
+                    return
+                unblock_from_ap_id = request_json['object']['target']
+
+                if not unblocker.is_instance_admin() and not unblocked.instance_id == blocker.instance_id:
+                    log_incoming_ap(request_json['id'], APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
+                    return
+
+                # (no removeData field in an undo/ban - cannot restore without knowing if deletion was part of ban, or different moderator action)
+                #unblocked.banned = False                   # uncommented until there's a mechanism for processing ban expiry date
+                #db.session.commit()
+                log_incoming_ap(request_json['id'], APLOG_UNDO_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
+                return
+
+        # Announce is new content and votes that happened on a remote server.
+        if request_json['type'] == 'Announce':
+            if isinstance(request_json['object'], str):  # Mastodon, PeerTube, A.gup.pe
+                post = resolve_remote_post(request_json['object'], community.id, announce_actor=community.ap_profile_id, store_ap_json=store_ap_json)
+                if post:
+                    log_incoming_ap(request_json['id'], APLOG_ANNOUNCE, APLOG_SUCCESS, request_json)
+                else:
+                    log_incoming_ap(request_json['id'], APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'Could not resolve post')
+                return
+
+            user_ap_id = request_json['object']['actor']
+            user = find_actor_or_create(user_ap_id)
+            if not user or not isinstance(user, User):
+                log_incoming_ap(request_json['id'], APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'Blocked or unfound user for Announce object actor ' + user_ap_id)
+                return
+
+            user.last_seen = site.last_active = utcnow()
+            user.instance.last_seen = utcnow()
+            user.instance.dormant = False
+            user.instance.gone_forever = False
+            user.instance.failures = 0
             db.session.commit()
 
+            if request_json['object']['type'] == 'Create' or request_json['object']['type'] == 'Update':
+                object_type = request_json['object']['object']['type']
+                new_content_types = ['Page', 'Article', 'Link', 'Note', 'Question']
+                if object_type in new_content_types:  # create or update a post
+                    process_new_content(user, community, store_ap_json, request_json)
+                elif request_json['object']['type'] == 'Update' and request_json['object']['object']['type'] == 'Group':
+                    # force refresh next time community is heard from
+                    community.ap_fetched_at = None
+                    db.session.commit()
+                    log_incoming_ap(request_json['id'], APLOG_UPDATE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                else:
+                    log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unacceptable type (create): ' + object_type)
+                return
+
+            if request_json['object']['type'] == 'Delete':                                                  # Announced Delete
+                if isinstance(request_json['object']['object'], str):
+                    ap_id = request_json['object']['object']  # lemmy
+                else:
+                    ap_id = request_json['object']['object']['id']  # kbin
+                to_delete = find_liked_object(ap_id)                                # Just for Posts and Replies (User deletes aren't announced)
+
+                if to_delete:
+                    if to_delete.deleted:
+                        log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already deleted')
+                    else:
+                        delete_post_or_comment(user, to_delete, store_ap_json, request_json)
+                else:
+                    log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Delete: cannot find ' + ap_id)
+                return
+
+            if request_json['object']['type'] == 'Like' or request_json['object']['type'] == 'EmojiReact':  # Announced Upvote
+                process_upvote(user, store_ap_json, request_json)
+                return
+
+            if request_json['object']['type'] == 'Dislike':                                                 # Announced Downvote
+                if site.enable_downvotes is False:
+                    log_incoming_ap(request_json['id'], APLOG_DISLIKE, APLOG_IGNORED, request_json if store_ap_json else None, 'Dislike ignored because of allow_dislike setting')
+                    return
+                process_downvote(user, store_ap_json, request_json)
+                return
+
+            if request_json['object']['type'] == 'Flag':                                                            # Announce of reported content
+                reported = find_reported_object(request_json['object']['object'])
+                if reported:
+                    process_report(user, reported, request_json['object'])
+                    log_incoming_ap(request_json['id'], APLOG_REPORT, APLOG_SUCCESS, request_json if store_ap_json else None)
+                else:
+                    log_incoming_ap(request_json['id'], APLOG_REPORT, APLOG_IGNORED, request_json if store_ap_json else None, 'Report ignored due to missing content')
+                return
+
+            if request_json['object']['type'] == 'Lock':                                                            # Announce of post lock
+                mod = user
+                post_id = request_json['object']['object']
+                post = Post.query.filter_by(ap_id=post_id).first()
+                if post:
+                    if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
+                        post.comments_enabled = False
+                        db.session.commit()
+                        log_incoming_ap(request_json['id'], APLOG_LOCK, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    else:
+                        log_incoming_ap(request_json['id'], APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: Does not have permission')
+                else:
+                    log_incoming_ap(request_json['id'], APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: post not found')
+                return
+
+            if request_json['object']['type'] == 'Add':                                                             # Announce of adding mods or stickying a post
+                target = request_json['object']['target']
+                featured_url = community.ap_featured_url
+                moderators_url = community.ap_moderators_url
+                if target == featured_url:
+                    post = Post.query.filter_by(ap_id=request_json['object']['object']).first()
+                    if post:
+                        post.sticky = True
+                        db.session.commit()
+                        log_incoming_ap(request_json['id'], APLOG_ADD, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    else:
+                        log_incoming_ap(request_json['id'], APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' +  request_json['object']['object'])
+                    return
+                if target == moderators_url:
+                    user = find_actor_or_create(request_json['object']['object'])
+                    if user:
+                        existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=user.id).first()
+                        if existing_membership:
+                            existing_membership.is_moderator = True
+                        else:
+                            new_membership = CommunityMember(community_id=community.id, user_id=user.id, is_moderator=True)
+                            db.session.add(new_membership)
+                        db.session.commit()
+                        log_incoming_ap(request_json['id'], APLOG_ADD, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    else:
+                        log_incoming_ap(request_json['id'], APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + request_json['object']['object'])
+                    return
+                log_incoming_ap(request_json['id'], APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Add')
+                return
+
+            if request_json['object']['type'] == 'Remove':                                                          # Announce of removing mods or unstickying a post
+                target = request_json['object']['target']
+                featured_url = community.ap_featured_url
+                moderators_url = community.ap_moderators_url
+                if target == featured_url:
+                    post = Post.query.filter_by(ap_id=request_json['object']['object']).first()
+                    if post:
+                        post.sticky = False
+                        db.session.commit()
+                        log_incoming_ap(request_json['id'], APLOG_REMOVE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    else:
+                        log_incoming_ap(request_json['id'], APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + target)
+                    return
+                if target == moderators_url:
+                    user = find_actor_or_create(request_json['object']['object'], create_if_not_found=False)
+                    if user:
+                        existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=user.id).first()
+                        if existing_membership:
+                            existing_membership.is_moderator = False
+                            db.session.commit()
+                            log_incoming_ap(request_json['id'], APLOG_REMOVE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    else:
+                        log_incoming_ap(request_json['id'], APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + request_json['object']['object'])
+                    return
+                log_incoming_ap(request_json['id'], APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Remove')
+                return
+
+            if request_json['object']['type'] == 'Block':                               # Announce of user ban. Mod is banning a user from a community,
+                blocker = user                                                          # or an admin is banning a user from all the site's communities as part of a site ban
+                blocked_ap_id = request_json['object']['object'].lower()
+                blocked = User.query.filter_by(ap_profile_id=blocked_ap_id).first()
+                if not blocked:
+                    log_incoming_ap(request_json['id'], APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
+                    return
+                remove_data = request_json['object']['removeData'] if 'removeData' in request_json['object'] else False
+
+                if not community.is_moderator(blocker) and not community.is_instance_admin(blocker):
+                    log_incoming_ap(request_json['id'], APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
+                    return
+
+                if remove_data == True:
+                    community_ban_remove_data(blocker.id, community.id, blocked)
+                    log_incoming_ap(request_json['id'], APLOG_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
+                else:
+                    log_incoming_ap(request_json['id'], APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Banned, but content retained')
+
+                if blocked.is_local():
+                    ban_local_user(blocker, blocked, community, request_json)
+                return
+
+            if request_json['object']['type'] == 'Undo':
+                if request_json['object']['object']['type'] == 'Delete':                                                                    # Announce of undo of Delete
+                    if isinstance(request_json['object']['object']['object'], str):
+                        ap_id = request_json['object']['object']['object']  # lemmy
+                    else:
+                        ap_id = request_json['object']['object']['object']['id']  # kbin
+
+                    restorer = user
+                    to_restore = find_liked_object(ap_id)                           # a user or a mod/admin is undoing the delete of a post or reply
+                    if to_restore:
+                        if not to_restore.deleted:
+                            log_incoming_ap(request_json['id'], APLOG_UNDO_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Content was not deleted')
+                        else:
+                            restore_post_or_comment(restorer, to_restore, store_ap_json, request_json)
+                    else:
+                        log_incoming_ap(request_json['id'], APLOG_UNDO_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Undo delete: cannot find ' + ap_id)
+                    return
+
+                if request_json['object']['object']['type'] == 'Like' or request_json['object']['object']['type'] == 'Dislike':             # Announce of undo of upvote or downvote
+                    post = comment = None
+                    target_ap_id = request_json['object']['object']['object']
+                    post_or_comment = undo_vote(comment, post, target_ap_id, user)
+                    if post_or_comment:
+                        log_incoming_ap(request_json['id'], APLOG_UNDO_VOTE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    else:
+                        log_incoming_ap(request_json['id'], APLOG_UNDO_VOTE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound object ' + target_ap_id)
+                    return
+
+                if request_json['object']['object']['type'] == 'Lock':                                                                      # Announce of undo of post lock
+                    mod = user
+                    post_id = request_json['object']['object']['object']
+                    post = Post.query.filter_by(ap_id=post_id).first()
+                    if post:
+                        if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
+                            post.comments_enabled = True
+                            db.session.commit()
+                            log_incoming_ap(request_json['id'], APLOG_LOCK, APLOG_SUCCESS, request_json if store_ap_json else None)
+                        else:
+                            log_incoming_ap(request_json['id'], APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: Does not have permission')
+                    else:
+                        log_incoming_ap(request_json['id'], APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: post not found')
+                    return
+
+                if request_json['object']['object']['type'] == 'Block':                         # Announce of undo of user ban. Mod is unbanning a user from a community,
+                    blocker = user                                                              # or an admin is unbanning a user from all the site's communities as part of a site unban
+                    blocked_ap_id = request_json['object']['object']['object'].lower()
+                    blocked = User.query.filter_by(ap_profile_id=blocked_ap_id).first()
+                    if not blocked:
+                        log_incoming_ap(request_json['id'], APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
+                        return
+
+                    if not community.is_moderator(blocker) and not community.is_instance_admin(blocker):
+                        log_incoming_ap(request_json['id'], APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
+                        return
+
+                    if blocked.is_local():
+                        unban_local_user(blocker, blocked, community, request_json)
+                    log_incoming_ap(request_json['id'], APLOG_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
+
+                    return
+
+        log_incoming_ap(request_json['id'], APLOG_MONITOR, APLOG_PROCESSING, request_json if store_ap_json else None, 'Unmatched activity')
+
 
 @celery.task
-def process_delete_request(request_json, activitypublog_id, ip_address):
+def process_delete_request(request_json, store_ap_json):
     with current_app.app_context():
-        activity_log = ActivityPubLog.query.get(activitypublog_id)
-        if 'type' in request_json and request_json['type'] == 'Delete':
-            if isinstance(request_json['object'], dict):
-                # wafrn sends invalid delete requests
-                return
-            else:
-                actor_to_delete = request_json['object'].lower()
-                user = User.query.filter_by(ap_profile_id=actor_to_delete).first()
-                if user:
-                    # check that the user really has been deleted, to avoid spoofing attacks
-                    if not user.is_local():
-                        if user_removed_from_remote_server(actor_to_delete, is_piefed=user.instance.software == 'PieFed'):
-                            # Delete all their images to save moderators from having to see disgusting stuff.
-                            files = File.query.join(Post).filter(Post.user_id == user.id).all()
-                            for file in files:
-                                file.delete_from_disk()
-                                file.source_url = ''
-                            if user.avatar_id:
-                                user.avatar.delete_from_disk()
-                                user.avatar.source_url = ''
-                            if user.cover_id:
-                                user.cover.delete_from_disk()
-                                user.cover.source_url = ''
-                            user.banned = True
-                            user.deleted = True
-                            activity_log.result = 'success'
-                        else:
-                            activity_log.result = 'ignored'
-                            activity_log.exception_message = 'User not actually deleted.'
-                    else:
-                        activity_log.result = 'ignored'
-                        activity_log.exception_message = 'Only remote users can be deleted remotely'
-                else:
-                    activity_log.result = 'ignored'
-                    activity_log.exception_message = 'Does not exist here'
+        # this function processes self-deletes (retain case here, as user_removed_from_remote_server() uses a JSON request)
+        user_ap_id = request_json['actor']
+        user = User.query.filter_by(ap_profile_id=user_ap_id.lower()).first()
+        if user:
+            # check that the user really has been deleted, to avoid spoofing attacks
+            if user_removed_from_remote_server(user_ap_id, is_piefed=user.instance.software == 'PieFed'):
+                # soft self-delete
+                user.deleted = True
+                user.deleted_by = user.id
                 db.session.commit()
+                log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_SUCCESS, request_json if store_ap_json else None)
+            else:
+                log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'User not actually deleted.')
+        # TODO: process self-undeletes from Lemmy
+        # TODO: acknowledge 'removeData' field from Lemmy
+        # TODO: hard-delete in 7 days (should purge avatar and cover images, but keep posts and replies unless already soft-deleted by removeData = True)
 
 
 def announce_activity_to_followers(community, creator, activity):
@@ -1409,93 +1295,6 @@ def community_moderators_route(actor):
         return jsonify(community_data)
 
 
-@bp.route('/u/<actor>/inbox', methods=['POST'])
-def user_inbox(actor):
-    site = Site.query.get(1)
-    activity_log = ActivityPubLog(direction='in', result='failure')
-    activity_log.result = 'processing'
-    db.session.add(activity_log)
-    db.session.commit()
-
-    try:
-        request_json = request.get_json(force=True)
-    except werkzeug.exceptions.BadRequest as e:
-        activity_log.exception_message = 'Unable to parse json body: ' + e.description
-        activity_log.result = 'failure'
-        db.session.commit()
-        return '', 400
-
-    if 'id' in request_json:
-        activity_log.activity_id = request_json['id']
-    if site.log_activitypub_json:
-        activity_log.activity_json = json.dumps(request_json)
-
-    actor = find_actor_or_create(request_json['actor'], signed_get=True) if 'actor' in request_json else None
-    if actor is not None:
-        if (('type' in request_json and request_json['type'] == 'Like') or
-                ('type' in request_json and request_json['type'] == 'Undo' and
-                'object' in request_json and request_json['object']['type'] == 'Like')):
-            return shared_inbox()
-        if 'type' in request_json and request_json['type'] == 'Accept':
-            return shared_inbox()
-        try:
-            HttpSignature.verify_request(request, actor.public_key, skip_date=True)
-            if 'type' in request_json:
-                if request_json['type'] == 'Follow':
-                    if current_app.debug:
-                        process_user_follow_request(request_json, activity_log.id, actor.id)
-                    else:
-                        process_user_follow_request.delay(request_json, activity_log.id, actor.id)
-                elif request_json['type'] == 'Undo' and 'object' in request_json and request_json['object']['type'] == 'Follow':
-                    local_user_ap_id = request_json['object']['object']
-                    local_user = find_actor_or_create(local_user_ap_id, create_if_not_found=False)
-                    remote_user = User.query.get(actor.id)
-                    if local_user:
-                        db.session.query(UserFollower).filter_by(local_user_id=local_user.id, remote_user_id=remote_user.id, is_accepted=True).delete()
-                        activity_log.result = 'success'
-                    else:
-                        activity_log.exception_message = 'Could not find local user'
-                        activity_log.result = 'failure'
-                    db.session.commit()
-                elif ('type' in request_json and request_json['type'] == 'Create' and
-                    'object' in request_json and request_json['object']['type'] == 'Note' and
-                    'name' in request_json['object']):                                              # poll votes
-                    in_reply_to = request_json['object']['inReplyTo'] if 'inReplyTo' in request_json['object'] else None
-                    if in_reply_to:
-                        post_being_replied_to = Post.query.filter_by(ap_id=request_json['object']['inReplyTo']).first()
-                        if post_being_replied_to:
-                            community_ap_id = post_being_replied_to.community.ap_profile_id
-                            community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False)
-                            user_ap_id = request_json['object']['attributedTo']
-                            user = find_actor_or_create(user_ap_id, create_if_not_found=False)
-                            if can_create_post_reply(user, community):
-                                poll_data = Poll.query.get(post_being_replied_to.id)
-                                choice = PollChoice.query.filter_by(post_id=post_being_replied_to.id, choice_text=request_json['object']['name']).first()
-                                if poll_data and choice:
-                                    poll_data.vote_for_choice(choice.id, user.id)
-                                    activity_log.activity_type = 'Poll Vote'
-                                    activity_log.result = 'success'
-                                    db.session.commit()
-                                    if post_being_replied_to.author.is_local():
-                                        inform_followers_of_post_update(post_being_replied_to.id, user.instance_id)
-
-        except VerificationError:
-            activity_log.result = 'failure'
-            activity_log.exception_message = 'Could not verify signature'
-            db.session.commit()
-            return '', 400
-    else:
-        actor_name = request_json['actor'] if 'actor' in request_json else ''
-        activity_log.exception_message = f'Actor could not be found 2: {actor_name}'
-
-    if activity_log.exception_message is not None:
-        activity_log.result = 'failure'
-        db.session.commit()
-    resp = jsonify('ok')
-    resp.content_type = 'application/activity+json'
-    return resp
-
-
 @celery.task
 def process_user_follow_request(request_json, activitypublog_id, remote_user_id):
     activity_log = ActivityPubLog.query.get(activitypublog_id)
@@ -1536,11 +1335,6 @@ def process_user_follow_request(request_json, activitypublog_id, remote_user_id)
         activity_log.result = 'failure'
 
     db.session.commit()
-
-
-@bp.route('/c/<actor>/inbox', methods=['GET', 'POST'])
-def community_inbox(actor):
-    return shared_inbox()
 
 
 @bp.route('/c/<actor>/followers', methods=['GET'])
@@ -1656,3 +1450,111 @@ def activity_result(id):
             return jsonify({'error': activity.result, 'message': activity.exception_message})
     else:
         abort(404)
+
+
+def process_new_content(user, community, store_ap_json, request_json, announced=True):
+    if not announced:
+        in_reply_to = request_json['object']['inReplyTo'] if 'inReplyTo' in request_json['object'] else None
+        ap_id = request_json['object']['id']
+        announce_id = None
+        activity_json = request_json
+    else:
+        in_reply_to = request_json['object']['object']['inReplyTo'] if 'inReplyTo' in request_json['object']['object'] else None
+        ap_id = request_json['object']['object']['id']
+        announce_id = request_json['id']
+        activity_json = request_json['object']
+
+    if not in_reply_to: # Creating a new post
+        post = Post.query.filter_by(ap_id=ap_id).first()
+        if post:
+            if activity_json['type'] == 'Create':
+                log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Create processed after Update')
+                return
+            if user.id == post.user_id:
+                update_post_from_activity(post, activity_json)
+                log_incoming_ap(request_json['id'], APLOG_UPDATE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                if not announced:
+                    announce_activity_to_followers(post.community, post.author, request_json)
+                return
+            else:
+                log_incoming_ap(request_json['id'], APLOG_UPDATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Edit attempt denied')
+                return
+        else:
+            if can_create_post(user, community):
+                try:
+                    post = create_post(store_ap_json, community, activity_json, user, announce_id=announce_id)
+                    if post:
+                        log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                        if not announced:
+                            announce_activity_to_followers(community, user, request_json)
+                        return
+                except TypeError as e:
+                    current_app.logger.error('TypeError: ' + str(request_json))
+                    log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'TypeError. See log file.')
+                    return
+            else:
+                log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'User cannot create post in Community')
+                return
+    else:   # Creating a reply / comment
+        reply = PostReply.query.filter_by(ap_id=ap_id).first()
+        if reply:
+            if activity_json['type'] == 'Create':
+                log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Create processed after Update')
+                return
+            if user.id == reply.user_id:
+                update_post_reply_from_activity(reply, activity_json)
+                log_incoming_ap(request_json['id'], APLOG_UPDATE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                if not announced:
+                    announce_activity_to_followers(reply.community, reply.author, request_json)
+                return
+            else:
+                log_incoming_ap(request_json['id'], APLOG_UPDATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Edit attempt denied')
+                return
+        else:
+            if can_create_post_reply(user, community):
+                try:
+                    reply = create_post_reply(store_ap_json, community, in_reply_to, activity_json, user, announce_id=announce_id)
+                    if reply:
+                        log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                        if not announced:
+                            announce_activity_to_followers(community, user, request_json)
+                    return
+                except TypeError as e:
+                    current_app.logger.error('TypeError: ' + str(request_json))
+                    log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'TypeError. See log file.')
+                    return
+            else:
+                log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'User cannot create reply in Community')
+                return
+
+
+def process_upvote(user, store_ap_json, request_json, announced=True):
+    ap_id = request_json['object'] if not announced else request_json['object']['object']
+    liked = find_liked_object(ap_id)
+    if liked is None:
+        log_incoming_ap(request_json['id'], APLOG_LIKE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound object ' + ap_id)
+        return
+    if can_upvote(user, liked.community):
+        if isinstance(liked, (Post, PostReply)):
+            liked.vote(user, 'upvote')
+            log_incoming_ap(request_json['id'], APLOG_LIKE, APLOG_SUCCESS, request_json if store_ap_json else None)
+            if not announced:
+                announce_activity_to_followers(liked.community, user, request_json)
+    else:
+        log_incoming_ap(request_json['id'], APLOG_LIKE, APLOG_IGNORED, request_json if store_ap_json else None, 'Cannot upvote this')
+
+
+def process_downvote(user, store_ap_json, request_json, announced=True):
+    ap_id = request_json['object'] if not announced else request_json['object']['object']
+    liked = find_liked_object(ap_id)
+    if liked is None:
+        log_incoming_ap(request_json['id'], APLOG_DISLIKE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound object ' + ap_id)
+        return
+    if can_downvote(user, liked.community):
+        if isinstance(liked, (Post, PostReply)):
+            liked.vote(user, 'downvote')
+            log_incoming_ap(request_json['id'], APLOG_DISLIKE, APLOG_SUCCESS, request_json if store_ap_json else None)
+            if not announced:
+                announce_activity_to_followers(liked.community, user, request_json)
+    else:
+        log_incoming_ap(request_json['id'], APLOG_DISLIKE, APLOG_IGNORED, request_json if store_ap_json else None, 'Cannot downvote this')
