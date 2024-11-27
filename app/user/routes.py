@@ -1290,7 +1290,7 @@ def user_read_posts(sort=None):
         posts = posts.order_by(desc(Post.sticky)).order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
     elif sort == 'top':
         posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=7)).order_by(desc(Post.sticky)).order_by(desc(Post.up_votes - Post.down_votes))
-    elif sort == 'newest':
+    elif sort == 'new':
         posts = posts.order_by(desc(Post.posted_at))
     elif sort == 'oldest':
         posts = posts.order_by(asc(Post.posted_at))
