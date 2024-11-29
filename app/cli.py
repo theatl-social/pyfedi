@@ -251,8 +251,10 @@ def register(app):
                         except Exception as e:
                             db.session.rollback()
                             current_app.logger.error(f"Error processing instance {instance.domain}: {e}")
+                            instance.failures += 1
                         finally:
                             nodeinfo.close()
+                        db.session.commit()
 
                     if instance.nodeinfo_href:
                         try:
@@ -271,6 +273,7 @@ def register(app):
                             current_app.logger.error(f"Error processing nodeinfo for {instance.domain}: {e}")
                         finally:
                             node.close()
+                        db.session.commit()
 
                     # Handle admin roles
                     if instance.online() and (instance.software == 'lemmy' or instance.software == 'piefed'):
@@ -299,9 +302,7 @@ def register(app):
                         finally:
                             if response:
                                 response.close()
-
-                # Commit all changes at once
-                db.session.commit()
+                        db.session.commit()
 
             except Exception as e:
                 db.session.rollback()
