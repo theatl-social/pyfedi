@@ -948,10 +948,6 @@ def process_inbox_request(request_json, store_ap_json):
                     ap_id = request_json['object']['object']  # lemmy
                 else:
                     ap_id = request_json['object']['object']['id']  # kbin
-                if user.ap_profile_id == ap_id.lower():
-                    # a user is undoing a self-delete
-                    # will never get here, because find_actor_or_create() in shared_inbox() will return None if user.deleted
-                    return
 
                 restorer = user
                 to_restore = find_liked_object(ap_id)                           # a user or a mod/admin is undoing the delete of a post or reply
@@ -1249,7 +1245,6 @@ def process_delete_request(request_json, store_ap_json):
                 log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_SUCCESS, request_json if store_ap_json else None)
             else:
                 log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'User not actually deleted.')
-        # TODO: process self-undeletes from Lemmy
         # TODO: acknowledge 'removeData' field from Lemmy
         # TODO: hard-delete in 7 days (should purge avatar and cover images, but keep posts and replies unless already soft-deleted by removeData = True)
 
