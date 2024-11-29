@@ -513,21 +513,18 @@ def replay_inbox_request(request_json):
         log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, request_json, 'REPLAY: Missing minimum expected fields in JSON')
         return
 
-    id = request_json['id']
     if request_json['type'] == 'Announce' and isinstance(request_json['object'], dict):
         object = request_json['object']
         if not 'id' in object or not 'type' in object or not 'actor' in object or not 'object' in object:
-            if object['type'] == 'Page':
-                log_incoming_ap(request_json['id'], APLOG_ANNOUNCE, APLOG_IGNORED, request_json, 'REPLAY: Intended for Mastodon')
-            elif object['type'] == 'Note':          # Lemmy has Announced Note out from Mastodon, but will also announce Create/Note
+            if 'type' in object and (object['type'] == 'Page' or object['type'] == 'Note'):
                 log_incoming_ap(request_json['id'], APLOG_ANNOUNCE, APLOG_IGNORED, request_json, 'REPLAY: Intended for Mastodon')
             else:
                 log_incoming_ap(request_json['id'], APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'REPLAY: Missing minimum expected fields in JSON Announce object')
             return
 
-        actor = User.query.filter_by(ap_profile_id=object['actor'].lower()).first()
-        if actor and actor.is_local():
-            log_incoming_ap(object['id'], APLOG_DUPLICATE, APLOG_IGNORED, request_json, 'REPLAY: Activity about local content which is already present')
+        if object['actor'].startswith('https://' + current_app.config['SERVER_NAME']):
+            log_incoming_ap(object['id'], APLOG_DUPLICATE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already present')
+            return
 
     # Ignore unutilised PeerTube activity
     if request_json['actor'].endswith('accounts/peertube'):
