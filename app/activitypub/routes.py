@@ -412,13 +412,13 @@ def shared_inbox():
         object = request_json['object']
         if not 'id' in object or not 'type' in object or not 'actor' in object or not 'object' in object:
             if 'type' in object and (object['type'] == 'Page' or object['type'] == 'Note'):
-                log_incoming_ap(request_json['id'], APLOG_ANNOUNCE, APLOG_IGNORED, request_json if store_ap_json else None, 'Intended for Mastodon')
+                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_IGNORED, request_json if store_ap_json else None, 'Intended for Mastodon')
             else:
-                log_incoming_ap(request_json['id'], APLOG_ANNOUNCE, APLOG_FAILURE, request_json if store_ap_json else None, 'Missing minimum expected fields in JSON Announce object')
+                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json if store_ap_json else None, 'Missing minimum expected fields in JSON Announce object')
             return '', 200
 
         if object['actor'].startswith('https://' + current_app.config['SERVER_NAME']):
-            log_incoming_ap(object['id'], APLOG_DUPLICATE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already present')
+            log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already present')
             return '', 200
 
     redis_client = get_redis_connection()
@@ -429,7 +429,7 @@ def shared_inbox():
 
     # Ignore unutilised PeerTube activity
     if request_json['actor'].endswith('accounts/peertube'):
-        log_incoming_ap(request_json['id'], APLOG_PT_VIEW, APLOG_IGNORED, request_json if store_ap_json else None, 'PeerTube View or CacheFile activity')
+        log_incoming_ap(id, APLOG_PT_VIEW, APLOG_IGNORED, request_json if store_ap_json else None, 'PeerTube View or CacheFile activity')
         return ''
 
     # Ignore account deletion requests from users that do not already exist here
@@ -440,18 +440,18 @@ def shared_inbox():
         account_deletion = True
         actor = User.query.filter_by(ap_profile_id=request_json['actor'].lower()).first()
         if not actor:
-            log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
+            log_incoming_ap(id, APLOG_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
             return '', 200
     else:
         actor = find_actor_or_create(request_json['actor'])
 
     if not actor:
         actor_name = request_json['actor']
-        log_incoming_ap(request_json['id'], APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, f'Actor could not be found 1: {actor_name}')
+        log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, f'Actor could not be found 1: {actor_name}')
         return '', 200
 
     if actor.is_local():        # should be impossible (can be Announced back, but not sent without access to privkey)
-        log_incoming_ap(request_json['id'], APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'ActivityPub activity from a local actor')
+        log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'ActivityPub activity from a local actor')
         return '', 200
 
     actor.instance.last_seen = utcnow()
@@ -465,13 +465,13 @@ def shared_inbox():
         HttpSignature.verify_request(request, actor.public_key, skip_date=True)
     except VerificationError as e:
         if not 'signature' in request_json:
-            log_incoming_ap(request_json['id'], APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not verify HTTP signature: ' + str(e))
+            log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not verify HTTP signature: ' + str(e))
             return '', 400
         # HTTP sig will fail if a.gup.pe or PeerTube have bounced a request, so check LD sig instead
         try:
             LDSignature.verify_signature(request_json, actor.public_key)
         except VerificationError as e:
-            log_incoming_ap(request_json['id'], APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not verify LD signature: ' + str(e))
+            log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not verify LD signature: ' + str(e))
             return '', 400
 
     # When a user is deleted, the only way to be fairly sure they get deleted everywhere is to tell the whole fediverse.
@@ -511,22 +511,23 @@ def replay_inbox_request(request_json):
         log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, request_json, 'REPLAY: Missing minimum expected fields in JSON')
         return
 
+    id = request_json['id']
     if request_json['type'] == 'Announce' and isinstance(request_json['object'], dict):
         object = request_json['object']
         if not 'id' in object or not 'type' in object or not 'actor' in object or not 'object' in object:
             if 'type' in object and (object['type'] == 'Page' or object['type'] == 'Note'):
-                log_incoming_ap(request_json['id'], APLOG_ANNOUNCE, APLOG_IGNORED, request_json, 'REPLAY: Intended for Mastodon')
+                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_IGNORED, request_json, 'REPLAY: Intended for Mastodon')
             else:
-                log_incoming_ap(request_json['id'], APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'REPLAY: Missing minimum expected fields in JSON Announce object')
+                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'REPLAY: Missing minimum expected fields in JSON Announce object')
             return
 
         if object['actor'].startswith('https://' + current_app.config['SERVER_NAME']):
-            log_incoming_ap(object['id'], APLOG_DUPLICATE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already present')
+            log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already present')
             return
 
     # Ignore unutilised PeerTube activity
     if request_json['actor'].endswith('accounts/peertube'):
-        log_incoming_ap(request_json['id'], APLOG_PT_VIEW, APLOG_IGNORED, request_json, 'REPLAY: PeerTube View or CacheFile activity')
+        log_incoming_ap(id, APLOG_PT_VIEW, APLOG_IGNORED, request_json, 'REPLAY: PeerTube View or CacheFile activity')
         return
 
     # Ignore account deletion requests from users that do not already exist here
@@ -537,18 +538,18 @@ def replay_inbox_request(request_json):
         account_deletion = True
         actor = User.query.filter_by(ap_profile_id=request_json['actor'].lower()).first()
         if not actor:
-            log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_IGNORED, request_json, 'REPLAY: Does not exist here')
+            log_incoming_ap(id, APLOG_DELETE, APLOG_IGNORED, request_json, 'REPLAY: Does not exist here')
             return
     else:
         actor = find_actor_or_create(request_json['actor'])
 
     if not actor:
         actor_name = request_json['actor']
-        log_incoming_ap(request_json['id'], APLOG_NOTYPE, APLOG_FAILURE, request_json, f'REPLAY: Actor could not be found 1: {actor_name}')
+        log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, request_json, f'REPLAY: Actor could not be found 1: {actor_name}')
         return
 
     if actor.is_local():        # should be impossible (can be Announced back, but not sent back without access to privkey)
-        log_incoming_ap(request_json['id'], APLOG_NOTYPE, APLOG_FAILURE, request_json, 'REPLAY: ActivityPub activity from a local actor')
+        log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, request_json, 'REPLAY: ActivityPub activity from a local actor')
         return
 
     # When a user is deleted, the only way to be fairly sure they get deleted everywhere is to tell the whole fediverse.
@@ -572,19 +573,19 @@ def process_inbox_request(request_json, store_ap_json):
         #   It's the actor who signed the request, and whose signature has been verified
         #   Because of the earlier check, we know that they already exist, and so don't need to check again
         #   Using actors from inner objects has a vulnerability to spoofing attacks (e.g. if 'attributedTo' doesn't match the 'Create' actor)
-        announce_id = request_json['id']
+        id = request_json['id']
         if request_json['type'] == 'Announce' or request_json['type'] == 'Accept' or request_json['type'] == 'Reject':
             community_ap_id = request_json['actor']
             community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False)
             if not community or not isinstance(community, Community):
-                log_incoming_ap(announce_id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'Actor was not a community')
+                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'Actor was not a community')
                 return
             user_ap_id = None               # found in 'if request_json['type'] == 'Announce', or it's a local user (for 'Accept'/'Reject')
         else:
             user_ap_id = request_json['actor']
             user = find_actor_or_create(user_ap_id, create_if_not_found=False)
             if not user or not isinstance(user, User):
-                log_incoming_ap(announce_id, APLOG_NOTYPE, APLOG_FAILURE, request_json, 'Actor was not a user')
+                log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, request_json, 'Actor was not a user')
                 return
             user.last_seen = site.last_active = utcnow()
             db.session.commit()
@@ -596,19 +597,19 @@ def process_inbox_request(request_json, store_ap_json):
             follow_id = request_json['id']
             target = find_actor_or_create(target_ap_id, create_if_not_found=False)
             if not target:
-                log_incoming_ap(announce_id, APLOG_FOLLOW, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not find target of Follow')
+                log_incoming_ap(id, APLOG_FOLLOW, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not find target of Follow')
                 return
             if isinstance(target, Community):
                 community = target
                 reject_follow = False
                 if community.local_only:
-                    log_incoming_ap(announce_id, APLOG_FOLLOW, APLOG_FAILURE, request_json if store_ap_json else None, 'Local only cannot be followed by remote users')
+                    log_incoming_ap(id, APLOG_FOLLOW, APLOG_FAILURE, request_json if store_ap_json else None, 'Local only cannot be followed by remote users')
                     reject_follow = True
                 else:
                     # check if user is banned from this community
                     user_banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
                     if user_banned:
-                        log_incoming_ap(announce_id, APLOG_FOLLOW, APLOG_FAILURE, request_json if store_ap_json else None, 'Remote user has been banned')
+                        log_incoming_ap(id, APLOG_FOLLOW, APLOG_FAILURE, request_json if store_ap_json else None, 'Remote user has been banned')
                         reject_follow = True
                 if reject_follow:
                     # send reject message to deny the follow
@@ -627,13 +628,13 @@ def process_inbox_request(request_json, store_ap_json):
                                   "object": {"actor": user.public_url(), "to": None, "object": community.public_url(), "type": "Follow", "id": follow_id},
                                   "type": "Accept", "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)}
                         post_request(user.ap_inbox_url, accept, community.private_key, f"{community.public_url()}#main-key")
-                        log_incoming_ap(announce_id, APLOG_FOLLOW, APLOG_SUCCESS, request_json if store_ap_json else None)
+                        log_incoming_ap(id, APLOG_FOLLOW, APLOG_SUCCESS, request_json if store_ap_json else None)
                 return
             elif isinstance(target, User):
                 local_user = target
                 remote_user = user
                 if not local_user.is_local():
-                    log_incoming_ap(announce_id, APLOG_FOLLOW, APLOG_FAILURE, request_json if store_ap_json else None, 'Follow request for remote user received')
+                    log_incoming_ap(id, APLOG_FOLLOW, APLOG_FAILURE, request_json if store_ap_json else None, 'Follow request for remote user received')
                     return
                 existing_follower = UserFollower.query.filter_by(local_user_id=local_user.id, remote_user_id=remote_user.id).first()
                 if not existing_follower:
@@ -647,7 +648,7 @@ def process_inbox_request(request_json, store_ap_json):
                               "object": {"actor": remote_user.public_url(), "to": None, "object": local_user.public_url(), "type": "Follow", "id": follow_id},
                               "type": "Accept", "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)}
                     post_request(remote_user.ap_inbox_url, accept, local_user.private_key, f"{local_user.public_url()}#main-key")
-                    log_incoming_ap(announce_id, APLOG_FOLLOW, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    log_incoming_ap(id, APLOG_FOLLOW, APLOG_SUCCESS, request_json if store_ap_json else None)
             return
 
         # Accept: remote server is accepting our previous follow request
@@ -662,7 +663,7 @@ def process_inbox_request(request_json, store_ap_json):
                 user_ap_id = request_json['object']['actor']
                 user = find_actor_or_create(user_ap_id, create_if_not_found=False)
             if not user:
-                log_incoming_ap(announce_id, APLOG_ACCEPT, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not find recipient of Accept')
+                log_incoming_ap(id, APLOG_ACCEPT, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not find recipient of Accept')
                 return
             join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
             if join_request:
@@ -673,7 +674,7 @@ def process_inbox_request(request_json, store_ap_json):
                     community.subscriptions_count += 1
                     db.session.commit()
                     cache.delete_memoized(community_membership, user, community)
-                log_incoming_ap(announce_id, APLOG_ACCEPT, APLOG_SUCCESS, request_json if store_ap_json else None)
+                log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, request_json if store_ap_json else None)
             return
 
         # Reject: remote server is rejecting our previous follow request
@@ -682,7 +683,7 @@ def process_inbox_request(request_json, store_ap_json):
                 user_ap_id = request_json['object']['actor']
                 user = find_actor_or_create(user_ap_id, create_if_not_found=False)
                 if not user:
-                    log_incoming_ap(announce_id, APLOG_ACCEPT, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not find recipient of Reject')
+                    log_incoming_ap(id, APLOG_ACCEPT, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not find recipient of Reject')
                     return
                 join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
                 if join_request:
@@ -692,7 +693,7 @@ def process_inbox_request(request_json, store_ap_json):
                     db.session.delete(existing_membership)
                     cache.delete_memoized(community_membership, user, community)
                 db.session.commit()
-                log_incoming_ap(announce_id, APLOG_ACCEPT, APLOG_SUCCESS, request_json if store_ap_json else None)
+                log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, request_json if store_ap_json else None)
             return
 
         # Create is new content. Update is often an edit, but Updates from Lemmy can also be new content
@@ -703,10 +704,10 @@ def process_inbox_request(request_json, store_ap_json):
                 recipient = find_actor_or_create(recipient_ap_id, create_if_not_found=False)
                 if recipient and recipient.is_local():
                     if sender.created_recently() or sender.reputation <= -10:
-                        log_incoming_ap(announce_id, APLOG_CHATMESSAGE, APLOG_FAILURE, request_json if store_ap_json else None, 'Sender not eligible to send')
+                        log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, request_json if store_ap_json else None, 'Sender not eligible to send')
                         return
                     elif recipient.has_blocked_user(sender.id) or recipient.has_blocked_instance(sender.instance_id):
-                        log_incoming_ap(announce_id, APLOG_CHATMESSAGE, APLOG_FAILURE, request_json if store_ap_json else None, 'Sender blocked by recipient')
+                        log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, request_json if store_ap_json else None, 'Sender blocked by recipient')
                         return
                     else:
                         # Find existing conversation to add to
@@ -735,7 +736,7 @@ def process_inbox_request(request_json, store_ap_json):
                         recipient.unread_notifications += 1
                         existing_conversation.read = False
                         db.session.commit()
-                        log_incoming_ap(announce_id, APLOG_CHATMESSAGE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                        log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_SUCCESS, request_json if store_ap_json else None)
                 return
             # inner object of Create is not a ChatMessage
             else:
@@ -748,20 +749,20 @@ def process_inbox_request(request_json, store_ap_json):
                         if poll_data and choice:
                             poll_data.vote_for_choice(choice.id, user.id)
                             db.session.commit()
-                            log_incoming_ap(announce_id, APLOG_CREATE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                            log_incoming_ap(id, APLOG_CREATE, APLOG_SUCCESS, request_json if store_ap_json else None)
                         if post_being_replied_to.author.is_local():
                             inform_followers_of_post_update(post_being_replied_to.id, user.instance_id)
                     return
                 community_ap_id = find_community_ap_id(request_json)
                 if not ensure_domains_match(request_json['object']):
-                    log_incoming_ap(announce_id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Domains do not match')
+                    log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Domains do not match')
                     return
                 community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False) if community_ap_id else None
                 if community and community.local_only:
-                    log_incoming_ap(announce_id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Remote Create in local_only community')
+                    log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Remote Create in local_only community')
                     return
                 if not community:
-                    log_incoming_ap(announce_id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Blocked or unfound community')
+                    log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Blocked or unfound community')
                     return
 
                 object_type = request_json['object']['type']
@@ -774,16 +775,16 @@ def process_inbox_request(request_json, store_ap_json):
                     if post:
                         if user.id == post.user_id:
                             update_post_from_activity(post, request_json)
-                            log_incoming_ap(announce_id, APLOG_UPDATE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                            log_incoming_ap(id, APLOG_UPDATE, APLOG_SUCCESS, request_json if store_ap_json else None)
                             return
                         else:
-                            log_incoming_ap(announce_id, APLOG_UPDATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Edit attempt denied')
+                            log_incoming_ap(id, APLOG_UPDATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Edit attempt denied')
                             return
                     else:
-                        log_incoming_ap(announce_id, APLOG_UPDATE, APLOG_FAILURE, request_json if store_ap_json else None, 'PeerTube post not found')
+                        log_incoming_ap(id, APLOG_UPDATE, APLOG_FAILURE, request_json if store_ap_json else None, 'PeerTube post not found')
                         return
                 else:
-                    log_incoming_ap(announce_id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unacceptable type (create): ' + object_type)
+                    log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unacceptable type (create): ' + object_type)
             return
 
         if request_json['type'] == 'Delete':
@@ -795,12 +796,12 @@ def process_inbox_request(request_json, store_ap_json):
 
             if to_delete:
                 if to_delete.deleted:
-                    log_incoming_ap(announce_id, APLOG_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already deleted')
+                    log_incoming_ap(id, APLOG_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already deleted')
                 else:
                     delete_post_or_comment(user, to_delete, store_ap_json, request_json)
                     announce_activity_to_followers(to_delete.community, user, request_json)
             else:
-                log_incoming_ap(announce_id, APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Delete: cannot find ' + ap_id)
+                log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Delete: cannot find ' + ap_id)
             return
 
         if request_json['type'] == 'Like' or request_json['type'] == 'EmojiReact':  # Upvote
@@ -809,7 +810,7 @@ def process_inbox_request(request_json, store_ap_json):
 
         if request_json['type'] == 'Dislike':  # Downvote
             if site.enable_downvotes is False:
-                log_incoming_ap(announce_id, APLOG_DISLIKE, APLOG_IGNORED, request_json if store_ap_json else None, 'Dislike ignored because of allow_dislike setting')
+                log_incoming_ap(id, APLOG_DISLIKE, APLOG_IGNORED, request_json if store_ap_json else None, 'Dislike ignored because of allow_dislike setting')
                 return
             process_downvote(user, store_ap_json, request_json, announced=False)
             return
@@ -818,10 +819,10 @@ def process_inbox_request(request_json, store_ap_json):
             reported = find_reported_object(request_json['object'])
             if reported:
                 process_report(user, reported, request_json)
-                log_incoming_ap(announce_id, APLOG_REPORT, APLOG_SUCCESS, request_json if store_ap_json else None)
+                log_incoming_ap(id, APLOG_REPORT, APLOG_SUCCESS, request_json if store_ap_json else None)
                 announce_activity_to_followers(reported.community, user, request_json)
             else:
-                log_incoming_ap(announce_id, APLOG_REPORT, APLOG_IGNORED, request_json if store_ap_json else None, 'Report ignored due to missing content')
+                log_incoming_ap(id, APLOG_REPORT, APLOG_IGNORED, request_json if store_ap_json else None, 'Report ignored due to missing content')
             return
 
         if request_json['type'] == 'Add':       # remote site is adding a local user as a moderator, and is sending directly rather than announcing (happens if not subscribed)
@@ -830,7 +831,7 @@ def process_inbox_request(request_json, store_ap_json):
             community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False) if community_ap_id else None
             if community:
                 if not community.is_moderator(mod) and not community.is_instance_admin(mod):
-                    log_incoming_ap(announce_id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
+                    log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
                     return
                 target = request_json['target']
                 moderators_url = community.ap_moderators_url
@@ -844,15 +845,15 @@ def process_inbox_request(request_json, store_ap_json):
                             new_membership = CommunityMember(community_id=community.id, user_id=new_mod.id, is_moderator=True)
                             db.session.add(new_membership)
                         db.session.commit()
-                        log_incoming_ap(announce_id, APLOG_ADD, APLOG_SUCCESS, request_json if store_ap_json else None)
+                        log_incoming_ap(id, APLOG_ADD, APLOG_SUCCESS, request_json if store_ap_json else None)
                     else:
-                        log_incoming_ap(announce_id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + request_json['object'])
+                        log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + request_json['object'])
                     return
                 else:
                     # Lemmy might not send anything directly to sticky a post if no-one is subscribed (could not get it to generate the activity)
-                    log_incoming_ap(announce_id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Add')
+                    log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Add')
             else:
-                log_incoming_ap(announce_id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Add: cannot find community')
+                log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Add: cannot find community')
             return
 
         if request_json['type'] == 'Remove':       # remote site is removing a local user as a moderator, and is sending directly rather than announcing (happens if not subscribed)
@@ -861,7 +862,7 @@ def process_inbox_request(request_json, store_ap_json):
             community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False) if community_ap_id else None
             if community:
                 if not community.is_moderator(mod) and not community.is_instance_admin(mod):
-                    log_incoming_ap(announce_id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
+                    log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
                     return
                 target = request_json['target']
                 moderators_url = community.ap_moderators_url
@@ -872,15 +873,15 @@ def process_inbox_request(request_json, store_ap_json):
                         if existing_membership:
                             existing_membership.is_moderator = False
                             db.session.commit()
-                            log_incoming_ap(announce_id, APLOG_REMOVE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                            log_incoming_ap(id, APLOG_REMOVE, APLOG_SUCCESS, request_json if store_ap_json else None)
                     else:
-                        log_incoming_ap(announce_id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + request_json['object'])
+                        log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + request_json['object'])
                     return
                 else:
                     # Lemmy might not send anything directly to unsticky a post if no-one is subscribed (could not get it to generate the activity)
-                    log_incoming_ap(announce_id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Remove')
+                    log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Remove')
             else:
-                log_incoming_ap(announce_id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Remove: cannot find community')
+                log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Remove: cannot find community')
             return
 
         if request_json['type'] == 'Block':     # remote site is banning one of their users
@@ -890,7 +891,7 @@ def process_inbox_request(request_json, store_ap_json):
             if store_ap_json:
                 request_json['cc'] = []                                         # cut very long list of instances
             if not blocked:
-                log_incoming_ap(announce_id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
+                log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
                 return
 
             # target = request_json['target']   # target is supposed to determine the scope - whether it is an instance-wide ban or just one community. Lemmy doesn't use it right though
@@ -902,7 +903,7 @@ def process_inbox_request(request_json, store_ap_json):
             # Banning remote users is hacked by banning them from every community of which they are a part
             # There's plans to change this in the future though.
             if not blocker.is_instance_admin() and not blocked.instance_id == blocker.instance_id:
-                log_incoming_ap(announce_id, APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
+                log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
                 return
 
             if blocked.banned:  # We may have already banned them - we don't want remote temp bans to over-ride our permanent bans
@@ -926,9 +927,9 @@ def process_inbox_request(request_json, store_ap_json):
 
             if remove_data:
                 site_ban_remove_data(blocker.id, blocked)
-                log_incoming_ap(announce_id, APLOG_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
+                log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
             else:
-                log_incoming_ap(announce_id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Banned, but content retained')
+                log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Banned, but content retained')
 
             return
 
@@ -947,7 +948,7 @@ def process_inbox_request(request_json, store_ap_json):
                         db.session.delete(join_request)
                     db.session.commit()
                     cache.delete_memoized(community_membership, user, community)
-                    log_incoming_ap(announce_id, APLOG_UNDO_FOLLOW, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    log_incoming_ap(id, APLOG_UNDO_FOLLOW, APLOG_SUCCESS, request_json if store_ap_json else None)
                     return
                 if isinstance(target, User):
                     local_user = target
@@ -956,10 +957,10 @@ def process_inbox_request(request_json, store_ap_json):
                     if follower:
                         db.session.delete(follower)
                         db.session.commit()
-                        log_incoming_ap(announce_id, APLOG_UNDO_FOLLOW, APLOG_SUCCESS, request_json if store_ap_json else None)
+                        log_incoming_ap(id, APLOG_UNDO_FOLLOW, APLOG_SUCCESS, request_json if store_ap_json else None)
                     return
                 if not target:
-                    log_incoming_ap(announce_id, APLOG_UNDO_FOLLOW, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound target')
+                    log_incoming_ap(id, APLOG_UNDO_FOLLOW, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound target')
                 return
 
             if request_json['object']['type'] == 'Delete':                      # Restore something previously deleted
@@ -972,12 +973,12 @@ def process_inbox_request(request_json, store_ap_json):
                 to_restore = find_liked_object(ap_id)                           # a user or a mod/admin is undoing the delete of a post or reply
                 if to_restore:
                     if not to_restore.deleted:
-                        log_incoming_ap(announce_id, APLOG_UNDO_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already restored')
+                        log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already restored')
                     else:
                         restore_post_or_comment(restorer, to_restore, store_ap_json, request_json)
                         announce_activity_to_followers(to_restore.community, user, request_json)
                 else:
-                    log_incoming_ap(announce_id, APLOG_UNDO_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Undo delete: cannot find ' + ap_id)
+                    log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Undo delete: cannot find ' + ap_id)
                 return
 
             if request_json['object']['type'] == 'Like' or request_json['object']['type'] == 'Dislike':                        # Undoing an upvote or downvote
@@ -985,10 +986,10 @@ def process_inbox_request(request_json, store_ap_json):
                 target_ap_id = request_json['object']['object']
                 post_or_comment = undo_vote(comment, post, target_ap_id, user)
                 if post_or_comment:
-                    log_incoming_ap(announce_id, APLOG_UNDO_VOTE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    log_incoming_ap(id, APLOG_UNDO_VOTE, APLOG_SUCCESS, request_json if store_ap_json else None)
                     announce_activity_to_followers(post_or_comment.community, user, request_json)
                 else:
-                    log_incoming_ap(announce_id, APLOG_UNDO_VOTE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound object ' + target_ap_id)
+                    log_incoming_ap(id, APLOG_UNDO_VOTE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound object ' + target_ap_id)
                 return
 
             if request_json['object']['type'] == 'Block':     # remote site is unbanning one of their users
@@ -999,37 +1000,37 @@ def process_inbox_request(request_json, store_ap_json):
                     request_json['cc'] = []                                         # cut very long list of instances
                     request_json['object']['cc'] = []
                 if not unblocked:
-                    log_incoming_ap(announce_id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
+                    log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
                     return
                 unblock_from_ap_id = request_json['object']['target']
 
                 if not unblocker.is_instance_admin() and not unblocked.instance_id == unblocker.instance_id:
-                    log_incoming_ap(announce_id, APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
+                    log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
                     return
 
                 # (no removeData field in an undo/ban - cannot restore without knowing if deletion was part of ban, or different moderator action)
                 #unblocked.banned = False                   # uncommented until there's a mechanism for processing ban expiry date
                 #db.session.commit()
-                log_incoming_ap(announce_id, APLOG_UNDO_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
+                log_incoming_ap(id, APLOG_UNDO_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
                 return
 
         # Announce is new content and votes that happened on a remote server.
         if request_json['type'] == 'Announce':
             if isinstance(request_json['object'], str):  # Mastodon, PeerTube, A.gup.pe
                 if request_json['object'].startswith('https://' + current_app.config['SERVER_NAME']):
-                    log_incoming_ap(announce_id, APLOG_DUPLICATE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already present')
+                    log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already present')
                     return
                 post = resolve_remote_post(request_json['object'], community.id, announce_actor=community.ap_profile_id, store_ap_json=store_ap_json)
                 if post:
-                    log_incoming_ap(announce_id, APLOG_ANNOUNCE, APLOG_SUCCESS, request_json)
+                    log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_SUCCESS, request_json)
                 else:
-                    log_incoming_ap(announce_id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'Could not resolve post')
+                    log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'Could not resolve post')
                 return
 
             user_ap_id = request_json['object']['actor']
             user = find_actor_or_create(user_ap_id)
             if not user or not isinstance(user, User):
-                log_incoming_ap(announce_id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'Blocked or unfound user for Announce object actor ' + user_ap_id)
+                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'Blocked or unfound user for Announce object actor ' + user_ap_id)
                 return
 
             user.last_seen = site.last_active = utcnow()
@@ -1048,9 +1049,9 @@ def process_inbox_request(request_json, store_ap_json):
                     # force refresh next time community is heard from
                     community.ap_fetched_at = None
                     db.session.commit()
-                    log_incoming_ap(announce_id, APLOG_UPDATE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    log_incoming_ap(id, APLOG_UPDATE, APLOG_SUCCESS, request_json if store_ap_json else None)
                 else:
-                    log_incoming_ap(announce_id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unacceptable type (create): ' + object_type)
+                    log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unacceptable type (create): ' + object_type)
                 return
 
             if request_json['object']['type'] == 'Delete':                                                  # Announced Delete
@@ -1062,11 +1063,11 @@ def process_inbox_request(request_json, store_ap_json):
 
                 if to_delete:
                     if to_delete.deleted:
-                        log_incoming_ap(announce_id, APLOG_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already deleted')
+                        log_incoming_ap(id, APLOG_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already deleted')
                     else:
                         delete_post_or_comment(user, to_delete, store_ap_json, request_json)
                 else:
-                    log_incoming_ap(announce_id, APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Delete: cannot find ' + ap_id)
+                    log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Delete: cannot find ' + ap_id)
                 return
 
             if request_json['object']['type'] == 'Like' or request_json['object']['type'] == 'EmojiReact':  # Announced Upvote
@@ -1075,7 +1076,7 @@ def process_inbox_request(request_json, store_ap_json):
 
             if request_json['object']['type'] == 'Dislike':                                                 # Announced Downvote
                 if site.enable_downvotes is False:
-                    log_incoming_ap(announce_id, APLOG_DISLIKE, APLOG_IGNORED, request_json if store_ap_json else None, 'Dislike ignored because of allow_dislike setting')
+                    log_incoming_ap(id, APLOG_DISLIKE, APLOG_IGNORED, request_json if store_ap_json else None, 'Dislike ignored because of allow_dislike setting')
                     return
                 process_downvote(user, store_ap_json, request_json)
                 return
@@ -1084,9 +1085,9 @@ def process_inbox_request(request_json, store_ap_json):
                 reported = find_reported_object(request_json['object']['object'])
                 if reported:
                     process_report(user, reported, request_json['object'])
-                    log_incoming_ap(announce_id, APLOG_REPORT, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    log_incoming_ap(id, APLOG_REPORT, APLOG_SUCCESS, request_json if store_ap_json else None)
                 else:
-                    log_incoming_ap(announce_id, APLOG_REPORT, APLOG_IGNORED, request_json if store_ap_json else None, 'Report ignored due to missing content')
+                    log_incoming_ap(id, APLOG_REPORT, APLOG_IGNORED, request_json if store_ap_json else None, 'Report ignored due to missing content')
                 return
 
             if request_json['object']['type'] == 'Lock':                                                            # Announce of post lock
@@ -1097,11 +1098,11 @@ def process_inbox_request(request_json, store_ap_json):
                     if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
                         post.comments_enabled = False
                         db.session.commit()
-                        log_incoming_ap(announce_id, APLOG_LOCK, APLOG_SUCCESS, request_json if store_ap_json else None)
+                        log_incoming_ap(id, APLOG_LOCK, APLOG_SUCCESS, request_json if store_ap_json else None)
                     else:
-                        log_incoming_ap(announce_id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: Does not have permission')
+                        log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: Does not have permission')
                 else:
-                    log_incoming_ap(announce_id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: post not found')
+                    log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: post not found')
                 return
 
             if request_json['object']['type'] == 'Add':                                                             # Announce of adding mods or stickying a post
@@ -1113,9 +1114,9 @@ def process_inbox_request(request_json, store_ap_json):
                     if post:
                         post.sticky = True
                         db.session.commit()
-                        log_incoming_ap(announce_id, APLOG_ADD, APLOG_SUCCESS, request_json if store_ap_json else None)
+                        log_incoming_ap(id, APLOG_ADD, APLOG_SUCCESS, request_json if store_ap_json else None)
                     else:
-                        log_incoming_ap(announce_id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' +  request_json['object']['object'])
+                        log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' +  request_json['object']['object'])
                     return
                 if target == moderators_url:
                     user = find_actor_or_create(request_json['object']['object'])
@@ -1127,11 +1128,11 @@ def process_inbox_request(request_json, store_ap_json):
                             new_membership = CommunityMember(community_id=community.id, user_id=user.id, is_moderator=True)
                             db.session.add(new_membership)
                         db.session.commit()
-                        log_incoming_ap(announce_id, APLOG_ADD, APLOG_SUCCESS, request_json if store_ap_json else None)
+                        log_incoming_ap(id, APLOG_ADD, APLOG_SUCCESS, request_json if store_ap_json else None)
                     else:
-                        log_incoming_ap(announce_id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + request_json['object']['object'])
+                        log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + request_json['object']['object'])
                     return
-                log_incoming_ap(announce_id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Add')
+                log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Add')
                 return
 
             if request_json['object']['type'] == 'Remove':                                                          # Announce of removing mods or unstickying a post
@@ -1143,9 +1144,9 @@ def process_inbox_request(request_json, store_ap_json):
                     if post:
                         post.sticky = False
                         db.session.commit()
-                        log_incoming_ap(announce_id, APLOG_REMOVE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                        log_incoming_ap(id, APLOG_REMOVE, APLOG_SUCCESS, request_json if store_ap_json else None)
                     else:
-                        log_incoming_ap(announce_id, APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + target)
+                        log_incoming_ap(id, APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + target)
                     return
                 if target == moderators_url:
                     user = find_actor_or_create(request_json['object']['object'], create_if_not_found=False)
@@ -1154,11 +1155,11 @@ def process_inbox_request(request_json, store_ap_json):
                         if existing_membership:
                             existing_membership.is_moderator = False
                             db.session.commit()
-                            log_incoming_ap(announce_id, APLOG_REMOVE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                            log_incoming_ap(id, APLOG_REMOVE, APLOG_SUCCESS, request_json if store_ap_json else None)
                     else:
-                        log_incoming_ap(announce_id, APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + request_json['object']['object'])
+                        log_incoming_ap(id, APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + request_json['object']['object'])
                     return
-                log_incoming_ap(announce_id, APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Remove')
+                log_incoming_ap(id, APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Remove')
                 return
 
             if request_json['object']['type'] == 'Block':                               # Announce of user ban. Mod is banning a user from a community,
@@ -1166,19 +1167,19 @@ def process_inbox_request(request_json, store_ap_json):
                 blocked_ap_id = request_json['object']['object'].lower()
                 blocked = User.query.filter_by(ap_profile_id=blocked_ap_id).first()
                 if not blocked:
-                    log_incoming_ap(announce_id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
+                    log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
                     return
                 remove_data = request_json['object']['removeData'] if 'removeData' in request_json['object'] else False
 
                 if not community.is_moderator(blocker) and not community.is_instance_admin(blocker):
-                    log_incoming_ap(announce_id, APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
+                    log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
                     return
 
                 if remove_data == True:
                     community_ban_remove_data(blocker.id, community.id, blocked)
-                    log_incoming_ap(announce_id, APLOG_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
                 else:
-                    log_incoming_ap(announce_id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Banned, but content retained')
+                    log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Banned, but content retained')
 
                 if blocked.is_local():
                     ban_local_user(blocker, blocked, community, request_json)
@@ -1195,11 +1196,11 @@ def process_inbox_request(request_json, store_ap_json):
                     to_restore = find_liked_object(ap_id)                           # a user or a mod/admin is undoing the delete of a post or reply
                     if to_restore:
                         if not to_restore.deleted:
-                            log_incoming_ap(announce_id, APLOG_UNDO_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Content was not deleted')
+                            log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Content was not deleted')
                         else:
                             restore_post_or_comment(restorer, to_restore, store_ap_json, request_json)
                     else:
-                        log_incoming_ap(announce_id, APLOG_UNDO_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Undo delete: cannot find ' + ap_id)
+                        log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Undo delete: cannot find ' + ap_id)
                     return
 
                 if request_json['object']['object']['type'] == 'Like' or request_json['object']['object']['type'] == 'Dislike':             # Announce of undo of upvote or downvote
@@ -1207,9 +1208,9 @@ def process_inbox_request(request_json, store_ap_json):
                     target_ap_id = request_json['object']['object']['object']
                     post_or_comment = undo_vote(comment, post, target_ap_id, user)
                     if post_or_comment:
-                        log_incoming_ap(announce_id, APLOG_UNDO_VOTE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                        log_incoming_ap(id, APLOG_UNDO_VOTE, APLOG_SUCCESS, request_json if store_ap_json else None)
                     else:
-                        log_incoming_ap(announce_id, APLOG_UNDO_VOTE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound object ' + target_ap_id)
+                        log_incoming_ap(id, APLOG_UNDO_VOTE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound object ' + target_ap_id)
                     return
 
                 if request_json['object']['object']['type'] == 'Lock':                                                                      # Announce of undo of post lock
@@ -1220,11 +1221,11 @@ def process_inbox_request(request_json, store_ap_json):
                         if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
                             post.comments_enabled = True
                             db.session.commit()
-                            log_incoming_ap(announce_id, APLOG_LOCK, APLOG_SUCCESS, request_json if store_ap_json else None)
+                            log_incoming_ap(id, APLOG_LOCK, APLOG_SUCCESS, request_json if store_ap_json else None)
                         else:
-                            log_incoming_ap(announce_id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: Does not have permission')
+                            log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: Does not have permission')
                     else:
-                        log_incoming_ap(announce_id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: post not found')
+                        log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: post not found')
                     return
 
                 if request_json['object']['object']['type'] == 'Block':                         # Announce of undo of user ban. Mod is unbanning a user from a community,
@@ -1232,26 +1233,27 @@ def process_inbox_request(request_json, store_ap_json):
                     blocked_ap_id = request_json['object']['object']['object'].lower()
                     blocked = User.query.filter_by(ap_profile_id=blocked_ap_id).first()
                     if not blocked:
-                        log_incoming_ap(announce_id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
+                        log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
                         return
 
                     if not community.is_moderator(blocker) and not community.is_instance_admin(blocker):
-                        log_incoming_ap(announce_id, APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
+                        log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
                         return
 
                     if blocked.is_local():
                         unban_local_user(blocker, blocked, community, request_json)
-                    log_incoming_ap(announce_id, APLOG_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
 
                     return
 
-        log_incoming_ap(announce_id, APLOG_MONITOR, APLOG_PROCESSING, request_json if store_ap_json else None, 'Unmatched activity')
+        log_incoming_ap(id, APLOG_MONITOR, APLOG_PROCESSING, request_json if store_ap_json else None, 'Unmatched activity')
 
 
 @celery.task
 def process_delete_request(request_json, store_ap_json):
     with current_app.app_context():
         # this function processes self-deletes (retain case here, as user_removed_from_remote_server() uses a JSON request)
+        id = request_json['id']
         user_ap_id = request_json['actor']
         user = User.query.filter_by(ap_profile_id=user_ap_id.lower()).first()
         if user:
@@ -1261,9 +1263,9 @@ def process_delete_request(request_json, store_ap_json):
                 user.deleted = True
                 user.deleted_by = user.id
                 db.session.commit()
-                log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                log_incoming_ap(id, APLOG_DELETE, APLOG_SUCCESS, request_json if store_ap_json else None)
             else:
-                log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'User not actually deleted.')
+                log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'User not actually deleted.')
         # TODO: acknowledge 'removeData' field from Lemmy
         # TODO: hard-delete in 7 days (should purge avatar and cover images, but keep posts and replies unless already soft-deleted by removeData = True)
 
@@ -1600,34 +1602,34 @@ def process_new_content(user, community, store_ap_json, request_json, announced=
 
 
 def process_upvote(user, store_ap_json, request_json, announced=True):
-    announce_id = request_json['id']
+    id = request_json['id']
     ap_id = request_json['object'] if not announced else request_json['object']['object']
     liked = find_liked_object(ap_id)
     if liked is None:
-        log_incoming_ap(announce_id, APLOG_LIKE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound object ' + ap_id)
+        log_incoming_ap(id, APLOG_LIKE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound object ' + ap_id)
         return
     if can_upvote(user, liked.community):
         if isinstance(liked, (Post, PostReply)):
             liked.vote(user, 'upvote')
-            log_incoming_ap(announce_id, APLOG_LIKE, APLOG_SUCCESS, request_json if store_ap_json else None)
+            log_incoming_ap(id, APLOG_LIKE, APLOG_SUCCESS, request_json if store_ap_json else None)
             if not announced:
                 announce_activity_to_followers(liked.community, user, request_json)
     else:
-        log_incoming_ap(announce_id, APLOG_LIKE, APLOG_IGNORED, request_json if store_ap_json else None, 'Cannot upvote this')
+        log_incoming_ap(id, APLOG_LIKE, APLOG_IGNORED, request_json if store_ap_json else None, 'Cannot upvote this')
 
 
 def process_downvote(user, store_ap_json, request_json, announced=True):
-    announce_id = request_json['id']
+    id = request_json['id']
     ap_id = request_json['object'] if not announced else request_json['object']['object']
     liked = find_liked_object(ap_id)
     if liked is None:
-        log_incoming_ap(announce_id, APLOG_DISLIKE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound object ' + ap_id)
+        log_incoming_ap(id, APLOG_DISLIKE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound object ' + ap_id)
         return
     if can_downvote(user, liked.community):
         if isinstance(liked, (Post, PostReply)):
             liked.vote(user, 'downvote')
-            log_incoming_ap(announce_id, APLOG_DISLIKE, APLOG_SUCCESS, request_json if store_ap_json else None)
+            log_incoming_ap(id, APLOG_DISLIKE, APLOG_SUCCESS, request_json if store_ap_json else None)
             if not announced:
                 announce_activity_to_followers(liked.community, user, request_json)
     else:
-        log_incoming_ap(announce_id, APLOG_DISLIKE, APLOG_IGNORED, request_json if store_ap_json else None, 'Cannot downvote this')
+        log_incoming_ap(id, APLOG_DISLIKE, APLOG_IGNORED, request_json if store_ap_json else None, 'Cannot downvote this')

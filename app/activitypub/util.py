@@ -1341,6 +1341,7 @@ def is_activitypub_request():
 
 
 def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json):
+    id = request_json['id']
     community = to_delete.community
     if to_delete.user_id == deletor.id or deletor.is_admin() or community.is_moderator(deletor) or community.is_instance_admin(deletor):
         if isinstance(to_delete, Post):
@@ -1370,12 +1371,13 @@ def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json):
                 add_to_modlog_activitypub('delete_post_reply', deletor, community_id=community.id,
                                           link_text=f'comment on {shorten_string(to_delete.post.title)}',
                                           link=f'post/{to_delete.post.id}#comment_{to_delete.id}')
-        log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_SUCCESS, request_json if store_ap_json else None)
+        log_incoming_ap(id, APLOG_DELETE, APLOG_SUCCESS, request_json if store_ap_json else None)
     else:
-        log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Deletor did not have permisson')
+        log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Deletor did not have permisson')
 
 
 def restore_post_or_comment(restorer, to_restore, store_ap_json, request_json):
+    id = request_json['id']
     community = to_restore.community
     if to_restore.user_id == restorer.id or restorer.is_admin() or community.is_moderator(restorer) or community.is_instance_admin(restorer):
         if isinstance(to_restore, Post):
@@ -1411,9 +1413,9 @@ def restore_post_or_comment(restorer, to_restore, store_ap_json, request_json):
                 add_to_modlog_activitypub('restore_post_reply', restorer, community_id=community.id,
                                           link_text=f'comment on {shorten_string(to_restore.post.title)}',
                                           link=f'post/{to_restore.post_id}#comment_{to_restore.id}')
-        log_incoming_ap(request_json['id'], APLOG_UNDO_DELETE, APLOG_SUCCESS, request_json if store_ap_json else None)
+        log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_SUCCESS, request_json if store_ap_json else None)
     else:
-        log_incoming_ap(request_json['id'], APLOG_UNDO_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Restorer did not have permisson')
+        log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Restorer did not have permisson')
 
 
 def site_ban_remove_data(blocker_id, blocked):
@@ -1616,8 +1618,9 @@ def lock_post_task(mod_ap_id, post_id, comments_enabled):
 
 
 def create_post_reply(store_ap_json, community: Community, in_reply_to, request_json: dict, user: User, announce_id=None) -> Union[PostReply, None]:
+    id = request_json['id']
     if community.local_only:
-        log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Community is local only, reply discarded')
+        log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Community is local only, reply discarded')
         return None
     post_id, parent_comment_id, root_id = find_reply_parent(in_reply_to)
 
@@ -1628,7 +1631,7 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
         else:
             parent_comment = None
         if post_id is None:
-            log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not find parent post')
+            log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not find parent post')
             return None
         post = Post.query.get(post_id)
 
@@ -1659,22 +1662,23 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
                                        language_id=language_id, request_json=request_json, announce_id=announce_id)
             return post_reply
         except Exception as ex:
-            log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, str(ex))
+            log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, str(ex))
             return None
     else:
-        log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unable to find parent post/comment')
+        log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unable to find parent post/comment')
         return None
 
 
 def create_post(store_ap_json, community: Community, request_json: dict, user: User, announce_id=None) -> Union[Post, None]:
+    id = request_json['id']
     if community.local_only:
-        log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Community is local only, post discarded')
+        log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Community is local only, post discarded')
         return None
     try:
         post = Post.new(user, community, request_json, announce_id)
         return post
     except Exception as ex:
-        log_incoming_ap(request_json['id'], APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, str(ex))
+        log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, str(ex))
         return None
 
 
