@@ -1142,7 +1142,7 @@ class Post(db.Model):
 
     @classmethod
     def get_by_ap_id(cls, ap_id):
-        return cls.query.filter_by(ap_id=ap_id).first()
+        return cls.query.filter_by(ap_id=ap_id.lower()).first()
 
     @classmethod
     def new(cls, user: User, community: Community, request_json: dict, announce_id=None):
@@ -1750,7 +1750,7 @@ class PostReply(db.Model):
 
     @classmethod
     def get_by_ap_id(cls, ap_id):
-        return cls.query.filter_by(ap_id=ap_id).first()
+        return cls.query.filter_by(ap_id=ap_id.lower()).first()
 
     def profile_id(self):
         if self.ap_id:
