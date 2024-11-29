@@ -1505,7 +1505,7 @@ def activity_result(id):
 
 
 def process_new_content(user, community, store_ap_json, request_json, announced=True):
-    announce_id = request_json['id']
+    id = request_json['id']
     if not announced:
         in_reply_to = request_json['object']['inReplyTo'] if 'inReplyTo' in request_json['object'] else None
         ap_id = request_json['object']['id']
@@ -1521,63 +1521,63 @@ def process_new_content(user, community, store_ap_json, request_json, announced=
         post = Post.query.filter_by(ap_id=ap_id).first()
         if post:
             if activity_json['type'] == 'Create':
-                log_incoming_ap(announce_id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Create processed after Update')
+                log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Create processed after Update')
                 return
             if user.id == post.user_id:
                 update_post_from_activity(post, activity_json)
-                log_incoming_ap(announce_id, APLOG_UPDATE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                log_incoming_ap(id, APLOG_UPDATE, APLOG_SUCCESS, request_json if store_ap_json else None)
                 if not announced:
                     announce_activity_to_followers(post.community, post.author, request_json)
                 return
             else:
-                log_incoming_ap(announce_id, APLOG_UPDATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Edit attempt denied')
+                log_incoming_ap(id, APLOG_UPDATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Edit attempt denied')
                 return
         else:
             if can_create_post(user, community):
                 try:
                     post = create_post(store_ap_json, community, activity_json, user, announce_id=announce_id)
                     if post:
-                        log_incoming_ap(announce_id, APLOG_CREATE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                        log_incoming_ap(id, APLOG_CREATE, APLOG_SUCCESS, request_json if store_ap_json else None)
                         if not announced:
                             announce_activity_to_followers(community, user, request_json)
                         return
                 except TypeError as e:
                     current_app.logger.error('TypeError: ' + str(request_json))
-                    log_incoming_ap(announce_id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'TypeError. See log file.')
+                    log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'TypeError. See log file.')
                     return
             else:
-                log_incoming_ap(announce_id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'User cannot create post in Community')
+                log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'User cannot create post in Community')
                 return
     else:   # Creating a reply / comment
         reply = PostReply.query.filter_by(ap_id=ap_id).first()
         if reply:
             if activity_json['type'] == 'Create':
-                log_incoming_ap(announce_id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Create processed after Update')
+                log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Create processed after Update')
                 return
             if user.id == reply.user_id:
                 update_post_reply_from_activity(reply, activity_json)
-                log_incoming_ap(announce_id, APLOG_UPDATE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                log_incoming_ap(id, APLOG_UPDATE, APLOG_SUCCESS, request_json if store_ap_json else None)
                 if not announced:
                     announce_activity_to_followers(reply.community, reply.author, request_json)
                 return
             else:
-                log_incoming_ap(announce_id, APLOG_UPDATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Edit attempt denied')
+                log_incoming_ap(id, APLOG_UPDATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Edit attempt denied')
                 return
         else:
             if can_create_post_reply(user, community):
                 try:
                     reply = create_post_reply(store_ap_json, community, in_reply_to, activity_json, user, announce_id=announce_id)
                     if reply:
-                        log_incoming_ap(announce_id, APLOG_CREATE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                        log_incoming_ap(id, APLOG_CREATE, APLOG_SUCCESS, request_json if store_ap_json else None)
                         if not announced:
                             announce_activity_to_followers(community, user, request_json)
                     return
                 except TypeError as e:
                     current_app.logger.error('TypeError: ' + str(request_json))
-                    log_incoming_ap(announce_id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'TypeError. See log file.')
+                    log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'TypeError. See log file.')
                     return
             else:
-                log_incoming_ap(announce_id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'User cannot create reply in Community')
+                log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'User cannot create reply in Community')
                 return
 
 
