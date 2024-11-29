@@ -892,7 +892,10 @@ def process_inbox_request(request_json, store_ap_json):
             if not blocked:
                 log_incoming_ap(announce_id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
                 return
-            block_from_ap_id = request_json['target']
+
+            # target = request_json['target']   # target is supposed to determine the scope - whether it is an instance-wide ban or just one community. Lemmy doesn't use it right though
+            # community = find_actor_or_create(target, create_if_not_found=False, community_only=True)
+
             remove_data = request_json['removeData'] if 'removeData' in request_json else False
 
             # Lemmy currently only sends userbans for admins banning local users
@@ -902,15 +905,31 @@ def process_inbox_request(request_json, store_ap_json):
                 log_incoming_ap(announce_id, APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
                 return
 
-            # request_json includes 'expires' and 'endTime' (same thing) but nowhere to record this and check in future for end in ban.
+            if blocked.banned:  # We may have already banned them - we don't want remote temp bans to over-ride our permanent bans
+                return
 
-            if remove_data == True:
+            if blocked.is_local():  # Sanity check
+                current_app.logger.error('Attempt to ban local user: ' + str(request_json))
+                return
+
+            blocked.banned = True
+            db.session.commit()
+            if 'expires' in request_json:
+                blocked.banned_until = request_json['expires']
+            elif 'endTime' in request_json:
+                blocked.banned_until = request_json['endTime']
+            try:
+                db.session.commit()
+            except:  # I don't know the format of expires or endTime so let's see how this goes
+                db.session.rollback()
+                current_app.logger.error('could not save banned_until value: ' + str(request_json))
+
+            if remove_data:
                 site_ban_remove_data(blocker.id, blocked)
                 log_incoming_ap(announce_id, APLOG_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
             else:
-                #blocked.banned = True         # uncommented until there's a mechanism for processing ban expiry date
-                #db.session.commit()
                 log_incoming_ap(announce_id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Banned, but content retained')
+
             return
 
         if request_json['type'] == 'Undo':
@@ -1438,8 +1457,8 @@ def user_followers(actor):
 
 @bp.route('/comment/<int:comment_id>', methods=['GET', 'HEAD'])
 def comment_ap(comment_id):
+    reply = PostReply.query.get_or_404(comment_id)
     if is_activitypub_request():
-        reply = PostReply.query.get_or_404(comment_id)
         reply_data = comment_model_to_json(reply) if request.method == 'GET' else []
         resp = jsonify(reply_data)
         resp.content_type = 'application/activity+json'
@@ -1447,7 +1466,6 @@ def comment_ap(comment_id):
         resp.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/comment/{reply.id}>; rel="alternate"; type="text/html"')
         return resp
     else:
-        reply = PostReply.query.get_or_404(comment_id)
         return continue_discussion(reply.post.id, comment_id)
 
 

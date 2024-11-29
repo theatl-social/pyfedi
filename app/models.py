@@ -135,10 +135,18 @@ class InstanceRole(db.Model):
     user = db.relationship('User', lazy='joined')
 
 
+# Instances that this user has blocked
 class InstanceBlock(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
     instance_id = db.Column(db.Integer, db.ForeignKey('instance.id'), primary_key=True)
     created_at = db.Column(db.DateTime, default=utcnow)
+
+
+# Instances that have banned this user
+class InstanceBan(db.Model):
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    instance_id = db.Column(db.Integer, db.ForeignKey('instance.id'), primary_key=True)
+    banned_until = db.Column(db.DateTime)
 
 
 class Conversation(db.Model):
@@ -649,7 +657,8 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(128))
     verified = db.Column(db.Boolean, default=False)
     verification_token = db.Column(db.String(16), index=True)
-    banned = db.Column(db.Boolean, default=False)
+    banned = db.Column(db.Boolean, default=False, index=True)
+    banned_until = db.Column(db.DateTime)   # null == permanent ban
     deleted = db.Column(db.Boolean, default=False)
     deleted_by = db.Column(db.Integer, index=True)
     about = db.Column(db.Text)      # markdown
@@ -2010,6 +2019,7 @@ class CommunityBan(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)             # person who is banned, not the banner
     community_id = db.Column(db.Integer, db.ForeignKey('community.id'), primary_key=True)
     banned_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    banned_until = db.Column(db.DateTime)
     reason = db.Column(db.String(256))
     created_at = db.Column(db.DateTime, default=utcnow)
     ban_until = db.Column(db.DateTime)

@@ -470,8 +470,13 @@ def poll_vote(post_id):
 def continue_discussion(post_id, comment_id):
     post = Post.query.get_or_404(post_id)
     comment = PostReply.query.get_or_404(comment_id)
+
     if post.community.banned or post.deleted or comment.deleted:
-        abort(404)
+        if current_user.is_anonymous or not (current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff())):
+            abort(404)
+        else:
+            flash(_('This comment has been deleted and is only visible to staff and admins.'), 'warning')
+
     mods = post.community.moderators()
     is_moderator = current_user.is_authenticated and any(mod.user_id == current_user.id for mod in mods)
     if post.community.private_mods:

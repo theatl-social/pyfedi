@@ -1453,7 +1453,6 @@ def site_ban_remove_data(blocker_id, blocked):
     if blocked.cover_id:
         blocked.cover.delete_from_disk()
         blocked.cover.source_url = ''
-    # blocked.banned = True                     # uncommented until there's a mechanism for processing ban expiry date
 
     db.session.commit()
 

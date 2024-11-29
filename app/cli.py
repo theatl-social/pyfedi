@@ -209,6 +209,11 @@ def register(app):
             db.session.execute(text('DELETE FROM "post_reply_vote" WHERE created_at < :cutoff'), {'cutoff': utcnow() - timedelta(days=28 * 6)})
             db.session.commit()
 
+            # Un-ban after ban expires
+            db.session.execute(text('UPDATE "user" SET banned = false WHERE banned is true AND banned_until < :cutoff AND banned_until is not null'),
+                               {'cutoff': utcnow()})
+            db.session.commit()
+
             # Check for dormant or dead instances
             try:
                 # Check for dormant or dead instances
