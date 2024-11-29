@@ -426,6 +426,27 @@ def list_files(directory):
             yield os.path.join(root, file)
 
 
+@bp.route('/replay_inbox')
+@login_required
+def replay_inbox():
+    from app.activitypub.routes import replay_inbox_request
+
+    request_json = {}
+    """
+    request_json = {"@context": ["https://join-lemmy.org/context.json", "https://www.w3.org/ns/activitystreams"],
+                    "actor": "https://lemmy.lemmy/u/doesnotexist",
+                    "cc": [],
+                    "id": "https://lemmy.lemmy/activities/delete/5d42c8bf-cc60-4d2c-a3b5-673ddb7ce64b",
+                    "object": "https://lemmy.lemmy/u/doesnotexist",
+                    "to": ["https://www.w3.org/ns/activitystreams#Public"],
+                    "type": "Delete"}
+    """
+
+    replay_inbox_request(request_json)
+
+    return 'ok'
+
+
 @bp.route('/test')
 def test():
 
