@@ -422,7 +422,7 @@ def shared_inbox():
             return '', 200
 
     redis_client = get_redis_connection()
-    if redis_client.exists(id):                 # Something is sending same activity multiple times, or Announcing as well as sending the same content
+    if redis_client.exists(id):                 # Something is sending same activity multiple times
         log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, request_json if store_ap_json else None, 'Unnecessary retry attempt')
         return '', 200
     redis_client.set(id, 1, ex=90)              # Save the activity ID into redis, to avoid duplicate activities
@@ -432,19 +432,19 @@ def shared_inbox():
         log_incoming_ap(request_json['id'], APLOG_PT_VIEW, APLOG_IGNORED, request_json if store_ap_json else None, 'PeerTube View or CacheFile activity')
         return ''
 
-    # Ignore delete requests from uses that do not already exist here
-    if request_json['type'] == 'Delete':
-        if (request_json['id'].endswith('#delete') or                                                                                       # Mastodon / PieFed
-            ('object' in request_json and isinstance(request_json['object'], str) and request_json['actor'] == request_json['object'])):    # Lemmy
-            actor = User.query.filter_by(ap_profile_id=request_json['actor'].lower()).first()
-            if not actor:
-                log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
-                return '', 200
-            else:
-                actor.ap_fetched_at = utcnow()                  # use stored pubkey, don't try to re-fetch for next step (signature verification)
-                db.session.commit()
+    # Ignore account deletion requests from users that do not already exist here
+    account_deletion = False
+    if (request_json['type'] == 'Delete' and
+        'object' in request_json and isinstance(request_json['object'], str) and
+        request_json['actor'] == request_json['object']):
+        account_deletion = True
+        actor = User.query.filter_by(ap_profile_id=request_json['actor'].lower()).first()
+        if not actor:
+            log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
+            return '', 200
+    else:
+        actor = find_actor_or_create(request_json['actor'])
 
-    actor = find_actor_or_create(request_json['actor'])
     if not actor:
         actor_name = request_json['actor']
         log_incoming_ap(request_json['id'], APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, f'Actor could not be found 1: {actor_name}')
@@ -453,13 +453,13 @@ def shared_inbox():
     if actor.is_local():        # should be impossible (can be Announced back, but not sent without access to privkey)
         log_incoming_ap(request_json['id'], APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'ActivityPub activity from a local actor')
         return '', 200
-    else:
-        actor.instance.last_seen = utcnow()
-        actor.instance.dormant = False
-        actor.instance.gone_forever = False
-        actor.instance.failures = 0
-        actor.instance.ip_address = ip_address()
-        db.session.commit()
+
+    actor.instance.last_seen = utcnow()
+    actor.instance.dormant = False
+    actor.instance.gone_forever = False
+    actor.instance.failures = 0
+    actor.instance.ip_address = ip_address()
+    db.session.commit()
 
     try:
         HttpSignature.verify_request(request, actor.public_key, skip_date=True)
@@ -475,15 +475,13 @@ def shared_inbox():
             return '', 400
 
     # When a user is deleted, the only way to be fairly sure they get deleted everywhere is to tell the whole fediverse.
-    # Earlier check means this is only for users that already exist, repeating it here means that http signature will have been verified
-    if request_json['type'] == 'Delete':
-        if (request_json['id'].endswith('#delete') or                                                                                       # Mastodon / PieFed
-            ('object' in request_json and isinstance(request_json['object'], str) and request_json['actor'] == request_json['object'])):    # Lemmy
-            if current_app.debug:
-                process_delete_request(request_json, store_ap_json)
-            else:
-                process_delete_request.delay(request_json, store_ap_json)
-            return ''
+    # Earlier check means this is only for users that already exist, processing it here means that http signature will have been verified
+    if account_deletion == True:
+        if current_app.debug:
+            process_delete_request(request_json, store_ap_json)
+        else:
+            process_delete_request.delay(request_json, store_ap_json)
+        return ''
 
     if current_app.debug:
         process_inbox_request(request_json, store_ap_json)
@@ -531,16 +529,19 @@ def replay_inbox_request(request_json):
         log_incoming_ap(request_json['id'], APLOG_PT_VIEW, APLOG_IGNORED, request_json, 'REPLAY: PeerTube View or CacheFile activity')
         return
 
-    # Ignore delete requests from uses that do not already exist here
-    if request_json['type'] == 'Delete':
-        if (request_json['id'].endswith('#delete') or                                                                                       # Mastodon / PieFed
-            ('object' in request_json and isinstance(request_json['object'], str) and request_json['actor'] == request_json['object'])):    # Lemmy
-            actor = User.query.filter_by(ap_profile_id=request_json['actor'].lower()).first()
-            if not actor:
-                log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_IGNORED, request_json, 'REPLAY: Does not exist here')
-                return
+    # Ignore account deletion requests from users that do not already exist here
+    account_deletion = False
+    if (request_json['type'] == 'Delete' and
+        'object' in request_json and isinstance(request_json['object'], str) and
+        request_json['actor'] == request_json['object']):
+        account_deletion = True
+        actor = User.query.filter_by(ap_profile_id=request_json['actor'].lower()).first()
+        if not actor:
+            log_incoming_ap(request_json['id'], APLOG_DELETE, APLOG_IGNORED, request_json, 'REPLAY: Does not exist here')
+            return
+    else:
+        actor = find_actor_or_create(request_json['actor'])
 
-    actor = find_actor_or_create(request_json['actor'])
     if not actor:
         actor_name = request_json['actor']
         log_incoming_ap(request_json['id'], APLOG_NOTYPE, APLOG_FAILURE, request_json, f'REPLAY: Actor could not be found 1: {actor_name}')
@@ -551,12 +552,9 @@ def replay_inbox_request(request_json):
         return
 
     # When a user is deleted, the only way to be fairly sure they get deleted everywhere is to tell the whole fediverse.
-    # Earlier check means this is only for users that already exist, repeating it here means that http signature will have been verified
-    if request_json['type'] == 'Delete':
-        if (request_json['id'].endswith('#delete') or                                                                                       # Mastodon / PieFed
-            ('object' in request_json and isinstance(request_json['object'], str) and request_json['actor'] == request_json['object'])):    # Lemmy
-            process_delete_request(request_json, True)
-            return
+    if account_deletion == True:
+        process_delete_request(request_json, True)
+        return
 
     process_inbox_request(request_json, True)
 
