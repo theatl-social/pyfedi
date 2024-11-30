@@ -1833,8 +1833,10 @@ def update_post_from_activity(post: Post, request_json: dict):
     # Links
     old_url = post.url
     new_url = None
-    if 'attachment' in request_json['object'] and isinstance(request_json['object']['attachment'], list) and \
-            'type' in request_json['object']['attachment'][0]:
+    if ('attachment' in request_json['object'] and
+        isinstance(request_json['object']['attachment'], list) and
+        len(request_json['object']['attachment']) > 0 and
+        'type' in request_json['object']['attachment'][0]):
         if request_json['object']['attachment'][0]['type'] == 'Link':
             new_url = request_json['object']['attachment'][0]['href']              # Lemmy < 0.19.4
         if request_json['object']['attachment'][0]['type'] == 'Document':
