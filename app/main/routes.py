@@ -61,7 +61,7 @@ def home_page(sort, view_filter):
     if current_user.is_anonymous:
         flash(_('Create an account to tailor this feed to your interests.'))
         posts = Post.query.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
-        content_filters = {}
+        content_filters = {'trump': {'trump', 'elon', 'musk'}}
     else:
         posts = Post.query.filter(Post.deleted == False)
 
@@ -100,6 +100,8 @@ def home_page(sort, view_filter):
     elif view_filter == 'popular':
         posts = posts.join(Community, Community.id == Post.community_id)
         posts = posts.filter(Community.show_popular == True, Post.score > 100)
+        if current_user.is_anonymous:
+            posts = posts.filter(Community.low_quality == False)
     elif view_filter == 'all':
         posts = posts.join(Community, Community.id == Post.community_id)
         posts = posts.filter(Community.show_all == True)
