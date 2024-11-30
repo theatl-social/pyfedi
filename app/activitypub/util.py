@@ -1833,7 +1833,7 @@ def update_post_from_activity(post: Post, request_json: dict):
     # Links
     old_url = post.url
     new_url = None
-    if 'attachment' in request_json['object'] and len(request_json['object']['attachment']) > 0 and \
+    if 'attachment' in request_json['object'] and isinstance(request_json['object']['attachment'], list) and \
             'type' in request_json['object']['attachment'][0]:
         if request_json['object']['attachment'][0]['type'] == 'Link':
             new_url = request_json['object']['attachment'][0]['href']              # Lemmy < 0.19.4
@@ -1841,6 +1841,8 @@ def update_post_from_activity(post: Post, request_json: dict):
             new_url = request_json['object']['attachment'][0]['url']               # Mastodon
         if request_json['object']['attachment'][0]['type'] == 'Image':
             new_url = request_json['object']['attachment'][0]['url']               # PixelFed / PieFed / Lemmy >= 0.19.4
+    if 'attachment' in request_json['object'] and isinstance(request_json['object']['attachment'], dict):   # Mastodon / a.gup.pe
+        new_url = request_json['object']['attachment']['url']
     if new_url:
         new_url = remove_tracking_from_link(new_url)
         new_domain = domain_from_url(new_url)

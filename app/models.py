@@ -1227,7 +1227,7 @@ class Post(db.Model):
                 if blocked_phrase in post.body:
                     return None
 
-        if 'attachment' in request_json['object'] and len(request_json['object']['attachment']) > 0 and \
+        if 'attachment' in request_json['object'] and isinstance(request_json['object']['attachment'], list) and \
                 'type' in request_json['object']['attachment'][0]:
             alt_text = None
             if request_json['object']['attachment'][0]['type'] == 'Link':
@@ -1240,43 +1240,48 @@ class Post(db.Model):
                 post.url = request_json['object']['attachment'][0]['url']  # PixelFed, PieFed, Lemmy >= 0.19.4
                 if 'name' in request_json['object']['attachment'][0]:
                     alt_text = request_json['object']['attachment'][0]['name']
-            if post.url:
-                if is_image_url(post.url):
-                    post.type = constants.POST_TYPE_IMAGE
-                    image = File(source_url=post.url)
-                    if alt_text:
-                        image.alt_text = alt_text
-                    db.session.add(image)
-                    post.image = image
-                elif is_video_url(post.url):  # youtube is detected later
-                    post.type = constants.POST_TYPE_VIDEO
-                    image = File(source_url=post.url)
-                    db.session.add(image)
-                    post.image = image
-                else:
-                    post.type = constants.POST_TYPE_LINK
-                domain = domain_from_url(post.url)
-                # notify about links to banned websites.
-                already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
-                if domain.notify_mods:
-                    for community_member in post.community.moderators():
-                        notify = Notification(title='Suspicious content', url=post.ap_id,
-                                              user_id=community_member.user_id,
+
+        if 'attachment' in request_json['object'] and isinstance(request_json['object']['attachment'], dict):  # a.gup.pe (Mastodon)
+            alt_text = None
+            post.url = request_json['object']['attachment']['url']
+
+        if post.url:
+            if is_image_url(post.url):
+                post.type = constants.POST_TYPE_IMAGE
+                image = File(source_url=post.url)
+                if alt_text:
+                    image.alt_text = alt_text
+                db.session.add(image)
+                post.image = image
+            elif is_video_url(post.url):  # youtube is detected later
+                post.type = constants.POST_TYPE_VIDEO
+                image = File(source_url=post.url)
+                db.session.add(image)
+                post.image = image
+            else:
+                post.type = constants.POST_TYPE_LINK
+            domain = domain_from_url(post.url)
+            # notify about links to banned websites.
+            already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
+            if domain.notify_mods:
+                for community_member in post.community.moderators():
+                    notify = Notification(title='Suspicious content', url=post.ap_id,
+                                          user_id=community_member.user_id,
+                                          author_id=user.id)
+                    db.session.add(notify)
+                    already_notified.add(community_member.user_id)
+            if domain.notify_admins:
+                for admin in Site.admins():
+                    if admin.id not in already_notified:
+                        notify = Notification(title='Suspicious content',
+                                              url=post.ap_id, user_id=admin.id,
                                               author_id=user.id)
                         db.session.add(notify)
-                        already_notified.add(community_member.user_id)
-                if domain.notify_admins:
-                    for admin in Site.admins():
-                        if admin.id not in already_notified:
-                            notify = Notification(title='Suspicious content',
-                                                  url=post.ap_id, user_id=admin.id,
-                                                  author_id=user.id)
-                            db.session.add(notify)
-                if domain.banned or domain.name.endswith('.pages.dev'):
-                    raise Exception(domain.name + ' is blocked by admin')
-                else:
-                    domain.post_count += 1
-                    post.domain = domain
+            if domain.banned or domain.name.endswith('.pages.dev'):
+                raise Exception(domain.name + ' is blocked by admin')
+            else:
+                domain.post_count += 1
+                post.domain = domain
 
         if post is not None:
             if request_json['object']['type'] == 'Video':
