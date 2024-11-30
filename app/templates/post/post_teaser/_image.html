@@ -22,7 +22,7 @@
         </div>
     {% endif -%}
     {% if post.body_html -%}
-        <div class="post_teaser_link_preview small">
+        <div class="post_teaser_link_preview small post_teaser_clickable">
             {{ first_paragraph(post.body_html) | safe }}
         </div>
     {% endif -%}
