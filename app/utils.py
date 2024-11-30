@@ -427,8 +427,9 @@ def first_paragraph(html):
     first_para = soup.find('p')
     if first_para:
         if first_para.text.strip() == 'Summary' or \
+                first_para.text.strip() == '*Summary*' or \
                 first_para.text.strip() == 'Comments' or \
-                first_para.text.lower().startswith('cross-posted from:  https'):
+                first_para.text.lower().startswith('cross-posted from:'):
             second_paragraph = first_para.find_next('p')
             if second_paragraph:
                 return f'<p>{second_paragraph.text}</p>'
