@@ -1227,7 +1227,7 @@ class Post(db.Model):
                 if blocked_phrase in post.body:
                     return None
 
-        if 'attachment' in request_json['object'] and isinstance(request_json['object']['attachment'], list) and \
+        if 'attachment' in request_json['object'] and isinstance(request_json['object']['attachment'], list) and len(request_json['object']['attachment']) > 0 and \
                 'type' in request_json['object']['attachment'][0]:
             alt_text = None
             if request_json['object']['attachment'][0]['type'] == 'Link':
