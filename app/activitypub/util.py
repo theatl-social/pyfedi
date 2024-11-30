@@ -902,15 +902,11 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
             if post_json['mediaType'] == 'text/html':
                 post.body_html = allowlist_html(post_json['content'])
                 if 'source' in post_json and post_json['source']['mediaType'] == 'text/markdown':
-                    if post_json['source']['content'].startswith("***Summary***\n\n"):  # Microwave@lemmy.world often puts this at the start if their posts, which messes up post teasers
-                        post_json['source']['content'] = post_json['source']['content'][15:]
                     post.body = post_json['source']['content']
                     post.body_html = markdown_to_html(post.body)          # prefer Markdown if provided, overwrite version obtained from HTML
                 else:
                     post.body = html_to_text(post.body_html)
             elif post_json['mediaType'] == 'text/markdown':
-                if post_json['content'].startswith("***Summary***\n\n"):    # Microwave@lemmy.world often puts this at the start if their posts, which messes up post teasers
-                    post_json['content'] = post_json['content'][15:]
                 post.body = post_json['content']
                 post.body_html = markdown_to_html(post.body)
         if 'attachment' in post_json and len(post_json['attachment']) > 0 and 'type' in post_json['attachment'][0]:
