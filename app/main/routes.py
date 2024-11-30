@@ -91,7 +91,7 @@ def home_page(sort, view_filter):
         content_filters = user_filters_home(current_user.id)
 
     # view filter - subscribed/local/all
-    if view_filter == 'subscribed':
+    if view_filter == 'subscribed' and current_user.is_authenticated:
         posts = posts.join(CommunityMember, Post.community_id == CommunityMember.community_id).filter(CommunityMember.is_banned == False)
         posts = posts.filter(CommunityMember.user_id == current_user.id)
     elif view_filter == 'local':
@@ -102,7 +102,7 @@ def home_page(sort, view_filter):
         posts = posts.filter(Community.show_popular == True, Post.score > 100)
         if current_user.is_anonymous:
             posts = posts.filter(Community.low_quality == False)
-    elif view_filter == 'all':
+    elif view_filter == 'all' or current_user.is_anonymous:
         posts = posts.join(Community, Community.id == Post.community_id)
         posts = posts.filter(Community.show_all == True)
 
