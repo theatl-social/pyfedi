@@ -424,9 +424,15 @@ def microblog_content_to_title(html: str) -> str:
 
 def first_paragraph(html):
     soup = BeautifulSoup(html, 'html.parser')
-    first_paragraph = soup.find('p')
-    if first_paragraph:
-        return f'<p>{first_paragraph.text}</p>'
+    first_para = soup.find('p')
+    if first_para:
+        if first_para.text.strip() == 'Summary' or \
+                first_para.text.strip() == 'Comments' or \
+                first_para.text.lower().startswith('cross-posted from:  https'):
+            second_paragraph = first_para.find_next('p')
+            if second_paragraph:
+                return f'<p>{second_paragraph.text}</p>'
+        return f'<p>{first_para.text}</p>'
     else:
         return ''
 
