@@ -902,7 +902,7 @@ def process_inbox_request(request_json, store_ap_json):
             # Lemmy currently only sends userbans for admins banning local users
             # Banning remote users is hacked by banning them from every community of which they are a part
             # There's plans to change this in the future though.
-            if not blocker.is_instance_admin() and not blocked.instance_id == blocker.instance_id:
+            if not blocker.is_instance_admin() or not blocked.instance_id == blocker.instance_id:
                 log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
                 return
 
@@ -1004,7 +1004,7 @@ def process_inbox_request(request_json, store_ap_json):
                     return
                 unblock_from_ap_id = request_json['object']['target']
 
-                if not unblocker.is_instance_admin() and not unblocked.instance_id == unblocker.instance_id:
+                if not unblocker.is_instance_admin() or not unblocked.instance_id == unblocker.instance_id:
                     log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
                     return
 
