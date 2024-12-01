@@ -283,12 +283,14 @@ def register(app):
                                 instance_data = response.json()
                                 admin_profile_ids = []
                                 for admin in instance_data['admins']:
-                                    admin_profile_ids.append(admin['person']['actor_id'].lower())
-                                    user = find_actor_or_create(admin['person']['actor_id'])
-                                    if user and not instance.user_is_admin(user.id):
-                                        new_instance_role = InstanceRole(instance_id=instance.id, user_id=user.id,
-                                                                         role='admin')
-                                        db.session.add(new_instance_role)
+                                    profile_id = admin['person']['actor_id']
+                                    if profile_id.startswith('https://'):
+                                        admin_profile_ids.append(profile_id.lower())
+                                        user = find_actor_or_create(profile_id)
+                                        if user and not instance.user_is_admin(user.id):
+                                            new_instance_role = InstanceRole(instance_id=instance.id, user_id=user.id,
+                                                                             role='admin')
+                                            db.session.add(new_instance_role)
                                 # remove any InstanceRoles that are no longer part of instance-data['admins']
                                 for instance_admin in InstanceRole.query.filter_by(instance_id=instance.id):
                                    if instance_admin.user.profile_id() not in admin_profile_ids:
