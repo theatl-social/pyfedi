@@ -530,7 +530,7 @@ def refresh_user_profile_task(user_id):
             user.indexable = new_indexable
 
             avatar_changed = cover_changed = False
-            if 'icon' in activity_json:
+            if 'icon' in activity_json and activity_json['icon'] is not None:
                 if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
                     icon_entry = activity_json['icon']['url']
                 elif isinstance(activity_json['icon'], list) and 'url' in activity_json['icon'][-1]:
@@ -545,7 +545,7 @@ def refresh_user_profile_task(user_id):
                         user.avatar = avatar
                         session.add(avatar)
                         avatar_changed = True
-            if 'image' in activity_json:
+            if 'image' in activity_json and activity_json['image'] is not None:
                 if user.cover_id and activity_json['image']['url'] != user.cover.source_url:
                     user.cover.delete_from_disk()
                 if not user.cover_id or (user.cover_id and activity_json['image']['url'] != user.cover.source_url):
