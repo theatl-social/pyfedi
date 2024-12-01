@@ -417,7 +417,7 @@ def shared_inbox():
                 log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json if store_ap_json else None, 'Missing minimum expected fields in JSON Announce object')
             return '', 200
 
-        if object['actor'].startswith('https://' + current_app.config['SERVER_NAME']):
+        if isinstance(object['actor'], str) and object['actor'].startswith('https://' + current_app.config['SERVER_NAME']):
             log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already present')
             return '', 200
 
@@ -428,7 +428,7 @@ def shared_inbox():
     redis_client.set(id, 1, ex=90)              # Save the activity ID into redis, to avoid duplicate activities
 
     # Ignore unutilised PeerTube activity
-    if request_json['actor'].endswith('accounts/peertube'):
+    if isinstance(request_json['actor'], str) and request_json['actor'].endswith('accounts/peertube'):
         log_incoming_ap(id, APLOG_PT_VIEW, APLOG_IGNORED, request_json if store_ap_json else None, 'PeerTube View or CacheFile activity')
         return ''
 
@@ -521,12 +521,12 @@ def replay_inbox_request(request_json):
                 log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'REPLAY: Missing minimum expected fields in JSON Announce object')
             return
 
-        if object['actor'].startswith('https://' + current_app.config['SERVER_NAME']):
+        if isinstance(object['actor'], str) and object['actor'].startswith('https://' + current_app.config['SERVER_NAME']):
             log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already present')
             return
 
     # Ignore unutilised PeerTube activity
-    if request_json['actor'].endswith('accounts/peertube'):
+    if isinstance(request_json['actor'], str) and request_json['actor'].endswith('accounts/peertube'):
         log_incoming_ap(id, APLOG_PT_VIEW, APLOG_IGNORED, request_json, 'REPLAY: PeerTube View or CacheFile activity')
         return
 
