@@ -1096,8 +1096,7 @@ def process_inbox_request(request_json, store_ap_json):
                 post = Post.query.filter_by(ap_id=post_id).first()
                 if post:
                     if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
-                        post.comments_enabled = False
-                        db.session.commit()
+                        lock_post(user_ap_id, post_id, False, request_json)
                         log_incoming_ap(id, APLOG_LOCK, APLOG_SUCCESS, request_json if store_ap_json else None)
                     else:
                         log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: Does not have permission')
@@ -1219,8 +1218,7 @@ def process_inbox_request(request_json, store_ap_json):
                     post = Post.query.filter_by(ap_id=post_id).first()
                     if post:
                         if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
-                            post.comments_enabled = True
-                            db.session.commit()
+                            lock_post(user_ap_id, post_id, True, request_json)
                             log_incoming_ap(id, APLOG_LOCK, APLOG_SUCCESS, request_json if store_ap_json else None)
                         else:
                             log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: Does not have permission')

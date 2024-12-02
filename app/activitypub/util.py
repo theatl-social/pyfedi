@@ -1610,21 +1610,31 @@ def unban_local_user(blocker, blocked, community, request_json):
     add_to_modlog_activitypub('unban_user', blocker, community_id=community.id, link_text=blocked.display_name(), link=blocked.link(), reason=reason)
 
 
-def lock_post(mod_ap_id, post_id, comments_enabled):
+def lock_post(mod_ap_id, post_id, comments_enabled, request_json):
     if current_app.debug:
-        lock_post_task(mod_ap_id, post_id, comments_enabled)
+        lock_post_task(mod_ap_id, post_id, comments_enabled, request_json)
     else:
-        lock_post_task.delay(mod_ap_id, post_id, comments_enabled)
+        lock_post_task.delay(mod_ap_id, post_id, comments_enabled, request_json)
 
 
 @celery.task
-def lock_post_task(mod_ap_id, post_id, comments_enabled):
+def lock_post_task(mod_ap_id, post_id, comments_enabled, request_json):
     mod = find_actor_or_create(mod_ap_id, create_if_not_found=False)
     post = Post.query.filter_by(ap_id=post_id).first()
+    community = post.community
+    reason = request_json['object']['summary'] if 'summary' in request_json['object'] else ''
     if mod and post:
         if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
             post.comments_enabled = comments_enabled
             db.session.commit()
+            if comments_enabled:
+                add_to_modlog_activitypub('unlock_post', mod, community_id=community.id,
+                                          link_text=shorten_string(post.title), link=f'post/{post.id}',
+                                          reason=reason)
+            else:
+                add_to_modlog_activitypub('lock_post', mod, community_id=community.id,
+                                          link_text=shorten_string(post.title), link=f'post/{post.id}',
+                                          reason=reason)
 
 
 def create_post_reply(store_ap_json, community: Community, in_reply_to, request_json: dict, user: User, announce_id=None) -> Union[PostReply, None]:
