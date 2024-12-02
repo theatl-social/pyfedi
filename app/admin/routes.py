@@ -337,10 +337,10 @@ def admin_federation():
         regex_pattern = '^(https:\/\/)(?=.{1,255}$)((.{1,63}\.){1,127}(?![0-9]*$)[a-z0-9-]+\.?)$'
         result = re.match(regex_pattern, remote_url)
         if result is None:
-            flash(_(f'{remote_url} does not appear to be a valid url. Make sure input is in the form https://server-name.tld without trailing slashes or paths.'))
+            flash(_(f'{remote_url} does not appear to be a valid url. Make sure input is in the form "https://server-name.tld" without trailing slashes or paths.'))
             return redirect(url_for('admin.admin_federation'))
 
-        # check if its a banned instance
+        # check if it's a banned instance
         # Parse the URL
         parsed_url = urlparse(remote_url)
         # Extract the server domain name
@@ -358,9 +358,6 @@ def admin_federation():
         # get the minimums
         min_posts = remote_scan_form.minimum_posts.data
         min_users = remote_scan_form.minimum_active_users.data
-
-        # get nfsw
-        # allow_nsfw = remote_scan_form.allow_nsfw.data
 
         # get the nodeinfo
         resp = get_request(f'{remote_url}/.well-known/nodeinfo')
@@ -410,7 +407,7 @@ def admin_federation():
         local_on_remote_instance = []
         comms_list = []
         for i in range(1,num_requests):
-            params = {"sort":"New","type_":"All","limit":"50","page":f"{i}","show_nsfw":"false"}
+            params = {"sort":"Active","type_":"All","limit":"50","page":f"{i}","show_nsfw":"false"}
             resp = get_request(f"{remote_url}/api/v3/community/list", params=params)
             page_dict = json.loads(resp.text)
             # get the individual communities out of the communities[] list in the response and 
@@ -425,20 +422,13 @@ def admin_federation():
                 local_on_remote_instance.append(c)
 
         # filter out the communities
-        already_known_count = nsfw_count = low_content_count = low_active_users_count = banned_count = bad_words_count = 0
+        already_known_count = nsfw_count = low_content_count = low_active_users_count = bad_words_count = 0
         candidate_communities = []
         for community in local_on_remote_instance:
-            # get the relevant url bits
-            server, actor_id = extract_domain_and_actor(community["community"]["actor_id"])
-            
             # sort out already known communities
             if community['community']['actor_id'] in already_known:
                 already_known_count += 1
                 continue
-            # sort out the nsfw communities
-            # elif community['community']['nsfw']:
-            #     nsfw_count += 1
-            #     continue
             # sort out any that have less than minimum posts
             elif community['counts']['posts'] < min_posts:
                 low_content_count += 1
@@ -447,10 +437,6 @@ def admin_federation():
             elif community['counts']['users_active_week'] < min_users:
                 low_active_users_count += 1
                 continue
-            # sort out any instances we have already banned
-            # elif server in banned_urls:
-            #     banned_count += 1
-            #     continue
             # sort out the 'seven things you can't say on tv' names (cursewords), plus some
             # "low effort" communities
             if any(badword in community['community']['name'].lower() for badword in seven_things_plus):
@@ -470,9 +456,9 @@ def admin_federation():
         for i in range(communities_num):
             community_urls_to_join.append(candidate_communities[i]['community']['actor_id'].lower())
 
-        # if its a dry run, just return the thing we /would/ do
+        # if its a dry run, just return the stats
         if dry_run:
-            message = f"Dry-Run for {remote_url}, \
+            message = f"Dry-Run for {remote_url}: \
                         Total Communities the server knows about: {community_count}, \
                         Local Communities on the server: {len(local_on_remote_instance)}, \
                         Communities we already have: {already_known_count}, \
@@ -489,7 +475,6 @@ def admin_federation():
         for community in community_urls_to_join:
             # get the relevant url bits
             server, community = extract_domain_and_actor(community)
-
             # find the community
             new_community = search_for_community('!' + community + '@' + server)
             # subscribe to the community
