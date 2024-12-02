@@ -444,8 +444,7 @@ def admin_federation():
 
         # if its a dry run, just return the thing we /would/ do
         if dry_run:
-            # message = f"Dry-Run: Would follow {len(community_urls_to_join)} of {len(local_on_remote_instance)} local communities on {remote_url}."
-            message = f"Dry-Run: remoteurl: {remote_url}, remote comms: {len(local_on_remote_instance)}, candidates: {len(candidate_communities)}, to join: {len(community_urls_to_join)}."
+            message = f"Dry-Run: Remote Server - {remote_url}, Total Communities Found: {len(local_on_remote_instance)}, Communities to join based on current filters: {len(community_urls_to_join)}."
             flash(_(message))
             return redirect(url_for('admin.admin_federation'))
 
