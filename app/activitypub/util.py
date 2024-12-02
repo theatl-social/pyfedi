@@ -1545,7 +1545,7 @@ def community_ban_remove_data(blocker_id, community_id, blocked):
     db.session.commit()
 
 
-def ban_local_user(blocker, blocked, community, request_json):
+def ban_user(blocker, blocked, community, request_json):
     existing = CommunityBan.query.filter_by(community_id=community.id, user_id=blocked.id).first()
     if not existing:
         new_ban = CommunityBan(community_id=community.id, user_id=blocked.id, banned_by=blocker.id)
@@ -1566,40 +1566,42 @@ def ban_local_user(blocker, blocked, community, request_json):
         if community_membership_record:
             community_membership_record.is_banned = True
 
-        # Notify banned person
-        notify = Notification(title=shorten_string('You have been banned from ' + community.title),
-                                      url=f'/notifications', user_id=blocked.id,
-                                      author_id=blocker.id)
-        db.session.add(notify)
-        if not current_app.debug:                           # user.unread_notifications += 1 hangs app if 'user' is the same person
-            blocked.unread_notifications += 1               # who pressed 'Re-submit this activity'.
+        if blocked.is_local():
+            # Notify banned person
+            notify = Notification(title=shorten_string('You have been banned from ' + community.title),
+                                  url=f'/notifications', user_id=blocked.id,
+                                  author_id=blocker.id)
+            db.session.add(notify)
+            if not current_app.debug:                           # user.unread_notifications += 1 hangs app if 'user' is the same person
+                blocked.unread_notifications += 1               # who pressed 'Re-submit this activity'.
 
-        # Remove their notification subscription,  if any
-        db.session.query(NotificationSubscription).filter(NotificationSubscription.entity_id == community.id,
-                                                          NotificationSubscription.user_id == blocked.id,
-                                                          NotificationSubscription.type == NOTIF_COMMUNITY).delete()
+            # Remove their notification subscription,  if any
+            db.session.query(NotificationSubscription).filter(NotificationSubscription.entity_id == community.id,
+                                                              NotificationSubscription.user_id == blocked.id,
+                                                              NotificationSubscription.type == NOTIF_COMMUNITY).delete()
         db.session.commit()
 
         cache.delete_memoized(communities_banned_from, blocked.id)
         cache.delete_memoized(joined_communities, blocked.id)
         cache.delete_memoized(moderating_communities, blocked.id)
 
-        add_to_modlog_activitypub('ban_user', blocker, community_id=community.id, link_text=blocked.display_name(), link=blocked.link(), reason=reason)
+        add_to_modlog_activitypub('ban_user', blocker, community_id=community.id, link_text=blocked.display_name(), link=f'u/{blocked.link()}', reason=reason)
 
 
-def unban_local_user(blocker, blocked, community, request_json):
+def unban_user(blocker, blocked, community, request_json):
     db.session.query(CommunityBan).filter(CommunityBan.community_id == community.id, CommunityBan.user_id == blocked.id).delete()
     community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=blocked.id).first()
     if community_membership_record:
         community_membership_record.is_banned = False
     reason = request_json['object']['summary'] if 'summary' in request_json['object'] else ''
 
-    # Notify unbanned person
-    notify = Notification(title=shorten_string('You have been unbanned from ' + community.title),
-                          url=f'/notifications', user_id=blocked.id, author_id=blocker.id)
-    db.session.add(notify)
-    if not current_app.debug:                           # user.unread_notifications += 1 hangs app if 'user' is the same person
-        blocked.unread_notifications += 1               # who pressed 'Re-submit this activity'.
+    if blocked.is_local():
+        # Notify unbanned person
+        notify = Notification(title=shorten_string('You have been unbanned from ' + community.title),
+                              url=f'/notifications', user_id=blocked.id, author_id=blocker.id)
+        db.session.add(notify)
+        if not current_app.debug:                           # user.unread_notifications += 1 hangs app if 'user' is the same person
+            blocked.unread_notifications += 1               # who pressed 'Re-submit this activity'.
 
     db.session.commit()
 
@@ -1607,7 +1609,7 @@ def unban_local_user(blocker, blocked, community, request_json):
     cache.delete_memoized(joined_communities, blocked.id)
     cache.delete_memoized(moderating_communities, blocked.id)
 
-    add_to_modlog_activitypub('unban_user', blocker, community_id=community.id, link_text=blocked.display_name(), link=blocked.link(), reason=reason)
+    add_to_modlog_activitypub('unban_user', blocker, community_id=community.id, link_text=blocked.display_name(), link=f'u/{blocked.link()}', reason=reason)
 
 
 def lock_post(mod_ap_id, post_id, comments_enabled, request_json):

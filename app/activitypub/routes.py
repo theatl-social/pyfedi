@@ -24,7 +24,7 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
     user_removed_from_remote_server, create_post, create_post_reply, update_post_reply_from_activity, \
     update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection, find_reported_object, \
     process_report, ensure_domains_match, can_edit, can_delete, remove_data_from_banned_user, resolve_remote_post, \
-    inform_followers_of_post_update, comment_model_to_json, restore_post_or_comment, ban_local_user, unban_local_user, \
+    inform_followers_of_post_update, comment_model_to_json, restore_post_or_comment, ban_user, unban_user, \
     lock_post, log_incoming_ap, find_community_ap_id, site_ban_remove_data, community_ban_remove_data
 from app.utils import gibberish, get_setting, render_template, \
     community_membership, ap_datetime, ip_address, can_downvote, \
@@ -1180,8 +1180,7 @@ def process_inbox_request(request_json, store_ap_json):
                 else:
                     log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Banned, but content retained')
 
-                if blocked.is_local():
-                    ban_local_user(blocker, blocked, community, request_json)
+                ban_user(blocker, blocked, community, request_json)
                 return
 
             if request_json['object']['type'] == 'Undo':
@@ -1238,8 +1237,7 @@ def process_inbox_request(request_json, store_ap_json):
                         log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
                         return
 
-                    if blocked.is_local():
-                        unban_local_user(blocker, blocked, community, request_json)
+                    unban_user(blocker, blocked, community, request_json)
                     log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
 
                     return
