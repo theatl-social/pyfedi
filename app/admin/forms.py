@@ -61,6 +61,7 @@ class RemoteInstanceScanForm(FlaskForm):
     communities_num = IntegerField(_l('Number of Communities to add'), default=25)
     minimum_posts = IntegerField(_l('Communities must have at least this many posts'), default=100)
     minimum_active_users = IntegerField(_l('Communities must have at least this many active users in the past week.'), default=100)
+    # allow_nsfw = BooleanField(_l('Allow NFSW'), default=False)
     dry_run = BooleanField(_l('Dry Run'))
     remote_scan_submit = SubmitField(_l('Scan'))
 

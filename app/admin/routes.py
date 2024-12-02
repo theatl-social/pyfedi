@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import timedelta
 from time import sleep
 from io import BytesIO
@@ -10,6 +11,7 @@ from flask_babel import _
 from slugify import slugify
 from sqlalchemy import text, desc, or_
 from PIL import Image
+from urllib.parse import urlparse
 
 from app import db, celery, cache
 from app.activitypub.routes import process_inbox_request, process_delete_request, replay_inbox_request
@@ -318,10 +320,34 @@ def admin_federation():
 
     # this is the remote server scan
     elif remote_scan_form.remote_scan_submit.data and remote_scan_form.validate():
+        # filters to be used later
+        already_known = list(db.session.execute(text('SELECT ap_public_url FROM "community"')).scalars())
+        banned_urls = list(db.session.execute(text('SELECT domain FROM "banned_instances"')).scalars())
+        seven_things_plus = [
+            'shit', 'piss', 'fuck',
+            'cunt', 'cocksucker', 'motherfucker', 'tits',
+            'memes', 'piracy', '196', 'greentext', 'usauthoritarianism',
+            'enoughmuskspam', 'political_weirdos', '4chan'
+        ]
 
         # get the remote_url data
-        # TODO - validate that it is an https://fqdn
         remote_url = remote_scan_form.remote_url.data
+
+        # test to make sure its a valid fqdn
+        regex_pattern = '^(https:\/\/)(?=.{1,255}$)((.{1,63}\.){1,127}(?![0-9]*$)[a-z0-9-]+\.?)$'
+        result = re.match(regex_pattern, remote_url)
+        if result is None:
+            flash(_(f'{remote_url} does not appear to be a valid url. Make sure input is in the form https://server-name.tld without trailing slashes or paths.'))
+            return redirect(url_for('admin.admin_federation'))
+
+        # check if its a banned instance
+        # Parse the URL
+        parsed_url = urlparse(remote_url)
+        # Extract the server domain name
+        server_domain = parsed_url.netloc
+        if server_domain in banned_urls:
+            flash(_(f'{remote_url} is a banned instance.'))
+            return redirect(url_for('admin.admin_federation'))
 
         # get dry run
         dry_run = remote_scan_form.dry_run.data
@@ -332,6 +358,9 @@ def admin_federation():
         # get the minimums
         min_posts = remote_scan_form.minimum_posts.data
         min_users = remote_scan_form.minimum_active_users.data
+
+        # get nfsw
+        # allow_nsfw = remote_scan_form.allow_nsfw.data
 
         # get the nodeinfo
         resp = get_request(f'{remote_url}/.well-known/nodeinfo')
@@ -381,7 +410,7 @@ def admin_federation():
         local_on_remote_instance = []
         comms_list = []
         for i in range(1,num_requests):
-            params = {"sort":"New","type_":"All","limit":"50","page":f"{i}"}
+            params = {"sort":"New","type_":"All","limit":"50","page":f"{i}","show_nsfw":"false"}
             resp = get_request(f"{remote_url}/api/v3/community/list", params=params)
             page_dict = json.loads(resp.text)
             # get the individual communities out of the communities[] list in the response and 
@@ -396,14 +425,7 @@ def admin_federation():
                 local_on_remote_instance.append(c)
 
         # filter out the communities
-        already_known = list(db.session.execute(text('SELECT ap_public_url FROM "community"')).scalars())
-        banned_urls = list(db.session.execute(text('SELECT domain FROM "banned_instances"')).scalars())
-        seven_things_plus = [
-            'shit', 'piss', 'fuck',
-            'cunt', 'cocksucker', 'motherfucker', 'tits',
-            'memes', 'piracy', '196', 'greentext', 'usauthoritarianism',
-            'enoughmuskspam', 'political_weirdos', '4chan'
-        ]
+        already_known_count = nsfw_count = low_content_count = low_active_users_count = banned_count = bad_words_count = 0
         candidate_communities = []
         for community in local_on_remote_instance:
             # get the relevant url bits
@@ -411,22 +433,28 @@ def admin_federation():
             
             # sort out already known communities
             if community['community']['actor_id'] in already_known:
+                already_known_count += 1
                 continue
             # sort out the nsfw communities
-            elif community['community']['nsfw']:
-                continue
+            # elif community['community']['nsfw']:
+            #     nsfw_count += 1
+            #     continue
             # sort out any that have less than minimum posts
             elif community['counts']['posts'] < min_posts:
+                low_content_count += 1
                 continue
             # sort out any that do not have greater than the requested active users over the past week
             elif community['counts']['users_active_week'] < min_users:
+                low_active_users_count += 1
                 continue
             # sort out any instances we have already banned
-            elif server in banned_urls:
-                continue
+            # elif server in banned_urls:
+            #     banned_count += 1
+            #     continue
             # sort out the 'seven things you can't say on tv' names (cursewords), plus some
             # "low effort" communities
             if any(badword in community['community']['name'].lower() for badword in seven_things_plus):
+                bad_words_count += 1
                 continue
             else:
                 candidate_communities.append(community)
@@ -444,7 +472,15 @@ def admin_federation():
 
         # if its a dry run, just return the thing we /would/ do
         if dry_run:
-            message = f"Dry-Run: Remote Server - {remote_url}, Total Communities Found: {len(local_on_remote_instance)}, Communities to join based on current filters: {len(community_urls_to_join)}."
+            message = f"Dry-Run for {remote_url}, \
+                        Total Communities the server knows about: {community_count}, \
+                        Local Communities on the server: {len(local_on_remote_instance)}, \
+                        Communities we already have: {already_known_count}, \
+                        Communities below minimum posts: {low_content_count}, \
+                        Communities below minimum users: {low_active_users_count}, \
+                        Candidate Communities based on filters: {len(candidate_communities)}, \
+                        Communities to join request: {communities_num}, \
+                        Communities to join based on current filters: {len(community_urls_to_join)}."
             flash(_(message))
             return redirect(url_for('admin.admin_federation'))
 
