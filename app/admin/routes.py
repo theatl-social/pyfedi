@@ -1097,6 +1097,8 @@ def admin_user_edit(user_id):
     if form.validate_on_submit():
         user.bot = form.bot.data
         user.banned = form.banned.data
+        user.ban_posts = form.ban_posts.data
+        user.ban_comments = form.ban_comments.data
         user.hide_nsfw = form.hide_nsfw.data
         user.hide_nsfl = form.hide_nsfl.data
         if form.verified.data and not user.verified:
@@ -1130,6 +1132,8 @@ def admin_user_edit(user_id):
         form.bot.data = user.bot
         form.verified.data = user.verified
         form.banned.data = user.banned
+        form.ban_posts.data = user.ban_posts
+        form.ban_comments.data = user.ban_comments
         form.hide_nsfw.data = user.hide_nsfw
         form.hide_nsfl.data = user.hide_nsfl
         if user.roles and user.roles.count() > 0:

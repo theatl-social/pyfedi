@@ -587,7 +587,7 @@ def join_then_add(actor):
 @login_required
 @validation_required
 def add_post(actor, type):
-    if current_user.banned:
+    if current_user.banned or current_user.ban_posts:
         return show_ban_message()
     community = actor_to_community(actor)
 

@@ -208,6 +208,8 @@ class EditUserForm(FlaskForm):
     bot = BooleanField(_l('This profile is a bot'))
     verified = BooleanField(_l('Email address is verified'))
     banned = BooleanField(_l('Banned'))
+    ban_posts = BooleanField(_l('Ban posts'))
+    ban_comments = BooleanField(_l('Ban comments'))
     hide_type_choices = [(0, _l('Show')),
                          (1, _l('Hide completely')),
                          (2, _l('Blur')),

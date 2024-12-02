@@ -501,7 +501,7 @@ def continue_discussion(post_id, comment_id):
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/reply', methods=['GET', 'POST'])
 @login_required
 def add_reply(post_id: int, comment_id: int):
-    if current_user.banned:
+    if current_user.banned or current_user.ban_comments:
         return show_ban_message()
     post = Post.query.get_or_404(post_id)
 

@@ -1668,6 +1668,9 @@ class PostReply(db.Model):
         if not post.comments_enabled:
             raise Exception('Comments are disabled on this post')
 
+        if user.ban_comments:
+            raise Exception('Banned from commenting')
+
         if in_reply_to is not None:
             parent_id = in_reply_to.id
             depth = in_reply_to.depth + 1
