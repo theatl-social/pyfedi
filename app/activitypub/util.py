@@ -1862,7 +1862,10 @@ def update_post_from_activity(post: Post, request_json: dict):
                     image.alt_text = request_json['object']['attachment'][0]['name']
             elif is_video_url(new_url):
                 post.type = POST_TYPE_VIDEO
-                image = File(source_url=new_url)
+                if 'image' in request_json['object'] and 'url' in request_json['object']['image']:
+                    image = File(source_url=request_json['object']['image']['url'])
+                else:
+                    image = File(source_url=new_url)
             else:
                 if 'image' in request_json['object'] and 'url' in request_json['object']['image']:
                     image = File(source_url=request_json['object']['image']['url'])
