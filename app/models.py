@@ -1259,7 +1259,10 @@ class Post(db.Model):
                 post.image = image
             elif is_video_url(post.url):  # youtube is detected later
                 post.type = constants.POST_TYPE_VIDEO
-                image = File(source_url=post.url)
+                if 'image' in request_json['object'] and 'url' in request_json['object']['image']:
+                    image = File(source_url=request_json['object']['image']['url'])
+                else:
+                    image = File(source_url=post.url)
                 db.session.add(image)
                 post.image = image
             else:
