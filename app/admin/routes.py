@@ -17,7 +17,7 @@ from app.activitypub.signature import post_request, default_context
 from app.activitypub.util import instance_allowed, instance_blocked, extract_domain_and_actor
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm, \
-    EditInstanceForm
+    EditInstanceForm, RemoteInstanceScanForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form
 from app.community.util import save_icon_file, save_banner_file, search_for_community
@@ -196,6 +196,7 @@ def admin_federation():
     form = FederationForm()
     preload_form = PreLoadCommunitiesForm()
     ban_lists_form = ImportExportBannedListsForm()
+    remote_scan_form = RemoteInstanceScanForm()
 
     # this is the pre-load communities button
     if preload_form.pre_load_submit.data and preload_form.validate():
@@ -312,6 +313,165 @@ def admin_federation():
             flash(
                 _('Subscription process for %(communities_to_add)d of %(parsed_communities_sorted)d communities launched in background, check admin/activities for details',
                   communities_to_add=communities_to_add, parsed_communities_sorted=len(parsed_communities_sorted)))
+
+        return redirect(url_for('admin.admin_federation'))
+
+    # this is the remote server scan
+    elif remote_scan_form.remote_scan_submit.data and remote_scan_form.validate():
+
+        # get the remote_url data
+        # TODO - validate that it is an https://fqdn
+        remote_url = remote_scan_form.remote_url.data
+
+        # get dry run
+        dry_run = remote_scan_form.dry_run.data
+
+        # get the number of follows requested
+        communities_num = remote_scan_form.communities_num.data
+
+        # get the minimums
+        min_posts = remote_scan_form.minimum_posts.data
+        min_users = remote_scan_form.minimum_active_users.data
+
+        # get the nodeinfo
+        resp = get_request(f'{remote_url}/.well-known/nodeinfo')
+        nodeinfo_dict = json.loads(resp.text)
+
+        # check the ['links'] for instanceinfo url
+        schema2p0 = "http://nodeinfo.diaspora.software/ns/schema/2.0"
+        schema2p1 = "http://nodeinfo.diaspora.software/ns/schema/2.1"
+        for e in nodeinfo_dict['links']:
+            if e['rel'] == schema2p0 or e['rel'] == schema2p1:
+                remote_instanceinfo_url = e["href"]
+
+        # get the instanceinfo
+        resp = get_request(remote_instanceinfo_url)
+        instanceinfo_dict = json.loads(resp.text)
+
+        # determine the instance software
+        instance_software_name = instanceinfo_dict['software']['name']
+        # instance_software_version = instanceinfo_dict['software']['version']
+
+        # if the instance is not running lemmy break for now as 
+        # we dont yet support others for scanning
+        # TODO - add mbin support :-)
+        if instance_software_name != "lemmy":
+            flash(_(f"{remote_url} does not appear to be a lemmy instance."))
+            return redirect(url_for('admin.admin_federation'))
+
+        # get the siteinfo
+        resp = get_request(f'{remote_url}/api/v3/site')
+        siteinfo_dict = json.loads(resp.text)
+
+        # get the num of communities
+        community_count = siteinfo_dict["site_view"]["counts"]["communities"]
+
+        # lemmy has a hard-coded upper limit of 50 commnities
+        # in their api response
+        # do math to figure out how many requests to send to get all the communities
+        # if com count remainder limit == 0 it's an even division
+        # if not then divide and add one
+        if community_count % 50 == 0:
+            num_requests = community_count / 50
+        else:
+            num_requests = community_count // 50
+            num_requests += 1
+
+        # loop through and send the right number of requests to the remote endpoint
+        local_on_remote_instance = []
+        comms_list = []
+        for i in range(1,num_requests):
+            params = {"sort":"New","type_":"All","limit":"50","page":f"{i}"}
+            resp = get_request(f"{remote_url}/api/v3/community/list", params=params)
+            page_dict = json.loads(resp.text)
+            # get the individual communities out of the communities[] list in the response and 
+            # add them to a holding list[] of our own
+            for c in page_dict["communities"]:
+                comms_list.append(c)
+
+        # find all the communities that are local to the remote server
+        # being scanned
+        for c in comms_list:
+            if c["community"]["local"]:
+                local_on_remote_instance.append(c)
+
+        # filter out the communities
+        already_known = list(db.session.execute(text('SELECT ap_public_url FROM "community"')).scalars())
+        banned_urls = list(db.session.execute(text('SELECT domain FROM "banned_instances"')).scalars())
+        seven_things_plus = [
+            'shit', 'piss', 'fuck',
+            'cunt', 'cocksucker', 'motherfucker', 'tits',
+            'memes', 'piracy', '196', 'greentext', 'usauthoritarianism',
+            'enoughmuskspam', 'political_weirdos', '4chan'
+        ]
+        candidate_communities = []
+        for community in local_on_remote_instance:
+            # get the relevant url bits
+            server, actor_id = extract_domain_and_actor(community["community"]["actor_id"])
+            
+            # sort out already known communities
+            if community['community']['actor_id'] in already_known:
+                continue
+            # sort out the nsfw communities
+            elif community['community']['nsfw']:
+                continue
+            # sort out any that have less than minimum posts
+            elif community['counts']['posts'] < min_posts:
+                continue
+            # sort out any that do not have greater than the requested active users over the past week
+            elif community['counts']['users_active_week'] < min_users:
+                continue
+            # sort out any instances we have already banned
+            elif server in banned_urls:
+                continue
+            # sort out the 'seven things you can't say on tv' names (cursewords), plus some
+            # "low effort" communities
+            if any(badword in community['community']['name'].lower() for badword in seven_things_plus):
+                continue
+            else:
+                candidate_communities.append(community)
+
+        # get the community urls to join
+        community_urls_to_join = []
+
+        # if the admin user wants more added than we have, then just add all of them
+        if communities_num > len(candidate_communities):
+            communities_num = len(candidate_communities)
+
+        # make the list of urls
+        for i in range(communities_num):
+            community_urls_to_join.append(candidate_communities[i]['community']['actor_id'].lower())
+
+        # if its a dry run, just return the thing we /would/ do
+        if dry_run:
+            # message = f"Dry-Run: Would follow {len(community_urls_to_join)} of {len(local_on_remote_instance)} local communities on {remote_url}."
+            message = f"Dry-Run: remoteurl: {remote_url}, remote comms: {len(local_on_remote_instance)}, candidates: {len(candidate_communities)}, to join: {len(community_urls_to_join)}."
+            flash(_(message))
+            return redirect(url_for('admin.admin_federation'))
+
+        user = User.query.get(1)
+        remote_scan_messages = []
+        for community in community_urls_to_join:
+            # get the relevant url bits
+            server, community = extract_domain_and_actor(community)
+
+            # find the community
+            new_community = search_for_community('!' + community + '@' + server)
+            # subscribe to the community
+            # capture the messages returned by do_subscibe
+            # and show to user if instance is in debug mode
+            if current_app.debug:
+                message = do_subscribe(new_community.ap_id, user.id, admin_preload=True)
+                remote_scan_messages.append(message)
+            else:
+                message_we_wont_do_anything_with = do_subscribe.delay(new_community.ap_id, user.id, admin_preload=True)
+
+        if current_app.debug:
+            flash(_('Results: %(results)s', results=str(remote_scan_messages)))
+        else:
+            flash(
+                _('Subscription process for %(communities_num)d of %(candidate_communities)d communities launched in background, check admin/activities for details',
+                  communities_num=communities_num, candidate_communities=len(candidate_communities)))
 
         return redirect(url_for('admin.admin_federation'))
 
@@ -440,7 +600,7 @@ def admin_federation():
 
     return render_template('admin/federation.html', title=_('Federation settings'), 
                            form=form, preload_form=preload_form, ban_lists_form=ban_lists_form,
-                           current_app_debug=current_app.debug,
+                           remote_scan_form=remote_scan_form, current_app_debug=current_app.debug,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(),

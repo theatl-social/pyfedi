@@ -56,6 +56,13 @@ class PreLoadCommunitiesForm(FlaskForm):
     communities_num = IntegerField(_l('Number of Communities to add'), default=25)
     pre_load_submit = SubmitField(_l('Add Communities'))
 
+class RemoteInstanceScanForm(FlaskForm):
+    remote_url = StringField(_l('Remote Server'), validators=[DataRequired()])
+    communities_num = IntegerField(_l('Number of Communities to add'), default=25)
+    minimum_posts = IntegerField(_l('Communities must have at least this many posts'), default=100)
+    minimum_active_users = IntegerField(_l('Communities must have at least this many active users in the past week.'), default=100)
+    dry_run = BooleanField(_l('Dry Run'))
+    remote_scan_submit = SubmitField(_l('Scan'))
 
 class ImportExportBannedListsForm(FlaskForm):
     import_file = FileField(_l('Import Bans List Json File'))
