@@ -659,6 +659,8 @@ class User(UserMixin, db.Model):
     verification_token = db.Column(db.String(16), index=True)
     banned = db.Column(db.Boolean, default=False, index=True)
     banned_until = db.Column(db.DateTime)   # null == permanent ban
+    ban_posts = db.Column(db.Boolean, default=False)
+    ban_comments = db.Column(db.Boolean, default=False)
     deleted = db.Column(db.Boolean, default=False)
     deleted_by = db.Column(db.Integer, index=True)
     about = db.Column(db.Text)      # markdown

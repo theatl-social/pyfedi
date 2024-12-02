@@ -711,6 +711,9 @@ def can_create_post(user, content: Community) -> bool:
     if user is None or content is None or user.banned:
         return False
 
+    if user.ban_posts:
+        return False
+
     if content.is_moderator(user) or user.is_admin():
         return True
 
@@ -728,6 +731,9 @@ def can_create_post(user, content: Community) -> bool:
 
 def can_create_post_reply(user, content: Community) -> bool:
     if user is None or content is None or user.banned:
+        return False
+
+    if user.ban_comments:
         return False
 
     if content.is_moderator(user) or user.is_admin():
