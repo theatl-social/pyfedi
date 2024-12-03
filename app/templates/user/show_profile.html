@@ -104,7 +104,8 @@
                 </div>
         {% endif %}
         </div>
-        <p class="small">{{ _('Instance') }}: <a href="{{ url_for('instance.instance_overview', instance_domain=user.instance_domain()) }}">{{ user.instance_domain() }}</a><br />
+        <p class="small">{{ _('Instance') }}: <a href="{{ url_for('instance.instance_overview', instance_domain=user.instance_domain()) }}">{{ user.instance_domain() }}</a>
+            {% if user.is_instance_admin() %}<span class="red">({{ _('Admin') }})</span>{% endif %}<br />
             {{ _('Joined') }}: {{ arrow.get(user.created).humanize(locale=locale) }}<br />
             {% if current_user.is_authenticated and current_user.is_admin() and user.last_seen %}{{ _('Active') }}: {{ arrow.get(user.last_seen).humanize(locale=locale) }}<br />{% endif %}
             {% if user.bot %}
