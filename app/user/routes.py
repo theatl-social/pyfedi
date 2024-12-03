@@ -509,6 +509,10 @@ def ban_profile(actor):
 
             add_to_modlog('ban_user', link_text=user.display_name(), link=user.link())
 
+            if user.is_instance_admin():
+                flash('Banned user was a remote instance admin.', 'warning')
+            if user.is_admin() or user.is_staff():
+                flash('Banned user with role permissions.', 'warning')
             flash(f'{actor} has been banned.')
     else:
         abort(401)
@@ -700,6 +704,10 @@ def delete_profile(actor):
 
             add_to_modlog('delete_user', link_text=user.display_name(), link=user.link())
 
+            if user.is_instance_admin():
+                flash('Deleted user was a remote instance admin.', 'warning')
+            if user.is_admin() or user.is_staff():
+                flash('Deleted user with role permissions.', 'warning')
             flash(f'{actor} has been deleted.')
     else:
         abort(401)
@@ -815,6 +823,11 @@ def ban_purge_profile(actor):
             db.session.commit()
 
             # todo: empty relevant caches
+
+            if user.is_instance_admin():
+                flash('Purged user was a remote instance admin.', 'warning')
+            if user.is_admin() or user.is_staff():
+                flash('Purged user with role permissions.', 'warning')
 
             # federate deletion
             if user.is_local():
