@@ -1936,6 +1936,7 @@ def update_post_from_activity(post: Post, request_json: dict):
         else:
             post.type = POST_TYPE_ARTICLE
             post.url = ''
+            post.image_id = None
             if post.cross_posts is not None:                    # unlikely, but not impossible
                 old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
                 post.cross_posts.clear()
