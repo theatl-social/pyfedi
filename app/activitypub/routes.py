@@ -25,11 +25,11 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
     update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection, find_reported_object, \
     process_report, ensure_domains_match, can_edit, can_delete, remove_data_from_banned_user, resolve_remote_post, \
     inform_followers_of_post_update, comment_model_to_json, restore_post_or_comment, ban_user, unban_user, \
-    lock_post, log_incoming_ap, find_community_ap_id, site_ban_remove_data, community_ban_remove_data
+    log_incoming_ap, find_community_ap_id, site_ban_remove_data, community_ban_remove_data
 from app.utils import gibberish, get_setting, render_template, \
     community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
-    community_moderators, markdown_to_html, html_to_text
+    community_moderators, markdown_to_html, html_to_text, add_to_modlog_activitypub
 
 
 @bp.route('/testredis')
@@ -1094,9 +1094,14 @@ def process_inbox_request(request_json, store_ap_json):
                 mod = user
                 post_id = request_json['object']['object']
                 post = Post.query.filter_by(ap_id=post_id).first()
+                reason = request_json['object']['summary'] if 'summary' in request_json['object'] else ''
                 if post:
                     if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
-                        lock_post(user_ap_id, post_id, False, request_json)
+                        post.comments_enabled = False
+                        db.session.commit()
+                        add_to_modlog_activitypub('lock_post', mod, community_id=post.community.id,
+                                                  link_text=shorten_string(post.title), link=f'post/{post.id}',
+                                                  reason=reason)
                         log_incoming_ap(id, APLOG_LOCK, APLOG_SUCCESS, request_json if store_ap_json else None)
                     else:
                         log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: Does not have permission')
@@ -1215,9 +1220,14 @@ def process_inbox_request(request_json, store_ap_json):
                     mod = user
                     post_id = request_json['object']['object']['object']
                     post = Post.query.filter_by(ap_id=post_id).first()
+                    reason = request_json['object']['summary'] if 'summary' in request_json['object'] else ''
                     if post:
                         if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
-                            lock_post(user_ap_id, post_id, True, request_json)
+                            post.comments_enabled = True
+                            db.session.commit()
+                            add_to_modlog_activitypub('unlock_post', mod, community_id=post.community.id,
+                                                      link_text=shorten_string(post.title), link=f'post/{post.id}',
+                                                      reason=reason)
                             log_incoming_ap(id, APLOG_LOCK, APLOG_SUCCESS, request_json if store_ap_json else None)
                         else:
                             log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: Does not have permission')
