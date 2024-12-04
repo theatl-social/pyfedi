@@ -477,8 +477,8 @@ def admin_federation():
             flash(_('Results: %(results)s', results=str(remote_scan_messages)))
         else:
             flash(
-                _('Subscription process for %(communities_requested)d of %(candidate_communities)d communities launched in background, check admin/activities for details',
-                  communities_requested=communities_requested, candidate_communities=len(candidate_communities)))
+                _('Based on current filters, the subscription process for %(communities_to_join)d of %(candidate_communities)d communities launched in background, check admin/activities for details',
+                  communities_to_join=len(community_urls_to_join), candidate_communities=len(candidate_communities)))
 
         return redirect(url_for('admin.admin_federation'))
 
