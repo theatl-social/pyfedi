@@ -467,9 +467,9 @@ def admin_federation():
         if is_mbin:
             # hit the /api/magazines with a single call to get the stats for counts and num_requests
             # mbin does not have the hard-coded limit, but lets stick with 50 to match lemmy 
-            params = {"p":"1","perPage":"50","sort":"active","federation":"local","hide_adult":"hide"}
-            resp = get_request(f"{remote_url}/api/magazines", params=params)
-            page_dict = json.loads(resp.text)
+            # params = {"p":"1","perPage":"50","sort":"active","federation":"local","hide_adult":"hide"}
+            # resp = get_request(f"{remote_url}/api/magazines", params=params)
+            # page_dict = json.loads(resp.text)
 
             # get the number of requests to send
             # num_requests = page_dict['pagination']['maxPage']
@@ -498,7 +498,7 @@ def admin_federation():
             
             # filter out the magazines
             already_known_count = low_content_count = low_subscribed_users_count = bad_words_count = 0
-            candidate_magazines = []
+            candidate_communities = []
             for magazine in mags_list:
                 # sort out already known communities
                 if magazine['apProfileId'] in already_known:
@@ -519,7 +519,7 @@ def admin_federation():
                     bad_words_count += 1
                     continue
                 else:
-                    candidate_magazines.append(magazine)
+                    candidate_communities.append(magazine)
 
             # testing
             # flash(_(f"testing: candidate mags {len(candidate_magazines)}, m0: {candidate_magazines[0]}"))
@@ -529,14 +529,14 @@ def admin_federation():
             community_urls_to_join = []
 
             # if the admin user wants more added than we have, then just add all of them
-            if communities_requested > len(candidate_magazines):
-                magazines_to_add = len(candidate_magazines)
+            if communities_requested > len(candidate_communities):
+                magazines_to_add = len(candidate_communities)
             else:
                 magazines_to_add = communities_requested
 
             # make the list of urls
             for i in range(magazines_to_add):
-                community_urls_to_join.append(candidate_magazines[i]['apProfileId'].lower())
+                community_urls_to_join.append(candidate_communities[i]['apProfileId'].lower())
             
             # if its a dry run, just return the stats
             if dry_run:
@@ -545,7 +545,7 @@ def admin_federation():
                             Magazines we already have: {already_known_count}, \
                             Magazines below minimum posts: {low_content_count}, \
                             Magazines below minimum users: {low_subscribed_users_count}, \
-                            Candidate Magazines based on filters: {len(candidate_magazines)}, \
+                            Candidate Magazines based on filters: {len(candidate_communities)}, \
                             Magazines to join request: {communities_requested}, \
                             Magazines to join based on current filters: {len(community_urls_to_join)}."
                 flash(_(message))
@@ -560,7 +560,7 @@ def admin_federation():
             # find the community
             new_community = search_for_community('!' + community + '@' + server)
             # subscribe to the community
-            # capture the messages returned by do_subscibe
+            # capture the messages returned by do_subscribe
             # and show to user if instance is in debug mode
             if current_app.debug:
                 message = do_subscribe(new_community.ap_id, user.id, admin_preload=True)
