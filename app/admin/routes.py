@@ -683,7 +683,6 @@ def admin_community_edit(community_id):
         community.local_only = form.local_only.data
         community.restricted_to_mods = form.restricted_to_mods.data
         community.new_mods_wanted = form.new_mods_wanted.data
-        community.show_home = form.show_home.data
         community.show_popular = form.show_popular.data
         community.show_all = form.show_all.data
         community.low_quality = form.low_quality.data
@@ -740,7 +739,6 @@ def admin_community_edit(community_id):
         form.local_only.data = community.local_only
         form.new_mods_wanted.data = community.new_mods_wanted
         form.restricted_to_mods.data = community.restricted_to_mods
-        form.show_home.data = community.show_home
         form.show_popular.data = community.show_popular
         form.show_all.data = community.show_all
         form.low_quality.data = community.low_quality

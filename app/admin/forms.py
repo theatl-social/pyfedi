@@ -75,7 +75,6 @@ class EditCommunityForm(FlaskForm):
     local_only = BooleanField(_l('Only accept posts from current instance'))
     restricted_to_mods = BooleanField(_l('Only moderators can post'))
     new_mods_wanted = BooleanField(_l('New moderators wanted'))
-    show_home = BooleanField(_l('Posts show on home page'))
     show_popular = BooleanField(_l('Posts can be popular'))
     show_all = BooleanField(_l('Posts show in All list'))
     low_quality = BooleanField(_l("Low quality / toxic - upvotes in here don't add to reputation"))
