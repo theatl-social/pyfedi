@@ -329,6 +329,9 @@ def admin_federation():
             'memes', 'piracy', '196', 'greentext', 'usauthoritarianism',
             'enoughmuskspam', 'political_weirdos', '4chan'
         ]
+        is_lemmy = False
+        is_mbin = False
+
 
         # get the remote_url data
         remote_url = remote_scan_form.remote_url.data
@@ -378,84 +381,176 @@ def admin_federation():
         instance_software_name = instanceinfo_dict['software']['name']
         # instance_software_version = instanceinfo_dict['software']['version']
 
-        # if the instance is not running lemmy break for now as 
+        # if the instance is not running lemmy or mbin break for now as 
         # we dont yet support others for scanning
-        # TODO - add mbin support :-)
-        if instance_software_name != "lemmy":
-            flash(_(f"{remote_url} does not appear to be a lemmy instance."))
-            return redirect(url_for('admin.admin_federation'))
-
-        # lemmy has a hard-coded upper limit of 50 commnities
-        # in their api response
-        # loop through and send off requests to the remote endpoint for 50 communities at a time
-        comms_list = []
-        page = 1
-        get_more_communities = True
-        while get_more_communities:
-            params = {"sort":"Active","type_":"Local","limit":"50","page":f"{page}","show_nsfw":"false"}
-            resp = get_request(f"{remote_url}/api/v3/community/list", params=params)
-            page_dict = json.loads(resp.text)
-            # get the individual communities out of the communities[] list in the response and 
-            # add them to a holding list[] of our own
-            for c in page_dict["communities"]:
-                comms_list.append(c)
-            # check the amount of items in the page_dict['communities'] list
-            # if it's lesss than 50 then we know its the last page of communities
-            # so we break the loop
-            if len(page_dict['communities']) < 50:
-                get_more_communities = False
-            else:
-                page += 1
-
-        # filter out the communities
-        already_known_count = nsfw_count = low_content_count = low_active_users_count = bad_words_count = 0
-        candidate_communities = []
-        for community in comms_list:
-            # sort out already known communities
-            if community['community']['actor_id'] in already_known:
-                already_known_count += 1
-                continue
-            # sort out any that have less than minimum posts
-            elif community['counts']['posts'] < min_posts:
-                low_content_count += 1
-                continue
-            # sort out any that do not have greater than the requested active users over the past week
-            elif community['counts']['users_active_week'] < min_users:
-                low_active_users_count += 1
-                continue
-            # sort out the 'seven things you can't say on tv' names (cursewords), plus some
-            # "low effort" communities
-            if any(badword in community['community']['name'].lower() for badword in seven_things_plus):
-                bad_words_count += 1
-                continue
-            else:
-                candidate_communities.append(community)
-
-        # get the community urls to join
-        community_urls_to_join = []
-
-        # if the admin user wants more added than we have, then just add all of them
-        if communities_requested > len(candidate_communities):
-            communities_to_add = len(candidate_communities)
+        if instance_software_name == "lemmy":
+            is_lemmy = True
+        elif instance_software_name == "mbin":
+            is_mbin = True
         else:
-            communities_to_add = communities_requested
-
-        # make the list of urls
-        for i in range(communities_to_add):
-            community_urls_to_join.append(candidate_communities[i]['community']['actor_id'].lower())
-
-        # if its a dry run, just return the stats
-        if dry_run:
-            message = f"Dry-Run for {remote_url}: \
-                        Local Communities on the server: {len(comms_list)}, \
-                        Communities we already have: {already_known_count}, \
-                        Communities below minimum posts: {low_content_count}, \
-                        Communities below minimum users: {low_active_users_count}, \
-                        Candidate Communities based on filters: {len(candidate_communities)}, \
-                        Communities to join request: {communities_requested}, \
-                        Communities to join based on current filters: {len(community_urls_to_join)}."
-            flash(_(message))
+            flash(_(f"{remote_url} does not appear to be a lemmy or mbin instance."))
             return redirect(url_for('admin.admin_federation'))
+
+        if is_lemmy:
+            # lemmy has a hard-coded upper limit of 50 commnities
+            # in their api response
+            # loop through and send off requests to the remote endpoint for 50 communities at a time
+            comms_list = []
+            page = 1
+            get_more_communities = True
+            while get_more_communities:
+                params = {"sort":"Active","type_":"Local","limit":"50","page":f"{page}","show_nsfw":"false"}
+                resp = get_request(f"{remote_url}/api/v3/community/list", params=params)
+                page_dict = json.loads(resp.text)
+                # get the individual communities out of the communities[] list in the response and 
+                # add them to a holding list[] of our own
+                for c in page_dict["communities"]:
+                    comms_list.append(c)
+                # check the amount of items in the page_dict['communities'] list
+                # if it's lesss than 50 then we know its the last page of communities
+                # so we break the loop
+                if len(page_dict['communities']) < 50:
+                    get_more_communities = False
+                else:
+                    page += 1
+
+            # filter out the communities
+            already_known_count = nsfw_count = low_content_count = low_active_users_count = bad_words_count = 0
+            candidate_communities = []
+            for community in comms_list:
+                # sort out already known communities
+                if community['community']['actor_id'] in already_known:
+                    already_known_count += 1
+                    continue
+                # sort out any that have less than minimum posts
+                elif community['counts']['posts'] < min_posts:
+                    low_content_count += 1
+                    continue
+                # sort out any that do not have greater than the requested active users over the past week
+                elif community['counts']['users_active_week'] < min_users:
+                    low_active_users_count += 1
+                    continue
+                # sort out the 'seven things you can't say on tv' names (cursewords), plus some
+                # "low effort" communities
+                if any(badword in community['community']['name'].lower() for badword in seven_things_plus):
+                    bad_words_count += 1
+                    continue
+                else:
+                    candidate_communities.append(community)
+
+            # get the community urls to join
+            community_urls_to_join = []
+
+            # if the admin user wants more added than we have, then just add all of them
+            if communities_requested > len(candidate_communities):
+                communities_to_add = len(candidate_communities)
+            else:
+                communities_to_add = communities_requested
+
+            # make the list of urls
+            for i in range(communities_to_add):
+                community_urls_to_join.append(candidate_communities[i]['community']['actor_id'].lower())
+
+            # if its a dry run, just return the stats
+            if dry_run:
+                message = f"Dry-Run for {remote_url}: \
+                            Local Communities on the server: {len(comms_list)}, \
+                            Communities we already have: {already_known_count}, \
+                            Communities below minimum posts: {low_content_count}, \
+                            Communities below minimum users: {low_active_users_count}, \
+                            Candidate Communities based on filters: {len(candidate_communities)}, \
+                            Communities to join request: {communities_requested}, \
+                            Communities to join based on current filters: {len(community_urls_to_join)}."
+                flash(_(message))
+                return redirect(url_for('admin.admin_federation'))
+
+        if is_mbin:
+            # hit the /api/magazines with a single call to get the stats for counts and num_requests
+            # mbin does not have the hard-coded limit, but lets stick with 50 to match lemmy 
+            params = {"p":"1","perPage":"50","sort":"active","federation":"local","hide_adult":"hide"}
+            resp = get_request(f"{remote_url}/api/magazines", params=params)
+            page_dict = json.loads(resp.text)
+
+            # get the number of requests to send
+            # num_requests = page_dict['pagination']['maxPage']
+
+            # loop through and send the right number of requests to the remote endpoint
+            # local_on_remote_instance = []
+            mags_list = []
+            page = 1
+            get_more_magazines = True
+            while get_more_magazines:
+                params = {"p":f"{page}","perPage":"50","sort":"active","federation":"local","hide_adult":"hide"}
+                resp = get_request(f"{remote_url}/api/magazines", params=params)
+                page_dict = json.loads(resp.text)
+                # get the individual magazines out of the items[] list in the response and 
+                # add them to a holding list[] of our own
+                for m in page_dict['items']:
+                    mags_list.append(m)
+                # check the amount of items in the page_dict['items'] list
+                # if it's lesss than 50 then we know its the last page of magazines
+                # so we break the loop
+                if len(page_dict['items']) < 50:
+                    get_more_magazines = False
+                else:
+                    page += 1
+
+            
+            # filter out the magazines
+            already_known_count = low_content_count = low_subscribed_users_count = bad_words_count = 0
+            candidate_magazines = []
+            for magazine in mags_list:
+                # sort out already known communities
+                if magazine['apProfileId'] in already_known:
+                    already_known_count += 1
+                    continue
+                # sort out any that have less than minimum posts
+                elif magazine['entryCount'] < min_posts:
+                    low_content_count += 1
+                    continue
+                # sort out any that do not have greater than the requested users over the past week
+                # mbin does not show active users here, so its based on subscriber count
+                elif magazine['subscriptionsCount'] < min_users:
+                    low_subscribed_users_count += 1
+                    continue
+                # sort out the 'seven things you can't say on tv' names (cursewords), plus some
+                # "low effort" communities
+                if any(badword in magazine['name'].lower() for badword in seven_things_plus):
+                    bad_words_count += 1
+                    continue
+                else:
+                    candidate_magazines.append(magazine)
+
+            # testing
+            # flash(_(f"testing: candidate mags {len(candidate_magazines)}, m0: {candidate_magazines[0]}"))
+            # return redirect(url_for('admin.admin_federation'))
+
+            # get the community urls to join
+            community_urls_to_join = []
+
+            # if the admin user wants more added than we have, then just add all of them
+            if communities_requested > len(candidate_magazines):
+                magazines_to_add = len(candidate_magazines)
+            else:
+                magazines_to_add = communities_requested
+
+            # make the list of urls
+            for i in range(magazines_to_add):
+                community_urls_to_join.append(candidate_magazines[i]['apProfileId'].lower())
+            
+            # if its a dry run, just return the stats
+            if dry_run:
+                message = f"Dry-Run for {remote_url}: \
+                            Local Magazines on the server: {len(mags_list)}, \
+                            Magazines we already have: {already_known_count}, \
+                            Magazines below minimum posts: {low_content_count}, \
+                            Magazines below minimum users: {low_subscribed_users_count}, \
+                            Candidate Magazines based on filters: {len(candidate_magazines)}, \
+                            Magazines to join request: {communities_requested}, \
+                            Magazines to join based on current filters: {len(community_urls_to_join)}."
+                flash(_(message))
+                return redirect(url_for('admin.admin_federation'))
+
 
         user = User.query.get(1)
         remote_scan_messages = []
