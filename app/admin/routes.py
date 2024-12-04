@@ -353,7 +353,7 @@ def admin_federation():
         dry_run = remote_scan_form.dry_run.data
 
         # get the number of follows requested
-        communities_num = remote_scan_form.communities_num.data
+        communities_requested = remote_scan_form.communities_requested.data
 
         # get the minimums
         min_posts = remote_scan_form.minimum_posts.data
@@ -385,46 +385,32 @@ def admin_federation():
             flash(_(f"{remote_url} does not appear to be a lemmy instance."))
             return redirect(url_for('admin.admin_federation'))
 
-        # get the siteinfo
-        resp = get_request(f'{remote_url}/api/v3/site')
-        siteinfo_dict = json.loads(resp.text)
-
-        # get the num of communities
-        community_count = siteinfo_dict["site_view"]["counts"]["communities"]
-
         # lemmy has a hard-coded upper limit of 50 commnities
         # in their api response
-        # do math to figure out how many requests to send to get all the communities
-        # if com count remainder limit == 0 it's an even division
-        # if not then divide and add one
-        if community_count % 50 == 0:
-            num_requests = community_count / 50
-        else:
-            num_requests = community_count // 50
-            num_requests += 1
-
-        # loop through and send the right number of requests to the remote endpoint
-        local_on_remote_instance = []
+        # loop through and send off requests to the remote endpoint for 50 communities at a time
         comms_list = []
-        for i in range(1,num_requests):
-            params = {"sort":"Active","type_":"All","limit":"50","page":f"{i}","show_nsfw":"false"}
+        page = 1
+        get_more_communities = True
+        while get_more_communities:
+            params = {"sort":"Active","type_":"Local","limit":"50","page":f"{page}","show_nsfw":"false"}
             resp = get_request(f"{remote_url}/api/v3/community/list", params=params)
             page_dict = json.loads(resp.text)
             # get the individual communities out of the communities[] list in the response and 
             # add them to a holding list[] of our own
             for c in page_dict["communities"]:
                 comms_list.append(c)
-
-        # find all the communities that are local to the remote server
-        # being scanned
-        for c in comms_list:
-            if c["community"]["local"]:
-                local_on_remote_instance.append(c)
+            # check the amount of items in the page_dict['communities'] list
+            # if it's lesss than 50 then we know its the last page of communities
+            # so we break the loop
+            if len(page_dict['communities']) < 50:
+                get_more_communities = False
+            else:
+                page += 1
 
         # filter out the communities
         already_known_count = nsfw_count = low_content_count = low_active_users_count = bad_words_count = 0
         candidate_communities = []
-        for community in local_on_remote_instance:
+        for community in comms_list:
             # sort out already known communities
             if community['community']['actor_id'] in already_known:
                 already_known_count += 1
@@ -449,23 +435,24 @@ def admin_federation():
         community_urls_to_join = []
 
         # if the admin user wants more added than we have, then just add all of them
-        if communities_num > len(candidate_communities):
-            communities_num = len(candidate_communities)
+        if communities_requested > len(candidate_communities):
+            communities_to_add = len(candidate_communities)
+        else:
+            communities_to_add = communities_requested
 
         # make the list of urls
-        for i in range(communities_num):
+        for i in range(communities_to_add):
             community_urls_to_join.append(candidate_communities[i]['community']['actor_id'].lower())
 
         # if its a dry run, just return the stats
         if dry_run:
             message = f"Dry-Run for {remote_url}: \
-                        Total Communities the server knows about: {community_count}, \
-                        Local Communities on the server: {len(local_on_remote_instance)}, \
+                        Local Communities on the server: {len(comms_list)}, \
                         Communities we already have: {already_known_count}, \
                         Communities below minimum posts: {low_content_count}, \
                         Communities below minimum users: {low_active_users_count}, \
                         Candidate Communities based on filters: {len(candidate_communities)}, \
-                        Communities to join request: {communities_num}, \
+                        Communities to join request: {communities_requested}, \
                         Communities to join based on current filters: {len(community_urls_to_join)}."
             flash(_(message))
             return redirect(url_for('admin.admin_federation'))
@@ -490,8 +477,8 @@ def admin_federation():
             flash(_('Results: %(results)s', results=str(remote_scan_messages)))
         else:
             flash(
-                _('Subscription process for %(communities_num)d of %(candidate_communities)d communities launched in background, check admin/activities for details',
-                  communities_num=communities_num, candidate_communities=len(candidate_communities)))
+                _('Subscription process for %(communities_requested)d of %(candidate_communities)d communities launched in background, check admin/activities for details',
+                  communities_requested=communities_requested, candidate_communities=len(candidate_communities)))
 
         return redirect(url_for('admin.admin_federation'))
 

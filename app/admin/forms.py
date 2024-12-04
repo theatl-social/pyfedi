@@ -58,7 +58,7 @@ class PreLoadCommunitiesForm(FlaskForm):
 
 class RemoteInstanceScanForm(FlaskForm):
     remote_url = StringField(_l('Remote Server'), validators=[DataRequired()])
-    communities_num = IntegerField(_l('Number of Communities to add'), default=25)
+    communities_requested = IntegerField(_l('Number of Communities to add'), default=25)
     minimum_posts = IntegerField(_l('Communities must have at least this many posts'), default=100)
     minimum_active_users = IntegerField(_l('Communities must have at least this many active users in the past week.'), default=100)
     dry_run = BooleanField(_l('Dry Run'))
