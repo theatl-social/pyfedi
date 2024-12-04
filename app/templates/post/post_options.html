@@ -71,6 +71,8 @@
                         {% if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()) -%}
                             <li><a href="{{ url_for('post.post_view_voting_activity', post_id=post.id) }}" class="no-underline" rel="nofollow"><span class="fe fe-sticky-left"></span>
                                         {{ _('View Voting Activity') }}</a></li>
+                            <li><a href="{{ url_for('post.post_fixup_from_remote', post_id=post.id) }}" class="no-underline" rel="nofollow"><span class="fe fe-sticky-right"></span>
+                                        {{ _('Fixup from remote') }}</a></li>
                         {% endif -%}
                     </ul>
                     <p>{{ _('If you want to perform more than one of these (e.g. block and report), hold down Ctrl and click, then complete the operation in the new tabs that open.') }}</p>
