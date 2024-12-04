@@ -1030,7 +1030,7 @@ def process_inbox_request(request_json, store_ap_json):
             user_ap_id = request_json['object']['actor']
             user = find_actor_or_create(user_ap_id)
             if not user or not isinstance(user, User):
-                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'Blocked or unfound user for Announce object actor ' + user_ap_id)
+                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json if store_ap_json else None, 'Blocked or unfound user for Announce object actor ' + user_ap_id)
                 return
 
             user.last_seen = site.last_active = utcnow()
@@ -1246,7 +1246,7 @@ def process_inbox_request(request_json, store_ap_json):
 
                     return
 
-        log_incoming_ap(id, APLOG_MONITOR, APLOG_PROCESSING, request_json if store_ap_json else None, 'Unmatched activity')
+        log_incoming_ap(id, APLOG_MONITOR, APLOG_PROCESSING, request_json, 'Unmatched activity')
 
 
 @celery.task
