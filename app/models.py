@@ -2285,6 +2285,8 @@ class ModLog(db.Model):
         'undelete_user': _l('Restored account'),
         'ban_user': _l('Banned account'),
         'unban_user': _l('Un-banned account'),
+        'lock_post': _l('Lock post'),
+        'unlock_post': _l('Un-lock post'),
     }
 
     def action_to_str(self):
