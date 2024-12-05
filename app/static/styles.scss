@@ -1287,6 +1287,13 @@ h1 .warning_badge {
   }
 }
 
+.wiki_page {
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
 #post_reply_markdown_editor_enabler {
   display: none;
   position: absolute;
