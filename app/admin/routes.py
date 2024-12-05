@@ -465,17 +465,8 @@ def admin_federation():
                 return redirect(url_for('admin.admin_federation'))
 
         if is_mbin:
-            # hit the /api/magazines with a single call to get the stats for counts and num_requests
+            # loop through and send the right number of requests to the remote endpoint for mbin
             # mbin does not have the hard-coded limit, but lets stick with 50 to match lemmy 
-            # params = {"p":"1","perPage":"50","sort":"active","federation":"local","hide_adult":"hide"}
-            # resp = get_request(f"{remote_url}/api/magazines", params=params)
-            # page_dict = json.loads(resp.text)
-
-            # get the number of requests to send
-            # num_requests = page_dict['pagination']['maxPage']
-
-            # loop through and send the right number of requests to the remote endpoint
-            # local_on_remote_instance = []
             mags_list = []
             page = 1
             get_more_magazines = True
@@ -494,7 +485,6 @@ def admin_federation():
                     get_more_magazines = False
                 else:
                     page += 1
-
             
             # filter out the magazines
             already_known_count = low_content_count = low_subscribed_users_count = bad_words_count = 0
@@ -521,10 +511,6 @@ def admin_federation():
                 else:
                     candidate_communities.append(magazine)
 
-            # testing
-            # flash(_(f"testing: candidate mags {len(candidate_magazines)}, m0: {candidate_magazines[0]}"))
-            # return redirect(url_for('admin.admin_federation'))
-
             # get the community urls to join
             community_urls_to_join = []
 
@@ -550,7 +536,6 @@ def admin_federation():
                             Magazines to join based on current filters: {len(community_urls_to_join)}."
                 flash(_(message))
                 return redirect(url_for('admin.admin_federation'))
-
 
         user = User.query.get(1)
         remote_scan_messages = []
