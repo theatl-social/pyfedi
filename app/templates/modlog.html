@@ -29,11 +29,11 @@
                             {% elif modlog_entry.link_text -%}
                                 {{ modlog_entry.link_text }}
                             {% endif -%}
-                            {% if modlog_entry.reason -%}
-                               <br>{{ _('Reason:') }} {{ modlog_entry.reason }}
-                            {% endif -%}
                             {% if modlog_entry.community_id -%}
                                 <a href="/c/{{ modlog_entry.community.link() }}">{{ _(' in %(community_name)s', community_name='' + modlog_entry.community.display_name()) }}</a>
+                            {% endif -%}
+                            {% if modlog_entry.reason -%}
+                                <br>{{ _('Reason:') }} {{ modlog_entry.reason }}
                             {% endif -%}
                         </td>
                     </tr>

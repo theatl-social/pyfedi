@@ -630,6 +630,7 @@ class Community(db.Model):
         db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == self.id).delete()
         db.session.query(CommunityMember).filter(CommunityMember.community_id == self.id).delete()
         db.session.query(Report).filter(Report.suspect_community_id == self.id).delete()
+        db.session.query(ModLog).filter(ModLog.community_id == self.id).delete()
 
 
 user_role = db.Table('user_role',
@@ -1020,6 +1021,7 @@ class User(UserMixin, db.Model):
         db.session.query(PollChoiceVote).filter(PollChoiceVote.user_id == self.id).delete()
         db.session.query(PostBookmark).filter(PostBookmark.user_id == self.id).delete()
         db.session.query(PostReplyBookmark).filter(PostReplyBookmark.user_id == self.id).delete()
+        db.session.query(ModLog).filter(ModLog.user_id == self.id).delete()
 
     def purge_content(self, soft=True):
         files = File.query.join(Post).filter(Post.user_id == self.id).all()
@@ -2285,6 +2287,8 @@ class ModLog(db.Model):
         'undelete_user': _l('Restored account'),
         'ban_user': _l('Banned account'),
         'unban_user': _l('Un-banned account'),
+        'lock_post': _l('Lock post'),
+        'unlock_post': _l('Un-lock post'),
     }
 
     def action_to_str(self):

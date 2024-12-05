@@ -1343,6 +1343,7 @@ def is_activitypub_request():
 def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json):
     id = request_json['id']
     community = to_delete.community
+    reason = request_json['object']['summary'] if 'summary' in request_json['object'] else ''
     if to_delete.user_id == deletor.id or deletor.is_admin() or community.is_moderator(deletor) or community.is_instance_admin(deletor):
         if isinstance(to_delete, Post):
             to_delete.deleted = True
@@ -1358,7 +1359,8 @@ def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json):
             db.session.commit()
             if to_delete.author.id != deletor.id:
                 add_to_modlog_activitypub('delete_post', deletor, community_id=community.id,
-                                          link_text=shorten_string(to_delete.title), link=f'post/{to_delete.id}')
+                                          link_text=shorten_string(to_delete.title), link=f'post/{to_delete.id}',
+                                          reason=reason)
         elif isinstance(to_delete, PostReply):
             to_delete.deleted = True
             to_delete.deleted_by = deletor.id
@@ -1370,7 +1372,8 @@ def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json):
             if to_delete.author.id != deletor.id:
                 add_to_modlog_activitypub('delete_post_reply', deletor, community_id=community.id,
                                           link_text=f'comment on {shorten_string(to_delete.post.title)}',
-                                          link=f'post/{to_delete.post.id}#comment_{to_delete.id}')
+                                          link=f'post/{to_delete.post.id}#comment_{to_delete.id}',
+                                          reason=reason)
         log_incoming_ap(id, APLOG_DELETE, APLOG_SUCCESS, request_json if store_ap_json else None)
     else:
         log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Deletor did not have permisson')
@@ -1379,6 +1382,7 @@ def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json):
 def restore_post_or_comment(restorer, to_restore, store_ap_json, request_json):
     id = request_json['id']
     community = to_restore.community
+    reason = request_json['object']['summary'] if 'summary' in request_json['object'] else ''
     if to_restore.user_id == restorer.id or restorer.is_admin() or community.is_moderator(restorer) or community.is_instance_admin(restorer):
         if isinstance(to_restore, Post):
             to_restore.deleted = False
@@ -1400,7 +1404,8 @@ def restore_post_or_comment(restorer, to_restore, store_ap_json, request_json):
             db.session.commit()
             if to_restore.author.id != restorer.id:
                 add_to_modlog_activitypub('restore_post', restorer, community_id=community.id,
-                                          link_text=shorten_string(to_restore.title), link=f'post/{to_restore.id}')
+                                          link_text=shorten_string(to_restore.title), link=f'post/{to_restore.id}',
+                                          reason=reason)
 
         elif isinstance(to_restore, PostReply):
             to_restore.deleted = False
@@ -1412,7 +1417,8 @@ def restore_post_or_comment(restorer, to_restore, store_ap_json, request_json):
             if to_restore.author.id != restorer.id:
                 add_to_modlog_activitypub('restore_post_reply', restorer, community_id=community.id,
                                           link_text=f'comment on {shorten_string(to_restore.post.title)}',
-                                          link=f'post/{to_restore.post_id}#comment_{to_restore.id}')
+                                          link=f'post/{to_restore.post_id}#comment_{to_restore.id}',
+                                          reason=reason)
         log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_SUCCESS, request_json if store_ap_json else None)
     else:
         log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Restorer did not have permisson')
@@ -1539,82 +1545,73 @@ def community_ban_remove_data(blocker_id, community_id, blocked):
     db.session.commit()
 
 
-def ban_local_user(blocker, blocked, community, request_json):
+def ban_user(blocker, blocked, community, request_json):
     existing = CommunityBan.query.filter_by(community_id=community.id, user_id=blocked.id).first()
     if not existing:
         new_ban = CommunityBan(community_id=community.id, user_id=blocked.id, banned_by=blocker.id)
-        if 'summary' in request_json:
+        if 'summary' in request_json['object']:
             new_ban.reason=request_json['object']['summary']
+            reason = request_json['object']['summary']
+        else:
+            reason = ''
         if 'expires' in request_json and datetime.fromisoformat(request_json['object']['expires']) > datetime.now(timezone.utc):
             new_ban.ban_until = datetime.fromisoformat(request_json['object']['expires'])
         elif 'endTime' in request_json and datetime.fromisoformat(request_json['object']['endTime']) > datetime.now(timezone.utc):
             new_ban.ban_until = datetime.fromisoformat(request_json['object']['endTime'])
         db.session.add(new_ban)
-        db.session.commit()
 
-        db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == community.id, CommunityJoinRequest.user_id == blocked.id).delete()
         community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=blocked.id).first()
         if community_membership_record:
             community_membership_record.is_banned = True
+        db.session.commit()
 
-        # Notify banned person
-        notify = Notification(title=shorten_string('You have been banned from ' + community.title),
-                                      url=f'/notifications', user_id=blocked.id,
-                                      author_id=blocker.id)
+        if blocked.is_local():
+            db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == community.id, CommunityJoinRequest.user_id == blocked.id).delete()
+
+            # Notify banned person
+            notify = Notification(title=shorten_string('You have been banned from ' + community.title),
+                                  url=f'/notifications', user_id=blocked.id,
+                                  author_id=blocker.id)
+            db.session.add(notify)
+            if not current_app.debug:                           # user.unread_notifications += 1 hangs app if 'user' is the same person
+                blocked.unread_notifications += 1               # who pressed 'Re-submit this activity'.
+
+            # Remove their notification subscription,  if any
+            db.session.query(NotificationSubscription).filter(NotificationSubscription.entity_id == community.id,
+                                                              NotificationSubscription.user_id == blocked.id,
+                                                              NotificationSubscription.type == NOTIF_COMMUNITY).delete()
+            db.session.commit()
+
+            cache.delete_memoized(communities_banned_from, blocked.id)
+            cache.delete_memoized(joined_communities, blocked.id)
+            cache.delete_memoized(moderating_communities, blocked.id)
+
+        add_to_modlog_activitypub('ban_user', blocker, community_id=community.id, link_text=blocked.display_name(), link=f'u/{blocked.link()}', reason=reason)
+
+
+def unban_user(blocker, blocked, community, request_json):
+    reason = request_json['object']['summary'] if 'summary' in request_json['object'] else ''
+    db.session.query(CommunityBan).filter(CommunityBan.community_id == community.id, CommunityBan.user_id == blocked.id).delete()
+    community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=blocked.id).first()
+    if community_membership_record:
+        community_membership_record.is_banned = False
+    db.session.commit()
+
+    if blocked.is_local():
+        # Notify unbanned person
+        notify = Notification(title=shorten_string('You have been unbanned from ' + community.title),
+                              url=f'/notifications', user_id=blocked.id, author_id=blocker.id)
         db.session.add(notify)
         if not current_app.debug:                           # user.unread_notifications += 1 hangs app if 'user' is the same person
             blocked.unread_notifications += 1               # who pressed 'Re-submit this activity'.
 
-        # Remove their notification subscription,  if any
-        db.session.query(NotificationSubscription).filter(NotificationSubscription.entity_id == community.id,
-                                                          NotificationSubscription.user_id == blocked.id,
-                                                          NotificationSubscription.type == NOTIF_COMMUNITY).delete()
         db.session.commit()
 
         cache.delete_memoized(communities_banned_from, blocked.id)
         cache.delete_memoized(joined_communities, blocked.id)
         cache.delete_memoized(moderating_communities, blocked.id)
 
-        add_to_modlog_activitypub('ban_user', blocker, community_id=community.id, link_text=blocked.display_name(), link=blocked.link())
-
-
-def unban_local_user(blocker, blocked, community, request_json):
-    db.session.query(CommunityBan).filter(CommunityBan.community_id == community.id, CommunityBan.user_id == blocked.id).delete()
-    community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=blocked.id).first()
-    if community_membership_record:
-        community_membership_record.is_banned = False
-
-    # Notify unbanned person
-    notify = Notification(title=shorten_string('You have been unbanned from ' + community.title),
-                          url=f'/notifications', user_id=blocked.id, author_id=blocker.id)
-    db.session.add(notify)
-    if not current_app.debug:                           # user.unread_notifications += 1 hangs app if 'user' is the same person
-        blocked.unread_notifications += 1               # who pressed 'Re-submit this activity'.
-
-    db.session.commit()
-
-    cache.delete_memoized(communities_banned_from, blocked.id)
-    cache.delete_memoized(joined_communities, blocked.id)
-    cache.delete_memoized(moderating_communities, blocked.id)
-
-    add_to_modlog_activitypub('unban_user', blocker, community_id=community.id, link_text=blocked.display_name(), link=blocked.link())
-
-
-def lock_post(mod_ap_id, post_id, comments_enabled):
-    if current_app.debug:
-        lock_post_task(mod_ap_id, post_id, comments_enabled)
-    else:
-        lock_post_task.delay(mod_ap_id, post_id, comments_enabled)
-
-
-@celery.task
-def lock_post_task(mod_ap_id, post_id, comments_enabled):
-    mod = find_actor_or_create(mod_ap_id, create_if_not_found=False)
-    post = Post.query.filter_by(ap_id=post_id).first()
-    if mod and post:
-        if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
-            post.comments_enabled = comments_enabled
-            db.session.commit()
+    add_to_modlog_activitypub('unban_user', blocker, community_id=community.id, link_text=blocked.display_name(), link=f'u/{blocked.link()}', reason=reason)
 
 
 def create_post_reply(store_ap_json, community: Community, in_reply_to, request_json: dict, user: User, announce_id=None) -> Union[PostReply, None]:
