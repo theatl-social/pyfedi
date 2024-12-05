@@ -673,6 +673,8 @@ def add_post(actor, type):
 
                 if file_ext.lower() == '.heic':
                     register_heif_opener()
+                if file_ext.lower() == '.avif':
+                    import pillow_avif
 
                 Image.MAX_IMAGE_PIXELS = 89478485
 

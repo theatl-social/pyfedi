@@ -187,7 +187,7 @@ def make_cache_key(sort=None, post_id=None, view_filter=None):
 
 
 def is_image_url(url):
-    common_image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp']
+    common_image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.avif']
     mime_type = mime_type_using_head(url)
     if mime_type:
         mime_type_parts = mime_type.split('/')
@@ -232,6 +232,8 @@ def mime_type_using_head(url):
         response.raise_for_status()  # Raise an exception for HTTP errors
         content_type = response.headers.get('Content-Type')
         if content_type:
+            if content_type == 'application/octet-stream':
+                return ''
             return content_type
         else:
             return ''

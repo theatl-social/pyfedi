@@ -1072,82 +1072,88 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                         source_image_response = None
                 if source_image_response and source_image_response.status_code == 200:
                     content_type = source_image_response.headers.get('content-type')
-                    if content_type and content_type.startswith('image'):
-                        source_image = source_image_response.content
-                        source_image_response.close()
+                    if content_type:
+                        if content_type.startswith('image') or (content_type == 'application/octet-stream' and file.source_url.endswith('.avif')):
+                            source_image = source_image_response.content
+                            source_image_response.close()
 
-                        content_type_parts = content_type.split('/')
-                        if content_type_parts:
-                            # content type headers often are just 'image/jpeg' but sometimes 'image/jpeg;charset=utf8'
+                            content_type_parts = content_type.split('/')
+                            if content_type_parts:
+                                # content type headers often are just 'image/jpeg' but sometimes 'image/jpeg;charset=utf8'
 
-                            # Remove ;charset=whatever
-                            main_part = content_type.split(';')[0]
+                                # Remove ;charset=whatever
+                                main_part = content_type.split(';')[0]
 
-                            # Split the main part on the '/' character and take the second part
-                            file_ext = '.' + main_part.split('/')[1]
-                            file_ext = file_ext.strip() # just to be sure
+                                # Split the main part on the '/' character and take the second part
+                                file_ext = '.' + main_part.split('/')[1]
+                                file_ext = file_ext.strip() # just to be sure
 
-                            if file_ext == '.jpeg':
-                                file_ext = '.jpg'
-                            elif file_ext == '.svg+xml':
-                                return  # no need to resize SVG images
-                        else:
-                            file_ext = os.path.splitext(file.source_url)[1]
-                            file_ext = file_ext.replace('%3f', '?')  # sometimes urls are not decoded properly
-                            if '?' in file_ext:
-                                file_ext = file_ext.split('?')[0]
+                                if file_ext == '.jpeg':
+                                    file_ext = '.jpg'
+                                elif file_ext == '.svg+xml':
+                                    return  # no need to resize SVG images
+                                elif file_ext == '.octet-stream':
+                                    file_ext = '.avif'
+                            else:
+                                file_ext = os.path.splitext(file.source_url)[1]
+                                file_ext = file_ext.replace('%3f', '?')  # sometimes urls are not decoded properly
+                                if '?' in file_ext:
+                                    file_ext = file_ext.split('?')[0]
 
-                        new_filename = gibberish(15)
+                            new_filename = gibberish(15)
 
-                        # set up the storage directory
-                        directory = f'app/static/media/{directory}/' + new_filename[0:2] + '/' + new_filename[2:4]
-                        ensure_directory_exists(directory)
+                            # set up the storage directory
+                            directory = f'app/static/media/{directory}/' + new_filename[0:2] + '/' + new_filename[2:4]
+                            ensure_directory_exists(directory)
 
-                        # file path and names to store the resized images on disk
-                        final_place = os.path.join(directory, new_filename + file_ext)
-                        final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail.webp')
+                            # file path and names to store the resized images on disk
+                            final_place = os.path.join(directory, new_filename + file_ext)
+                            final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail.webp')
 
-                        # Load image data into Pillow
-                        Image.MAX_IMAGE_PIXELS = 89478485
-                        image = Image.open(BytesIO(source_image))
-                        image = ImageOps.exif_transpose(image)
-                        img_width = image.width
-                        img_height = image.height
+                            if file_ext == '.avif': # this is quite a big plugin so we'll only load it if necessary
+                                import pillow_avif
 
-                        # Resize the image to medium
-                        if medium_width:
-                            if img_width > medium_width:
-                                image.thumbnail((medium_width, medium_width))
-                            image.save(final_place)
-                            file.file_path = final_place
-                            file.width = image.width
-                            file.height = image.height
+                            # Load image data into Pillow
+                            Image.MAX_IMAGE_PIXELS = 89478485
+                            image = Image.open(BytesIO(source_image))
+                            image = ImageOps.exif_transpose(image)
+                            img_width = image.width
+                            img_height = image.height
 
-                        # Resize the image to a thumbnail (webp)
-                        if thumbnail_width:
-                            if img_width > thumbnail_width:
-                                image.thumbnail((thumbnail_width, thumbnail_width))
-                            image.save(final_place_thumbnail, format="WebP", quality=93)
-                            file.thumbnail_path = final_place_thumbnail
-                            file.thumbnail_width = image.width
-                            file.thumbnail_height = image.height
+                            # Resize the image to medium
+                            if medium_width:
+                                if img_width > medium_width:
+                                    image.thumbnail((medium_width, medium_width))
+                                image.save(final_place)
+                                file.file_path = final_place
+                                file.width = image.width
+                                file.height = image.height
 
-                        session.commit()
+                            # Resize the image to a thumbnail (webp)
+                            if thumbnail_width:
+                                if img_width > thumbnail_width:
+                                    image.thumbnail((thumbnail_width, thumbnail_width))
+                                image.save(final_place_thumbnail, format="WebP", quality=93)
+                                file.thumbnail_path = final_place_thumbnail
+                                file.thumbnail_width = image.width
+                                file.thumbnail_height = image.height
 
-                        # Alert regarding fascist meme content
-                        if toxic_community and img_width < 2000:    # images > 2000px tend to be real photos instead of 4chan screenshots.
-                            try:
-                                image_text = pytesseract.image_to_string(Image.open(BytesIO(source_image)).convert('L'), timeout=30)
-                            except Exception as e:
-                                image_text = ''
-                            if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):   # chan posts usually contain the text 'Anonymous' and ' No.12345'
-                                post = Post.query.filter_by(image_id=file.id).first()
-                                notification = Notification(title='Review this',
-                                                            user_id=1,
-                                                            author_id=post.user_id,
-                                                            url=url_for('activitypub.post_ap', post_id=post.id))
-                                session.add(notification)
-                                session.commit()
+                            session.commit()
+
+                            # Alert regarding fascist meme content
+                            if toxic_community and img_width < 2000:    # images > 2000px tend to be real photos instead of 4chan screenshots.
+                                try:
+                                    image_text = pytesseract.image_to_string(Image.open(BytesIO(source_image)).convert('L'), timeout=30)
+                                except Exception as e:
+                                    image_text = ''
+                                if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):   # chan posts usually contain the text 'Anonymous' and ' No.12345'
+                                    post = Post.query.filter_by(image_id=file.id).first()
+                                    notification = Notification(title='Review this',
+                                                                user_id=1,
+                                                                author_id=post.user_id,
+                                                                url=url_for('activitypub.post_ap', post_id=post.id))
+                                    session.add(notification)
+                                    session.commit()
 
 
 def find_reply_parent(in_reply_to: str) -> Tuple[int, int, int]:

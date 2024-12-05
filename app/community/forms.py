@@ -159,6 +159,8 @@ class CreateImageForm(CreatePostForm):
             Image.MAX_IMAGE_PIXELS = 89478485
             # Do not allow fascist meme content
             try:
+                if '.avif' in uploaded_file.filename:
+                    import pillow_avif
                 image_text = pytesseract.image_to_string(Image.open(BytesIO(uploaded_file.read())).convert('L'))
             except FileNotFoundError as e:
                 image_text = ''
