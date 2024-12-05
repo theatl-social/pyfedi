@@ -1809,6 +1809,9 @@ form h5 {
   position: relative;
   top: -11px;
 }
+.coolfieldset legend.tweak-top {
+  top: -18px;
+}
 
 .coolfieldset legend, .coolfieldset.expanded legend {
   background: whitesmoke url(/static/images/expanded.gif) no-repeat center left;
