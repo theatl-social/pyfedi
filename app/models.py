@@ -456,7 +456,6 @@ class Community(db.Model):
     private_mods = db.Column(db.Boolean, default=False)
 
     # Which feeds posts from this community show up in
-    show_home = db.Column(db.Boolean, default=False)        # unused
     show_popular = db.Column(db.Boolean, default=True)
     show_all = db.Column(db.Boolean, default=True)
 
