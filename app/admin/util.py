@@ -8,8 +8,10 @@ from flask_babel import _
 
 from app import db, cache, celery
 from app.activitypub.signature import post_request, default_context
+from app.activitypub.util import extract_domain_and_actor
+
 from app.models import User, Community, Instance, Site, ActivityPubLog, CommunityMember, Language
-from app.utils import gibberish, topic_tree
+from app.utils import gibberish, topic_tree, get_request
 
 
 def unsubscribe_from_everything_then_delete(user_id):
@@ -123,6 +125,4 @@ def topics_for_form_children(topics, current_topic: int, depth: int) -> List[Tup
         if topic['children']:
             result.extend(topics_for_form_children(topic['children'], current_topic, depth + 1))
     return result
-
-
 
