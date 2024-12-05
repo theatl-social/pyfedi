@@ -1,7 +1,11 @@
 {% macro render_username(user, add_domain=True) -%}
 <span class="render_username">
     {% if user.deleted -%}
-        [deleted]
+        {% if current_user.is_authenticated and current_user.is_admin() -%}
+            <a href="/u/{{ user.link() }}" title="{{ user.ap_id if user.ap_id != none else user.user_name }}" aria-label="{{ _('Author') }}">[deleted]</a>
+        {% else -%}
+            [deleted]
+        {% endif -%}
     {% else -%}
         <a href="/u/{{ user.link() }}" title="{{ user.ap_id if user.ap_id != none else user.user_name }}" aria-label="{{ _('Author') }}">
             {% if user.avatar_id and not low_bandwidth and not collapsed -%}
