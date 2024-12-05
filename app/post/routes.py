@@ -10,7 +10,7 @@ from wtforms import SelectField, RadioField
 
 from app import db, constants, cache, celery
 from app.activitypub.signature import HttpSignature, post_request, default_context, post_request_in_background
-from app.activitypub.util import notify_about_post_reply, inform_followers_of_post_update
+from app.activitypub.util import notify_about_post_reply, inform_followers_of_post_update, update_post_from_activity
 from app.community.util import save_post, send_to_remote_instance
 from app.inoculation import inoculation
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm
@@ -32,7 +32,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     blocked_instances, blocked_domains, community_moderators, blocked_phrases, show_ban_message, recently_upvoted_posts, \
     recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, reply_is_stupid, \
     languages_for_form, menu_topics, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown, \
-    permission_required, blocked_users
+    permission_required, blocked_users, get_request
 
 
 def show_post(post_id: int):
@@ -1899,6 +1899,25 @@ def post_reply_view_voting_activity(comment_id: int):
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site
                            )
+
+
+@bp.route('/post/<int:post_id>/fixup_from_remote', methods=['GET'])
+@login_required
+@permission_required('change instance settings')
+def post_fixup_from_remote(post_id: int):
+    post = Post.query.get_or_404(post_id)
+
+    # will fail for some MBIN objects for same reason that 'View original on ...' does
+    # (ap_id is lowercase, but original URL was mixed-case and remote instance software is case-sensitive)
+    remote_post_request = get_request(post.ap_id, headers={'Accept': 'application/activity+json'})
+    if remote_post_request.status_code == 200:
+        remote_post_json = remote_post_request.json()
+        remote_post_request.close()
+        if 'type' in remote_post_json and remote_post_json['type'] == 'Page':
+            update_json = {'type': 'Update', 'object': remote_post_json}
+            update_post_from_activity(post, update_json)
+
+    return redirect(url_for('activitypub.post_ap', post_id=post.id))
 
 
 @bp.route('/post/<int:post_id>/cross-post', methods=['GET', 'POST'])
