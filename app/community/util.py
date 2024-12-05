@@ -25,7 +25,7 @@ from sqlalchemy import func, desc, text
 import os
 
 
-allowed_extensions = ['.gif', '.jpg', '.jpeg', '.png', '.webp', '.heic', '.mpo', '.avif']
+allowed_extensions = ['.gif', '.jpg', '.jpeg', '.png', '.webp', '.heic', '.mpo', '.avif', '.svg']
 
 
 def search_for_community(address: str):
@@ -649,30 +649,38 @@ def save_icon_file(icon_file, directory='communities') -> File:
 
     if file_ext.lower() == '.heic':
         register_heif_opener()
+    elif file_ext.lower() == '.avif':
+        import pillow_avif
 
     # resize if necessary
-    Image.MAX_IMAGE_PIXELS = 89478485
-    img = Image.open(final_place)
-    if '.' + img.format.lower() in allowed_extensions:
-        img = ImageOps.exif_transpose(img)
-        img_width = img.width
-        img_height = img.height
-        if img.width > 250 or img.height > 250:
-            img.thumbnail((250, 250))
-            img.save(final_place)
+    if file_ext.lower() in allowed_extensions:
+        if file_ext.lower() == '.svg':  # svgs don't need to be resized
+            file = File(file_path=final_place, file_name=new_filename + file_ext, alt_text=f'{directory} icon',
+                        thumbnail_path=final_place)
+            db.session.add(file)
+            return file
+        else:
+            Image.MAX_IMAGE_PIXELS = 89478485
+            img = Image.open(final_place)
+            img = ImageOps.exif_transpose(img)
             img_width = img.width
             img_height = img.height
-        # save a second, smaller, version as a thumbnail
-        img.thumbnail((40, 40))
-        img.save(final_place_thumbnail, format="WebP", quality=93)
-        thumbnail_width = img.width
-        thumbnail_height = img.height
+            if img.width > 250 or img.height > 250:
+                img.thumbnail((250, 250))
+                img.save(final_place)
+                img_width = img.width
+                img_height = img.height
+            # save a second, smaller, version as a thumbnail
+            img.thumbnail((40, 40))
+            img.save(final_place_thumbnail, format="WebP", quality=93)
+            thumbnail_width = img.width
+            thumbnail_height = img.height
 
-        file = File(file_path=final_place, file_name=new_filename + file_ext, alt_text=f'{directory} icon',
-                    width=img_width, height=img_height, thumbnail_width=thumbnail_width,
-                    thumbnail_height=thumbnail_height, thumbnail_path=final_place_thumbnail)
-        db.session.add(file)
-        return file
+            file = File(file_path=final_place, file_name=new_filename + file_ext, alt_text=f'{directory} icon',
+                        width=img_width, height=img_height, thumbnail_width=thumbnail_width,
+                        thumbnail_height=thumbnail_height, thumbnail_path=final_place_thumbnail)
+            db.session.add(file)
+            return file
     else:
         abort(400)
 
@@ -695,6 +703,8 @@ def save_banner_file(banner_file, directory='communities') -> File:
 
     if file_ext.lower() == '.heic':
         register_heif_opener()
+    elif file_ext.lower() == '.avif':
+        import pillow_avif
 
     # resize if necessary
     Image.MAX_IMAGE_PIXELS = 89478485

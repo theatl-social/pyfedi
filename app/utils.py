@@ -187,7 +187,7 @@ def make_cache_key(sort=None, post_id=None, view_filter=None):
 
 
 def is_image_url(url):
-    common_image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.avif']
+    common_image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.avif', '.svg+xml', '.svg+xml; charset=utf-8']
     mime_type = mime_type_using_head(url)
     if mime_type:
         mime_type_parts = mime_type.split('/')

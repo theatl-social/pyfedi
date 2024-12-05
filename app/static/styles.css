@@ -905,6 +905,7 @@ div.navbar {
 }
 .post_teaser_image_preview img {
   max-width: 100%;
+  min-width: 150px;
   margin-right: 4px;
   border-radius: 5px;
   height: auto;

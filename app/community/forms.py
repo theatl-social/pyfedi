@@ -155,7 +155,7 @@ class CreateImageForm(CreatePostForm):
 
     def validate(self, extra_validators=None) -> bool:
         uploaded_file = request.files['image_file']
-        if uploaded_file and uploaded_file.filename != '':
+        if uploaded_file and uploaded_file.filename != '' and not uploaded_file.filename.endswith('.svg'):
             Image.MAX_IMAGE_PIXELS = 89478485
             # Do not allow fascist meme content
             try:

@@ -679,13 +679,14 @@ def add_post(actor, type):
                 Image.MAX_IMAGE_PIXELS = 89478485
 
                 # resize if necessary
-                img = Image.open(final_place)
-                if '.' + img.format.lower() in allowed_extensions:
-                    img = ImageOps.exif_transpose(img)
+                if not final_place.endswith('.svg'):
+                    img = Image.open(final_place)
+                    if '.' + img.format.lower() in allowed_extensions:
+                        img = ImageOps.exif_transpose(img)
 
-                    # limit full sized version to 2000px
-                    img.thumbnail((2000, 2000))
-                    img.save(final_place)
+                        # limit full sized version to 2000px
+                        img.thumbnail((2000, 2000))
+                        img.save(final_place)
 
                 request_json['object']['attachment'] = [{'type': 'Image', 'url': f'https://{current_app.config["SERVER_NAME"]}/{final_place.replace("app/", "")}',
                                                         'name': form.image_alt_text.data}]
