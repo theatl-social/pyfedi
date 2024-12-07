@@ -218,7 +218,7 @@ def list_communities():
     return render_template('list_communities.html', communities=communities, search=search_param, title=_('Communities'),
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                           next_url=next_url, prev_url=prev_url,
+                           next_url=next_url, prev_url=prev_url, current_user=current_user,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
@@ -264,13 +264,13 @@ def list_local_communities():
     # Pagination
     communities = communities.paginate(page=page, per_page=250 if current_user.is_authenticated and not low_bandwidth else 50,
                            error_out=False)
-    next_url = url_for('main.list_communities', page=communities.next_num, sort_by=sort_by, language_id=language_id) if communities.has_next else None
-    prev_url = url_for('main.list_communities', page=communities.prev_num, sort_by=sort_by, language_id=language_id) if communities.has_prev and page != 1 else None
+    next_url = url_for('main.list_local_communities', page=communities.next_num, sort_by=sort_by, language_id=language_id) if communities.has_next else None
+    prev_url = url_for('main.list_local_communities', page=communities.prev_num, sort_by=sort_by, language_id=language_id) if communities.has_prev and page != 1 else None
 
     return render_template('list_communities.html', communities=communities, search=search_param, title=_('Local Communities'),
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                           next_url=next_url, prev_url=prev_url,
+                           next_url=next_url, prev_url=prev_url, current_user=current_user,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
@@ -311,8 +311,8 @@ def list_subscribed_communities():
         # Pagination
         communities = communities.paginate(page=page, per_page=250 if current_user.is_authenticated and not low_bandwidth else 50,
                            error_out=False)
-        next_url = url_for('main.list_communities', page=communities.next_num, sort_by=sort_by, language_id=language_id) if communities.has_next else None
-        prev_url = url_for('main.list_communities', page=communities.prev_num, sort_by=sort_by, language_id=language_id) if communities.has_prev and page != 1 else None
+        next_url = url_for('main.list_subscribed_communities', page=communities.next_num, sort_by=sort_by, language_id=language_id) if communities.has_next else None
+        prev_url = url_for('main.list_subscribed_communities', page=communities.prev_num, sort_by=sort_by, language_id=language_id) if communities.has_prev and page != 1 else None
 
     else:
         communities = []
@@ -322,7 +322,7 @@ def list_subscribed_communities():
     return render_template('list_communities.html', communities=communities, search=search_param, title=_('Joined Communities'),
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                           next_url=next_url, prev_url=prev_url,
+                           next_url=next_url, prev_url=prev_url, current_user=current_user,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
@@ -366,14 +366,18 @@ def list_not_subscribed_communities():
         banned_from = communities_banned_from(current_user.id)
         if banned_from:
             communities = communities.filter(Community.id.not_in(banned_from))
+        if current_user.hide_nsfw == 1:
+            communities = communities.filter(Community.nsfw == False)
+        if current_user.hide_nsfl == 1:
+            communities = communities.filter(Community.nsfl == False)
 
         communities = communities.order_by(text('community.' + sort_by))
 
         # Pagination
         communities = communities.paginate(page=page, per_page=250 if current_user.is_authenticated and not low_bandwidth else 50,
                            error_out=False)
-        next_url = url_for('main.list_communities', page=communities.next_num, sort_by=sort_by, language_id=language_id) if communities.has_next else None
-        prev_url = url_for('main.list_communities', page=communities.prev_num, sort_by=sort_by, language_id=language_id) if communities.has_prev and page != 1 else None
+        next_url = url_for('main.list_not_subscribed_communities', page=communities.next_num, sort_by=sort_by, language_id=language_id) if communities.has_next else None
+        prev_url = url_for('main.list_not_subscribed_communities', page=communities.prev_num, sort_by=sort_by, language_id=language_id) if communities.has_prev and page != 1 else None
 
     else:
         communities = []
@@ -383,7 +387,7 @@ def list_not_subscribed_communities():
     return render_template('list_communities.html', communities=communities, search=search_param, title=_('Not Joined Communities'),
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                           next_url=next_url, prev_url=prev_url,
+                           next_url=next_url, prev_url=prev_url, current_user=current_user,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site)
