@@ -2,6 +2,8 @@
   teaser: Renders just a teaser
   disable_voting: Disable voting buttons (to prevent mass downvoting)
   no_collapse: Don't collapse for admin and moderator views
+  show_deleted: Show deleted content (for admin views)
+  children: replies to this reply
 #}
 {% if current_user.is_authenticated -%}
     {% set collapsed = ((post_reply.score <= current_user.reply_collapse_threshold) or post_reply.deleted)
@@ -9,7 +11,7 @@
 {% else -%}
     {% set collapsed = (post_reply.score <= -10) and not no_collapse -%}
 {% endif -%}
-<div class="container comment{% if post_reply.score <= -10 %} low_score{% endif %}" id="comment_{{ post_reply.id }}">
+<div class="container comment{% if post_reply.score and post_reply.score <= -10 %} low_score{% endif %}{% if post_reply.author.id == post_reply.post.author.id %} original_poster{% endif %}" id="comment_{{ post_reply.id }}"{% if post_reply.language_id and post_reply.language.code != 'en' %} lang="{{ post_reply.language.code }}"{% endif %} aria-level="{{ post_reply.depth+1 }}" role="treeitem">
     {% if not post_reply.author.indexable -%}<!--googleoff: all-->{% endif -%}
     {% if teaser -%}
     <div class="row">
@@ -52,7 +54,15 @@
 
     <div class="row comment_body hidable{% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) %} reported{% endif %}">
         <div class="col-12">
-            {{ post_reply.body_html | community_links | safe }}
+            {% if post_reply.deleted and not show_deleted -%}
+                {% if post_reply.deleted_by is none or post_reply.deleted_by != post_reply.user_id -%}
+                    <p>Deleted by moderator</p>
+                {% else -%}
+                    <p>Deleted by author</p>
+                {% endif -%}
+            {% else -%}
+                {{ post_reply.body_html | community_links | safe }}
+            {% endif -%}
         </div>
     </div>
     <div class="comment_actions hidable">
@@ -76,7 +86,7 @@
             {% endif -%}
         </div>
         <div class="notify_toggle">
-            {% if current_user.is_authenticated -%}
+            {% if current_user.is_authenticated and current_user.verified -%}
                 {% with comment=dict(comment=post_reply) -%}
                     {% include "post/_reply_notification_toggle.html" -%}
                 {% endwith -%}
@@ -87,6 +97,23 @@
         {% endif -%}
     </div>
     {% if not post_reply.author.indexable -%}<!--googleon all-->{% endif -%}
+
+    {% if children -%}
+        <div class="replies hidable" role="group">
+            {% if not THREAD_CUTOFF_DEPTH or post_reply.depth <= THREAD_CUTOFF_DEPTH -%}
+                    {% for reply in children -%}
+                        {% with post_reply=reply['comment'], children=reply['replies'] %}
+                            {% include 'post/_post_reply_teaser.html' %}
+                        {% endwith %}
+                    {% endfor -%}
+            {% else -%}
+                <div class="continue_thread hidable">
+                    <a href="{{ url_for('post.continue_discussion', post_id=post_reply.post.id, comment_id=post_reply.id, _anchor='replies') }}">Continue thread</a>
+                </div>
+            {% endif -%}
+        </div>
+    {% endif -%}
+
     {% if collapsed -%}
         <script nonce="{{ session['nonce'] }}" type="text/javascript">
             if (typeof(toBeHidden) === 'undefined') {
