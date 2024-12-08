@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en" data-bs-theme="auto">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title id="head-title">{% if not debug_mode %}{{ g.site.name }}{% endif %}</title>
+  {{ bootstrap.load_css() }}
+  <link href="{{ '/static/themes/' + theme() + '/css/navbars.css' }}" rel="stylesheet">
+  <link href="{{ '/static/themes/' + theme() + '/css/color-modes.css' }}" rel="stylesheet">
+
+  <script src="{{ '/static/themes/' + theme() + '/js/color-modes.js' }}"></script>
+</head>
+
+<body>
+  <div class="dropdown position-fixed bottom-0 end-0 mb-3 me-3 bd-mode-toggle">
+    <button class="btn btn-bd-primary py-2 dropdown-toggle d-flex align-items-center" id="bd-theme" type="button" aria-expanded="false" data-bs-toggle="dropdown" aria-label="Toggle theme (auto)">
+      <svg class="bi my-1 theme-icon-active" width="1em" height="1em"><use href="{{ '/static/themes/' + theme() + '/svg/color-modes.svg#circle-half' }}"></use></svg>
+      <span class="visually-hidden" id="bd-theme-text">Toggle theme</span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="bd-theme-text">
+      <li>
+        <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="light" aria-pressed="false">
+          <svg class="bi me-2 opacity-50" width="1em" height="1em"><use href="{{ '/static/themes/' + theme() + '/svg/color-modes.svg#sun-fill' }}"></use></svg>
+          Light
+          <svg class="bi ms-auto d-none" width="1em" height="1em"><use href="{{ '/static/themes/' + theme() + '/svg/color-modes.svg#check2' }}"></use></svg>
+        </button>
+      </li>
+      <li>
+        <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="dark" aria-pressed="false">
+          <svg class="bi me-2 opacity-50" width="1em" height="1em"><use href="{{ '/static/themes/' + theme() + '/svg/color-modes.svg#moon-stars-fill' }}"></use></svg>
+          Dark
+          <svg class="bi ms-auto d-none" width="1em" height="1em"><use href="{{ '/static/themes/' + theme() + '/svg/color-modes.svg#check2' }}"></use></svg>
+        </button>
+      </li>
+      <li>
+        <button type="button" class="dropdown-item d-flex align-items-center active" data-bs-theme-value="auto" aria-pressed="true">
+          <svg class="bi me-2 opacity-50" width="1em" height="1em"><use href="{{ '/static/themes/' + theme() + '/svg/color-modes.svg#circle-half' }}"></use></svg>
+          Auto
+          <svg class="bi ms-auto d-none" width="1em" height="1em"><use href="{{ '/static/themes/' + theme() + '/svg/color-modes.svg#check2' }}"></use></svg>
+        </button>
+      </li>
+    </ul>
+  </div>
+
+  <nav class="navbar navbar-expand-lg sticky-top bg-body-tertiary">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="/" id="navbar-title">{% if not debug_mode %}{{ g.site.name }}{% endif %}</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        {% if current_user.is_anonymous %}
+          <li class="nav-item"><a class="nav-link" href="/auth/login">{{ _('Log in') }}</a></li>
+          <li class="nav-item"><a class="nav-link" href="/auth/register">{{ _('Register') }}</a></li>
+          <li class="nav-item"><a class="nav-link" href="/donate">{{ _('Donate') }}</a></li>
+        {% else %}
+
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              {{ _('Communities') }}
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="/communities">{{ _('All communities') }}</a></li>
+              {% if moderating_communities %}
+                <li><hr class="dropdown-divider"></li>
+                <li><h6 class="dropdown-header">{{ _('Moderating') }}</h6></li>
+                {% for mc in moderating_communities %}
+                  <li>
+                    <a class="dropdown-item" href="/c/{{ mc.link() }}">{{ mc.title }}<span class="text-body-secondary"> ({{ mc.ap_domain }})</span></a>
+                  </li>
+                {% endfor %}
+              {% endif %}
+              {% if joined_communities %}
+                <li><hr class="dropdown-divider"></li>
+                <li><h6 class="dropdown-header">{{ _('Joined communities') }}</h6></li>
+                {% for jc in joined_communities %}
+                  <li>
+                    <a class="dropdown-item" href="/c/{{ jc.link() }}">{{ jc.title }}<span class="text-body-secondary"> ({{ jc.ap_domain }})</span></a>
+                  </li>
+                {% endfor %}
+              {% endif %}
+            </ul>
+          </li>
+
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              {{ _('Account') }}
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="/u/{{ current_user.link() }}">{{ _('View profile') }}</a></li>
+              <li><a class="dropdown-item" href="/user/settings">{{ _('Edit profile & settings') }}</a></li>
+              <li><a class="dropdown-item" href="/chat">{{ _('Chats') }}</a></li>
+              <li><a class="dropdown-item" href="/bookmarks">{{ _('Bookmarks') }}</a></li>
+              <li><a class="dropdown-item" href="/alerts">{{ _('Activity Alerts') }}</a></li>
+              {% if current_user.hide_read_posts %}
+                <li><a class="dropdown-item" href="/read-posts">{{ _('Read Posts') }}</a></li>
+              {% endif %}
+            </ul>
+          </li>
+
+          <li class="nav-item"><a class="nav-link" href="/donate">{{ _('Donate') }}</a></li>
+
+          {% if user_access('change instance settings', current_user.id) %}
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                {{ _('Admin') }}
+              </a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="/admin/site") }}">{{ _('Site profile') }}</a></li>
+                <li><a class="dropdown-item" href="/admin/misc">{{ _('Misc settings') }}</a></li>
+                <li><a class="dropdown-item" href="/admin/communities">{{ _('Communities') }}</a></li>
+                <li><a class="dropdown-item" href="/admin/topics">{{ _('Topics') }}</a></li>
+                <li><a class="dropdown-item" href="/admin/users?local_remote=local">{{ _('Users') }}</a></li>
+                <li><a class="dropdown-item" href="/admin/users/trash?local_remote=local">{{ _('Monitoring - users') }}</a></li>
+                <li><a class="dropdown-item" href="/admin/content/trash">{{ _('Monitoring - content') }}</a></li>
+                <li><a class="dropdown-item" href="/admin/content/spam">{{ _('Monitoring - spammy content') }}</a></li>
+                <li><a class="dropdown-item" href="/admin/content/deleted">{{ _('Deleted content') }}</a></li>
+                {% if g.site.registration_mode == 'RequireApplication' %}
+                  <li><a class="dropdown-item" href="/admin/approve_registrations">{{ _('Registration applications') }}</a></li>
+                {% endif %}
+                <li><a class="dropdown-item" href="/admin/reports">{{ _('Moderation') }}</a></li>
+                <li><a class="dropdown-item" href="/admin/federation">{{ _('Federation') }}</a></li>
+                <li><a class="dropdown-item" href="/admin/instances">{{ _('Instances') }}</a></li>
+                <li><a class="dropdown-item" href="/admin/newsletter">{{ _('Newsletter') }}</a></li>
+                <li><a class="dropdown-item" href="/admin/activities">{{ _('Activities') }}</a></li>
+                <li><a class="dropdown-item" href="/admin/permissions">{{ _('Permissions') }}</a></li>
+                {% if debug_mode %}
+                  <li><a class="dropdown-item" href="/dev/tools">{{ _('Dev Tools') }}</a></li>
+                {% endif %}
+              </ul>
+            </li>
+          {% endif %}
+
+          <li class="nav-item"><a class="nav-link" href="/notifications">{{ _('Inbox') }}</a></li>
+
+          <li class="nav-item"><a class="nav-link" href="/auth/logout">{{ _('Log out') }}</a></li>
+
+        {% endif %}
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container">
+    {% block app_content %}{% endblock %}
+    <hr />
+  </main>
+        
+  <footer class="text-center">
+    <small>
+      <a href="/donate">{{ _('Donate') }}</a><br />
+      <a href="/about">{{ _('About') }}</a><br />
+      <a href="/keyboard_shortcuts">{{ _('Keyboard shortcuts') }}</a><br/>
+      <a href="https://codeberg.org/rimu/pyfedi">PieFed</a> is free and open source. Please <a href="https://codeberg.org/rimu/pyfedi/issues">report bugs</a> or <a href="https://join.piefed.social/get-involved/">get involved</a>.<br />
+      <a href="/privacy">Privacy policy</a>
+    </small>
+  </footer>
+
+  {{ bootstrap.load_js() }}
+  {% if debug_mode %}
+    <script src="{{ '/static/themes/' + theme() + '/js/site.js' }}"></script>
+  {% endif %}
+</body>
+</html>

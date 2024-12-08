@@ -1,0 +1,21 @@
+{% extends 'themes/' + theme() + '/base.html' %}
+
+{% block app_content %}
+  <h3>Site Info from API</h3>
+
+  {% if not debug_mode %}
+    <p>(API only available in debug mode)</p>
+  {% else %}
+    <ul>
+      <li><span class="text-body-secondary">version: </span><span id="site_version"></span></li>
+      <li><span class="text-body-secondary">actor_id: </span><span id="site_actor_id"></span></li>
+      <li><span class="text-body-secondary">description: </span><span id="site_description"></span></li>
+      <li><span class="text-body-secondary">enable_downvotes: </span><span id="site_enable_downvotes"></span></li>
+      <li><span class="text-body-secondary">icon: </span><span id="site_icon"></span></li>
+      <li><span class="text-body-secondary">name: </span><span id="site_name"></span></li>
+      <li><span class="text-body-secondary">sidebar: </span><span id="site_sidebar"></span></li>
+      <li><span class="text-body-secondary">user_count: </span><span id="site_user_count"></span></li>
+      <li><span class="text-body-secondary">all languages: </span><span id="site_all_languages"></span></li>
+    </ul>
+  {% endif %}
+{% endblock%}
