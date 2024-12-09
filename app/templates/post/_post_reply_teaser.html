@@ -33,9 +33,8 @@
                 <span title="Submitter of original post" aria-label="{{ _('Post creator') }}" class="small"> [OP]</span>
             {% endif -%}
         </div>
-        <div class="col-auto text-muted small">
-            {{ arrow.get(post_reply.posted_at).humanize(locale=locale) }}
-            {% if post_reply.edited_at -%}, edited {{ arrow.get(post_reply.edited_at).humanize(locale=locale) }} {% endif -%}
+        <div class="col-auto text-muted small pt-05">
+            {{ arrow.get(post_reply.posted_at).humanize(locale=locale) }}{% if post_reply.edited_at -%}, edited {{ arrow.get(post_reply.edited_at).humanize(locale=locale) }}{% endif -%}
         </div>
         <div class="col-auto">
             {% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) -%}

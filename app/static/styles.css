@@ -1995,6 +1995,10 @@ form h5 {
   margin-bottom: 0;
 }
 
+.pt-05 {
+  padding-top: 0.12rem !important;
+}
+
 /* high contrast */
 @media (prefers-contrast: more) {
   :root {
