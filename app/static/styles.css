@@ -894,7 +894,6 @@ div.navbar {
 .post_teaser_image_preview {
   text-align: center;
   margin-top: 10px;
-  margin-bottom: 10px;
 }
 .post_teaser_image_preview a {
   display: inline-block;
@@ -911,7 +910,6 @@ div.navbar {
 .post_teaser_video_preview {
   text-align: center;
   margin-top: 10px;
-  margin-bottom: 10px;
   position: relative;
 }
 .post_teaser_video_preview .fe-video {
