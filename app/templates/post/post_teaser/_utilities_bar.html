@@ -1,19 +1,30 @@
-<div class="post_utilities_bar_wrapper">
     <div class="post_utilities_bar">
-        <a class="post_replies_link" href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None, _anchor='post_replies') }}" aria-label="{{ _('View comments') }}"><span class="fe fe-reply"></span> <span aria-label="{{ _('Number of comments:') }}">{{ post.reply_count }}</span></a>
+        <div class="post_replies_link">
+            <a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None, _anchor='post_replies') }}" aria-label="{{ _('View comments') }}"><span class="fe fe-reply"></span> <span aria-label="{{ _('Number of comments:') }}">{{ post.reply_count }}</span></a>
+        </div>
         <div class="voting_buttons_new" aria-live="assertive">
             {% include "post/_post_voting_buttons.html" -%}
         </div>
         {% if post.type == POST_TYPE_IMAGE and low_bandwidth -%}
-            {% if post.image_id -%}
-                <a href="{{ post.image.view_url() }}" rel="nofollow ugc" class="preview_image" aria-label="{{ _('View image') }}" aria-hidden="true"><span class="fe fe-magnify"></span></a>
-            {% else -%}
-                <a href="{{ post.url }}" rel="nofollow ugc" class="preview_image" target="_blank" aria-label="{{ _('View image') }}" aria-hidden="true"><span class="fe fe-magnify"></span></a>
-            {% endif -%}
+            <div class="preview_image">
+                {% if post.image_id -%}
+                    <a href="{{ post.image.view_url() }}" rel="nofollow ugc" aria-label="{{ _('View image') }}" aria-hidden="true"><span class="fe fe-magnify"></span></a>
+                {% else -%}
+                    <a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="{{ _('View image') }}" aria-hidden="true"><span class="fe fe-magnify"></span></a>
+                {% endif -%}
+            </div>
         {% endif -%}
         {% if current_user.is_authenticated and post.type == POST_TYPE_LINK and post.author.bot and (post.cross_posts is none or len(post.cross_posts) == 0) -%}
-            <a class="post_cross_post_link" rel="nofollow" aria-label="{{ _('Cross-post') }}" href="{{ url_for('post.post_cross_post', post_id=post.id) }}"><span class="fe fe-cross-post"></span></a>
+            <div class="post_cross_post_link">
+                <a rel="nofollow" aria-label="{{ _('Cross-post') }}" href="{{ url_for('post.post_cross_post', post_id=post.id) }}"><span class="fe fe-cross-post"></span></a>
+            </div>
         {% endif -%}
-        <a class="post_options_link" href="{{ url_for('post.post_options', post_id=post.id) }}" rel="nofollow" aria-label="{{ _('Options') }}"><span class="fe fe-options" title="Options"> </span></a>
+        <div class="notify_toggle">
+            {% if current_user.is_authenticated and current_user.verified -%}
+                {% include 'post/_post_notification_toggle.html' -%}
+            {% endif -%}
+        </div>
+        <div class="post_options_link">
+          <a href="{{ url_for('post.post_options', post_id=post.id) }}" rel="nofollow" aria-label="{{ _('Options') }}"><span class="fe fe-options" title="Options"> </span></a>
+        </div>
     </div>
-</div>

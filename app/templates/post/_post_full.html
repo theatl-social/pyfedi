@@ -2,9 +2,6 @@
         <div class="col post_col {% if post.type == POST_TYPE_IMAGE %}post_col post_type_image{% else %}post_type_normal{% endif %}">
             {% include "post/_breadcrumb_nav.html" %}
             <h1 class="mt-2 post_title" {% if post.language_id and post.language.code != 'en' %}lang="{{ post.language.code }}"{% endif %}>{{ post.title }}
-                {% if current_user.is_authenticated -%}
-                    {% include 'post/_post_notification_toggle.html' -%}
-                {% endif -%}
                 {% if post.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif -%}
                 {% if post.nsfl -%}<span class="warning_badge nsfl" title="{{ _('Potentially emotionally scarring content') }}">nsfl</span>{% endif -%}
             </h1>
@@ -175,6 +172,13 @@
             <span aria-label="{{ _('Number of cross-posts:') }}">{{ len(post.cross_posts) }}</span></a>
         </div>
         {% endif -%}
-        <a href="{{ url_for('post.post_options', post_id=post.id) }}" class="post_options_link" rel="nofollow"><span class="fe fe-options" title="Options"> </span></a>
+        <div class="notify_toggle">
+            {% if current_user.is_authenticated and current_user.verified -%}
+                {% include 'post/_post_notification_toggle.html' -%}
+            {% endif -%}
+        </div>
+        <div class="post_options_link">
+            <a href="{{ url_for('post.post_options', post_id=post.id) }}" rel="nofollow"><span class="fe fe-options" title="Options"> </span></a>
+        </div>
     </div>
 </div>

@@ -65,13 +65,15 @@
         </div>
     </div>
     <div class="comment_actions hidable">
+        <div class="post_replies_link">
             {% if post_reply.post.comments_enabled -%}
                 {% if not post_reply.post.deleted and not post_reply.deleted -%}
-                    <a href="{{ url_for('post.add_reply', post_id=post_reply.post.id, comment_id=post_reply.id) }}" class="" rel="nofollow noindex"><span class="fe fe-reply"></span> reply</a>
+                    <a href="{{ url_for('post.add_reply', post_id=post_reply.post.id, comment_id=post_reply.id) }}" rel="nofollow noindex"><span class="fe fe-reply"></span> reply</a>
                 {% else -%}
                     <span class="fe fe-reply"></span> reply
                 {% endif -%}
             {% endif -%}
+        </div>
         <div class="voting_buttons_new">
             {% with comment=post_reply, community=post_reply.post.community -%}
                 {% include "post/_comment_voting_buttons.html" -%}
@@ -91,9 +93,11 @@
                 {% endwith -%}
             {% endif -%}
         </div>
-        {% if not post_reply.post.deleted -%}
-            <a href="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) }}" class="comment_actions_link" rel="nofollow noindex" aria-label="{{ _('Comment options') }}"><span class="fe fe-options" title="Options"> </span></a>
-        {% endif -%}
+        <div class="comment_actions_link">
+            {% if not post_reply.post.deleted -%}
+                <a href="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) }}" rel="nofollow noindex" aria-label="{{ _('Comment options') }}"><span class="fe fe-options" title="Options"> </span></a>
+            {% endif -%}
+        </div>
     </div>
     {% if not post_reply.author.indexable -%}<!--googleon all-->{% endif -%}
 

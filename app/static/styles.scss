@@ -469,7 +469,6 @@ div.navbar {
 
 .post_teaser_body {
   position: relative;
-  padding-bottom: 32px;
 }
 
 .post_teaser_article_preview, .post_teaser_link_preview {
@@ -571,12 +570,6 @@ time {
   width: 100%;
 }
 
-.post_utilities_bar_wrapper {
-  position: absolute;
-  bottom: -9px;
-  width: 97%;
-}
-
 .post_utilities_bar {
   display: flex;
   min-height: $min-touch-target;
@@ -586,41 +579,17 @@ time {
     justify-content: left;
   }
 
-  .cross_post_button {
+  div {
     display: flex;
-    justify-content: left;
+    justify-content: center;
     align-items: center;
-    width: $min-touch-target;
-    height: $min-touch-target;
-    line-height: $min-touch-target;
-    padding: 3px;
-    padding-left: 0;
-  }
-
-  .post_replies_link {
-    display: flex;
     min-width: $min-touch-target;
     height: $min-touch-target;
-    padding: 3px;
-    align-items: center;
-    margin-left: -3px;
+    line-height: $min-touch-target;
   }
 
-  .voting_buttons_new {
-    display: flex;
-    height: $min-touch-target;
-    padding: 3px;
-    justify-content: center;
-    align-items: center;
-  }
-
-   .post_cross_post_link, .post_options_link, .preview_image {
-    display: flex;
-    width: $min-touch-target;
-    height: $min-touch-target;
-    padding: 3px;
-    justify-content: center;
-    align-items: center;
+  .notify_toggle {
+    margin-left: auto; /* pull right */
   }
 }
 
@@ -848,8 +817,6 @@ time {
 }
 
 .voting_buttons_new {
-  display: inline-block;
-
   .upvote_button, .downvote_button {
     position: relative; /* so the htmx-indicators can be position: absolute */
     display: inline-block;
@@ -1059,28 +1026,26 @@ time {
 
   .comment_actions {
     margin-top: -18px;
-    position: relative;
-    padding-bottom: 5px;
-    a {
-      text-decoration: none;
-      padding: 0;
+    display: flex;
+    min-height: $min-touch-target;
+    /* justify-content: space-between; */
+    justify-content: left;
+    @include breakpoint(tablet) {
+      justify-content: left;
     }
 
-    .hide_button {
-      display: inline-block;
-
-      a {
-        padding: 5px 15px;
-      }
+    div {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-width: $min-touch-target;
+      height: $min-touch-target;
+      line-height: $min-touch-target;
     }
 
     .notify_toggle {
-      display: inline-block;
-      a {
-        text-decoration: none;
-        font-size: 87%;
-        padding: 5px 15px;
-      }
+      margin-left: auto; /* pull right */
+      font-size: 87%;
     }
   }
 
@@ -1592,30 +1557,6 @@ form {
   margin-top: -15px;
   display: block;
   margin-bottom: 10px;
-}
-
-.post_options_link {
-  display: block;
-  width: 41px;
-  text-decoration: none;
-}
-
-.comment_actions_link {
-  display: block;
-  position: absolute;
-  top: 3px;
-  right: -16px;
-  width: 41px;
-  text-decoration: none;
-}
-
-.notify_toggle  {
-  display: block;
-  position: absolute;
-  top: 2px;
-  right: 30px;
-  width: 41px;
-  text-decoration: none;
 }
 
 .alert {
