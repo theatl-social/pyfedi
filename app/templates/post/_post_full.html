@@ -1,69 +1,7 @@
 <div class="row position-relative post_full">
-    {% if post.type == POST_TYPE_IMAGE -%}
-        <div class="col post_col post_type_image">
-            <nav aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
-              <ol class="breadcrumb">
-                {% for breadcrumb in breadcrumbs -%}
-                  <li class="breadcrumb-item">{% if breadcrumb.url -%}<a href="{{ breadcrumb.url }}">{% endif -%}{{ breadcrumb.text }}{% if breadcrumb.url -%}</a>{% endif -%}</li>
-                {% endfor -%}
-                <li class="breadcrumb-item"><a href="/c/{{ post.community.link() }}" title="{{ post.community.ap_domain }}">{{ post.community.title }}@{{ post.community.ap_domain }}</a></li>
-              </ol>
-            </nav>
-            <h1 class="mt-2 post_title"{% if post.language_id and post.language.code != 'en' %} lang="{{ post.language.code }}"{% endif %}>{{ post.title }}
-                {% if current_user.is_authenticated -%}
-                    {% include 'post/_post_notification_toggle.html' -%}
-                {% endif -%}
-                {% if post.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif -%}
-                {% if post.nsfl -%}<span class="warning_badge nsfl" title="{{ _('Potentially emotionally scarring content') }}">nsfl</span>{% endif -%}
-            </h1>
-            {% if post.url -%}
-                <p><a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="Go to image">{{ post.url|shorten_url }}
-                    <span class="fe fe-external"></span></a></p>
-            {% endif -%}
-            <p>{% if post.reports > 0 and current_user.is_authenticated and post.community.is_moderator(current_user) -%}
-                    <span class="red fe fe-report" title="{{ _('Reported. Check post for issues.') }}"></span>
-                {% endif -%}<small>submitted {{ arrow.get(post.posted_at).humanize(locale=locale) }} by {{ render_username(post.author) }}
-                {% if post.edited_at -%} edited {{ arrow.get(post.edited_at).humanize(locale=locale) }}{% endif -%}
-            </small></p>
-            <div class="post_image">
-                {% if post.image_id -%}
-                    {% if low_bandwidth -%}
-                        <a href="{{ post.image.view_url(resize=True) }}" rel="nofollow ugc"><img src="{{ post.image.medium_url() }}"
-                             alt="{{ post.image.alt_text if post.image.alt_text else post.title }}" fetchpriority="high" referrerpolicy="same-origin"
-                             width="{{ post.image.width }}" height="{{ post.image.height }}" /></a>
-                    {% else -%}
-                        <a href="{{ post.image.view_url() }}" rel="nofollow ugc">
-                            <img src="{{ post.image.view_url(resize=True) }}" lowsrc="{{ post.image.medium_url() }}"
-                                 sizes="(max-width: 512px) 100vw, 854px" srcset="{{ post.image.medium_url() }} 512w, {{ post.image.view_url(resize=True) }} 1024w"
-                                 alt="{{ post.image.alt_text if post.image.alt_text else post.title }}"
-                                 fetchpriority="high" referrerpolicy="same-origin" >
-                        </a>
-                    {% endif -%}
-                {% else -%}
-                    <a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="Go to image"><img src="{{ post.url }}" style="max-width: 100%; height: auto;"  /></a>
-                {% endif -%}
-            </div>
-            <div class="post_body mt-2"{% if post.language_id and post.language.code != 'en' %} lang="{{ post.language.code }}"{% endif %}>
-                {{ post.body_html|community_links|safe if post.body_html else '' }}
-                {% if post.licence_id -%}
-                    <p>Licence: {{ post.licence.name }}</p>
-                {% endif -%}
-            </div>
-        </div>
-    {% else -%}
-        <div class="col post_col post_type_normal">
-            <nav aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
-              <ol class="breadcrumb">
-                {% for breadcrumb in breadcrumbs -%}
-                  <li class="breadcrumb-item">{% if breadcrumb.url -%}<a href="{{ breadcrumb.url }}">{% endif -%}{{ breadcrumb.text }}{% if breadcrumb.url -%}</a>{% endif -%}</li>
-                {% endfor -%}
-                <li class="breadcrumb-item"><a href="/c/{{ post.community.link() }}">{{ post.community.title }}@{{ post.community.ap_domain }}</a></li>
-              </ol>
-            </nav>
+        <div class="col post_col {% if post.type == POST_TYPE_IMAGE %}post_col post_type_image{% else %}post_type_normal{% endif %}">
+            {% include "post/_breadcrumb_nav.html" %}
             <h1 class="mt-2 post_title" {% if post.language_id and post.language.code != 'en' %}lang="{{ post.language.code }}"{% endif %}>{{ post.title }}
-                {% if current_user.is_authenticated -%}
-                    {% include 'post/_post_notification_toggle.html' -%}
-                {% endif -%}
                 {% if post.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif -%}
                 {% if post.nsfl -%}<span class="warning_badge nsfl" title="{{ _('Potentially emotionally scarring content') }}">nsfl</span>{% endif -%}
             </h1>
@@ -72,6 +10,9 @@
                     <a href="{{ post.url }}" target="_blank" rel="nofollow ugc" class="post_link"><img src="{{ post.image.thumbnail_url() }}" alt="{{ post.image.alt_text if post.image.alt_text else '' }}"
                             width="{{ post.image.thumbnail_width }}" height="{{ post.image.thumbnail_height }}" loading="lazy" /></a>
                 </div>
+            {% elif post.type == POST_TYPE_IMAGE and post.url -%}
+                <p><a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="Go to image">{{ post.url|shorten_url }}
+                    <span class="fe fe-external"></span></a></p>
             {% endif -%}
             <p>{% if post.reports > 0 and current_user.is_authenticated and post.community.is_moderator(current_user) -%}
                     <span class="red fe fe-report" title="{{ _('Reported. Check post for issues.') }}"></span>
@@ -79,7 +20,26 @@
                 {{ render_username(post.author) }}
                 {% if post.edited_at -%} edited {{ arrow.get(post.edited_at).humanize(locale=locale) }}{% endif -%}</small>
             </p>
-            {% if post.type == POST_TYPE_LINK -%}
+            {% if post.type == POST_TYPE_IMAGE -%}
+                <div class="post_image">
+                    {% if post.image_id -%}
+                        {% if low_bandwidth -%}
+                            <a href="{{ post.image.view_url(resize=True) }}" rel="nofollow ugc"><img src="{{ post.image.medium_url() }}"
+                                 alt="{{ post.image.alt_text if post.image.alt_text else post.title }}" fetchpriority="high" referrerpolicy="same-origin"
+                                 width="{{ post.image.width }}" height="{{ post.image.height }}" /></a>
+                        {% else -%}
+                            <a href="{{ post.image.view_url() }}" rel="nofollow ugc">
+                                <img src="{{ post.image.view_url(resize=True) }}" lowsrc="{{ post.image.medium_url() }}"
+                                     sizes="(max-width: 512px) 100vw, 854px" srcset="{{ post.image.medium_url() }} 512w, {{ post.image.view_url(resize=True) }} 1024w"
+                                     alt="{{ post.image.alt_text if post.image.alt_text else post.title }}"
+                                     fetchpriority="high" referrerpolicy="same-origin" >
+                            </a>
+                        {% endif -%}
+                    {% else -%}
+                        <a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="Go to image"><img src="{{ post.url }}" style="max-width: 100%; height: auto;"  /></a>
+                    {% endif -%}
+                </div>
+            {% elif post.type == POST_TYPE_LINK -%}
                 <p><a href="{{ post.url }}" rel="nofollow ugc" target="_blank" class="post_link" aria-label="Go to post url">{{ post.url|shorten_url }}
                 <span class="fe fe-external"></span></a></p>
                 {% if post.url.endswith('.mp3') -%}
@@ -189,7 +149,6 @@
                 </div>
             {% endif -%}
         </div>
-    {% endif -%}
 
     {% if post.tags.count() > 0 -%}
         <nav role="navigation">
@@ -213,6 +172,13 @@
             <span aria-label="{{ _('Number of cross-posts:') }}">{{ len(post.cross_posts) }}</span></a>
         </div>
         {% endif -%}
-        <a href="{{ url_for('post.post_options', post_id=post.id) }}" class="post_options_link" rel="nofollow"><span class="fe fe-options" title="Options"> </span></a>
+        <div class="notify_toggle">
+            {% if current_user.is_authenticated and current_user.verified -%}
+                {% include 'post/_post_notification_toggle.html' -%}
+            {% endif -%}
+        </div>
+        <div class="post_options_link">
+            <a href="{{ url_for('post.post_options', post_id=post.id) }}" rel="nofollow"><span class="fe fe-options" title="Options"> </span></a>
+        </div>
     </div>
 </div>

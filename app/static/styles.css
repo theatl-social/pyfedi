@@ -783,11 +783,9 @@ div.navbar {
   max-width: 78%;
 }
 .post_list .post_teaser .col_thumbnail {
+  float: right;
   width: 70px;
   position: relative;
-  padding-left: 0;
-  padding-right: 0;
-  left: -13px;
 }
 @media (min-width: 992px) {
   .post_list .post_teaser .col_thumbnail {
@@ -873,7 +871,6 @@ div.navbar {
 
 .post_teaser_body {
   position: relative;
-  padding-bottom: 32px;
 }
 
 .post_teaser_article_preview, .post_teaser_link_preview {
@@ -897,7 +894,6 @@ div.navbar {
 .post_teaser_image_preview {
   text-align: center;
   margin-top: 10px;
-  margin-bottom: 10px;
 }
 .post_teaser_image_preview a {
   display: inline-block;
@@ -914,7 +910,6 @@ div.navbar {
 .post_teaser_video_preview {
   text-align: center;
   margin-top: 10px;
-  margin-bottom: 10px;
   position: relative;
 }
 .post_teaser_video_preview .fe-video {
@@ -969,12 +964,6 @@ time {
   width: 100%;
 }
 
-.post_utilities_bar_wrapper {
-  position: absolute;
-  bottom: -9px;
-  width: 97%;
-}
-
 .post_utilities_bar {
   display: flex;
   min-height: 44px;
@@ -986,38 +975,16 @@ time {
     justify-content: left;
   }
 }
-.post_utilities_bar .cross_post_button {
+.post_utilities_bar div {
   display: flex;
-  justify-content: left;
+  justify-content: center;
   align-items: center;
-  width: 44px;
-  height: 44px;
-  line-height: 44px;
-  padding: 3px;
-  padding-left: 0;
-}
-.post_utilities_bar .post_replies_link {
-  display: flex;
   min-width: 44px;
   height: 44px;
-  padding: 3px;
-  align-items: center;
-  margin-left: -3px;
+  line-height: 44px;
 }
-.post_utilities_bar .voting_buttons_new {
-  display: flex;
-  height: 44px;
-  padding: 3px;
-  justify-content: center;
-  align-items: center;
-}
-.post_utilities_bar .post_cross_post_link, .post_utilities_bar .post_options_link, .post_utilities_bar .preview_image {
-  display: flex;
-  width: 44px;
-  height: 44px;
-  padding: 3px;
-  justify-content: center;
-  align-items: center;
+.post_utilities_bar .notify_toggle {
+  margin-left: auto; /* pull right */
 }
 
 .post_full .post_utilities_bar .voting_buttons_new {
@@ -1213,9 +1180,6 @@ time {
   height: auto;
 }
 
-.voting_buttons_new {
-  display: inline-block;
-}
 .voting_buttons_new .upvote_button, .voting_buttons_new .downvote_button {
   position: relative; /* so the htmx-indicators can be position: absolute */
   display: inline-block;
@@ -1396,26 +1360,27 @@ time {
 }
 .comment .comment_actions {
   margin-top: -18px;
-  position: relative;
-  padding-bottom: 5px;
+  display: flex;
+  min-height: 44px;
+  /* justify-content: space-between; */
+  justify-content: left;
 }
-.comment .comment_actions a {
-  text-decoration: none;
-  padding: 0;
+@media (min-width: 992px) {
+  .comment .comment_actions {
+    justify-content: left;
+  }
 }
-.comment .comment_actions .hide_button {
-  display: inline-block;
-}
-.comment .comment_actions .hide_button a {
-  padding: 5px 15px;
+.comment .comment_actions div {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 44px;
+  height: 44px;
+  line-height: 44px;
 }
 .comment .comment_actions .notify_toggle {
-  display: inline-block;
-}
-.comment .comment_actions .notify_toggle a {
-  text-decoration: none;
+  margin-left: auto; /* pull right */
   font-size: 87%;
-  padding: 5px 15px;
 }
 .comment .replies {
   margin-top: 0;
@@ -1881,30 +1846,6 @@ form h5 {
   margin-top: -15px;
   display: block;
   margin-bottom: 10px;
-}
-
-.post_options_link {
-  display: block;
-  width: 41px;
-  text-decoration: none;
-}
-
-.comment_actions_link {
-  display: block;
-  position: absolute;
-  top: 3px;
-  right: -16px;
-  width: 41px;
-  text-decoration: none;
-}
-
-.notify_toggle {
-  display: block;
-  position: absolute;
-  top: 2px;
-  right: 30px;
-  width: 41px;
-  text-decoration: none;
 }
 
 .alert {
