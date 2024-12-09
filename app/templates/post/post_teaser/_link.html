@@ -1,4 +1,14 @@
 <div class="col post_teaser_body">
+    {% if post.image_id -%}
+        <div class="col_thumbnail thumbnail{{ ' lbw' if low_bandwidth }}" aria-hidden="true">
+            {% if low_bandwidth -%}
+                <a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="{{ _('Follow link') }}"><span class="fe fe-external"></span></a>
+            {% else -%}
+                <a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="{{ _('Read article') }}"><span class="fe fe-external"></span><img src="{{ post.image.thumbnail_url() }}"
+                         alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ ' blur' if blur_content }}" /></a>
+            {% endif -%}
+        </div>
+    {% endif -%}
     {% include "post/post_teaser/_title.html" %}
     {% if post.body_html -%}
         <div class="post_teaser_link_preview small post_teaser_clickable">
@@ -7,15 +17,3 @@
     {% endif -%}
     {% include "post/post_teaser/_utilities_bar.html" %}
 </div>
-{% if post.image_id -%}
-<div class="col col-2 col_thumbnail">
-        <div class="thumbnail{{ ' lbw' if low_bandwidth }}" aria-hidden="true">
-            {% if low_bandwidth -%}
-                <a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="{{ _('Follow link') }}"><span class="fe fe-external"></span></a>
-            {% else -%}
-                <a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="{{ _('Read article') }}"><span class="fe fe-external"></span><img src="{{ post.image.thumbnail_url() }}"
-                         alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ ' blur' if blur_content }}" /></a>
-            {% endif -%}
-        </div>
-</div>
-{% endif -%}

@@ -783,11 +783,9 @@ div.navbar {
   max-width: 78%;
 }
 .post_list .post_teaser .col_thumbnail {
+  float: right;
   width: 70px;
   position: relative;
-  padding-left: 0;
-  padding-right: 0;
-  left: -13px;
 }
 @media (min-width: 992px) {
   .post_list .post_teaser .col_thumbnail {

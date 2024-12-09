@@ -369,11 +369,9 @@ div.navbar {
     }
 
     .col_thumbnail {
+      float: right;
       width: 70px;
       position: relative;
-      padding-left: 0;
-      padding-right: 0;
-      left: -13px;
       @include breakpoint(tablet) {
         width: 170px;
       }
