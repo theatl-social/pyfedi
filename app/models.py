@@ -1022,6 +1022,7 @@ class User(UserMixin, db.Model):
         db.session.query(PostBookmark).filter(PostBookmark.user_id == self.id).delete()
         db.session.query(PostReplyBookmark).filter(PostReplyBookmark.user_id == self.id).delete()
         db.session.query(ModLog).filter(ModLog.user_id == self.id).delete()
+        db.session.query(UserNote).filter(or_(UserNote.user_id == self.id, UserNote.target_id == self.id)).delete()
 
     def purge_content(self, soft=True):
         files = File.query.join(Post).filter(Post.user_id == self.id).all()
@@ -1077,7 +1078,13 @@ class User(UserMixin, db.Model):
     # returns true if the post has been read, false if not
     def has_read_post(self, post):
         return self.read_post.filter(read_posts.c.read_post_id == post.id).count() > 0
-    
+
+    def get_note(self, by_user):
+        user_note = UserNote.query.filter(UserNote.target_id == self.id, UserNote.user_id == by_user.id).first()
+        if user_note:
+            return user_note.body
+        else:
+            return None
 
 
 class ActivityLog(db.Model):
