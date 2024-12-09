@@ -19,11 +19,6 @@
                 <a rel="nofollow" aria-label="{{ _('Cross-post') }}" href="{{ url_for('post.post_cross_post', post_id=post.id) }}"><span class="fe fe-cross-post"></span></a>
             </div>
         {% endif -%}
-        <div class="notify_toggle">
-            {% if current_user.is_authenticated and current_user.verified -%}
-                {% include 'post/_post_notification_toggle.html' -%}
-            {% endif -%}
-        </div>
         <div class="post_options_link">
           <a href="{{ url_for('post.post_options', post_id=post.id) }}" rel="nofollow" aria-label="{{ _('Options') }}"><span class="fe fe-options" title="Options"> </span></a>
         </div>

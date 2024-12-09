@@ -10,7 +10,7 @@
         <div class="col col-login mx-auto">
             <div class="card mt-5">
                 <div class="card-body p-6">
-                    <div class="card-title">{{ _('Options for "%(post_title)s"', post_title=post.title) }}</div>
+                    <div class="card-title">{{ _('Options for "%(post_title)s"', post_title=post.title) }} {% include 'post/_post_notification_toggle.html' -%}</div>
                     <ul class="option_list">
                         {% if current_user.is_authenticated -%}
                             {% if post.user_id == current_user.id -%}
