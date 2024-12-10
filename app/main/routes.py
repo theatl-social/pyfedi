@@ -9,8 +9,7 @@ from sqlalchemy.sql.operators import or_, and_
 from app import db, cache
 from app.activitypub.util import users_total, active_month, local_posts, local_communities
 from app.activitypub.signature import default_context, LDSignature
-from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, POST_TYPE_IMAGE, POST_TYPE_LINK, \
-    SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_VIDEO, POST_TYPE_POLL
+from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR
 from app.email import send_email
 from app.inoculation import inoculation
 from app.main import bp
@@ -22,7 +21,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     ap_datetime, shorten_string, markdown_to_text, user_filters_home, \
     joined_communities, moderating_communities, markdown_to_html, allowlist_html, \
     blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
-    blocked_users, menu_topics, languages_for_form, blocked_communities, get_request
+    blocked_users, menu_topics, blocked_communities, get_request
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, read_posts
 
