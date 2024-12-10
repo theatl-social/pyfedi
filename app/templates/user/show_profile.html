@@ -2,7 +2,7 @@
     {% extends 'themes/' + theme() + '/base.html' %}
 {% else %}
     {% extends "base.html" %}
-{% endif %} %}
+{% endif %}
 {% from 'bootstrap/form.html' import render_form %}
 
 {% if current_user.is_authenticated and user.id == current_user.id %}
