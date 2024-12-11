@@ -12,9 +12,8 @@
                 <div class="card-body p-6">
                     <div class="card-title">{{ _('Edit note for "%(user_name)s"', user_name=user.display_name()) }}</div>
                     <div class="card-body">
+                        <strong>{{ _('Emoji quick access') }}</strong>
                         <div>
-                            <strong>Emoji quick access</strong>
-                            <br />
                             <button id="thumbsup" class="emojitoggle">👍</button>
                             <button id="thumbsdown" class="emojitoggle">👎</button>
                             <button id="smile" class="emojitoggle">😄</button>
@@ -23,27 +22,27 @@
                             <button id="red-heart" class="emojitoggle">❤️</button>
                             <button id="rocket" class="emojitoggle">🚀</button>
                             <button id="eyes" class="emojitoggle">👀</button>
-                            <br />
+                        </div><div>
                             <button id="star" class="emojitoggle">⭐</button>
                             <button id="medal" class="emojitoggle">🥇</button>
+                            <button id="check" class="emojitoggle">☑️</button>
                             <button id="fire" class="emojitoggle">🔥</button>
                             <button id="robot" class="emojitoggle">🤖</button>
                             <button id="ghost" class="emojitoggle">👻</button>
                             <button id="clown" class="emojitoggle">🤡</button>
                             <button id="poo" class="emojitoggle">💩</button>
-                            <button id="check" class="emojitoggle">☑️</button>
-                            <br />
+                        </div><div>
+                            <button id="speech-bubble" class="emojitoggle">💬</button>
+                            <button id="anger-bubble" class="emojitoggle">🗯️</button>
+                            <button id="hundred" class="emojitoggle">💯</button>
+                            <button id="rofl" class="emojitoggle">🤣</button>
+                            <button id="zany" class="emojitoggle">🤪</button>
                             <button id="warning" class="emojitoggle">⚠️</button>
                             <button id="no-entry" class="emojitoggle">⛔</button>
                             <button id="vomit" class="emojitoggle">🤮</button>
-                            <button id="speech-bubble" class="emojitoggle">💬</button>
-                            <button id="anger-bubble" class="emojitoggle">🗯️</button>
-                            <button id="rofl" class="emojitoggle">🤣</button>
-                            <button id="zany" class="emojitoggle">🤪</button>
-                            <button id="hundred" class="emojitoggle">💯</button>
                         </div>
                         {{ render_form(form) }}
-                        <div class="row mt-5"><small class="field_hint">This note appears next to the username. It's just for you and not displayed to anyone else.</small></div>
+                        <div class="row mt-5"><small class="field_hint">{{ _('This note appears next to their username. It\'s meant just for you and not displayed to anyone else.') }}</small></div>
                     </div>
                 </div>
             </div>

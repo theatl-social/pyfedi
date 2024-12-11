@@ -1337,7 +1337,7 @@ def user_read_posts_delete():
 def edit_user_note(actor):
     actor = actor.strip()
     if '@' in actor:
-        user: User = User.query.filter_by(ap_id=actor, deleted=False, banned=False).first()
+        user: User = User.query.filter_by(ap_id=actor, deleted=False).first()
     else:
         user: User = User.query.filter_by(user_name=actor, deleted=False, ap_id=None).first()
     if user is None:
@@ -1352,13 +1352,12 @@ def edit_user_note(actor):
             usernote = UserNote(target_id=user.id, user_id=current_user.id, body=text)
             db.session.add(usernote)
         db.session.commit()
+        cache.delete_memoized(User.get_note, user, current_user)
 
         flash(_('Your changes have been saved.'), 'success')
-        referrer = request.headers.get('Referer', None)
-        if referrer is not None:
-            return redirect(referrer)
-        else:
-            return redirect(url_for('user.edit_user_note', actor=actor))
+        goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
+        return redirect(goto)
+
     elif request.method == 'GET':
         form.note.data = user.get_note(current_user)
 

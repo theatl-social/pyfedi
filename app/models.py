@@ -710,6 +710,7 @@ class User(UserMixin, db.Model):
     cover = db.relationship('File', lazy='joined', foreign_keys=[cover_id], single_parent=True, cascade="all, delete-orphan")
     instance = db.relationship('Instance', lazy='joined', foreign_keys=[instance_id])
     conversations = db.relationship('Conversation', lazy='dynamic', secondary=conversation_member, backref=db.backref('members', lazy='joined'))
+    user_notes = db.relationship('UserNote', lazy='dynamic', foreign_keys="UserNote.target_id")
 
     ap_id = db.Column(db.String(255), index=True)           # e.g. username@server
     ap_profile_id = db.Column(db.String(255), index=True, unique=True)   # e.g. https://server/u/username
@@ -1079,8 +1080,9 @@ class User(UserMixin, db.Model):
     def has_read_post(self, post):
         return self.read_post.filter(read_posts.c.read_post_id == post.id).count() > 0
 
+    @cache.memoize(timeout=500)
     def get_note(self, by_user):
-        user_note = UserNote.query.filter(UserNote.target_id == self.id, UserNote.user_id == by_user.id).first()
+        user_note = self.user_notes.filter(UserNote.target_id == self.id, UserNote.user_id == by_user.id).first()
         if user_note:
             return user_note.body
         else:
