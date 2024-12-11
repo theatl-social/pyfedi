@@ -27,7 +27,7 @@
     {% endif -%}
     <div class="row">
         <div class="col-auto comment_author">
-            by
+            <span class="visually-hidden">by</span>
             {{ render_username(post_reply.author) }}
             {% if post_reply.author.id == post_reply.post.author.id -%}
                 <span title="Submitter of original post" aria-label="{{ _('Post creator') }}" class="small"> [OP]</span>
