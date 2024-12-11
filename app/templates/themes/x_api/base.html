@@ -1,9 +1,46 @@
+{% macro render_username(user, add_domain=True) -%}
+<span class="render_username">
+    {% if user.deleted -%}
+        [deleted]
+    {% else -%}
+        <a href="/u/{{ user.link() }}" title="{{ user.ap_id if user.ap_id != none else user.user_name }}" aria-label="{{ _('Author') }}">
+            {{ user.display_name() }}{% if not user.is_local() %}<span class="text-muted">@{{ user.ap_domain }}</span>{% endif %}
+        </a>
+        {% if user.bot -%}
+            <span class="fe fe-bot-account" title="Bot account"> </span>
+        {% endif -%}
+    {% endif -%}
+</span>
+{% endmacro -%}
+
+{% macro render_communityname(community, add_domain=True) -%}
+    <span class="render_community">
+        <a href="/c/{{ community.link() }}" aria-label="{{ _('Go to community %(name)s', name=community.name) }}">
+            {{ community.title }}{% if not community.is_local() %}<span class="text-muted">@{{ community.ap_domain }}</span>{% endif %}
+        </a>
+    </span>
+{% endmacro -%}
+
+
 <!doctype html>
 <html lang="en" data-bs-theme="auto">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title id="head-title">{% if not debug_mode %}{{ g.site.name }}{% endif %}</title>
+  <title id="head_title"></title>
+
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <link rel="manifest" href="/static/manifest.json">
+
+  <link id="icon_152" rel="apple-touch-icon" sizes="152x152" href="">
+  <link id="icon_32" rel="icon" type="image/png" sizes="32x32" href="">
+  <link id="icon_16" rel="icon" type="image/png" sizes="16x16" href="">
+  <link id="icon_shortcut" rel="shortcut icon" type="image/png" href="">
+
   {{ bootstrap.load_css() }}
   <link href="{{ '/static/themes/' + theme() + '/css/navbars.css' }}" rel="stylesheet">
   <link href="{{ '/static/themes/' + theme() + '/css/color-modes.css' }}" rel="stylesheet">
@@ -44,99 +81,12 @@
 
   <nav class="navbar navbar-expand-lg sticky-top bg-body-tertiary">
     <div class="container-fluid">
-      <a class="navbar-brand" href="/" id="navbar-title">{% if not debug_mode %}{{ g.site.name }}{% endif %}</a>
+      <a class="navbar-brand" href="/api/alpha" id="navbar_title"></a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
-        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        {% if current_user.is_anonymous %}
-          <li class="nav-item"><a class="nav-link" href="/auth/login">{{ _('Log in') }}</a></li>
-          <li class="nav-item"><a class="nav-link" href="/auth/register">{{ _('Register') }}</a></li>
-          <li class="nav-item"><a class="nav-link" href="/donate">{{ _('Donate') }}</a></li>
-        {% else %}
-
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              {{ _('Communities') }}
-            </a>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="/communities">{{ _('All communities') }}</a></li>
-              {% if moderating_communities %}
-                <li><hr class="dropdown-divider"></li>
-                <li><h6 class="dropdown-header">{{ _('Moderating') }}</h6></li>
-                {% for mc in moderating_communities %}
-                  <li>
-                    <a class="dropdown-item" href="/c/{{ mc.link() }}">{{ mc.title }}<span class="text-body-secondary"> ({{ mc.ap_domain }})</span></a>
-                  </li>
-                {% endfor %}
-              {% endif %}
-              {% if joined_communities %}
-                <li><hr class="dropdown-divider"></li>
-                <li><h6 class="dropdown-header">{{ _('Joined communities') }}</h6></li>
-                {% for jc in joined_communities %}
-                  <li>
-                    <a class="dropdown-item" href="/c/{{ jc.link() }}">{{ jc.title }}<span class="text-body-secondary"> ({{ jc.ap_domain }})</span></a>
-                  </li>
-                {% endfor %}
-              {% endif %}
-            </ul>
-          </li>
-
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              {{ _('Account') }}
-            </a>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="/u/{{ current_user.link() }}">{{ _('View profile') }}</a></li>
-              <li><a class="dropdown-item" href="/user/settings">{{ _('Edit profile & settings') }}</a></li>
-              <li><a class="dropdown-item" href="/chat">{{ _('Chats') }}</a></li>
-              <li><a class="dropdown-item" href="/bookmarks">{{ _('Bookmarks') }}</a></li>
-              <li><a class="dropdown-item" href="/alerts">{{ _('Activity Alerts') }}</a></li>
-              {% if current_user.hide_read_posts %}
-                <li><a class="dropdown-item" href="/read-posts">{{ _('Read Posts') }}</a></li>
-              {% endif %}
-            </ul>
-          </li>
-
-          <li class="nav-item"><a class="nav-link" href="/donate">{{ _('Donate') }}</a></li>
-
-          {% if user_access('change instance settings', current_user.id) %}
-            <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                {{ _('Admin') }}
-              </a>
-              <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="/admin/site") }}">{{ _('Site profile') }}</a></li>
-                <li><a class="dropdown-item" href="/admin/misc">{{ _('Misc settings') }}</a></li>
-                <li><a class="dropdown-item" href="/admin/communities">{{ _('Communities') }}</a></li>
-                <li><a class="dropdown-item" href="/admin/topics">{{ _('Topics') }}</a></li>
-                <li><a class="dropdown-item" href="/admin/users?local_remote=local">{{ _('Users') }}</a></li>
-                <li><a class="dropdown-item" href="/admin/users/trash?local_remote=local">{{ _('Monitoring - users') }}</a></li>
-                <li><a class="dropdown-item" href="/admin/content/trash">{{ _('Monitoring - content') }}</a></li>
-                <li><a class="dropdown-item" href="/admin/content/spam">{{ _('Monitoring - spammy content') }}</a></li>
-                <li><a class="dropdown-item" href="/admin/content/deleted">{{ _('Deleted content') }}</a></li>
-                {% if g.site.registration_mode == 'RequireApplication' %}
-                  <li><a class="dropdown-item" href="/admin/approve_registrations">{{ _('Registration applications') }}</a></li>
-                {% endif %}
-                <li><a class="dropdown-item" href="/admin/reports">{{ _('Moderation') }}</a></li>
-                <li><a class="dropdown-item" href="/admin/federation">{{ _('Federation') }}</a></li>
-                <li><a class="dropdown-item" href="/admin/instances">{{ _('Instances') }}</a></li>
-                <li><a class="dropdown-item" href="/admin/newsletter">{{ _('Newsletter') }}</a></li>
-                <li><a class="dropdown-item" href="/admin/activities">{{ _('Activities') }}</a></li>
-                <li><a class="dropdown-item" href="/admin/permissions">{{ _('Permissions') }}</a></li>
-                {% if debug_mode %}
-                  <li><a class="dropdown-item" href="/dev/tools">{{ _('Dev Tools') }}</a></li>
-                {% endif %}
-              </ul>
-            </li>
-          {% endif %}
-
-          <li class="nav-item"><a class="nav-link" href="/notifications">{{ _('Inbox') }}</a></li>
-
-          <li class="nav-item"><a class="nav-link" href="/auth/logout">{{ _('Log out') }}</a></li>
-
-        {% endif %}
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0" id="navbar_items">
         </ul>
       </div>
     </div>
@@ -152,14 +102,12 @@
       <a href="/donate">{{ _('Donate') }}</a><br />
       <a href="/about">{{ _('About') }}</a><br />
       <a href="/keyboard_shortcuts">{{ _('Keyboard shortcuts') }}</a><br/>
-      <a href="https://codeberg.org/rimu/pyfedi">PieFed</a> is free and open source. Please <a href="https://codeberg.org/rimu/pyfedi/issues">report bugs</a> or <a href="https://join.piefed.social/get-involved/">get involved</a>.<br />
+      <a href="https://codeberg.org/rimu/pyfedi">PieFed</a> is free and open source.<br />Please <a href="https://codeberg.org/rimu/pyfedi/issues">report bugs</a> or <a href="https://join.piefed.social/get-involved/">get involved</a>.<br />
       <a href="/privacy">Privacy policy</a>
     </small>
   </footer>
 
   {{ bootstrap.load_js() }}
-  {% if debug_mode %}
-    <script src="{{ '/static/themes/' + theme() + '/js/site.js' }}"></script>
-  {% endif %}
+  <script src="{{ '/static/themes/' + theme() + '/js/site.js' }}" type="module"></script>
 </body>
 </html>

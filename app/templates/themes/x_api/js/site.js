@@ -1,30 +1,52 @@
 const url = new URL(window.location.href);
-const baseUrl = `${url.protocol}//${url.host}`;
-const api = baseUrl + '/api/alpha/site'
+export const baseUrl = `${url.protocol}//${url.host}`;
+const api = baseUrl + '/api/alpha/site';
 
-fetch(api)
+let jwt = null;
+let session_jwt = sessionStorage.getItem('jwt');
+if (session_jwt != null) {
+  jwt = session_jwt;
+} else {
+  let local_jwt = localStorage.getItem('jwt');
+  if (local_jwt != null) {
+    jwt = local_jwt;
+  }
+}
+export { jwt };
+
+const ul = document.getElementById('navbar_items');
+if (jwt != null) {
+  var request = {method: "GET", headers: {Authorization: `Bearer ${jwt}`}};
+  ul.innerHTML = '<li class="nav-item dropdown">' +
+                    '<a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">' +
+                      'Communities' +
+                    '</a>' +
+                    '<ul class="dropdown-menu">' +
+                      '<li><a class="dropdown-item" href="/api/alpha/communities">All communities</a></li>' +
+                    '</ul>' +
+                  '</li>' +
+
+                  '<li class="nav-item"><a class="nav-link" href="/api/alpha/auth/logout">Logout</a></li>';
+} else {
+  var request = {method: "GET"};
+  ul.innerHTML = '<li class="nav-item"><a class="nav-link" href="/api/alpha/auth/login">Log in</a></li>' +
+                 '<li class="nav-item"><a class="nav-link" href="/donate">Donate</a></li>';
+}
+
+fetch(api, request)
   .then(response => response.json())
   .then(data => {
+        // head
+        document.querySelector('#head_title').textContent = data.site.name;
+        document.querySelector('#icon_152').href = data.site.icon_152;
+        document.querySelector('#icon_32').href = data.site.icon_32;
+        document.querySelector('#icon_16').href = data.site.icon_16;
+        document.querySelector('#icon_shortcut').href = data.site.icon_32;
+
         // navbar
-        document.querySelector('#head-title').textContent = data.site.name
-        document.querySelector('#navbar-title').innerHTML = '<img src="' + data.site.icon + '" alt="Logo" width="36" height="36" />' + ' ' + data.site.name
+        document.querySelector('#navbar_title').innerHTML = '<img src="' + data.site.icon + '" alt="Logo" width="36" height="36" />' + ' ' + data.site.name;
 
         // site info
-        document.querySelector('#site_version').textContent = data.version
-        document.querySelector('#site_actor_id').textContent = data.site.actor_id
-        document.querySelector('#site_description').textContent = data.site.description
-        document.querySelector('#site_enable_downvotes').textContent = data.site.enable_downvotes
-        document.querySelector('#site_icon').textContent = data.site.icon
-        document.querySelector('#site_name').textContent = data.site.name
-        document.querySelector('#site_sidebar').textContent = data.site.sidebar
-        document.querySelector('#site_user_count').textContent = data.site.user_count
-
-        let lang_names = data.site.all_languages[0].name;
-        let lang_count = data.site.all_languages.length;
-
-        for (let i = 1; i < lang_count; i++) {
-          lang_names += ", " + data.site.all_languages[i].name;
-        }
-
-        document.querySelector('#site_all_languages').textContent = lang_names
+        document.querySelector('#site_json').textContent = JSON.stringify(data, null, 2);
   })
+
