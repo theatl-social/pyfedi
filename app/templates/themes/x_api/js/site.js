@@ -26,10 +26,23 @@ if (jwt != null) {
                     '</ul>' +
                   '</li>' +
 
-                  '<li class="nav-item"><a class="nav-link" href="/api/alpha/auth/logout">Logout</a></li>';
+                  '<li class="nav-item"><a class="nav-link" href="/user/settings">User settings</a></li>' +
+
+                  '<li class="nav-item"><a class="nav-link" href="/donate">Donate</a></li>' +
+
+                  '<li class="nav-item"><a class="nav-link" href="/api/alpha/auth/logout">Logout (via API)</a></li>';
 } else {
   var request = {method: "GET"};
-  ul.innerHTML = '<li class="nav-item"><a class="nav-link" href="/api/alpha/auth/login">Log in</a></li>' +
+  ul.innerHTML = '<li class="nav-item"><a class="nav-link" href="/api/alpha/auth/login">Log in (via API)</a></li>' +
+                 '<li class="nav-item dropdown">' +
+                    '<a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">' +
+                      'Communities' +
+                    '</a>' +
+                    '<ul class="dropdown-menu">' +
+                      '<li><a class="dropdown-item" href="/api/alpha/communities">All communities</a></li>' +
+                    '</ul>' +
+                  '</li>' +
+                 '<li class="nav-item"><a class="nav-link" href="/user/settings">User settings</a></li>' +
                  '<li class="nav-item"><a class="nav-link" href="/donate">Donate</a></li>';
 }
 
@@ -42,6 +55,7 @@ fetch(api, request)
         document.querySelector('#icon_32').href = data.site.icon_32;
         document.querySelector('#icon_16').href = data.site.icon_16;
         document.querySelector('#icon_shortcut').href = data.site.icon_32;
+        document.querySelector('#favicon').href = baseUrl + '/static/images/favicon.ico';
 
         // navbar
         document.querySelector('#navbar_title').innerHTML = '<img src="' + data.site.icon + '" alt="Logo" width="36" height="36" />' + ' ' + data.site.name;
