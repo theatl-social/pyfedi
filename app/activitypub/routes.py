@@ -454,16 +454,11 @@ def shared_inbox():
         log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'ActivityPub activity from a local actor')
         return '', 200
 
-    actor.instance.last_seen = utcnow()
-    actor.instance.dormant = False
-    actor.instance.gone_forever = False
-    actor.instance.failures = 0
-    actor.instance.ip_address = ip_address()
-    db.session.commit()
-
+    bounced = False
     try:
         HttpSignature.verify_request(request, actor.public_key, skip_date=True)
     except VerificationError as e:
+        bounced = True
         if not 'signature' in request_json:
             log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not verify HTTP signature: ' + str(e))
             return '', 400
@@ -473,6 +468,13 @@ def shared_inbox():
         except VerificationError as e:
             log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not verify LD signature: ' + str(e))
             return '', 400
+
+    actor.instance.last_seen = utcnow()
+    actor.instance.dormant = False
+    actor.instance.gone_forever = False
+    actor.instance.failures = 0
+    actor.instance.ip_address = ip_address() if not bounced else ''
+    db.session.commit()
 
     # When a user is deleted, the only way to be fairly sure they get deleted everywhere is to tell the whole fediverse.
     # Earlier check means this is only for users that already exist, processing it here means that http signature will have been verified
