@@ -20,9 +20,16 @@ def get_site(auth):
         user = None
 
     logo = g.site.logo if g.site.logo else '/static/images/logo2.png'
+    logo_152 = g.site.logo_152 if g.site.logo_152 else '/static/images/apple-touch-icon.png'
+    logo_32 = g.site.logo_32 if g.site.logo_32 else '/static/images/favicon-32x32.png'
+    logo_16 = g.site.logo_16 if g.site.logo_16 else '/static/images/favicon-16x16.png'
     site = {
       "enable_downvotes": g.site.enable_downvotes,
       "icon": f"https://{current_app.config['SERVER_NAME']}{logo}",
+      "icon_152": f"https://{current_app.config['SERVER_NAME']}{logo_152}",
+      "icon_32": f"https://{current_app.config['SERVER_NAME']}{logo_32}",
+      "icon_16": f"https://{current_app.config['SERVER_NAME']}{logo_16}",
+      "registration_mode": g.site.registration_mode,
       "name": g.site.name,
       "actor_id": f"https://{current_app.config['SERVER_NAME']}/",
       "user_count": users_total(),
