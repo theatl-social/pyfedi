@@ -927,9 +927,6 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
                     post.image = image
                 elif is_video_url(post.url):
                     post.type = POST_TYPE_VIDEO
-                    image = File(source_url=post.url)
-                    db.session.add(image)
-                    post.image = image
                 else:
                     post.type = POST_TYPE_LINK
                     post.url = remove_tracking_from_link(post.url)
@@ -1012,7 +1009,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
     session = get_task_session()
     file: File = session.query(File).get(file_id)
     if file and file.source_url:
-        # Videos
+        # Videos (old code. not invoked because file.source_url won't end .mp4 or .webm)
         if file.source_url.endswith('.mp4') or file.source_url.endswith('.webm'):
             new_filename = gibberish(15)
 
@@ -1863,12 +1860,6 @@ def update_post_from_activity(post: Post, request_json: dict):
                 image = File(source_url=new_url)
                 if 'name' in request_json['object']['attachment'][0] and request_json['object']['attachment'][0]['name'] is not None:
                     image.alt_text = request_json['object']['attachment'][0]['name']
-            elif is_video_url(new_url):
-                post.type = POST_TYPE_VIDEO
-                if 'image' in request_json['object'] and 'url' in request_json['object']['image']:
-                    image = File(source_url=request_json['object']['image']['url'])
-                else:
-                    image = File(source_url=new_url)
             else:
                 if 'image' in request_json['object'] and 'url' in request_json['object']['image']:
                     image = File(source_url=request_json['object']['image']['url'])
@@ -1882,7 +1873,7 @@ def update_post_from_activity(post: Post, request_json: dict):
                         filename = opengraph.get('og:image') or opengraph.get('og:image:url')
                         if not filename.startswith('/'):
                             image = File(source_url=filename, alt_text=shorten_string(opengraph.get('og:title'), 295))
-                if is_video_hosting_site(new_url):
+                if is_video_hosting_site(new_url) or is_video_url(new_url):
                     post.type = POST_TYPE_VIDEO
                 else:
                     post.type = POST_TYPE_LINK

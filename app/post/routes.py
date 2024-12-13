@@ -23,7 +23,7 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_
 from app.models import Post, PostReply, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, InstanceBlock, Report, Site, Community, \
     Topic, User, Instance, NotificationSubscription, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
-    PostReplyBookmark, CommunityBlock
+    PostReplyBookmark, CommunityBlock, File
 from app.post import bp
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
@@ -1914,6 +1914,16 @@ def post_fixup_from_remote(post_id: int):
         remote_post_json = remote_post_request.json()
         remote_post_request.close()
         if 'type' in remote_post_json and remote_post_json['type'] == 'Page':
+            post.domain_id = None
+            file_entry_to_delete = None
+            if post.image_id:
+                file_entry_to_delete = post.image_id
+            post.image_id = None
+            post.url = None
+            db.session.commit()
+            if file_entry_to_delete:
+                File.query.filter_by(id=file_entry_to_delete).delete()
+                db.session.commit()
             update_json = {'type': 'Update', 'object': remote_post_json}
             update_post_from_activity(post, update_json)
 
