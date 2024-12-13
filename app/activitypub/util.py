@@ -12,10 +12,12 @@ from flask import current_app, request, g, url_for, json
 from flask_babel import _
 from requests import JSONDecodeError
 from sqlalchemy import text, func, desc
+from sqlalchemy.exc import IntegrityError
+
 from app import db, cache, constants, celery
 from app.models import User, Post, Community, BannedInstances, File, PostReply, AllowedInstances, Instance, utcnow, \
     PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation, \
-    Language, Tag, Poll, PollChoice, UserFollower, CommunityBan, CommunityJoinRequest, NotificationSubscription
+    Language, Tag, Poll, PollChoice, UserFollower, CommunityBan, CommunityJoinRequest, NotificationSubscription, Licence
 from app.activitypub.signature import signed_get_request, post_request
 import time
 from app.constants import *
@@ -30,7 +32,7 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     microblog_content_to_title, generate_image_from_video_url, is_video_url, \
     notification_subscribers, communities_banned_from, actor_contains_blocked_words, \
     html_to_text, add_to_modlog_activitypub, joined_communities, \
-    moderating_communities
+    moderating_communities, get_task_session, is_video_hosting_site, opengraph_parse
 
 from sqlalchemy import or_
 
@@ -256,12 +258,13 @@ def instance_allowed(host: str) -> bool:
     return instance is not None
 
 
-def find_actor_or_create(actor: str, create_if_not_found=True, community_only=False, signed_get=False) -> Union[User, Community, None]:
+def find_actor_or_create(actor: str, create_if_not_found=True, community_only=False) -> Union[User, Community, None]:
     if isinstance(actor, dict):     # Discourse does this
         actor = actor['id']
     actor_url = actor.strip()
     actor = actor.strip().lower()
     user = None
+    server = ''
     # actor parameter must be formatted as https://server/u/actor or https://server/c/actor
 
     # Initially, check if the user exists in the local DB already
@@ -313,34 +316,37 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
     else:   # User does not exist in the DB, it's going to need to be created from it's remote home instance
         if create_if_not_found:
             if actor.startswith('https://'):
-                if not signed_get:
+                try:
+                    actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
+                except httpx.HTTPError:
+                    time.sleep(randint(3, 10))
                     try:
                         actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
-                    except httpx.HTTPError:
-                        time.sleep(randint(3, 10))
-                        try:
-                            actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
-                        except httpx.HTTPError as e:
-                            raise e
-                            return None
-                    if actor_data.status_code == 200:
-                        try:
-                            actor_json = actor_data.json()
-                        except Exception as e:
-                            actor_data.close()
-                            return None
+                    except httpx.HTTPError as e:
+                        raise e
+                        return None
+                if actor_data.status_code == 200:
+                    try:
+                        actor_json = actor_data.json()
+                    except Exception as e:
                         actor_data.close()
-                        actor_model = actor_json_to_model(actor_json, address, server)
-                        if community_only and not isinstance(actor_model, Community):
-                            return None
-                        return actor_model
-                else:
+                        return None
+                    actor_data.close()
+                    actor_model = actor_json_to_model(actor_json, address, server)
+                    if community_only and not isinstance(actor_model, Community):
+                        return None
+                    return actor_model
+                elif actor_data.status_code == 401:
                     try:
                         site = Site.query.get(1)
                         actor_data = signed_get_request(actor_url, site.private_key,
                                         f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
                         if actor_data.status_code == 200:
-                            actor_json = actor_data.json()
+                            try:
+                                actor_json = actor_data.json()
+                            except Exception as e:
+                                actor_data.close()
+                                return None
                             actor_data.close()
                             actor_model = actor_json_to_model(actor_json, address, server)
                             if community_only and not isinstance(actor_model, Community):
@@ -388,14 +394,30 @@ def find_language(code: str) -> Language | None:
         return None
 
 
-def find_language_or_create(code: str, name: str) -> Language:
-    existing_language = Language.query.filter(Language.code == code).first()
+def find_language_or_create(code: str, name: str, session=None) -> Language:
+    if session:
+        existing_language: Language = session.query(Language).filter(Language.code == code).first()
+    else:
+        existing_language = Language.query.filter(Language.code == code).first()
     if existing_language:
         return existing_language
     else:
         new_language = Language(code=code, name=name)
-        db.session.add(new_language)
+        if session:
+            session.add(new_language)
+        else:
+            db.session.add(new_language)
         return new_language
+
+
+def find_licence_or_create(name: str) -> Licence:
+    existing_licence = Licence.query.filter(Licence.name == name.strip()).first()
+    if existing_licence:
+        return existing_licence
+    else:
+        new_licence = Licence(name=name.strip())
+        db.session.add(new_licence)
+        return new_licence
 
 
 def find_hashtag_or_create(hashtag: str) -> Tag:
@@ -457,7 +479,8 @@ def refresh_user_profile(user_id):
 
 @celery.task
 def refresh_user_profile_task(user_id):
-    user = User.query.get(user_id)
+    session = get_task_session()
+    user: User = session.query(User).get(user_id)
     if user and user.instance_id and user.instance.online():
         try:
             actor_data = get_request(user.ap_public_url, headers={'Accept': 'application/activity+json'})
@@ -469,7 +492,7 @@ def refresh_user_profile_task(user_id):
                 return
         except:
             try:
-                site = Site.query.get(1)
+                site = session.query(Site).get(1)
                 actor_data = signed_get_request(user.ap_public_url, site.private_key,
                                 f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
             except:
@@ -481,9 +504,9 @@ def refresh_user_profile_task(user_id):
             # update indexible state on their posts, if necessary
             new_indexable = activity_json['indexable'] if 'indexable' in activity_json else True
             if new_indexable != user.indexable:
-                db.session.execute(text('UPDATE "post" set indexable = :indexable WHERE user_id = :user_id'),
-                                   {'user_id': user.id,
-                                    'indexable': new_indexable})
+                session.execute(text('UPDATE "post" set indexable = :indexable WHERE user_id = :user_id'),
+                                {'user_id': user.id,
+                                'indexable': new_indexable})
 
             user.user_name = activity_json['preferredUsername'].strip()
             if 'name' in activity_json:
@@ -507,7 +530,7 @@ def refresh_user_profile_task(user_id):
             user.indexable = new_indexable
 
             avatar_changed = cover_changed = False
-            if 'icon' in activity_json:
+            if 'icon' in activity_json and activity_json['icon'] is not None:
                 if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
                     icon_entry = activity_json['icon']['url']
                 elif isinstance(activity_json['icon'], list) and 'url' in activity_json['icon'][-1]:
@@ -520,18 +543,18 @@ def refresh_user_profile_task(user_id):
                     if not user.avatar_id or (user.avatar_id and icon_entry != user.avatar.source_url):
                         avatar = File(source_url=icon_entry)
                         user.avatar = avatar
-                        db.session.add(avatar)
+                        session.add(avatar)
                         avatar_changed = True
-            if 'image' in activity_json:
+            if 'image' in activity_json and activity_json['image'] is not None:
                 if user.cover_id and activity_json['image']['url'] != user.cover.source_url:
                     user.cover.delete_from_disk()
                 if not user.cover_id or (user.cover_id and activity_json['image']['url'] != user.cover.source_url):
                     cover = File(source_url=activity_json['image']['url'])
                     user.cover = cover
-                    db.session.add(cover)
+                    session.add(cover)
                     cover_changed = True
             user.recalculate_post_stats()
-            db.session.commit()
+            session.commit()
             if user.avatar_id and avatar_changed:
                 make_image_sizes(user.avatar_id, 40, 250, 'users')
                 cache.delete_memoized(User.avatar_image, user)
@@ -539,6 +562,7 @@ def refresh_user_profile_task(user_id):
             if user.cover_id and cover_changed:
                 make_image_sizes(user.cover_id, 700, 1600, 'users')
                 cache.delete_memoized(User.cover_image, user)
+            session.close()
 
 
 def refresh_community_profile(community_id):
@@ -550,7 +574,8 @@ def refresh_community_profile(community_id):
 
 @celery.task
 def refresh_community_profile_task(community_id):
-    community = Community.query.get(community_id)
+    session = get_task_session()
+    community: Community = session.query(Community).get(community_id)
     if community and community.instance.online() and not community.is_local():
         try:
             actor_data = get_request(community.ap_public_url, headers={'Accept': 'application/activity+json'})
@@ -618,7 +643,7 @@ def refresh_community_profile_task(community_id):
                     if not community.icon_id or (community.icon_id and icon_entry != community.icon.source_url):
                         icon = File(source_url=icon_entry)
                         community.icon = icon
-                        db.session.add(icon)
+                        session.add(icon)
                         icon_changed = True
             if 'image' in activity_json:
                 if isinstance(activity_json['image'], dict) and 'url' in activity_json['image']:
@@ -633,17 +658,18 @@ def refresh_community_profile_task(community_id):
                     if not community.image_id or (community.image_id and image_entry != community.image.source_url):
                         image = File(source_url=image_entry)
                         community.image = image
-                        db.session.add(image)
+                        session.add(image)
                         cover_changed = True
             if 'language' in activity_json and isinstance(activity_json['language'], list) and not community.ignore_remote_language:
                 for ap_language in activity_json['language']:
-                    new_language = find_language_or_create(ap_language['identifier'], ap_language['name'])
+                    new_language = find_language_or_create(ap_language['identifier'], ap_language['name'], session)
                     if new_language not in community.languages:
                         community.languages.append(new_language)
-            instance = Instance.query.get(community.instance_id)
+            instance = session.query(Instance).get(community.instance_id)
             if instance and instance.software == 'peertube':
                 community.restricted_to_mods = True
-            db.session.commit()
+            session.commit()
+
             if community.icon_id and icon_changed:
                 make_image_sizes(community.icon_id, 60, 250, 'communities')
             if community.image_id and cover_changed:
@@ -683,6 +709,7 @@ def refresh_community_profile_task(community_id):
                                                                             user_id=member_user.id,
                                                                             is_moderator=True).delete()
                                 db.session.commit()
+    session.close()
 
 
 def actor_json_to_model(activity_json, address, server):
@@ -743,8 +770,12 @@ def actor_json_to_model(activity_json, address, server):
             cover = File(source_url=activity_json['image']['url'])
             user.cover = cover
             db.session.add(cover)
-        db.session.add(user)
-        db.session.commit()
+        try:
+            db.session.add(user)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            return User.query.filter_by(ap_profile_id=activity_json['id'].lower()).one()
         if user.avatar_id:
             make_image_sizes(user.avatar_id, 40, 250, 'users')
         if user.cover_id:
@@ -838,8 +869,12 @@ def actor_json_to_model(activity_json, address, server):
         if 'language' in activity_json and isinstance(activity_json['language'], list):
             for ap_language in activity_json['language']:
                 community.languages.append(find_language_or_create(ap_language['identifier'], ap_language['name']))
-        db.session.add(community)
-        db.session.commit()
+        try:
+            db.session.add(community)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            return Community.query.filter_by(ap_profile_id=activity_json['id'].lower()).one()
         if community.icon_id:
             make_image_sizes(community.icon_id, 60, 250, 'communities')
         if community.image_id:
@@ -885,19 +920,13 @@ def post_json_to_model(activity_log, post_json, user, community) -> Post:
             if post.url:
                 if is_image_url(post.url):
                     post.type = POST_TYPE_IMAGE
-                    if 'image' in post_json and 'url' in post_json['image']:
-                        image = File(source_url=post_json['image']['url'])
-                    else:
-                        image = File(source_url=post.url)
-                        if alt_text:
-                            image.alt_text = alt_text
+                    image = File(source_url=post.url)
+                    if alt_text:
+                        image.alt_text = alt_text
                     db.session.add(image)
                     post.image = image
                 elif is_video_url(post.url):
                     post.type = POST_TYPE_VIDEO
-                    image = File(source_url=post.url)
-                    db.session.add(image)
-                    post.image = image
                 else:
                     post.type = POST_TYPE_LINK
                     post.url = remove_tracking_from_link(post.url)
@@ -977,9 +1006,10 @@ def make_image_sizes(file_id, thumbnail_width=50, medium_width=120, directory='p
 
 @celery.task
 def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, toxic_community):
-    file = File.query.get(file_id)
+    session = get_task_session()
+    file: File = session.query(File).get(file_id)
     if file and file.source_url:
-        # Videos
+        # Videos (old code. not invoked because file.source_url won't end .mp4 or .webm)
         if file.source_url.endswith('.mp4') or file.source_url.endswith('.webm'):
             new_filename = gibberish(15)
 
@@ -1017,7 +1047,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                     file.thumbnail_width = image.width
                     file.thumbnail_height = image.height
 
-                db.session.commit()
+                session.commit()
 
         # Images
         else:
@@ -1039,82 +1069,88 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                         source_image_response = None
                 if source_image_response and source_image_response.status_code == 200:
                     content_type = source_image_response.headers.get('content-type')
-                    if content_type and content_type.startswith('image'):
-                        source_image = source_image_response.content
-                        source_image_response.close()
+                    if content_type:
+                        if content_type.startswith('image') or (content_type == 'application/octet-stream' and file.source_url.endswith('.avif')):
+                            source_image = source_image_response.content
+                            source_image_response.close()
 
-                        content_type_parts = content_type.split('/')
-                        if content_type_parts:
-                            # content type headers often are just 'image/jpeg' but sometimes 'image/jpeg;charset=utf8'
+                            content_type_parts = content_type.split('/')
+                            if content_type_parts:
+                                # content type headers often are just 'image/jpeg' but sometimes 'image/jpeg;charset=utf8'
 
-                            # Remove ;charset=whatever
-                            main_part = content_type.split(';')[0]
+                                # Remove ;charset=whatever
+                                main_part = content_type.split(';')[0]
 
-                            # Split the main part on the '/' character and take the second part
-                            file_ext = '.' + main_part.split('/')[1]
-                            file_ext = file_ext.strip() # just to be sure
+                                # Split the main part on the '/' character and take the second part
+                                file_ext = '.' + main_part.split('/')[1]
+                                file_ext = file_ext.strip() # just to be sure
 
-                            if file_ext == '.jpeg':
-                                file_ext = '.jpg'
-                            elif file_ext == '.svg+xml':
-                                return  # no need to resize SVG images
-                        else:
-                            file_ext = os.path.splitext(file.source_url)[1]
-                            file_ext = file_ext.replace('%3f', '?')  # sometimes urls are not decoded properly
-                            if '?' in file_ext:
-                                file_ext = file_ext.split('?')[0]
+                                if file_ext == '.jpeg':
+                                    file_ext = '.jpg'
+                                elif file_ext == '.svg+xml':
+                                    return  # no need to resize SVG images
+                                elif file_ext == '.octet-stream':
+                                    file_ext = '.avif'
+                            else:
+                                file_ext = os.path.splitext(file.source_url)[1]
+                                file_ext = file_ext.replace('%3f', '?')  # sometimes urls are not decoded properly
+                                if '?' in file_ext:
+                                    file_ext = file_ext.split('?')[0]
 
-                        new_filename = gibberish(15)
+                            new_filename = gibberish(15)
 
-                        # set up the storage directory
-                        directory = f'app/static/media/{directory}/' + new_filename[0:2] + '/' + new_filename[2:4]
-                        ensure_directory_exists(directory)
+                            # set up the storage directory
+                            directory = f'app/static/media/{directory}/' + new_filename[0:2] + '/' + new_filename[2:4]
+                            ensure_directory_exists(directory)
 
-                        # file path and names to store the resized images on disk
-                        final_place = os.path.join(directory, new_filename + file_ext)
-                        final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail.webp')
+                            # file path and names to store the resized images on disk
+                            final_place = os.path.join(directory, new_filename + file_ext)
+                            final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail.webp')
 
-                        # Load image data into Pillow
-                        Image.MAX_IMAGE_PIXELS = 89478485
-                        image = Image.open(BytesIO(source_image))
-                        image = ImageOps.exif_transpose(image)
-                        img_width = image.width
-                        img_height = image.height
+                            if file_ext == '.avif': # this is quite a big plugin so we'll only load it if necessary
+                                import pillow_avif
 
-                        # Resize the image to medium
-                        if medium_width:
-                            if img_width > medium_width:
-                                image.thumbnail((medium_width, medium_width))
-                            image.save(final_place)
-                            file.file_path = final_place
-                            file.width = image.width
-                            file.height = image.height
+                            # Load image data into Pillow
+                            Image.MAX_IMAGE_PIXELS = 89478485
+                            image = Image.open(BytesIO(source_image))
+                            image = ImageOps.exif_transpose(image)
+                            img_width = image.width
+                            img_height = image.height
 
-                        # Resize the image to a thumbnail (webp)
-                        if thumbnail_width:
-                            if img_width > thumbnail_width:
-                                image.thumbnail((thumbnail_width, thumbnail_width))
-                            image.save(final_place_thumbnail, format="WebP", quality=93)
-                            file.thumbnail_path = final_place_thumbnail
-                            file.thumbnail_width = image.width
-                            file.thumbnail_height = image.height
+                            # Resize the image to medium
+                            if medium_width:
+                                if img_width > medium_width:
+                                    image.thumbnail((medium_width, medium_width))
+                                image.save(final_place)
+                                file.file_path = final_place
+                                file.width = image.width
+                                file.height = image.height
 
-                        db.session.commit()
+                            # Resize the image to a thumbnail (webp)
+                            if thumbnail_width:
+                                if img_width > thumbnail_width:
+                                    image.thumbnail((thumbnail_width, thumbnail_width))
+                                image.save(final_place_thumbnail, format="WebP", quality=93)
+                                file.thumbnail_path = final_place_thumbnail
+                                file.thumbnail_width = image.width
+                                file.thumbnail_height = image.height
 
-                        # Alert regarding fascist meme content
-                        if toxic_community and img_width < 2000:    # images > 2000px tend to be real photos instead of 4chan screenshots.
-                            try:
-                                image_text = pytesseract.image_to_string(Image.open(BytesIO(source_image)).convert('L'), timeout=30)
-                            except Exception as e:
-                                image_text = ''
-                            if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):   # chan posts usually contain the text 'Anonymous' and ' No.12345'
-                                post = Post.query.filter_by(image_id=file.id).first()
-                                notification = Notification(title='Review this',
-                                                            user_id=1,
-                                                            author_id=post.user_id,
-                                                            url=url_for('activitypub.post_ap', post_id=post.id))
-                                db.session.add(notification)
-                                db.session.commit()
+                            session.commit()
+
+                            # Alert regarding fascist meme content
+                            if toxic_community and img_width < 2000:    # images > 2000px tend to be real photos instead of 4chan screenshots.
+                                try:
+                                    image_text = pytesseract.image_to_string(Image.open(BytesIO(source_image)).convert('L'), timeout=30)
+                                except Exception as e:
+                                    image_text = ''
+                                if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):   # chan posts usually contain the text 'Anonymous' and ' No.12345'
+                                    post = Post.query.filter_by(image_id=file.id).first()
+                                    notification = Notification(title='Review this',
+                                                                user_id=1,
+                                                                author_id=post.user_id,
+                                                                url=url_for('activitypub.post_ap', post_id=post.id))
+                                    session.add(notification)
+                                    session.commit()
 
 
 def find_reply_parent(in_reply_to: str) -> Tuple[int, int, int]:
@@ -1178,7 +1214,7 @@ def find_reported_object(ap_id) -> Union[User, Post, PostReply, None]:
 
 
 def find_instance_id(server):
-    server = server.strip()
+    server = server.strip().lower()
     instance = Instance.query.filter_by(domain=server).first()
     if instance:
         return instance.id
@@ -1186,8 +1222,11 @@ def find_instance_id(server):
         # Our instance does not know about {server} yet. Initially, create a sparse row in the 'instance' table and spawn a background
         # task to update the row with more details later
         new_instance = Instance(domain=server, software='unknown', created_at=utcnow(), trusted=server == 'piefed.social')
-        db.session.add(new_instance)
-        db.session.commit()
+        try:
+            db.session.add(new_instance)
+            db.session.commit()
+        except IntegrityError:
+            return Instance.query.filter_by(domain=server).one()
 
         # Spawn background task to fill in more details
         new_instance_profile(new_instance.id)
@@ -1205,7 +1244,8 @@ def new_instance_profile(instance_id: int):
 
 @celery.task
 def new_instance_profile_task(instance_id: int):
-    instance = Instance.query.get(instance_id)
+    session = get_task_session()
+    instance: Instance = session.query(Instance).get(instance_id)
     try:
         instance_data = get_request(f"https://{instance.domain}", headers={'Accept': 'application/activity+json'})
     except:
@@ -1222,7 +1262,7 @@ def new_instance_profile_task(instance_id: int):
         else:   # it's pretty much always /inbox so just assume that it is for whatever this instance is running
             instance.inbox = f"https://{instance.domain}/inbox"
         instance.updated_at = utcnow()
-        db.session.commit()
+        session.commit()
 
         # retrieve list of Admins from /api/v3/site, update InstanceRole
         try:
@@ -1246,20 +1286,20 @@ def new_instance_profile_task(instance_id: int):
                         user = find_actor_or_create(admin['person']['actor_id'])
                         if user and not instance.user_is_admin(user.id):
                             new_instance_role = InstanceRole(instance_id=instance.id, user_id=user.id, role='admin')
-                            db.session.add(new_instance_role)
-                            db.session.commit()
+                            session.add(new_instance_role)
+                            session.commit()
                     # remove any InstanceRoles that are no longer part of instance-data['admins']
                     for instance_admin in InstanceRole.query.filter_by(instance_id=instance.id):
                         if instance_admin.user.profile_id() not in admin_profile_ids:
-                            db.session.query(InstanceRole).filter(
+                            session.query(InstanceRole).filter(
                                     InstanceRole.user_id == instance_admin.user.id,
                                     InstanceRole.instance_id == instance.id,
                                     InstanceRole.role == 'admin').delete()
-                            db.session.commit()
+                            session.commit()
     elif instance_data.status_code == 406 or instance_data.status_code == 404:  # Mastodon and PeerTube do 406, a.gup.pe does 404
         instance.inbox = f"https://{instance.domain}/inbox"
         instance.updated_at = utcnow()
-        db.session.commit()
+        session.commit()
 
     headers = {'User-Agent': 'PieFed/1.0', 'Accept': 'application/activity+json'}
     try:
@@ -1280,12 +1320,13 @@ def new_instance_profile_task(instance_id: int):
                                 instance.software = node_json['software']['name'].lower()
                                 instance.version = node_json['software']['version']
                                 instance.nodeinfo_href = links['href']
-                                db.session.commit()
+                                session.commit()
                                 break  # most platforms (except Lemmy v0.19.4) that provide 2.1 also provide 2.0 - there's no need to check both
                     except:
                         return
     except:
         return
+    session.close()
 
 
 # alter the effect of upvotes based on their instance. Default to 1.0
@@ -1302,116 +1343,129 @@ def is_activitypub_request():
     return 'application/ld+json' in request.headers.get('Accept', '') or 'application/activity+json' in request.headers.get('Accept', '')
 
 
-def delete_post_or_comment(user_ap_id, community_ap_id, to_be_deleted_ap_id, aplog_id):
-    if current_app.debug:
-        delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id, aplog_id)
+def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json):
+    id = request_json['id']
+    community = to_delete.community
+    reason = request_json['object']['summary'] if 'summary' in request_json['object'] else ''
+    if to_delete.user_id == deletor.id or deletor.is_admin() or community.is_moderator(deletor) or community.is_instance_admin(deletor):
+        if isinstance(to_delete, Post):
+            to_delete.deleted = True
+            to_delete.deleted_by = deletor.id
+            community.post_count -= 1
+            to_delete.author.post_count -= 1
+            if to_delete.url and to_delete.cross_posts is not None:
+                old_cross_posts = Post.query.filter(Post.id.in_(to_delete.cross_posts)).all()
+                to_delete.cross_posts.clear()
+                for ocp in old_cross_posts:
+                    if ocp.cross_posts is not None and to_delete.id in ocp.cross_posts:
+                        ocp.cross_posts.remove(to_delete.id)
+            db.session.commit()
+            if to_delete.author.id != deletor.id:
+                add_to_modlog_activitypub('delete_post', deletor, community_id=community.id,
+                                          link_text=shorten_string(to_delete.title), link=f'post/{to_delete.id}',
+                                          reason=reason)
+        elif isinstance(to_delete, PostReply):
+            to_delete.deleted = True
+            to_delete.deleted_by = deletor.id
+            to_delete.author.post_reply_count -= 1
+            community.post_reply_count -= 1
+            if not to_delete.author.bot:
+                to_delete.post.reply_count -= 1
+            db.session.commit()
+            if to_delete.author.id != deletor.id:
+                add_to_modlog_activitypub('delete_post_reply', deletor, community_id=community.id,
+                                          link_text=f'comment on {shorten_string(to_delete.post.title)}',
+                                          link=f'post/{to_delete.post.id}#comment_{to_delete.id}',
+                                          reason=reason)
+        log_incoming_ap(id, APLOG_DELETE, APLOG_SUCCESS, request_json if store_ap_json else None)
     else:
-        delete_post_or_comment_task.delay(user_ap_id, community_ap_id, to_be_deleted_ap_id, aplog_id)
+        log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Deletor did not have permisson')
 
 
-@celery.task
-def delete_post_or_comment_task(user_ap_id, community_ap_id, to_be_deleted_ap_id, aplog_id):
-    deletor = find_actor_or_create(user_ap_id)
-    community = find_actor_or_create(community_ap_id, community_only=True)
-    to_delete = find_liked_object(to_be_deleted_ap_id)
-    aplog = ActivityPubLog.query.get(aplog_id)
+def restore_post_or_comment(restorer, to_restore, store_ap_json, request_json):
+    id = request_json['id']
+    community = to_restore.community
+    reason = request_json['object']['summary'] if 'summary' in request_json['object'] else ''
+    if to_restore.user_id == restorer.id or restorer.is_admin() or community.is_moderator(restorer) or community.is_instance_admin(restorer):
+        if isinstance(to_restore, Post):
+            to_restore.deleted = False
+            to_restore.deleted_by = None
+            community.post_count += 1
+            to_restore.author.post_count += 1
+            if to_restore.url:
+                new_cross_posts = Post.query.filter(Post.id != to_restore.id, Post.url == to_restore.url, Post.deleted == False,
+                                                                Post.posted_at > utcnow() - timedelta(days=6)).all()
+                for ncp in new_cross_posts:
+                    if ncp.cross_posts is None:
+                        ncp.cross_posts = [to_restore.id]
+                    else:
+                        ncp.cross_posts.append(to_restore.id)
+                    if to_restore.cross_posts is None:
+                        to_restore.cross_posts = [ncp.id]
+                    else:
+                        to_restore.cross_posts.append(ncp.id)
+            db.session.commit()
+            if to_restore.author.id != restorer.id:
+                add_to_modlog_activitypub('restore_post', restorer, community_id=community.id,
+                                          link_text=shorten_string(to_restore.title), link=f'post/{to_restore.id}',
+                                          reason=reason)
 
-    if to_delete and to_delete.deleted:
-        if aplog:
-            aplog.result = 'ignored'
-            aplog.exception_message = 'Activity about local content which is already deleted'
-        return
-
-    if deletor and community and to_delete:
-        if to_delete.author.id == deletor.id or deletor.is_admin() or community.is_moderator(deletor) or community.is_instance_admin(deletor):
-            if isinstance(to_delete, Post):
-                to_delete.deleted = True
-                to_delete.deleted_by = deletor.id
-                community.post_count -= 1
-                to_delete.author.post_count -= 1
-                db.session.commit()
-                if to_delete.author.id != deletor.id:
-                    add_to_modlog_activitypub('delete_post', deletor, community_id=community.id,
-                                              link_text=shorten_string(to_delete.title), link=f'post/{to_delete.id}')
-            elif isinstance(to_delete, PostReply):
-                to_delete.deleted = True
-                to_delete.deleted_by = deletor.id
-                to_delete.author.post_reply_count -= 1
-                if not to_delete.author.bot:
-                    to_delete.post.reply_count -= 1
-                db.session.commit()
-                if to_delete.author.id != deletor.id:
-                    add_to_modlog_activitypub('delete_post_reply', deletor, community_id=community.id,
-                                              link_text=f'comment on {shorten_string(to_delete.post.title)}',
-                                              link=f'post/{to_delete.post.id}#comment_{to_delete.id}')
-            if aplog:
-                aplog.result = 'success'
-        else:
-           if aplog:
-                aplog.result = 'failure'
-                aplog.exception_message = 'Deletor did not have permission'
+        elif isinstance(to_restore, PostReply):
+            to_restore.deleted = False
+            to_restore.deleted_by = None
+            if not to_restore.author.bot:
+                to_restore.post.reply_count += 1
+            to_restore.author.post_reply_count += 1
+            db.session.commit()
+            if to_restore.author.id != restorer.id:
+                add_to_modlog_activitypub('restore_post_reply', restorer, community_id=community.id,
+                                          link_text=f'comment on {shorten_string(to_restore.post.title)}',
+                                          link=f'post/{to_restore.post_id}#comment_{to_restore.id}',
+                                          reason=reason)
+        log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_SUCCESS, request_json if store_ap_json else None)
     else:
-       if aplog:
-            aplog.result = 'failure'
-            aplog.exception_message = 'Unable to resolve deletor, community, or target'
+        log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Restorer did not have permisson')
 
 
-def restore_post_or_comment(object_json, aplog_id):
-    if current_app.debug:
-        restore_post_or_comment_task(object_json, aplog_id)
-    else:
-        restore_post_or_comment_task.delay(object_json, aplog_id)
+def site_ban_remove_data(blocker_id, blocked):
+    replies = PostReply.query.filter_by(user_id=blocked.id, deleted=False)
+    for reply in replies:
+        reply.deleted = True
+        reply.deleted_by = blocker_id
+        if not blocked.bot:
+            reply.post.reply_count -= 1
+        reply.community.post_reply_count -= 1
+    blocked.reply_count = 0
+    db.session.commit()
 
+    posts = Post.query.filter_by(user_id=blocked.id, deleted=False)
+    for post in posts:
+        post.deleted = True
+        post.deleted_by = blocker_id
+        post.community.post_count -= 1
+        if post.url and post.cross_posts is not None:
+            old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
+            post.cross_posts.clear()
+            for ocp in old_cross_posts:
+                if ocp.cross_posts is not None and post.id in ocp.cross_posts:
+                    ocp.cross_posts.remove(post.id)
+    blocked.post_count = 0
+    db.session.commit()
 
-@celery.task
-def restore_post_or_comment_task(object_json, aplog_id):
-    restorer = find_actor_or_create(object_json['actor']) if 'actor' in object_json else None
-    community = find_actor_or_create(object_json['audience'], community_only=True)  if 'audience' in object_json else None
-    to_restore = find_liked_object(object_json['object']) if 'object' in object_json else None
-    if to_restore and not community:
-        community = to_restore.community
-    aplog = ActivityPubLog.query.get(aplog_id)
+    # Delete all their images to save moderators from having to see disgusting stuff.
+    # Images attached to posts can't be restored, but site ban reversals don't have a 'removeData' field anyway.
+    files = File.query.join(Post).filter(Post.user_id == blocked.id).all()
+    for file in files:
+        file.delete_from_disk()
+        file.source_url = ''
+    if blocked.avatar_id:
+        blocked.avatar.delete_from_disk()
+        blocked.avatar.source_url = ''
+    if blocked.cover_id:
+        blocked.cover.delete_from_disk()
+        blocked.cover.source_url = ''
 
-    if to_restore and not to_restore.deleted:
-        if aplog:
-            aplog.result = 'ignored'
-            aplog.exception_message = 'Activity about local content which is already restored'
-        return
-
-    if restorer and community and to_restore:
-        if to_restore.author.id == restorer.id or restorer.is_admin() or community.is_moderator(restorer) or community.is_instance_admin(restorer):
-            if isinstance(to_restore, Post):
-                to_restore.deleted = False
-                to_restore.deleted_by = None
-                community.post_count += 1
-                to_restore.author.post_count += 1
-                db.session.commit()
-                if to_restore.author.id != restorer.id:
-                    add_to_modlog_activitypub('restore_post', restorer, community_id=community.id,
-                                              link_text=shorten_string(to_restore.title), link=f'post/{to_restore.id}')
-
-            elif isinstance(to_restore, PostReply):
-                to_restore.deleted = False
-                to_restore.deleted_by = None
-                if not to_restore.author.bot:
-                    to_restore.post.reply_count += 1
-                to_restore.author.post_reply_count += 1
-                db.session.commit()
-                if to_restore.author.id != restorer.id:
-                    add_to_modlog_activitypub('restore_post_reply', restorer, community_id=community.id,
-                                              link_text=f'comment on {shorten_string(to_restore.post.title)}',
-                                              link=f'post/{to_restore.post_id}#comment_{to_restore.id}')
-
-            if aplog:
-                aplog.result = 'success'
-        else:
-           if aplog:
-                aplog.result = 'failure'
-                aplog.exception_message = 'Restorer did not have permission'
-    else:
-       if aplog:
-            aplog.result = 'failure'
-            aplog.exception_message = 'Unable to resolve restorer, community, or target'
+    db.session.commit()
 
 
 def remove_data_from_banned_user(deletor_ap_id, user_ap_id, target):
@@ -1461,155 +1515,112 @@ def remove_data_from_banned_user_task(deletor_ap_id, user_ap_id, target):
     db.session.commit()
 
 
-def ban_local_user(deletor_ap_id, user_ap_id, target, request_json):
-    if current_app.debug:
-        ban_local_user_task(deletor_ap_id, user_ap_id, target, request_json)
-    else:
-        ban_local_user_task.delay(deletor_ap_id, user_ap_id, target, request_json)
+def community_ban_remove_data(blocker_id, community_id, blocked):
+    replies = PostReply.query.filter_by(user_id=blocked.id, deleted=False, community_id=community_id)
+    for reply in replies:
+        reply.deleted = True
+        reply.deleted_by = blocker_id
+        if not blocked.bot:
+            reply.post.reply_count -= 1
+        reply.community.post_reply_count -= 1
+        blocked.post_reply_count -= 1
+    db.session.commit()
+
+    posts = Post.query.filter_by(user_id=blocked.id, deleted=False, community_id=community_id)
+    for post in posts:
+        post.deleted = True
+        post.deleted_by = blocker_id
+        post.community.post_count -= 1
+        if post.url and post.cross_posts is not None:
+            old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
+            post.cross_posts.clear()
+            for ocp in old_cross_posts:
+                if ocp.cross_posts is not None and post.id in ocp.cross_posts:
+                    ocp.cross_posts.remove(post.id)
+        blocked.post_count -= 1
+    db.session.commit()
+
+    # Delete attached images to save moderators from having to see disgusting stuff.
+    files = File.query.join(Post).filter(Post.user_id == blocked.id, Post.community_id == community_id).all()
+    for file in files:
+        file.delete_from_disk()
+        file.source_url = ''
+    db.session.commit()
 
 
-@celery.task
-def ban_local_user_task(deletor_ap_id, user_ap_id, target, request_json):
-    # same info in 'Block' and 'Announce/Block' can be sent at same time, and both call this function
-    ban_in_progress = cache.get(f'{deletor_ap_id} is banning {user_ap_id} from {target}')
-    if not ban_in_progress:
-        cache.set(f'{deletor_ap_id} is banning {user_ap_id} from {target}', True, timeout=60)
-    else:
-        return
+def ban_user(blocker, blocked, community, request_json):
+    existing = CommunityBan.query.filter_by(community_id=community.id, user_id=blocked.id).first()
+    if not existing:
+        new_ban = CommunityBan(community_id=community.id, user_id=blocked.id, banned_by=blocker.id)
+        if 'summary' in request_json['object']:
+            new_ban.reason=request_json['object']['summary']
+            reason = request_json['object']['summary']
+        else:
+            reason = ''
+        if 'expires' in request_json and datetime.fromisoformat(request_json['object']['expires']) > datetime.now(timezone.utc):
+            new_ban.ban_until = datetime.fromisoformat(request_json['object']['expires'])
+        elif 'endTime' in request_json and datetime.fromisoformat(request_json['object']['endTime']) > datetime.now(timezone.utc):
+            new_ban.ban_until = datetime.fromisoformat(request_json['object']['endTime'])
+        db.session.add(new_ban)
 
-    deletor = find_actor_or_create(deletor_ap_id, create_if_not_found=False)
-    user = find_actor_or_create(user_ap_id, create_if_not_found=False)
-    community = Community.query.filter_by(ap_profile_id=target).first()
-
-    if not deletor or not user:
-        return
-
-    # site bans by admins
-    if deletor.instance.user_is_admin(deletor.id) and target == f"https://{deletor.instance.domain}/":
-        # need instance_ban table?
-        ...
-
-    # community bans by mods or admins
-    elif community and (community.is_moderator(deletor) or community.is_instance_admin(deletor)):
-        existing = CommunityBan.query.filter_by(community_id=community.id, user_id=user.id).first()
-
-        if not existing:
-            new_ban = CommunityBan(community_id=community.id, user_id=user.id, banned_by=deletor.id)
-            if 'summary' in request_json:
-                new_ban.reason=request_json['summary']
-
-            if 'expires' in request_json and datetime.fromisoformat(request_json['expires']) > datetime.now(timezone.utc):
-                new_ban.ban_until = datetime.fromisoformat(request_json['expires'])
-            elif 'endTime' in request_json and datetime.fromisoformat(request_json['endTime']) > datetime.now(timezone.utc):
-                new_ban.ban_until = datetime.fromisoformat(request_json['endTime'])
-
-            db.session.add(new_ban)
-            db.session.commit()
-
-        db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == community.id, CommunityJoinRequest.user_id == user.id).delete()
-
-        community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=user.id).first()
+        community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=blocked.id).first()
         if community_membership_record:
             community_membership_record.is_banned = True
-
-        cache.delete_memoized(communities_banned_from, user.id)
-        cache.delete_memoized(joined_communities, user.id)
-        cache.delete_memoized(moderating_communities, user.id)
-
-        # Notify banned person
-        notify = Notification(title=shorten_string('You have been banned from ' + community.title),
-                                      url=f'/notifications', user_id=user.id,
-                                      author_id=deletor.id)
-        db.session.add(notify)
-        if not current_app.debug:                       # user.unread_notifications += 1 hangs app if 'user' is the same person
-            user.unread_notifications += 1              # who pressed 'Re-submit this activity'.
         db.session.commit()
 
-        # Remove their notification subscription,  if any
-        db.session.query(NotificationSubscription).filter(NotificationSubscription.entity_id == community.id,
-                                                          NotificationSubscription.user_id == user.id,
-                                                          NotificationSubscription.type == NOTIF_COMMUNITY).delete()
+        if blocked.is_local():
+            db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == community.id, CommunityJoinRequest.user_id == blocked.id).delete()
 
-        add_to_modlog_activitypub('ban_user', deletor, community_id=community.id, link_text=user.display_name(), link=user.link())
+            # Notify banned person
+            notify = Notification(title=shorten_string('You have been banned from ' + community.title),
+                                  url=f'/notifications', user_id=blocked.id,
+                                  author_id=blocker.id)
+            db.session.add(notify)
+            if not current_app.debug:                           # user.unread_notifications += 1 hangs app if 'user' is the same person
+                blocked.unread_notifications += 1               # who pressed 'Re-submit this activity'.
 
-
-def unban_local_user(deletor_ap_id, user_ap_id, target):
-    if current_app.debug:
-        unban_local_user_task(deletor_ap_id, user_ap_id, target)
-    else:
-        unban_local_user_task.delay(deletor_ap_id, user_ap_id, target)
-
-
-@celery.task
-def unban_local_user_task(deletor_ap_id, user_ap_id, target):
-    # same info in 'Block' and 'Announce/Block' can be sent at same time, and both call this function
-    unban_in_progress = cache.get(f'{deletor_ap_id} is undoing ban of {user_ap_id} from {target}')
-    if not unban_in_progress:
-        cache.set(f'{deletor_ap_id} is undoing ban of {user_ap_id} from {target}', True, timeout=60)
-    else:
-        return
-
-    deletor = find_actor_or_create(deletor_ap_id, create_if_not_found=False)
-    user = find_actor_or_create(user_ap_id, create_if_not_found=False)
-    community = Community.query.filter_by(ap_profile_id=target).first()
-
-    if not deletor or not user:
-        return
-
-    # site undo bans by admins
-    if deletor.instance.user_is_admin(deletor.id) and target == f"https://{deletor.instance.domain}/":
-        # need instance_ban table?
-        ...
-
-    # community undo bans by mods or admins
-    elif community and (community.is_moderator(deletor) or community.is_instance_admin(deletor)):
-        existing_ban = CommunityBan.query.filter_by(community_id=community.id, user_id=user.id).first()
-        if existing_ban:
-            db.session.delete(existing_ban)
+            # Remove their notification subscription,  if any
+            db.session.query(NotificationSubscription).filter(NotificationSubscription.entity_id == community.id,
+                                                              NotificationSubscription.user_id == blocked.id,
+                                                              NotificationSubscription.type == NOTIF_COMMUNITY).delete()
             db.session.commit()
 
-        community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=user.id).first()
-        if community_membership_record:
-            community_membership_record.is_banned = False
-            db.session.commit()
+            cache.delete_memoized(communities_banned_from, blocked.id)
+            cache.delete_memoized(joined_communities, blocked.id)
+            cache.delete_memoized(moderating_communities, blocked.id)
 
-        cache.delete_memoized(communities_banned_from, user.id)
-        cache.delete_memoized(joined_communities, user.id)
-        cache.delete_memoized(moderating_communities, user.id)
+        add_to_modlog_activitypub('ban_user', blocker, community_id=community.id, link_text=blocked.display_name(), link=f'u/{blocked.link()}', reason=reason)
 
-        # Notify previously banned person
-        notify = Notification(title=shorten_string('You have been un-banned from ' + community.title),
-                                      url=f'/notifications', user_id=user.id,
-                                      author_id=deletor.id)
+
+def unban_user(blocker, blocked, community, request_json):
+    reason = request_json['object']['summary'] if 'summary' in request_json['object'] else ''
+    db.session.query(CommunityBan).filter(CommunityBan.community_id == community.id, CommunityBan.user_id == blocked.id).delete()
+    community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=blocked.id).first()
+    if community_membership_record:
+        community_membership_record.is_banned = False
+    db.session.commit()
+
+    if blocked.is_local():
+        # Notify unbanned person
+        notify = Notification(title=shorten_string('You have been unbanned from ' + community.title),
+                              url=f'/notifications', user_id=blocked.id, author_id=blocker.id)
         db.session.add(notify)
-        if not current_app.debug:                       # user.unread_notifications += 1 hangs app if 'user' is the same person
-            user.unread_notifications += 1              # who pressed 'Re-submit this activity'.
+        if not current_app.debug:                           # user.unread_notifications += 1 hangs app if 'user' is the same person
+            blocked.unread_notifications += 1               # who pressed 'Re-submit this activity'.
+
         db.session.commit()
 
-        add_to_modlog_activitypub('unban_user', deletor, community_id=community.id, link_text=user.display_name(), link=user.link())
+        cache.delete_memoized(communities_banned_from, blocked.id)
+        cache.delete_memoized(joined_communities, blocked.id)
+        cache.delete_memoized(moderating_communities, blocked.id)
+
+    add_to_modlog_activitypub('unban_user', blocker, community_id=community.id, link_text=blocked.display_name(), link=f'u/{blocked.link()}', reason=reason)
 
 
-def lock_post(mod_ap_id, post_id, comments_enabled):
-    if current_app.debug:
-        lock_post_task(mod_ap_id, post_id, comments_enabled)
-    else:
-        lock_post_task.delay(mod_ap_id, post_id, comments_enabled)
-
-
-@celery.task
-def lock_post_task(mod_ap_id, post_id, comments_enabled):
-    mod = find_actor_or_create(mod_ap_id, create_if_not_found=False)
-    post = Post.query.filter_by(ap_id=post_id).first()
-    if mod and post:
-        if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
-            post.comments_enabled = comments_enabled
-            db.session.commit()
-
-
-def create_post_reply(activity_log: ActivityPubLog, community: Community, in_reply_to, request_json: dict, user: User, announce_id=None) -> Union[PostReply, None]:
+def create_post_reply(store_ap_json, community: Community, in_reply_to, request_json: dict, user: User, announce_id=None) -> Union[PostReply, None]:
+    id = request_json['id']
     if community.local_only:
-        activity_log.exception_message = 'Community is local only, reply discarded'
-        activity_log.result = 'ignored'
+        log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Community is local only, reply discarded')
         return None
     post_id, parent_comment_id, root_id = find_reply_parent(in_reply_to)
 
@@ -1620,7 +1631,7 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
         else:
             parent_comment = None
         if post_id is None:
-            activity_log.exception_message = 'Could not find parent post'
+            log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not find parent post')
             return None
         post = Post.query.get(post_id)
 
@@ -1646,30 +1657,29 @@ def create_post_reply(activity_log: ActivityPubLog, community: Community, in_rep
             language = find_language(next(iter(request_json['object']['contentMap'])))  # Combination of next and iter gets the first key in a dict
             language_id = language.id if language else None
 
-        post_reply = None
         try:
             post_reply = PostReply.new(user, post, parent_comment, notify_author=True, body=body, body_html=body_html,
                                        language_id=language_id, request_json=request_json, announce_id=announce_id)
-            activity_log.result = 'success'
+            return post_reply
         except Exception as ex:
-            activity_log.exception_message = str(ex)
-            activity_log.result = 'ignored'
-        db.session.commit()
-        return post_reply
+            log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, str(ex))
+            return None
+    else:
+        log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unable to find parent post/comment')
+        return None
 
 
-def create_post(activity_log: ActivityPubLog, community: Community, request_json: dict, user: User, announce_id=None) -> Union[Post, None]:
+def create_post(store_ap_json, community: Community, request_json: dict, user: User, announce_id=None) -> Union[Post, None]:
+    id = request_json['id']
     if community.local_only:
-        activity_log.exception_message = 'Community is local only, post discarded'
-        activity_log.result = 'ignored'
+        log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Community is local only, post discarded')
         return None
     try:
         post = Post.new(user, community, request_json, announce_id)
+        return post
     except Exception as ex:
-        activity_log.exception_message = str(ex)
+        log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, str(ex))
         return None
-
-    return post
 
 
 def notify_about_post(post: Post):
@@ -1746,13 +1756,7 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
 
 
 def update_post_from_activity(post: Post, request_json: dict):
-    if 'name' not in request_json['object']:    # Microblog posts
-        name = "[Microblog]"
-    else:
-        name = request_json['object']['name']
-
-    nsfl_in_title = '[NSFL]' in name.upper() or '(NSFL)' in name.upper()
-    post.title = name
+    # redo body without checking if it's changed
     if 'content' in request_json['object'] and request_json['object']['content'] is not None:
         if 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/html':
             post.body_html = allowlist_html(request_json['object']['content'])
@@ -1769,128 +1773,42 @@ def update_post_from_activity(post: Post, request_json: dict):
                 request_json['object']['content'] = '<p>' + request_json['object']['content'] + '</p>'
             post.body_html = allowlist_html(request_json['object']['content'])
             post.body = html_to_text(post.body_html)
-        if name == "[Microblog]":
-            autogenerated_title = microblog_content_to_title(post.body_html)
-            if len(autogenerated_title) < 20:
-                name += ' ' + autogenerated_title
-            else:
-                name = autogenerated_title
-            nsfl_in_title = '[NSFL]' in name.upper() or '(NSFL)' in name.upper()
-            post.title = name
-    # Language
-    if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
-        language = find_language_or_create(request_json['object']['language']['identifier'], request_json['object']['language']['name'])
-        post.language_id = language.id
-    # Links
-    old_url = post.url
-    old_image_id = post.image_id
-    post.url = ''
-    if request_json['object']['type'] == 'Video':
-        post.type = POST_TYPE_VIDEO
-        # PeerTube URL isn't going to change, so set to old_url to prevent this function changing type or icon
-        post.url = old_url
-    if 'attachment' in request_json['object'] and len(request_json['object']['attachment']) > 0 and \
-            'type' in request_json['object']['attachment'][0]:
-        alt_text = None
-        if request_json['object']['attachment'][0]['type'] == 'Link':
-            post.url = request_json['object']['attachment'][0]['href']              # Lemmy < 0.19.4
-        if request_json['object']['attachment'][0]['type'] == 'Document':
-            post.url = request_json['object']['attachment'][0]['url']               # Mastodon
-            if 'name' in request_json['object']['attachment'][0]:
-                alt_text = request_json['object']['attachment'][0]['name']
-        if request_json['object']['attachment'][0]['type'] == 'Image':
-            post.url = request_json['object']['attachment'][0]['url']               # PixelFed / PieFed / Lemmy >= 0.19.4
-            if 'name' in request_json['object']['attachment'][0]:
-                alt_text = request_json['object']['attachment'][0]['name']
-    if post.url == '':
-        post.type = POST_TYPE_ARTICLE
+
+    # title
+    old_title = post.title
+    if 'name' in request_json['object']:
+        new_title = request_json['object']['name']
+        post.microblog = False
     else:
-        post.url = remove_tracking_from_link(post.url)
-    if (post.url and post.url != old_url) or (post.url == '' and old_url != ''):
-        if post.image_id:
-            old_image = File.query.get(post.image_id)
-            post.image_id = None
-            old_image.delete_from_disk()
-            File.query.filter_by(id=old_image_id).delete()
-            post.image = None
-    if (post.url and post.url != old_url):
-        if is_image_url(post.url):
-            post.type = POST_TYPE_IMAGE
-            if 'image' in request_json['object'] and 'url' in request_json['object']['image']:
-                image = File(source_url=request_json['object']['image']['url'])
-            else:
-                image = File(source_url=post.url)
-                if alt_text:
-                    image.alt_text = alt_text
-            db.session.add(image)
-            post.image = image
-        elif is_video_url(post.url):
-            post.type = POST_TYPE_VIDEO
-            image = File(source_url=post.url)
-            db.session.add(image)
-            post.image = image
+        autogenerated_title = microblog_content_to_title(post.body_html)
+        if len(autogenerated_title) < 20:
+            new_title = '[Microblog] ' + autogenerated_title.strip()
         else:
-            post.type = POST_TYPE_LINK
-        domain = domain_from_url(post.url)
-        # notify about links to banned websites.
-        already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
-        if domain.notify_mods:
-            for community_member in post.community.moderators():
-                notify = Notification(title='Suspicious content', url=post.ap_id,
-                                          user_id=community_member.user_id,
-                                          author_id=1)
-                db.session.add(notify)
-                already_notified.add(community_member.user_id)
-        if domain.notify_admins:
-            for admin in Site.admins():
-                if admin.id not in already_notified:
-                    notify = Notification(title='Suspicious content',
-                                              url=post.ap_id, user_id=admin.id,
-                                              author_id=1)
-                    db.session.add(notify)
-        if not domain.banned:
-            domain.post_count += 1
-            post.domain = domain
-        else:
-            post.url = old_url              # don't change if url changed from non-banned domain to banned domain
+            new_title = autogenerated_title.strip()
+        post.microblog = True
 
-        # Fix-up cross posts (Posts which link to the same url as other posts)
-        if post.cross_posts is not None:
-            old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
-            post.cross_posts.clear()
-            for ocp in old_cross_posts:
-                if ocp.cross_posts is not None and post.id in ocp.cross_posts:
-                    ocp.cross_posts.remove(post.id)
-
-        new_cross_posts = Post.query.filter(Post.id != post.id, Post.url == post.url, Post.deleted == False,
-                                    Post.posted_at > utcnow() - timedelta(days=6)).all()
-        for ncp in new_cross_posts:
-            if ncp.cross_posts is None:
-                ncp.cross_posts = [post.id]
-            else:
-                ncp.cross_posts.append(post.id)
-            if post.cross_posts is None:
-                post.cross_posts = [ncp.id]
-            else:
-                post.cross_posts.append(ncp.id)
-
-    if post is not None:
-        if 'image' in request_json['object'] and post.image is None:
-            image = File(source_url=request_json['object']['image']['url'])
-            db.session.add(image)
-            db.session.commit()
-            post.image_id = image.id
-            db.session.add(post)
-            db.session.commit()
-
-        if post.image_id and post.image_id != old_image_id:
-            make_image_sizes(post.image_id, 170, 512, 'posts')  # the 512 sized image is for masonry view
+    if old_title != new_title:
+        post.title = new_title
+        if '[NSFL]' in new_title.upper() or '(NSFL)' in new_title.upper():
+            post.nsfl = True
+        if '[NSFW]' in new_title.upper() or '(NSFW)' in new_title.upper():
+            post.nsfw = True
     if 'sensitive' in request_json['object']:
         post.nsfw = request_json['object']['sensitive']
-    if nsfl_in_title:
-        post.nsfl = True
-    elif 'nsfl' in request_json['object']:
+    if 'nsfl' in request_json['object']:
         post.nsfl = request_json['object']['nsfl']
+
+    # Language
+    old_language_id = post.language_id
+    new_language = None
+    if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
+        new_language = find_language_or_create(request_json['object']['language']['identifier'], request_json['object']['language']['name'])
+    elif 'contentMap' in request_json['object'] and isinstance(request_json['object']['contentMap'], dict):
+        new_language = find_language(next(iter(request_json['object']['contentMap'])))
+    if new_language and (new_language.id != old_language_id):
+        post.language_id = new_language.id
+
+    # Tags
     if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
         db.session.execute(text('DELETE FROM "post_tag" WHERE post_id = :post_id'), {'post_id': post.id})
         for json_tag in request_json['object']['tag']:
@@ -1899,9 +1817,131 @@ def update_post_from_activity(post: Post, request_json: dict):
                     hashtag = find_hashtag_or_create(json_tag['name'])
                     if hashtag:
                         post.tags.append(hashtag)
+
     post.comments_enabled = request_json['object']['commentsEnabled'] if 'commentsEnabled' in request_json['object'] else True
     post.edited_at = utcnow()
+
+    if request_json['object']['type'] == 'Video':
+        # return now for PeerTube, otherwise rest of this function breaks the post
+        # consider querying the Likes endpoint (that mostly seems to be what Updates are about)
+        return
+
+    # Links
+    old_url = post.url
+    new_url = None
+    if ('attachment' in request_json['object'] and
+        isinstance(request_json['object']['attachment'], list) and
+        len(request_json['object']['attachment']) > 0 and
+        'type' in request_json['object']['attachment'][0]):
+        if request_json['object']['attachment'][0]['type'] == 'Link':
+            new_url = request_json['object']['attachment'][0]['href']              # Lemmy < 0.19.4
+        if request_json['object']['attachment'][0]['type'] == 'Document':
+            new_url = request_json['object']['attachment'][0]['url']               # Mastodon
+        if request_json['object']['attachment'][0]['type'] == 'Image':
+            new_url = request_json['object']['attachment'][0]['url']               # PixelFed / PieFed / Lemmy >= 0.19.4
+    if 'attachment' in request_json['object'] and isinstance(request_json['object']['attachment'], dict):   # Mastodon / a.gup.pe
+        new_url = request_json['object']['attachment']['url']
+    if new_url:
+        new_url = remove_tracking_from_link(new_url)
+        new_domain = domain_from_url(new_url)
+        if new_domain.banned:
+            db.session.commit()
+            return                                                                  # reject change to url if new domain is banned
+    old_db_entry_to_delete = None
+    if old_url != new_url:
+        if post.image:
+            post.image.delete_from_disk()
+            old_db_entry_to_delete = post.image_id
+        if new_url:
+            post.url = new_url
+            image = None
+            if is_image_url(new_url):
+                post.type = POST_TYPE_IMAGE
+                image = File(source_url=new_url)
+                if 'name' in request_json['object']['attachment'][0] and request_json['object']['attachment'][0]['name'] is not None:
+                    image.alt_text = request_json['object']['attachment'][0]['name']
+            else:
+                if 'image' in request_json['object'] and 'url' in request_json['object']['image']:
+                    image = File(source_url=request_json['object']['image']['url'])
+                else:
+                    # Let's see if we can do better than the source instance did!
+                    tn_url = new_url
+                    if tn_url[:32] == 'https://www.youtube.com/watch?v=':
+                        tn_url = 'https://youtu.be/' + tn_url[32:43]  # better chance of thumbnail from youtu.be than youtube.com
+                    opengraph = opengraph_parse(tn_url)
+                    if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
+                        filename = opengraph.get('og:image') or opengraph.get('og:image:url')
+                        if not filename.startswith('/'):
+                            image = File(source_url=filename, alt_text=shorten_string(opengraph.get('og:title'), 295))
+                if is_video_hosting_site(new_url) or is_video_url(new_url):
+                    post.type = POST_TYPE_VIDEO
+                else:
+                    post.type = POST_TYPE_LINK
+            if image:
+                db.session.add(image)
+                db.session.commit()
+                post.image = image
+                make_image_sizes(image.id, 170, 512, 'posts')  # the 512 sized image is for masonry view
+            else:
+                old_db_entry_to_delete = None
+
+            # url domain
+            old_domain = domain_from_url(old_url) if old_url else None
+            if old_domain != new_domain:
+                # notify about links to banned websites.
+                already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
+                if new_domain.notify_mods:
+                    for community_member in post.community.moderators():
+                        notify = Notification(title='Suspicious content', url=post.ap_id,
+                                                  user_id=community_member.user_id,
+                                                  author_id=1)
+                        db.session.add(notify)
+                        already_notified.add(community_member.user_id)
+                if new_domain.notify_admins:
+                    for admin in Site.admins():
+                        if admin.id not in already_notified:
+                            notify = Notification(title='Suspicious content',
+                                                      url=post.ap_id, user_id=admin.id,
+                                                      author_id=1)
+                            db.session.add(notify)
+                new_domain.post_count += 1
+                post.domain = new_domain
+
+            # Fix-up cross posts (Posts which link to the same url as other posts)
+            if post.cross_posts is not None:
+                old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
+                post.cross_posts.clear()
+                for ocp in old_cross_posts:
+                    if ocp.cross_posts is not None and post.id in ocp.cross_posts:
+                        ocp.cross_posts.remove(post.id)
+
+            new_cross_posts = Post.query.filter(Post.id != post.id, Post.url == new_url, Post.deleted == False,
+                                    Post.posted_at > utcnow() - timedelta(days=6)).all()
+            for ncp in new_cross_posts:
+                if ncp.cross_posts is None:
+                    ncp.cross_posts = [post.id]
+                else:
+                    ncp.cross_posts.append(post.id)
+                if post.cross_posts is None:
+                    post.cross_posts = [ncp.id]
+                else:
+                    post.cross_posts.append(ncp.id)
+
+        else:
+            post.type = POST_TYPE_ARTICLE
+            post.url = ''
+            post.image_id = None
+            if post.cross_posts is not None:                    # unlikely, but not impossible
+                old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
+                post.cross_posts.clear()
+                for ocp in old_cross_posts:
+                    if ocp.cross_posts is not None and post.id in ocp.cross_posts:
+                        ocp.cross_posts.remove(post.id)
+
     db.session.commit()
+    if old_db_entry_to_delete:
+        File.query.filter_by(id=old_db_entry_to_delete).delete()
+        db.session.commit()
 
 
 def undo_downvote(activity_log, comment, post, target_ap_id, user):
@@ -1934,11 +1974,10 @@ def undo_downvote(activity_log, comment, post, target_ap_id, user):
     return post
 
 
-def undo_vote(activity_log, comment, post, target_ap_id, user):
+def undo_vote(comment, post, target_ap_id, user):
     voted_on = find_liked_object(target_ap_id)
-    if (user and not user.is_local()) and isinstance(voted_on, Post):
+    if isinstance(voted_on, Post):
         post = voted_on
-        user.last_seen = utcnow()
         existing_vote = PostVote.query.filter_by(user_id=user.id, post_id=post.id).first()
         if existing_vote:
             post.author.reputation -= existing_vote.effect
@@ -1948,8 +1987,9 @@ def undo_vote(activity_log, comment, post, target_ap_id, user):
                 post.up_votes -= 1
             post.score -= existing_vote.effect
             db.session.delete(existing_vote)
-            activity_log.result = 'success'
-    if (user and not user.is_local()) and isinstance(voted_on, PostReply):
+            db.session.commit()
+        return post
+    if isinstance(voted_on, PostReply):
         comment = voted_on
         existing_vote = PostReplyVote.query.filter_by(user_id=user.id, post_reply_id=comment.id).first()
         if existing_vote:
@@ -1960,22 +2000,13 @@ def undo_vote(activity_log, comment, post, target_ap_id, user):
                 comment.up_votes -= 1
             comment.score -= existing_vote.effect
             db.session.delete(existing_vote)
-            activity_log.result = 'success'
-
-    if user is None or (post is None and comment is None):
-        activity_log.exception_message = 'Blocked or unfound user or comment'
-    if user and user.is_local():
-        activity_log.exception_message = 'Activity about local content which is already present'
-        activity_log.result = 'ignored'
-
-    if post:
-        return post
-    if comment:
+            db.session.commit()
         return comment
+
     return None
 
 
-def process_report(user, reported, request_json, activity_log):
+def process_report(user, reported, request_json):
     if len(request_json['summary']) < 15:
         reasons = request_json['summary']
         description = ''
@@ -2265,7 +2296,7 @@ def can_delete(user_ap_id, post):
     return can_edit(user_ap_id, post)
 
 
-def resolve_remote_post(uri: str, community_id: int, announce_actor=None) -> Union[Post, PostReply, None]:
+def resolve_remote_post(uri: str, community_id: int, announce_actor=None, store_ap_json=False) -> Union[Post, PostReply, None]:
     post = Post.query.filter_by(ap_id=uri).first()
     if post:
         return post
@@ -2345,18 +2376,14 @@ def resolve_remote_post(uri: str, community_id: int, announce_actor=None) -> Uni
                 if not community_found:
                     return None
 
-        activity_log = ActivityPubLog(direction='in', activity_id=post_data['id'], activity_type='Resolve Post', result='failure')
-        if site.log_activitypub_json:
-            activity_log.activity_json = json.dumps(post_data)
-        db.session.add(activity_log)
         user = find_actor_or_create(actor)
         if user and community and post_data:
             request_json = {
-              'id': f"https://{uri_domain}/activities/create/gibberish(15)",
+              'id': f"https://{uri_domain}/activities/create/{gibberish(15)}",
               'object': post_data
             }
             if 'inReplyTo' in request_json['object'] and request_json['object']['inReplyTo']:
-                post_reply = create_post_reply(activity_log, community, request_json['object']['inReplyTo'], request_json, user)
+                post_reply = create_post_reply(store_ap_json, community, request_json['object']['inReplyTo'], request_json, user)
                 if post_reply:
                     if 'published' in post_data:
                         post_reply.posted_at = post_data['published']
@@ -2365,7 +2392,7 @@ def resolve_remote_post(uri: str, community_id: int, announce_actor=None) -> Uni
                         db.session.commit()
                     return post_reply
             else:
-                post = create_post(activity_log, community, request_json, user)
+                post = create_post(store_ap_json, community, request_json, user)
                 if post:
                     if 'published' in post_data:
                         post.posted_at=post_data['published']
@@ -2533,3 +2560,59 @@ def inform_followers_of_post_update_task(post_id: int, sending_instance_id: int)
                 post_request(i.inbox, update_json, post.author.private_key, post.author.public_url() + '#main-key')
             except Exception:
                 pass
+
+
+def log_incoming_ap(id, aplog_type, aplog_result, request_json, message=None):
+    aplog_in = APLOG_IN
+
+    if aplog_in and aplog_type[0] and aplog_result[0]:
+        activity_log = ActivityPubLog(direction='in', activity_id=id, activity_type=aplog_type[1], result=aplog_result[1])
+        if message:
+            activity_log.exception_message = message
+        if request_json:
+            activity_log.activity_json = json.dumps(request_json)
+        db.session.add(activity_log)
+        db.session.commit()
+
+
+def find_community_ap_id(request_json):
+    locations = ['audience', 'cc', 'to']
+    if 'object' in request_json and isinstance(request_json['object'], dict):
+        rjs = [request_json, request_json['object']]
+    else:
+        rjs = [request_json]
+    for rj in rjs:
+        for location in locations:
+            if location in rj:
+                potential_id = rj[location]
+                if isinstance(potential_id, str):
+                    if not potential_id.startswith('https://www.w3.org') and not potential_id.endswith('/followers'):
+                        potential_community = Community.query.filter_by(ap_profile_id=potential_id.lower()).first()
+                        if potential_community:
+                            return potential_id
+                if isinstance(potential_id, list):
+                    for c in potential_id:
+                        if not c.startswith('https://www.w3.org') and not c.endswith('/followers'):
+                            potential_community = Community.query.filter_by(ap_profile_id=c.lower()).first()
+                            if potential_community:
+                                return c
+
+    if not 'object' in request_json:
+        return None
+
+    if 'inReplyTo' in request_json['object'] and request_json['object']['inReplyTo'] is not None:
+        post_being_replied_to = Post.query.filter_by(ap_id=request_json['object']['inReplyTo']).first()
+        if post_being_replied_to:
+            return post_being_replied_to.community.ap_profile_id
+        else:
+            comment_being_replied_to = PostReply.query.filter_by(ap_id=request_json['object']['inReplyTo']).first()
+            if comment_being_replied_to:
+                return comment_being_replied_to.community.ap_profile_id
+
+    if request_json['object']['type'] == 'Video': # PeerTube
+        if 'attributedTo' in request_json['object'] and isinstance(request_json['object']['attributedTo'], list):
+            for a in request_json['object']['attributedTo']:
+                if a['type'] == 'Group':
+                    return a['id']
+
+    return None

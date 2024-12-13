@@ -1,0 +1,6 @@
+{% extends 'themes/' + theme() + '/base.html' %}
+
+{% block app_content %}
+  <p class="mb-0">GET <code>/api/alpha/site</code></p>
+  <details><summary>JSON</summary><pre id="site_json"></pre></details>
+{% endblock%}

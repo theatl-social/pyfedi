@@ -1,33 +1,6 @@
 <div class="col post_teaser_body">
-    <h3>{% if post.sticky -%}<span class="fe fe-sticky-left"></span>{% endif -%}<a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None) }}" class="post_teaser_title_a">{{ post.title }}</a>
-        {% if post.domain_id -%}
-            {% if post.url.endswith('.mp3') -%}
-                <span class="fe fe-audio" aria-hidden="true"></span>
-            {% endif -%}
-            <span class="domain_link" aria-hidden="true">(<a href="/d/{{ post.domain_id }}" aria-label="{{ _('All posts about this domain') }}">{{ post.domain.name }}</a>)</span>
-        {% endif -%}
-        {% if post.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif -%}
-        {% if post.nsfl -%}<span class="warning_badge nsfl" title="{{ _('Potentially emotionally scarring content') }}">nsfl</span>{% endif -%}
-        {% if post.reports > 0 and current_user.is_authenticated and post.community.is_moderator(current_user) -%}
-            <span class="red fe fe-report" title="{{ _('Reported. Check post for issues.') }}"></span>
-        {% endif -%}
-        {% if post.sticky -%}<span class="fe fe-sticky-right"></span>{% endif -%}
-        {% if post.deleted -%}<span class="red fe fe-delete" title="{{ _('Post deleted') }}"></span>{% endif -%}
-    </h3>
-    <span class="author small">{% if show_post_community -%}<a href="/c/{{ post.community.link() }}" aria-label="{{ _('Go to community %(name)s', name=post.community.name) }}">
-        {% if post.community.icon_id and not low_bandwidth %}<img class="community_icon_small rounded-circle" src="{{ post.community.icon_image('tiny') }}" alt="Community icon" />{% endif -%}
-        c/{{ post.community.name }}</a>{% endif -%}
-        by {{ render_username(post.author) }} <time datetime="{{ post.last_active }}">{{ post.posted_at_localized(sort, locale) }}</time></span>
-    {% if post.body_html -%}
-        <div class="post_teaser_link_preview small">
-            {{ first_paragraph(post.body_html) | safe }}
-        </div>
-    {% endif -%}
-    {% include "post/post_teaser/_utilities_bar.html" %}
-</div>
-{% if post.image_id -%}
-<div class="col col-2 col_thumbnail">
-        <div class="thumbnail{{ ' lbw' if low_bandwidth }}" aria-hidden="true">
+    {% if post.image_id -%}
+        <div class="col_thumbnail thumbnail{{ ' lbw' if low_bandwidth }}" aria-hidden="true">
             {% if low_bandwidth -%}
                 <a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="{{ _('Follow link') }}"><span class="fe fe-external"></span></a>
             {% else -%}
@@ -35,5 +8,12 @@
                          alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ ' blur' if blur_content }}" /></a>
             {% endif -%}
         </div>
+    {% endif -%}
+    {% include "post/post_teaser/_title.html" %}
+    {% if post.body_html -%}
+        <div class="post_teaser_link_preview small post_teaser_clickable">
+            {{ first_paragraph(post.body_html) | safe }}
+        </div>
+    {% endif -%}
+    {% include "post/post_teaser/_utilities_bar.html" %}
 </div>
-{% endif -%}

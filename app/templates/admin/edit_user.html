@@ -2,7 +2,7 @@
     {% extends 'themes/' + theme() + '/base.html' %}
 {% else %}
     {% extends "base.html" %}
-{% endif %} %}
+{% endif %}
 {% from 'bootstrap/form.html' import render_field %}
 {% set active_child = 'admin_users' %}
 
@@ -26,6 +26,8 @@
             {{ render_field(form.bot) }}
             {{ render_field(form.verified) }}
             {{ render_field(form.banned) }}
+            {{ render_field(form.ban_posts) }}
+            {{ render_field(form.ban_comments) }}
             <p>receive newsletter: {{ user.newsletter }}</p>
             {{ render_field(form.hide_nsfw) }}
             {{ render_field(form.hide_nsfl) }}

@@ -2,7 +2,7 @@
     {% extends 'themes/' + theme() + '/base.html' %}
 {% else %}
     {% extends "base.html" %}
-{% endif %} %}
+{% endif %}
 {% from 'bootstrap/form.html' import render_form %}
 
 {% block app_content %}
@@ -16,6 +16,9 @@
           </ol>
         </nav>
         <h1 class="mt-2">{{ domain.name }}</h1>
+        {% if domain.post_warning -%}
+            <p>{{ domain.post_warning }}</p>
+        {% endif -%}
         <div class="post_list">
             {% for post in posts.items %}
                 {% include 'post/_post_teaser.html' %}

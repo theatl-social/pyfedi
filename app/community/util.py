@@ -16,16 +16,16 @@ from app.activitypub.util import find_actor_or_create, actor_json_to_model, post
 from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO, NOTIF_POST, \
     POST_TYPE_POLL
 from app.models import Community, File, BannedInstances, PostReply, Post, utcnow, CommunityMember, Site, \
-    Instance, Notification, User, ActivityPubLog, NotificationSubscription, PollChoice, Poll
+    Instance, Notification, User, ActivityPubLog, NotificationSubscription, PollChoice, Poll, Tag
 from app.utils import get_request, gibberish, markdown_to_html, domain_from_url, \
     is_image_url, ensure_directory_exists, shorten_string, \
     remove_tracking_from_link, ap_datetime, instance_banned, blocked_phrases, url_to_thumbnail_file, opengraph_parse, \
-    piefed_markdown_to_lemmy_markdown
+    piefed_markdown_to_lemmy_markdown, get_task_session
 from sqlalchemy import func, desc, text
 import os
 
 
-allowed_extensions = ['.gif', '.jpg', '.jpeg', '.png', '.webp', '.heic', '.mpo']
+allowed_extensions = ['.gif', '.jpg', '.jpeg', '.png', '.webp', '.heic', '.mpo', '.avif', '.svg']
 
 
 def search_for_community(address: str):
@@ -170,7 +170,7 @@ def retrieve_mods_and_backfill(community_id: int):
             return
 
         # download 50 old posts
-        if community.ap_public_url:
+        if community.ap_outbox_url:
             outbox_request = get_request(community.ap_outbox_url, headers={'Accept': 'application/activity+json'})
             if outbox_request.status_code == 200:
                 outbox_data = outbox_request.json()
@@ -426,7 +426,7 @@ def save_post(form, post: Post, type: int):
         db.session.add(post)
     else:
         db.session.execute(text('DELETE FROM "post_tag" WHERE post_id = :post_id'), {'post_id': post.id})
-    post.tags = tags_from_string(form.tags.data)
+    post.tags = tags_from_string_old(form.tags.data)
     db.session.commit()
 
     # Save poll choices. NB this will delete all votes whenever a poll is edited. Partially because it's easier to code but also to stop malicious alterations to polls after people have already voted
@@ -497,6 +497,22 @@ def tags_from_string(tags: str) -> List[dict]:
         tag_to_append = find_hashtag_or_create(tag)
         if tag_to_append:
             return_value.append({'type': 'Hashtag', 'name': tag_to_append.name})
+    return return_value
+
+
+def tags_from_string_old(tags: str) -> List[Tag]:
+    return_value = []
+    tags = tags.strip()
+    if tags == '':
+        return []
+    tag_list = tags.split(',')
+    tag_list = [tag.strip() for tag in tag_list]
+    for tag in tag_list:
+        if tag[0] == '#':
+            tag = tag[1:]
+        tag_to_append = find_hashtag_or_create(tag)
+        if tag_to_append:
+            return_value.append(tag_to_append)
     return return_value
 
 
@@ -633,30 +649,38 @@ def save_icon_file(icon_file, directory='communities') -> File:
 
     if file_ext.lower() == '.heic':
         register_heif_opener()
+    elif file_ext.lower() == '.avif':
+        import pillow_avif
 
     # resize if necessary
-    Image.MAX_IMAGE_PIXELS = 89478485
-    img = Image.open(final_place)
-    if '.' + img.format.lower() in allowed_extensions:
-        img = ImageOps.exif_transpose(img)
-        img_width = img.width
-        img_height = img.height
-        if img.width > 250 or img.height > 250:
-            img.thumbnail((250, 250))
-            img.save(final_place)
+    if file_ext.lower() in allowed_extensions:
+        if file_ext.lower() == '.svg':  # svgs don't need to be resized
+            file = File(file_path=final_place, file_name=new_filename + file_ext, alt_text=f'{directory} icon',
+                        thumbnail_path=final_place)
+            db.session.add(file)
+            return file
+        else:
+            Image.MAX_IMAGE_PIXELS = 89478485
+            img = Image.open(final_place)
+            img = ImageOps.exif_transpose(img)
             img_width = img.width
             img_height = img.height
-        # save a second, smaller, version as a thumbnail
-        img.thumbnail((40, 40))
-        img.save(final_place_thumbnail, format="WebP", quality=93)
-        thumbnail_width = img.width
-        thumbnail_height = img.height
+            if img.width > 250 or img.height > 250:
+                img.thumbnail((250, 250))
+                img.save(final_place)
+                img_width = img.width
+                img_height = img.height
+            # save a second, smaller, version as a thumbnail
+            img.thumbnail((40, 40))
+            img.save(final_place_thumbnail, format="WebP", quality=93)
+            thumbnail_width = img.width
+            thumbnail_height = img.height
 
-        file = File(file_path=final_place, file_name=new_filename + file_ext, alt_text=f'{directory} icon',
-                    width=img_width, height=img_height, thumbnail_width=thumbnail_width,
-                    thumbnail_height=thumbnail_height, thumbnail_path=final_place_thumbnail)
-        db.session.add(file)
-        return file
+            file = File(file_path=final_place, file_name=new_filename + file_ext, alt_text=f'{directory} icon',
+                        width=img_width, height=img_height, thumbnail_width=thumbnail_width,
+                        thumbnail_height=thumbnail_height, thumbnail_path=final_place_thumbnail)
+            db.session.add(file)
+            return file
     else:
         abort(400)
 
@@ -679,6 +703,8 @@ def save_banner_file(banner_file, directory='communities') -> File:
 
     if file_ext.lower() == '.heic':
         register_heif_opener()
+    elif file_ext.lower() == '.avif':
+        import pillow_avif
 
     # resize if necessary
     Image.MAX_IMAGE_PIXELS = 89478485
@@ -718,11 +744,12 @@ def send_to_remote_instance(instance_id: int, community_id: int, payload):
 
 @celery.task
 def send_to_remote_instance_task(instance_id: int, community_id: int, payload):
-    community = Community.query.get(community_id)
+    session = get_task_session()
+    community: Community = session.query(Community).get(community_id)
     if community:
-        instance = Instance.query.get(instance_id)
+        instance: Instance = session.query(Instance).get(instance_id)
         if instance.inbox and instance.online() and not instance_banned(instance.domain):
-            if post_request(instance.inbox, payload, community.private_key, community.ap_profile_id + '#main-key') is True:
+            if post_request(instance.inbox, payload, community.private_key, community.ap_profile_id + '#main-key', timeout=10) is True:
                 instance.last_successful_send = utcnow()
                 instance.failures = 0
             else:
@@ -731,7 +758,8 @@ def send_to_remote_instance_task(instance_id: int, community_id: int, payload):
                 instance.start_trying_again = utcnow() + timedelta(seconds=instance.failures ** 4)
                 if instance.failures > 10:
                     instance.dormant = True
-            db.session.commit()
+            session.commit()
+    session.close()
 
 
 def community_in_list(community_id, community_list):

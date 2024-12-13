@@ -8,6 +8,7 @@ import arrow
 from flask import current_app, escape, url_for, render_template_string
 from flask_login import UserMixin, current_user
 from sqlalchemy import or_, text, desc
+from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_babel import _, lazy_gettext as _l
 from sqlalchemy.orm import backref
@@ -51,7 +52,7 @@ class AllowedInstances(db.Model):
 
 class Instance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    domain = db.Column(db.String(256), index=True)
+    domain = db.Column(db.String(256), index=True, unique=True)
     inbox = db.Column(db.String(256))
     shared_inbox = db.Column(db.String(256))
     outbox = db.Column(db.String(256))
@@ -134,10 +135,18 @@ class InstanceRole(db.Model):
     user = db.relationship('User', lazy='joined')
 
 
+# Instances that this user has blocked
 class InstanceBlock(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
     instance_id = db.Column(db.Integer, db.ForeignKey('instance.id'), primary_key=True)
     created_at = db.Column(db.DateTime, default=utcnow)
+
+
+# Instances that have banned this user
+class InstanceBan(db.Model):
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    instance_id = db.Column(db.Integer, db.ForeignKey('instance.id'), primary_key=True)
+    banned_until = db.Column(db.DateTime)
 
 
 class Conversation(db.Model):
@@ -225,6 +234,11 @@ class Tag(db.Model):
     banned = db.Column(db.Boolean, default=False, index=True)
 
 
+class Licence(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50))
+
+
 class Language(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     code = db.Column(db.String(5), index=True)
@@ -262,7 +276,8 @@ class File(db.Model):
                 return self.source_url
         elif self.file_path:
             file_path = self.file_path[4:] if self.file_path.startswith('app/') else self.file_path
-            return f"https://{current_app.config['SERVER_NAME']}/{file_path}"
+            scheme = 'http' if current_app.config['SERVER_NAME'] == '127.0.0.1:5000' else 'https'
+            return f"{scheme}://{current_app.config['SERVER_NAME']}/{file_path}"
         else:
             return ''
 
@@ -270,7 +285,8 @@ class File(db.Model):
         if self.file_path is None:
             return self.thumbnail_url()
         file_path = self.file_path[4:] if self.file_path.startswith('app/') else self.file_path
-        return f"https://{current_app.config['SERVER_NAME']}/{file_path}"
+        scheme = 'http' if current_app.config['SERVER_NAME'] == '127.0.0.1:5000' else 'https'
+        return f"{scheme}://{current_app.config['SERVER_NAME']}/{file_path}"
 
     def thumbnail_url(self):
         if self.thumbnail_path is None:
@@ -279,7 +295,8 @@ class File(db.Model):
             else:
                 return ''
         thumbnail_path = self.thumbnail_path[4:] if self.thumbnail_path.startswith('app/') else self.thumbnail_path
-        return f"https://{current_app.config['SERVER_NAME']}/{thumbnail_path}"
+        scheme = 'http' if current_app.config['SERVER_NAME'] == '127.0.0.1:5000' else 'https'
+        return f"{scheme}://{current_app.config['SERVER_NAME']}/{thumbnail_path}"
 
     def delete_from_disk(self):
         purge_from_cache = []
@@ -366,6 +383,7 @@ class Topic(db.Model):
     name = db.Column(db.String(50))
     num_communities = db.Column(db.Integer, default=0)
     parent_id = db.Column(db.Integer)
+    show_posts_in_children = db.Column(db.Boolean, default=False)
     communities = db.relationship('Community', lazy='dynamic', backref='topic', cascade="all, delete-orphan")
 
     def path(self):
@@ -417,7 +435,7 @@ class Community(db.Model):
     posting_warning = db.Column(db.String(512))
 
     ap_id = db.Column(db.String(255), index=True)
-    ap_profile_id = db.Column(db.String(255), index=True)
+    ap_profile_id = db.Column(db.String(255), index=True, unique=True)
     ap_followers_url = db.Column(db.String(255))
     ap_preferred_username = db.Column(db.String(255))
     ap_discoverable = db.Column(db.Boolean, default=False)
@@ -438,7 +456,6 @@ class Community(db.Model):
     private_mods = db.Column(db.Boolean, default=False)
 
     # Which feeds posts from this community show up in
-    show_home = db.Column(db.Boolean, default=False)        # For anonymous users. When logged in, the home feed shows posts from subscribed communities
     show_popular = db.Column(db.Boolean, default=True)
     show_all = db.Column(db.Boolean, default=True)
 
@@ -613,6 +630,7 @@ class Community(db.Model):
         db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == self.id).delete()
         db.session.query(CommunityMember).filter(CommunityMember.community_id == self.id).delete()
         db.session.query(Report).filter(Report.suspect_community_id == self.id).delete()
+        db.session.query(ModLog).filter(ModLog.community_id == self.id).delete()
 
 
 user_role = db.Table('user_role',
@@ -639,7 +657,10 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(128))
     verified = db.Column(db.Boolean, default=False)
     verification_token = db.Column(db.String(16), index=True)
-    banned = db.Column(db.Boolean, default=False)
+    banned = db.Column(db.Boolean, default=False, index=True)
+    banned_until = db.Column(db.DateTime)   # null == permanent ban
+    ban_posts = db.Column(db.Boolean, default=False)
+    ban_comments = db.Column(db.Boolean, default=False)
     deleted = db.Column(db.Boolean, default=False)
     deleted_by = db.Column(db.Integer, index=True)
     about = db.Column(db.Text)      # markdown
@@ -691,7 +712,7 @@ class User(UserMixin, db.Model):
     conversations = db.relationship('Conversation', lazy='dynamic', secondary=conversation_member, backref=db.backref('members', lazy='joined'))
 
     ap_id = db.Column(db.String(255), index=True)           # e.g. username@server
-    ap_profile_id = db.Column(db.String(255), index=True)   # e.g. https://server/u/username
+    ap_profile_id = db.Column(db.String(255), index=True, unique=True)   # e.g. https://server/u/username
     ap_public_url = db.Column(db.String(255))               # e.g. https://server/u/UserName
     ap_fetched_at = db.Column(db.DateTime)
     ap_followers_url = db.Column(db.String(255))
@@ -890,20 +911,21 @@ class User(UserMixin, db.Model):
 
     def recalculate_attitude(self):
         upvotes = downvotes = 0
-        last_50_votes = PostVote.query.filter(PostVote.user_id == self.id).order_by(-PostVote.id).limit(50)
-        for vote in last_50_votes:
-            if vote.effect > 0:
-                upvotes += 1
-            if vote.effect < 0:
-                downvotes += 1
+        with db.session.no_autoflush:  # Avoid StaleDataError exception
+            last_50_votes = PostVote.query.filter(PostVote.user_id == self.id).order_by(-PostVote.id).limit(50)
+            for vote in last_50_votes:
+                if vote.effect > 0:
+                    upvotes += 1
+                if vote.effect < 0:
+                    downvotes += 1
 
-        comment_upvotes = comment_downvotes = 0
-        last_50_votes = PostReplyVote.query.filter(PostReplyVote.user_id == self.id).order_by(-PostReplyVote.id).limit(50)
-        for vote in last_50_votes:
-            if vote.effect > 0:
-                comment_upvotes += 1
-            if vote.effect < 0:
-                comment_downvotes += 1
+            comment_upvotes = comment_downvotes = 0
+            last_50_votes = PostReplyVote.query.filter(PostReplyVote.user_id == self.id).order_by(-PostReplyVote.id).limit(50)
+            for vote in last_50_votes:
+                if vote.effect > 0:
+                    comment_upvotes += 1
+                if vote.effect < 0:
+                    comment_downvotes += 1
 
         total_upvotes = upvotes + comment_upvotes
         total_downvotes = downvotes + comment_downvotes
@@ -999,6 +1021,7 @@ class User(UserMixin, db.Model):
         db.session.query(PollChoiceVote).filter(PollChoiceVote.user_id == self.id).delete()
         db.session.query(PostBookmark).filter(PostBookmark.user_id == self.id).delete()
         db.session.query(PostReplyBookmark).filter(PostReplyBookmark.user_id == self.id).delete()
+        db.session.query(ModLog).filter(ModLog.user_id == self.id).delete()
 
     def purge_content(self, soft=True):
         files = File.query.join(Post).filter(Post.user_id == self.id).all()
@@ -1073,6 +1096,7 @@ class Post(db.Model):
     image_id = db.Column(db.Integer, db.ForeignKey('file.id'), index=True)
     domain_id = db.Column(db.Integer, db.ForeignKey('domain.id'), index=True)
     instance_id = db.Column(db.Integer, db.ForeignKey('instance.id'), index=True)
+    licence_id = db.Column(db.Integer, db.ForeignKey('licence.id'), index=True)
     slug = db.Column(db.String(255))
     title = db.Column(db.String(255))
     url = db.Column(db.String(2048))
@@ -1106,7 +1130,7 @@ class Post(db.Model):
     cross_posts = db.Column(MutableList.as_mutable(ARRAY(db.Integer)))
     tags = db.relationship('Tag', lazy='dynamic', secondary=post_tag, backref=db.backref('posts', lazy='dynamic'))
 
-    ap_id = db.Column(db.String(255), index=True)
+    ap_id = db.Column(db.String(255), index=True, unique=True)
     ap_create_id = db.Column(db.String(100))
     ap_announce_id = db.Column(db.String(100))
 
@@ -1118,6 +1142,7 @@ class Post(db.Model):
     community = db.relationship('Community', lazy='joined', overlaps='posts', foreign_keys=[community_id])
     replies = db.relationship('PostReply', lazy='dynamic', backref='post')
     language = db.relationship('Language', foreign_keys=[language_id])
+    licence = db.relationship('Licence', foreign_keys=[licence_id])
 
     # db relationship tracked by the "read_posts" table
     # this is the Post side, so its referencing the User side
@@ -1129,12 +1154,12 @@ class Post(db.Model):
 
     @classmethod
     def get_by_ap_id(cls, ap_id):
-        return cls.query.filter_by(ap_id=ap_id).first()
+        return cls.query.filter_by(ap_id=ap_id.lower()).first()
 
     @classmethod
     def new(cls, user: User, community: Community, request_json: dict, announce_id=None):
         from app.activitypub.util import instance_weight, find_language_or_create, find_language, find_hashtag_or_create, \
-            make_image_sizes, notify_about_post
+            find_licence_or_create, make_image_sizes, notify_about_post
         from app.utils import allowlist_html, markdown_to_html, html_to_text, microblog_content_to_title, blocked_phrases, \
             is_image_url, is_video_url, domain_from_url, opengraph_parse, shorten_string, remove_tracking_from_link, \
             is_video_hosting_site, communities_banned_from
@@ -1155,7 +1180,7 @@ class Post(db.Model):
                     sticky=request_json['object']['stickied'] if 'stickied' in request_json['object'] else False,
                     nsfw=request_json['object']['sensitive'] if 'sensitive' in request_json['object'] else False,
                     nsfl=request_json['object']['nsfl'] if 'nsfl' in request_json['object'] else nsfl_in_title,
-                    ap_id=request_json['object']['id'],
+                    ap_id=request_json['object']['id'].lower(),
                     ap_create_id=request_json['id'],
                     ap_announce_id=announce_id,
                     up_votes=1,
@@ -1205,8 +1230,10 @@ class Post(db.Model):
                 if blocked_phrase in post.body:
                     return None
 
-        if 'attachment' in request_json['object'] and len(request_json['object']['attachment']) > 0 and \
-                'type' in request_json['object']['attachment'][0]:
+        if ('attachment' in request_json['object'] and
+            isinstance(request_json['object']['attachment'], list) and
+            len(request_json['object']['attachment']) > 0 and
+            'type' in request_json['object']['attachment'][0]):
             alt_text = None
             if request_json['object']['attachment'][0]['type'] == 'Link':
                 post.url = request_json['object']['attachment'][0]['href']  # Lemmy < 0.19.4
@@ -1218,46 +1245,46 @@ class Post(db.Model):
                 post.url = request_json['object']['attachment'][0]['url']  # PixelFed, PieFed, Lemmy >= 0.19.4
                 if 'name' in request_json['object']['attachment'][0]:
                     alt_text = request_json['object']['attachment'][0]['name']
-            if post.url:
-                if is_image_url(post.url):
-                    post.type = constants.POST_TYPE_IMAGE
-                    if 'image' in request_json['object'] and 'url' in request_json['object']['image']:
-                        image = File(source_url=request_json['object']['image']['url'])
-                    else:
-                        image = File(source_url=post.url)
-                    if alt_text:
-                        image.alt_text = alt_text
-                    db.session.add(image)
-                    post.image = image
-                elif is_video_url(post.url):  # youtube is detected later
-                    post.type = constants.POST_TYPE_VIDEO
-                    image = File(source_url=post.url)
-                    db.session.add(image)
-                    post.image = image
-                else:
-                    post.type = constants.POST_TYPE_LINK
-                domain = domain_from_url(post.url)
-                # notify about links to banned websites.
-                already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
-                if domain.notify_mods:
-                    for community_member in post.community.moderators():
-                        notify = Notification(title='Suspicious content', url=post.ap_id,
-                                              user_id=community_member.user_id,
+
+        if 'attachment' in request_json['object'] and isinstance(request_json['object']['attachment'], dict):  # a.gup.pe (Mastodon)
+            alt_text = None
+            post.url = request_json['object']['attachment']['url']
+
+        if post.url:
+            if is_image_url(post.url):
+                post.type = constants.POST_TYPE_IMAGE
+                image = File(source_url=post.url)
+                if alt_text:
+                    image.alt_text = alt_text
+                db.session.add(image)
+                post.image = image
+            elif is_video_url(post.url):  # youtube is detected later
+                post.type = constants.POST_TYPE_VIDEO
+                # custom thumbnails will be added below in the "if 'image' in request_json['object'] and post.image is None:" section
+            else:
+                post.type = constants.POST_TYPE_LINK
+            domain = domain_from_url(post.url)
+            # notify about links to banned websites.
+            already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
+            if domain.notify_mods:
+                for community_member in post.community.moderators():
+                    notify = Notification(title='Suspicious content', url=post.ap_id,
+                                          user_id=community_member.user_id,
+                                          author_id=user.id)
+                    db.session.add(notify)
+                    already_notified.add(community_member.user_id)
+            if domain.notify_admins:
+                for admin in Site.admins():
+                    if admin.id not in already_notified:
+                        notify = Notification(title='Suspicious content',
+                                              url=post.ap_id, user_id=admin.id,
                                               author_id=user.id)
                         db.session.add(notify)
-                        already_notified.add(community_member.user_id)
-                if domain.notify_admins:
-                    for admin in Site.admins():
-                        if admin.id not in already_notified:
-                            notify = Notification(title='Suspicious content',
-                                                  url=post.ap_id, user_id=admin.id,
-                                                  author_id=user.id)
-                            db.session.add(notify)
-                if domain.banned or domain.name.endswith('.pages.dev'):
-                    raise Exception(domain.name + ' is blocked by admin')
-                else:
-                    domain.post_count += 1
-                    post.domain = domain
+            if domain.banned or domain.name.endswith('.pages.dev'):
+                raise Exception(domain.name + ' is blocked by admin')
+            else:
+                domain.post_count += 1
+                post.domain = domain
 
         if post is not None:
             if request_json['object']['type'] == 'Video':
@@ -1272,10 +1299,13 @@ class Post(db.Model):
             if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
                 language = find_language_or_create(request_json['object']['language']['identifier'],
                                                    request_json['object']['language']['name'])
-                post.language_id = language.id
+                post.language = language
             elif 'contentMap' in request_json['object'] and isinstance(request_json['object']['contentMap'], dict):
                 language = find_language(next(iter(request_json['object']['contentMap'])))
                 post.language_id = language.id if language else None
+            if 'licence' in request_json['object'] and isinstance(request_json['object']['licence'], dict):
+                licence = find_licence_or_create(request_json['object']['licence']['name'])
+                post.licence = licence
             if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
                 for json_tag in request_json['object']['tag']:
                     if json_tag and json_tag['type'] == 'Hashtag':
@@ -1313,7 +1343,11 @@ class Post(db.Model):
             community.post_count += 1
             community.last_active = utcnow()
             user.post_count += 1
-            db.session.commit()
+            try:
+                db.session.commit()
+            except IntegrityError:
+                db.session.rollback()
+                return Post.query.filter_by(ap_id=request_json['object']['id'].lower()).one()
 
             # Polls need to be processed quite late because they need a post_id to refer to
             if request_json['object']['type'] == 'Question':
@@ -1614,7 +1648,7 @@ class PostReply(db.Model):
     edited_at = db.Column(db.DateTime)
     reports = db.Column(db.Integer, default=0)  # how many times this post has been reported. Set to -1 to ignore reports
 
-    ap_id = db.Column(db.String(255), index=True)
+    ap_id = db.Column(db.String(255), index=True, unique=True)
     ap_create_id = db.Column(db.String(100))
     ap_announce_id = db.Column(db.String(100))
 
@@ -1633,6 +1667,9 @@ class PostReply(db.Model):
         if not post.comments_enabled:
             raise Exception('Comments are disabled on this post')
 
+        if user.ban_comments:
+            raise Exception('Banned from commenting')
+
         if in_reply_to is not None:
             parent_id = in_reply_to.id
             depth = in_reply_to.depth + 1
@@ -1647,7 +1684,7 @@ class PostReply(db.Model):
                           from_bot=user.bot, nsfw=post.nsfw, nsfl=post.nsfl,
                           notify_author=notify_author, instance_id=user.instance_id,
                           language_id=language_id,
-                          ap_id=request_json['object']['id'] if request_json else None,
+                          ap_id=request_json['object']['id'].lower() if request_json else None,
                           ap_create_id=request_json['id'] if request_json else None,
                           ap_announce_id=announce_id)
         if reply.body:
@@ -1672,8 +1709,12 @@ class PostReply(db.Model):
         if reply_is_stupid(reply.body):
             raise Exception('Low quality reply')
 
-        db.session.add(reply)
-        db.session.commit()
+        try:
+            db.session.add(reply)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            return PostReply.query.filter_by(ap_id=request_json['object']['id'].lower()).one()
 
         # Notify subscribers
         notify_about_post_reply(in_reply_to, reply)
@@ -1729,7 +1770,7 @@ class PostReply(db.Model):
 
     @classmethod
     def get_by_ap_id(cls, ap_id):
-        return cls.query.filter_by(ap_id=ap_id).first()
+        return cls.query.filter_by(ap_id=ap_id.lower()).first()
 
     def profile_id(self):
         if self.ap_id:
@@ -1880,12 +1921,12 @@ class PostReply(db.Model):
                                  effect=effect)
             self.author.reputation += effect
             db.session.add(vote)
+        db.session.commit()
         user.last_seen = utcnow()
         self.ranking = PostReply.confidence(self.up_votes, self.down_votes)
         user.recalculate_attitude()
         db.session.commit()
         return undo
-
 
 
 class Domain(db.Model):
@@ -1895,6 +1936,7 @@ class Domain(db.Model):
     banned = db.Column(db.Boolean, default=False, index=True) # Domains can be banned site-wide (by admin) or DomainBlock'ed by users
     notify_mods = db.Column(db.Boolean, default=False, index=True)
     notify_admins = db.Column(db.Boolean, default=False, index=True)
+    post_warning = db.Column(db.String(512))
 
     def blocked_by(self, user):
         block = DomainBlock.query.filter_by(domain_id=self.id, user_id=user.id).first()
@@ -1988,7 +2030,8 @@ class CommunityBan(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)             # person who is banned, not the banner
     community_id = db.Column(db.Integer, db.ForeignKey('community.id'), primary_key=True)
     banned_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    reason = db.Column(db.String(50))
+    banned_until = db.Column(db.DateTime)
+    reason = db.Column(db.String(256))
     created_at = db.Column(db.DateTime, default=utcnow)
     ban_until = db.Column(db.DateTime)
 
@@ -2045,7 +2088,7 @@ class UserRegistration(db.Model):
 class PostVote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
-    author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    author_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), index=True)
     effect = db.Column(db.Float, index=True)
     created_at = db.Column(db.DateTime, default=utcnow)
@@ -2055,7 +2098,7 @@ class PostVote(db.Model):
 class PostReplyVote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)   # who voted
-    author_id = db.Column(db.Integer, db.ForeignKey('user.id')) # the author of the reply voted on - who's reputation is affected
+    author_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True) # the author of the reply voted on - who's reputation is affected
     post_reply_id = db.Column(db.Integer, db.ForeignKey('post_reply.id'), index=True)
     effect = db.Column(db.Float)
     created_at = db.Column(db.DateTime, default=utcnow)
@@ -2239,6 +2282,8 @@ class ModLog(db.Model):
         'undelete_user': _l('Restored account'),
         'ban_user': _l('Banned account'),
         'unban_user': _l('Un-banned account'),
+        'lock_post': _l('Lock post'),
+        'unlock_post': _l('Un-lock post'),
     }
 
     def action_to_str(self):

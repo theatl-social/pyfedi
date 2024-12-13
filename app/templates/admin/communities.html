@@ -2,7 +2,7 @@
     {% extends 'themes/' + theme() + '/base.html' %}
 {% else %}
     {% extends "base.html" %}
-{% endif %} %}
+{% endif %}
 {% from 'bootstrap/form.html' import render_form %}
 {% set active_child = 'admin_communities' %}
 
@@ -19,12 +19,10 @@
         <table class="table table-striped">
             <tr>
                <th>Name</th>
-               <th>Title</th>
                <th>Topic</th>
                <th>#&nbsp;Posts</th>
                <th>Retention</th>
                <th>Layout</th>
-               <th title="{{ _('Posts show on home page.') }}">Home</th>
                <th title="{{ _('Posts can be popular.') }}">Popular</th>
                <th title="{{ _('Posts show in the All feed.') }}">All</th>
                <th title="{{ _('Content warning, NSFW or NSFL set for community.') }}">Warning</th>
@@ -32,13 +30,12 @@
             </tr>
             {% for community in communities.items %}
                 <tr>
-                    <td><a href="/c/{{ community.link() }}">{{ community.name }}</a></td>
-                    <td>{{ render_communityname(community) }}{% if community.banned %} (banned){% endif %}</td>
+                    <td>{{ render_communityname(community, add_domain=False) }}{% if community.banned %} (banned){% endif %}<br />
+                    !<a href="/c/{{ community.link() }}">{{ community.name }}</a><wbr />@<a href="{{ community.ap_profile_id }}">{{ community.ap_domain }}</a></td>
                     <td>{{ community.topic.name  }}</td>
                     <td>{{ community.post_count  }}</td>
                     <td>{{ community.content_retention if community.content_retention != -1 }}</td>
                     <td>{{ community.default_layout if community.default_layout }}</td>
-                    <th>{{ '&check;'|safe if community.show_home else '&cross;'|safe }}</th>
                     <th>{{ '&check;'|safe if community.show_popular else '&cross;'|safe }}</th>
                     <th>{{ '&check;'|safe if community.show_all else '&cross;'|safe }}</th>
                     <th>{{ '&#x26A0;'|safe if community.nsfw or community.nsfl or community.content_warning else ''|safe }}</th>

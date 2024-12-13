@@ -16,6 +16,7 @@
           </ol>
         </nav>
         <h1>{{ _('Read posts') }}</h1>
+        {% include "user/_read_posts_nav.html" -%}
         {% if posts %}
             <div class="post_list">
                 {% for post in posts.items -%}

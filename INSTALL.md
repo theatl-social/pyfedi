@@ -114,7 +114,8 @@ pip install -r requirements.txt
 
 ### Extra info
 
-* `SERVER_NAME` should be the domain of the site/instance. Use `127.0.0.1:5000` during development unless using ngrok.
+* `SERVER_NAME` should be the domain of the site/instance. Use `127.0.0.1:5000` during development unless using ngrok. Just use the bare
+domain name, without https:// on the front or a slash on the end.
 * `RECAPTCHA_PUBLIC_KEY` and `RECAPTCHA_PRIVATE_KEY` can be generated at https://www.google.com/recaptcha/admin/create (this is optional - omit to allow registration without RECAPCHA).
 * `CACHE_TYPE` can be `FileSystemCache` or `RedisCache`. `FileSystemCache` is fine during development (set `CACHE_DIR` to `/tmp/piefed` or `/dev/shm/piefed`)
 while `RedisCache` **should** be used in production. If using `RedisCache`, set `CACHE_REDIS_URL` to `redis://localhost:6379/1`. Visit https://yourdomain/testredis to check if your redis url is working.
@@ -170,6 +171,8 @@ flask run
 ```
 (open web browser at http://127.0.0.1:5000)          
 (log in with username and password from admin account)
+
+For development purposes, that should be enough - see ./dev_notes.txt for a few more bits and pieces. Most of what follows is for running PieFed in production.
 
 <div id="database-management"></div>
 
@@ -245,11 +248,13 @@ also [see this](https://pganalyze.com/blog/5mins-postgres-tuning-huge-pages).
 To assess whether to accept a registration application it can be helpful to know the country of the applicant. This can be
 automatically discovered by using [the ipinfo service](https://ipinfo.io/) - register with them to get an API token and put it into your .env file.
 
+If the search function is not returning any results, you need to [add some database triggers](https://codeberg.org/rimu/pyfedi/issues/358#issuecomment-2475019).
+
 <div id="background-services"></div>
 
 ### Background services
 
-Gunicorn and Celery need to run as background services:
+In production, Gunicorn and Celery need to run as background services:
 
 #### Gunicorn
 

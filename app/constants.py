@@ -36,3 +36,37 @@ ROLE_STAFF = 3
 ROLE_ADMIN = 4
 
 MICROBLOG_APPS = ["mastodon", "misskey", "akkoma", "iceshrimp", "pleroma"]
+
+APLOG_IN            = True
+
+APLOG_MONITOR       = (True, 'Debug this')
+
+APLOG_SUCCESS       = (True, 'success')
+APLOG_FAILURE       = (True, 'failure')
+APLOG_IGNORED       = (True, 'ignored')
+APLOG_PROCESSING    = (True, 'processing')
+
+APLOG_NOTYPE        = (True, 'Unknown')
+APLOG_DUPLICATE     = (True, 'Duplicate')
+APLOG_FOLLOW        = (True, 'Follow')
+APLOG_ACCEPT        = (True, 'Accept')
+APLOG_DELETE        = (True, 'Delete')
+APLOG_CHATMESSAGE   = (True, 'Create ChatMessage')
+APLOG_CREATE        = (True, 'Create')
+APLOG_UPDATE        = (True, 'Update')
+APLOG_LIKE          = (True, 'Like')
+APLOG_DISLIKE       = (True, 'Dislike')
+APLOG_REPORT        = (True, 'Report')
+APLOG_USERBAN       = (True, 'User Ban')
+APLOG_LOCK          = (True, 'Post Lock')
+
+APLOG_UNDO_FOLLOW   = (True, 'Undo Follow')
+APLOG_UNDO_DELETE   = (True, 'Undo Delete')
+APLOG_UNDO_VOTE     = (True, 'Undo Vote')
+APLOG_UNDO_USERBAN  = (True, 'Undo User Ban')
+
+APLOG_ADD           = (True, 'Add Mod/Sticky')
+APLOG_REMOVE        = (True, 'Remove Mod/Sticky')
+
+APLOG_ANNOUNCE      = (True, 'Announce')
+APLOG_PT_VIEW       = (True, 'PeerTube View')

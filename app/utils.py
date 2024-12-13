@@ -28,6 +28,7 @@ from flask import current_app, json, redirect, url_for, request, make_response, 
 from flask_babel import _
 from flask_login import current_user, logout_user
 from sqlalchemy import text, or_
+from sqlalchemy.orm import Session
 from wtforms.fields  import SelectField, SelectMultipleField
 from wtforms.widgets import Select, html_params, ListWidget, CheckboxInput
 from app import db, cache, httpx_client
@@ -186,7 +187,7 @@ def make_cache_key(sort=None, post_id=None, view_filter=None):
 
 
 def is_image_url(url):
-    common_image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp']
+    common_image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.avif', '.svg+xml', '.svg+xml; charset=utf-8']
     mime_type = mime_type_using_head(url)
     if mime_type:
         mime_type_parts = mime_type.split('/')
@@ -231,6 +232,8 @@ def mime_type_using_head(url):
         response.raise_for_status()  # Raise an exception for HTTP errors
         content_type = response.headers.get('Content-Type')
         if content_type:
+            if content_type == 'application/octet-stream':
+                return ''
             return content_type
         else:
             return ''
@@ -331,6 +334,10 @@ def allowlist_html(html: str, a_target='_blank') -> str:
     re_embedded_mp3 = re.compile(r'<img .*?src="(https://.*?\.mp3)".*?/>')
     clean_html = re_embedded_mp3.sub(r'<audio controls><source src="\1" type="audio/mp3"></audio>', clean_html)
 
+    # replace the 'static' for images hotlinked to fandom sites with 'vignette'
+    re_fandom_hotlink = re.compile(r'<img alt="(.*?)" loading="lazy" src="https://static.wikia.nocookie.net')
+    clean_html = re_fandom_hotlink.sub(r'<img alt="\1" loading="lazy" src="https://vignette.wikia.nocookie.net', clean_html)
+
     return clean_html
 
 
@@ -419,9 +426,16 @@ def microblog_content_to_title(html: str) -> str:
 
 def first_paragraph(html):
     soup = BeautifulSoup(html, 'html.parser')
-    first_paragraph = soup.find('p')
-    if first_paragraph:
-        return f'<p>{first_paragraph.text}</p>'
+    first_para = soup.find('p')
+    if first_para:
+        if first_para.text.strip() == 'Summary' or \
+                first_para.text.strip() == '*Summary*' or \
+                first_para.text.strip() == 'Comments' or \
+                first_para.text.lower().startswith('cross-posted from:'):
+            second_paragraph = first_para.find_next('p')
+            if second_paragraph:
+                return f'<p>{second_paragraph.text}</p>'
+        return f'<p>{first_para.text}</p>'
     else:
         return ''
 
@@ -699,6 +713,9 @@ def can_create_post(user, content: Community) -> bool:
     if user is None or content is None or user.banned:
         return False
 
+    if user.ban_posts:
+        return False
+
     if content.is_moderator(user) or user.is_admin():
         return True
 
@@ -716,6 +733,9 @@ def can_create_post(user, content: Community) -> bool:
 
 def can_create_post_reply(user, content: Community) -> bool:
     if user is None or content is None or user.banned:
+        return False
+
+    if user.ban_comments:
         return False
 
     if content.is_moderator(user) or user.is_admin():
@@ -1028,6 +1048,8 @@ def theme_list():
         for dir in dirs:
             if os.path.exists(f'app/templates/themes/{dir}/{dir}.json'):
                 theme_settings = json.loads(file_get_contents(f'app/templates/themes/{dir}/{dir}.json'))
+                if 'debug' in theme_settings and theme_settings['debug'] == True and not current_app.debug:
+                  continue
                 result.append((dir, theme_settings['name']))
     return result
 
@@ -1267,3 +1289,9 @@ def authorise_api_user(auth, return_type=None, id_match=None):
 def community_ids_from_instances(instance_ids) -> List[int]:
     communities = Community.query.join(Instance, Instance.id == Community.instance_id).filter(Instance.id.in_(instance_ids))
     return [community.id for community in communities]
+
+
+# Set up a new SQLAlchemy session specifically for Celery tasks
+def get_task_session() -> Session:
+    # Use the same engine as the main app, but create an independent session
+    return Session(bind=db.engine)

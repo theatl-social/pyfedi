@@ -16,10 +16,14 @@
             <a href="/communities/local" aria-label="{{ _('Communities on this server') }}" class="btn {{ 'btn-primary' if request.path == '/communities/local' else 'btn-outline-secondary' }}">
                 {{ _('Local') }}
             </a>
+            {% if current_user.is_authenticated -%}
             <a href="/communities/subscribed" aria-label="{{ _('Joined communities') }}" class="btn {{ 'btn-primary' if request.path == '/communities/subscribed' else 'btn-outline-secondary' }}">
                 {{ _('Joined') }}
             </a>
-
+            <a href="/communities/notsubscribed" aria-label="{{ _('Not Joined communities') }}" class="btn {{ 'btn-primary' if request.path == '/communities/notsubscribed' else 'btn-outline-secondary' }}">
+                {{ _('Not Joined') }}
+            </a>
+            {% endif -%}
         </div>
     </div>
     <div class="col-auto">

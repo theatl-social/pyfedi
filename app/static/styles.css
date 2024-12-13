@@ -197,7 +197,6 @@
 }
 
 .fe-reply {
-  margin-right: 2px;
   margin-top: -1px;
 }
 
@@ -783,11 +782,9 @@ div.navbar {
   max-width: 78%;
 }
 .post_list .post_teaser .col_thumbnail {
+  float: right;
   width: 70px;
   position: relative;
-  padding-left: 0;
-  padding-right: 0;
-  left: -13px;
 }
 @media (min-width: 992px) {
   .post_list .post_teaser .col_thumbnail {
@@ -796,13 +793,18 @@ div.navbar {
 }
 .post_list .post_teaser .thumbnail {
   text-align: center;
-  height: 100%;
   align-content: center;
   display: flex;
+  height: 60px;
+  width: 60px;
+  overflow: hidden;
 }
 @media (min-width: 992px) {
   .post_list .post_teaser .thumbnail {
     align-items: center;
+    height: 90px;
+    width: 170px;
+    max-width: 100%;
   }
 }
 .post_list .post_teaser .thumbnail a {
@@ -862,10 +864,12 @@ div.navbar {
 .post_list .post_teaser.blocked .voting_buttons .upvote_button, .post_list .post_teaser.blocked .voting_buttons .downvote_button {
   font-size: 80%;
 }
+.post_list .post_teaser .post_teaser_clickable {
+  cursor: pointer;
+}
 
 .post_teaser_body {
   position: relative;
-  padding-bottom: 32px;
 }
 
 .post_teaser_article_preview, .post_teaser_link_preview {
@@ -889,7 +893,6 @@ div.navbar {
 .post_teaser_image_preview {
   text-align: center;
   margin-top: 10px;
-  margin-bottom: 10px;
 }
 .post_teaser_image_preview a {
   display: inline-block;
@@ -897,6 +900,7 @@ div.navbar {
 }
 .post_teaser_image_preview img {
   max-width: 100%;
+  min-width: 150px;
   margin-right: 4px;
   border-radius: 5px;
   height: auto;
@@ -905,7 +909,6 @@ div.navbar {
 .post_teaser_video_preview {
   text-align: center;
   margin-top: 10px;
-  margin-bottom: 10px;
   position: relative;
 }
 .post_teaser_video_preview .fe-video {
@@ -948,7 +951,6 @@ time {
 
 .author {
   padding-left: 3px;
-  display: inline-block;
 }
 .author a {
   border-left: 0;
@@ -958,12 +960,6 @@ time {
   max-width: 512px;
   display: inline-block;
   width: 100%;
-}
-
-.post_utilities_bar_wrapper {
-  position: absolute;
-  bottom: -9px;
-  width: 97%;
 }
 
 .post_utilities_bar {
@@ -977,38 +973,16 @@ time {
     justify-content: left;
   }
 }
-.post_utilities_bar .cross_post_button {
+.post_utilities_bar div {
   display: flex;
-  justify-content: left;
+  justify-content: center;
   align-items: center;
-  width: 44px;
-  height: 44px;
-  line-height: 44px;
-  padding: 3px;
-  padding-left: 0;
-}
-.post_utilities_bar .post_replies_link {
-  display: flex;
   min-width: 44px;
   height: 44px;
-  padding: 3px;
-  align-items: center;
-  margin-left: -3px;
+  line-height: 44px;
 }
-.post_utilities_bar .voting_buttons_new {
-  display: flex;
-  height: 44px;
-  padding: 3px;
-  justify-content: center;
-  align-items: center;
-}
-.post_utilities_bar .post_cross_post_link, .post_utilities_bar .post_options_link, .post_utilities_bar .preview_image {
-  display: flex;
-  width: 44px;
-  height: 44px;
-  padding: 3px;
-  justify-content: center;
-  align-items: center;
+.post_utilities_bar .notify_toggle {
+  margin-left: auto; /* pull right */
 }
 
 .post_full .post_utilities_bar .voting_buttons_new {
@@ -1204,9 +1178,6 @@ time {
   height: auto;
 }
 
-.voting_buttons_new {
-  display: inline-block;
-}
 .voting_buttons_new .upvote_button, .voting_buttons_new .downvote_button {
   position: relative; /* so the htmx-indicators can be position: absolute */
   display: inline-block;
@@ -1230,10 +1201,14 @@ time {
 }
 .voting_buttons_new .upvote_button.voted_up, .voting_buttons_new .downvote_button.voted_up {
   color: green;
+}
+.voting_buttons_new .upvote_button.voted_up .fe, .voting_buttons_new .downvote_button.voted_up .fe {
   font-weight: bold;
 }
 .voting_buttons_new .upvote_button.voted_down, .voting_buttons_new .downvote_button.voted_down {
   color: darkred;
+}
+.voting_buttons_new .upvote_button.voted_down .fe, .voting_buttons_new .downvote_button.voted_down .fe {
   font-weight: bold;
 }
 .voting_buttons_new .upvote_button .htmx-indicator {
@@ -1335,6 +1310,7 @@ time {
 .comment {
   clear: both;
   margin-left: 15px;
+  padding-left: 0px;
   padding-top: 8px;
 }
 .comment .limit_height {
@@ -1386,26 +1362,27 @@ time {
 }
 .comment .comment_actions {
   margin-top: -18px;
-  position: relative;
-  padding-bottom: 5px;
+  display: flex;
+  min-height: 44px;
+  /* justify-content: space-between; */
+  justify-content: left;
 }
-.comment .comment_actions a {
-  text-decoration: none;
-  padding: 0;
+@media (min-width: 992px) {
+  .comment .comment_actions {
+    justify-content: left;
+  }
 }
-.comment .comment_actions .hide_button {
-  display: inline-block;
-}
-.comment .comment_actions .hide_button a {
-  padding: 5px 15px;
+.comment .comment_actions div {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 44px;
+  height: 44px;
+  line-height: 44px;
 }
 .comment .comment_actions .notify_toggle {
-  display: inline-block;
-}
-.comment .comment_actions .notify_toggle a {
-  text-decoration: none;
+  margin-left: auto; /* pull right */
   font-size: 87%;
-  padding: 5px 15px;
 }
 .comment .replies {
   margin-top: 0;
@@ -1597,6 +1574,11 @@ h1 .warning_badge {
 }
 
 .profile_bio img {
+  max-width: 100%;
+  height: auto;
+}
+
+.wiki_page img {
   max-width: 100%;
   height: auto;
 }
@@ -1801,6 +1783,9 @@ form h5 {
   position: relative;
   top: -11px;
 }
+.coolfieldset legend.tweak-top {
+  top: -18px;
+}
 
 .coolfieldset legend, .coolfieldset.expanded legend {
   background: whitesmoke url(/static/images/expanded.gif) no-repeat center left;
@@ -1863,30 +1848,6 @@ form h5 {
   margin-top: -15px;
   display: block;
   margin-bottom: 10px;
-}
-
-.post_options_link {
-  display: block;
-  width: 41px;
-  text-decoration: none;
-}
-
-.comment_actions_link {
-  display: block;
-  position: absolute;
-  top: 3px;
-  right: -16px;
-  width: 41px;
-  text-decoration: none;
-}
-
-.notify_toggle {
-  display: block;
-  position: absolute;
-  top: 2px;
-  right: 30px;
-  width: 41px;
-  text-decoration: none;
 }
 
 .alert {
@@ -1975,6 +1936,10 @@ form h5 {
 }
 #home_announcement p {
   margin-bottom: 0;
+}
+
+.pt-05 {
+  padding-top: 0.12rem !important;
 }
 
 /* high contrast */

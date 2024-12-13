@@ -404,5 +404,62 @@ def alpha_emoji():
     return jsonify({"error": "not_yet_implemented"}), 400
 
 
+# HTML routes
+from flask import abort, render_template
+from app.utils import current_theme
+import os
+
+@bp.route('/api/alpha/', methods=['GET'])
+def get_alpha():
+    if not current_app.debug:
+        abort(404)
+
+    template_name = "index.html"
+
+    theme = current_theme()
+    if theme != '' and os.path.exists(f'app/templates/themes/{theme}/{template_name}'):
+        return render_template(f'themes/{theme}/{template_name}')
+    else:
+        return render_template(template_name)
 
 
+@bp.route('/api/alpha/auth/login', methods=['GET'])
+def get_alpha_auth_login():
+    if not current_app.debug:
+        abort(404)
+
+    template_name = "auth/login.html"
+
+    theme = current_theme()
+    if theme != '' and os.path.exists(f'app/templates/themes/{theme}/{template_name}'):
+        return render_template(f'themes/{theme}/{template_name}')
+    else:
+        return render_template(template_name)
+
+
+@bp.route('/api/alpha/auth/logout', methods=['GET'])
+def get_alpha_auth_logout():
+    if not current_app.debug:
+        abort(404)
+
+    template_name = "auth/logout.html"
+
+    theme = current_theme()
+    if theme != '' and os.path.exists(f'app/templates/themes/{theme}/{template_name}'):
+        return render_template(f'themes/{theme}/{template_name}')
+    else:
+        return render_template(template_name)
+
+
+@bp.route('/api/alpha/communities', methods=['GET'])
+def get_alpha_communities():
+    if not current_app.debug:
+        abort(404)
+
+    template_name = "list_communities.html"
+
+    theme = current_theme()
+    if theme != '' and os.path.exists(f'app/templates/themes/{theme}/{template_name}'):
+        return render_template(f'themes/{theme}/{template_name}')
+    else:
+        return render_template(template_name)

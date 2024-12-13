@@ -2,7 +2,7 @@
     {% extends 'themes/' + theme() + '/base.html' %}
 {% else %}
     {% extends "base.html" %}
-{% endif %} %}
+{% endif %}
 {% from 'bootstrap/form.html' import render_form %}
 {% set active_child = 'admin_content_deleted' %}
 
@@ -33,7 +33,7 @@
             <h2 class="mt-4" id="comments">Deleted comments</h2>
             <div class="post_list">
                 {% for post_reply in post_replies.items %}
-                    {% with teaser=True, disable_voting=True, no_collapse=True %}
+                    {% with teaser=True, disable_voting=True, no_collapse=True, show_deleted=True %}
                         {% include 'post/_post_reply_teaser.html' %}
                     {% endwith %}
                     <hr />

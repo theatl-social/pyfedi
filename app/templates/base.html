@@ -1,13 +1,17 @@
-{% macro render_username(user) -%}
+{% macro render_username(user, add_domain=True) -%}
 <span class="render_username">
     {% if user.deleted -%}
-        [deleted]
+        {% if current_user.is_authenticated and current_user.is_admin() -%}
+            <a href="/u/{{ user.link() }}" title="{{ user.ap_id if user.ap_id != none else user.user_name }}" aria-label="{{ _('Author') }}">[deleted]</a>
+        {% else -%}
+            [deleted]
+        {% endif -%}
     {% else -%}
         <a href="/u/{{ user.link() }}" title="{{ user.ap_id if user.ap_id != none else user.user_name }}" aria-label="{{ _('Author') }}">
             {% if user.avatar_id and not low_bandwidth and not collapsed -%}
                 <img src="{{ user.avatar_thumbnail() }}" alt="" loading="lazy" />
             {% endif -%}
-            {{ user.display_name() }}{% if not user.is_local() %}<span class="text-muted">@{{ user.ap_domain }}</span>{% endif %}
+            {{ user.display_name() }}{% if add_domain and not user.is_local() %}<span class="text-muted">@{{ user.ap_domain }}</span>{% endif %}
         </a>
         {% if user.created_recently() -%}
             <span class="fe fe-new-account" title="New account"> </span>
@@ -26,13 +30,13 @@
     {% endif -%}
 </span>
 {% endmacro -%}
-{% macro render_communityname(community) -%}
+{% macro render_communityname(community, add_domain=True) -%}
     <span class="render_community">
         <a href="/c/{{ community.link() }}" aria-label="{{ _('Go to community %(name)s', name=community.name) }}">
             {% if community.icon_id and not low_bandwidth and not collapsed -%}
                 <img src="{{ community.icon_image('tiny') }}" class="community_icon rounded-circle" alt="" loading="lazy" />
             {% endif -%}
-            c/{{ community.display_name() }}
+            {{ community.title }}{% if add_domain and not community.is_local() %}<span class="text-muted">@{{ community.ap_domain }}</span>{% endif %}
         </a>
     </span>
 {% endmacro -%}

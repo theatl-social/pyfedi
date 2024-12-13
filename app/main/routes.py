@@ -9,8 +9,7 @@ from sqlalchemy.sql.operators import or_, and_
 from app import db, cache
 from app.activitypub.util import users_total, active_month, local_posts, local_communities
 from app.activitypub.signature import default_context, LDSignature
-from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, POST_TYPE_IMAGE, POST_TYPE_LINK, \
-    SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_VIDEO, POST_TYPE_POLL
+from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR
 from app.email import send_email
 from app.inoculation import inoculation
 from app.main import bp
@@ -22,7 +21,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     ap_datetime, shorten_string, markdown_to_text, user_filters_home, \
     joined_communities, moderating_communities, markdown_to_html, allowlist_html, \
     blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
-    blocked_users, menu_topics, languages_for_form, blocked_communities, get_request
+    blocked_users, menu_topics, blocked_communities, get_request
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, read_posts
 
@@ -61,7 +60,7 @@ def home_page(sort, view_filter):
     if current_user.is_anonymous:
         flash(_('Create an account to tailor this feed to your interests.'))
         posts = Post.query.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
-        content_filters = {}
+        content_filters = {'trump': {'trump', 'elon', 'musk'}}
     else:
         posts = Post.query.filter(Post.deleted == False)
 
@@ -91,7 +90,7 @@ def home_page(sort, view_filter):
         content_filters = user_filters_home(current_user.id)
 
     # view filter - subscribed/local/all
-    if view_filter == 'subscribed':
+    if view_filter == 'subscribed' and current_user.is_authenticated:
         posts = posts.join(CommunityMember, Post.community_id == CommunityMember.community_id).filter(CommunityMember.is_banned == False)
         posts = posts.filter(CommunityMember.user_id == current_user.id)
     elif view_filter == 'local':
@@ -100,7 +99,9 @@ def home_page(sort, view_filter):
     elif view_filter == 'popular':
         posts = posts.join(Community, Community.id == Post.community_id)
         posts = posts.filter(Community.show_popular == True, Post.score > 100)
-    elif view_filter == 'all':
+        if current_user.is_anonymous:
+            posts = posts.filter(Community.low_quality == False)
+    elif view_filter == 'all' or current_user.is_anonymous:
         posts = posts.join(Community, Community.id == Post.community_id)
         posts = posts.filter(Community.show_all == True)
 
@@ -216,7 +217,7 @@ def list_communities():
     return render_template('list_communities.html', communities=communities, search=search_param, title=_('Communities'),
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                           next_url=next_url, prev_url=prev_url,
+                           next_url=next_url, prev_url=prev_url, current_user=current_user,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
@@ -262,13 +263,13 @@ def list_local_communities():
     # Pagination
     communities = communities.paginate(page=page, per_page=250 if current_user.is_authenticated and not low_bandwidth else 50,
                            error_out=False)
-    next_url = url_for('main.list_communities', page=communities.next_num, sort_by=sort_by, language_id=language_id) if communities.has_next else None
-    prev_url = url_for('main.list_communities', page=communities.prev_num, sort_by=sort_by, language_id=language_id) if communities.has_prev and page != 1 else None
+    next_url = url_for('main.list_local_communities', page=communities.next_num, sort_by=sort_by, language_id=language_id) if communities.has_next else None
+    prev_url = url_for('main.list_local_communities', page=communities.prev_num, sort_by=sort_by, language_id=language_id) if communities.has_prev and page != 1 else None
 
     return render_template('list_communities.html', communities=communities, search=search_param, title=_('Local Communities'),
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                           next_url=next_url, prev_url=prev_url,
+                           next_url=next_url, prev_url=prev_url, current_user=current_user,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
@@ -309,8 +310,8 @@ def list_subscribed_communities():
         # Pagination
         communities = communities.paginate(page=page, per_page=250 if current_user.is_authenticated and not low_bandwidth else 50,
                            error_out=False)
-        next_url = url_for('main.list_communities', page=communities.next_num, sort_by=sort_by, language_id=language_id) if communities.has_next else None
-        prev_url = url_for('main.list_communities', page=communities.prev_num, sort_by=sort_by, language_id=language_id) if communities.has_prev and page != 1 else None
+        next_url = url_for('main.list_subscribed_communities', page=communities.next_num, sort_by=sort_by, language_id=language_id) if communities.has_next else None
+        prev_url = url_for('main.list_subscribed_communities', page=communities.prev_num, sort_by=sort_by, language_id=language_id) if communities.has_prev and page != 1 else None
 
     else:
         communities = []
@@ -320,12 +321,75 @@ def list_subscribed_communities():
     return render_template('list_communities.html', communities=communities, search=search_param, title=_('Joined Communities'),
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                           next_url=next_url, prev_url=prev_url,
+                           next_url=next_url, prev_url=prev_url, current_user=current_user,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site)
 
+
+@bp.route('/communities/notsubscribed', methods=['GET'])
+def list_not_subscribed_communities():
+    verification_warning()
+    search_param = request.args.get('search', '')
+    topic_id = int(request.args.get('topic_id', 0))
+    language_id = int(request.args.get('language_id', 0))
+    page = request.args.get('page', 1, type=int)
+    low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+    sort_by = request.args.get('sort_by', 'post_reply_count desc')
+    topics = Topic.query.order_by(Topic.name).all()
+    languages = Language.query.order_by(Language.name).all()
+    if current_user.is_authenticated:
+        # get all communities
+        all_communities = Community.query.filter_by(banned=False)
+        # get the user's joined communities
+        joined_communities = Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == current_user.id)
+        # get the joined community ids list
+        joined_ids = []
+        for jc in joined_communities:
+            joined_ids.append(jc.id)
+        # filter out the joined communities from all communities
+        communities = all_communities.filter(Community.id.not_in(joined_ids))
+
+        if search_param == '':
+            pass
+        else:
+            communities = communities.filter(or_(Community.title.ilike(f"%{search_param}%"), Community.ap_id.ilike(f"%{search_param}%")))
+
+        if topic_id != 0:
+            communities = communities.filter_by(topic_id=topic_id)
+
+        if language_id != 0:
+            communities = communities.join(community_language).filter(community_language.c.language_id == language_id)
+
+        banned_from = communities_banned_from(current_user.id)
+        if banned_from:
+            communities = communities.filter(Community.id.not_in(banned_from))
+        if current_user.hide_nsfw == 1:
+            communities = communities.filter(Community.nsfw == False)
+        if current_user.hide_nsfl == 1:
+            communities = communities.filter(Community.nsfl == False)
+
+        communities = communities.order_by(text('community.' + sort_by))
+
+        # Pagination
+        communities = communities.paginate(page=page, per_page=250 if current_user.is_authenticated and not low_bandwidth else 50,
+                           error_out=False)
+        next_url = url_for('main.list_not_subscribed_communities', page=communities.next_num, sort_by=sort_by, language_id=language_id) if communities.has_next else None
+        prev_url = url_for('main.list_not_subscribed_communities', page=communities.prev_num, sort_by=sort_by, language_id=language_id) if communities.has_prev and page != 1 else None
+
+    else:
+        communities = []
+        next_url = None
+        prev_url = None
+
+    return render_template('list_communities.html', communities=communities, search=search_param, title=_('Not Joined Communities'),
+                           SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
+                           SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
+                           next_url=next_url, prev_url=prev_url, current_user=current_user,
+                           topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
+                           low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
+                           menu_topics=menu_topics(), site=g.site)
 
 @bp.route('/modlog', methods=['GET'])
 def modlog():
@@ -424,6 +488,27 @@ def list_files(directory):
     for root, dirs, files in os.walk(directory):
         for file in files:
             yield os.path.join(root, file)
+
+
+@bp.route('/replay_inbox')
+@login_required
+def replay_inbox():
+    from app.activitypub.routes import replay_inbox_request
+
+    request_json = {}
+    """
+    request_json = {"@context": ["https://join-lemmy.org/context.json", "https://www.w3.org/ns/activitystreams"],
+                    "actor": "https://lemmy.lemmy/u/doesnotexist",
+                    "cc": [],
+                    "id": "https://lemmy.lemmy/activities/delete/5d42c8bf-cc60-4d2c-a3b5-673ddb7ce64b",
+                    "object": "https://lemmy.lemmy/u/doesnotexist",
+                    "to": ["https://www.w3.org/ns/activitystreams#Public"],
+                    "type": "Delete"}
+    """
+
+    replay_inbox_request(request_json)
+
+    return 'ok'
 
 
 @bp.route('/test')

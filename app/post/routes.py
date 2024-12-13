@@ -10,7 +10,7 @@ from wtforms import SelectField, RadioField
 
 from app import db, constants, cache, celery
 from app.activitypub.signature import HttpSignature, post_request, default_context, post_request_in_background
-from app.activitypub.util import notify_about_post_reply, inform_followers_of_post_update
+from app.activitypub.util import notify_about_post_reply, inform_followers_of_post_update, update_post_from_activity
 from app.community.util import save_post, send_to_remote_instance
 from app.inoculation import inoculation
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm
@@ -23,7 +23,7 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_
 from app.models import Post, PostReply, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, InstanceBlock, Report, Site, Community, \
     Topic, User, Instance, NotificationSubscription, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
-    PostReplyBookmark, CommunityBlock
+    PostReplyBookmark, CommunityBlock, File
 from app.post import bp
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
@@ -32,7 +32,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     blocked_instances, blocked_domains, community_moderators, blocked_phrases, show_ban_message, recently_upvoted_posts, \
     recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, reply_is_stupid, \
     languages_for_form, menu_topics, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown, \
-    permission_required, blocked_users
+    permission_required, blocked_users, get_request
 
 
 def show_post(post_id: int):
@@ -109,6 +109,9 @@ def show_post(post_id: int):
             'language': {
                 'identifier': reply.language_code(),
                 'name': reply.language_name()
+            },
+            'contentMap': {
+                reply.language_code(): reply.body_html
             }
         }
         create_json = {
@@ -130,8 +133,8 @@ def show_post(post_id: int):
             }]
         }
         if not community.is_local():    # this is a remote community, send it to the instance that hosts it
-            success = post_request(community.ap_inbox_url, create_json, current_user.private_key,
-                                                       current_user.public_url() + '#main-key')
+            success = post_request_in_background(community.ap_inbox_url, create_json, current_user.private_key,
+                                                 current_user.public_url() + '#main-key', timeout=10)
             if success is False or isinstance(success, str):
                 flash('Failed to send to remote instance', 'error')
         else:                       # local community - send it to followers on remote instances
@@ -156,13 +159,13 @@ def show_post(post_id: int):
         # send copy of Note to post author (who won't otherwise get it if no-one else on their instance is subscribed to the community)
         if not post.author.is_local() and post.author.ap_domain != community.ap_domain:
             if not community.is_local() or (community.is_local and not community.has_followers_from_domain(post.author.ap_domain)):
-                success = post_request(post.author.ap_inbox_url, create_json, current_user.private_key,
-                                                       current_user.public_url() + '#main-key')
+                success = post_request_in_background(post.author.ap_inbox_url, create_json, current_user.private_key,
+                                                     current_user.public_url() + '#main-key', timeout=10)
                 if success is False or isinstance(success, str):
                     # sending to shared inbox is good enough for Mastodon, but Lemmy will reject it the local community has no followers
                     personal_inbox = post.author.public_url() + '/inbox'
-                    post_request(personal_inbox, create_json, current_user.private_key,
-                                                       current_user.public_url() + '#main-key')
+                    post_request_in_background(personal_inbox, create_json, current_user.private_key,
+                                               current_user.public_url() + '#main-key', timeout=10)
 
         return redirect(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{reply.id}'))
     else:
@@ -272,6 +275,7 @@ def show_post(post_id: int):
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
                            )
     response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
+    response.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/post/{post.id}>; rel="alternate"; type="application/activity+json"')
     return response
 
 
@@ -466,8 +470,13 @@ def poll_vote(post_id):
 def continue_discussion(post_id, comment_id):
     post = Post.query.get_or_404(post_id)
     comment = PostReply.query.get_or_404(comment_id)
+
     if post.community.banned or post.deleted or comment.deleted:
-        abort(404)
+        if current_user.is_anonymous or not (current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff())):
+            abort(404)
+        else:
+            flash(_('This comment has been deleted and is only visible to staff and admins.'), 'warning')
+
     mods = post.community.moderators()
     is_moderator = current_user.is_authenticated and any(mod.user_id == current_user.id for mod in mods)
     if post.community.private_mods:
@@ -492,7 +501,7 @@ def continue_discussion(post_id, comment_id):
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/reply', methods=['GET', 'POST'])
 @login_required
 def add_reply(post_id: int, comment_id: int):
-    if current_user.banned:
+    if current_user.banned or current_user.ban_comments:
         return show_ban_message()
     post = Post.query.get_or_404(post_id)
 
@@ -583,6 +592,10 @@ def add_reply(post_id: int, comment_id: int):
                 'published': ap_datetime(utcnow()),
                 'distinguished': False,
                 'audience': post.community.public_url(),
+                'language': {
+                    'identifier': reply.language_code(),
+                    'name': reply.language_name()
+                },
                 'contentMap': {
                     'en': reply.body_html
                 }
@@ -1886,6 +1899,35 @@ def post_reply_view_voting_activity(comment_id: int):
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site
                            )
+
+
+@bp.route('/post/<int:post_id>/fixup_from_remote', methods=['GET'])
+@login_required
+@permission_required('change instance settings')
+def post_fixup_from_remote(post_id: int):
+    post = Post.query.get_or_404(post_id)
+
+    # will fail for some MBIN objects for same reason that 'View original on ...' does
+    # (ap_id is lowercase, but original URL was mixed-case and remote instance software is case-sensitive)
+    remote_post_request = get_request(post.ap_id, headers={'Accept': 'application/activity+json'})
+    if remote_post_request.status_code == 200:
+        remote_post_json = remote_post_request.json()
+        remote_post_request.close()
+        if 'type' in remote_post_json and remote_post_json['type'] == 'Page':
+            post.domain_id = None
+            file_entry_to_delete = None
+            if post.image_id:
+                file_entry_to_delete = post.image_id
+            post.image_id = None
+            post.url = None
+            db.session.commit()
+            if file_entry_to_delete:
+                File.query.filter_by(id=file_entry_to_delete).delete()
+                db.session.commit()
+            update_json = {'type': 'Update', 'object': remote_post_json}
+            update_post_from_activity(post, update_json)
+
+    return redirect(url_for('activitypub.post_ap', post_id=post.id))
 
 
 @bp.route('/post/<int:post_id>/cross-post', methods=['GET', 'POST'])

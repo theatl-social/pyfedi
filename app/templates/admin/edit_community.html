@@ -2,7 +2,7 @@
     {% extends 'themes/' + theme() + '/base.html' %}
 {% else %}
     {% extends "base.html" %}
-{% endif %} %}
+{% endif %}
 {% from 'bootstrap/form.html' import render_field %}
 {% set active_child = 'admin_communities' %}
 
@@ -41,7 +41,6 @@
                 {{ render_field(form.banned) }}
                 {{ render_field(form.local_only) }}
                 {{ render_field(form.new_mods_wanted) }}
-                {{ render_field(form.show_home) }}
                 {{ render_field(form.show_popular) }}
                 {{ render_field(form.show_all) }}
                 {{ render_field(form.low_quality) }}

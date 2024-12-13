@@ -73,83 +73,12 @@
                         {{ _('New') }}
                     </a>
                 </div>
-                {% macro render_comment(comment) -%}
-                    <div id="comment_{{ comment['comment'].id }}" class="comment {% if comment['comment'].score <= -10 -%}low_score{% endif -%}
-                        {% if comment['comment'].author.id == post.author.id -%}original_poster{% endif -%}"
-                         {% if comment['comment'].language_id and comment['comment'].language.code != 'en' -%} lang="{{ comment['comment'].language.code }}"{% endif %}
-                         aria-level="{{ comment['comment'].depth + 1 }}" role="treeitem" aria-expanded="true" tabindex="0">
-                        <div class="limit_height">{% if not comment['comment'].author.indexable -%}<!--googleoff: all-->{% endif -%}
-                            <div class="comment_author">
-                                {% with collapsed = (comment['comment'].score < reply_collapse_threshold or comment['comment'].deleted) -%}
-                                    {{ render_username(comment['comment'].author) }}
-                                {% endwith -%}
-                                {% if comment['comment'].author.id == post.author.id -%}<span title="Submitter of original post" aria-label="{{ _('Post creator') }}" class="small">[OP] </span>{% endif -%}
-                                <a href="#comment_{{ comment['comment'].id }}" class="text-muted small" aria_label="{{ _('When: ') }}">{{ comment['comment'].posted_at_localized(locale) }}{% if comment['comment'].edited_at -%}, edited {{ arrow.get(comment['comment'].edited_at).humanize(locale=locale) }} {% endif -%}</a>
-                                <a class="unhide" href="#"><span class="fe fe-expand"></span></a>
-                                {% if comment['comment'].reports and current_user.is_authenticated and post.community.is_moderator(current_user)%}
-                                    <span class="red fe fe-report" title="{{ _('Reported. Check comment for issues.') }}"></span>
-                                {% endif -%}
-                            </div>
-                            <div class="comment_body hidable {% if comment['comment'].reports and current_user.is_authenticated and post.community.is_moderator(current_user) -%}reported{% endif -%}">
-                                {% if comment['comment'].deleted -%}
-                                  {% if comment['comment'].deleted_by is none or comment['comment'].deleted_by != comment['comment'].user_id -%}
-                                    <p>Deleted by moderator</p>
-                                  {% else -%}
-                                    <p>Deleted by author</p>
-                                  {% endif -%}
-                                {% else -%}
-                                  {{ comment['comment'].body_html | community_links | safe }}
-                                {% endif -%}
-                            </div>{% if not comment['comment'].author.indexable -%}<!--googleon: all-->{% endif -%}
-                        </div>
-                        <div class="comment_actions hidable">
-                            {% if post.comments_enabled -%}
-                                <a href="{{ url_for('post.add_reply', post_id=post.id, comment_id=comment['comment'].id) }}" rel="nofollow noindex"><span class="fe fe-reply"></span> reply</a>
-                            {% endif -%}
-                            <div class="voting_buttons_new">
-                            {% with comment=comment['comment'] -%}
-                                {% include "post/_comment_voting_buttons.html" -%}
-                            {% endwith -%}
-                            </div>
-                            <div class="hide_button">
-                                {% if comment['comment'].score <= reply_collapse_threshold or comment['comment'].deleted -%}
-                                    <a href='#'><span class="fe fe-expand"></span></a>
-                                {% else -%}
-                                    <a href='#'><span class="fe fe-collapse"></span></a>
-                                {% endif -%}
-                            </div>
-                            <div class="notify_toggle">
-                                {% if current_user.is_authenticated and current_user.verified -%}
-                                    {% include "post/_reply_notification_toggle.html" -%}
-                                {% endif -%}
-                            </div>
-                            <a href="{{ url_for('post.post_reply_options', post_id=post.id, comment_id=comment['comment'].id) }}" class="comment_actions_link" rel="nofollow noindex" aria-label="{{ _('Comment options') }}"><span class="fe fe-options" title="Options"> </span></a>
-                        </div>
-                        {% if comment['replies'] -%}
-                            {% if comment['comment'].depth <= THREAD_CUTOFF_DEPTH -%}
-                                <div class="replies hidable" role="group">
-                                    {% for reply in comment['replies'] -%}
-                                      {{ render_comment(reply) | safe }}
-                                    {% endfor -%}
-                                </div>
-                            {% else -%}
-                                <div class="continue_thread hidable">
-                                    <a href="{{ url_for('post.continue_discussion', post_id=post.id, comment_id=comment['comment'].id, _anchor='replies') }}">
-                                        Continue thread</a>
-                                </div>
-                            {% endif -%}
-                        {% endif -%}
-                    </div>
-                    {% if comment['comment'].score <= reply_collapse_threshold or comment['comment'].deleted -%}
-                        <script nonce="{{ session['nonce'] }}" type="text/javascript">
-                            toBeHidden.push({{ comment['comment'].id }});
-                        </script>
-                    {% endif -%}
-                {% endmacro -%}
 
                 <div id="replies" class="comments" role="tree" aria-label="{{ _('Comments') }}" aria-expanded="true">
                     {% for reply in replies -%}
-                      {{ render_comment(reply) | safe }}
+                      {% with post_reply=reply['comment'], children=reply['replies'] %}
+                          {% include 'post/_post_reply_teaser.html' %}
+                      {% endwith %}
                     {% endfor -%}
                 </div>
             </div>

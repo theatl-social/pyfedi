@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import timedelta
 from time import sleep
 from io import BytesIO
@@ -10,14 +11,15 @@ from flask_babel import _
 from slugify import slugify
 from sqlalchemy import text, desc, or_
 from PIL import Image
+from urllib.parse import urlparse
 
 from app import db, celery, cache
-from app.activitypub.routes import process_inbox_request, process_delete_request
+from app.activitypub.routes import process_inbox_request, process_delete_request, replay_inbox_request
 from app.activitypub.signature import post_request, default_context
 from app.activitypub.util import instance_allowed, instance_blocked, extract_domain_and_actor
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm, \
-    EditInstanceForm
+    EditInstanceForm, RemoteInstanceScanForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form
 from app.community.util import save_icon_file, save_banner_file, search_for_community
@@ -196,6 +198,7 @@ def admin_federation():
     form = FederationForm()
     preload_form = PreLoadCommunitiesForm()
     ban_lists_form = ImportExportBannedListsForm()
+    remote_scan_form = RemoteInstanceScanForm()
 
     # this is the pre-load communities button
     if preload_form.pre_load_submit.data and preload_form.validate():
@@ -210,94 +213,101 @@ def admin_federation():
         community_json = resp.json()
         resp.close()
 
-        # sort out the nsfw communities
-        safe_for_work_communities = []
-        for community in community_json:
-            if community['nsfw']:
-                continue
-            else:
-                safe_for_work_communities.append(community)
-
-        # sort out any that have less than 100 posts
-        communities_with_lots_of_content = []
-        for community in safe_for_work_communities:
-            if community['counts']['posts'] < 100:
-                continue
-            else:
-                communities_with_lots_of_content.append(community)
-
-        # sort out any that do not have greater than 500 active users over the past week
-        communities_with_lots_of_activity = []
-        for community in communities_with_lots_of_content:
-            if community['counts']['users_active_week'] < 500:
-                continue
-            else:
-                communities_with_lots_of_activity.append(community)
-
-        # sort out any instances we have already banned
-        banned_instances = BannedInstances.query.all()
-        banned_urls = []
-        communities_not_banned = []
-        for bi in banned_instances:
-            banned_urls.append(bi.domain)
-        for community in communities_with_lots_of_activity:
-            if community['baseurl'] in banned_urls:
-                continue
-            else:
-                communities_not_banned.append(community)
-
-        # sort out the 'seven things you can't say on tv' names (cursewords, ie sh*t), plus some
-        # "low effort" communities
-        # I dont know why, but some of them slip through on the first pass, so I just 
-        # ran the list again and filter out more
-        #
-        # TO-DO: fix the need for the double filter
+        already_known = list(db.session.execute(text('SELECT ap_public_url FROM "community"')).scalars())
+        banned_urls = list(db.session.execute(text('SELECT domain FROM "banned_instances"')).scalars())
         seven_things_plus = [
-            'shit', 'piss', 'fuck', 
-            'cunt', 'cocksucker', 'motherfucker', 'tits', 
+            'shit', 'piss', 'fuck',
+            'cunt', 'cocksucker', 'motherfucker', 'tits',
             'memes', 'piracy', '196', 'greentext', 'usauthoritarianism',
             'enoughmuskspam', 'political_weirdos', '4chan'
             ]
-        for community in communities_not_banned:
-            for word in seven_things_plus:
-                if word in community['name']:
-                    communities_not_banned.remove(community)
-        for community in communities_not_banned:
-            for word in seven_things_plus:
-                if word in community['name']:
-                    communities_not_banned.remove(community)
+
+        total_count = already_known_count = nsfw_count = low_content_count = low_active_users_count = banned_count = bad_words_count = 0
+        candidate_communities = []
+
+        for community in community_json:
+            total_count += 1
+
+            # sort out already known communities
+            if community['url'] in already_known:
+                already_known_count += 1
+                continue
+
+            # sort out the nsfw communities
+            elif community['nsfw']:
+                nsfw_count += 1
+                continue
+
+            # sort out any that have less than 100 posts
+            elif community['counts']['posts'] < 100:
+                low_content_count += 1
+                continue
+
+            # sort out any that do not have greater than 500 active users over the past week
+            elif community['counts']['users_active_week'] < 500:
+                low_active_users_count += 1
+                continue
+
+            # sort out any instances we have already banned
+            elif community['baseurl'] in banned_urls:
+                banned_count += 1
+                continue
+
+            # sort out the 'seven things you can't say on tv' names (cursewords), plus some
+            # "low effort" communities
+            if any(badword in community['name'].lower() for badword in seven_things_plus):
+                bad_words_count += 1
+                continue
+
+            else:
+                candidate_communities.append(community)
+
+        filtered_count = already_known_count + nsfw_count + low_content_count + low_active_users_count + banned_count + bad_words_count
+        flash(_('%d out of %d communities were excluded using current filters' % (filtered_count, total_count)))
 
         # sort the list based on the users_active_week key
-        parsed_communities_sorted = sorted(communities_not_banned, key=lambda c: c['counts']['users_active_week'], reverse=True)
+        parsed_communities_sorted = sorted(candidate_communities, key=lambda c: c['counts']['users_active_week'], reverse=True)
 
         # get the community urls to join
         community_urls_to_join = []
-        
+
         # if the admin user wants more added than we have, then just add all of them
         if communities_to_add > len(parsed_communities_sorted):
-            communities_to_add = len(parsed_communities_sorted) 
-        
+            communities_to_add = len(parsed_communities_sorted)
+
         # make the list of urls
         for i in range(communities_to_add):
-            community_urls_to_join.append(parsed_communities_sorted[i]['url'])
+            community_urls_to_join.append(parsed_communities_sorted[i]['url'].lower())
 
         # loop through the list and send off the follow requests
         # use User #1, the first instance admin
+
+        # NOTE: Subscribing using the admin's alt_profile causes problems:
+        # 1. 'Leave' will use the main user name so unsubscribe won't succeed.
+        # 2. De-selecting and re-selecting 'vote privately' generates a new alt_user_name every time,
+        #    so the username needed for a successful unsubscribe might get lost
+        # 3. If the admin doesn't have 'vote privately' selected, the federation JSON will populate
+        #    with a blank space for the name, so the subscription won't succeed.
+        # 4. Membership is based on user id, so using the alt_profile doesn't decrease the admin's joined communities
+        #
+        # Therefore, 'main_user_name=False' has been changed to 'admin_preload=True' below
+
         user = User.query.get(1)
         pre_load_messages = []
         for community in community_urls_to_join:
-            # get the relevant url bits 
+            # get the relevant url bits
             server, community = extract_domain_and_actor(community)
+
             # find the community
             new_community = search_for_community('!' + community + '@' + server)
-            # subscribe to the community using alt_profile
+            # subscribe to the community
             # capture the messages returned by do_subscibe
             # and show to user if instance is in debug mode
             if current_app.debug:
-                message = do_subscribe(new_community.ap_id, user.id, main_user_name=False)
+                message = do_subscribe(new_community.ap_id, user.id, admin_preload=True)
                 pre_load_messages.append(message)
             else:
-                message_we_wont_do_anything_with = do_subscribe.delay(new_community.ap_id, user.id, main_user_name=False)
+                message_we_wont_do_anything_with = do_subscribe.delay(new_community.ap_id, user.id, admin_preload=True)
 
         if current_app.debug:
             flash(_('Results: %(results)s', results=str(pre_load_messages)))
@@ -307,7 +317,251 @@ def admin_federation():
                   communities_to_add=communities_to_add, parsed_communities_sorted=len(parsed_communities_sorted)))
 
         return redirect(url_for('admin.admin_federation'))
-    
+
+    # this is the remote server scan
+    elif remote_scan_form.remote_scan_submit.data and remote_scan_form.validate():
+        # filters to be used later
+        already_known = list(db.session.execute(text('SELECT ap_public_url FROM "community"')).scalars())
+        banned_urls = list(db.session.execute(text('SELECT domain FROM "banned_instances"')).scalars())
+        seven_things_plus = [
+            'shit', 'piss', 'fuck',
+            'cunt', 'cocksucker', 'motherfucker', 'tits',
+            'memes', 'piracy', '196', 'greentext', 'usauthoritarianism',
+            'enoughmuskspam', 'political_weirdos', '4chan'
+        ]
+        is_lemmy = False
+        is_mbin = False
+
+
+        # get the remote_url data
+        remote_url = remote_scan_form.remote_url.data
+
+        # test to make sure its a valid fqdn
+        regex_pattern = '^(https:\/\/)(?=.{1,255}$)((.{1,63}\.){1,127}(?![0-9]*$)[a-z0-9-]+\.?)$'
+        result = re.match(regex_pattern, remote_url)
+        if result is None:
+            flash(_(f'{remote_url} does not appear to be a valid url. Make sure input is in the form "https://server-name.tld" without trailing slashes or paths.'))
+            return redirect(url_for('admin.admin_federation'))
+
+        # check if it's a banned instance
+        # Parse the URL
+        parsed_url = urlparse(remote_url)
+        # Extract the server domain name
+        server_domain = parsed_url.netloc
+        if server_domain in banned_urls:
+            flash(_(f'{remote_url} is a banned instance.'))
+            return redirect(url_for('admin.admin_federation'))
+
+        # get dry run
+        dry_run = remote_scan_form.dry_run.data
+
+        # get the number of follows requested
+        communities_requested = remote_scan_form.communities_requested.data
+
+        # get the minimums
+        min_posts = remote_scan_form.minimum_posts.data
+        min_users = remote_scan_form.minimum_active_users.data
+
+        # get the nodeinfo
+        resp = get_request(f'{remote_url}/.well-known/nodeinfo')
+        nodeinfo_dict = json.loads(resp.text)
+
+        # check the ['links'] for instanceinfo url
+        schema2p0 = "http://nodeinfo.diaspora.software/ns/schema/2.0"
+        schema2p1 = "http://nodeinfo.diaspora.software/ns/schema/2.1"
+        for e in nodeinfo_dict['links']:
+            if e['rel'] == schema2p0 or e['rel'] == schema2p1:
+                remote_instanceinfo_url = e["href"]
+
+        # get the instanceinfo
+        resp = get_request(remote_instanceinfo_url)
+        instanceinfo_dict = json.loads(resp.text)
+
+        # determine the instance software
+        instance_software_name = instanceinfo_dict['software']['name']
+        # instance_software_version = instanceinfo_dict['software']['version']
+
+        # if the instance is not running lemmy or mbin break for now as 
+        # we dont yet support others for scanning
+        if instance_software_name == "lemmy":
+            is_lemmy = True
+        elif instance_software_name == "mbin":
+            is_mbin = True
+        else:
+            flash(_(f"{remote_url} does not appear to be a lemmy or mbin instance."))
+            return redirect(url_for('admin.admin_federation'))
+
+        if is_lemmy:
+            # lemmy has a hard-coded upper limit of 50 commnities
+            # in their api response
+            # loop through and send off requests to the remote endpoint for 50 communities at a time
+            comms_list = []
+            page = 1
+            get_more_communities = True
+            while get_more_communities:
+                params = {"sort":"Active","type_":"Local","limit":"50","page":f"{page}","show_nsfw":"false"}
+                resp = get_request(f"{remote_url}/api/v3/community/list", params=params)
+                page_dict = json.loads(resp.text)
+                # get the individual communities out of the communities[] list in the response and 
+                # add them to a holding list[] of our own
+                for c in page_dict["communities"]:
+                    comms_list.append(c)
+                # check the amount of items in the page_dict['communities'] list
+                # if it's lesss than 50 then we know its the last page of communities
+                # so we break the loop
+                if len(page_dict['communities']) < 50:
+                    get_more_communities = False
+                else:
+                    page += 1
+
+            # filter out the communities
+            already_known_count = nsfw_count = low_content_count = low_active_users_count = bad_words_count = 0
+            candidate_communities = []
+            for community in comms_list:
+                # sort out already known communities
+                if community['community']['actor_id'] in already_known:
+                    already_known_count += 1
+                    continue
+                # sort out any that have less than minimum posts
+                elif community['counts']['posts'] < min_posts:
+                    low_content_count += 1
+                    continue
+                # sort out any that do not have greater than the requested active users over the past week
+                elif community['counts']['users_active_week'] < min_users:
+                    low_active_users_count += 1
+                    continue
+                # sort out the 'seven things you can't say on tv' names (cursewords), plus some
+                # "low effort" communities
+                if any(badword in community['community']['name'].lower() for badword in seven_things_plus):
+                    bad_words_count += 1
+                    continue
+                else:
+                    candidate_communities.append(community)
+
+            # get the community urls to join
+            community_urls_to_join = []
+
+            # if the admin user wants more added than we have, then just add all of them
+            if communities_requested > len(candidate_communities):
+                communities_to_add = len(candidate_communities)
+            else:
+                communities_to_add = communities_requested
+
+            # make the list of urls
+            for i in range(communities_to_add):
+                community_urls_to_join.append(candidate_communities[i]['community']['actor_id'].lower())
+
+            # if its a dry run, just return the stats
+            if dry_run:
+                message = f"Dry-Run for {remote_url}: \
+                            Local Communities on the server: {len(comms_list)}, \
+                            Communities we already have: {already_known_count}, \
+                            Communities below minimum posts: {low_content_count}, \
+                            Communities below minimum users: {low_active_users_count}, \
+                            Candidate Communities based on filters: {len(candidate_communities)}, \
+                            Communities to join request: {communities_requested}, \
+                            Communities to join based on current filters: {len(community_urls_to_join)}."
+                flash(_(message))
+                return redirect(url_for('admin.admin_federation'))
+
+        if is_mbin:
+            # loop through and send the right number of requests to the remote endpoint for mbin
+            # mbin does not have the hard-coded limit, but lets stick with 50 to match lemmy 
+            mags_list = []
+            page = 1
+            get_more_magazines = True
+            while get_more_magazines:
+                params = {"p":f"{page}","perPage":"50","sort":"active","federation":"local","hide_adult":"hide"}
+                resp = get_request(f"{remote_url}/api/magazines", params=params)
+                page_dict = json.loads(resp.text)
+                # get the individual magazines out of the items[] list in the response and 
+                # add them to a holding list[] of our own
+                for m in page_dict['items']:
+                    mags_list.append(m)
+                # check the amount of items in the page_dict['items'] list
+                # if it's lesss than 50 then we know its the last page of magazines
+                # so we break the loop
+                if len(page_dict['items']) < 50:
+                    get_more_magazines = False
+                else:
+                    page += 1
+            
+            # filter out the magazines
+            already_known_count = low_content_count = low_subscribed_users_count = bad_words_count = 0
+            candidate_communities = []
+            for magazine in mags_list:
+                # sort out already known communities
+                if magazine['apProfileId'] in already_known:
+                    already_known_count += 1
+                    continue
+                # sort out any that have less than minimum posts
+                elif magazine['entryCount'] < min_posts:
+                    low_content_count += 1
+                    continue
+                # sort out any that do not have greater than the requested users over the past week
+                # mbin does not show active users here, so its based on subscriber count
+                elif magazine['subscriptionsCount'] < min_users:
+                    low_subscribed_users_count += 1
+                    continue
+                # sort out the 'seven things you can't say on tv' names (cursewords), plus some
+                # "low effort" communities
+                if any(badword in magazine['name'].lower() for badword in seven_things_plus):
+                    bad_words_count += 1
+                    continue
+                else:
+                    candidate_communities.append(magazine)
+
+            # get the community urls to join
+            community_urls_to_join = []
+
+            # if the admin user wants more added than we have, then just add all of them
+            if communities_requested > len(candidate_communities):
+                magazines_to_add = len(candidate_communities)
+            else:
+                magazines_to_add = communities_requested
+
+            # make the list of urls
+            for i in range(magazines_to_add):
+                community_urls_to_join.append(candidate_communities[i]['apProfileId'].lower())
+            
+            # if its a dry run, just return the stats
+            if dry_run:
+                message = f"Dry-Run for {remote_url}: \
+                            Local Magazines on the server: {len(mags_list)}, \
+                            Magazines we already have: {already_known_count}, \
+                            Magazines below minimum posts: {low_content_count}, \
+                            Magazines below minimum users: {low_subscribed_users_count}, \
+                            Candidate Magazines based on filters: {len(candidate_communities)}, \
+                            Magazines to join request: {communities_requested}, \
+                            Magazines to join based on current filters: {len(community_urls_to_join)}."
+                flash(_(message))
+                return redirect(url_for('admin.admin_federation'))
+
+        user = User.query.get(1)
+        remote_scan_messages = []
+        for community in community_urls_to_join:
+            # get the relevant url bits
+            server, community = extract_domain_and_actor(community)
+            # find the community
+            new_community = search_for_community('!' + community + '@' + server)
+            # subscribe to the community
+            # capture the messages returned by do_subscribe
+            # and show to user if instance is in debug mode
+            if current_app.debug:
+                message = do_subscribe(new_community.ap_id, user.id, admin_preload=True)
+                remote_scan_messages.append(message)
+            else:
+                message_we_wont_do_anything_with = do_subscribe.delay(new_community.ap_id, user.id, admin_preload=True)
+
+        if current_app.debug:
+            flash(_('Results: %(results)s', results=str(remote_scan_messages)))
+        else:
+            flash(
+                _('Based on current filters, the subscription process for %(communities_to_join)d of %(candidate_communities)d communities launched in background, check admin/activities for details',
+                  communities_to_join=len(community_urls_to_join), candidate_communities=len(candidate_communities)))
+
+        return redirect(url_for('admin.admin_federation'))
+
     # this is the import bans button
     elif ban_lists_form.import_submit.data and ban_lists_form.validate():
         import_file = request.files['import_file']
@@ -433,7 +687,7 @@ def admin_federation():
 
     return render_template('admin/federation.html', title=_('Federation settings'), 
                            form=form, preload_form=preload_form, ban_lists_form=ban_lists_form,
-                           current_app_debug=current_app.debug,
+                           remote_scan_form=remote_scan_form, current_app_debug=current_app.debug,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(),
@@ -604,10 +858,8 @@ def activity_json(activity_id):
 def activity_replay(activity_id):
     activity = ActivityPubLog.query.get_or_404(activity_id)
     request_json = json.loads(activity.activity_json)
-    if 'type' in request_json and request_json['type'] == 'Delete' and request_json['id'].endswith('#delete'):
-        process_delete_request(request_json, activity.id, None)
-    else:
-        process_inbox_request(request_json, activity.id, None)
+    replay_inbox_request(request_json)
+
     return 'Ok'
 
 
@@ -678,7 +930,6 @@ def admin_community_edit(community_id):
         community.local_only = form.local_only.data
         community.restricted_to_mods = form.restricted_to_mods.data
         community.new_mods_wanted = form.new_mods_wanted.data
-        community.show_home = form.show_home.data
         community.show_popular = form.show_popular.data
         community.show_all = form.show_all.data
         community.low_quality = form.low_quality.data
@@ -735,7 +986,6 @@ def admin_community_edit(community_id):
         form.local_only.data = community.local_only
         form.new_mods_wanted.data = community.new_mods_wanted
         form.restricted_to_mods.data = community.restricted_to_mods
-        form.show_home.data = community.show_home
         form.show_popular.data = community.show_popular
         form.show_all.data = community.show_all
         form.low_quality.data = community.low_quality
@@ -818,7 +1068,8 @@ def admin_topic_add():
     form = EditTopicForm()
     form.parent_id.choices = topics_for_form(0)
     if form.validate_on_submit():
-        topic = Topic(name=form.name.data, machine_name=slugify(form.machine_name.data.strip()), num_communities=0)
+        topic = Topic(name=form.name.data, machine_name=slugify(form.machine_name.data.strip()), num_communities=0,
+                      show_posts_in_children=form.show_posts_in_children.data)
         if form.parent_id.data:
             topic.parent_id = form.parent_id.data
         else:
@@ -848,6 +1099,7 @@ def admin_topic_edit(topic_id):
         topic.name = form.name.data
         topic.num_communities = topic.communities.count()
         topic.machine_name = form.machine_name.data
+        topic.show_posts_in_children = form.show_posts_in_children.data
         if form.parent_id.data:
             topic.parent_id = form.parent_id.data
         else:
@@ -860,6 +1112,7 @@ def admin_topic_edit(topic_id):
         form.name.data = topic.name
         form.machine_name.data = topic.machine_name
         form.parent_id.data = topic.parent_id
+        form.show_posts_in_children.data = topic.show_posts_in_children
     return render_template('admin/edit_topic.html', title=_('Edit topic'), form=form, topic=topic,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
@@ -962,7 +1215,7 @@ def admin_content_trash():
 
     page = request.args.get('page', 1, type=int)
 
-    posts = Post.query.filter(Post.posted_at > utcnow() - timedelta(days=3), Post.deleted == False).order_by(Post.score)
+    posts = Post.query.filter(Post.posted_at > utcnow() - timedelta(days=3), Post.deleted == False, Post.down_votes > 0).order_by(Post.score)
     posts = posts.paginate(page=page, per_page=100, error_out=False)
 
     next_url = url_for('admin.admin_content_trash', page=posts.next_num) if posts.has_next else None
@@ -1024,12 +1277,12 @@ def admin_content_deleted():
 
     posts = Post.query.\
         filter(Post.deleted == True).\
-        order_by(Post.posted_at)
+        order_by(desc(Post.posted_at))
     posts = posts.paginate(page=page, per_page=100, error_out=False)
 
     post_replies = PostReply.query. \
         filter(PostReply.deleted == True). \
-        order_by(PostReply.posted_at)
+        order_by(desc(PostReply.posted_at))
     post_replies = post_replies.paginate(page=replies_page, per_page=100, error_out=False)
 
     next_url = url_for('admin.admin_content_deleted', page=posts.next_num) if posts.has_next else None
@@ -1089,6 +1342,8 @@ def admin_user_edit(user_id):
     if form.validate_on_submit():
         user.bot = form.bot.data
         user.banned = form.banned.data
+        user.ban_posts = form.ban_posts.data
+        user.ban_comments = form.ban_comments.data
         user.hide_nsfw = form.hide_nsfw.data
         user.hide_nsfl = form.hide_nsfl.data
         if form.verified.data and not user.verified:
@@ -1122,6 +1377,8 @@ def admin_user_edit(user_id):
         form.bot.data = user.bot
         form.verified.data = user.verified
         form.banned.data = user.banned
+        form.ban_posts.data = user.ban_posts
+        form.ban_comments.data = user.ban_comments
         form.hide_nsfw.data = user.hide_nsfw
         form.hide_nsfl.data = user.hide_nsfl
         if user.roles and user.roles.count() > 0:

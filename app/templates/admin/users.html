@@ -2,7 +2,7 @@
     {% extends 'themes/' + theme() + '/base.html' %}
 {% else %}
     {% extends "base.html" %}
-{% endif %} %}
+{% endif %}
 {% from 'bootstrap/form.html' import render_form %}
 {% set active_child = 'admin_users' %}
 
@@ -20,7 +20,6 @@
         <table class="table table-striped mt-1">
             <tr>
                <th title="{{ _('Display name.') }}">{{ _('Name') }}</th>
-               <th>{{ _('Local/Remote') }}</th>
                <th title="{{ _('Last seen.') }}">{{ _('Seen') }}</th>
                <th title="{{ _('Attitude: Percentage of up votes vs. down votes the account made.') }}">{{ _('Attitude') }}</th>
                <th title="{{ _('Reputation: The Karma of the account. Total up votes minus down votes they got.') }}">{{ _('Reputation') }}</th>
@@ -32,29 +31,23 @@
             </tr>
             {% for user in users.items %}
                 <tr>
-                    <td><a href="/u/{{ user.link() }}">
-                            <img src="{{ user.avatar_thumbnail() }}" class="community_icon rounded-circle" loading="lazy" />
-                            {{ user.display_name() }}</a></td>
-                    <td>{% if user.is_local() %}Local{% else %}<a href="{{ user.ap_profile_id }}">Remote</a>{% endif %}</td>
+                    <td>{{ render_username(user, add_domain=False) }}<br />
+                    <a href="/u/{{ user.link() }}">{{ user.user_name }}</a>{% if not user.is_local() %}<wbr />@<a href="{{ user.ap_profile_id }}">{{ user.ap_domain }}</a>{% endif %}</td>
                     <td>{% if request.args.get('local_remote', '') == 'local' %}
                             {{ arrow.get(user.last_seen).humanize(locale=locale) }}
                         {% else %}
                             {{ user.last_seen }}
                         {% endif %}
                     </td>
-                    <td>{{ user.attitude * 100 if user.attitude != 1 }}</td>
-                    <td>{{ 'R ' + str(user.reputation) if user.reputation }}</td>
-                    <td>{{ '<span class="red">Banned</span>'|safe if user.banned }} </td>
+                    <td>{% if user.attitude != 1 %}{{ (user.attitude * 100) | round | int }}%{% endif %}</td>
+                    <td>{% if user.reputation %}R {{ user.reputation | round | int }}{% endif %}</td>
+                    <td>{{ '<span class="red">Banned</span>'|safe if user.banned }}
+                        {{ '<span class="red">Banned posts</span>'|safe if user.ban_posts }}
+                        {{ '<span class="red">Banned comments</span>'|safe if user.ban_comments }}</td>
                     <td>{{ user.reports if user.reports > 0 }} </td>
                     <td>{{ user.ip_address if user.ip_address }}<br />{{ user.ip_address_country if user.ip_address_country }}</td>
                     <td>{{ user.referrer if user.referrer }} </td>
-                    <td><a href="/u/{{ user.link() }}">View local</a> |
-                        {% if not user.is_local() %}
-                            <a href="{{ user.ap_profile_id }}">View remote</a> |
-                        {% else %}
-                            View remote |
-                        {% endif %}
-                        <a href="{{ url_for('admin.admin_user_edit', user_id=user.id) }}">Edit</a> |
+                    <td><a href="{{ url_for('admin.admin_user_edit', user_id=user.id) }}">Edit</a> |
                         <a href="{{ url_for('admin.admin_user_delete', user_id=user.id) }}" class="confirm_first">Delete</a>
                     </td>
                 </tr>

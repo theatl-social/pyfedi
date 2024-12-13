@@ -209,6 +209,11 @@ def register(app):
             db.session.execute(text('DELETE FROM "post_reply_vote" WHERE created_at < :cutoff'), {'cutoff': utcnow() - timedelta(days=28 * 6)})
             db.session.commit()
 
+            # Un-ban after ban expires
+            db.session.execute(text('UPDATE "user" SET banned = false WHERE banned is true AND banned_until < :cutoff AND banned_until is not null'),
+                               {'cutoff': utcnow()})
+            db.session.commit()
+
             # Check for dormant or dead instances
             try:
                 # Check for dormant or dead instances
@@ -219,8 +224,8 @@ def register(app):
                     if instance_banned(instance.domain) or instance.domain == 'flipboard.com':
                         continue
                     nodeinfo_href = instance.nodeinfo_href
-                    if instance.software == 'lemmy' and instance.version >= '0.19.4' and instance.nodeinfo_href and instance.nodeinfo_href.endswith(
-                            'nodeinfo/2.0.json'):
+                    if instance.software == 'lemmy' and instance.version is not None and instance.version >= '0.19.4' and \
+                            instance.nodeinfo_href and instance.nodeinfo_href.endswith('nodeinfo/2.0.json'):
                         nodeinfo_href = None
 
                     if not nodeinfo_href:
@@ -246,8 +251,10 @@ def register(app):
                         except Exception as e:
                             db.session.rollback()
                             current_app.logger.error(f"Error processing instance {instance.domain}: {e}")
+                            instance.failures += 1
                         finally:
                             nodeinfo.close()
+                        db.session.commit()
 
                     if instance.nodeinfo_href:
                         try:
@@ -266,6 +273,7 @@ def register(app):
                             current_app.logger.error(f"Error processing nodeinfo for {instance.domain}: {e}")
                         finally:
                             node.close()
+                        db.session.commit()
 
                     # Handle admin roles
                     if instance.online() and (instance.software == 'lemmy' or instance.software == 'piefed'):
@@ -275,12 +283,14 @@ def register(app):
                                 instance_data = response.json()
                                 admin_profile_ids = []
                                 for admin in instance_data['admins']:
-                                    admin_profile_ids.append(admin['person']['actor_id'].lower())
-                                    user = find_actor_or_create(admin['person']['actor_id'])
-                                    if user and not instance.user_is_admin(user.id):
-                                        new_instance_role = InstanceRole(instance_id=instance.id, user_id=user.id,
-                                                                         role='admin')
-                                        db.session.add(new_instance_role)
+                                    profile_id = admin['person']['actor_id']
+                                    if profile_id.startswith('https://'):
+                                        admin_profile_ids.append(profile_id.lower())
+                                        user = find_actor_or_create(profile_id)
+                                        if user and not instance.user_is_admin(user.id):
+                                            new_instance_role = InstanceRole(instance_id=instance.id, user_id=user.id,
+                                                                             role='admin')
+                                            db.session.add(new_instance_role)
                                 # remove any InstanceRoles that are no longer part of instance-data['admins']
                                 for instance_admin in InstanceRole.query.filter_by(instance_id=instance.id):
                                    if instance_admin.user.profile_id() not in admin_profile_ids:
@@ -294,9 +304,7 @@ def register(app):
                         finally:
                             if response:
                                 response.close()
-
-                # Commit all changes at once
-                db.session.commit()
+                        db.session.commit()
 
             except Exception as e:
                 db.session.rollback()

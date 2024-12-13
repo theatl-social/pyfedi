@@ -369,11 +369,9 @@ div.navbar {
     }
 
     .col_thumbnail {
+      float: right;
       width: 70px;
       position: relative;
-      padding-left: 0;
-      padding-right: 0;
-      left: -13px;
       @include breakpoint(tablet) {
         width: 170px;
       }
@@ -382,11 +380,16 @@ div.navbar {
     .thumbnail {
 
       text-align: center;
-      height: 100%;
       align-content: center;
       display: flex;
+      height: 60px;
+      width: 60px;
+      overflow: hidden;
       @include breakpoint(tablet) {
         align-items: center;
+        height: 90px;
+        width: 170px;
+        max-width: 100%;
       }
 
       a {
@@ -455,12 +458,15 @@ div.navbar {
         }
       }
     }
+
+    .post_teaser_clickable {
+      cursor: pointer;
+    }
   }
 }
 
 .post_teaser_body {
   position: relative;
-  padding-bottom: 32px;
 }
 
 .post_teaser_article_preview, .post_teaser_link_preview {
@@ -485,13 +491,13 @@ div.navbar {
 .post_teaser_image_preview {
   text-align: center;
   margin-top: 10px;
-  margin-bottom: 10px;
   a {
     display: inline-block;
     max-width: 512px;
   }
   img {
     max-width: 100%;
+    min-width: 150px;
     margin-right: 4px;
     border-radius: 5px;
     height: auto;
@@ -501,7 +507,6 @@ div.navbar {
 .post_teaser_video_preview {
   text-align: center;
   margin-top: 10px;
-  margin-bottom: 10px;
   position: relative;
 
   .fe-video {
@@ -548,7 +553,6 @@ time {
 
 .author {
   padding-left: 3px;
-  display: inline-block;
 
   a {
     border-left: 0;
@@ -561,12 +565,6 @@ time {
   width: 100%;
 }
 
-.post_utilities_bar_wrapper {
-  position: absolute;
-  bottom: -9px;
-  width: 97%;
-}
-
 .post_utilities_bar {
   display: flex;
   min-height: $min-touch-target;
@@ -576,41 +574,17 @@ time {
     justify-content: left;
   }
 
-  .cross_post_button {
+  div {
     display: flex;
-    justify-content: left;
+    justify-content: center;
     align-items: center;
-    width: $min-touch-target;
-    height: $min-touch-target;
-    line-height: $min-touch-target;
-    padding: 3px;
-    padding-left: 0;
-  }
-
-  .post_replies_link {
-    display: flex;
     min-width: $min-touch-target;
     height: $min-touch-target;
-    padding: 3px;
-    align-items: center;
-    margin-left: -3px;
+    line-height: $min-touch-target;
   }
 
-  .voting_buttons_new {
-    display: flex;
-    height: $min-touch-target;
-    padding: 3px;
-    justify-content: center;
-    align-items: center;
-  }
-
-   .post_cross_post_link, .post_options_link, .preview_image {
-    display: flex;
-    width: $min-touch-target;
-    height: $min-touch-target;
-    padding: 3px;
-    justify-content: center;
-    align-items: center;
+  .notify_toggle {
+    margin-left: auto; /* pull right */
   }
 }
 
@@ -838,8 +812,6 @@ time {
 }
 
 .voting_buttons_new {
-  display: inline-block;
-
   .upvote_button, .downvote_button {
     position: relative; /* so the htmx-indicators can be position: absolute */
     display: inline-block;
@@ -866,11 +838,15 @@ time {
 
     &.voted_up {
       color: green;
-      font-weight: bold;
+      .fe {
+        font-weight: bold;
+      }
     }
     &.voted_down {
       color: darkred;
-      font-weight: bold;
+      .fe {
+        font-weight: bold;
+      }
     }
   }
 
@@ -988,6 +964,7 @@ time {
 .comment {
   clear: both;
   margin-left: 15px;
+  padding-left: 0px;
   padding-top: 8px;
 
   .limit_height {
@@ -1048,28 +1025,26 @@ time {
 
   .comment_actions {
     margin-top: -18px;
-    position: relative;
-    padding-bottom: 5px;
-    a {
-      text-decoration: none;
-      padding: 0;
+    display: flex;
+    min-height: $min-touch-target;
+    /* justify-content: space-between; */
+    justify-content: left;
+    @include breakpoint(tablet) {
+      justify-content: left;
     }
 
-    .hide_button {
-      display: inline-block;
-
-      a {
-        padding: 5px 15px;
-      }
+    div {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-width: $min-touch-target;
+      height: $min-touch-target;
+      line-height: $min-touch-target;
     }
 
     .notify_toggle {
-      display: inline-block;
-      a {
-        text-decoration: none;
-        font-size: 87%;
-        padding: 5px 15px;
-      }
+      margin-left: auto; /* pull right */
+      font-size: 87%;
     }
   }
 
@@ -1272,6 +1247,13 @@ h1 .warning_badge {
 }
 
 .profile_bio {
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+.wiki_page {
   img {
     max-width: 100%;
     height: auto;
@@ -1491,6 +1473,10 @@ form {
   display: block;
   position: relative;
   top: -11px;
+
+  &.tweak-top {
+    top: -18px;
+  }
 }
 
 .coolfieldset legend, .coolfieldset.expanded legend{
@@ -1570,30 +1556,6 @@ form {
   margin-top: -15px;
   display: block;
   margin-bottom: 10px;
-}
-
-.post_options_link {
-  display: block;
-  width: 41px;
-  text-decoration: none;
-}
-
-.comment_actions_link {
-  display: block;
-  position: absolute;
-  top: 3px;
-  right: -16px;
-  width: 41px;
-  text-decoration: none;
-}
-
-.notify_toggle  {
-  display: block;
-  position: absolute;
-  top: 2px;
-  right: 30px;
-  width: 41px;
-  text-decoration: none;
 }
 
 .alert {
@@ -1685,6 +1647,10 @@ form {
   p {
     margin-bottom: 0;
   }
+}
+
+.pt-05 {
+  padding-top: .12rem !important;
 }
 
 

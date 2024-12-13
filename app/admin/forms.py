@@ -56,6 +56,13 @@ class PreLoadCommunitiesForm(FlaskForm):
     communities_num = IntegerField(_l('Number of Communities to add'), default=25)
     pre_load_submit = SubmitField(_l('Add Communities'))
 
+class RemoteInstanceScanForm(FlaskForm):
+    remote_url = StringField(_l('Remote Server'), validators=[DataRequired()])
+    communities_requested = IntegerField(_l('Number of Communities to add'), default=25)
+    minimum_posts = IntegerField(_l('Communities must have at least this many posts'), default=100)
+    minimum_active_users = IntegerField(_l('Communities must have at least this many active users in the past week.'), default=100)
+    dry_run = BooleanField(_l('Dry Run'))
+    remote_scan_submit = SubmitField(_l('Scan'))
 
 class ImportExportBannedListsForm(FlaskForm):
     import_file = FileField(_l('Import Bans List Json File'))
@@ -75,7 +82,6 @@ class EditCommunityForm(FlaskForm):
     local_only = BooleanField(_l('Only accept posts from current instance'))
     restricted_to_mods = BooleanField(_l('Only moderators can post'))
     new_mods_wanted = BooleanField(_l('New moderators wanted'))
-    show_home = BooleanField(_l('Posts show on home page'))
     show_popular = BooleanField(_l('Posts can be popular'))
     show_all = BooleanField(_l('Posts show in All list'))
     low_quality = BooleanField(_l("Low quality / toxic - upvotes in here don't add to reputation"))
@@ -119,6 +125,7 @@ class EditTopicForm(FlaskForm):
     name = StringField(_l('Name'), validators=[DataRequired()], render_kw={'title': _l('Human readable name for the topic.')})
     machine_name = StringField(_l('Slug'), validators=[DataRequired()], render_kw={'title': _l('A short and unique identifier that becomes part of the URL.')})
     parent_id = SelectField(_l('Parent topic'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
+    show_posts_in_children = BooleanField(_l('Show posts from child topics'), validators=[Optional()])
     submit = SubmitField(_l('Save'))
 
 
@@ -207,6 +214,8 @@ class EditUserForm(FlaskForm):
     bot = BooleanField(_l('This profile is a bot'))
     verified = BooleanField(_l('Email address is verified'))
     banned = BooleanField(_l('Banned'))
+    ban_posts = BooleanField(_l('Ban posts'))
+    ban_comments = BooleanField(_l('Ban comments'))
     hide_type_choices = [(0, _l('Show')),
                          (1, _l('Hide completely')),
                          (2, _l('Blur')),

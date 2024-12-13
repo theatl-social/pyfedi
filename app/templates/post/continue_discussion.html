@@ -2,7 +2,7 @@
     {% extends 'themes/' + theme() + '/base.html' %}
 {% else %}
     {% extends "base.html" %}
-{% endif %} %}
+{% endif %}
 {% from 'bootstrap/form.html' import render_form %}
 
 {% block app_content %}
@@ -12,68 +12,11 @@
         <p><a href="{{ url_for('activitypub.post_ap', post_id=post.id, _anchor='replies') }}">Back to main discussion</a></p>
         <div class="row post_replies">
             <div class="col">
-                {% macro render_comment(comment) %}
-                    <div id="comment_{{ comment['comment'].id }}" class="comment {% if comment['comment'].author.id == post.author.id %}original_poster{% endif %}" role="treeitem"
-                        {% if comment['comment'].language_id and comment['comment'].language.code != 'en' %} lang="{{ comment['comment'].language.code }}"{% endif %}>
-                        <div class="limit_height">
-                            <div class="comment_author">
-                                {% with collapsed = comment['comment'].score < -10 -%}
-                                    {{ render_username(comment['comment'].author) }}
-                                {% endwith -%}
-                                {% if comment['comment'].author.id == post.author.id %}<span title="Submitter of original post" aria-label="submitter" class="small">[OP] </span>{% endif %}
-                                <span class="text-muted small">{{ comment['comment'].posted_at_localized(locale) }}{% if comment['comment'].edited_at %}, edited {{ arrow.get(comment['comment'].edited_at).humanize(locale=locale) }} {% endif %}</span>
-                                <a class="unhide" href="#"><span class="fe fe-expand"></span></a>
-                                {% if comment['comment'].reports and current_user.is_authenticated and post.community.is_moderator(current_user)%}
-                                    <span class="red fe fe-report" title="{{ _('Reported. Check comment for issues.') }}"></span>
-                                {% endif %}
-                            </div>
-                            <div class="comment_body hidable {% if comment['comment'].reports and current_user.is_authenticated and post.community.is_moderator(current_user) %}reported{% endif %}">
-                                {% if comment['comment'].deleted -%}
-                                  {% if comment['comment'].deleted_by is none or comment['comment'].deleted_by != comment['comment'].user_id -%}
-                                    <p>Deleted by moderator</p>
-                                  {% else -%}
-                                    <p>Deleted by author</p>
-                                  {% endif -%}
-                                {% else -%}
-                                  {{ comment['comment'].body_html | community_links | safe }}
-                                {% endif -%}
-                            </div>
-                        </div>
-                        <div class="comment_actions hidable">
-                            {% if post.comments_enabled %}
-                                <a href="{{ url_for('post.add_reply', post_id=post.id, comment_id=comment['comment'].id) }}" rel="nofollow"><span class="fe fe-reply"></span> reply</a>
-                            {% endif %}
-                            <div class="voting_buttons_new">
-                            {% with comment=comment['comment'] %}
-                                {% include "post/_comment_voting_buttons.html" %}
-                            {% endwith %}
-                            </div>
-                            <div class="hide_button">
-                                {% if comment['comment'].score <= -10 %}
-                                    <a href='#'><span class="fe fe-expand"></span></a>
-                                {% else %}
-                                    <a href='#'><span class="fe fe-collapse"></span></a>
-                                {% endif %}
-                            </div>
-                            <div class="notify_toggle">
-                                {% if current_user.is_authenticated and current_user.verified and current_user.id == comment['comment'].author.id %}
-                                    {% include "post/_reply_notification_toggle.html" %}
-                                {% endif %}
-                            </div>
-                            <a href="{{ url_for('post.post_reply_options', post_id=post.id, comment_id=comment['comment'].id) }}" class="comment_actions_link" rel="nofollow"><span class="fe fe-options" title="Options"> </span></a>
-                        </div>
-                        {% if comment['replies'] %}
-                            <div class="replies hidable" role="group">
-                                {% for reply in comment['replies'] %}
-                                  {{ render_comment(reply) | safe }}
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
-                {% endmacro %}
                 <div id="replies" class="comments" role="tree">
                     {% for reply in replies %}
-                      {{ render_comment(reply) | safe }}
+                      {% with post_reply=reply['comment'], children=reply['replies'] %}
+                          {% include 'post/_post_reply_teaser.html' %}
+                      {% endwith %}
                     {% endfor %}
                 </div>
             </div>
