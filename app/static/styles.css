@@ -1201,10 +1201,14 @@ time {
 }
 .voting_buttons_new .upvote_button.voted_up, .voting_buttons_new .downvote_button.voted_up {
   color: green;
+}
+.voting_buttons_new .upvote_button.voted_up .fe, .voting_buttons_new .downvote_button.voted_up .fe {
   font-weight: bold;
 }
 .voting_buttons_new .upvote_button.voted_down, .voting_buttons_new .downvote_button.voted_down {
   color: darkred;
+}
+.voting_buttons_new .upvote_button.voted_down .fe, .voting_buttons_new .downvote_button.voted_down .fe {
   font-weight: bold;
 }
 .voting_buttons_new .upvote_button .htmx-indicator {
