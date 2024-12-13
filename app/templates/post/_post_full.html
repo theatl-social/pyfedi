@@ -41,7 +41,10 @@
                 </div>
             {% elif post.type == POST_TYPE_LINK -%}
                 <p><a href="{{ post.url }}" rel="nofollow ugc" target="_blank" class="post_link" aria-label="Go to post url">{{ post.url|shorten_url }}
-                <span class="fe fe-external"></span></a></p>
+                <span class="fe fe-external"></span></a>
+                    {% if post.domain.post_warning -%}
+                        <span class="fe fe-warning red" title="{{ post.domain.post_warning }}"></span>
+                    {% endif -%}</p>
                 {% if post.url.endswith('.mp3') -%}
                     <p><audio controls preload="{{ 'none' if low_bandwidth else 'metadata' }}" src="{{ post.url }}"></audio></p>
                 {% elif post.url.endswith('.mp4') or post.url.endswith('.webm') -%}

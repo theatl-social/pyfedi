@@ -1929,7 +1929,6 @@ class PostReply(db.Model):
         return undo
 
 
-
 class Domain(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), index=True)
@@ -1937,6 +1936,7 @@ class Domain(db.Model):
     banned = db.Column(db.Boolean, default=False, index=True) # Domains can be banned site-wide (by admin) or DomainBlock'ed by users
     notify_mods = db.Column(db.Boolean, default=False, index=True)
     notify_admins = db.Column(db.Boolean, default=False, index=True)
+    post_warning = db.Column(db.String(512))
 
     def blocked_by(self, user):
         block = DomainBlock.query.filter_by(domain_id=self.id, user_id=user.id).first()
