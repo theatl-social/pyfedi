@@ -17,6 +17,7 @@ import math
 from urllib.parse import urlparse, parse_qs, urlencode
 from functools import wraps
 import flask
+import requests
 from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
 import warnings
 import jwt
@@ -1111,7 +1112,7 @@ def in_sorted_list(arr, target):
 # Makes a still image from a video url, without downloading the whole video file
 def generate_image_from_video_url(video_url, output_path, length=2):
 
-    response = httpx_client.get(video_url, stream=True, timeout=5,
+    response = requests.get(video_url, stream=True, timeout=5,
                             headers={'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0'})  # Imgur requires a user agent
     content_type = response.headers.get('Content-Type')
     if content_type:
