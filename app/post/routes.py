@@ -817,6 +817,15 @@ def post_edit(post_id: int):
             elif post.type == POST_TYPE_IMAGE:
                 # existing_image = True
                 form.image_alt_text.data = post.image.alt_text
+                path = post.image.file_path
+                # This is fallback for existing entries
+                if not path:
+                    path = "app/" + post.image.source_url.replace(
+                        f"https://{current_app.config['SERVER_NAME']}/", ""
+                    )
+                with open(path, "rb")as file:
+                    form.image_file.data = file.read()
+            
             elif post.type == POST_TYPE_VIDEO:
                 form.video_url.data = post.url
             elif post.type == POST_TYPE_POLL:

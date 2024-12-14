@@ -688,8 +688,13 @@ def add_post(actor, type):
                         img.thumbnail((2000, 2000))
                         img.save(final_place)
 
-                request_json['object']['attachment'] = [{'type': 'Image', 'url': f'https://{current_app.config["SERVER_NAME"]}/{final_place.replace("app/", "")}',
-                                                        'name': form.image_alt_text.data}]
+                request_json['object']['attachment'] = [{
+                    'type': 'Image', 
+                    'url': f'https://{current_app.config["SERVER_NAME"]}/{final_place.replace("app/", "")}',
+                    'name': form.image_alt_text.data,
+                    'file_path': final_place
+                }]
+        
         elif type == 'video':
             request_json['object']['attachment'] = [{'type': 'Document', 'url': form.video_url.data}]
         elif type == 'poll':

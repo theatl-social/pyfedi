@@ -323,7 +323,6 @@ class File(db.Model):
         if purge_from_cache:
             flush_cdn_cache(purge_from_cache)
 
-
     def filesize(self):
         size = 0
         if self.file_path and os.path.exists(self.file_path):
@@ -1242,9 +1241,10 @@ class Post(db.Model):
                 if 'name' in request_json['object']['attachment'][0]:
                     alt_text = request_json['object']['attachment'][0]['name']
             if request_json['object']['attachment'][0]['type'] == 'Image':
-                post.url = request_json['object']['attachment'][0]['url']  # PixelFed, PieFed, Lemmy >= 0.19.4
-                if 'name' in request_json['object']['attachment'][0]:
-                    alt_text = request_json['object']['attachment'][0]['name']
+                attachment = request_json['object']['attachment'][0]
+                post.url = attachment['url']  # PixelFed, PieFed, Lemmy >= 0.19.4
+                alt_text = attachment.get("name")
+                file_path = attachment.get("file_path")
 
         if 'attachment' in request_json['object'] and isinstance(request_json['object']['attachment'], dict):  # a.gup.pe (Mastodon)
             alt_text = None
@@ -1256,6 +1256,8 @@ class Post(db.Model):
                 image = File(source_url=post.url)
                 if alt_text:
                     image.alt_text = alt_text
+                if file_path:
+                    image.file_path = file_path
                 db.session.add(image)
                 post.image = image
             elif is_video_url(post.url):  # youtube is detected later
