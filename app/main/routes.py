@@ -116,6 +116,7 @@ def home_page(sort, view_filter):
         posts = posts.order_by(desc(Post.last_active))
 
     # Pagination
+    """
     if view_filter == 'subscribed' and current_user.is_authenticated and sort == 'new':
         # use python list instead of DB query
         posts = posts.all()
@@ -146,9 +147,10 @@ def home_page(sort, view_filter):
         next_url = url_for('main.index', page=next_page, sort=sort, view_filter=view_filter) if next_page else None
         prev_url = url_for('main.index', page=previous_page, sort=sort, view_filter=view_filter) if previous_page else None
     else:
-        posts = posts.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50, error_out=False)
-        next_url = url_for('main.index', page=posts.next_num, sort=sort, view_filter=view_filter) if posts.has_next else None
-        prev_url = url_for('main.index', page=posts.prev_num, sort=sort, view_filter=view_filter) if posts.has_prev and page != 1 else None
+    """
+    posts = posts.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50, error_out=False)
+    next_url = url_for('main.index', page=posts.next_num, sort=sort, view_filter=view_filter) if posts.has_next else None
+    prev_url = url_for('main.index', page=posts.prev_num, sort=sort, view_filter=view_filter) if posts.has_prev and page != 1 else None
 
     # Active Communities
     active_communities = Community.query.filter_by(banned=False)
