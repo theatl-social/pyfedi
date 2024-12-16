@@ -1,6 +1,6 @@
 const url = new URL(window.location.href);
 export const baseUrl = `${url.protocol}//${url.host}`;
-const api = baseUrl + '/api/alpha/site';
+const api_site = baseUrl + '/api/alpha/site';
 
 let jwt = null;
 let session_jwt = sessionStorage.getItem('jwt');
@@ -32,7 +32,7 @@ if (jwt != null) {
                       '<li class="nav-item"><a class="nav-link" href="/donate">Donate</a></li>';
 }
 
-fetch(api, request)
+fetch(api_site, request)
   .then(response => response.json())
   .then(data => {
         // head
@@ -41,7 +41,6 @@ fetch(api, request)
         document.querySelector('#icon_32').href = data.site.icon_32;
         document.querySelector('#icon_16').href = data.site.icon_16;
         document.querySelector('#icon_shortcut').href = data.site.icon_32;
-        document.querySelector('#favicon').href = baseUrl + '/static/images/favicon.ico';
 
         // navbar
         document.querySelector('#navbar_title').innerHTML = '<img src="' + data.site.icon + '" alt="Logo" width="36" height="36" />' + ' ' + data.site.name;
@@ -106,29 +105,39 @@ fetch(api, request)
           communities_item.appendChild(communities_menu)
           navbar.appendChild(communities_item)
 
+          const user_settings_item = document.createElement('li')
+          user_settings_item.className = 'nav-item'
+          user_settings_item.innerHTML = '<a class="nav-link" href="/user/settings">User settings</a>';
+          navbar.appendChild(user_settings_item)
 
-
-          /*const login_item = document.createElement('li')
-          login_item.className = 'nav-item'
-          login_item.innerHTML = '<a class="nav-link" href="/api/alpha/auth/login">Log in (via API)</a>'
-          ul.appendChild(login_item)
-
-          const communities_dropdown = document.createElement('li')
-          communities_dropdown.className =  'nav-item dropdown'
-          communities_dropdown.innerHTML =  '<a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">' +
-                                              'Communities' +
-                                            '</a>'
-            const communities_dropdown_ul = document.createElement('ul')
-            communities_dropdown_ul.className = 'dropdown-menu'
-              const communities_dropdown_ul_item = document.createElement('li')
-              communities_dropdown_ul_item.className = 'dropdown-item'
-              communities_dropdown_ul_item.href = '/api/alpha/communities'
-              communities_dropdown_ul.appendChild(communities_dropdown_ul_item)
-            communities_dropdown.appendChild(communities_dropdown_ul)
-          ul.appendChild(communities_dropdown)*/
+          const logout_item = document.createElement('li')
+          logout_item.className = 'nav-item'
+          logout_item.innerHTML = '<a class="nav-link" href="/api/alpha/auth/logout">Log out (via API)</a>';
+          navbar.appendChild(logout_item)
         }
 
         // site info
+        if (jwt != null) {
+          document.querySelector('#site_request').innerHTML = 'GET <code>/api/alpha/site</code> [LOGGED IN]'
+          document.querySelector('#post_list_request').innerHTML = 'GET <code>/api/alpha/post/list?type_=Subscribed&sort=New&page=1</code></p>'
+        } else {
+          document.querySelector('#site_request').innerHTML = 'GET <code>/api/alpha/site</code> [LOGGED OUT]'
+          document.querySelector('#post_list_request').innerHTML = 'GET <code>/api/alpha/post/list?type_=Popular&sort=Hot&page=1</code></p>'
+        }
+
         document.querySelector('#site_json').textContent = JSON.stringify(data, null, 2);
   })
 
+
+if (jwt != null) {
+  var api_postlist = baseUrl + '/api/alpha/post/list?type_=Subscribed&sort=New&page=1';
+} else {
+  var api_postlist = baseUrl + '/api/alpha/post/list?type_=Popular&sort=Hot&page=1';
+}
+
+fetch(api_postlist, request)
+  .then(response => response.json())
+  .then(data => {
+    document.querySelector('#post_list_json').textContent = JSON.stringify(data, null, 2);
+
+  })
