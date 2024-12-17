@@ -25,8 +25,6 @@
                <th title="{{ _('Reputation: The Karma of the account. Total up votes minus down votes they got.') }}">{{ _('Reputation') }}</th>
                <th>{{ _('Banned') }}</th>
                <th title="{{ _('How often a user has been reported.') }}">{{ _('Reports') }}</th>
-               <th title="{{ _('IP address of last interaction.') }}">{{ _('IP and country code') }}</th>
-               <th title="{{ _('Which website linked to PieFed when the user initially registered.') }}">{{ _('Source') }}</th>
                <th>{{ _('Actions') }}</th>
             </tr>
             {% for user in users.items %}
@@ -45,8 +43,6 @@
                         {{ '<span class="red">Banned posts</span>'|safe if user.ban_posts }}
                         {{ '<span class="red">Banned comments</span>'|safe if user.ban_comments }}</td>
                     <td>{{ user.reports if user.reports > 0 }} </td>
-                    <td>{{ user.ip_address if user.ip_address }}<br />{{ user.ip_address_country if user.ip_address_country }}</td>
-                    <td>{{ user.referrer if user.referrer }} </td>
                     <td><a href="{{ url_for('admin.admin_user_edit', user_id=user.id) }}">Edit</a> |
                         <a href="{{ url_for('admin.admin_user_delete', user_id=user.id) }}" class="confirm_first">Delete</a>
                     </td>
