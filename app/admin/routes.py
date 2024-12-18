@@ -1178,45 +1178,6 @@ def admin_users():
                            )
 
 
-@bp.route('/users/trash', methods=['GET'])
-@login_required
-@permission_required('administer all users')
-def admin_users_trash():
-
-    page = request.args.get('page', 1, type=int)
-    search = request.args.get('search', '')
-    local_remote = request.args.get('local_remote', '')
-    type = request.args.get('type', 'bad_rep')
-
-    users = User.query.filter_by(deleted=False)
-    if local_remote == 'local':
-        users = users.filter_by(ap_id=None)
-    if local_remote == 'remote':
-        users = users.filter(User.ap_id != None)
-    if search:
-        users = users.filter(User.email.ilike(f"%{search}%"))
-
-    if type == '' or type == 'bad_rep':
-        users = users.filter(User.last_seen > utcnow() - timedelta(days=7))
-        users = users.filter(User.reputation < -10)
-        users = users.order_by(User.reputation).paginate(page=page, per_page=1000, error_out=False)
-    elif type == 'bad_attitude':
-        users = users.filter(User.last_seen > utcnow() - timedelta(days=7))
-        users = users.filter(User.attitude < 0.0).filter(User.reputation < -10)
-        users = users.order_by(User.attitude).paginate(page=page, per_page=1000, error_out=False)
-
-    next_url = url_for('admin.admin_users_trash', page=users.next_num, search=search, local_remote=local_remote, type=type) if users.has_next else None
-    prev_url = url_for('admin.admin_users_trash', page=users.prev_num, search=search, local_remote=local_remote, type=type) if users.has_prev and page != 1 else None
-
-    return render_template('admin/users_trash.html', title=_('Problematic users'), next_url=next_url, prev_url=prev_url, users=users,
-                           local_remote=local_remote, search=search, type=type,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site
-                           )
-
-
 @bp.route('/content/trash', methods=['GET'])
 @login_required
 @permission_required('administer all users')
