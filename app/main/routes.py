@@ -116,39 +116,9 @@ def home_page(sort, view_filter):
         posts = posts.order_by(desc(Post.last_active))
 
     # Pagination
-    if view_filter == 'subscribed' and current_user.is_authenticated and sort == 'new':
-        # use python list instead of DB query
-        posts = posts.all()
-
-        # exclude extra cross-posts from feed
-        already_seen = []
-        limit = 100 if not low_bandwidth else 50
-        #i = -1                                                 # option 1: don't exclude cross-posts
-        #i = min(limit - 1, len(posts) - 1)                     # option 2: exclude cross-posts from the first page only
-        i = min((limit * 10) - 1, len(posts) - 1)               # option 3: exclude cross-posts across a 'magic number' of pages
-        #i = len(posts) - 1                                     # option 4: exclude all cross-posts ever
-        while i >= 0:
-            if not posts[i].cross_posts:
-                i -= 1
-                continue
-            if posts[i].id in already_seen:
-                posts.pop(i)
-            else:
-                already_seen.extend(posts[i].cross_posts)
-            i -= 1
-
-        # paginate manually (can't use paginate())
-        start = (page - 1) * limit
-        end = start + limit
-        posts = posts[start:end]
-        next_page = page + 1 if len(posts) == limit else None
-        previous_page = page - 1 if page != 1 else None
-        next_url = url_for('main.index', page=next_page, sort=sort, view_filter=view_filter) if next_page else None
-        prev_url = url_for('main.index', page=previous_page, sort=sort, view_filter=view_filter) if previous_page else None
-    else:
-        posts = posts.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50, error_out=False)
-        next_url = url_for('main.index', page=posts.next_num, sort=sort, view_filter=view_filter) if posts.has_next else None
-        prev_url = url_for('main.index', page=posts.prev_num, sort=sort, view_filter=view_filter) if posts.has_prev and page != 1 else None
+    posts = posts.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50, error_out=False)
+    next_url = url_for('main.index', page=posts.next_num, sort=sort, view_filter=view_filter) if posts.has_next else None
+    prev_url = url_for('main.index', page=posts.prev_num, sort=sort, view_filter=view_filter) if posts.has_prev and page != 1 else None
 
     # Active Communities
     active_communities = Community.query.filter_by(banned=False)
@@ -250,7 +220,6 @@ def list_communities():
                            next_url=next_url, prev_url=prev_url, current_user=current_user,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site)
 
 
@@ -302,11 +271,11 @@ def list_local_communities():
                            next_url=next_url, prev_url=prev_url, current_user=current_user,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site)
 
 
 @bp.route('/communities/subscribed', methods=['GET'])
+@login_required
 def list_subscribed_communities():
     verification_warning()
     search_param = request.args.get('search', '')
@@ -317,36 +286,39 @@ def list_subscribed_communities():
     sort_by = request.args.get('sort_by', 'post_reply_count desc')
     topics = Topic.query.order_by(Topic.name).all()
     languages = Language.query.order_by(Language.name).all()
-    if current_user.is_authenticated:
-        communities = Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == current_user.id)
+    # get all the communities
+    all_communities = Community.query.filter_by(banned=False)
+    # get the user's joined communities
+    user_joined_communities = joined_communities(current_user.id)
+    # get the joined community ids list
+    joined_ids = []
+    for jc in user_joined_communities:
+        joined_ids.append(jc.id)
+    # filter down to just the joined communities
+    communities = all_communities.filter(Community.id.in_(joined_ids))
 
-        if search_param == '':
+    if search_param == '':
             pass
-        else:
-            communities = communities.filter(or_(Community.title.ilike(f"%{search_param}%"), Community.ap_id.ilike(f"%{search_param}%")))
-
-        if topic_id != 0:
-            communities = communities.filter_by(topic_id=topic_id)
-
-        if language_id != 0:
-            communities = communities.join(community_language).filter(community_language.c.language_id == language_id)
-
-        banned_from = communities_banned_from(current_user.id)
-        if banned_from:
-            communities = communities.filter(Community.id.not_in(banned_from))
-
-        communities = communities.order_by(text('community.' + sort_by))
-
-        # Pagination
-        communities = communities.paginate(page=page, per_page=250 if current_user.is_authenticated and not low_bandwidth else 50,
-                           error_out=False)
-        next_url = url_for('main.list_subscribed_communities', page=communities.next_num, sort_by=sort_by, language_id=language_id) if communities.has_next else None
-        prev_url = url_for('main.list_subscribed_communities', page=communities.prev_num, sort_by=sort_by, language_id=language_id) if communities.has_prev and page != 1 else None
-
     else:
-        communities = []
-        next_url = None
-        prev_url = None
+        communities = communities.filter(or_(Community.title.ilike(f"%{search_param}%"), Community.ap_id.ilike(f"%{search_param}%")))
+
+    if topic_id != 0:
+        communities = communities.filter_by(topic_id=topic_id)
+
+    if language_id != 0:
+        communities = communities.join(community_language).filter(community_language.c.language_id == language_id)
+
+    banned_from = communities_banned_from(current_user.id)
+    if banned_from:
+        communities = communities.filter(Community.id.not_in(banned_from))
+
+    communities = communities.order_by(text('community.' + sort_by))
+
+    # Pagination
+    communities = communities.paginate(page=page, per_page=250 if current_user.is_authenticated and not low_bandwidth else 50,
+                        error_out=False)
+    next_url = url_for('main.list_subscribed_communities', page=communities.next_num, sort_by=sort_by, language_id=language_id) if communities.has_next else None
+    prev_url = url_for('main.list_subscribed_communities', page=communities.prev_num, sort_by=sort_by, language_id=language_id) if communities.has_prev and page != 1 else None
 
     return render_template('list_communities.html', communities=communities, search=search_param, title=_('Joined Communities'),
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
@@ -354,7 +326,6 @@ def list_subscribed_communities():
                            next_url=next_url, prev_url=prev_url, current_user=current_user,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site)
 
 
@@ -369,49 +340,43 @@ def list_not_subscribed_communities():
     sort_by = request.args.get('sort_by', 'post_reply_count desc')
     topics = Topic.query.order_by(Topic.name).all()
     languages = Language.query.order_by(Language.name).all()
-    if current_user.is_authenticated:
-        # get all communities
-        all_communities = Community.query.filter_by(banned=False)
-        # get the user's joined communities
-        joined_communities = Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == current_user.id)
-        # get the joined community ids list
-        joined_ids = []
-        for jc in joined_communities:
-            joined_ids.append(jc.id)
-        # filter out the joined communities from all communities
-        communities = all_communities.filter(Community.id.not_in(joined_ids))
+    # get all communities
+    all_communities = Community.query.filter_by(banned=False)
+    # get the user's joined communities
+    joined_communities = Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == current_user.id)
+    # get the joined community ids list
+    joined_ids = []
+    for jc in joined_communities:
+        joined_ids.append(jc.id)
+    # filter out the joined communities from all communities
+    communities = all_communities.filter(Community.id.not_in(joined_ids))
 
-        if search_param == '':
-            pass
-        else:
-            communities = communities.filter(or_(Community.title.ilike(f"%{search_param}%"), Community.ap_id.ilike(f"%{search_param}%")))
-
-        if topic_id != 0:
-            communities = communities.filter_by(topic_id=topic_id)
-
-        if language_id != 0:
-            communities = communities.join(community_language).filter(community_language.c.language_id == language_id)
-
-        banned_from = communities_banned_from(current_user.id)
-        if banned_from:
-            communities = communities.filter(Community.id.not_in(banned_from))
-        if current_user.hide_nsfw == 1:
-            communities = communities.filter(Community.nsfw == False)
-        if current_user.hide_nsfl == 1:
-            communities = communities.filter(Community.nsfl == False)
-
-        communities = communities.order_by(text('community.' + sort_by))
-
-        # Pagination
-        communities = communities.paginate(page=page, per_page=250 if current_user.is_authenticated and not low_bandwidth else 50,
-                           error_out=False)
-        next_url = url_for('main.list_not_subscribed_communities', page=communities.next_num, sort_by=sort_by, language_id=language_id) if communities.has_next else None
-        prev_url = url_for('main.list_not_subscribed_communities', page=communities.prev_num, sort_by=sort_by, language_id=language_id) if communities.has_prev and page != 1 else None
-
+    if search_param == '':
+        pass
     else:
-        communities = []
-        next_url = None
-        prev_url = None
+        communities = communities.filter(or_(Community.title.ilike(f"%{search_param}%"), Community.ap_id.ilike(f"%{search_param}%")))
+
+    if topic_id != 0:
+        communities = communities.filter_by(topic_id=topic_id)
+
+    if language_id != 0:
+        communities = communities.join(community_language).filter(community_language.c.language_id == language_id)
+
+    banned_from = communities_banned_from(current_user.id)
+    if banned_from:
+        communities = communities.filter(Community.id.not_in(banned_from))
+    if current_user.hide_nsfw == 1:
+        communities = communities.filter(Community.nsfw == False)
+    if current_user.hide_nsfl == 1:
+        communities = communities.filter(Community.nsfl == False)
+
+    communities = communities.order_by(text('community.' + sort_by))
+
+    # Pagination
+    communities = communities.paginate(page=page, per_page=250 if current_user.is_authenticated and not low_bandwidth else 50,
+                        error_out=False)
+    next_url = url_for('main.list_not_subscribed_communities', page=communities.next_num, sort_by=sort_by, language_id=language_id) if communities.has_next else None
+    prev_url = url_for('main.list_not_subscribed_communities', page=communities.prev_num, sort_by=sort_by, language_id=language_id) if communities.has_prev and page != 1 else None
 
     return render_template('list_communities.html', communities=communities, search=search_param, title=_('Not Joined Communities'),
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
