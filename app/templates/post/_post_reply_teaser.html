@@ -95,7 +95,22 @@
         </div>
         <div class="comment_actions_link">
             {% if not post_reply.post.deleted -%}
-                <a href="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) }}" rel="nofollow noindex" aria-label="{{ _('Comment options') }}"><span class="fe fe-options" title="Options"> </span></a>
+                <div class="dropdown">
+                    <a 
+                        href="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) }}" 
+                        data-bs-toggle="dropdown" rel="nofollow noindex" 
+                        aria-label="{{ _('Comment options') }}">
+                        <span class="fe fe-options" title="Options"> </span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <div 
+                            hx-get="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) }}"
+                            hx-trigger="revealed"
+                            hx-target="this"
+                            hx-swap="outerHTML"
+                        ></div>
+                    </ul>
+                </div>
             {% endif -%}
         </div>
     </div>
