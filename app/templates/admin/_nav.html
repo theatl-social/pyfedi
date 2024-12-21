@@ -6,7 +6,6 @@
     <a href="{{ url_for('admin.admin_communities') }}">{{ _('Communities') }}</a> |
     <a href="{{ url_for('admin.admin_topics') }}">{{ _('Topics') }}</a> |
     <a href="{{ url_for('admin.admin_users', local_remote='local') }}">{{ _('Users') }}</a> |
-    <a href="{{ url_for('admin.admin_users_trash', local_remote='local') }}">{{ _('Watch') }}</a> |
     {% if site.registration_mode == 'RequireApplication' %}
         <a href="{{ url_for('admin.admin_approve_registrations') }}">{{ _('Registration applications') }}</a> |
     {% endif %}
@@ -15,6 +14,7 @@
     <a href="{{ url_for('admin.newsletter') }}">{{ _('Newsletter') }}</a> |
     <a href="{{ url_for('admin.admin_permissions') }}">{{ _('Permissions') }}</a> |
     <a href="{{ url_for('admin.admin_activities') }}">{{ _('Activities') }}</a>
+    <a href="{{ url_for('main.modlog') }}">{{ _('Modlog') }}</a>
     {% if debug_mode %}
         | <a href="{{ url_for('dev.tools') }}">{{ _('Dev Tools') }}</a>
     {% endif%}    
