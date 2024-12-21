@@ -11,44 +11,84 @@
     <div class="col">
         <h1>{{ _('Users') }}</h1>
         <a class="btn btn-primary" href="{{ url_for('admin.admin_users_add') }}" style="float: right;">{{ _('Add local user') }}</a>
-        <form method="get">
-            <input type="search" name="search" value="{{ search }}">
-            <input type="radio" name="local_remote" value="local" id="local_remote_local" {{ 'checked' if local_remote == 'local' }}><label for="local_remote_local"> Local</label>
-            <input type="radio" name="local_remote" value="remote" id="local_remote_remote" {{ 'checked' if local_remote == 'remote' }}><label for="local_remote_remote"> Remote</label>
-            <input type="submit" name="submit" value="Search" class="btn btn-primary">
+        <form id="searchUsers" method="get">
+            <div>
+                <input type="search" name="search" placeholder="{{ _('Search') }}" value="{{ search }}">
+                <input type="submit" name="submit_search" value="{{ _('Search') }}" class="btn btn-primary">
+            </div>
+            <div style="display:inline;">
+                <label for="local_remote">Local/Remote: </label>
+                <select name="local_remote" class="form-control-sm submit_on_change">
+                    <option value="">All</option>
+                    <option value="local" {{ 'selected' if local_remote == 'local' }}>Local</option>
+                    <option value="remote" {{ 'selected' if local_remote == 'remote' }}>Remote</option>
+                </select>
+            </div>
+            <div style="display:inline;">
+                <label for="last_seen">Active: </label>
+                <select name="last_seen" class="form-control-sm submit_on_change">
+                    <option value="0">All</option>
+                    <option value="7" {{ 'selected' if last_seen == 7 }}>7 days</option>
+                    <option value="30" {{ 'selected' if last_seen == 30 }}>30 days</option>
+                </select>
+            </div>
+            <input type="hidden" name="sort_by" value="{{ sort_by }}"></button>
         </form>
         <table class="table table-striped mt-1">
             <tr>
-               <th title="{{ _('Display name.') }}">{{ _('Name') }}</th>
-               <th title="{{ _('Last seen.') }}">{{ _('Seen') }}</th>
-               <th title="{{ _('Attitude: Percentage of up votes vs. down votes the account made.') }}">{{ _('Attitude') }}</th>
-               <th title="{{ _('Reputation: The Karma of the account. Total up votes minus down votes they got.') }}">{{ _('Reputation') }}</th>
+               <th>
+                   <button form="searchUsers" name="sort_by_btn" value="user_name{{' DESC' if sort_by == 'user_name ASC' else ' ASC' }}" class="btn" title="{{ _('Display name.') }}">
+                       {{ _('Name') }}
+                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'user_name DESC' }}{{ 'fe fe-chevron-down' if sort_by == 'user_name ASC' }}"></span>
+                   </button>
+               </th>
                <th>{{ _('Banned') }}</th>
-               <th title="{{ _('How often a user has been reported.') }}">{{ _('Reports') }}</th>
-               <th title="{{ _('IP address of last interaction.') }}">{{ _('IP and country code') }}</th>
-               <th title="{{ _('Which website linked to PieFed when the user initially registered.') }}">{{ _('Source') }}</th>
+               <th>
+                   <button form="searchUsers" name="sort_by_btn" value="reports{{' ASC' if sort_by == 'reports DESC' else ' DESC' }}" class="btn" title="{{ _('How often a user has been reported.') }}">
+                       {{ _('Reports') }}
+                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'reports ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'reports DESC' }}"></span>
+                   </button>
+               </th>
+               <th>
+                   <button form="searchUsers" name="sort_by_btn" value="attitude{{' ASC' if sort_by == 'attitude DESC' else ' DESC' }}" class="btn" title="{{ _('Attitude: Percentage of up votes vs. down votes the account made.') }}">
+                       {{ _('Attitude') }}
+                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'attitude ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'attitude DESC' }}"></span>
+                   </button>
+               </th>
+               <th>
+                   <button form="searchUsers" name="sort_by_btn" value="reputation{{' ASC' if sort_by == 'reputation DESC' else ' DESC' }}" class="btn" title="{{ _('Reputation: The Karma of the account. Total up votes minus down votes they got.') }}">
+                       {{ _('Reputation') }}
+                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'reputation ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'reputation DESC' }}"></span>
+                   </button>
+               </th>
+               <th>
+                   <button form="searchUsers" name="sort_by_btn" value="last_seen{{' ASC' if sort_by == 'last_seen DESC' else ' DESC' }}" class="btn" title="{{ _('Last seen.') }}">
+                       {{ _('Seen') }}
+                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'last_seen ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'last_seen DESC' }}"></span>
+                   </button>
+               </th>
                <th>{{ _('Actions') }}</th>
             </tr>
             {% for user in users.items %}
                 <tr>
                     <td>{{ render_username(user, add_domain=False) }}<br />
                     <a href="/u/{{ user.link() }}">{{ user.user_name }}</a>{% if not user.is_local() %}<wbr />@<a href="{{ user.ap_profile_id }}">{{ user.ap_domain }}</a>{% endif %}</td>
-                    <td>{% if request.args.get('local_remote', '') == 'local' %}
-                            {{ arrow.get(user.last_seen).humanize(locale=locale) }}
-                        {% else %}
-                            {{ user.last_seen }}
-                        {% endif %}
-                    </td>
-                    <td>{% if user.attitude != 1 %}{{ (user.attitude * 100) | round | int }}%{% endif %}</td>
-                    <td>{% if user.reputation %}R {{ user.reputation | round | int }}{% endif %}</td>
                     <td>{{ '<span class="red">Banned</span>'|safe if user.banned }}
                         {{ '<span class="red">Banned posts</span>'|safe if user.ban_posts }}
                         {{ '<span class="red">Banned comments</span>'|safe if user.ban_comments }}</td>
                     <td>{{ user.reports if user.reports > 0 }} </td>
-                    <td>{{ user.ip_address if user.ip_address }}<br />{{ user.ip_address_country if user.ip_address_country }}</td>
-                    <td>{{ user.referrer if user.referrer }} </td>
-                    <td><a href="{{ url_for('admin.admin_user_edit', user_id=user.id) }}">Edit</a> |
-                        <a href="{{ url_for('admin.admin_user_delete', user_id=user.id) }}" class="confirm_first">Delete</a>
+                    <td>{% if user.attitude != 1 %}{{ (user.attitude * 100) | round | int }}%{% endif %}</td>
+                    <td>{% if user.reputation %}R {{ user.reputation | round | int }}{% endif %}</td>
+                    <td><span title="{{ user.last_seen }}">{{ arrow.get(user.last_seen).humanize(locale=locale) }}</span></td>
+                    <td><a href="{{ url_for('admin.admin_user_edit', user_id=user.id) }}">Edit</a>,
+                        <a href="{{ url_for('admin.admin_user_delete', user_id=user.id) }}" class="confirm_first">Delete</a>,
+                        <br />
+                        {% if user.banned %}
+                            <a href="{{ url_for('user.unban_profile', actor=user.link()) }}" class="confirm_first">Ban</a>,
+                        {% else %}
+                            <a href="{{ url_for('user.ban_profile', actor=user.link()) }}" class="confirm_first">Ban</a>,
+                        {% endif %}
+                        <a href="{{ url_for('user.ban_purge_profile', actor=user.link()) }}" class="confirm_first">Purge</a>
                     </td>
                 </tr>
             {% endfor %}

@@ -217,7 +217,6 @@
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_communities' }}" href="{{ url_for('admin.admin_communities') }}">{{ _('Communities') }}</a></li>
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_topics' }}" href="{{ url_for('admin.admin_topics') }}">{{ _('Topics') }}</a></li>
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_users' }}" href="{{ url_for('admin.admin_users', local_remote='local') }}">{{ _('Users') }}</a></li>
-                                      <li><a class="dropdown-item{{ ' active' if active_child == 'admin_users_trash' }}" href="{{ url_for('admin.admin_users_trash', local_remote='local') }}">{{ _('Monitoring - users') }}</a></li>
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_content_trash' }}" href="{{ url_for('admin.admin_content_trash') }}">{{ _('Monitoring - content') }}</a></li>
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_content_spam' }}" href="{{ url_for('admin.admin_content_spam') }}">{{ _('Monitoring - spammy content') }}</a></li>
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_content_deleted' }}" href="{{ url_for('admin.admin_content_deleted') }}">{{ _('Deleted content') }}</a></li>

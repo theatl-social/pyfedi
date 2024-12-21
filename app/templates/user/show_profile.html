@@ -108,6 +108,8 @@
             {% if user.is_instance_admin() or (user.is_local() and user.is_admin()) %}<span class="red">({{ _('Admin') }})</span>{% endif %}<br />
             {% if user.is_admin() or user.is_staff() %}{{ _('Role permissions') }}: {% if user.is_admin() %}{{ _('Admin') }}{% endif %} {% if user.is_staff() %}{{ _('Staff') }}{% endif %}<br />{% endif %}
             {{ _('Joined') }}: {{ arrow.get(user.created).humanize(locale=locale) }}<br />
+            {% if current_user.is_authenticated and current_user.is_admin() %}{{ _('Referer') }}: <span title="{{ _('Which website linked to PieFed when the user initially registered.') }}">{{ user.referrer if user.referrer }}</span><br />{% endif %}
+            {% if current_user.is_authenticated and current_user.is_admin() %}{{ _('IP and country code') }}: <span title="{{ _('IP address of last interaction.') }}">{{ user.ip_address if user.ip_address }}{% if user.ip_address_country %} ({{ user.ip_address_country }}){% endif %}</span><br />{% endif %}
             {% if current_user.is_authenticated and current_user.is_admin() and user.last_seen %}{{ _('Active') }}: {{ arrow.get(user.last_seen).humanize(locale=locale) }}<br />{% endif %}
             {% if user.bot %}
                 {{ _('Bot Account') }}<br />
