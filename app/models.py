@@ -1229,6 +1229,7 @@ class Post(db.Model):
                 if blocked_phrase in post.body:
                     return None
 
+        file_path = None
         if ('attachment' in request_json['object'] and
             isinstance(request_json['object']['attachment'], list) and
             len(request_json['object']['attachment']) > 0 and

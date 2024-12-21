@@ -32,7 +32,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     blocked_instances, blocked_domains, community_moderators, blocked_phrases, show_ban_message, recently_upvoted_posts, \
     recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, reply_is_stupid, \
     languages_for_form, menu_topics, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown, \
-    permission_required, blocked_users, get_request
+    permission_required, blocked_users, get_request, is_local_image_url, is_video_url
 
 
 def show_post(post_id: int):
@@ -730,14 +730,23 @@ def post_reply_options(post_id: int, comment_id: int):
 @login_required
 def post_edit(post_id: int):
     post = Post.query.get_or_404(post_id)
+    post_type = post.type
     if post.type == POST_TYPE_ARTICLE:
         form = CreateDiscussionForm()
     elif post.type == POST_TYPE_LINK:
         form = CreateLinkForm()
     elif post.type == POST_TYPE_IMAGE:
-        form = EditImageForm()
+        if post.image and post.image.source_url and is_local_image_url(post.image.source_url):
+            form = EditImageForm()
+        else:
+            form = CreateLinkForm()
+            post_type = POST_TYPE_LINK
     elif post.type == POST_TYPE_VIDEO:
-        form = CreateVideoForm()
+        if is_video_url(post.url):
+            form = CreateVideoForm()
+        else:
+            form = CreateLinkForm()
+            post_type = POST_TYPE_LINK
     elif post.type == POST_TYPE_POLL:
         form = CreatePollForm()
         poll = Poll.query.filter_by(post_id=post_id).first()
@@ -769,7 +778,7 @@ def post_edit(post_id: int):
         form.language_id.choices = languages_for_form()
 
         if form.validate_on_submit():
-            save_post(form, post, post.type)
+            save_post(form, post, post_type)
             post.community.last_active = utcnow()
             post.edited_at = utcnow()
 
@@ -812,9 +821,9 @@ def post_edit(post_id: int):
             form.sticky.data = post.sticky
             form.language_id.data = post.language_id
             form.tags.data = tags_to_string(post)
-            if post.type == POST_TYPE_LINK:
+            if post_type == POST_TYPE_LINK:
                 form.link_url.data = post.url
-            elif post.type == POST_TYPE_IMAGE:
+            elif post_type == POST_TYPE_IMAGE:
                 # existing_image = True
                 form.image_alt_text.data = post.image.alt_text
                 path = post.image.file_path
@@ -826,9 +835,9 @@ def post_edit(post_id: int):
                 with open(path, "rb")as file:
                     form.image_file.data = file.read()
             
-            elif post.type == POST_TYPE_VIDEO:
+            elif post_type == POST_TYPE_VIDEO:
                 form.video_url.data = post.url
-            elif post.type == POST_TYPE_POLL:
+            elif post_type == POST_TYPE_POLL:
                 poll = Poll.query.filter_by(post_id=post.id).first()
                 form.mode.data = poll.mode
                 form.local_only.data = poll.local_only
@@ -841,7 +850,7 @@ def post_edit(post_id: int):
             if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
                 form.sticky.render_kw = {'disabled': True}
             return render_template('post/post_edit.html', title=_('Edit post'), form=form,
-                                   post_type=post.type, community=post.community, post=post,
+                                   post_type=post_type, community=post.community, post=post,
                                    markdown_editor=current_user.markdown_editor, mods=mod_list,
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
