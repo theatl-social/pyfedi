@@ -100,6 +100,7 @@
                         {% endif -%}
                     {% endif -%}
                     <li><a class="dropdown-item" href="{{ url_for('user.report_profile', actor=user.link()) }}" rel="nofollow">{{ _('Report') }}</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('user.edit_user_note', actor=user.link()) }}" rel="nofollow">{{ _('Edit note') }}</a></li>
                   </ul>
                 </div>
         {% endif %}
@@ -118,6 +119,7 @@
             {% if current_user.is_authenticated and current_user.is_admin() and user.reputation %}{{ _('Reputation') }}: <span title="{{ _('Reputation: The Karma of the account. Total up votes minus down votes they got.') }}">{{ user.reputation | round | int }}</span><br />{% endif %}
             {{ _('Posts') }}: {{ user.post_count }}<br />
             {{ _('Comments') }}: {{ user.post_reply_count }}<br />
+            {% if current_user.is_authenticated %}{{ _('User note') }}: {{ user.get_note(current_user) }}<br />{% endif %}
         </p>
         <div class="profile_bio">
             {{ user.about_html|safe }}
