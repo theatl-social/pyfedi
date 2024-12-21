@@ -1,0 +1,68 @@
+{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' %}
+{% else -%}
+    {% extends "base.html" %}
+{% endif -%}
+{% from 'bootstrap/form.html' import render_form %}
+
+{% block app_content %}
+    <div class="row">
+        <div class="col col-login mx-auto">
+            <div class="card mt-5">
+                <div class="card-body p-6">
+                    <div class="card-title">{{ _('Edit note for "%(user_name)s"', user_name=user.display_name()) }}</div>
+                    <div class="card-body">
+                        <strong>{{ _('Emoji quick access') }}</strong>
+                        <div>
+                            <button id="thumbsup" class="emojitoggle">👍</button>
+                            <button id="thumbsdown" class="emojitoggle">👎</button>
+                            <button id="smile" class="emojitoggle">😄</button>
+                            <button id="party-popper" class="emojitoggle">🎉</button>
+                            <button id="frown" class="emojitoggle">😕</button>
+                            <button id="red-heart" class="emojitoggle">❤️</button>
+                            <button id="rocket" class="emojitoggle">🚀</button>
+                            <button id="eyes" class="emojitoggle">👀</button>
+                        </div><div>
+                            <button id="star" class="emojitoggle">⭐</button>
+                            <button id="medal" class="emojitoggle">🥇</button>
+                            <button id="check" class="emojitoggle">☑️</button>
+                            <button id="fire" class="emojitoggle">🔥</button>
+                            <button id="robot" class="emojitoggle">🤖</button>
+                            <button id="ghost" class="emojitoggle">👻</button>
+                            <button id="clown" class="emojitoggle">🤡</button>
+                            <button id="poo" class="emojitoggle">💩</button>
+                        </div><div>
+                            <button id="speech-bubble" class="emojitoggle">💬</button>
+                            <button id="anger-bubble" class="emojitoggle">🗯️</button>
+                            <button id="hundred" class="emojitoggle">💯</button>
+                            <button id="rofl" class="emojitoggle">🤣</button>
+                            <button id="zany" class="emojitoggle">🤪</button>
+                            <button id="warning" class="emojitoggle">⚠️</button>
+                            <button id="no-entry" class="emojitoggle">⛔</button>
+                            <button id="vomit" class="emojitoggle">🤮</button>
+                        </div>
+                        {{ render_form(form) }}
+                        <div class="row mt-5"><small class="field_hint">{{ _('This note appears next to their username. It\'s meant just for you and not displayed to anyone else.') }}</small></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script nonce="{{ session['nonce'] }}" type="text/javascript">
+        function addtext(text) {
+            var note = document.getElementById("note");
+            newtext = note.value.replaceAll(text, "");
+            if (newtext == note.value) {
+                note.value += text;
+            } else {
+                note.value = newtext;
+            }
+        }
+        document.addEventListener("DOMContentLoaded", function() {
+            document.querySelectorAll("button.emojitoggle").forEach(function(button) {
+                var emoji = button.textContent || button.innerText;
+                button.addEventListener('click', function() {addtext(emoji);});
+            });
+        });
+    </script>
+{% endblock %}
