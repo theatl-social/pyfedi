@@ -185,7 +185,7 @@
                 <a href="{{ url_for('post.post_options', post_id=post.id) }}"
                    data-bs-toggle="dropdown"
                    rel="nofollow"><span class="fe fe-options" title="Options"></span></a>
-                <ul class="dropdown-menu">
+                <ul class="dropdown-menu" style="width: 320px">
                     <div 
                         hx-get="{{ url_for('post.post_options', post_id=post.id) }}" 
                         hx-trigger="revealed"

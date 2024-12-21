@@ -80,7 +80,7 @@
                                     class="btn btn-outline-secondary">
                                     {{ _('Options') }}
                                 </a>
-                                <ul class="dropdown-menu">
+                                <ul class="dropdown-menu" style="max-width: 240px">
                                     <div 
                                         hx-get="{{ url_for('chat.chat_options', conversation_id=current_conversation) }}"
                                         hx-trigger="revealed"
