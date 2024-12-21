@@ -27,6 +27,12 @@
                 <span class="fe fe-warning orangered" title="Low reputation."> </span>
             {% endif -%}
         {% endif -%}
+        {% if current_user.is_authenticated -%}
+            {% set user_note = user.get_note(current_user) %}
+            {% if user_note -%}
+                <span class="user_note" title="{{ _('User note: %(note)s', note=user_note) }}">[{{ user_note | truncate(12, True) }}]</span>
+            {% endif -%}
+        {% endif -%}
     {% endif -%}
 </span>
 {% endmacro -%}
@@ -217,7 +223,6 @@
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_communities' }}" href="{{ url_for('admin.admin_communities') }}">{{ _('Communities') }}</a></li>
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_topics' }}" href="{{ url_for('admin.admin_topics') }}">{{ _('Topics') }}</a></li>
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_users' }}" href="{{ url_for('admin.admin_users', local_remote='local') }}">{{ _('Users') }}</a></li>
-                                      <li><a class="dropdown-item{{ ' active' if active_child == 'admin_users_trash' }}" href="{{ url_for('admin.admin_users_trash', local_remote='local') }}">{{ _('Monitoring - users') }}</a></li>
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_content_trash' }}" href="{{ url_for('admin.admin_content_trash') }}">{{ _('Monitoring - content') }}</a></li>
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_content_spam' }}" href="{{ url_for('admin.admin_content_spam') }}">{{ _('Monitoring - spammy content') }}</a></li>
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_content_deleted' }}" href="{{ url_for('admin.admin_content_deleted') }}">{{ _('Deleted content') }}</a></li>
@@ -228,8 +233,9 @@
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_federation' }}" href="{{ url_for('admin.admin_federation') }}">{{ _('Federation') }}</a></li>
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_instances' }}" href="{{ url_for('admin.admin_instances') }}">{{ _('Instances') }}</a></li>
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_newsletter' }}" href="{{ url_for('admin.newsletter') }}">{{ _('Newsletter') }}</a></li>
-                                      <li><a class="dropdown-item{{ ' active' if active_child == 'admin_activities' }}" href="{{ url_for('admin.admin_activities') }}">{{ _('Activities') }}</a></li>
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_permissions' }}" href="{{ url_for('admin.admin_permissions') }}">{{ _('Permissions') }}</a></li>
+                                      <li><a class="dropdown-item{{ ' active' if active_child == 'admin_activities' }}" href="{{ url_for('admin.admin_activities') }}">{{ _('Activities') }}</a></li>
+                                      <li><a class="dropdown-item{{ ' active' if active_child == 'modlog' }}" href="{{ url_for('main.modlog') }}">{{ _('Modlog') }}</a></li>
                                         {% if debug_mode %}
                                             <li><a class="dropdown-item{{ ' active' if active_child == 'dev_tools' }}" href="{{ url_for('dev.tools') }}">{{ _('Dev Tools') }}</a></li>
                                         {% endif %}

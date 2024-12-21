@@ -147,3 +147,8 @@ class RemoteFollowForm(FlaskForm):
 
     instance_type = SelectField(_l('Instance type'), choices=type_choices, render_kw={'class': 'form-select'})
     submit = SubmitField(_l('View profile on remote instance'))
+
+
+class UserNoteForm(FlaskForm):
+    note = StringField(_l('User note'), validators=[Optional(), Length(max=50)])
+    submit = SubmitField(_l('Save note'))
