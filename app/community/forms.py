@@ -180,6 +180,7 @@ class CreateImageForm(CreatePostForm):
 
 class EditImageForm(CreateImageForm):
     image_file = FileField(_l('Replace Image'), validators=[DataRequired()], render_kw={'accept': 'image/*'})
+    image_file = FileField(_l('Image'), validators=[Optional()], render_kw={'accept': 'image/*'})
     
     def validate(self, extra_validators=None) -> bool:
         if self.communities:
