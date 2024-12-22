@@ -1976,6 +1976,9 @@ form h5 {
 .render_username .user_preview .card {
   width: 300px;
 }
+.render_username .user_preview .card .preview_avatar_image {
+  max-width: 50%;
+}
 .render_username .user_preview .card .preview_avatar_image img {
   max-width: 100%;
 }

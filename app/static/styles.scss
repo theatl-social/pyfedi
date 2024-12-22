@@ -1694,8 +1694,12 @@ form {
   .user_preview .card {
     width: 300px;
 
-    .preview_avatar_image img {
-      max-width: 100%;
+    .preview_avatar_image {
+      max-width: 50%;
+
+      img {
+        max-width: 100%;
+      }
     }
   }
 }
