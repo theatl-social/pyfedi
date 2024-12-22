@@ -680,7 +680,7 @@ def add_reply(post_id: int, comment_id: int):
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
 
 
-@bp.route('/post/<int:post_id>/options', methods=['GET'])
+@bp.route('/post/<int:post_id>/options_menu', methods=['GET'])
 def post_options(post_id: int):
     post = Post.query.get_or_404(post_id)
     if post.deleted:
@@ -701,7 +701,7 @@ def post_options(post_id: int):
                            menu_topics=menu_topics(), site=g.site)
 
 
-@bp.route('/post/<int:post_id>/comment/<int:comment_id>/options', methods=['GET'])
+@bp.route('/post/<int:post_id>/comment/<int:comment_id>/options_menu', methods=['GET'])
 def post_reply_options(post_id: int, comment_id: int):
     post = Post.query.get_or_404(post_id)
     post_reply = PostReply.query.get_or_404(comment_id)
