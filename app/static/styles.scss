@@ -1046,6 +1046,15 @@ time {
       margin-left: auto; /* pull right */
       font-size: 87%;
     }
+
+    .dropdown-item {
+      white-space: unset;
+      line-height: 30px;
+
+      &:active {
+        line-height: 26px;
+      }
+    }
   }
 
   .replies {
