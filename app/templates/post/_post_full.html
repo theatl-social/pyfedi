@@ -16,9 +16,9 @@
             {% endif -%}
             <p>{% if post.reports > 0 and current_user.is_authenticated and post.community.is_moderator(current_user) -%}
                     <span class="red fe fe-report" title="{{ _('Reported. Check post for issues.') }}"></span>
-                {% endif -%}<small>submitted <time datetime="{{ arrow.get(post.posted_at) }}" title="{{ arrow.get(post.posted_at) }}">{{ arrow.get(post.posted_at).humanize(locale=locale) }}</time> by
+                {% endif -%}<small>submitted <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post.posted_at).humanize(locale=locale) }}</time> by
                 {{ render_username(post.author) }}
-                {% if post.edited_at -%} edited <time datetime="{{ arrow.get(post.posted_at) }}" title="{{ arrow.get(post.posted_at) }}">{{ arrow.get(post.edited_at).humanize(locale=locale) }}{% endif -%}</time></small>
+                {% if post.edited_at -%} edited <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post.edited_at).humanize(locale=locale) }}{% endif -%}</time></small>
             </p>
             {% if post.type == POST_TYPE_IMAGE -%}
                 <div class="post_image">
