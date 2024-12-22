@@ -1682,26 +1682,29 @@ form {
     display: inline-block;
   }
 
-  .author_link:hover + .user_preview, .user_preview:hover {
-    display: inline-block !important;
-    position: absolute;
-    top: 17px;
-    left: 0;
-    background-color: white;
-    z-index: 20;
-  }
+  @include breakpoint(laptop) {
+    .author_link:hover + .user_preview, .user_preview:hover {
+      display: inline-block !important;
+      position: absolute;
+      top: 17px;
+      left: 0;
+      background-color: white;
+      z-index: 20;
+    }
 
-  .user_preview .card {
-    width: 300px;
+    .user_preview .card {
+      width: 300px;
 
-    .preview_avatar_image {
-      max-width: 50%;
+      .preview_avatar_image {
+        max-width: 50%;
 
-      img {
-        max-width: 100%;
+        img {
+          max-width: 100%;
+        }
       }
     }
   }
+
 }
 
 /* high contrast */

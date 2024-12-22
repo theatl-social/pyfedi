@@ -1965,22 +1965,24 @@ form h5 {
 .render_username .author_link {
   display: inline-block;
 }
-.render_username .author_link:hover + .user_preview, .render_username .user_preview:hover {
-  display: inline-block !important;
-  position: absolute;
-  top: 17px;
-  left: 0;
-  background-color: white;
-  z-index: 20;
-}
-.render_username .user_preview .card {
-  width: 300px;
-}
-.render_username .user_preview .card .preview_avatar_image {
-  max-width: 50%;
-}
-.render_username .user_preview .card .preview_avatar_image img {
-  max-width: 100%;
+@media (min-width: 1280px) {
+  .render_username .author_link:hover + .user_preview, .render_username .user_preview:hover {
+    display: inline-block !important;
+    position: absolute;
+    top: 17px;
+    left: 0;
+    background-color: white;
+    z-index: 20;
+  }
+  .render_username .user_preview .card {
+    width: 300px;
+  }
+  .render_username .user_preview .card .preview_avatar_image {
+    max-width: 50%;
+  }
+  .render_username .user_preview .card .preview_avatar_image img {
+    max-width: 100%;
+  }
 }
 
 /* high contrast */
