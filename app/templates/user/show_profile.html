@@ -124,6 +124,21 @@
         <div class="profile_bio">
             {{ user.about_html|safe }}
         </div>
+        {% if user.extra_fields -%}
+            <ul class="list-group">
+                {% for field in user.extra_fields -%}
+                    <li class="list-group-item">
+                        <p class="mb-0"><strong>{{ field.label }}</strong><br>
+                           {% if field.text.startswith('http') -%}
+                                <a href="{{ field.text }}" rel="nofollow noindex ugc">{{ field.text }}</a>
+                           {% else -%}
+                                {{ field.text }}
+                           {% endif -%}
+                        </p>
+                    </li>
+                {% endfor -%}
+            </ul>
+        {% endif -%}
         {% if posts %}
             <h2 class="mt-4">Posts</h2>
             <div class="post_list">

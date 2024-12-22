@@ -1397,6 +1397,10 @@ time {
   border-top: solid 1px #ddd;
 }
 
+.hide-labels label {
+  display: none;
+}
+
 #add_local_community_form #url {
   width: 297px;
   display: inline-block;
@@ -1485,10 +1489,6 @@ fieldset legend {
   display: block;
   width: 100%;
   overflow-x: auto;
-}
-
-.list-group-item:first-child {
-  padding-top: 0;
 }
 
 .skip-link:focus {
@@ -1707,6 +1707,9 @@ h1 .warning_badge {
 
 .side_pane img {
   max-width: 100%;
+}
+.side_pane .list-group-item:first-child {
+  padding-top: 0;
 }
 
 [data-bs-theme=dark] .main_pane {

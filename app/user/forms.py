@@ -14,6 +14,14 @@ class ProfileForm(FlaskForm):
     password_field = PasswordField(_l('Set new password'), validators=[Optional(), Length(min=1, max=50)],
                                    render_kw={"autocomplete": 'new-password'})
     about = TextAreaField(_l('Bio'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5})
+    extra_label_1 = StringField(_l('Extra field 1 - label'), validators=[Optional(), Length(max=50)], render_kw={"placeholder": _l('Label')})
+    extra_text_1 = StringField(_l('Extra field 1 - text'), validators=[Optional(), Length(max=256)], render_kw={"placeholder": _l('Content')})
+    extra_label_2 = StringField(_l('Extra field 2 - label'), validators=[Optional(), Length(max=50)], render_kw={"placeholder": _l('Label')})
+    extra_text_2 = StringField(_l('Extra field 2 - text'), validators=[Optional(), Length(max=256)], render_kw={"placeholder": _l('Content')})
+    extra_label_3 = StringField(_l('Extra field 3 - label'), validators=[Optional(), Length(max=50)], render_kw={"placeholder": _l('Label')})
+    extra_text_3 = StringField(_l('Extra field 3 - text'), validators=[Optional(), Length(max=256)], render_kw={"placeholder": _l('Content')})
+    extra_label_4 = StringField(_l('Extra field 4 - label'), validators=[Optional(), Length(max=50)], render_kw={"placeholder": _l('Label')})
+    extra_text_4 = StringField(_l('Extra field 4 - text'), validators=[Optional(), Length(max=256)], render_kw={"placeholder": _l('Content')})
     matrixuserid = StringField(_l('Matrix User ID'), validators=[Optional(), Length(max=255)],
                                render_kw={'autocomplete': 'off'})
     profile_file = FileField(_l('Avatar image'), render_kw={'accept': 'image/*'})

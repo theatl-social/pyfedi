@@ -1064,6 +1064,10 @@ time {
   }
 }
 
+.hide-labels label {
+  display: none;
+}
+
 #add_local_community_form {
   #url {
     width: 297px;
@@ -1155,10 +1159,6 @@ fieldset {
     width: 100%;
     overflow-x: auto;
   }
-}
-
-.list-group-item:first-child {
-  padding-top: 0;
 }
 
 .skip-link:focus {
@@ -1396,6 +1396,10 @@ h1 .warning_badge {
 .side_pane {
   img {
     max-width: 100%;
+  }
+
+  .list-group-item:first-child {
+    padding-top: 0;
   }
 }
 
