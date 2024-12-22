@@ -181,7 +181,19 @@
             {% endif -%}
         </div>
         <div class="post_options_link">
-            <a href="{{ url_for('post.post_options', post_id=post.id) }}" rel="nofollow"><span class="fe fe-options" title="Options"> </span></a>
+            <div class="dropdown">
+                <a href="{{ url_for('post.post_options', post_id=post.id) }}"
+                   data-bs-toggle="dropdown"
+                   rel="nofollow"><span class="fe fe-options" title="Options"></span></a>
+                <ul class="dropdown-menu" style="width: 320px">
+                    <div 
+                        hx-get="{{ url_for('post.post_options', post_id=post.id) }}" 
+                        hx-trigger="revealed"
+                        hx-target="this"
+                        hx-swap="outerHTML"
+                    ></div>
+                </ul>
+            </div>
         </div>
     </div>
 </div>
