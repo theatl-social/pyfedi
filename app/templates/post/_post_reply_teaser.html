@@ -34,7 +34,7 @@
             {% endif -%}
         </div>
         <div class="col-auto text-muted small pt-05">
-            {{ arrow.get(post_reply.posted_at).humanize(locale=locale) }}{% if post_reply.edited_at -%}, edited {{ arrow.get(post_reply.edited_at).humanize(locale=locale) }}{% endif -%}
+            <time datetime="{{ arrow.get(post_reply.posted_at) }}" title="{{ arrow.get(post_reply.posted_at) }}">{{ arrow.get(post_reply.posted_at).humanize(locale=locale) }}</time>{% if post_reply.edited_at -%}, edited <time datetime="{{ arrow.get(post_reply.posted_at) }}" title="{{ arrow.get(post_reply.posted_at) }}">{{ arrow.get(post_reply.edited_at).humanize(locale=locale) }}</time>{% endif -%}
         </div>
         <div class="col-auto">
             {% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) -%}
