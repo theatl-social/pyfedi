@@ -7,7 +7,7 @@
             [deleted]
         {% endif -%}
     {% else -%}
-        <a href="/u/{{ user.link() }}" title="{{ user.ap_id if user.ap_id != none else user.user_name }}" aria-label="{{ _('Author') }}">
+        <a href="/u/{{ user.link() }}" aria-label="{{ _('Author') }}" class="author_link">
             {% if user.avatar_id and not low_bandwidth and not collapsed -%}
                 <img src="{{ user.avatar_thumbnail() }}" alt="" loading="lazy" />
             {% endif -%}
@@ -33,6 +33,12 @@
                 <span class="user_note" title="{{ _('User note: %(note)s', note=user_note) }}">[{{ user_note | truncate(12, True) }}]</span>
             {% endif -%}
         {% endif -%}
+        <div class="d-none user_preview" id="preview_{{ user.id }}"
+            hx-get="{{ url_for('user.user_preview', user_id=user.id) }}"
+            hx-trigger="intersect once"
+            hx-target="this"
+            hx-swap="innerHTML"
+        ></div>
     {% endif -%}
 </span>
 {% endmacro -%}

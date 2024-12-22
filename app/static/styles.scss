@@ -1010,7 +1010,7 @@ time {
     }
   }
 
-  .comment_author {
+  .comment_author .author_link {
     img {
       width: 25px;
       height: 25px;
@@ -1675,6 +1675,30 @@ form {
   padding-top: .12rem !important;
 }
 
+.render_username {
+  position: relative;
+
+  .author_link {
+    display: inline-block;
+  }
+
+  .author_link:hover + .user_preview, .user_preview:hover {
+    display: inline-block !important;
+    position: absolute;
+    top: 17px;
+    left: 0;
+    background-color: white;
+    z-index: 20;
+  }
+
+  .user_preview .card {
+    width: 300px;
+
+    .preview_avatar_image img {
+      max-width: 100%;
+    }
+  }
+}
 
 /* high contrast */
 @import "scss/high_contrast";

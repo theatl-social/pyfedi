@@ -1379,3 +1379,11 @@ def edit_user_note(actor):
 
     return render_template('user/edit_note.html', title=_('Edit note'), form=form, user=user,
                            menu_topics=menu_topics(), site=g.site)
+
+
+@bp.route('/user/<int:user_id>/preview')
+def user_preview(user_id):
+    user = User.query.get_or_404(user_id)
+    if (user.deleted or user.banned) and current_user.is_anonymous:
+        abort(404)
+    return render_template('user/user_preview.html', user=user)
