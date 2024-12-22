@@ -97,7 +97,7 @@
             {% if not post_reply.post.deleted -%}
                 <div class="dropdown">
                     <a 
-                        href="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) }}" 
+                        href="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) if low_bandwidth else '#' }}"
                         data-bs-toggle="dropdown" rel="nofollow noindex" 
                         aria-label="{{ _('Comment options') }}">
                         <span class="fe fe-options" title="Options"> </span>

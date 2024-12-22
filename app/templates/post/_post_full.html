@@ -182,7 +182,7 @@
         </div>
         <div class="post_options_link">
             <div class="dropdown">
-                <a href="{{ url_for('post.post_options', post_id=post.id) }}"
+                <a href="{{ url_for('post.post_options', post_id=post.id) if low_bandwidth else '#' }}"
                    data-bs-toggle="dropdown"
                    rel="nofollow"><span class="fe fe-options" title="Options"></span></a>
                 <ul class="dropdown-menu" style="width: 320px">
