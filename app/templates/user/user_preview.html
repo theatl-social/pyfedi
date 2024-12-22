@@ -12,7 +12,7 @@
         </div>
         <div class="row">
             <div class="col-auto">
-                <p class="small">{{ _('Instance') }}: <a href="{{ url_for('instance.instance_overview', instance_domain=user.instance_domain()) }}">{{ user.instance_domain() }}</a>
+                <p>{{ _('Instance') }}: <a href="{{ url_for('instance.instance_overview', instance_domain=user.instance_domain()) }}">{{ user.instance_domain() }}</a>
                     {% if user.is_instance_admin() or (user.is_local() and user.is_admin()) %}<span class="red">({{ _('Admin') }})</span>{% endif %}<br />
                     {% if user.is_admin() or user.is_staff() %}{{ _('Role permissions') }}: {% if user.is_admin() %}{{ _('Admin') }}{% endif %} {% if user.is_staff() %}{{ _('Staff') }}{% endif %}<br />{% endif %}
                     {{ _('Joined') }}: {{ arrow.get(user.created).humanize(locale=locale) }}<br />
@@ -31,6 +31,21 @@
                 <div class="profile_bio">
                     {{ user.about_html|safe }}
                 </div>
+                {% if user.extra_fields -%}
+                    <ul class="list-group mb-3">
+                        {% for field in user.extra_fields -%}
+                            <li class="list-group-item">
+                                <p class="mb-0"><strong>{{ field.label }}</strong><br>
+                                   {% if field.text.startswith('http') -%}
+                                        <a href="{{ field.text }}" rel="nofollow noindex ugc">{{ field.text }}</a>
+                                   {% else -%}
+                                        {{ field.text }}
+                                   {% endif -%}
+                                </p>
+                            </li>
+                        {% endfor -%}
+                    </ul>
+                {% endif -%}
             </div>
         </div>
         <div class="row">
