@@ -981,6 +981,13 @@ time {
   height: 44px;
   line-height: 44px;
 }
+.post_utilities_bar div .dropdown-item {
+  white-space: unset;
+  line-height: 30px;
+}
+.post_utilities_bar div .dropdown-item:active {
+  line-height: 26px;
+}
 .post_utilities_bar .notify_toggle {
   margin-left: auto; /* pull right */
 }

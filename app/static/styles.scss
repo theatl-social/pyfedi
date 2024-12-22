@@ -581,6 +581,15 @@ time {
     min-width: $min-touch-target;
     height: $min-touch-target;
     line-height: $min-touch-target;
+
+    .dropdown-item {
+      white-space: unset;
+      line-height: 30px;
+
+      &:active {
+        line-height: 26px;
+      }
+    }
   }
 
   .notify_toggle {
