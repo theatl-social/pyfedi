@@ -476,6 +476,7 @@ def register(app):
 
                 current_user_upvotes = set(current_user_upvoted_posts + current_user_upvoted_replies)
                 if len(current_user_upvotes) > 12:
+                    print(i)
                     for j in range(i + 1, len(all_user_ids)):
                         other_user_id = all_user_ids[j]
                         if jaccard_similarity(current_user_upvotes, other_user_id) >= 95:
