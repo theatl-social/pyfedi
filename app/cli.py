@@ -470,19 +470,18 @@ def register(app):
             print('Getting user ids...')
             all_user_ids = [user.id for user in User.query.filter(User.last_seen > datetime.utcnow() - timedelta(days=7))]
             print('Checking...')
-            for first_user_id in all_user_ids:
+            for i, first_user_id in enumerate(all_user_ids):
                 current_user_upvoted_posts = ['post/' + str(id) for id in recently_upvoted_posts(first_user_id)]
                 current_user_upvoted_replies = ['reply/' + str(id) for id in recently_upvoted_post_replies(first_user_id)]
 
                 current_user_upvotes = set(current_user_upvoted_posts + current_user_upvoted_replies)
                 if len(current_user_upvotes) > 12:
-                    for other_user_id in all_user_ids:
+                    for j in range(i + 1, len(all_user_ids)):
+                        other_user_id = all_user_ids[j]
                         if jaccard_similarity(current_user_upvotes, other_user_id) >= 95:
                             first_user = User.query.get(first_user_id)
                             other_user = User.query.get(other_user_id)
-                            if first_user_id != other_user_id:
-                                print(f'{first_user.link()} votes the same as {other_user.link()}')
-            print('Done')
+                            print(f'{first_user.link()} votes the same as {other_user.link()}')
 
     @app.cli.command("migrate_community_notifs")
     def migrate_community_notifs():
