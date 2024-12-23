@@ -16,9 +16,9 @@
             {% endif -%}
             <p>{% if post.reports > 0 and current_user.is_authenticated and post.community.is_moderator(current_user) -%}
                     <span class="red fe fe-report" title="{{ _('Reported. Check post for issues.') }}"></span>
-                {% endif -%}<small>submitted {{ arrow.get(post.posted_at).humanize(locale=locale) }} by
+                {% endif -%}<small>submitted <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post.posted_at).humanize(locale=locale) }}</time> by
                 {{ render_username(post.author) }}
-                {% if post.edited_at -%} edited {{ arrow.get(post.edited_at).humanize(locale=locale) }}{% endif -%}</small>
+                {% if post.edited_at -%} edited <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post.edited_at).humanize(locale=locale) }}{% endif -%}</time></small>
             </p>
             {% if post.type == POST_TYPE_IMAGE -%}
                 <div class="post_image">
@@ -181,7 +181,19 @@
             {% endif -%}
         </div>
         <div class="post_options_link">
-            <a href="{{ url_for('post.post_options', post_id=post.id) }}" rel="nofollow"><span class="fe fe-options" title="Options"> </span></a>
+            <div class="dropdown">
+                <a href="{{ url_for('post.post_options', post_id=post.id) if low_bandwidth else '#' }}"
+                   data-bs-toggle="dropdown"
+                   rel="nofollow"><span class="fe fe-options" title="Options"></span></a>
+                <ul class="dropdown-menu" style="width: 320px">
+                    <div 
+                        hx-get="{{ url_for('post.post_options', post_id=post.id) }}" 
+                        hx-trigger="intersect once"
+                        hx-target="this"
+                        hx-swap="outerHTML"
+                    ></div>
+                </ul>
+            </div>
         </div>
     </div>
 </div>

@@ -726,6 +726,7 @@ class User(UserMixin, db.Model):
     activity = db.relationship('ActivityLog', backref='account', lazy='dynamic', cascade="all, delete-orphan")
     posts = db.relationship('Post', lazy='dynamic', cascade="all, delete-orphan")
     post_replies = db.relationship('PostReply', lazy='dynamic', cascade="all, delete-orphan")
+    extra_fields = db.relationship('UserExtraField', lazy='dynamic', cascade="all, delete-orphan")
 
     roles = db.relationship('Role', secondary=user_role, lazy='dynamic', cascade="all, delete")
 
@@ -2054,6 +2055,13 @@ class UserNote(db.Model):
     target_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
     body = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=utcnow)
+
+
+class UserExtraField(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    label = db.Column(db.String(50))
+    text = db.Column(db.String(256))
 
 
 class UserBlock(db.Model):

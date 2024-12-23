@@ -1,0 +1,57 @@
+<div class="card" title="{{ user.display_name() }}">
+    <div class="card-body">
+        <div class="row">
+            {% if user.avatar_id -%}
+                <div class="col-auto preview_avatar_image">
+                    <img src="{{ user.avatar_image() }}" alt="" loading="lazy" />
+                </div>
+            {% endif -%}
+            <div class="col-auto">
+                <a href="/u/{{ user.link() }}">{{ user.display_name() }}</a>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-auto">
+                <p>{{ _('Instance') }}: <a href="{{ url_for('instance.instance_overview', instance_domain=user.instance_domain()) }}">{{ user.instance_domain() }}</a>
+                    {% if user.is_instance_admin() or (user.is_local() and user.is_admin()) %}<span class="red">({{ _('Admin') }})</span>{% endif %}<br />
+                    {% if user.is_admin() or user.is_staff() %}{{ _('Role permissions') }}: {% if user.is_admin() %}{{ _('Admin') }}{% endif %} {% if user.is_staff() %}{{ _('Staff') }}{% endif %}<br />{% endif %}
+                    {{ _('Joined') }}: {{ arrow.get(user.created).humanize(locale=locale) }}<br />
+                    {% if current_user.is_authenticated and current_user.is_admin() %}{{ _('Referer') }}: <span title="{{ _('Which website linked to PieFed when the user initially registered.') }}">{{ user.referrer if user.referrer }}</span><br />{% endif %}
+                    {% if current_user.is_authenticated and current_user.is_admin() %}{{ _('IP and country code') }}: <span title="{{ _('IP address of last interaction.') }}">{{ user.ip_address if user.ip_address }}{% if user.ip_address_country %} ({{ user.ip_address_country }}){% endif %}</span><br />{% endif %}
+                    {% if current_user.is_authenticated and current_user.is_admin() and user.last_seen %}{{ _('Active') }}: {{ arrow.get(user.last_seen).humanize(locale=locale) }}<br />{% endif %}
+                    {% if user.bot %}
+                        {{ _('Bot Account') }}<br />
+                    {% endif %}
+                    {{ _('Attitude') }}: <span title="{{ _('Ratio of upvotes cast to downvotes cast. Higher is more positive.') }}">{{ (user.attitude * 100) | round | int }}%</span><br />
+                    {% if current_user.is_authenticated and current_user.is_admin() and user.reputation %}{{ _('Reputation') }}: <span title="{{ _('Reputation: The Karma of the account. Total up votes minus down votes they got.') }}">{{ user.reputation | round | int }}</span><br />{% endif %}
+                    {{ _('Posts') }}: {{ user.post_count }}<br />
+                    {{ _('Comments') }}: {{ user.post_reply_count }}<br />
+                    {% if current_user.is_authenticated %}{{ _('Note') }}: {{ user.get_note(current_user) }}<br />{% endif %}
+                </p>
+                <div class="profile_bio">
+                    {{ user.about_html|safe }}
+                </div>
+                {% if user.extra_fields -%}
+                    <ul class="list-group mb-3">
+                        {% for field in user.extra_fields -%}
+                            <li class="list-group-item">
+                                <p class="mb-0"><strong>{{ field.label }}</strong><br>
+                                   {% if field.text.startswith('http') -%}
+                                        <a href="{{ field.text }}" rel="nofollow noindex ugc">{{ field.text }}</a>
+                                   {% else -%}
+                                        {{ field.text }}
+                                   {% endif -%}
+                                </p>
+                            </li>
+                        {% endfor -%}
+                    </ul>
+                {% endif -%}
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-auto text-center">
+                <a href="/u/{{ user.link() }}" class="btn btn-primary btn-sm">{{ _('View profile') }}</a>
+            </div>
+        </div>
+    </div>
+</div>

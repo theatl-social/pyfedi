@@ -44,6 +44,28 @@
                     <a href="#" aria-hidden="true" class="markdown_editor_enabler create_post_markdown_editor_enabler" data-id="about">{{ _('Enable markdown editor') }}</a>
                 {% endif %}
             {% endif %}
+            <fieldset class="coolfieldset mt-2 mb-3">
+                <legend>{{ _('Extra fields') }}</legend>
+                <p>{{ _('Your homepage, pronouns, age, etc.') }}</p>
+                <table class="hide-labels">
+                    <tr>
+                        <td>{{ render_field(form.extra_label_1) }}</td>
+                        <td>{{ render_field(form.extra_text_1) }}</td>
+                    </tr>
+                    <tr>
+                        <td>{{ render_field(form.extra_label_2) }}</td>
+                        <td>{{ render_field(form.extra_text_2) }}</td>
+                    </tr>
+                    <tr>
+                        <td>{{ render_field(form.extra_label_3) }}</td>
+                        <td>{{ render_field(form.extra_text_3) }}</td>
+                    </tr>
+                    <tr>
+                        <td>{{ render_field(form.extra_label_4) }}</td>
+                        <td>{{ render_field(form.extra_text_4) }}</td>
+                    </tr>
+                </table>
+            </fieldset>
             {{ render_field(form.bot) }}
             {{ render_field(form.matrixuserid) }}
             <small class="field_hint">e.g. @something:matrix.org. Include leading @ and use : before server</small>
@@ -69,7 +91,8 @@
                       hx-swap="outerHTML">{{ _('Remove image') }}</a></p>
                 <div id="cover_div" class="community_header mb-4" style="display: none; height: 240px; background-image: url({{ user.cover_image() }});"></div>
             {% endif %}
-            {{ render_field(form.submit) }}
+
+            <p class="mt-4">{{ render_field(form.submit) }}</p>
         </form>
         <p class="mt-4 pt-4">
             <a class="btn btn-warning" href="{{ url_for('user.delete_account') }}">{{ _('Delete account') }}</a>

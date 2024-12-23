@@ -16,7 +16,8 @@ from sqlalchemy.exc import IntegrityError
 from app import db, cache, constants, celery
 from app.models import User, Post, Community, BannedInstances, File, PostReply, AllowedInstances, Instance, utcnow, \
     PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation, \
-    Language, Tag, Poll, PollChoice, UserFollower, CommunityBan, CommunityJoinRequest, NotificationSubscription, Licence
+    Language, Tag, Poll, PollChoice, UserFollower, CommunityBan, CommunityJoinRequest, NotificationSubscription, \
+    Licence, UserExtraField
 from app.activitypub.signature import signed_get_request, post_request
 import time
 from app.constants import *
@@ -522,6 +523,11 @@ def refresh_user_profile_task(user_id):
                 user.about_html = markdown_to_html(user.about)          # prefer Markdown if provided, overwrite version obtained from HTML
             else:
                 user.about = html_to_text(user.about_html)
+            if 'attachment' in activity_json and isinstance(activity_json['attachment'], list):
+                user.extra_fields = []
+                for field_data in activity_json['attachment']:
+                    if field_data['type'] == 'PropertyValue':
+                        user.extra_fields.append(UserExtraField(label=field_data['name'].strip(), text=field_data['value'].strip()))
             if 'type' in activity_json:
                 user.bot = True if activity_json['type'] == 'Service' else False
             user.ap_fetched_at = utcnow()
@@ -769,6 +775,11 @@ def actor_json_to_model(activity_json, address, server):
             cover = File(source_url=activity_json['image']['url'])
             user.cover = cover
             db.session.add(cover)
+        if 'attachment' in activity_json and isinstance(activity_json['attachment'], list):
+            user.extra_fields = []
+            for field_data in activity_json['attachment']:
+                if field_data['type'] == 'PropertyValue':
+                    user.extra_fields.append(UserExtraField(label=field_data['name'].strip(), text=field_data['value'].strip()))
         try:
             db.session.add(user)
             db.session.commit()

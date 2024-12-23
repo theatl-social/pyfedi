@@ -300,6 +300,12 @@ def user_profile(actor):
                 actor_data['source'] = {'content': user.about, 'mediaType': 'text/markdown'}
             if user.matrix_user_id and main_user_name:
                 actor_data['matrixUserId'] = user.matrix_user_id
+            if user.extra_fields.count() > 0:
+                actor_data['attachment'] = []
+                for field in user.extra_fields:
+                    actor_data['attachment'].append({'type': 'PropertyValue',
+                                                     'name': field.label,
+                                                     'value': field.text})
             resp = jsonify(actor_data)
             resp.content_type = 'application/activity+json'
             resp.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/u/{actor}>; rel="alternate"; type="text/html"')

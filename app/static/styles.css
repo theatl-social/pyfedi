@@ -981,6 +981,13 @@ time {
   height: 44px;
   line-height: 44px;
 }
+.post_utilities_bar div .dropdown-item {
+  white-space: unset;
+  line-height: 30px;
+}
+.post_utilities_bar div .dropdown-item:active {
+  line-height: 26px;
+}
 .post_utilities_bar .notify_toggle {
   margin-left: auto; /* pull right */
 }
@@ -1343,7 +1350,7 @@ time {
     display: inline;
   }
 }
-.comment .comment_author img {
+.comment .comment_author .author_link img {
   width: 25px;
   height: 25px;
   border-radius: 50%;
@@ -1384,10 +1391,21 @@ time {
   margin-left: auto; /* pull right */
   font-size: 87%;
 }
+.comment .comment_actions .dropdown-item {
+  white-space: unset;
+  line-height: 30px;
+}
+.comment .comment_actions .dropdown-item:active {
+  line-height: 26px;
+}
 .comment .replies {
   margin-top: 0;
   border-left: solid 1px #ddd;
   border-top: solid 1px #ddd;
+}
+
+.hide-labels label {
+  display: none;
 }
 
 #add_local_community_form #url {
@@ -1478,10 +1496,6 @@ fieldset legend {
   display: block;
   width: 100%;
   overflow-x: auto;
-}
-
-.list-group-item:first-child {
-  padding-top: 0;
 }
 
 .skip-link:focus {
@@ -1700,6 +1714,9 @@ h1 .warning_badge {
 
 .side_pane img {
   max-width: 100%;
+}
+.side_pane .list-group-item:first-child {
+  padding-top: 0;
 }
 
 [data-bs-theme=dark] .main_pane {
@@ -1940,6 +1957,32 @@ form h5 {
 
 .pt-05 {
   padding-top: 0.12rem !important;
+}
+
+.render_username {
+  position: relative;
+}
+.render_username .author_link {
+  display: inline-block;
+}
+@media (min-width: 1280px) {
+  .render_username .author_link:hover + .user_preview, .render_username .user_preview:hover {
+    display: inline-block !important;
+    position: absolute;
+    top: 17px;
+    left: 0;
+    background-color: white;
+    z-index: 20;
+  }
+  .render_username .user_preview .card {
+    width: 300px;
+  }
+  .render_username .user_preview .card .preview_avatar_image {
+    max-width: 50%;
+  }
+  .render_username .user_preview .card .preview_avatar_image img {
+    max-width: 100%;
+  }
 }
 
 /* high contrast */

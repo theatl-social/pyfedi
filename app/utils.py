@@ -1257,3 +1257,23 @@ def community_ids_from_instances(instance_ids) -> List[int]:
 def get_task_session() -> Session:
     # Use the same engine as the main app, but create an independent session
     return Session(bind=db.engine)
+
+
+user2_cache = {}
+
+
+def jaccard_similarity(user1_upvoted: set, user2_id: int):
+    if user2_id not in user2_cache:
+        user2_upvoted_posts = ['post/' + str(id) for id in recently_upvoted_posts(user2_id)]
+        user2_upvoted_replies = ['reply/' + str(id) for id in recently_upvoted_post_replies(user2_id)]
+        user2_cache[user2_id] = set(user2_upvoted_posts + user2_upvoted_replies)
+
+    user2_upvoted = user2_cache[user2_id]
+
+    if len(user2_upvoted) > 12:
+        intersection = len(user1_upvoted.intersection(user2_upvoted))
+        union = len(user1_upvoted.union(user2_upvoted))
+
+        return (intersection / union) * 100
+    else:
+        return 0

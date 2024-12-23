@@ -1,63 +1,42 @@
-{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
-    {% extends 'themes/' + theme() + '/base.html' -%}
-{% else -%}
-    {% extends "base.html" -%}
-{% endif -%} -%}
-{% from 'bootstrap/form.html' import render_form -%}
-
-{% block app_content -%}
-    <div class="row">
-        <div class="col col-login mx-auto">
-            <div class="card mt-5">
-                <div class="card-body p-6">
-                    <div class="card-title">{{ _('Options for comment on "%(post_title)s"', post_title=post.title) }}</div>
-                    <ul class="option_list">
-                        {% if current_user.is_authenticated -%}
-                            {% if post_reply.user_id == current_user.id -%}
-                                <li><a href="{{ url_for('post.post_reply_edit', post_id=post.id, comment_id=post_reply.id) }}" class="no-underline" rel="nofollow"><span class="fe fe-edit"></span>
-                                    {{ _('Edit') }}</a></li>
-                            {% endif -%}
-                            {% if post_reply.user_id == current_user.id or post.community.is_moderator() or post.community.is_owner() or current_user.is_admin() -%}
-                                {% if post_reply.deleted -%}
-                                    <li><a href="{{ url_for('post.post_reply_restore', post_id=post.id, comment_id=post_reply.id) }}" class="no-underline confirm_first" rel="nofollow"><span class="fe fe-arrow-up"></span>
-                                        {{ _('Restore') }}</a></li>
-                                    {% if not post_reply.has_replies() -%}
-                                        {% if post.community.is_moderator() or current_user.is_admin() or (post_reply.user_id == current_user.id and post_reply.deleted_by == post_reply.user_id) -%}
-                                            <li><a href="{{ url_for('post.post_reply_purge', post_id=post.id, comment_id=post_reply.id) }}" class="no-underline confirm_first" rel="nofollow"><span class="fe fe-delete red"></span>
-                                            {{ _('Purge') }}</a></li>
-                                        {% endif -%}
-                                    {% endif -%}
-                                {% else -%}
-                                    <li><a href="{{ url_for('post.post_reply_delete', post_id=post.id, comment_id=post_reply.id) }}" class="no-underline confirm_first" rel="nofollow"><span class="fe fe-delete"></span>
-                                        {{ _('Delete') }}</a></li>
-                                {% endif -%}
-                            {% endif -%}
-                            {% if existing_bookmark -%}
-                                <li><a href="{{ url_for('post.post_reply_remove_bookmark', post_id=post.id, comment_id=post_reply.id) }}" class="no-underline" rel="nofollow"><span class="fe fe-bookmark"></span>
-                                        {{ _('Remove bookmark') }}</a></li>
-                            {% else -%}
-                            <li><a href="{{ url_for('post.post_reply_bookmark', post_id=post.id, comment_id=post_reply.id) }}" class="no-underline" rel="nofollow"><span class="fe fe-bookmark"></span>
-                                        {{ _('Bookmark') }}</a></li>
-                            {% endif -%}
-                            {% if post_reply.user_id != current_user.id -%}
-                                <li><a href="{{ url_for('post.post_reply_block_user', post_id=post.id, comment_id=post_reply.id) }}" class="no-underline"><span class="fe fe-block"></span>
-                                    {{ _('Block author @%(author_name)s', author_name=post_reply.author.user_name) }}</a></li>
-                                {% if post_reply.instance_id and post_reply.instance_id != 1 -%}
-                                <li><a href="{{ url_for('post.post_reply_block_instance', post_id=post.id, comment_id=post_reply.id) }}" class="no-underline"><span class="fe fe-block"></span>
-                                    {{ _("Hide every post from author's instance: %(name)s", name=post_reply.instance.domain) }}</a></li>
-                                {% endif -%}
-                            {% endif -%}
-                            {% if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()) -%}
-                            <li><a href="{{ url_for('post.post_reply_view_voting_activity', comment_id=post_reply.id) }}" class="no-underline" rel="nofollow"><span class="fe fe-sticky-left"></span>
-                                        {{ _('View Voting Activity') }}</a></li>
-                            {% endif -%}
-                        {% endif -%}
-                         <li><a href="{{ url_for('post.post_reply_report', post_id=post.id, comment_id=post_reply.id) }}" rel="nofollow" class="no-underline"><span class="fe fe-report"></span>
-                                {{ _('Report to moderators') }}</a></li>
-                    </ul>
-                    <p>{{ _('If you want to perform more than one of these (e.g. block and report), hold down Ctrl and click, then complete the operation in the new tabs that open.') }}</p>
-                </div>
-            </div>
-        </div>
-    </div>
-{% endblock -%}
+{% if current_user.is_authenticated -%}
+    {% if post_reply.user_id == current_user.id -%}
+        <li><a href="{{ url_for('post.post_reply_edit', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-edit"></span>
+            {{ _('Edit') }}</a></li>
+    {% endif -%}
+    {% if post_reply.user_id == current_user.id or post.community.is_moderator() or post.community.is_owner() or current_user.is_admin() -%}
+        {% if post_reply.deleted -%}
+            <li><a href="{{ url_for('post.post_reply_restore', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline confirm_first" rel="nofollow"><span class="fe fe-arrow-up"></span>
+                {{ _('Restore') }}</a></li>
+            {% if not post_reply.has_replies() -%}
+                {% if post.community.is_moderator() or current_user.is_admin() or (post_reply.user_id == current_user.id and post_reply.deleted_by == post_reply.user_id) -%}
+                    <li><a href="{{ url_for('post.post_reply_purge', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline confirm_first" rel="nofollow"><span class="fe fe-delete red"></span>
+                    {{ _('Purge') }}</a></li>
+                {% endif -%}
+            {% endif -%}
+        {% else -%}
+            <li><a href="{{ url_for('post.post_reply_delete', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline confirm_first" rel="nofollow"><span class="fe fe-delete"></span>
+                {{ _('Delete') }}</a></li>
+        {% endif -%}
+    {% endif -%}
+    {% if existing_bookmark -%}
+        <li><a href="{{ url_for('post.post_reply_remove_bookmark', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-bookmark"></span>
+                {{ _('Remove bookmark') }}</a></li>
+    {% else -%}
+    <li><a href="{{ url_for('post.post_reply_bookmark', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-bookmark"></span>
+                {{ _('Bookmark') }}</a></li>
+    {% endif -%}
+    {% if post_reply.user_id != current_user.id -%}
+        <li><a href="{{ url_for('post.post_reply_block_user', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline"><span class="fe fe-block"></span>
+            {{ _('Block author @%(author_name)s', author_name=post_reply.author.user_name) }}</a></li>
+        {% if post_reply.instance_id and post_reply.instance_id != 1 -%}
+        <li><a href="{{ url_for('post.post_reply_block_instance', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline"><span class="fe fe-block"></span>
+            {{ _("Hide every post from author's instance: %(name)s", name=post_reply.instance.domain) }}</a></li>
+        {% endif -%}
+    {% endif -%}
+    {% if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()) -%}
+    <li><a href="{{ url_for('post.post_reply_view_voting_activity', comment_id=post_reply.id) }}" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-sticky-left"></span>
+                {{ _('View Voting Activity') }}</a></li>
+    {% endif -%}
+{% endif -%}
+ <li><a href="{{ url_for('post.post_reply_report', post_id=post.id, comment_id=post_reply.id) }}" rel="nofollow" class="dropdown-item no-underline"><span class="fe fe-report"></span>
+        {{ _('Report to moderators') }}</a></li>

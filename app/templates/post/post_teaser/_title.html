@@ -26,4 +26,4 @@
 <span class="author small">{% if show_post_community -%}<a href="/c/{{ post.community.link() }}" aria-label="{{ _('Go to community %(name)s', name=post.community.name) }}">
     {% if post.community.icon_id and not low_bandwidth %}<img class="community_icon_small rounded-circle" src="{{ post.community.icon_image('tiny') }}" alt="Community icon" />{% endif -%}
     c/{{ post.community.name }}</a>{% endif -%}
-    by {{ render_username(post.author) }} <time datetime="{{ post.last_active }}">{{ post.posted_at_localized(sort, locale) }}</time></span>
+    by {{ render_username(post.author) }} <time datetime="{{ post.last_active }}" title="{{ post.last_active }}">{{ post.posted_at_localized(sort, locale) }}</time></span>
