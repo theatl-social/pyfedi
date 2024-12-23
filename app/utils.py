@@ -1251,10 +1251,16 @@ def get_task_session() -> Session:
     return Session(bind=db.engine)
 
 
+user2_cache = {}
+
+
 def jaccard_similarity(user1_upvoted: set, user2_id: int):
-    user2_upvoted_posts = ['post/' + str(id) for id in recently_upvoted_posts(user2_id)]
-    user2_upvoted_replies = ['reply/' + str(id) for id in recently_upvoted_post_replies(user2_id)]
-    user2_upvoted = set(user2_upvoted_posts + user2_upvoted_replies)
+    if user2_id not in user2_cache:
+        user2_upvoted_posts = ['post/' + str(id) for id in recently_upvoted_posts(user2_id)]
+        user2_upvoted_replies = ['reply/' + str(id) for id in recently_upvoted_post_replies(user2_id)]
+        user2_cache[user2_id] = set(user2_upvoted_posts + user2_upvoted_replies)
+
+    user2_upvoted = user2_cache[user2_id]
 
     if len(user2_upvoted) > 12:
         intersection = len(user1_upvoted.intersection(user2_upvoted))
