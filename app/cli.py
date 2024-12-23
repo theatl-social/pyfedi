@@ -27,7 +27,7 @@ from app.models import Settings, BannedInstances, Interest, Role, User, RolePerm
 from app.post.routes import post_delete_post
 from app.utils import file_get_contents, retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
     shorten_string, get_request, html_to_text, blocked_communities, ap_datetime, gibberish, get_request_instance, \
-    instance_banned
+    instance_banned, recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity
 
 
 def register(app):
@@ -463,6 +463,26 @@ def register(app):
         with app.app_context():
             db.session.query(ActivityPubLog).filter(ActivityPubLog.created_at < utcnow() - timedelta(days=3)).delete()
             db.session.commit()
+
+    @app.cli.command("detect_vote_manipulation")
+    def detect_vote_manipulation():
+        with app.app_context():
+            print('Getting user ids...')
+            all_user_ids = [user.id for user in User.query.filter(User.last_seen > datetime.utcnow() - timedelta(days=7))]
+            print('Checking...')
+            for first_user_id in all_user_ids:
+                current_user_upvoted_posts = ['post/' + str(id) for id in recently_upvoted_posts(first_user_id)]
+                current_user_upvoted_replies = ['reply/' + str(id) for id in recently_upvoted_post_replies(first_user_id)]
+
+                current_user_upvotes = set(current_user_upvoted_posts + current_user_upvoted_replies)
+                if len(current_user_upvotes) > 12:
+                    for other_user_id in all_user_ids:
+                        if jaccard_similarity(current_user_upvotes, other_user_id) >= 95:
+                            first_user = User.query.get(first_user_id)
+                            other_user = User.query.get(other_user_id)
+                            if first_user_id != other_user_id:
+                                print(f'{first_user.link()} votes the same as {other_user.link()}')
+            print('Done')
 
     @app.cli.command("migrate_community_notifs")
     def migrate_community_notifs():
