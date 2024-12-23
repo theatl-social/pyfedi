@@ -37,10 +37,10 @@
                     <li class="breadcrumb-item active">{{ (community.title + '@' + community.ap_domain)|shorten }}</li>
                   </ol>
                 </nav>
-                <div class="col-2">
+                <div class="col-3 col-md-2">
                     <img class="community_icon_big rounded-circle" src="{{ community.icon_image() }}" alt="Community icon" />
                 </div>
-                <div class="col-10">
+                <div class="col-9 col-md-10">
                     <h1 class="mt-3">{{ community.title }}
                         {% if current_user.is_authenticated -%}
                             {% include 'community/_notification_toggle.html' -%}
