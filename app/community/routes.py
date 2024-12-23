@@ -439,6 +439,7 @@ def do_subscribe(actor, user_id, admin_preload=False):
             # for local communities, joining is instant
             member = CommunityMember(user_id=user.id, community_id=community.id)
             db.session.add(member)
+            community.subscriptions_count += 1
             db.session.commit()
             if remote:
                 # send ActivityPub message to remote community, asking to follow. Accept message will be sent to our shared inbox
@@ -533,6 +534,7 @@ def unsubscribe(actor):
                 if proceed:
                     db.session.query(CommunityMember).filter_by(user_id=current_user.id, community_id=community.id).delete()
                     db.session.query(CommunityJoinRequest).filter_by(user_id=current_user.id, community_id=community.id).delete()
+                    community.subscriptions_count -= 1
                     db.session.commit()
 
                     flash('You have left ' + community.title)
