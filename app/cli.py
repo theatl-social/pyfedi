@@ -206,6 +206,7 @@ def register(app):
 
             # Ensure accurate community stats
             for community in Community.query.filter(Community.banned == False).all():
+                community.subscriptions_count = CommunityMember.query.filter(CommunityMember.community_id == community.id).count()
                 community.post_count = community.posts.filter(Post.deleted == False).count()
                 community.post_reply_count = community.replies.filter(PostReply.deleted == False).count()
                 db.session.commit()
