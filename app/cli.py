@@ -204,6 +204,12 @@ def register(app):
                 db.session.delete(post)
             db.session.commit()
 
+            # Ensure accurate community stats
+            for community in Community.query.filter(Community.banned == False).all():
+                community.post_count = community.posts.filter(Post.deleted == False).count()
+                community.post_reply_count = community.replies.filter(PostReply.deleted == False).count()
+                db.session.commit()
+
             # Delete voting data after 6 months
             db.session.execute(text('DELETE FROM "post_vote" WHERE created_at < :cutoff'), {'cutoff': utcnow() - timedelta(days=28 * 6)})
             db.session.execute(text('DELETE FROM "post_reply_vote" WHERE created_at < :cutoff'), {'cutoff': utcnow() - timedelta(days=28 * 6)})
