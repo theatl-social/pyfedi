@@ -87,6 +87,7 @@
                     {{ _('More') }}
                   </button>
                   <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{{ user.ap_profile_id }}" title="{{ _('View user profile on original server') }}" rel="nofollow"><span class="fe fe-external"></span>{{ _('View original profile') }}</a></li>
                     {% if current_user.has_blocked_user(user.id) -%}
                         <a class="dropdown-item" href="{{ url_for('user.unblock_profile', actor=user.link()) }}" rel="nofollow">{{ _('Unblock') }}</a>
                     {% else -%}
