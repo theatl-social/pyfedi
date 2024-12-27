@@ -7,7 +7,6 @@ from random import randint
 from time import sleep
 
 import flask
-import httpx
 from flask import json, current_app
 from flask_babel import _
 from sqlalchemy import or_, desc, text
@@ -20,14 +19,14 @@ from app.activitypub.signature import RsaKeys
 from app.activitypub.util import find_actor_or_create
 from app.auth.util import random_token
 from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY
-from app.email import send_verification_email, send_email
-from app.models import Settings, BannedInstances, Interest, Role, User, RolePermission, Domain, ActivityPubLog, \
+from app.email import send_email
+from app.models import Settings, BannedInstances, Role, User, RolePermission, Domain, ActivityPubLog, \
     utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply, Language, \
-    Tag, InstanceRole, Community
+    Tag, InstanceRole, Community, DefederationSubscription
 from app.post.routes import post_delete_post
-from app.utils import file_get_contents, retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
-    shorten_string, get_request, html_to_text, blocked_communities, ap_datetime, gibberish, get_request_instance, \
-    instance_banned, recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity
+from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
+    shorten_string, get_request, blocked_communities, gibberish, get_request_instance, \
+    instance_banned, recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, download_defeds
 
 
 def register(app):
@@ -220,6 +219,10 @@ def register(app):
             db.session.execute(text('UPDATE "user" SET banned = false WHERE banned is true AND banned_until < :cutoff AND banned_until is not null'),
                                {'cutoff': utcnow()})
             db.session.commit()
+
+            # update and sync defederation subscriptions
+            for defederation_sub in DefederationSubscription.query.all():
+                download_defeds(defederation_sub.id, defederation_sub.domain)
 
             # Check for dormant or dead instances
             try:
