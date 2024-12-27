@@ -1205,7 +1205,9 @@ def admin_content():
     next_url = url_for('admin.admin_content', page=posts.next_num) if posts.has_next else None
     prev_url = url_for('admin.admin_content', page=posts.prev_num) if posts.has_prev and page != 1 else None
 
-    return render_template('admin/content.html', title=_('Bad posts'), next_url=next_url, prev_url=prev_url, posts=posts,
+    return render_template('admin/content.html', title=_('Bad posts'),
+                           next_url=next_url, prev_url=prev_url,
+                           posts=posts, post_replies=None,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(),
@@ -1240,7 +1242,7 @@ def admin_content_spam():
     next_url_replies = url_for('admin.admin_content_spam', replies_page=post_replies.next_num) if post_replies.has_next else None
     prev_url_replies = url_for('admin.admin_content_spam', replies_page=post_replies.prev_num) if post_replies.has_prev and replies_page != 1 else None
 
-    return render_template('admin/spam_posts.html', title=_('Likely spam'),
+    return render_template('admin/content.html', title=_('Likely spam'),
                            next_url=next_url, prev_url=prev_url,
                            next_url_replies=next_url_replies, prev_url_replies=prev_url_replies,
                            posts=posts, post_replies=post_replies,
@@ -1274,7 +1276,7 @@ def admin_content_deleted():
     next_url_replies = url_for('admin.admin_content_deleted', replies_page=post_replies.next_num) if post_replies.has_next else None
     prev_url_replies = url_for('admin.admin_content_deleted', replies_page=post_replies.prev_num) if post_replies.has_prev and replies_page != 1 else None
 
-    return render_template('admin/deleted_posts.html', title=_('Deleted content'),
+    return render_template('admin/content.html', title=_('Deleted content'),
                            next_url=next_url, prev_url=prev_url,
                            next_url_replies=next_url_replies, prev_url_replies=prev_url_replies,
                            posts=posts, post_replies=post_replies,
