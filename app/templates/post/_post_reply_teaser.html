@@ -86,7 +86,7 @@
                 <a href='#' class=""><span class="fe fe-collapse"></span></a>
             {% endif -%}
         </div>
-        <div class="notify_toggle">
+        <div class="notify_toggle pull-right">
             {% if current_user.is_authenticated and current_user.verified -%}
                 {% with comment=dict(comment=post_reply) -%}
                     {% include "post/_reply_notification_toggle.html" -%}

@@ -988,9 +988,6 @@ time {
 .post_utilities_bar div .dropdown-item:active {
   line-height: 26px;
 }
-.post_utilities_bar .notify_toggle {
-  margin-left: auto; /* pull right */
-}
 
 .post_full .post_utilities_bar .voting_buttons_new {
   margin-left: -15px;
@@ -1388,7 +1385,6 @@ time {
   line-height: 44px;
 }
 .comment .comment_actions .notify_toggle {
-  margin-left: auto; /* pull right */
   font-size: 87%;
 }
 .comment .comment_actions .dropdown-item {
@@ -1839,6 +1835,10 @@ form h5 {
 
 .text-right {
   text-align: right;
+}
+
+.pull-right {
+  margin-left: auto;
 }
 
 #timeSpent {

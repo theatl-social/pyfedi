@@ -175,7 +175,7 @@
             <span aria-label="{{ _('Number of cross-posts:') }}">{{ len(post.cross_posts) }}</span></a>
         </div>
         {% endif -%}
-        <div class="notify_toggle">
+        <div class="notify_toggle pull-right">
             {% if current_user.is_authenticated and current_user.verified -%}
                 {% include 'post/_post_notification_toggle.html' -%}
             {% endif -%}
