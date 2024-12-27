@@ -10,12 +10,23 @@
 <div class="row">
     <div class="col">
         <h1>{{ title }}</h1>
-        <form method="get">
-            <input type="search" name="search"> <input type="submit" name="submit" value="Search">
-        </form>
-        Result Filter:
-        <a href="{{ url_for('admin.admin_communities') }}">All</a> | 
-        <a href="{{ url_for('admin.admin_communities_no_topic') }}">No topic</a>
+        <div class="row">
+            <div class="col">
+                <form method="get">
+                    <input type="search" name="search"> <input type="submit" name="submit" value="Search">
+                </form>
+                Result Filter:
+                <a href="{{ url_for('admin.admin_communities') }}">All</a> | 
+                <a href="{{ url_for('admin.admin_communities_no_topic') }}">No topic</a>
+            </div>
+            <div class="col-auto">
+                <div class="btn-group">
+                    <a href="{{ url_for('community.add_local') }}" class="btn btn-outline-secondary" aria-label="{{ _('Create local community') }}">{{ _('Create local community') }}</a>
+                    <a href="{{ url_for('community.add_remote') }}" class="btn btn-outline-secondary" aria-label="{{ _('Add community from another instance') }}">{{ _('Add remote community') }}</a>
+                </div>
+            </div>
+        </div>
+
         <table class="table table-striped">
             <tr>
                <th>Name</th>
