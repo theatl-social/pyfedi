@@ -42,12 +42,18 @@ class BannedInstances(db.Model):
     reason = db.Column(db.String(256))
     initiator = db.Column(db.String(256))
     created_at = db.Column(db.DateTime, default=utcnow)
+    subscription_id = db.Column(db.Integer, db.ForeignKey('defederation_subscription.id'), index=True) # is None when the ban was done by a local admin
 
 
 class AllowedInstances(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     domain = db.Column(db.String(256), index=True)
     created_at = db.Column(db.DateTime, default=utcnow)
+
+
+class DefederationSubscription(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    domain = db.Column(db.String(256), index=True)
 
 
 class Instance(db.Model):

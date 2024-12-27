@@ -28,10 +28,11 @@ from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED
 from app.email import send_welcome_email
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission, Domain, \
-    Tag
+    Tag, DefederationSubscription
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
-    topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents
+    topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents, \
+    download_defeds
 from app.admin import bp
 
 
@@ -661,11 +662,23 @@ def admin_federation():
                     cache.delete_memoized(instance_allowed, allow.strip())
         if form.use_blocklist.data:
             set_setting('use_allowlist', False)
-            db.session.execute(text('DELETE FROM banned_instances'))
+            db.session.execute(text('DELETE FROM banned_instances WHERE subscription_id is null'))
             for banned in form.blocklist.data.split('\n'):
                 if banned.strip():
                     db.session.add(BannedInstances(domain=banned.strip()))
                     cache.delete_memoized(instance_blocked, banned.strip())
+
+        # update and sync defederation subscriptions
+        db.session.execute(text('DELETE FROM banned_instances WHERE subscription_id is not null'))
+        db.session.query(DefederationSubscription).delete()
+        db.session.commit()
+        for defed_subscription in form.defederation_subscription.data.split('\n'):
+            if defed_subscription.strip():
+                db.session.add(DefederationSubscription(domain=defed_subscription.strip().lower()))
+        db.session.commit()
+        for defederation_sub in DefederationSubscription.query.all():
+            download_defeds(defederation_sub.id, defederation_sub.domain)
+
         g.site.blocked_phrases = form.blocked_phrases.data
         set_setting('actor_blocked_words', form.blocked_actors.data)
         cache.delete_memoized(blocked_phrases)
@@ -678,10 +691,11 @@ def admin_federation():
     elif request.method == 'GET':
         form.use_allowlist.data = get_setting('use_allowlist', False)
         form.use_blocklist.data = not form.use_allowlist.data
-        instances = BannedInstances.query.all()
+        instances = BannedInstances.query.filter(BannedInstances.subscription_id == None).all()
         form.blocklist.data = '\n'.join([instance.domain for instance in instances])
         instances = AllowedInstances.query.all()
         form.allowlist.data = '\n'.join([instance.domain for instance in instances])
+        form.defederation_subscription.data = '\n'.join([instance.domain for instance in DefederationSubscription.query.all()])
         form.blocked_phrases.data = g.site.blocked_phrases
         form.blocked_actors.data = get_setting('actor_blocked_words', '88')
 
@@ -1550,6 +1564,8 @@ def admin_instances():
         elif filter == 'gone_forever':
             instances = instances.filter(Instance.gone_forever == True)
             title = 'Gone forever instances'
+        elif filter == 'blocked':
+            instances = instances.join(BannedInstances, BannedInstances.domain == Instance.domain)
 
     # Pagination
     instances = instances.paginate(page=page,

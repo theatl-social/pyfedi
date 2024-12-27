@@ -29,7 +29,7 @@ from sqlalchemy import text, or_
 from sqlalchemy.orm import Session
 from wtforms.fields  import SelectField, SelectMultipleField
 from wtforms.widgets import Select, html_params, ListWidget, CheckboxInput
-from app import db, cache, httpx_client
+from app import db, cache, httpx_client, celery
 import re
 from PIL import Image, ImageOps
 
@@ -1251,9 +1251,53 @@ def get_task_session() -> Session:
     return Session(bind=db.engine)
 
 
+def download_defeds(defederation_subscription_id: int, domain: str):
+    if current_app.debug:
+        download_defeds_worker(defederation_subscription_id, domain)
+    else:
+        download_defeds_worker.delay(defederation_subscription_id, domain)
+
+
+@celery.task
+def download_defeds_worker(defederation_subscription_id: int, domain: str):
+    session = get_task_session()
+    for defederation_url in retrieve_defederation_list(domain):
+        session.add(BannedInstances(domain=defederation_url, reason='auto', subscription_id=defederation_subscription_id))
+    session.commit()
+    session.close()
+
+
+def retrieve_defederation_list(domain: str) -> List[str]:
+    result = []
+    software = instance_software(domain)
+    if software == 'lemmy' or software == 'piefed':
+        try:
+            response = get_request(f'https://{domain}/api/v3/federated_instances')
+        except:
+            response = None
+        if response and response.status_code == 200:
+            instance_data = response.json()
+            for row in instance_data['federated_instances']['blocked']:
+                result.append(row['domain'])
+    else:   # Assume mastodon-compatible API
+        try:
+            response = get_request(f'https://{domain}/api/v1/instance/domain_blocks')
+        except:
+            response = None
+        if response and response.status_code == 200:
+            instance_data = response.json()
+            for row in instance_data:
+                result.append(row['domain'])
+
+    return result
+
+
+def instance_software(domain: str):
+    instance = Instance.query.filter(Instance.domain == domain).first()
+    return instance.software.lower() if instance else ''
+
+
 user2_cache = {}
-
-
 def jaccard_similarity(user1_upvoted: set, user2_id: int):
     if user2_id not in user2_cache:
         user2_upvoted_posts = ['post/' + str(id) for id in recently_upvoted_posts(user2_id)]
