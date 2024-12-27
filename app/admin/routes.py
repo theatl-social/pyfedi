@@ -1192,20 +1192,20 @@ def admin_users():
                            )
 
 
-@bp.route('/content/trash', methods=['GET'])
+@bp.route('/content', methods=['GET'])
 @login_required
 @permission_required('administer all users')
-def admin_content_trash():
+def admin_content():
 
     page = request.args.get('page', 1, type=int)
 
     posts = Post.query.filter(Post.posted_at > utcnow() - timedelta(days=3), Post.deleted == False, Post.down_votes > 0).order_by(Post.score)
     posts = posts.paginate(page=page, per_page=100, error_out=False)
 
-    next_url = url_for('admin.admin_content_trash', page=posts.next_num) if posts.has_next else None
-    prev_url = url_for('admin.admin_content_trash', page=posts.prev_num) if posts.has_prev and page != 1 else None
+    next_url = url_for('admin.admin_content', page=posts.next_num) if posts.has_next else None
+    prev_url = url_for('admin.admin_content', page=posts.prev_num) if posts.has_prev and page != 1 else None
 
-    return render_template('admin/posts.html', title=_('Bad posts'), next_url=next_url, prev_url=prev_url, posts=posts,
+    return render_template('admin/content.html', title=_('Bad posts'), next_url=next_url, prev_url=prev_url, posts=posts,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(),
@@ -1217,7 +1217,7 @@ def admin_content_trash():
 @login_required
 @permission_required('administer all users')
 def admin_content_spam():
-    # Essentially the same as admin_content_trash() except only shows heavily downvoted posts by new users - who are usually spammers
+    # Essentially the same as admin_content() except only shows heavily downvoted posts by new users - who are usually spammers
     page = request.args.get('page', 1, type=int)
     replies_page = request.args.get('replies_page', 1, type=int)
 
