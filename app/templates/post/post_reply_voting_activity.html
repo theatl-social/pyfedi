@@ -10,18 +10,20 @@
         <h3>{{ _('Voting Activity for "%(reply_text)s"', reply_text=reply_text) }}</h3>
             <p><details open>
                 <summary>Upvoters</summary>
+                <ul>
                     {% for upvoter in upvoters -%}
-                        <a href="{{ upvoter.ap_profile_id }}" rel="nofollow" class="no-underline"><span class="fe fe-external"></span>
-                                {{ upvoter.ap_profile_id }}</a><br />
+                        <li>{{ render_username(upvoter) }}</li>
                     {% endfor -%}
+                </ul>
             </details>
             </p><p><hr></p>
             <details open>
                 <summary>Downvoters</summary>
+                <ul>
                     {% for downvoter in downvoters -%}
-                        <a href="{{ downvoter.ap_profile_id }}" rel="nofollow" class="no-underline"><span class="fe fe-external"></span>
-                            {{ downvoter.ap_profile_id }}</a><br />
+                        <li>{{ render_username(downvoter) }}</li>
                     {% endfor -%}
+                </ul>
             </details>
     </div>
 {% endblock -%}
