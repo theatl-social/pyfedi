@@ -37,7 +37,9 @@
             {% if post_replies %}<h3 class="mt-4" id="comments">Posts</h3>{% endif %}
             <div class="post_list">
                 {% for post in posts.items %}
-                    {% include 'post/_post_teaser.html' %}
+                    {% with disable_voting=True %}
+                        {% include 'post/_post_teaser.html' %}
+                    {% endwith %}
                 {% else %}
                     <p>{{ _('No posts.') }}</p>
                 {% endfor %}
