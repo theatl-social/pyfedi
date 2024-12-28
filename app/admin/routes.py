@@ -1196,90 +1196,65 @@ def admin_users():
 @login_required
 @permission_required('administer all users')
 def admin_content():
-
-    page = request.args.get('page', 1, type=int)
-
-    posts = Post.query.filter(Post.posted_at > utcnow() - timedelta(days=3), Post.deleted == False, Post.down_votes > 0).order_by(Post.score)
-    posts = posts.paginate(page=page, per_page=100, error_out=False)
-
-    next_url = url_for('admin.admin_content', page=posts.next_num) if posts.has_next else None
-    prev_url = url_for('admin.admin_content', page=posts.prev_num) if posts.has_prev and page != 1 else None
-
-    return render_template('admin/content.html', title=_('Bad posts'),
-                           next_url=next_url, prev_url=prev_url,
-                           posts=posts, post_replies=None,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site
-                           )
-
-
-@bp.route('/content/spam', methods=['GET'])
-@login_required
-@permission_required('administer all users')
-def admin_content_spam():
-    # Essentially the same as admin_content() except only shows heavily downvoted posts by new users - who are usually spammers
     page = request.args.get('page', 1, type=int)
     replies_page = request.args.get('replies_page', 1, type=int)
+    posts_replies = request.args.get('posts_replies', '')
+    show = request.args.get('show', 'trash')
+    days = request.args.get('days', 3, type=int)
 
-    posts = Post.query.join(User, User.id == Post.user_id).\
-        filter(User.created > utcnow() - timedelta(days=3)).\
-        filter(Post.posted_at > utcnow() - timedelta(days=3)).\
-        filter(Post.deleted == False).\
-        filter(Post.score <= 0).order_by(Post.score)
+    posts = Post.query.join(User, User.id == Post.user_id).filter(Post.deleted == False)
+    post_replies = PostReply.query.join(User, User.id == PostReply.user_id).filter(PostReply.deleted == False)
+    if show == 'trash':
+        title = _('Bad / Most downvoted')
+        posts = posts.filter(Post.down_votes > 0)
+        if days > 0:
+            posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=days))
+        posts = posts.order_by(Post.score)
+        post_replies = post_replies.filter(PostReply.down_votes > 0)
+        if days > 0:
+            post_replies = post_replies.filter(PostReply.posted_at > utcnow() - timedelta(days=days))
+        post_replies = post_replies.order_by(PostReply.score)
+    elif show == 'spammy':
+        title = _('Likely spam')
+        posts = posts.filter(Post.score <= 0)
+        if days > 0:
+            posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=days),
+                                 User.created > utcnow() - timedelta(days=days))
+        posts = posts.order_by(Post.score)
+        post_replies = post_replies.filter(PostReply.score <= 0)
+        if days > 0:
+            post_replies = post_replies.filter(PostReply.posted_at > utcnow() - timedelta(days=days),
+                                               User.created > utcnow() - timedelta(days=days))
+        post_replies = post_replies.order_by(PostReply.score)
+    elif show == 'deleted':
+        title = _('Deleted content')
+        posts = Post.query.filter(Post.deleted == True)
+        if days > 0:
+            posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=days))
+        posts = posts.order_by(desc(Post.posted_at))
+        post_replies = PostReply.query.filter(PostReply.deleted == True)
+        if days > 0:
+            post_replies = post_replies.filter(PostReply.posted_at > utcnow() - timedelta(days=days))
+        post_replies = post_replies.order_by(desc(PostReply.posted_at))
+
+    if posts_replies == 'posts':
+        post_replies = post_replies.filter(False)
+    elif posts_replies == 'replies':
+        posts = posts.filter(False)
+
     posts = posts.paginate(page=page, per_page=100, error_out=False)
-
-    post_replies = PostReply.query.join(User, User.id == PostReply.user_id). \
-        filter(User.created > utcnow() - timedelta(days=3)). \
-        filter(PostReply.posted_at > utcnow() - timedelta(days=3)). \
-        filter(PostReply.deleted == False). \
-        filter(PostReply.score <= 0).order_by(PostReply.score)
     post_replies = post_replies.paginate(page=replies_page, per_page=100, error_out=False)
 
-    next_url = url_for('admin.admin_content_spam', page=posts.next_num) if posts.has_next else None
-    prev_url = url_for('admin.admin_content_spam', page=posts.prev_num) if posts.has_prev and page != 1 else None
-    next_url_replies = url_for('admin.admin_content_spam', replies_page=post_replies.next_num) if post_replies.has_next else None
-    prev_url_replies = url_for('admin.admin_content_spam', replies_page=post_replies.prev_num) if post_replies.has_prev and replies_page != 1 else None
+    next_url = url_for('admin.admin_content', page=posts.next_num, replies_page=replies_page, posts_replies=posts_replies, show=show, days=days) if posts.has_next else None
+    prev_url = url_for('admin.admin_content', page=posts.prev_num, replies_page=replies_page, posts_replies=posts_replies, show=show, days=days) if posts.has_prev and page != 1 else None
+    next_url_replies = url_for('admin.admin_content', replies_page=post_replies.next_num, page=page, posts_replies=posts_replies, show=show, days=days) if post_replies.has_next else None
+    prev_url_replies = url_for('admin.admin_content', replies_page=post_replies.prev_num, page=page, posts_replies=posts_replies, show=show, days=days) if post_replies.has_prev and replies_page != 1 else None
 
-    return render_template('admin/content.html', title=_('Likely spam'),
+    return render_template('admin/content.html', title=title,
                            next_url=next_url, prev_url=prev_url,
                            next_url_replies=next_url_replies, prev_url_replies=prev_url_replies,
                            posts=posts, post_replies=post_replies,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site
-                           )
-
-
-@bp.route('/content/deleted', methods=['GET'])
-@login_required
-@permission_required('administer all users')
-def admin_content_deleted():
-    # Shows all soft deleted posts
-    page = request.args.get('page', 1, type=int)
-    replies_page = request.args.get('replies_page', 1, type=int)
-
-    posts = Post.query.\
-        filter(Post.deleted == True).\
-        order_by(desc(Post.posted_at))
-    posts = posts.paginate(page=page, per_page=100, error_out=False)
-
-    post_replies = PostReply.query. \
-        filter(PostReply.deleted == True). \
-        order_by(desc(PostReply.posted_at))
-    post_replies = post_replies.paginate(page=replies_page, per_page=100, error_out=False)
-
-    next_url = url_for('admin.admin_content_deleted', page=posts.next_num) if posts.has_next else None
-    prev_url = url_for('admin.admin_content_deleted', page=posts.prev_num) if posts.has_prev and page != 1 else None
-    next_url_replies = url_for('admin.admin_content_deleted', replies_page=post_replies.next_num) if post_replies.has_next else None
-    prev_url_replies = url_for('admin.admin_content_deleted', replies_page=post_replies.prev_num) if post_replies.has_prev and replies_page != 1 else None
-
-    return render_template('admin/content.html', title=_('Deleted content'),
-                           next_url=next_url, prev_url=prev_url,
-                           next_url_replies=next_url_replies, prev_url_replies=prev_url_replies,
-                           posts=posts, post_replies=post_replies,
+                           posts_replies=posts_replies, show=show, days=days,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(),
