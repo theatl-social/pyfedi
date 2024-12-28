@@ -1206,11 +1206,11 @@ def admin_content():
     post_replies = PostReply.query.join(User, User.id == PostReply.user_id).filter(PostReply.deleted == False)
     if show == 'trash':
         title = _('Bad / Most downvoted')
-        posts = posts.filter(Post.down_votes > 0)
+        posts = posts.filter(Post.down_votes > 1, Post.score < 10)
         if days > 0:
             posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=days))
         posts = posts.order_by(Post.score)
-        post_replies = post_replies.filter(PostReply.down_votes > 0)
+        post_replies = post_replies.filter(PostReply.down_votes > 1, PostReply.score < 10)
         if days > 0:
             post_replies = post_replies.filter(PostReply.posted_at > utcnow() - timedelta(days=days))
         post_replies = post_replies.order_by(PostReply.score)
