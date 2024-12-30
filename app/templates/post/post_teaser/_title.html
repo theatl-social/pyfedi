@@ -9,11 +9,13 @@
         {% if post.type == POST_TYPE_VIDEO -%}
                 <span class="fe fe-video" aria-hidden="true"></span>
         {% endif -%}
-        <span class="domain_link" aria-hidden="true">(<a href="/d/{{ post.domain_id }}" aria-label="{{ _('All posts about this domain') }}">{{ post.domain.name }}</a>)
-        {% if post.domain.post_warning -%}
-                <span class="fe fe-warning red" title="{{ post.domain.post_warning }}"></span>
+        {% if post.type == POST_TYPE_LINK -%}
+            <span class="domain_link" aria-hidden="true">(<a href="/d/{{ post.domain_id }}" aria-label="{{ _('All posts about this domain') }}">{{ post.domain.name }}</a>)
+            {% if post.domain.post_warning -%}
+                    <span class="fe fe-warning red" title="{{ post.domain.post_warning }}"></span>
+            {% endif -%}
+            </span>
         {% endif -%}
-        </span>
     {% endif -%}
     {% if post.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif -%}
     {% if post.nsfl -%}<span class="warning_badge nsfl" title="{{ _('Potentially emotionally scarring content') }}">nsfl</span>{% endif -%}
