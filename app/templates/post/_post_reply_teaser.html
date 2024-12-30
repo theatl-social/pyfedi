@@ -17,7 +17,7 @@
     <div class="row">
         <div class="col-12 hidable">
             {% if post_reply.post.deleted: -%}
-                reply to: [deleted post]
+                reply to: <a href="{{ url_for('activitypub.post_ap', post_id=post_reply.post.id, _anchor='comment_' + str(post_reply.id)) }}">[deleted post]</a>
             {% else -%}
                 reply to: <a href="{{ url_for('activitypub.post_ap', post_id=post_reply.post.id, _anchor='comment_' + str(post_reply.id)) }}">{{ post_reply.post.title | truncate(80, True) }}</a>
             {% endif -%}
@@ -86,7 +86,7 @@
                 <a href='#' class=""><span class="fe fe-collapse"></span></a>
             {% endif -%}
         </div>
-        <div class="notify_toggle">
+        <div class="notify_toggle pull-right">
             {% if current_user.is_authenticated and current_user.verified -%}
                 {% with comment=dict(comment=post_reply) -%}
                     {% include "post/_reply_notification_toggle.html" -%}

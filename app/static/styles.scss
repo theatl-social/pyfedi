@@ -591,10 +591,6 @@ time {
       }
     }
   }
-
-  .notify_toggle {
-    margin-left: auto; /* pull right */
-  }
 }
 
 .post_full .post_utilities_bar {
@@ -1052,7 +1048,6 @@ time {
     }
 
     .notify_toggle {
-      margin-left: auto; /* pull right */
       font-size: 87%;
     }
 
@@ -1550,6 +1545,10 @@ form {
 
 .text-right {
   text-align: right;
+}
+
+.pull-right {
+  margin-left: auto;
 }
 
 #timeSpent {

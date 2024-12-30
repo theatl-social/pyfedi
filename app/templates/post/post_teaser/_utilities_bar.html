@@ -19,7 +19,7 @@
                 <a rel="nofollow" aria-label="{{ _('Cross-post') }}" href="{{ url_for('post.post_cross_post', post_id=post.id) }}"><span class="fe fe-cross-post"></span></a>
             </div>
         {% endif -%}
-        <div class="post_options_link">
+        <div class="post_options_link pull-right">
             <div class="dropdown">
                 <a href="{{ url_for('post.post_options', post_id=post.id) if low_bandwidth else '#' }}"
                    data-bs-toggle="dropdown"
