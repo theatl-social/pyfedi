@@ -22,6 +22,7 @@ import jwt
 
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 import os
+from furl import furl
 from flask import current_app, json, redirect, url_for, request, make_response, Response, g, flash
 from flask_babel import _
 from flask_login import current_user, logout_user
@@ -193,6 +194,13 @@ def is_image_url(url):
         parsed_url = urlparse(url)
         path = parsed_url.path.lower()
         return any(path.endswith(extension) for extension in common_image_extensions)
+
+
+def is_local_image_url(url):
+    if not is_image_url(url):
+        return False
+    f = furl(url)
+    return f.host in ["127.0.0.1", current_app.config["SERVER_NAME"]]
 
 
 def is_video_url(url: str) -> bool:

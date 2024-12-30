@@ -178,9 +178,10 @@ class CreateImageForm(CreatePostForm):
 
         return True
 
-class EditImageForm(CreatePostForm):
-    image_alt_text = StringField(_l('Alt text'), validators=[Optional(), Length(min=3, max=1500)])
-
+class EditImageForm(CreateImageForm):
+    image_file = FileField(_l('Replace Image'), validators=[DataRequired()], render_kw={'accept': 'image/*'})
+    image_file = FileField(_l('Image'), validators=[Optional()], render_kw={'accept': 'image/*'})
+    
     def validate(self, extra_validators=None) -> bool:
         if self.communities:
             community = Community.query.get(self.communities.data)

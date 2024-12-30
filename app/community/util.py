@@ -304,66 +304,72 @@ def save_post(form, post: Post, type: int):
     elif type == POST_TYPE_IMAGE:
         post.type = POST_TYPE_IMAGE
         alt_text = form.image_alt_text.data if form.image_alt_text.data else form.title.data
-        if post.image_id is not None:
-            # editing an existing image post, dont try an upload
-            pass
-        else:
-            uploaded_file = request.files['image_file']
-            if uploaded_file and uploaded_file.filename != '':
-                if post.image_id:
-                    remove_old_file(post.image_id)
-                    post.image_id = None
+        uploaded_file = request.files['image_file']
+        # If we are uploading new file in the place of existing one just remove the old one
+        if post.image_id is not None and uploaded_file:
+            post.image.delete_from_disk()
+            image_id = post.image_id
+            post.image_id = None
+            db.session.add(post)
+            db.session.commit() 
+            File.query.filter_by(id=image_id).delete()
+        
+        if uploaded_file and uploaded_file.filename != '':
+            if post.image_id:
+                remove_old_file(post.image_id)
+                post.image_id = None
 
-                # check if this is an allowed type of file
-                file_ext = os.path.splitext(uploaded_file.filename)[1]
-                if file_ext.lower() not in allowed_extensions:
-                    abort(400)
-                new_filename = gibberish(15)
+            # check if this is an allowed type of file
+            file_ext = os.path.splitext(uploaded_file.filename)[1]
+            if file_ext.lower() not in allowed_extensions:
+                abort(400)
+            new_filename = gibberish(15)
 
-                # set up the storage directory
-                directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
-                ensure_directory_exists(directory)
+            # set up the storage directory
+            directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
+            ensure_directory_exists(directory)
 
-                # save the file
-                final_place = os.path.join(directory, new_filename + file_ext)
-                final_place_medium = os.path.join(directory, new_filename + '_medium.webp')
-                final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail.webp')
-                uploaded_file.seek(0)
-                uploaded_file.save(final_place)
+            # save the file
+            final_place = os.path.join(directory, new_filename + file_ext)
+            final_place_medium = os.path.join(directory, new_filename + '_medium.webp')
+            final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail.webp')
+            uploaded_file.seek(0)
+            uploaded_file.save(final_place)
 
-                if file_ext.lower() == '.heic':
-                    register_heif_opener()
+            if file_ext.lower() == '.heic':
+                register_heif_opener()
 
-                Image.MAX_IMAGE_PIXELS = 89478485
+            Image.MAX_IMAGE_PIXELS = 89478485
 
-                # resize if necessary
-                img = Image.open(final_place)
-                if '.' + img.format.lower() in allowed_extensions:
-                    img = ImageOps.exif_transpose(img)
+            # resize if necessary
+            img = Image.open(final_place)
+            if '.' + img.format.lower() in allowed_extensions:
+                img = ImageOps.exif_transpose(img)
 
-                    # limit full sized version to 2000px
-                    img_width = img.width
-                    img_height = img.height
-                    img.thumbnail((2000, 2000))
-                    img.save(final_place)
+                # limit full sized version to 2000px
+                img_width = img.width
+                img_height = img.height
+                img.thumbnail((2000, 2000))
+                img.save(final_place)
 
-                    # medium sized version
-                    img.thumbnail((512, 512))
-                    img.save(final_place_medium, format="WebP", quality=93)
+                # medium sized version
+                img.thumbnail((512, 512))
+                img.save(final_place_medium, format="WebP", quality=93)
 
-                    # save a third, smaller, version as a thumbnail
-                    img.thumbnail((170, 170))
-                    img.save(final_place_thumbnail, format="WebP", quality=93)
-                    thumbnail_width = img.width
-                    thumbnail_height = img.height
+                # save a third, smaller, version as a thumbnail
+                img.thumbnail((170, 170))
+                img.save(final_place_thumbnail, format="WebP", quality=93)
+                thumbnail_width = img.width
+                thumbnail_height = img.height
 
-                    file = File(file_path=final_place_medium, file_name=new_filename + file_ext, alt_text=alt_text,
-                                width=img_width, height=img_height, thumbnail_width=thumbnail_width,
-                                thumbnail_height=thumbnail_height, thumbnail_path=final_place_thumbnail,
-                                source_url=final_place.replace('app/static/', f"https://{current_app.config['SERVER_NAME']}/static/"))
-                    db.session.add(file)
-                    db.session.commit()
-                    post.image_id = file.id
+                file = File(file_path=final_place_medium, file_name=new_filename + file_ext, alt_text=alt_text,
+                            width=img_width, height=img_height, thumbnail_width=thumbnail_width,
+                            thumbnail_height=thumbnail_height, thumbnail_path=final_place_thumbnail,
+                            source_url=final_place.replace('app/static/', f"https://{current_app.config['SERVER_NAME']}/static/"))
+                db.session.add(file)
+                db.session.commit()
+                post.image_id = file.id
+
     elif type == POST_TYPE_VIDEO:
         form.video_url.data = form.video_url.data.strip()
         url_changed = post.id is None or form.video_url.data != post.url
