@@ -1,6 +1,7 @@
 {% if community %}
     {% if not community.restricted_to_mods or (community.restricted_to_mods and current_user.is_authenticated and community_membership(current_user, community) in [SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER]) %}
         <div class="mobile_create_post d-md-none mt-1">
+
             <a class="btn btn-primary" href="/community/{{ community.link() }}/submit">{{ _('Create post') }}</a>
         </div>
     {% endif %}

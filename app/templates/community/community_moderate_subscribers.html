@@ -39,7 +39,7 @@
                 {% for user in subscribers.items %}
                     <tr>
                         <td>
-                            <a href="/u/{{ user.link() }}">{{ render_username(user) }}</a>
+                            {{ render_username(user) }}
                         </td>
                         <td>{% if user.is_local() %} Local {% else %} <a href="{{ user.ap_profile_id }}">{{ user.ap_domain }}</a>{% endif %}</td>
                         <td>{{ arrow.get(user.last_seen).humanize(locale=locale) }} </td>
@@ -99,7 +99,7 @@
                 </tr>
                 {% for user in banned_people %}
                     <tr>
-                        <td><a href="/u/{{ user.link() }}">{{ render_username(user) }}</a></td>
+                        <td>{{ render_username(user) }}</td>
                         <td>{% if user.is_local() %} Local {% else %} <a href="{{ user.ap_profile_id }}">{{ user.ap_domain }}</a>{% endif %}</td>
                         <td>{{ user.reports if user.reports > 0 }} </td>
                         <td>{{ user.ip_address if user.ip_address }} </td>
