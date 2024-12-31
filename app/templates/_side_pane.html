@@ -20,14 +20,14 @@
                     {% endif -%}
                 </div>
                 <form method="get" action="/search">
-                    <input type="search" name="q" class="form-control mt-2" placeholder="{{ _('Search this community') }}" />
+                    <input type="search" id="search_community" name="q" class="form-control mt-2" placeholder="{{ _('Search this community') }}" />
                     <input type="hidden" name="community" value="{{ community.id }}">
                 </form>
             </div>
         </div>
     {% endblock %}
     {% block about_community %}
-        <div class="card mt-3">
+        <div class="card mt-3" id="about_community">
             <div class="card-header">
                  <h2>{{ community.title }}</h2>
             </div>

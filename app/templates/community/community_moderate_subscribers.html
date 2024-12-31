@@ -47,7 +47,7 @@
                         <td>
                             <div class="dropdown">
                               <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                Actions
+                                {{ _('Actions') }}
                               </button>
                               <ul class="dropdown-menu">
                                 {% if user.is_local() %}<li><a class="dropdown-item" href="/chat/{{ user.id }}/new">Send Message</a></li>{% endif %}
