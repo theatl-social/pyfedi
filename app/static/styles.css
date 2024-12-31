@@ -1493,6 +1493,12 @@ fieldset legend {
   width: 100%;
   overflow-x: auto;
 }
+.post_body ol li, .post_body ul li, .comment_body ol li, .comment_body ul li {
+  margin-bottom: 7px;
+}
+.post_body ol li > p, .post_body ul li > p, .comment_body ol li > p, .comment_body ul li > p {
+  margin-bottom: 0;
+}
 
 .skip-link:focus {
   top: 0;

@@ -1163,6 +1163,16 @@ fieldset {
     width: 100%;
     overflow-x: auto;
   }
+
+  ol, ul {
+    li {
+      margin-bottom: 7px;
+
+      > p {
+        margin-bottom: 0;
+      }
+    }
+  }
 }
 
 .skip-link:focus {
