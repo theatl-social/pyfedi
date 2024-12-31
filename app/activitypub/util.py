@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import html
 import os
+import re
 from datetime import timedelta, datetime, timezone
 from random import randint
 from typing import Union, Tuple, List
@@ -32,7 +33,7 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     microblog_content_to_title, is_video_url, \
     notification_subscribers, communities_banned_from, actor_contains_blocked_words, \
     html_to_text, add_to_modlog_activitypub, joined_communities, \
-    moderating_communities, get_task_session, is_video_hosting_site, opengraph_parse
+    moderating_communities, get_task_session, is_video_hosting_site, opengraph_parse, instance_banned
 
 from sqlalchemy import or_
 
@@ -237,17 +238,6 @@ def banned_user_agents():
 
 
 @cache.memoize(150)
-def instance_blocked(host: str) -> bool:        # see also utils.instance_banned()
-    if host is None or host == '':
-        return True
-    host = host.lower()
-    if 'https://' in host or 'http://' in host:
-        host = urlparse(host).hostname
-    instance = BannedInstances.query.filter_by(domain=host.strip()).first()
-    return instance is not None
-
-
-@cache.memoize(150)
 def instance_allowed(host: str) -> bool:
     if host is None or host == '':
         return True
@@ -282,7 +272,7 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
             if not instance_allowed(server):
                 return None
         else:
-            if instance_blocked(server):
+            if instance_banned(server):
                 return None
         if actor_contains_blocked_words(actor):
             return None

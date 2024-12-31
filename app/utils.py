@@ -656,12 +656,21 @@ def user_ip_banned() -> bool:
         return current_ip_address in banned_ip_addresses()
 
 
-@cache.memoize(timeout=60)
+@cache.memoize(timeout=150)
 def instance_banned(domain: str) -> bool:   # see also activitypub.util.instance_blocked()
     if domain is None or domain == '':
         return False
+    domain = domain.lower().strip()
+    if 'https://' in domain or 'http://' in domain:
+        domain = urlparse(domain).hostname
     banned = BannedInstances.query.filter_by(domain=domain).first()
-    return banned is not None
+    if banned is not None:
+        return True
+
+    # Mastodon sometimes bans with a * in the domain name, meaning "any letter", e.g. "cum.**mp"
+    regex_patterns = [re.compile(f"^{cond.domain.replace('*', '[a-zA-Z0-9]')}$") for cond in
+                      BannedInstances.query.filter(BannedInstances.domain.like('%*%')).all()]
+    return any(pattern.match(domain) for pattern in regex_patterns)
 
 
 def user_cookie_banned() -> bool:

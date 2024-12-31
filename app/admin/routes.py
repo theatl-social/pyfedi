@@ -16,7 +16,7 @@ from urllib.parse import urlparse
 from app import db, celery, cache
 from app.activitypub.routes import process_inbox_request, process_delete_request, replay_inbox_request
 from app.activitypub.signature import post_request, default_context
-from app.activitypub.util import instance_allowed, instance_blocked, extract_domain_and_actor
+from app.activitypub.util import instance_allowed, extract_domain_and_actor
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm, \
     EditInstanceForm, RemoteInstanceScanForm
@@ -32,7 +32,7 @@ from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
     topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents, \
-    download_defeds
+    download_defeds, instance_banned
 from app.admin import bp
 
 
@@ -666,7 +666,7 @@ def admin_federation():
             for banned in form.blocklist.data.split('\n'):
                 if banned.strip():
                     db.session.add(BannedInstances(domain=banned.strip()))
-                    cache.delete_memoized(instance_blocked, banned.strip())
+                    cache.delete_memoized(instance_banned, banned.strip())
 
         # update and sync defederation subscriptions
         db.session.execute(text('DELETE FROM banned_instances WHERE subscription_id is not null'))

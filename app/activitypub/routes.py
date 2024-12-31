@@ -19,7 +19,7 @@ from app.models import User, Community, CommunityJoinRequest, CommunityMember, C
     PostReply, Instance, PostVote, PostReplyVote, File, AllowedInstances, BannedInstances, utcnow, Site, Notification, \
     ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice
 from app.activitypub.util import public_key, users_total, active_half_year, active_month, local_posts, local_comments, \
-    post_to_activity, find_actor_or_create, instance_blocked, find_reply_parent, find_liked_object, \
+    post_to_activity, find_actor_or_create, find_reply_parent, find_liked_object, \
     lemmy_site_data, is_activitypub_request, delete_post_or_comment, community_members, \
     user_removed_from_remote_server, create_post, create_post_reply, update_post_reply_from_activity, \
     update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection, find_reported_object, \
@@ -29,7 +29,7 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
 from app.utils import gibberish, get_setting, render_template, \
     community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
-    community_moderators, markdown_to_html, html_to_text, add_to_modlog_activitypub
+    community_moderators, html_to_text, add_to_modlog_activitypub, instance_banned
 
 
 @bp.route('/testredis')
@@ -1311,7 +1311,7 @@ def announce_activity_to_followers(community, creator, activity):
         awaken_dormant_instance(instance)
 
         # All good? Send!
-        if instance and instance.online() and not instance_blocked(instance.inbox):
+        if instance and instance.online() and not instance_banned(instance.inbox):
             if creator.instance_id != instance.id:    # don't send it to the instance that hosts the creator as presumably they already have the content
                 send_to_remote_instance(instance.id, community.id, announce_activity)
 
