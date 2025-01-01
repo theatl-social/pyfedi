@@ -384,6 +384,12 @@ def html_to_text(html) -> str:
     return soup.get_text()
 
 
+def mastodon_extra_field_link(extra_field: str) -> str:
+    soup = BeautifulSoup(extra_field, 'html.parser')
+    for tag in soup.find_all('a'):
+        return tag['href']
+
+
 def microblog_content_to_title(html: str) -> str:
     title = ''
     if '<p>' in html:

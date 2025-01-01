@@ -21,7 +21,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     ap_datetime, shorten_string, markdown_to_text, user_filters_home, \
     joined_communities, moderating_communities, markdown_to_html, allowlist_html, \
     blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
-    blocked_users, menu_topics, blocked_communities, get_request
+    blocked_users, menu_topics, blocked_communities, get_request, mastodon_extra_field_link
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, read_posts
 
@@ -508,6 +508,8 @@ def replay_inbox():
 
 @bp.route('/test')
 def test():
+
+    return mastodon_extra_field_link('<a href="https://www.brammeehan.com" target="_blank" rel="nofollow noopener me" translate="no"><span class="invisible">https://www.</span><span class="">brammeehan.com</span><span class="invisible"></span></a>')
 
     response = get_request('https://rimu.geek.nz')
     x = ''

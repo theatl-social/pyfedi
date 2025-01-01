@@ -33,7 +33,8 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     microblog_content_to_title, is_video_url, \
     notification_subscribers, communities_banned_from, actor_contains_blocked_words, \
     html_to_text, add_to_modlog_activitypub, joined_communities, \
-    moderating_communities, get_task_session, is_video_hosting_site, opengraph_parse, instance_banned
+    moderating_communities, get_task_session, is_video_hosting_site, opengraph_parse, instance_banned, \
+    mastodon_extra_field_link
 
 from sqlalchemy import or_
 
@@ -517,6 +518,8 @@ def refresh_user_profile_task(user_id):
                 user.extra_fields = []
                 for field_data in activity_json['attachment']:
                     if field_data['type'] == 'PropertyValue':
+                        if '<a ' in field_data['value']:
+                            field_data['value'] = mastodon_extra_field_link(field_data['value'])
                         user.extra_fields.append(UserExtraField(label=field_data['name'].strip(), text=field_data['value'].strip()))
             if 'type' in activity_json:
                 user.bot = True if activity_json['type'] == 'Service' else False
@@ -769,6 +772,8 @@ def actor_json_to_model(activity_json, address, server):
             user.extra_fields = []
             for field_data in activity_json['attachment']:
                 if field_data['type'] == 'PropertyValue':
+                    if '<a ' in field_data['value']:
+                        field_data['value'] = mastodon_extra_field_link(field_data['value'])
                     user.extra_fields.append(UserExtraField(label=field_data['name'].strip(), text=field_data['value'].strip()))
         try:
             db.session.add(user)
