@@ -206,9 +206,12 @@ def register(app):
             # Ensure accurate community stats
             for community in Community.query.filter(Community.banned == False).all():
                 community.subscriptions_count = CommunityMember.query.filter(CommunityMember.community_id == community.id).count()
-                community.post_count = community.posts.filter(Post.deleted == False).count()
-                community.post_reply_count = community.replies.filter(PostReply.deleted == False).count()
-                db.session.commit()
+                community.post_count = db.session.execute(text('SELECT COUNT(id) as c FROM post WHERE deleted is false and community_id = :community_id'),
+                                                          {'community_id': community.id}).scalar()
+                community.post_reply_count = db.session.execute(text('SELECT COUNT(id) as c FROM post_reply WHERE deleted is false and community_id = :community_id'),
+                                                                {'community_id': community.id}).scalar()
+
+            db.session.commit()
 
             # Delete voting data after 6 months
             db.session.execute(text('DELETE FROM "post_vote" WHERE created_at < :cutoff'), {'cutoff': utcnow() - timedelta(days=28 * 6)})
