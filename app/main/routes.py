@@ -330,6 +330,7 @@ def list_subscribed_communities():
 
 
 @bp.route('/communities/notsubscribed', methods=['GET'])
+@login_required
 def list_not_subscribed_communities():
     verification_warning()
     search_param = request.args.get('search', '')
@@ -385,6 +386,7 @@ def list_not_subscribed_communities():
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site)
+
 
 @bp.route('/modlog', methods=['GET'])
 def modlog():
@@ -508,8 +510,6 @@ def replay_inbox():
 
 @bp.route('/test')
 def test():
-
-    return mastodon_extra_field_link('<a href="https://www.brammeehan.com" target="_blank" rel="nofollow noopener me" translate="no"><span class="invisible">https://www.</span><span class="">brammeehan.com</span><span class="invisible"></span></a>')
 
     response = get_request('https://rimu.geek.nz')
     x = ''
