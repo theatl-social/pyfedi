@@ -210,8 +210,7 @@ def register(app):
                                                           {'community_id': community.id}).scalar()
                 community.post_reply_count = db.session.execute(text('SELECT COUNT(id) as c FROM post_reply WHERE deleted is false and community_id = :community_id'),
                                                                 {'community_id': community.id}).scalar()
-
-            db.session.commit()
+                db.session.commit()
 
             # Delete voting data after 6 months
             db.session.execute(text('DELETE FROM "post_vote" WHERE created_at < :cutoff'), {'cutoff': utcnow() - timedelta(days=28 * 6)})
