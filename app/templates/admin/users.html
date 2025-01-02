@@ -42,7 +42,12 @@
                        <span class="{{ 'fe fe-chevron-up' if sort_by == 'user_name DESC' }}{{ 'fe fe-chevron-down' if sort_by == 'user_name ASC' }}"></span>
                    </button>
                </th>
-               <th>{{ _('Banned') }}</th>
+               <th>
+                   <button form="searchUsers" name="sort_by_btn" value="banned{{' ASC' if sort_by == 'banned DESC' else ' DESC' }}" class="btn" title="{{ _('This user has been banned.') }}">
+                       {{ _('Banned') }}
+                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'banned ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'banned DESC' }}"></span>
+                   </button>
+               </th>
                <th>
                    <button form="searchUsers" name="sort_by_btn" value="reports{{' ASC' if sort_by == 'reports DESC' else ' DESC' }}" class="btn" title="{{ _('How often a user has been reported.') }}">
                        {{ _('Reports') }}
