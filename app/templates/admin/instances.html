@@ -93,7 +93,7 @@
                     <td><span title="{{ _('Post Replies') }}">{{ instance.post_replies_count()  }}</span></td>
                     <td><span title="{{ _('Vote Weight') }}">{{ instance.vote_weight  }}</span></td>
                     <td><span title="{{ _('Trusted') }}">{{ _('Yes') if instance.trusted }}</span></td>
-                    <td><span title="{{ _('Last Seen') }}">{{ arrow.get(instance.last_seen).humanize(locale=locale) if instance.last_seen }}</span></td>
+                    <td><span title="{{ _('Last Seen') }}: {{ instance.last_seen }}">{{ arrow.get(instance.last_seen).humanize(locale=locale) if instance.last_seen }}</span></td>
                     <td><span title="{{ _('Sent') }}">{{ arrow.get(instance.last_successful_send).humanize(locale=locale) if instance.last_successful_send }}</span></td>
                     <td><span title="{{ _('Failed') }}">{{ instance.failures  }}</span></td>
                     {% if instance.gone_forever %}
