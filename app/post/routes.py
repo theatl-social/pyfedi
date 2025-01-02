@@ -1993,3 +1993,9 @@ def post_cross_post(post_id: int):
                                joined_communities=joined,
                                menu_topics=menu_topics(), site=g.site
                                )
+
+
+@bp.route('/post_preview', methods=['POST'])
+@login_required
+def preview():
+    return markdown_to_html(request.form.get('body'))

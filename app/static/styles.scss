@@ -1716,6 +1716,13 @@ form {
 
 }
 
+#preview:has(p, a, h1, h2, h3, ul, ol) {
+  border: solid 1px #ddd;
+  border-radius: 5px;
+  padding: 5px 10px;
+  margin-bottom: 15px;
+}
+
 /* high contrast */
 @import "scss/high_contrast";
 

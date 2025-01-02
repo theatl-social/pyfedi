@@ -55,14 +55,6 @@
 
     fieldsets.forEach((fieldset) => {
       const legend = fieldset.querySelector('legend');
-      const content = fieldset.querySelectorAll('*:not(legend)');
-
-      content.forEach((element) => {
-        const wrapper = document.createElement('div');
-        wrapper.classList.add('wrapper');
-        element.parentNode.insertBefore(wrapper, element);
-        wrapper.appendChild(element);
-      });
 
       if (setting.collapsed) {
         hideFieldsetContent(fieldset, { animation: false });
