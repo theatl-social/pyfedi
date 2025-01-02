@@ -76,15 +76,15 @@
             </tr>
             {% for user in users.items %}
                 <tr>
-                    <td>{{ render_username(user, add_domain=False) }}<br />
-                    <a href="/u/{{ user.link() }}">{{ user.user_name }}</a>{% if not user.is_local() %}<wbr />@<a href="{{ user.ap_profile_id }}">{{ user.ap_domain }}</a>{% endif %}</td>
-                    <td>{{ '<span class="red">Banned</span>'|safe if user.banned }}
+                    <td><span title="{{ _('Name') }}">{{ render_username(user, add_domain=False) }}<br />
+                    <a href="/u/{{ user.link() }}">{{ user.user_name }}</a>{% if not user.is_local() %}<wbr />@<a href="{{ user.ap_profile_id }}">{{ user.ap_domain }}</a>{% endif %}</span></td>
+                    <td><span title="{{ _('Banned') }}">{{ '<span class="red">Banned</span>'|safe if user.banned }}
                         {{ '<span class="red">Banned posts</span>'|safe if user.ban_posts }}
-                        {{ '<span class="red">Banned comments</span>'|safe if user.ban_comments }}</td>
-                    <td>{{ user.reports if user.reports > 0 }} </td>
-                    <td>{% if user.attitude != 1 %}{{ (user.attitude * 100) | round | int }}%{% endif %}</td>
-                    <td>{% if user.reputation %}R {{ user.reputation | round | int }}{% endif %}</td>
-                    <td><span title="{{ user.last_seen }}">{{ arrow.get(user.last_seen).humanize(locale=locale) }}</span></td>
+                        {{ '<span class="red">Banned comments</span>'|safe if user.ban_comments }}</span></td>
+                    <td><span title="{{ _('Reports') }}">{{ user.reports if user.reports > 0 }}</span></td>
+                    <td><span title="{{ _('Attitude') }}">{% if user.attitude != 1 %}{{ (user.attitude * 100) | round | int }}%{% endif %}</span></td>
+                    <td><span title="{{ _('Reputation') }}">{% if user.reputation %}R {{ user.reputation | round | int }}{% endif %}</span></td>
+                    <td><span title="{{ _('Last Seen') }}: {{ user.last_seen }}">{{ arrow.get(user.last_seen).humanize(locale=locale) }}</span></td>
                     <td><a href="{{ url_for('admin.admin_user_edit', user_id=user.id) }}">Edit</a>,
                         <a href="{{ url_for('admin.admin_user_delete', user_id=user.id) }}" class="confirm_first">Delete</a>,
                         <br />
