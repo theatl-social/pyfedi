@@ -32,11 +32,13 @@
                <th>Name</th>
                <th>Topic</th>
                <th>#&nbsp;Posts</th>
+               <th title="{{ _('Local members') }}">#&nbsp;Members</th>
                <th>Retention</th>
                <th>Layout</th>
                <th title="{{ _('Posts can be popular.') }}">Popular</th>
                <th title="{{ _('Posts show in the All feed.') }}">All</th>
                <th title="{{ _('Content warning, NSFW or NSFL set for community.') }}">Warning</th>
+               <th>{{ _('Active') }}</th>
                <th>Actions</th>
             </tr>
             {% for community in communities.items %}
@@ -45,11 +47,13 @@
                     !<a href="/c/{{ community.link() }}">{{ community.name }}</a><wbr />@<a href="{{ community.ap_profile_id }}">{{ community.ap_domain }}</a></td>
                     <td>{{ community.topic.name  }}</td>
                     <td>{{ community.post_count  }}</td>
+                    <td>{{ community.subscriptions_count }}</td>
                     <td>{{ community.content_retention if community.content_retention != -1 }}</td>
                     <td>{{ community.default_layout if community.default_layout }}</td>
                     <th>{{ '&check;'|safe if community.show_popular else '&cross;'|safe }}</th>
                     <th>{{ '&check;'|safe if community.show_all else '&cross;'|safe }}</th>
                     <th>{{ '&#x26A0;'|safe if community.nsfw or community.nsfl or community.content_warning else ''|safe }}</th>
+                    <td>{{ arrow.get(community.last_active).humanize(locale=locale) }}</td>
                     <td><a href="{{ url_for('admin.admin_community_edit', community_id=community.id) }}">Edit</a> |
                         <a href="{{ url_for('admin.admin_community_delete', community_id=community.id) }}" class="confirm_first">Delete</a>
                     </td>
