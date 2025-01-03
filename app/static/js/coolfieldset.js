@@ -44,8 +44,10 @@
   function doToggle(fieldset, setting) {
     if (fieldset.classList.contains('collapsed')) {
       showFieldsetContent(fieldset, setting);
+      setCookie(`fieldset_${fieldset.id}_state`, 'expanded', 365);
     } else if (fieldset.classList.contains('expanded')) {
       hideFieldsetContent(fieldset, setting);
+      setCookie(`fieldset_${fieldset.id}_state`, 'collapsed', 365);
     }
   }
 
@@ -73,5 +75,6 @@
 // coolfieldset('.coolfieldset', { collapsed: true, animation: true, speed: 'slow' });
 
 document.addEventListener('DOMContentLoaded', function () {
-  coolfieldset('.coolfieldset', { collapsed: true, animation: true, speed: 'slow' });
+  coolfieldset('.coolfieldset.collapsed', { collapsed: true, animation: true, speed: 'slow' });
+  coolfieldset('.coolfieldset:not(.collapsed)', { collapsed: false, animation: true, speed: 'slow' });
 });

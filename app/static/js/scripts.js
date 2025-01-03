@@ -806,6 +806,23 @@ function getCookie(name) {
     return null;
 }
 
+function setCookie(name, value, days) {
+    var expires;
+
+    if (days) {
+        var date = new Date();
+        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+        expires = "; expires=" + date.toGMTString();
+    } else {
+        expires = "";
+    }
+    document.cookie = encodeURIComponent(name) + "=" + encodeURIComponent(value) + expires + "; path=/";
+}
+
+function eraseCookie(name) {
+    setCookie(name, "", -1);
+}
+
 /* register a service worker */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
