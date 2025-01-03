@@ -6,7 +6,7 @@
 {% from 'bootstrap/form.html' import render_form, render_field %}
 
 {% block app_content %}
-<script src="/static/js/coolfieldset.js?v=2"></script>
+<script src="/static/js/coolfieldset.js?v=3"></script>
 <div class="row">
     <div class="col-12 col-md-8 position-relative main_pane">
         {% block title %}<h1>{{ _('Edit post') }}</h1>{% endblock %}
@@ -116,7 +116,7 @@
             {{ render_field(form.tags) }}
             <small class="field_hint">{{ _('Separate each tag with a comma.') }}</small>
 
-            <fieldset id="post_more_options" class="mt-4 mb-4 coolfieldset {{ 'collapsed' if request.cookies.get('fieldset_post_more_options_state') == 'collapsed' }}">
+            <fieldset id="post_more_options" class="mt-4 mb-4 coolfieldset {{ 'collapsed' if request.cookies.get('fieldset_post_more_options_state', 'collapsed') == 'collapsed' }}">
                 <legend class="w-auto">{{ _('More options') }}</legend>
                 {{ render_field(form.notify_author) }}
                 {{ render_field(form.sticky) }}

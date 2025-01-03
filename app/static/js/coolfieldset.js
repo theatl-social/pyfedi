@@ -18,6 +18,7 @@
     if (!options.animation) {
       fieldset.dispatchEvent(new Event('update'));
     }
+    setCookie(`fieldset_${fieldset.id}_state`, 'collapsed', 365);
   }
 
   function showFieldsetContent(fieldset, options) {
@@ -39,6 +40,7 @@
     if (!options.animation) {
       fieldset.dispatchEvent(new Event('update'));
     }
+    setCookie(`fieldset_${fieldset.id}_state`, 'expanded', 365);
   }
 
   function doToggle(fieldset, setting) {
