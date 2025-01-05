@@ -173,7 +173,8 @@ def cached_community_view_variant_1(community: Community, stub=False):
                'actor_id': community.public_url(),
                'local': community.is_local(),
                'hidden': not community.show_all,
-               'instance_id': community.instance_id if community.instance_id else 1})
+               'instance_id': community.instance_id if community.instance_id else 1,
+               'ap_domain': community.ap_domain})
     if community.description and not stub:
         v1['description'] = community.description
     if community.icon_id:
