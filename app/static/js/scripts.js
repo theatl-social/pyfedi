@@ -34,6 +34,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupLightboxTeaser();
     setupLightboxPostBody();
     setupPostTeaserHandler();
+    setupPostTypeSwitcher();
 });
 
 function setupPostTeaserHandler() {
@@ -45,6 +46,26 @@ function setupPostTeaserHandler() {
             }
         };
     });
+}
+
+function setupPostTypeSwitcher() {
+    document.querySelectorAll('#type_of_post a').forEach(a => {
+        a.onclick = function() {
+            setCookie('post_title', document.getElementById('title').value, 0.1);
+            setCookie('post_description', document.getElementById('body').value, 0.1);
+            setCookie('post_tags', document.getElementById('tags').value, 0.1);
+        };
+    });
+
+    var typeSwitcher = document.getElementById('type_of_post');
+    var title = document.getElementById('title');
+    var body = document.getElementById('body');
+    var tags = document.getElementById('tags');
+    if(typeSwitcher && title && body && tags) {
+        title.value = getCookie('post_title');
+        body.value = getCookie('post_description');
+        tags.value = getCookie('post_tags');
+    }
 }
 
 function setupYouTubeLazyLoad() {
@@ -799,7 +820,7 @@ function getCookie(name) {
         var cookie = cookies[i].trim();
 
         if (cookie.indexOf(name + '=') === 0) {
-            return cookie.substring(name.length + 1);
+            return decodeURIComponent(cookie.substring(name.length + 1));
         }
     }
 

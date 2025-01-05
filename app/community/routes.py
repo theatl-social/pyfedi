@@ -735,7 +735,12 @@ def add_post(actor, type):
             if not community.local_only:
                 federate_post(community, post)
 
-        return redirect(f"/post/{post.id}")
+        resp = make_response(redirect(f"/post/{post.id}"))
+        # remove cookies used to maintain state when switching post type
+        resp.delete_cookie('post_title')
+        resp.delete_cookie('post_description')
+        resp.delete_cookie('post_tags')
+        return resp
     else: # GET
         form.communities.data = community.id
         form.notify_author.data = True
