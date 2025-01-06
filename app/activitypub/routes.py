@@ -25,7 +25,7 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
     update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection, find_reported_object, \
     process_report, ensure_domains_match, can_edit, can_delete, remove_data_from_banned_user, resolve_remote_post, \
     inform_followers_of_post_update, comment_model_to_json, restore_post_or_comment, ban_user, unban_user, \
-    log_incoming_ap, find_community, site_ban_remove_data, community_ban_remove_data
+    log_incoming_ap, find_community, site_ban_remove_data, community_ban_remove_data, verify_object_from_source
 from app.utils import gibberish, get_setting, render_template, \
     community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
@@ -465,14 +465,19 @@ def shared_inbox():
         HttpSignature.verify_request(request, actor.public_key, skip_date=True)
     except VerificationError as e:
         bounced = True
-        if not 'signature' in request_json:
-            log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not verify HTTP signature: ' + str(e))
-            return '', 400
         # HTTP sig will fail if a.gup.pe or PeerTube have bounced a request, so check LD sig instead
-        try:
-            LDSignature.verify_signature(request_json, actor.public_key)
-        except VerificationError as e:
-            log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not verify LD signature: ' + str(e))
+        if 'signature' in request_json:
+            try:
+                LDSignature.verify_signature(request_json, actor.public_key)
+            except VerificationError as e:
+                log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not verify LD signature: ' + str(e))
+                return '', 400
+        # not HTTP sig, and no LD sig, so reduce the inner object to just its remote ID, and then fetch it and check it in process_inbox_request()
+        elif ((request_json['type'] == 'Create' or request_json['type'] == 'Update') and
+              isinstance(request_json['object'], dict) and 'id' in request_json['object'] and isinstance(request_json['object']['id'], str)):
+            request_json['object'] = request_json['object']['id']
+        else:
+            log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not verify HTTP signature: ' + str(e))
             return '', 400
 
     actor.instance.last_seen = utcnow()
@@ -564,6 +569,11 @@ def replay_inbox_request(request_json):
     if account_deletion == True:
         process_delete_request(request_json, True)
         return
+
+    # testing verify_object_from_source()
+    if ((request_json['type'] == 'Create' or request_json['type'] == 'Update') and
+          isinstance(request_json['object'], dict) and 'id' in request_json['object'] and isinstance(request_json['object']['id'], str)):
+        request_json['object'] = request_json['object']['id']
 
     process_inbox_request(request_json, True)
 
@@ -706,6 +716,12 @@ def process_inbox_request(request_json, store_ap_json):
 
         # Create is new content. Update is often an edit, but Updates from Lemmy can also be new content
         if request_json['type'] == 'Create' or request_json['type'] == 'Update':
+            if isinstance(request_json['object'], str):
+                request_json = verify_object_from_source(request_json)             # change request_json['object'] from str to dict, then process normally
+                if not request_json:
+                    log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not verify unsigned request from source')
+                    return
+
             if request_json['object']['type'] == 'ChatMessage':
                 sender = user
                 recipient_ap_id = request_json['object']['to'][0]

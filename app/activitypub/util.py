@@ -2467,6 +2467,68 @@ def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
     return None
 
 
+# called from activitypub/routes if something is posted to us without any kind of signature (typically from PeerTube)
+def verify_object_from_source(request_json):
+    uri = request_json['object']
+    uri_domain = urlparse(uri).netloc
+    if not uri_domain:
+        return None
+
+    create_domain = urlparse(request_json['actor']).netloc
+    if create_domain != uri_domain:
+        return None
+
+    try:
+        object_request = get_request(uri, headers={'Accept': 'application/activity+json'})
+    except httpx.HTTPError:
+        time.sleep(3)
+        try:
+            object_request = get_request(uri, headers={'Accept': 'application/activity+json'})
+        except httpx.HTTPError:
+            return None
+    if object_request.status_code == 200:
+        try:
+            object = object_request.json()
+        except:
+            object_request.close()
+            return None
+        object_request.close()
+    elif object_request.status_code == 401:
+        try:
+            site = Site.query.get(1)
+            object_request = signed_get_request(uri, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+        except httpx.HTTPError:
+            time.sleep(3)
+            try:
+                object_request = signed_get_request(uri, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+            except httpx.HTTPError:
+                return None
+        try:
+            object = object_request.json()
+        except:
+            object_request.close()
+            return None
+        object_request.close()
+    else:
+        return None
+
+    if not 'id' in object or not 'type' in object or not 'attributedTo' in object:
+        return None
+
+    if isinstance(object['attributedTo'], str):
+        actor_domain = urlparse(object['attributedTo']).netloc
+    elif isinstance(object['attributedTo'], list) and 'id' in object['attributedTo']:
+        actor_domain = urlparse(object['attributedTo']['id']).netloc
+    else:
+        return None
+
+    if uri_domain != actor_domain:
+        return None
+
+    request_json['object'] = object
+    return request_json
+
+
 # This is for followers on microblog apps
 # Used to let them know a Poll has been updated with a new vote
 # The plan is to also use it for activities on local user's posts that aren't understood by being Announced (anything beyond the initial Create)
