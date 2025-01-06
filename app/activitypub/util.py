@@ -1784,6 +1784,7 @@ def update_post_from_activity(post: Post, request_json: dict):
     if request_json['object']['type'] == 'Video':
         # return now for PeerTube, otherwise rest of this function breaks the post
         # consider querying the Likes endpoint (that mostly seems to be what Updates are about)
+        db.session.commit()
         return
 
     # Links
@@ -2517,7 +2518,7 @@ def verify_object_from_source(request_json):
 
     if isinstance(object['attributedTo'], str):
         actor_domain = urlparse(object['attributedTo']).netloc
-    elif isinstance(object['attributedTo'], list) and 'id' in object['attributedTo']:
+    elif isinstance(object['attributedTo'], dict) and 'id' in object['attributedTo']:
         actor_domain = urlparse(object['attributedTo']['id']).netloc
     else:
         return None
