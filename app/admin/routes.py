@@ -884,17 +884,21 @@ def admin_communities():
 
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
+    sort_by = request.args.get('sort_by', 'title ASC')
 
     communities = Community.query
     if search:
         communities = communities.filter(Community.title.ilike(f"%{search}%"))
-    communities = communities.order_by(Community.title).paginate(page=page, per_page=1000, error_out=False)
+    communities = communities.order_by(text('"community".' + sort_by))
+    communities = communities.paginate(page=page, per_page=1000, error_out=False)
 
-    next_url = url_for('admin.admin_communities', page=communities.next_num) if communities.has_next else None
-    prev_url = url_for('admin.admin_communities', page=communities.prev_num) if communities.has_prev and page != 1 else None
+    next_url = url_for('admin.admin_communities', page=communities.next_num, search=search, sort_by=sort_by) if communities.has_next else None
+    prev_url = url_for('admin.admin_communities', page=communities.prev_num, search=search, sort_by=sort_by) if communities.has_prev and page != 1 else None
 
     return render_template('admin/communities.html', title=_('Communities'), next_url=next_url, prev_url=prev_url,
-                           communities=communities, moderating_communities=moderating_communities(current_user.get_id()),
+                           communities=communities,
+                           search=search, sort_by=sort_by,
+                           moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(),
                            site=g.site)
@@ -1521,9 +1525,10 @@ def admin_instances():
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
     filter = request.args.get('filter', '')
+    sort_by = request.args.get('sort_by', 'domain ASC')
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
-    instances = Instance.query.order_by(Instance.domain)
+    instances = Instance.query
 
     if search:
         instances = instances.filter(Instance.domain.ilike(f"%{search}%"))
@@ -1544,15 +1549,15 @@ def admin_instances():
         elif filter == 'blocked':
             instances = instances.join(BannedInstances, BannedInstances.domain == Instance.domain)
 
-    # Pagination
+    instances = instances.order_by(text('"instance".' + sort_by))
     instances = instances.paginate(page=page,
                                        per_page=250 if current_user.is_authenticated and not low_bandwidth else 50,
                                        error_out=False)
-    next_url = url_for('admin.admin_instances', page=instances.next_num) if instances.has_next else None
-    prev_url = url_for('admin.admin_instances', page=instances.prev_num) if instances.has_prev and page != 1 else None
+    next_url = url_for('admin.admin_instances', page=instances.next_num, search=search, filter=filter, sort_by=sort_by) if instances.has_next else None
+    prev_url = url_for('admin.admin_instances', page=instances.prev_num, search=search, filter=filter, sort_by=sort_by) if instances.has_prev and page != 1 else None
 
     return render_template('admin/instances.html', instances=instances,
-                           title=_(title), search=search,
+                           title=_(title), search=search, filter=filter, sort_by=sort_by,
                            next_url=next_url, prev_url=prev_url,
                            low_bandwidth=low_bandwidth, 
                            moderating_communities=moderating_communities(current_user.get_id()),
