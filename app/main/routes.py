@@ -290,10 +290,13 @@ def list_subscribed_communities():
     all_communities = Community.query.filter_by(banned=False)
     # get the user's joined communities
     user_joined_communities = joined_communities(current_user.id)
+    user_moderating_communities = moderating_communities(current_user.id)
     # get the joined community ids list
     joined_ids = []
     for jc in user_joined_communities:
         joined_ids.append(jc.id)
+    for mc in user_moderating_communities:
+        joined_ids.append(mc.id)
     # filter down to just the joined communities
     communities = all_communities.filter(Community.id.in_(joined_ids))
 
