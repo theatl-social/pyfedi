@@ -1182,7 +1182,7 @@ def admin_users():
     if last_seen > 0:
         users = users.filter(User.last_seen > utcnow() - timedelta(days=last_seen))
     users = users.order_by(text('"user".' + sort_by))
-    users = users.paginate(page=page, per_page=1000, error_out=False)
+    users = users.paginate(page=page, per_page=500, error_out=False)
 
     next_url = url_for('admin.admin_users', page=users.next_num, search=search, local_remote=local_remote, sort_by=sort_by, last_seen=last_seen) if users.has_next else None
     prev_url = url_for('admin.admin_users', page=users.prev_num, search=search, local_remote=local_remote, sort_by=sort_by, last_seen=last_seen) if users.has_prev and page != 1 else None
