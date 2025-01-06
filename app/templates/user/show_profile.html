@@ -116,7 +116,7 @@
             {% if user.bot %}
                 {{ _('Bot Account') }}<br />
             {% endif %}
-            {{ _('Attitude') }}: <span title="{{ _('Ratio of upvotes cast to downvotes cast. Higher is more positive.') }}">{{ (user.attitude * 100) | round | int }}%</span><br />
+            {{ _('Attitude') }}: <span title="{{ _('Ratio of upvotes cast to downvotes cast. Higher is more positive.') }}">{% if user.attitude %}{{ (user.attitude * 100) | round | int }}%{% endif %}</span><br />
             {% if current_user.is_authenticated and current_user.is_admin() and user.reputation %}{{ _('Reputation') }}: <span title="{{ _('Reputation: The Karma of the account. Total up votes minus down votes they got.') }}">{{ user.reputation | round | int }}</span><br />{% endif %}
             {{ _('Posts') }}: {{ user.post_count }}<br />
             {{ _('Comments') }}: {{ user.post_reply_count }}<br />

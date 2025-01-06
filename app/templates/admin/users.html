@@ -50,9 +50,9 @@
                    </button>
                </th>
                <th>
-                   <button form="searchUsers" name="sort_by_btn" value="attitude{{' ASC' if sort_by == 'attitude DESC' else ' DESC' }}" class="btn" title="{{ _('Attitude: Percentage of up votes vs. down votes the account made.') }}">
+                   <button form="searchUsers" name="sort_by_btn" value="attitude{{' ASC' if sort_by == 'attitude DESC NULLS LAST' else ' DESC' }} NULLS LAST" class="btn" title="{{ _('Attitude: Percentage of up votes vs. down votes the account made.') }}">
                        {{ _('Attitude') }}
-                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'attitude ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'attitude DESC' }}"></span>
+                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'attitude ASC NULLS LAST' }}{{ 'fe fe-chevron-down' if sort_by == 'attitude DESC NULLS LAST' }}"></span>
                    </button>
                </th>
                <th>
@@ -77,7 +77,7 @@
                         {{ '<span class="red">Banned posts</span>'|safe if user.ban_posts }}
                         {{ '<span class="red">Banned comments</span>'|safe if user.ban_comments }}</td>
                     <td>{{ user.reports if user.reports > 0 }} </td>
-                    <td>{% if user.attitude != 1 %}{{ (user.attitude * 100) | round | int }}%{% endif %}</td>
+                    <td>{% if user.attitude %}{{ (user.attitude * 100) | round | int }}%{% endif %}</td>
                     <td>{% if user.reputation %}R {{ user.reputation | round | int }}{% endif %}</td>
                     <td><span title="{{ user.last_seen }}">{{ arrow.get(user.last_seen).humanize(locale=locale) }}</span></td>
                     <td><a href="{{ url_for('admin.admin_user_edit', user_id=user.id) }}">Edit</a>,
