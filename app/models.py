@@ -687,7 +687,7 @@ class User(UserMixin, db.Model):
     bounces = db.Column(db.SmallInteger, default=0)
     timezone = db.Column(db.String(20))
     reputation = db.Column(db.Float, default=0.0)
-    attitude = db.Column(db.Float, default=1.0)  # (upvotes cast - downvotes cast) / (upvotes + downvotes). A number between 1 and -1 is the ratio between up and down votes they cast
+    attitude = db.Column(db.Float, default=None)  # (upvotes cast - downvotes cast) / (upvotes + downvotes). A number between 1 and -1 is the ratio between up and down votes they cast
     post_count = db.Column(db.Integer, default=0)
     post_reply_count = db.Column(db.Integer, default=0)
     stripe_customer_id = db.Column(db.String(50))
@@ -934,13 +934,10 @@ class User(UserMixin, db.Model):
         total_upvotes = upvotes + comment_upvotes
         total_downvotes = downvotes + comment_downvotes
 
-        if total_downvotes == 0:    # guard against division by zero
-            self.attitude = 1.0
+        if total_upvotes + total_downvotes > 2:  # Only calculate attitude if they've done 3 or more votes as anything less than this could be an outlier and not representative of their overall attitude (also guard against division by zero)
+            self.attitude = (total_upvotes - total_downvotes) / (total_upvotes + total_downvotes)
         else:
-            if total_upvotes + total_downvotes > 2:  # Only calculate attitude if they've done 3 or more votes as anything less than this could be an outlier and not representative of their overall attitude
-                self.attitude = (total_upvotes - total_downvotes) / (total_upvotes + total_downvotes)
-            else:
-                self.attitude = 1.0
+            self.attitude = None
 
     def recalculate_post_stats(self, posts=True, replies=True):
         if posts:
