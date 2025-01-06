@@ -2535,7 +2535,7 @@ def log_incoming_ap(id, aplog_type, aplog_result, request_json, message=None):
         db.session.commit()
 
 
-def find_community_ap_id(request_json):
+def find_community(request_json):
     locations = ['audience', 'cc', 'to']
     if 'object' in request_json and isinstance(request_json['object'], dict):
         rjs = [request_json, request_json['object']]
@@ -2549,30 +2549,32 @@ def find_community_ap_id(request_json):
                     if not potential_id.startswith('https://www.w3.org') and not potential_id.endswith('/followers'):
                         potential_community = Community.query.filter_by(ap_profile_id=potential_id.lower()).first()
                         if potential_community:
-                            return potential_id
+                            return potential_community
                 if isinstance(potential_id, list):
                     for c in potential_id:
                         if not c.startswith('https://www.w3.org') and not c.endswith('/followers'):
                             potential_community = Community.query.filter_by(ap_profile_id=c.lower()).first()
                             if potential_community:
-                                return c
+                                return potential_community
 
     if not 'object' in request_json:
         return None
 
     if 'inReplyTo' in request_json['object'] and request_json['object']['inReplyTo'] is not None:
-        post_being_replied_to = Post.query.filter_by(ap_id=request_json['object']['inReplyTo']).first()
+        post_being_replied_to = Post.query.filter_by(ap_id=request_json['object']['inReplyTo'].lower()).first()
         if post_being_replied_to:
-            return post_being_replied_to.community.ap_profile_id
+            return post_being_replied_to.community
         else:
-            comment_being_replied_to = PostReply.query.filter_by(ap_id=request_json['object']['inReplyTo']).first()
+            comment_being_replied_to = PostReply.query.filter_by(ap_id=request_json['object']['inReplyTo'].lower()).first()
             if comment_being_replied_to:
-                return comment_being_replied_to.community.ap_profile_id
+                return comment_being_replied_to.community
 
     if request_json['object']['type'] == 'Video': # PeerTube
         if 'attributedTo' in request_json['object'] and isinstance(request_json['object']['attributedTo'], list):
             for a in request_json['object']['attributedTo']:
                 if a['type'] == 'Group':
-                    return a['id']
+                    potential_community = Community.query.filter_by(ap_profile_id=a['id'].lower()).first()
+                    if potential_community:
+                        return potential_community
 
     return None

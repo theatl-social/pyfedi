@@ -25,7 +25,7 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
     update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection, find_reported_object, \
     process_report, ensure_domains_match, can_edit, can_delete, remove_data_from_banned_user, resolve_remote_post, \
     inform_followers_of_post_update, comment_model_to_json, restore_post_or_comment, ban_user, unban_user, \
-    log_incoming_ap, find_community_ap_id, site_ban_remove_data, community_ban_remove_data
+    log_incoming_ap, find_community, site_ban_remove_data, community_ban_remove_data
 from app.utils import gibberish, get_setting, render_template, \
     community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
@@ -761,11 +761,10 @@ def process_inbox_request(request_json, store_ap_json):
                         if post_being_replied_to.author.is_local():
                             inform_followers_of_post_update(post_being_replied_to.id, user.instance_id)
                     return
-                community_ap_id = find_community_ap_id(request_json)
+                community = find_community(request_json)
                 if not ensure_domains_match(request_json['object']):
                     log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Domains do not match')
                     return
-                community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False) if community_ap_id else None
                 if community and community.local_only:
                     log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Remote Create in local_only community')
                     return
@@ -835,8 +834,7 @@ def process_inbox_request(request_json, store_ap_json):
 
         if request_json['type'] == 'Add':       # remote site is adding a local user as a moderator, and is sending directly rather than announcing (happens if not subscribed)
             mod = user
-            community_ap_id = find_community_ap_id(request_json)
-            community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False) if community_ap_id else None
+            community = find_community(request_json)
             if community:
                 if not community.is_moderator(mod) and not community.is_instance_admin(mod):
                     log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
@@ -866,8 +864,7 @@ def process_inbox_request(request_json, store_ap_json):
 
         if request_json['type'] == 'Remove':       # remote site is removing a local user as a moderator, and is sending directly rather than announcing (happens if not subscribed)
             mod = user
-            community_ap_id = find_community_ap_id(request_json)
-            community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False) if community_ap_id else None
+            community = find_community(request_json)
             if community:
                 if not community.is_moderator(mod) and not community.is_instance_admin(mod):
                     log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
