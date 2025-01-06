@@ -64,11 +64,11 @@ fetch(api_site, request)
             for (let mods of data.my_user.moderates) {
               let moderated_community_item = document.createElement('li');
               if (mods.community.local) {
-                moderated_community_item.innerHTML =  '<a class="dropdown-item" href="' + baseUrl + '/c/' + mods.community.name + '">' +
+                moderated_community_item.innerHTML =  '<a class="dropdown-item" href="' + baseUrl + '/api/alpha/c/' + mods.community.name + '">' +
                                                         mods.community.title + '<span class="text-body-secondary">' + ' (' + mods.community.ap_domain + ')</span>' +
                                                       '</a>'
               } else {
-                moderated_community_item.innerHTML =  '<a class="dropdown-item" href="' + baseUrl + '/c/' + mods.community.name + '@' + mods.community.ap_domain + '">' +
+                moderated_community_item.innerHTML =  '<a class="dropdown-item" href="' + baseUrl + '/api/alpha/c/' + mods.community.name + '@' + mods.community.ap_domain + '">' +
                                                         mods.community.title + '<span class="text-body-secondary">' + ' (' + mods.community.ap_domain + ')</span>' +
                                                       '</a>'
               }
@@ -87,11 +87,11 @@ fetch(api_site, request)
             for (let follows of data.my_user.follows) {
               let followed_community_item = document.createElement('li');
               if (follows.community.local) {
-                followed_community_item.innerHTML =  '<a class="dropdown-item" href="' + baseUrl + '/c/' + follows.community.name + '">' +
+                followed_community_item.innerHTML =  '<a class="dropdown-item" href="' + baseUrl + '/api/alpha/c/' + follows.community.name + '">' +
                                                         follows.community.title + '<span class="text-body-secondary">' + ' (' + follows.community.ap_domain + ')</span>' +
                                                       '</a>'
               } else {
-                followed_community_item.innerHTML =  '<a class="dropdown-item" href="' + baseUrl + '/c/' + follows.community.name + '@' + follows.community.ap_domain + '">' +
+                followed_community_item.innerHTML =  '<a class="dropdown-item" href="' + baseUrl + '/api/alpha/c/' + follows.community.name + '@' + follows.community.ap_domain + '">' +
                                                         follows.community.title + '<span class="text-body-secondary">' + ' (' + follows.community.ap_domain + ')</span>' +
                                                       '</a>'
               }
@@ -117,27 +117,34 @@ fetch(api_site, request)
         }
 
         // site info
+        let postlist = document.querySelector('#post_list_request')
         if (jwt != null) {
           document.querySelector('#site_request').innerHTML = 'GET <code>/api/alpha/site</code> [LOGGED IN]'
-          document.querySelector('#post_list_request').innerHTML = 'GET <code>/api/alpha/post/list?type_=Subscribed&sort=New&page=1</code></p>'
+          if (postlist) {
+            postlist.innerHTML = 'GET <code>/api/alpha/post/list?type_=Subscribed&sort=New&page=1</code></p>'
+          }
         } else {
           document.querySelector('#site_request').innerHTML = 'GET <code>/api/alpha/site</code> [LOGGED OUT]'
-          document.querySelector('#post_list_request').innerHTML = 'GET <code>/api/alpha/post/list?type_=Popular&sort=Hot&page=1</code></p>'
+          if (postlist) {
+            postlist.innerHTML = 'GET <code>/api/alpha/post/list?type_=Popular&sort=Hot&page=1</code></p>'
+          }
         }
 
         document.querySelector('#site_json').textContent = JSON.stringify(data, null, 2);
   })
 
 
-if (jwt != null) {
-  var api_postlist = baseUrl + '/api/alpha/post/list?type_=Subscribed&sort=New&page=1';
-} else {
-  var api_postlist = baseUrl + '/api/alpha/post/list?type_=Popular&sort=Hot&page=1';
-}
+let postlist = document.querySelector('#post_list_request');
+if (postlist) {
+  if (jwt != null) {
+    var api_postlist = baseUrl + '/api/alpha/post/list?type_=Subscribed&sort=New&page=1';
+  } else {
+    var api_postlist = baseUrl + '/api/alpha/post/list?type_=Popular&sort=Hot&page=1';
+  }
 
-fetch(api_postlist, request)
-  .then(response => response.json())
-  .then(data => {
-    document.querySelector('#post_list_json').textContent = JSON.stringify(data, null, 2);
-
+  fetch(api_postlist, request)
+    .then(response => response.json())
+    .then(data => {
+      document.querySelector('#post_list_json').textContent = JSON.stringify(data, null, 2);
   })
+}
