@@ -2217,18 +2217,23 @@ def ensure_domains_match(activity: dict) -> bool:
     if 'id' in activity:
         note_id = activity['id']
     else:
-        note_id =  None
+        note_id = None
 
     note_actor = None
     if 'actor' in activity:
         note_actor = activity['actor']
-    elif 'attributedTo' in activity and isinstance(activity['attributedTo'], str):
-        note_actor = activity['attributedTo']
-    elif 'attributedTo' in activity and isinstance(activity['attributedTo'], list):
-        for a in activity['attributedTo']:
-            if a['type'] == 'Person':
-                note_actor = a['id']
-                break
+    elif 'attributedTo' in activity:
+        attributed_to = activity['attributedTo']
+        if isinstance(attributed_to, str):
+            note_actor = attributed_to
+        elif isinstance(attributed_to, list):
+            for a in attributed_to:
+                if isinstance(a, dict) and a.get('type') == 'Person':
+                    note_actor = a.get('id')
+                    break
+                elif isinstance(a, str):
+                    note_actor = a
+                    break
 
     if note_id and note_actor:
         parsed_url = urlparse(note_id)
