@@ -1782,8 +1782,37 @@ def update_post_from_activity(post: Post, request_json: dict):
     post.edited_at = utcnow()
 
     if request_json['object']['type'] == 'Video':
+        # fetching individual user details to attach to votes is probably too convoluted, so take the instance's word for it
+        upvotes = 1   # from OP
+        downvotes = 0
+        endpoints = ['likes', 'dislikes']
+        for endpoint in endpoints:
+            if endpoint in request_json['object']:
+                try:
+                    object_request = get_request(request_json['object'][endpoint], headers={'Accept': 'application/activity+json'})
+                except httpx.HTTPError:
+                    time.sleep(3)
+                    try:
+                        object_request = get_request(request_json['object'][endpoint], headers={'Accept': 'application/activity+json'})
+                    except httpx.HTTPError:
+                        object_request = None
+                if object_request and object_request.status_code == 200:
+                    try:
+                        object = object_request.json()
+                    except:
+                        object_request.close()
+                        object = None
+                    object_request.close()
+                    if object and 'totalItems' in object:
+                        if endpoint == 'likes':
+                            upvotes += object['totalItems']
+                        if endpoint == 'dislikes':
+                            downvotes += object['totalItems']
+        post.up_votes = upvotes
+        post.down_votes = downvotes
+        post.score = upvotes - downvotes
+        post.ranking = post.post_ranking(post.score, post.posted_at)
         # return now for PeerTube, otherwise rest of this function breaks the post
-        # consider querying the Likes endpoint (that mostly seems to be what Updates are about)
         db.session.commit()
         return
 

@@ -570,11 +570,6 @@ def replay_inbox_request(request_json):
         process_delete_request(request_json, True)
         return
 
-    # testing verify_object_from_source()
-    if ((request_json['type'] == 'Create' or request_json['type'] == 'Update') and
-          isinstance(request_json['object'], dict) and 'id' in request_json['object'] and isinstance(request_json['object']['id'], str)):
-        request_json['object'] = request_json['object']['id']
-
     process_inbox_request(request_json, True)
 
     return
