@@ -877,6 +877,25 @@ def process_inbox_request(request_json, store_ap_json):
                 log_incoming_ap(id, APLOG_REPORT, APLOG_IGNORED, request_json if store_ap_json else None, 'Report ignored due to missing content')
             return
 
+        if core_activity['type'] == 'Lock':     # Post lock
+            mod = user
+            post_id = core_activity['object']
+            post = Post.query.filter_by(ap_id=post_id).first()
+            reason = core_activity['summary'] if 'summary' in core_activity else ''
+            if post:
+                if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
+                    post.comments_enabled = False
+                    db.session.commit()
+                    add_to_modlog_activitypub('lock_post', mod, community_id=post.community.id,
+                                              link_text=shorten_string(post.title), link=f'post/{post.id}',
+                                              reason=reason)
+                    log_incoming_ap(id, APLOG_LOCK, APLOG_SUCCESS, request_json if store_ap_json else None)
+                else:
+                    log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: Does not have permission')
+            else:
+                log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: post not found')
+            return
+
         if request_json['type'] == 'Add':       # remote site is adding a local user as a moderator, and is sending directly rather than announcing (happens if not subscribed)
             mod = user
             community = find_community(request_json)
@@ -1119,24 +1138,24 @@ def process_inbox_request(request_json, store_ap_json):
             #        log_incoming_ap(id, APLOG_REPORT, APLOG_IGNORED, request_json if store_ap_json else None, 'Report ignored due to missing content')
             #    return
 
-            if request_json['object']['type'] == 'Lock':                                                            # Announce of post lock
-                mod = user
-                post_id = request_json['object']['object']
-                post = Post.query.filter_by(ap_id=post_id).first()
-                reason = request_json['object']['summary'] if 'summary' in request_json['object'] else ''
-                if post:
-                    if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
-                        post.comments_enabled = False
-                        db.session.commit()
-                        add_to_modlog_activitypub('lock_post', mod, community_id=post.community.id,
-                                                  link_text=shorten_string(post.title), link=f'post/{post.id}',
-                                                  reason=reason)
-                        log_incoming_ap(id, APLOG_LOCK, APLOG_SUCCESS, request_json if store_ap_json else None)
-                    else:
-                        log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: Does not have permission')
-                else:
-                    log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: post not found')
-                return
+            #if request_json['object']['type'] == 'Lock':                                                            # Announce of post lock
+            #    mod = user
+            #    post_id = request_json['object']['object']
+            #    post = Post.query.filter_by(ap_id=post_id).first()
+            #    reason = request_json['object']['summary'] if 'summary' in request_json['object'] else ''
+            #    if post:
+            #        if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
+            #            post.comments_enabled = False
+            #            db.session.commit()
+            #            add_to_modlog_activitypub('lock_post', mod, community_id=post.community.id,
+            #                                      link_text=shorten_string(post.title), link=f'post/{post.id}',
+            #                                      reason=reason)
+            #            log_incoming_ap(id, APLOG_LOCK, APLOG_SUCCESS, request_json if store_ap_json else None)
+            #        else:
+            #            log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: Does not have permission')
+            #    else:
+            #        log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: post not found')
+            #    return
 
             if request_json['object']['type'] == 'Add':                                                             # Announce of adding mods or stickying a post
                 target = request_json['object']['target']
