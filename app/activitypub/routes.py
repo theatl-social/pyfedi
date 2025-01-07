@@ -935,29 +935,38 @@ def process_inbox_request(request_json, store_ap_json):
                 log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Add: cannot find community')
             return
 
-        if request_json['type'] == 'Remove':       # remote site is removing a local user as a moderator, and is sending directly rather than announcing (happens if not subscribed)
+        if core_activity['type'] == 'Remove':       # Remove mods, or unsticky a post
             mod = user
-            community = find_community(request_json)
+            if not announced:
+                community = find_community(core_activity)
             if community:
                 if not community.is_moderator(mod) and not community.is_instance_admin(mod):
                     log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
                     return
-                target = request_json['target']
+                target = core_activity['target']
+                featured_url = community.ap_featured_url
                 moderators_url = community.ap_moderators_url
+                if target == featured_url:
+                    post = Post.query.filter_by(ap_id=core_activity['object']).first()
+                    if post:
+                        post.sticky = False
+                        db.session.commit()
+                        log_incoming_ap(id, APLOG_REMOVE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    else:
+                        log_incoming_ap(id, APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + core_activity['object'])
+                    return
                 if target == moderators_url:
-                    old_mod = find_actor_or_create(request_json['object'], create_if_not_found=False)
-                    if old_mod and old_mod.is_local():
+                    old_mod = find_actor_or_create(core_activity['object'])
+                    if old_mod:
                         existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=old_mod.id).first()
                         if existing_membership:
                             existing_membership.is_moderator = False
                             db.session.commit()
                             log_incoming_ap(id, APLOG_REMOVE, APLOG_SUCCESS, request_json if store_ap_json else None)
                     else:
-                        log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + request_json['object'])
+                        log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + core_activity['object'])
                     return
-                else:
-                    # Lemmy might not send anything directly to unsticky a post if no-one is subscribed (could not get it to generate the activity)
-                    log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Remove')
+                log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Remove')
             else:
                 log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Remove: cannot find community')
             return
@@ -1196,32 +1205,32 @@ def process_inbox_request(request_json, store_ap_json):
             #    log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Add')
             #    return
 
-            if request_json['object']['type'] == 'Remove':                                                          # Announce of removing mods or unstickying a post
-                target = request_json['object']['target']
-                featured_url = community.ap_featured_url
-                moderators_url = community.ap_moderators_url
-                if target == featured_url:
-                    post = Post.query.filter_by(ap_id=request_json['object']['object']).first()
-                    if post:
-                        post.sticky = False
-                        db.session.commit()
-                        log_incoming_ap(id, APLOG_REMOVE, APLOG_SUCCESS, request_json if store_ap_json else None)
-                    else:
-                        log_incoming_ap(id, APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + target)
-                    return
-                if target == moderators_url:
-                    user = find_actor_or_create(request_json['object']['object'], create_if_not_found=False)
-                    if user:
-                        existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=user.id).first()
-                        if existing_membership:
-                            existing_membership.is_moderator = False
-                            db.session.commit()
-                            log_incoming_ap(id, APLOG_REMOVE, APLOG_SUCCESS, request_json if store_ap_json else None)
-                    else:
-                        log_incoming_ap(id, APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + request_json['object']['object'])
-                    return
-                log_incoming_ap(id, APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Remove')
-                return
+            #if request_json['object']['type'] == 'Remove':                                                          # Announce of removing mods or unstickying a post
+            #    target = request_json['object']['target']
+            #    featured_url = community.ap_featured_url
+            #    moderators_url = community.ap_moderators_url
+            #    if target == featured_url:
+            #        post = Post.query.filter_by(ap_id=request_json['object']['object']).first()
+            #        if post:
+            #            post.sticky = False
+            #            db.session.commit()
+            #            log_incoming_ap(id, APLOG_REMOVE, APLOG_SUCCESS, request_json if store_ap_json else None)
+            #        else:
+            #            log_incoming_ap(id, APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + target)
+            #        return
+            #    if target == moderators_url:
+            #        user = find_actor_or_create(request_json['object']['object'], create_if_not_found=False)
+            #        if user:
+            #            existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=user.id).first()
+            #            if existing_membership:
+            #                existing_membership.is_moderator = False
+            #                db.session.commit()
+            #                log_incoming_ap(id, APLOG_REMOVE, APLOG_SUCCESS, request_json if store_ap_json else None)
+            #        else:
+            #            log_incoming_ap(id, APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + request_json['object']['object'])
+            #        return
+            #    log_incoming_ap(id, APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Remove')
+            #    return
 
             if request_json['object']['type'] == 'Block':                               # Announce of user ban. Mod is banning a user from a community,
                 blocker = user                                                          # or an admin is banning a user from all the site's communities as part of a site ban
