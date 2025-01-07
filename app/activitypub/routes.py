@@ -867,10 +867,10 @@ def process_inbox_request(request_json, store_ap_json):
             process_downvote(user, store_ap_json, request_json, announced)
             return
 
-        if request_json['type'] == 'Flag':    # Reported content
-            reported = find_reported_object(request_json['object'])
+        if core_activity['type'] == 'Flag':    # Reported content
+            reported = find_reported_object(core_activity['object'])
             if reported:
-                process_report(user, reported, request_json)
+                process_report(user, reported, core_activity)
                 log_incoming_ap(id, APLOG_REPORT, APLOG_SUCCESS, request_json if store_ap_json else None)
                 announce_activity_to_followers(reported.community, user, request_json)
             else:
@@ -1110,14 +1110,14 @@ def process_inbox_request(request_json, store_ap_json):
             #    process_downvote(user, store_ap_json, request_json)
             #    return
 
-            if request_json['object']['type'] == 'Flag':                                                            # Announce of reported content
-                reported = find_reported_object(request_json['object']['object'])
-                if reported:
-                    process_report(user, reported, request_json['object'])
-                    log_incoming_ap(id, APLOG_REPORT, APLOG_SUCCESS, request_json if store_ap_json else None)
-                else:
-                    log_incoming_ap(id, APLOG_REPORT, APLOG_IGNORED, request_json if store_ap_json else None, 'Report ignored due to missing content')
-                return
+            #if request_json['object']['type'] == 'Flag':                                                            # Announce of reported content
+            #    reported = find_reported_object(request_json['object']['object'])
+            #    if reported:
+            #        process_report(user, reported, request_json['object'])
+            #        log_incoming_ap(id, APLOG_REPORT, APLOG_SUCCESS, request_json if store_ap_json else None)
+            #    else:
+            #        log_incoming_ap(id, APLOG_REPORT, APLOG_IGNORED, request_json if store_ap_json else None, 'Report ignored due to missing content')
+            #    return
 
             if request_json['object']['type'] == 'Lock':                                                            # Announce of post lock
                 mod = user
