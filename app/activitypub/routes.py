@@ -604,6 +604,40 @@ def process_inbox_request(request_json, store_ap_json):
             db.session.commit()
             community = None                # found as needed
 
+        # Announce: take care of inner objects that are just a URL (PeerTube, a.gup.pe), or find the user if the inner object is a dict
+        if request_json['type'] == 'Announce':
+            if isinstance(request_json['object'], str):
+                if request_json['object'].startswith('https://' + current_app.config['SERVER_NAME']):
+                    log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already present')
+                    return
+                post = resolve_remote_post(request_json['object'], community.id, announce_actor=community.ap_profile_id, store_ap_json=store_ap_json)
+                if post:
+                    log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_SUCCESS, request_json)
+                else:
+                    log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'Could not resolve post')
+                return
+
+            user_ap_id = request_json['object']['actor']
+            user = find_actor_or_create(user_ap_id)
+            if not user or not isinstance(user, User):
+                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json if store_ap_json else None, 'Blocked or unfound user for Announce object actor ' + user_ap_id)
+                return
+
+            user.last_seen = site.last_active = utcnow()
+            user.instance.last_seen = utcnow()
+            user.instance.dormant = False
+            user.instance.gone_forever = False
+            user.instance.failures = 0
+            db.session.commit()
+
+            # Now that we have the community and the user from an Announce, we can save repeating code by removing it
+            # core_activity is checked for its Type, but request_json is passed to any other functions
+            announced = True
+            core_activity = request_json['object']
+        else:
+            announced = False
+            core_activity = request_json
+
         # Follow: remote user wants to join/follow one of our users or communities
         if request_json['type'] == 'Follow':
             target_ap_id = request_json['object']
@@ -822,8 +856,8 @@ def process_inbox_request(request_json, store_ap_json):
                 log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Delete: cannot find ' + ap_id)
             return
 
-        if request_json['type'] == 'Like' or request_json['type'] == 'EmojiReact':  # Upvote
-            process_upvote(user, store_ap_json, request_json, announced=False)
+        if core_activity['type'] == 'Like' or core_activity['type'] == 'EmojiReact':  # Upvote
+            process_upvote(user, store_ap_json, request_json, announced)
             return
 
         if request_json['type'] == 'Dislike':  # Downvote
@@ -1032,29 +1066,8 @@ def process_inbox_request(request_json, store_ap_json):
 
         # Announce is new content and votes that happened on a remote server.
         if request_json['type'] == 'Announce':
-            if isinstance(request_json['object'], str):  # Mastodon, PeerTube, A.gup.pe
-                if request_json['object'].startswith('https://' + current_app.config['SERVER_NAME']):
-                    log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already present')
-                    return
-                post = resolve_remote_post(request_json['object'], community.id, announce_actor=community.ap_profile_id, store_ap_json=store_ap_json)
-                if post:
-                    log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_SUCCESS, request_json)
-                else:
-                    log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'Could not resolve post')
-                return
-
-            user_ap_id = request_json['object']['actor']
-            user = find_actor_or_create(user_ap_id)
-            if not user or not isinstance(user, User):
-                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json if store_ap_json else None, 'Blocked or unfound user for Announce object actor ' + user_ap_id)
-                return
-
-            user.last_seen = site.last_active = utcnow()
-            user.instance.last_seen = utcnow()
-            user.instance.dormant = False
-            user.instance.gone_forever = False
-            user.instance.failures = 0
-            db.session.commit()
+            # should be able to remove the rest of this, and process the activities above.
+            # Then for any activities that are both sent direct and Announced, one can be dropped when shared_inbox() checks for dupes
 
             if request_json['object']['type'] == 'Create' or request_json['object']['type'] == 'Update':
                 object_type = request_json['object']['object']['type']
@@ -1086,9 +1099,9 @@ def process_inbox_request(request_json, store_ap_json):
                     log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Delete: cannot find ' + ap_id)
                 return
 
-            if request_json['object']['type'] == 'Like' or request_json['object']['type'] == 'EmojiReact':  # Announced Upvote
-                process_upvote(user, store_ap_json, request_json)
-                return
+            #if request_json['object']['type'] == 'Like' or request_json['object']['type'] == 'EmojiReact':  # Announced Upvote
+            #    process_upvote(user, store_ap_json, request_json)
+            #    return
 
             if request_json['object']['type'] == 'Dislike':                                                 # Announced Downvote
                 if site.enable_downvotes is False:
@@ -1623,7 +1636,7 @@ def process_new_content(user, community, store_ap_json, request_json, announced=
                 return
 
 
-def process_upvote(user, store_ap_json, request_json, announced=True):
+def process_upvote(user, store_ap_json, request_json, announced):
     id = request_json['id']
     ap_id = request_json['object'] if not announced else request_json['object']['object']
     if isinstance(ap_id, dict) and 'id' in ap_id:
