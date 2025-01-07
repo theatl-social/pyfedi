@@ -860,11 +860,11 @@ def process_inbox_request(request_json, store_ap_json):
             process_upvote(user, store_ap_json, request_json, announced)
             return
 
-        if request_json['type'] == 'Dislike':  # Downvote
+        if core_activity['type'] == 'Dislike':  # Downvote
             if site.enable_downvotes is False:
                 log_incoming_ap(id, APLOG_DISLIKE, APLOG_IGNORED, request_json if store_ap_json else None, 'Dislike ignored because of allow_dislike setting')
                 return
-            process_downvote(user, store_ap_json, request_json, announced=False)
+            process_downvote(user, store_ap_json, request_json, announced)
             return
 
         if request_json['type'] == 'Flag':    # Reported content
@@ -1103,12 +1103,12 @@ def process_inbox_request(request_json, store_ap_json):
             #    process_upvote(user, store_ap_json, request_json)
             #    return
 
-            if request_json['object']['type'] == 'Dislike':                                                 # Announced Downvote
-                if site.enable_downvotes is False:
-                    log_incoming_ap(id, APLOG_DISLIKE, APLOG_IGNORED, request_json if store_ap_json else None, 'Dislike ignored because of allow_dislike setting')
-                    return
-                process_downvote(user, store_ap_json, request_json)
-                return
+            #if request_json['object']['type'] == 'Dislike':                                                 # Announced Downvote
+            #    if site.enable_downvotes is False:
+            #        log_incoming_ap(id, APLOG_DISLIKE, APLOG_IGNORED, request_json if store_ap_json else None, 'Dislike ignored because of allow_dislike setting')
+            #        return
+            #    process_downvote(user, store_ap_json, request_json)
+            #    return
 
             if request_json['object']['type'] == 'Flag':                                                            # Announce of reported content
                 reported = find_reported_object(request_json['object']['object'])
@@ -1655,7 +1655,7 @@ def process_upvote(user, store_ap_json, request_json, announced):
         log_incoming_ap(id, APLOG_LIKE, APLOG_IGNORED, request_json if store_ap_json else None, 'Cannot upvote this')
 
 
-def process_downvote(user, store_ap_json, request_json, announced=True):
+def process_downvote(user, store_ap_json, request_json, announced):
     id = request_json['id']
     ap_id = request_json['object'] if not announced else request_json['object']['object']
     if isinstance(ap_id, dict) and 'id' in ap_id:
