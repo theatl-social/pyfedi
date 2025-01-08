@@ -2557,10 +2557,22 @@ def verify_object_from_source(request_json):
     if not 'id' in object or not 'type' in object or not 'attributedTo' in object:
         return None
 
+    actor_domain = ''
     if isinstance(object['attributedTo'], str):
         actor_domain = urlparse(object['attributedTo']).netloc
     elif isinstance(object['attributedTo'], dict) and 'id' in object['attributedTo']:
         actor_domain = urlparse(object['attributedTo']['id']).netloc
+    elif isinstance(object['attributedTo'], list):
+        for a in object['attributedTo']:
+            if isinstance(a, str):
+                actor_domain = urlparse(a).netloc
+                break
+            elif isinstance(a, dict) and a.get('type') == 'Person':
+                actor = a.get('id')
+                if isinstance(actor, str):
+                    parsed_url = urlparse(actor)
+                    actor_domain = parsed_url.netloc
+                break
     else:
         return None
 
