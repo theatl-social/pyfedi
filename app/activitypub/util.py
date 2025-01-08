@@ -2389,17 +2389,24 @@ def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
         if post:
             return post
 
-        # find the author of the post. Make sure their domain matches the site hosting it to migitage impersonation attempts
+        # find the author of the post. Make sure their domain matches the site hosting it to mitigate impersonation attempts
         if 'attributedTo' in post_data:
-            if isinstance(post_data['attributedTo'], str):
-                actor = post_data['attributedTo']
-                parsed_url = urlparse(post_data['attributedTo'])
+            attributed_to = post_data['attributedTo']
+            if isinstance(attributed_to, str):
+                actor = attributed_to
+                parsed_url = urlparse(actor)
                 actor_domain = parsed_url.netloc
-            elif isinstance(post_data['attributedTo'], list):
-                for a in post_data['attributedTo']:
-                    if a['type'] == 'Person':
-                        actor = a['id']
-                        parsed_url = urlparse(a['id'])
+            elif isinstance(attributed_to, list):
+                for a in attributed_to:
+                    if isinstance(a, dict) and a.get('type') == 'Person':
+                        actor = a.get('id')
+                        if isinstance(actor, str):  # Ensure `actor` is a valid string
+                            parsed_url = urlparse(actor)
+                            actor_domain = parsed_url.netloc
+                        break
+                    elif isinstance(a, str):
+                        actor = a
+                        parsed_url = urlparse(actor)
                         actor_domain = parsed_url.netloc
                         break
         if uri_domain != actor_domain:
