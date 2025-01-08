@@ -643,9 +643,9 @@ def process_inbox_request(request_json, store_ap_json):
             core_activity = request_json
 
         # Follow: remote user wants to join/follow one of our users or communities
-        if request_json['type'] == 'Follow':
-            target_ap_id = request_json['object']
-            follow_id = request_json['id']
+        if core_activity['type'] == 'Follow':
+            target_ap_id = core_activity['object']
+            follow_id = core_activity['id']
             target = find_actor_or_create(target_ap_id, create_if_not_found=False)
             if not target:
                 log_incoming_ap(id, APLOG_FOLLOW, APLOG_FAILURE, saved_json, 'Could not find target of Follow')
@@ -703,15 +703,15 @@ def process_inbox_request(request_json, store_ap_json):
             return
 
         # Accept: remote server is accepting our previous follow request
-        if request_json['type'] == 'Accept':
+        if core_activity['type'] == 'Accept':
             user = None
-            if isinstance(request_json['object'], str): # a.gup.pe accepts using a string with the ID of the follow request
-                join_request_parts = request_json['object'].split('/')
+            if isinstance(core_activity['object'], str): # a.gup.pe accepts using a string with the ID of the follow request
+                join_request_parts = core_activity['object'].split('/')
                 join_request = CommunityJoinRequest.query.get(join_request_parts[-1])
                 if join_request:
                     user = User.query.get(join_request.user_id)
-            elif request_json['object']['type'] == 'Follow':
-                user_ap_id = request_json['object']['actor']
+            elif core_activity['object']['type'] == 'Follow':
+                user_ap_id = core_activity['object']['actor']
                 user = find_actor_or_create(user_ap_id, create_if_not_found=False)
             if not user:
                 log_incoming_ap(id, APLOG_ACCEPT, APLOG_FAILURE, saved_json, 'Could not find recipient of Accept')
@@ -729,9 +729,9 @@ def process_inbox_request(request_json, store_ap_json):
             return
 
         # Reject: remote server is rejecting our previous follow request
-        if request_json['type'] == 'Reject':
-            if request_json['object']['type'] == 'Follow':
-                user_ap_id = request_json['object']['actor']
+        if core_activity['type'] == 'Reject':
+            if core_activity['object']['type'] == 'Follow':
+                user_ap_id = core_activity['object']['actor']
                 user = find_actor_or_create(user_ap_id, create_if_not_found=False)
                 if not user:
                     log_incoming_ap(id, APLOG_ACCEPT, APLOG_FAILURE, saved_json, 'Could not find recipient of Reject')
@@ -776,10 +776,10 @@ def process_inbox_request(request_json, store_ap_json):
                             db.session.add(existing_conversation)
                             db.session.commit()
                         # Save ChatMessage to DB
-                        encrypted = request_json['object']['encrypted'] if 'encrypted' in request_json['object'] else None
+                        encrypted = core_activity['object']['encrypted'] if 'encrypted' in core_activity['object'] else None
                         new_message = ChatMessage(sender_id=sender.id, recipient_id=recipient.id, conversation_id=existing_conversation.id,
-                                                  body_html=request_json['object']['content'],
-                                                  body=html_to_text(request_json['object']['content']),
+                                                  body_html=core_activity['object']['content'],
+                                                  body=html_to_text(core_activity['object']['content']),
                                                   encrypted=encrypted)
                         db.session.add(new_message)
                         existing_conversation.updated_at = utcnow()
@@ -802,7 +802,7 @@ def process_inbox_request(request_json, store_ap_json):
                     post_being_replied_to = Post.query.filter_by(ap_id=core_activity['object']['inReplyTo']).first()
                     if post_being_replied_to:
                         poll_data = Poll.query.get(post_being_replied_to.id)
-                        choice = PollChoice.query.filter_by(post_id=post_being_replied_to.id, choice_text=request_json['object']['name']).first()
+                        choice = PollChoice.query.filter_by(post_id=post_being_replied_to.id, choice_text=core_activity['object']['name']).first()
                         if poll_data and choice:
                             poll_data.vote_for_choice(choice.id, user.id)
                             db.session.commit()
@@ -815,7 +815,7 @@ def process_inbox_request(request_json, store_ap_json):
                     if not community:
                         log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Blocked or unfound community')
                         return
-                    if not ensure_domains_match(request_json['object']):
+                    if not ensure_domains_match(core_activity['object']):
                         log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Domains do not match')
                         return
                     if community.local_only:
@@ -828,7 +828,7 @@ def process_inbox_request(request_json, store_ap_json):
                     process_new_content(user, community, store_ap_json, request_json, announced)
                     return
                 elif object_type == 'Video':  # PeerTube: editing a video (mostly used to update post score)
-                    post = Post.query.filter_by(ap_id=request_json['object']['id']).first()
+                    post = Post.query.filter_by(ap_id=core_activity['object']['id']).first()
                     if post:
                         if user.id == post.user_id:
                             update_post_from_activity(post, request_json)
@@ -1001,7 +1001,7 @@ def process_inbox_request(request_json, store_ap_json):
             If / When this changes, the code below will need updating, and we'll have to do extra work
             """
             if not announced and store_ap_json:
-                request_json['cc'] = []   # cut very long list of instances
+                core_activity['cc'] = []   # cut very long list of instances
 
             blocker = user
             blocked_ap_id = core_activity['object'].lower()
@@ -1029,10 +1029,10 @@ def process_inbox_request(request_json, store_ap_json):
                     return
 
                 blocked.banned = True
-                if 'expires' in request_json:
-                    blocked.banned_until = request_json['expires']
-                elif 'endTime' in request_json:
-                    blocked.banned_until = request_json['endTime']
+                if 'expires' in core_activity:
+                    blocked.banned_until = core_activity['expires']
+                elif 'endTime' in core_activity:
+                    blocked.banned_until = core_activity['endTime']
                 db.session.commit()
 
                 if remove_data:
@@ -1054,8 +1054,8 @@ def process_inbox_request(request_json, store_ap_json):
             return
 
         if core_activity['type'] == 'Undo':
-            if request_json['object']['type'] == 'Follow':                      # Unsubscribe from a community or user
-                target_ap_id = request_json['object']['object']
+            if core_activity['object']['type'] == 'Follow':                      # Unsubscribe from a community or user
+                target_ap_id = core_activity['object']['object']
                 target = find_actor_or_create(target_ap_id, create_if_not_found=False)
                 if isinstance(target, Community):
                     community = target
@@ -1136,8 +1136,8 @@ def process_inbox_request(request_json, store_ap_json):
 
             if core_activity['object']['type'] == 'Block':                                                                        # Undo of user ban
                 if announced and store_ap_json:
-                    request_json['cc'] = []           # cut very long list of instances
-                    request_json['object']['cc'] = []
+                    core_activity['cc'] = []           # cut very long list of instances
+                    core_activity['object']['cc'] = []
 
                 unblocker = user
                 unblocked_ap_id = core_activity['object']['object'].lower()
