@@ -744,16 +744,16 @@ def process_inbox_request(request_json, store_ap_json):
             return
 
         # Create is new content. Update is often an edit, but Updates from Lemmy can also be new content
-        if request_json['type'] == 'Create' or request_json['type'] == 'Update':
-            if isinstance(request_json['object'], str):
-                request_json = verify_object_from_source(request_json)             # change request_json['object'] from str to dict, then process normally
+        if core_activity['type'] == 'Create' or core_activity['type'] == 'Update':
+            if isinstance(core_activity['object'], str):
+                core_activity = verify_object_from_source(core_activity)             # change core_activity['object'] from str to dict, then process normally
                 if not request_json:
                     log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not verify unsigned request from source')
                     return
 
-            if request_json['object']['type'] == 'ChatMessage':
+            if core_activity['object']['type'] == 'ChatMessage':
                 sender = user
-                recipient_ap_id = request_json['object']['to'][0]
+                recipient_ap_id = core_activity['object']['to'][0]
                 recipient = find_actor_or_create(recipient_ap_id, create_if_not_found=False)
                 if recipient and recipient.is_local():
                     if sender.created_recently() or sender.reputation <= -10:
@@ -793,9 +793,9 @@ def process_inbox_request(request_json, store_ap_json):
                 return
             # inner object of Create is not a ChatMessage
             else:
-                if (request_json['object']['type'] == 'Note' and 'name' in request_json['object'] and                           # Poll Votes
-                    'inReplyTo' in request_json['object'] and 'attributedTo' in request_json['object']):
-                    post_being_replied_to = Post.query.filter_by(ap_id=request_json['object']['inReplyTo']).first()
+                if (core_activity['object']['type'] == 'Note' and 'name' in core_activity['object'] and                           # Poll Votes
+                    'inReplyTo' in core_activity['object'] and 'attributedTo' in core_activity['object']):
+                    post_being_replied_to = Post.query.filter_by(ap_id=core_activity['object']['inReplyTo']).first()
                     if post_being_replied_to:
                         poll_data = Poll.query.get(post_being_replied_to.id)
                         choice = PollChoice.query.filter_by(post_id=post_being_replied_to.id, choice_text=request_json['object']['name']).first()
@@ -806,23 +806,24 @@ def process_inbox_request(request_json, store_ap_json):
                         if post_being_replied_to.author.is_local():
                             inform_followers_of_post_update(post_being_replied_to.id, user.instance_id)
                     return
-                community = find_community(request_json)
-                if not ensure_domains_match(request_json['object']):
-                    log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Domains do not match')
-                    return
-                if community and community.local_only:
-                    log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Remote Create in local_only community')
-                    return
-                if not community:
-                    log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Blocked or unfound community')
-                    return
+                if not announced:
+                    community = find_community(request_json)
+                    if not community:
+                        log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Blocked or unfound community')
+                        return
+                    if not ensure_domains_match(request_json['object']):
+                        log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Domains do not match')
+                        return
+                    if community.local_only:
+                        log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Remote Create in local_only community')
+                        return
 
-                object_type = request_json['object']['type']
+                object_type = core_activity['object']['type']
                 new_content_types = ['Page', 'Article', 'Link', 'Note', 'Question']
                 if object_type in new_content_types:  # create or update a post
-                    process_new_content(user, community, store_ap_json, request_json, announced=False)
+                    process_new_content(user, community, store_ap_json, request_json, announced)
                     return
-                elif object_type == 'Video':  # PeerTube: editing a video (PT doesn't Announce these)
+                elif object_type == 'Video':  # PeerTube: editing a video (mostly used to update post score)
                     post = Post.query.filter_by(ap_id=request_json['object']['id']).first()
                     if post:
                         if user.id == post.user_id:
@@ -835,6 +836,11 @@ def process_inbox_request(request_json, store_ap_json):
                     else:
                         log_incoming_ap(id, APLOG_UPDATE, APLOG_FAILURE, request_json if store_ap_json else None, 'PeerTube post not found')
                         return
+                elif announced and core_activity['type'] == 'Update' and core_activity['object']['type'] == 'Group':
+                    # force refresh next time community is heard from
+                    community.ap_fetched_at = None
+                    db.session.commit()
+                    log_incoming_ap(id, APLOG_UPDATE, APLOG_SUCCESS, request_json if store_ap_json else None)
                 else:
                     log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unacceptable type (create): ' + object_type)
             return
@@ -1129,19 +1135,19 @@ def process_inbox_request(request_json, store_ap_json):
             # should be able to remove the rest of this, and process the activities above.
             # Then for any activities that are both sent direct and Announced, one can be dropped when shared_inbox() checks for dupes
 
-            if request_json['object']['type'] == 'Create' or request_json['object']['type'] == 'Update':
-                object_type = request_json['object']['object']['type']
-                new_content_types = ['Page', 'Article', 'Link', 'Note', 'Question']
-                if object_type in new_content_types:  # create or update a post
-                    process_new_content(user, community, store_ap_json, request_json)
-                elif request_json['object']['type'] == 'Update' and request_json['object']['object']['type'] == 'Group':
-                    # force refresh next time community is heard from
-                    community.ap_fetched_at = None
-                    db.session.commit()
-                    log_incoming_ap(id, APLOG_UPDATE, APLOG_SUCCESS, request_json if store_ap_json else None)
-                else:
-                    log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unacceptable type (create): ' + object_type)
-                return
+            #if request_json['object']['type'] == 'Create' or request_json['object']['type'] == 'Update':
+            #    object_type = request_json['object']['object']['type']
+            #    new_content_types = ['Page', 'Article', 'Link', 'Note', 'Question']
+            #    if object_type in new_content_types:  # create or update a post
+            #        process_new_content(user, community, store_ap_json, request_json)
+            #    elif request_json['object']['type'] == 'Update' and request_json['object']['object']['type'] == 'Group':
+            #        # force refresh next time community is heard from
+            #        community.ap_fetched_at = None
+            #        db.session.commit()
+            #        log_incoming_ap(id, APLOG_UPDATE, APLOG_SUCCESS, request_json if store_ap_json else None)
+            #    else:
+            #        log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unacceptable type (create): ' + object_type)
+            #    return
 
             #if request_json['object']['type'] == 'Delete':                                                  # Announced Delete
             #    if isinstance(request_json['object']['object'], str):
@@ -1619,7 +1625,7 @@ def activity_result(id):
         abort(404)
 
 
-def process_new_content(user, community, store_ap_json, request_json, announced=True):
+def process_new_content(user, community, store_ap_json, request_json, announced):
     id = request_json['id']
     if not announced:
         in_reply_to = request_json['object']['inReplyTo'] if 'inReplyTo' in request_json['object'] else None
