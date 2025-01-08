@@ -1049,7 +1049,7 @@ def process_inbox_request(request_json, store_ap_json):
                 log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
             return
 
-        if request_json['type'] == 'Undo':
+        if core_activity['type'] == 'Undo':
             if request_json['object']['type'] == 'Follow':                      # Unsubscribe from a community or user
                 target_ap_id = request_json['object']['object']
                 target = find_actor_or_create(target_ap_id, create_if_not_found=False)
@@ -1079,11 +1079,11 @@ def process_inbox_request(request_json, store_ap_json):
                     log_incoming_ap(id, APLOG_UNDO_FOLLOW, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound target')
                 return
 
-            if request_json['object']['type'] == 'Delete':                      # Restore something previously deleted
-                if isinstance(request_json['object']['object'], str):
-                    ap_id = request_json['object']['object']  # lemmy
+            if core_activity['object']['type'] == 'Delete':                      # Restore something previously deleted
+                if isinstance(core_activity['object']['object'], str):
+                    ap_id = core_activity['object']['object']  # lemmy
                 else:
-                    ap_id = request_json['object']['object']['id']  # kbin
+                    ap_id = core_activity['object']['object']['id']  # kbin
 
                 restorer = user
                 to_restore = find_liked_object(ap_id)                           # a user or a mod/admin is undoing the delete of a post or reply
@@ -1091,8 +1091,10 @@ def process_inbox_request(request_json, store_ap_json):
                     if not to_restore.deleted:
                         log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already restored')
                     else:
-                        restore_post_or_comment(restorer, to_restore, store_ap_json, request_json)
-                        announce_activity_to_followers(to_restore.community, user, request_json)
+                        reason = core_activity['object']['summary'] if 'summary' in core_activity['object'] else ''
+                        restore_post_or_comment(restorer, to_restore, store_ap_json, request_json, reason)
+                        if not announced:
+                            announce_activity_to_followers(to_restore.community, user, request_json)
                 else:
                     log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Undo delete: cannot find ' + ap_id)
                 return
@@ -1284,22 +1286,22 @@ def process_inbox_request(request_json, store_ap_json):
             #    return
 
             if request_json['object']['type'] == 'Undo':
-                if request_json['object']['object']['type'] == 'Delete':                                                                    # Announce of undo of Delete
-                    if isinstance(request_json['object']['object']['object'], str):
-                        ap_id = request_json['object']['object']['object']  # lemmy
-                    else:
-                        ap_id = request_json['object']['object']['object']['id']  # kbin
+                #if request_json['object']['object']['type'] == 'Delete':                                                                    # Announce of undo of Delete
+                #    if isinstance(request_json['object']['object']['object'], str):
+                #        ap_id = request_json['object']['object']['object']  # lemmy
+                #    else:
+                #        ap_id = request_json['object']['object']['object']['id']  # kbin
 
-                    restorer = user
-                    to_restore = find_liked_object(ap_id)                           # a user or a mod/admin is undoing the delete of a post or reply
-                    if to_restore:
-                        if not to_restore.deleted:
-                            log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Content was not deleted')
-                        else:
-                            restore_post_or_comment(restorer, to_restore, store_ap_json, request_json)
-                    else:
-                        log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Undo delete: cannot find ' + ap_id)
-                    return
+                #    restorer = user
+                #    to_restore = find_liked_object(ap_id)                           # a user or a mod/admin is undoing the delete of a post or reply
+                #    if to_restore:
+                #        if not to_restore.deleted:
+                #            log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Content was not deleted')
+                #        else:
+                #            restore_post_or_comment(restorer, to_restore, store_ap_json, request_json)
+                #    else:
+                #        log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Undo delete: cannot find ' + ap_id)
+                #    return
 
                 if request_json['object']['object']['type'] == 'Like' or request_json['object']['object']['type'] == 'Dislike':             # Announce of undo of upvote or downvote
                     post = comment = None

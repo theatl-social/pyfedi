@@ -1344,11 +1344,13 @@ def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json, reas
         log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Deletor did not have permisson')
 
 
-def restore_post_or_comment(restorer, to_restore, store_ap_json, request_json):
+def restore_post_or_comment(restorer, to_restore, store_ap_json, request_json, reason):
     id = request_json['id']
     community = to_restore.community
-    reason = request_json['object']['summary'] if 'summary' in request_json['object'] else ''
-    if to_restore.user_id == restorer.id or restorer.is_admin() or community.is_moderator(restorer) or community.is_instance_admin(restorer):
+    if (to_restore.user_id == restorer.id or
+        (restorer.instance_id == to_restore.author.instance_id and restorer.is_instance_admin()) or
+        community.is_moderator(restorer) or
+        community.is_instance_admin(restorer)):
         if isinstance(to_restore, Post):
             to_restore.deleted = False
             to_restore.deleted_by = None
