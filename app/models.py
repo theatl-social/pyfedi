@@ -1171,7 +1171,7 @@ class Post(db.Model):
             find_licence_or_create, make_image_sizes, notify_about_post
         from app.utils import allowlist_html, markdown_to_html, html_to_text, microblog_content_to_title, blocked_phrases, \
             is_image_url, is_video_url, domain_from_url, opengraph_parse, shorten_string, remove_tracking_from_link, \
-            is_video_hosting_site, communities_banned_from
+            is_video_hosting_site, communities_banned_from, recently_upvoted_posts
 
         microblog = False
         if 'name' not in request_json['object']:  # Microblog posts
@@ -1399,11 +1399,16 @@ class Post(db.Model):
             if post.community_id not in communities_banned_from(user.id):
                 notify_about_post(post)
 
+            # attach initial upvote to author
+            vote = PostVote(user_id=user.id, post_id=post.id, author_id=user.id, effect=1)
+            db.session.add(vote)
+            if user.is_local():
+                cache.delete_memoized(recently_upvoted_posts, user.id)
             if user.reputation > 100:
                 post.up_votes += 1
                 post.score += 1
                 post.ranking = post.post_ranking(post.score, post.posted_at)
-                db.session.commit()
+            db.session.commit()
 
         return post
 

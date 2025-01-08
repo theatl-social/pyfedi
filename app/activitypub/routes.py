@@ -25,7 +25,7 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
     update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection, find_reported_object, \
     process_report, ensure_domains_match, can_edit, can_delete, remove_data_from_banned_user, resolve_remote_post, \
     inform_followers_of_post_update, comment_model_to_json, restore_post_or_comment, ban_user, unban_user, \
-    log_incoming_ap, find_community_ap_id, site_ban_remove_data, community_ban_remove_data
+    log_incoming_ap, find_community, site_ban_remove_data, community_ban_remove_data, verify_object_from_source
 from app.utils import gibberish, get_setting, render_template, \
     community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
@@ -465,14 +465,19 @@ def shared_inbox():
         HttpSignature.verify_request(request, actor.public_key, skip_date=True)
     except VerificationError as e:
         bounced = True
-        if not 'signature' in request_json:
-            log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not verify HTTP signature: ' + str(e))
-            return '', 400
         # HTTP sig will fail if a.gup.pe or PeerTube have bounced a request, so check LD sig instead
-        try:
-            LDSignature.verify_signature(request_json, actor.public_key)
-        except VerificationError as e:
-            log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not verify LD signature: ' + str(e))
+        if 'signature' in request_json:
+            try:
+                LDSignature.verify_signature(request_json, actor.public_key)
+            except VerificationError as e:
+                log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not verify LD signature: ' + str(e))
+                return '', 400
+        # not HTTP sig, and no LD sig, so reduce the inner object to just its remote ID, and then fetch it and check it in process_inbox_request()
+        elif ((request_json['type'] == 'Create' or request_json['type'] == 'Update') and
+              isinstance(request_json['object'], dict) and 'id' in request_json['object'] and isinstance(request_json['object']['id'], str)):
+            request_json['object'] = request_json['object']['id']
+        else:
+            log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not verify HTTP signature: ' + str(e))
             return '', 400
 
     actor.instance.last_seen = utcnow()
@@ -599,6 +604,40 @@ def process_inbox_request(request_json, store_ap_json):
             db.session.commit()
             community = None                # found as needed
 
+        # Announce: take care of inner objects that are just a URL (PeerTube, a.gup.pe), or find the user if the inner object is a dict
+        if request_json['type'] == 'Announce':
+            if isinstance(request_json['object'], str):
+                if request_json['object'].startswith('https://' + current_app.config['SERVER_NAME']):
+                    log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already present')
+                    return
+                post = resolve_remote_post(request_json['object'], community.id, announce_actor=community.ap_profile_id, store_ap_json=store_ap_json)
+                if post:
+                    log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_SUCCESS, request_json)
+                else:
+                    log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'Could not resolve post')
+                return
+
+            user_ap_id = request_json['object']['actor']
+            user = find_actor_or_create(user_ap_id)
+            if not user or not isinstance(user, User):
+                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json if store_ap_json else None, 'Blocked or unfound user for Announce object actor ' + user_ap_id)
+                return
+
+            user.last_seen = site.last_active = utcnow()
+            user.instance.last_seen = utcnow()
+            user.instance.dormant = False
+            user.instance.gone_forever = False
+            user.instance.failures = 0
+            db.session.commit()
+
+            # Now that we have the community and the user from an Announce, we can save repeating code by removing it
+            # core_activity is checked for its Type, but request_json is passed to any other functions
+            announced = True
+            core_activity = request_json['object']
+        else:
+            announced = False
+            core_activity = request_json
+
         # Follow: remote user wants to join/follow one of our users or communities
         if request_json['type'] == 'Follow':
             target_ap_id = request_json['object']
@@ -706,6 +745,12 @@ def process_inbox_request(request_json, store_ap_json):
 
         # Create is new content. Update is often an edit, but Updates from Lemmy can also be new content
         if request_json['type'] == 'Create' or request_json['type'] == 'Update':
+            if isinstance(request_json['object'], str):
+                request_json = verify_object_from_source(request_json)             # change request_json['object'] from str to dict, then process normally
+                if not request_json:
+                    log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Could not verify unsigned request from source')
+                    return
+
             if request_json['object']['type'] == 'ChatMessage':
                 sender = user
                 recipient_ap_id = request_json['object']['to'][0]
@@ -761,11 +806,10 @@ def process_inbox_request(request_json, store_ap_json):
                         if post_being_replied_to.author.is_local():
                             inform_followers_of_post_update(post_being_replied_to.id, user.instance_id)
                     return
-                community_ap_id = find_community_ap_id(request_json)
+                community = find_community(request_json)
                 if not ensure_domains_match(request_json['object']):
                     log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Domains do not match')
                     return
-                community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False) if community_ap_id else None
                 if community and community.local_only:
                     log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Remote Create in local_only community')
                     return
@@ -812,40 +856,69 @@ def process_inbox_request(request_json, store_ap_json):
                 log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Delete: cannot find ' + ap_id)
             return
 
-        if request_json['type'] == 'Like' or request_json['type'] == 'EmojiReact':  # Upvote
-            process_upvote(user, store_ap_json, request_json, announced=False)
+        if core_activity['type'] == 'Like' or core_activity['type'] == 'EmojiReact':  # Upvote
+            process_upvote(user, store_ap_json, request_json, announced)
             return
 
-        if request_json['type'] == 'Dislike':  # Downvote
+        if core_activity['type'] == 'Dislike':  # Downvote
             if site.enable_downvotes is False:
                 log_incoming_ap(id, APLOG_DISLIKE, APLOG_IGNORED, request_json if store_ap_json else None, 'Dislike ignored because of allow_dislike setting')
                 return
-            process_downvote(user, store_ap_json, request_json, announced=False)
+            process_downvote(user, store_ap_json, request_json, announced)
             return
 
-        if request_json['type'] == 'Flag':    # Reported content
-            reported = find_reported_object(request_json['object'])
+        if core_activity['type'] == 'Flag':    # Reported content
+            reported = find_reported_object(core_activity['object'])
             if reported:
-                process_report(user, reported, request_json)
+                process_report(user, reported, core_activity)
                 log_incoming_ap(id, APLOG_REPORT, APLOG_SUCCESS, request_json if store_ap_json else None)
                 announce_activity_to_followers(reported.community, user, request_json)
             else:
                 log_incoming_ap(id, APLOG_REPORT, APLOG_IGNORED, request_json if store_ap_json else None, 'Report ignored due to missing content')
             return
 
-        if request_json['type'] == 'Add':       # remote site is adding a local user as a moderator, and is sending directly rather than announcing (happens if not subscribed)
+        if core_activity['type'] == 'Lock':     # Post lock
             mod = user
-            community_ap_id = find_community_ap_id(request_json)
-            community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False) if community_ap_id else None
+            post_id = core_activity['object']
+            post = Post.query.filter_by(ap_id=post_id).first()
+            reason = core_activity['summary'] if 'summary' in core_activity else ''
+            if post:
+                if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
+                    post.comments_enabled = False
+                    db.session.commit()
+                    add_to_modlog_activitypub('lock_post', mod, community_id=post.community.id,
+                                              link_text=shorten_string(post.title), link=f'post/{post.id}',
+                                              reason=reason)
+                    log_incoming_ap(id, APLOG_LOCK, APLOG_SUCCESS, request_json if store_ap_json else None)
+                else:
+                    log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: Does not have permission')
+            else:
+                log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: post not found')
+            return
+
+        if core_activity['type'] == 'Add':       # Add mods, or sticky a post
+            mod = user
+            if not announced:
+                community = find_community(core_activity)
             if community:
                 if not community.is_moderator(mod) and not community.is_instance_admin(mod):
                     log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
                     return
-                target = request_json['target']
+                target = core_activity['target']
+                featured_url = community.ap_featured_url
                 moderators_url = community.ap_moderators_url
+                if target == featured_url:
+                    post = Post.query.filter_by(ap_id=core_activity['object']).first()
+                    if post:
+                        post.sticky = True
+                        db.session.commit()
+                        log_incoming_ap(id, APLOG_ADD, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    else:
+                        log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' +  core_activity['object'])
+                    return
                 if target == moderators_url:
-                    new_mod = find_actor_or_create(request_json['object'], create_if_not_found=False)
-                    if new_mod and new_mod.is_local():
+                    new_mod = find_actor_or_create(core_activity['object'])
+                    if new_mod:
                         existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=new_mod.id).first()
                         if existing_membership:
                             existing_membership.is_moderator = True
@@ -855,39 +928,45 @@ def process_inbox_request(request_json, store_ap_json):
                         db.session.commit()
                         log_incoming_ap(id, APLOG_ADD, APLOG_SUCCESS, request_json if store_ap_json else None)
                     else:
-                        log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + request_json['object'])
+                        log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + core_activity['object'])
                     return
-                else:
-                    # Lemmy might not send anything directly to sticky a post if no-one is subscribed (could not get it to generate the activity)
-                    log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Add')
+                log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Add')
             else:
                 log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Add: cannot find community')
             return
 
-        if request_json['type'] == 'Remove':       # remote site is removing a local user as a moderator, and is sending directly rather than announcing (happens if not subscribed)
+        if core_activity['type'] == 'Remove':       # Remove mods, or unsticky a post
             mod = user
-            community_ap_id = find_community_ap_id(request_json)
-            community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False) if community_ap_id else None
+            if not announced:
+                community = find_community(core_activity)
             if community:
                 if not community.is_moderator(mod) and not community.is_instance_admin(mod):
                     log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
                     return
-                target = request_json['target']
+                target = core_activity['target']
+                featured_url = community.ap_featured_url
                 moderators_url = community.ap_moderators_url
+                if target == featured_url:
+                    post = Post.query.filter_by(ap_id=core_activity['object']).first()
+                    if post:
+                        post.sticky = False
+                        db.session.commit()
+                        log_incoming_ap(id, APLOG_REMOVE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    else:
+                        log_incoming_ap(id, APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + core_activity['object'])
+                    return
                 if target == moderators_url:
-                    old_mod = find_actor_or_create(request_json['object'], create_if_not_found=False)
-                    if old_mod and old_mod.is_local():
+                    old_mod = find_actor_or_create(core_activity['object'])
+                    if old_mod:
                         existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=old_mod.id).first()
                         if existing_membership:
                             existing_membership.is_moderator = False
                             db.session.commit()
                             log_incoming_ap(id, APLOG_REMOVE, APLOG_SUCCESS, request_json if store_ap_json else None)
                     else:
-                        log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + request_json['object'])
+                        log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + core_activity['object'])
                     return
-                else:
-                    # Lemmy might not send anything directly to unsticky a post if no-one is subscribed (could not get it to generate the activity)
-                    log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Remove')
+                log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Remove')
             else:
                 log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Remove: cannot find community')
             return
@@ -1024,29 +1103,8 @@ def process_inbox_request(request_json, store_ap_json):
 
         # Announce is new content and votes that happened on a remote server.
         if request_json['type'] == 'Announce':
-            if isinstance(request_json['object'], str):  # Mastodon, PeerTube, A.gup.pe
-                if request_json['object'].startswith('https://' + current_app.config['SERVER_NAME']):
-                    log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already present')
-                    return
-                post = resolve_remote_post(request_json['object'], community.id, announce_actor=community.ap_profile_id, store_ap_json=store_ap_json)
-                if post:
-                    log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_SUCCESS, request_json)
-                else:
-                    log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'Could not resolve post')
-                return
-
-            user_ap_id = request_json['object']['actor']
-            user = find_actor_or_create(user_ap_id)
-            if not user or not isinstance(user, User):
-                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json if store_ap_json else None, 'Blocked or unfound user for Announce object actor ' + user_ap_id)
-                return
-
-            user.last_seen = site.last_active = utcnow()
-            user.instance.last_seen = utcnow()
-            user.instance.dormant = False
-            user.instance.gone_forever = False
-            user.instance.failures = 0
-            db.session.commit()
+            # should be able to remove the rest of this, and process the activities above.
+            # Then for any activities that are both sent direct and Announced, one can be dropped when shared_inbox() checks for dupes
 
             if request_json['object']['type'] == 'Create' or request_json['object']['type'] == 'Update':
                 object_type = request_json['object']['object']['type']
@@ -1078,101 +1136,101 @@ def process_inbox_request(request_json, store_ap_json):
                     log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Delete: cannot find ' + ap_id)
                 return
 
-            if request_json['object']['type'] == 'Like' or request_json['object']['type'] == 'EmojiReact':  # Announced Upvote
-                process_upvote(user, store_ap_json, request_json)
-                return
+            #if request_json['object']['type'] == 'Like' or request_json['object']['type'] == 'EmojiReact':  # Announced Upvote
+            #    process_upvote(user, store_ap_json, request_json)
+            #    return
 
-            if request_json['object']['type'] == 'Dislike':                                                 # Announced Downvote
-                if site.enable_downvotes is False:
-                    log_incoming_ap(id, APLOG_DISLIKE, APLOG_IGNORED, request_json if store_ap_json else None, 'Dislike ignored because of allow_dislike setting')
-                    return
-                process_downvote(user, store_ap_json, request_json)
-                return
+            #if request_json['object']['type'] == 'Dislike':                                                 # Announced Downvote
+            #    if site.enable_downvotes is False:
+            #        log_incoming_ap(id, APLOG_DISLIKE, APLOG_IGNORED, request_json if store_ap_json else None, 'Dislike ignored because of allow_dislike setting')
+            #        return
+            #    process_downvote(user, store_ap_json, request_json)
+            #    return
 
-            if request_json['object']['type'] == 'Flag':                                                            # Announce of reported content
-                reported = find_reported_object(request_json['object']['object'])
-                if reported:
-                    process_report(user, reported, request_json['object'])
-                    log_incoming_ap(id, APLOG_REPORT, APLOG_SUCCESS, request_json if store_ap_json else None)
-                else:
-                    log_incoming_ap(id, APLOG_REPORT, APLOG_IGNORED, request_json if store_ap_json else None, 'Report ignored due to missing content')
-                return
+            #if request_json['object']['type'] == 'Flag':                                                            # Announce of reported content
+            #    reported = find_reported_object(request_json['object']['object'])
+            #    if reported:
+            #        process_report(user, reported, request_json['object'])
+            #        log_incoming_ap(id, APLOG_REPORT, APLOG_SUCCESS, request_json if store_ap_json else None)
+            #    else:
+            #        log_incoming_ap(id, APLOG_REPORT, APLOG_IGNORED, request_json if store_ap_json else None, 'Report ignored due to missing content')
+            #    return
 
-            if request_json['object']['type'] == 'Lock':                                                            # Announce of post lock
-                mod = user
-                post_id = request_json['object']['object']
-                post = Post.query.filter_by(ap_id=post_id).first()
-                reason = request_json['object']['summary'] if 'summary' in request_json['object'] else ''
-                if post:
-                    if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
-                        post.comments_enabled = False
-                        db.session.commit()
-                        add_to_modlog_activitypub('lock_post', mod, community_id=post.community.id,
-                                                  link_text=shorten_string(post.title), link=f'post/{post.id}',
-                                                  reason=reason)
-                        log_incoming_ap(id, APLOG_LOCK, APLOG_SUCCESS, request_json if store_ap_json else None)
-                    else:
-                        log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: Does not have permission')
-                else:
-                    log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: post not found')
-                return
+            #if request_json['object']['type'] == 'Lock':                                                            # Announce of post lock
+            #    mod = user
+            #    post_id = request_json['object']['object']
+            #    post = Post.query.filter_by(ap_id=post_id).first()
+            #    reason = request_json['object']['summary'] if 'summary' in request_json['object'] else ''
+            #    if post:
+            #        if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
+            #            post.comments_enabled = False
+            #            db.session.commit()
+            #            add_to_modlog_activitypub('lock_post', mod, community_id=post.community.id,
+            #                                      link_text=shorten_string(post.title), link=f'post/{post.id}',
+            #                                      reason=reason)
+            #            log_incoming_ap(id, APLOG_LOCK, APLOG_SUCCESS, request_json if store_ap_json else None)
+            #        else:
+            #            log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: Does not have permission')
+            #    else:
+            #        log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: post not found')
+            #    return
 
-            if request_json['object']['type'] == 'Add':                                                             # Announce of adding mods or stickying a post
-                target = request_json['object']['target']
-                featured_url = community.ap_featured_url
-                moderators_url = community.ap_moderators_url
-                if target == featured_url:
-                    post = Post.query.filter_by(ap_id=request_json['object']['object']).first()
-                    if post:
-                        post.sticky = True
-                        db.session.commit()
-                        log_incoming_ap(id, APLOG_ADD, APLOG_SUCCESS, request_json if store_ap_json else None)
-                    else:
-                        log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' +  request_json['object']['object'])
-                    return
-                if target == moderators_url:
-                    user = find_actor_or_create(request_json['object']['object'])
-                    if user:
-                        existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=user.id).first()
-                        if existing_membership:
-                            existing_membership.is_moderator = True
-                        else:
-                            new_membership = CommunityMember(community_id=community.id, user_id=user.id, is_moderator=True)
-                            db.session.add(new_membership)
-                        db.session.commit()
-                        log_incoming_ap(id, APLOG_ADD, APLOG_SUCCESS, request_json if store_ap_json else None)
-                    else:
-                        log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + request_json['object']['object'])
-                    return
-                log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Add')
-                return
+            #if request_json['object']['type'] == 'Add':                                                             # Announce of adding mods or stickying a post
+            #    target = request_json['object']['target']
+            #    featured_url = community.ap_featured_url
+            #    moderators_url = community.ap_moderators_url
+            #    if target == featured_url:
+            #        post = Post.query.filter_by(ap_id=request_json['object']['object']).first()
+            #        if post:
+            #            post.sticky = True
+            #            db.session.commit()
+            #            log_incoming_ap(id, APLOG_ADD, APLOG_SUCCESS, request_json if store_ap_json else None)
+            #        else:
+            #            log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' +  request_json['object']['object'])
+            #        return
+            #    if target == moderators_url:
+            #        user = find_actor_or_create(request_json['object']['object'])
+            #        if user:
+            #            existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=user.id).first()
+            #            if existing_membership:
+            #                existing_membership.is_moderator = True
+            #            else:
+            #                new_membership = CommunityMember(community_id=community.id, user_id=user.id, is_moderator=True)
+            #                db.session.add(new_membership)
+            #            db.session.commit()
+            #            log_incoming_ap(id, APLOG_ADD, APLOG_SUCCESS, request_json if store_ap_json else None)
+            #        else:
+            #            log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + request_json['object']['object'])
+            #        return
+            #    log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Add')
+            #    return
 
-            if request_json['object']['type'] == 'Remove':                                                          # Announce of removing mods or unstickying a post
-                target = request_json['object']['target']
-                featured_url = community.ap_featured_url
-                moderators_url = community.ap_moderators_url
-                if target == featured_url:
-                    post = Post.query.filter_by(ap_id=request_json['object']['object']).first()
-                    if post:
-                        post.sticky = False
-                        db.session.commit()
-                        log_incoming_ap(id, APLOG_REMOVE, APLOG_SUCCESS, request_json if store_ap_json else None)
-                    else:
-                        log_incoming_ap(id, APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + target)
-                    return
-                if target == moderators_url:
-                    user = find_actor_or_create(request_json['object']['object'], create_if_not_found=False)
-                    if user:
-                        existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=user.id).first()
-                        if existing_membership:
-                            existing_membership.is_moderator = False
-                            db.session.commit()
-                            log_incoming_ap(id, APLOG_REMOVE, APLOG_SUCCESS, request_json if store_ap_json else None)
-                    else:
-                        log_incoming_ap(id, APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + request_json['object']['object'])
-                    return
-                log_incoming_ap(id, APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Remove')
-                return
+            #if request_json['object']['type'] == 'Remove':                                                          # Announce of removing mods or unstickying a post
+            #    target = request_json['object']['target']
+            #    featured_url = community.ap_featured_url
+            #    moderators_url = community.ap_moderators_url
+            #    if target == featured_url:
+            #        post = Post.query.filter_by(ap_id=request_json['object']['object']).first()
+            #        if post:
+            #            post.sticky = False
+            #            db.session.commit()
+            #            log_incoming_ap(id, APLOG_REMOVE, APLOG_SUCCESS, request_json if store_ap_json else None)
+            #        else:
+            #            log_incoming_ap(id, APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + target)
+            #        return
+            #    if target == moderators_url:
+            #        user = find_actor_or_create(request_json['object']['object'], create_if_not_found=False)
+            #        if user:
+            #            existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=user.id).first()
+            #            if existing_membership:
+            #                existing_membership.is_moderator = False
+            #                db.session.commit()
+            #                log_incoming_ap(id, APLOG_REMOVE, APLOG_SUCCESS, request_json if store_ap_json else None)
+            #        else:
+            #            log_incoming_ap(id, APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Cannot find: ' + request_json['object']['object'])
+            #        return
+            #    log_incoming_ap(id, APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Remove')
+            #    return
 
             if request_json['object']['type'] == 'Block':                               # Announce of user ban. Mod is banning a user from a community,
                 blocker = user                                                          # or an admin is banning a user from all the site's communities as part of a site ban
@@ -1615,7 +1673,7 @@ def process_new_content(user, community, store_ap_json, request_json, announced=
                 return
 
 
-def process_upvote(user, store_ap_json, request_json, announced=True):
+def process_upvote(user, store_ap_json, request_json, announced):
     id = request_json['id']
     ap_id = request_json['object'] if not announced else request_json['object']['object']
     if isinstance(ap_id, dict) and 'id' in ap_id:
@@ -1634,7 +1692,7 @@ def process_upvote(user, store_ap_json, request_json, announced=True):
         log_incoming_ap(id, APLOG_LIKE, APLOG_IGNORED, request_json if store_ap_json else None, 'Cannot upvote this')
 
 
-def process_downvote(user, store_ap_json, request_json, announced=True):
+def process_downvote(user, store_ap_json, request_json, announced):
     id = request_json['id']
     ap_id = request_json['object'] if not announced else request_json['object']['object']
     if isinstance(ap_id, dict) and 'id' in ap_id:

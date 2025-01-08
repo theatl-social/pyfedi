@@ -722,8 +722,6 @@ def add_post(actor, type):
         post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
         db.session.commit()
 
-        upvote_own_post(post)
-
         if post.type == POST_TYPE_POLL:
             poll = Poll.query.filter_by(post_id=post.id).first()
             if not poll.local_only:
@@ -2007,11 +2005,3 @@ def check_url_already_posted():
         abort(404)
 
 
-def upvote_own_post(post):
-        post.score = 1
-        post.up_votes = 1
-        post.ranking = post.post_ranking(post.score, utcnow())
-        vote = PostVote(user_id=current_user.id, post_id=post.id, author_id=current_user.id, effect=1)
-        db.session.add(vote)
-        db.session.commit()
-        cache.delete_memoized(recently_upvoted_posts, current_user.id)
