@@ -1130,30 +1130,53 @@ def process_inbox_request(request_json, store_ap_json):
                     log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: post not found')
                 return
 
-            if request_json['object']['type'] == 'Block':     # remote site is unbanning one of their users
-                unblocker = user
-                unblocked_ap_id = request_json['object']['object'].lower()
-                unblocked = User.query.filter_by(ap_profile_id=unblocked_ap_id).first()
-                if store_ap_json:
-                    request_json['cc'] = []                                         # cut very long list of instances
+            if core_activity['object']['type'] == 'Block':                                                                        # Undo of user ban
+                if announced and store_ap_json:
+                    request_json['cc'] = []           # cut very long list of instances
                     request_json['object']['cc'] = []
+
+                unblocker = user
+                unblocked_ap_id = core_activity['object']['object'].lower()
+                unblocked = User.query.filter_by(ap_profile_id=unblocked_ap_id).first()
                 if not unblocked:
                     log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
                     return
-                unblock_from_ap_id = request_json['object']['target']
-
-                if not unblocker.is_instance_admin() or not unblocked.instance_id == unblocker.instance_id:
-                    log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
-                    return
+                # in future, we'll need to know who banned a user, so this activity doesn't unban a user that was bannned by a local admin
 
                 # (no removeData field in an undo/ban - cannot restore without knowing if deletion was part of ban, or different moderator action)
-                #unblocked.banned = False                   # uncommented until there's a mechanism for processing ban expiry date
-                #db.session.commit()
-                log_incoming_ap(id, APLOG_UNDO_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
+                target = core_activity['object']['target']
+                if target.count('/') < 4:   # undo of site ban
+                    if not unblocker.is_instance_admin():
+                        log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
+                        return
+                    if unblocked.is_local():
+                        log_incoming_ap(id, APLOG_USERBAN, APLOG_MONITOR, request_json, 'Remote Admin in unbanning one of our users from their site')
+                        current_app.logger.error('Remote Admin in unbanning one of our users from their site: ' + str(request_json))
+                        return
+                    if unblocked.instance_id != unblocker.instance_id:
+                        log_incoming_ap(id, APLOG_USERBAN, APLOG_MONITOR, request_json, 'Remote Admin is unbanning a user of a different instance from their site')
+                        current_app.logger.error('Remote Admin is unbanning a user of a different instance from their site: ' + str(request_json))
+                        return
+
+                    unblocked.banned = False
+                    unblocked.banned_until = None
+                    db.session.commit()
+                    log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
+                else:                       # undo community ban (community will already known if activity was Announced)
+                    community = community if community else find_actor_or_create(target, create_if_not_found=False, community_only=True)
+                    if not community:
+                        log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Blocked or unfound community')
+                        return
+                    if not community.is_moderator(unblocker) and not community.is_instance_admin(unblocker):
+                        log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
+                        return
+
+                    unban_user(unblocker, unblocked, community, request_json)
+                    log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
                 return
 
         # Announce is new content and votes that happened on a remote server.
-        if request_json['type'] == 'Announce':
+        #if request_json['type'] == 'Announce':
             # should be able to remove the rest of this, and process the activities above.
             # Then for any activities that are both sent direct and Announced, one can be dropped when shared_inbox() checks for dupes
 
@@ -1305,7 +1328,7 @@ def process_inbox_request(request_json, store_ap_json):
             #    ban_user(blocker, blocked, community, request_json)
             #    return
 
-            if request_json['object']['type'] == 'Undo':
+            #if request_json['object']['type'] == 'Undo':
                 #if request_json['object']['object']['type'] == 'Delete':                                                                    # Announce of undo of Delete
                 #    if isinstance(request_json['object']['object']['object'], str):
                 #        ap_id = request_json['object']['object']['object']  # lemmy
@@ -1352,22 +1375,22 @@ def process_inbox_request(request_json, store_ap_json):
                 #        log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: post not found')
                 #    return
 
-                if request_json['object']['object']['type'] == 'Block':                         # Announce of undo of user ban. Mod is unbanning a user from a community,
-                    blocker = user                                                              # or an admin is unbanning a user from all the site's communities as part of a site unban
-                    blocked_ap_id = request_json['object']['object']['object'].lower()
-                    blocked = User.query.filter_by(ap_profile_id=blocked_ap_id).first()
-                    if not blocked:
-                        log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
-                        return
+                #if request_json['object']['object']['type'] == 'Block':                         # Announce of undo of user ban. Mod is unbanning a user from a community,
+                #    blocker = user                                                              # or an admin is unbanning a user from all the site's communities as part of a site unban
+                #    blocked_ap_id = request_json['object']['object']['object'].lower()
+                #    blocked = User.query.filter_by(ap_profile_id=blocked_ap_id).first()
+                #    if not blocked:
+                #        log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
+                #        return
 
-                    if not community.is_moderator(blocker) and not community.is_instance_admin(blocker):
-                        log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
-                        return
+                #    if not community.is_moderator(blocker) and not community.is_instance_admin(blocker):
+                #        log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
+                #        return
 
-                    unban_user(blocker, blocked, community, request_json)
-                    log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
+                #    unban_user(blocker, blocked, community, request_json)
+                #    log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
 
-                    return
+                #    return
 
         log_incoming_ap(id, APLOG_MONITOR, APLOG_PROCESSING, request_json, 'Unmatched activity')
 
