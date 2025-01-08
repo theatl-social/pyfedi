@@ -1434,53 +1434,6 @@ def site_ban_remove_data(blocker_id, blocked):
     db.session.commit()
 
 
-def remove_data_from_banned_user(deletor_ap_id, user_ap_id, target):
-    if current_app.debug:
-        remove_data_from_banned_user_task(deletor_ap_id, user_ap_id, target)
-    else:
-        remove_data_from_banned_user_task.delay(deletor_ap_id, user_ap_id, target)
-
-
-@celery.task
-def remove_data_from_banned_user_task(deletor_ap_id, user_ap_id, target):
-    deletor = find_actor_or_create(deletor_ap_id, create_if_not_found=False)
-    user = find_actor_or_create(user_ap_id, create_if_not_found=False)
-    community = Community.query.filter_by(ap_profile_id=target).first()
-
-    if not deletor or not user:
-        return
-
-    # site bans by admins
-    if deletor.instance.user_is_admin(deletor.id) and target == f"https://{deletor.instance.domain}/" and deletor.instance_id == user.instance_id:
-        post_replies = PostReply.query.filter_by(user_id=user.id)
-        posts = Post.query.filter_by(user_id=user.id)
-
-    # community bans by mods or admins
-    elif community and (community.is_moderator(deletor) or community.is_instance_admin(deletor)):
-        post_replies = PostReply.query.filter_by(user_id=user.id, community_id=community.id, deleted=False)
-        posts = Post.query.filter_by(user_id=user.id, community_id=community.id, deleted=False)
-    else:
-        return
-
-    for post_reply in post_replies:
-        if not user.bot:
-            post_reply.post.reply_count -= 1
-        post_reply.deleted = True
-        post_reply.deleted_by = deletor.id
-    db.session.commit()
-
-    for post in posts:
-        if post.cross_posts:
-            old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
-            for ocp in old_cross_posts:
-                if ocp.cross_posts is not None:
-                    ocp.cross_posts.remove(post.id)
-        post.delete_dependencies()
-        post.deleted = True
-        post.community.post_count -= 1
-    db.session.commit()
-
-
 def community_ban_remove_data(blocker_id, community_id, blocked):
     replies = PostReply.query.filter_by(user_id=blocked.id, deleted=False, community_id=community_id)
     for reply in replies:

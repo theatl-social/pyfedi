@@ -23,7 +23,7 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
     lemmy_site_data, is_activitypub_request, delete_post_or_comment, community_members, \
     user_removed_from_remote_server, create_post, create_post_reply, update_post_reply_from_activity, \
     update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection, find_reported_object, \
-    process_report, ensure_domains_match, can_edit, can_delete, remove_data_from_banned_user, resolve_remote_post, \
+    process_report, ensure_domains_match, can_edit, can_delete, resolve_remote_post, \
     inform_followers_of_post_update, comment_model_to_json, restore_post_or_comment, ban_user, unban_user, \
     log_incoming_ap, find_community, site_ban_remove_data, community_ban_remove_data, verify_object_from_source
 from app.utils import gibberish, get_setting, render_template, \
@@ -1300,48 +1300,6 @@ def community_moderators_route(actor):
             community_data['orderedItems'].append(moderator.ap_profile_id)
 
         return jsonify(community_data)
-
-
-@celery.task
-def process_user_follow_request(request_json, activitypublog_id, remote_user_id):
-    activity_log = ActivityPubLog.query.get(activitypublog_id)
-    local_user_ap_id = request_json['object']
-    follow_id = request_json['id']
-    local_user = find_actor_or_create(local_user_ap_id, create_if_not_found=False)
-    remote_user = User.query.get(remote_user_id)
-    if local_user and local_user.is_local() and not remote_user.is_local():
-        existing_follower = UserFollower.query.filter_by(local_user_id=local_user.id, remote_user_id=remote_user.id).first()
-        if not existing_follower:
-            auto_accept = not local_user.ap_manually_approves_followers
-            new_follower = UserFollower(local_user_id=local_user.id, remote_user_id=remote_user.id, is_accepted=auto_accept)
-            if not local_user.ap_followers_url:
-                local_user.ap_followers_url = local_user.public_url() + '/followers'
-            db.session.add(new_follower)
-        accept = {
-            "@context": default_context(),
-            "actor": local_user.public_url(),
-            "to": [
-                remote_user.public_url()
-            ],
-            "object": {
-                "actor": remote_user.public_url(),
-                "to": None,
-                "object": local_user.public_url(),
-                "type": "Follow",
-                "id": follow_id
-            },
-            "type": "Accept",
-            "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)
-        }
-        if post_request(remote_user.ap_inbox_url, accept, local_user.private_key, f"{local_user.public_url()}#main-key") is True:
-            activity_log.result = 'success'
-        else:
-            activity_log.exception_message = 'Error sending Accept'
-    else:
-        activity_log.exception_message = 'Could not find local user'
-        activity_log.result = 'failure'
-
-    db.session.commit()
 
 
 @bp.route('/c/<actor>/followers', methods=['GET'])
