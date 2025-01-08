@@ -654,7 +654,7 @@ def activitypub_application():
         'summary': g.site.name + ' - ' + g.site.description,
         'published': ap_datetime(g.site.created_at),
         'updated': ap_datetime(g.site.updated),
-        'inbox': f"https://{current_app.config['SERVER_NAME']}/site_inbox",
+        'inbox': f"https://{current_app.config['SERVER_NAME']}/inbox",
         'outbox': f"https://{current_app.config['SERVER_NAME']}/site_outbox",
         'icon': {
           'type': 'Image',
@@ -690,7 +690,7 @@ def instance_actor():
           'publicKeyPem': g.site.public_key
         },
         'endpoints': {
-          'sharedInbox': f"https://{current_app.config['SERVER_NAME']}/site_inbox",
+          'sharedInbox': f"https://{current_app.config['SERVER_NAME']}/inbox",
         }
     }
     resp = jsonify(application_data)
