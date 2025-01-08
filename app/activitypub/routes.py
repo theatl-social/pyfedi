@@ -1099,13 +1099,14 @@ def process_inbox_request(request_json, store_ap_json):
                     log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Undo delete: cannot find ' + ap_id)
                 return
 
-            if request_json['object']['type'] == 'Like' or request_json['object']['type'] == 'Dislike':                        # Undoing an upvote or downvote
+            if core_activity['object']['type'] == 'Like' or core_activity['object']['type'] == 'Dislike':                        # Undoing an upvote or downvote
                 post = comment = None
-                target_ap_id = request_json['object']['object']
+                target_ap_id = core_activity['object']['object']
                 post_or_comment = undo_vote(comment, post, target_ap_id, user)
                 if post_or_comment:
                     log_incoming_ap(id, APLOG_UNDO_VOTE, APLOG_SUCCESS, request_json if store_ap_json else None)
-                    announce_activity_to_followers(post_or_comment.community, user, request_json)
+                    if not announced:
+                        announce_activity_to_followers(post_or_comment.community, user, request_json)
                 else:
                     log_incoming_ap(id, APLOG_UNDO_VOTE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound object ' + target_ap_id)
                 return
@@ -1303,15 +1304,15 @@ def process_inbox_request(request_json, store_ap_json):
                 #        log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Undo delete: cannot find ' + ap_id)
                 #    return
 
-                if request_json['object']['object']['type'] == 'Like' or request_json['object']['object']['type'] == 'Dislike':             # Announce of undo of upvote or downvote
-                    post = comment = None
-                    target_ap_id = request_json['object']['object']['object']
-                    post_or_comment = undo_vote(comment, post, target_ap_id, user)
-                    if post_or_comment:
-                        log_incoming_ap(id, APLOG_UNDO_VOTE, APLOG_SUCCESS, request_json if store_ap_json else None)
-                    else:
-                        log_incoming_ap(id, APLOG_UNDO_VOTE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound object ' + target_ap_id)
-                    return
+                #if request_json['object']['object']['type'] == 'Like' or request_json['object']['object']['type'] == 'Dislike':             # Announce of undo of upvote or downvote
+                #    post = comment = None
+                #    target_ap_id = request_json['object']['object']['object']
+                #    post_or_comment = undo_vote(comment, post, target_ap_id, user)
+                #    if post_or_comment:
+                #        log_incoming_ap(id, APLOG_UNDO_VOTE, APLOG_SUCCESS, request_json if store_ap_json else None)
+                #    else:
+                #        log_incoming_ap(id, APLOG_UNDO_VOTE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound object ' + target_ap_id)
+                #    return
 
                 if request_json['object']['object']['type'] == 'Lock':                                                                      # Announce of undo of post lock
                     mod = user
