@@ -427,9 +427,11 @@ def shared_inbox():
             log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already present')
             return '', 200
 
+        id = object['id']
+
     redis_client = get_redis_connection()
     if redis_client.exists(id):                 # Something is sending same activity multiple times
-        log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, request_json if store_ap_json else None, 'Unnecessary retry attempt')
+        log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, request_json if store_ap_json else None, 'Already aware of this activity')
         return '', 200
     redis_client.set(id, 1, ex=90)              # Save the activity ID into redis, to avoid duplicate activities
 
@@ -631,7 +633,7 @@ def process_inbox_request(request_json, store_ap_json):
             db.session.commit()
 
             # Now that we have the community and the user from an Announce, we can save repeating code by removing it
-            # core_activity is checked for its Type, but request_json is passed to any other functions
+            # core_activity is checked for its Type, but the original request_json is sometimes passed to any other functions
             announced = True
             core_activity = request_json['object']
         else:
@@ -990,7 +992,7 @@ def process_inbox_request(request_json, store_ap_json):
             Is Announced if a remote Admin or Mod is banning a remote user from one of their communities (a remote user could also be one of our local users)
             (e.g. lemmy.ml is banning piefed.social/u/troll or lemmy.world/u/troll from lemmy.ml/c/memes)
 
-            Same activity can be sent direct and Announced, but one will be filtered out when shared_inbox() checks for it as a duplicate (TODO, when the 'streamline ap routes' process is complete)
+            Same activity can be sent direct and Announced, but one will be filtered out when shared_inbox() checks for it as a duplicate
 
             We currently don't receive a Block if a remote Admin is banning a user of a different instance from their site (it's hacked by all the relevant communities Announcing a community ban)
             This may change in the future, so it's something to monitor
@@ -1045,7 +1047,7 @@ def process_inbox_request(request_json, store_ap_json):
 
                 if remove_data:
                     community_ban_remove_data(blocker.id, community.id, blocked)
-                ban_user(blocker, blocked, community, request_json)
+                ban_user(blocker, blocked, community, core_activity)
                 log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
             return
 
@@ -1171,7 +1173,7 @@ def process_inbox_request(request_json, store_ap_json):
                         log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
                         return
 
-                    unban_user(unblocker, unblocked, community, request_json)
+                    unban_user(unblocker, unblocked, community, core_activity)
                     log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
                 return
 

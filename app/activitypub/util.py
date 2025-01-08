@@ -1512,19 +1512,19 @@ def community_ban_remove_data(blocker_id, community_id, blocked):
     db.session.commit()
 
 
-def ban_user(blocker, blocked, community, request_json):
+def ban_user(blocker, blocked, community, core_activity):
     existing = CommunityBan.query.filter_by(community_id=community.id, user_id=blocked.id).first()
     if not existing:
         new_ban = CommunityBan(community_id=community.id, user_id=blocked.id, banned_by=blocker.id)
-        if 'summary' in request_json['object']:
-            new_ban.reason=request_json['object']['summary']
-            reason = request_json['object']['summary']
+        if 'summary' in core_activity:
+            reason = core_activity['summary']
         else:
             reason = ''
-        if 'expires' in request_json and datetime.fromisoformat(request_json['object']['expires']) > datetime.now(timezone.utc):
-            new_ban.ban_until = datetime.fromisoformat(request_json['object']['expires'])
-        elif 'endTime' in request_json and datetime.fromisoformat(request_json['object']['endTime']) > datetime.now(timezone.utc):
-            new_ban.ban_until = datetime.fromisoformat(request_json['object']['endTime'])
+        new_ban.reason = reason
+        if 'expires' in core_activity and datetime.fromisoformat(core_activity['expires']) > datetime.now(timezone.utc):
+            new_ban.ban_until = core_activity['expires']
+        elif 'endTime' in core_activity and datetime.fromisoformat(core_activity['endTime']) > datetime.now(timezone.utc):
+            new_ban.ban_until = core_activity['endTime']
         db.session.add(new_ban)
 
         community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=blocked.id).first()
@@ -1556,8 +1556,8 @@ def ban_user(blocker, blocked, community, request_json):
         add_to_modlog_activitypub('ban_user', blocker, community_id=community.id, link_text=blocked.display_name(), link=f'u/{blocked.link()}', reason=reason)
 
 
-def unban_user(blocker, blocked, community, request_json):
-    reason = request_json['object']['summary'] if 'summary' in request_json['object'] else ''
+def unban_user(blocker, blocked, community, core_activity):
+    reason = core_activity['summary'] if 'summary' in core_activity else ''
     db.session.query(CommunityBan).filter(CommunityBan.community_id == community.id, CommunityBan.user_id == blocked.id).delete()
     community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=blocked.id).first()
     if community_membership_record:
