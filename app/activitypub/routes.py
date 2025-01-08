@@ -971,53 +971,74 @@ def process_inbox_request(request_json, store_ap_json):
                 log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, request_json if store_ap_json else None, 'Remove: cannot find community')
             return
 
-        if request_json['type'] == 'Block':     # remote site is banning one of their users
+        if core_activity['type'] == 'Block':     # User Ban
+            """
+            Sent directly (not Announced) if a remote Admin is banning one of their own users from their site
+            (e.g. lemmy.ml is banning lemmy.ml/u/troll)
+
+            Also send directly if a remote Admin or Mod is banning one of our users from one of their communities
+            (e.g. lemmy.ml is banning piefed.social/u/troll from lemmy.ml/c/memes)
+
+            Is Announced if a remote Admin or Mod is banning a remote user from one of their communities (a remote user could also be one of our local users)
+            (e.g. lemmy.ml is banning piefed.social/u/troll or lemmy.world/u/troll from lemmy.ml/c/memes)
+
+            Same activity can be sent direct and Announced, but one will be filtered out when shared_inbox() checks for it as a duplicate (TODO, when the 'streamline ap routes' process is complete)
+
+            We currently don't receive a Block if a remote Admin is banning a user of a different instance from their site (it's hacked by all the relevant communities Announcing a community ban)
+            This may change in the future, so it's something to monitor
+            If / When this changes, the code below will need updating, and we'll have to do extra work
+            """
+            if not announced and store_ap_json:
+                request_json['cc'] = []   # cut very long list of instances
+
             blocker = user
-            blocked_ap_id = request_json['object'].lower()
+            blocked_ap_id = core_activity['object'].lower()
             blocked = User.query.filter_by(ap_profile_id=blocked_ap_id).first()
-            if store_ap_json:
-                request_json['cc'] = []                                         # cut very long list of instances
             if not blocked:
                 log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
                 return
-
-            # target = request_json['target']   # target is supposed to determine the scope - whether it is an instance-wide ban or just one community. Lemmy doesn't use it right though
-            # community = find_actor_or_create(target, create_if_not_found=False, community_only=True)
-
-            remove_data = request_json['removeData'] if 'removeData' in request_json else False
-
-            # Lemmy currently only sends userbans for admins banning local users
-            # Banning remote users is hacked by banning them from every community of which they are a part
-            # There's plans to change this in the future though.
-            if not blocker.is_instance_admin() or not blocked.instance_id == blocker.instance_id:
-                log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
-                return
-
             if blocked.banned:  # We may have already banned them - we don't want remote temp bans to over-ride our permanent bans
+                log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Already banned')
                 return
 
-            if blocked.is_local():  # Sanity check
-                current_app.logger.error('Attempt to ban local user: ' + str(request_json))
-                return
+            remove_data = core_activity['removeData'] if 'removeData' in core_activity else False
+            target = core_activity['target']
+            if target.count('/') < 4:   # site ban
+                if not blocker.is_instance_admin():
+                    log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
+                    return
+                if blocked.is_local():
+                    log_incoming_ap(id, APLOG_USERBAN, APLOG_MONITOR, request_json, 'Remote Admin in banning one of our users from their site')
+                    current_app.logger.error('Remote Admin in banning one of our users from their site: ' + str(request_json))
+                    return
+                if blocked.instance_id != blocker.instance_id:
+                    log_incoming_ap(id, APLOG_USERBAN, APLOG_MONITOR, request_json, 'Remote Admin is banning a user of a different instance from their site')
+                    current_app.logger.error('Remote Admin is banning a user of a different instance from their site: ' + str(request_json))
+                    return
 
-            blocked.banned = True
-            db.session.commit()
-            if 'expires' in request_json:
-                blocked.banned_until = request_json['expires']
-            elif 'endTime' in request_json:
-                blocked.banned_until = request_json['endTime']
-            try:
+                blocked.banned = True
+                if 'expires' in request_json:
+                    blocked.banned_until = request_json['expires']
+                elif 'endTime' in request_json:
+                    blocked.banned_until = request_json['endTime']
                 db.session.commit()
-            except:  # I don't know the format of expires or endTime so let's see how this goes
-                db.session.rollback()
-                current_app.logger.error('could not save banned_until value: ' + str(request_json))
 
-            if remove_data:
-                site_ban_remove_data(blocker.id, blocked)
+                if remove_data:
+                    site_ban_remove_data(blocker.id, blocked)
                 log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
-            else:
-                log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Banned, but content retained')
+            else:                       # community ban (community will already known if activity was Announced)
+                community = community if community else find_actor_or_create(target, create_if_not_found=False, community_only=True)
+                if not community:
+                    log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Blocked or unfound community')
+                    return
+                if not community.is_moderator(blocker) and not community.is_instance_admin(blocker):
+                    log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
+                    return
 
+                if remove_data:
+                    community_ban_remove_data(blocker.id, community.id, blocked)
+                ban_user(blocker, blocked, community, request_json)
+                log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
             return
 
         if request_json['type'] == 'Undo':
@@ -1232,27 +1253,27 @@ def process_inbox_request(request_json, store_ap_json):
             #    log_incoming_ap(id, APLOG_REMOVE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unknown target for Remove')
             #    return
 
-            if request_json['object']['type'] == 'Block':                               # Announce of user ban. Mod is banning a user from a community,
-                blocker = user                                                          # or an admin is banning a user from all the site's communities as part of a site ban
-                blocked_ap_id = request_json['object']['object'].lower()
-                blocked = User.query.filter_by(ap_profile_id=blocked_ap_id).first()
-                if not blocked:
-                    log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
-                    return
-                remove_data = request_json['object']['removeData'] if 'removeData' in request_json['object'] else False
+            #if request_json['object']['type'] == 'Block':                               # Announce of user ban. Mod is banning a user from a community,
+            #    blocker = user                                                          # or an admin is banning a user from all the site's communities as part of a site ban
+            #    blocked_ap_id = request_json['object']['object'].lower()
+            #    blocked = User.query.filter_by(ap_profile_id=blocked_ap_id).first()
+            #    if not blocked:
+            #        log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Does not exist here')
+            #        return
+            #    remove_data = request_json['object']['removeData'] if 'removeData' in request_json['object'] else False
 
-                if not community.is_moderator(blocker) and not community.is_instance_admin(blocker):
-                    log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
-                    return
+            #    if not community.is_moderator(blocker) and not community.is_instance_admin(blocker):
+            #        log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, request_json if store_ap_json else None, 'Does not have permission')
+            #        return
 
-                if remove_data == True:
-                    community_ban_remove_data(blocker.id, community.id, blocked)
-                    log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
-                else:
-                    log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Banned, but content retained')
+            #    if remove_data == True:
+            #        community_ban_remove_data(blocker.id, community.id, blocked)
+            #        log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, request_json if store_ap_json else None)
+            #    else:
+            #        log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, request_json if store_ap_json else None, 'Banned, but content retained')
 
-                ban_user(blocker, blocked, community, request_json)
-                return
+            #    ban_user(blocker, blocked, community, request_json)
+            #    return
 
             if request_json['object']['type'] == 'Undo':
                 if request_json['object']['object']['type'] == 'Delete':                                                                    # Announce of undo of Delete
