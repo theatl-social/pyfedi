@@ -1111,6 +1111,25 @@ def process_inbox_request(request_json, store_ap_json):
                     log_incoming_ap(id, APLOG_UNDO_VOTE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound object ' + target_ap_id)
                 return
 
+            if core_activity['object']['type'] == 'Lock':                                                                      # Undo of post lock
+                mod = user
+                post_id = core_activity['object']['object']
+                post = Post.query.filter_by(ap_id=post_id).first()
+                reason = core_activity['summary'] if 'summary' in core_activity else ''
+                if post:
+                    if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
+                        post.comments_enabled = True
+                        db.session.commit()
+                        add_to_modlog_activitypub('unlock_post', mod, community_id=post.community.id,
+                                                  link_text=shorten_string(post.title), link=f'post/{post.id}',
+                                                  reason=reason)
+                        log_incoming_ap(id, APLOG_LOCK, APLOG_SUCCESS, request_json if store_ap_json else None)
+                    else:
+                        log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: Does not have permission')
+                else:
+                    log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: post not found')
+                return
+
             if request_json['object']['type'] == 'Block':     # remote site is unbanning one of their users
                 unblocker = user
                 unblocked_ap_id = request_json['object']['object'].lower()
@@ -1314,24 +1333,24 @@ def process_inbox_request(request_json, store_ap_json):
                 #        log_incoming_ap(id, APLOG_UNDO_VOTE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unfound object ' + target_ap_id)
                 #    return
 
-                if request_json['object']['object']['type'] == 'Lock':                                                                      # Announce of undo of post lock
-                    mod = user
-                    post_id = request_json['object']['object']['object']
-                    post = Post.query.filter_by(ap_id=post_id).first()
-                    reason = request_json['object']['summary'] if 'summary' in request_json['object'] else ''
-                    if post:
-                        if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
-                            post.comments_enabled = True
-                            db.session.commit()
-                            add_to_modlog_activitypub('unlock_post', mod, community_id=post.community.id,
-                                                      link_text=shorten_string(post.title), link=f'post/{post.id}',
-                                                      reason=reason)
-                            log_incoming_ap(id, APLOG_LOCK, APLOG_SUCCESS, request_json if store_ap_json else None)
-                        else:
-                            log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: Does not have permission')
-                    else:
-                        log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: post not found')
-                    return
+                #if request_json['object']['object']['type'] == 'Lock':                                                                      # Announce of undo of post lock
+                #    mod = user
+                #    post_id = request_json['object']['object']['object']
+                #    post = Post.query.filter_by(ap_id=post_id).first()
+                #    reason = request_json['object']['summary'] if 'summary' in request_json['object'] else ''
+                #    if post:
+                #        if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
+                #            post.comments_enabled = True
+                #            db.session.commit()
+                #            add_to_modlog_activitypub('unlock_post', mod, community_id=post.community.id,
+                #                                      link_text=shorten_string(post.title), link=f'post/{post.id}',
+                #                                      reason=reason)
+                #            log_incoming_ap(id, APLOG_LOCK, APLOG_SUCCESS, request_json if store_ap_json else None)
+                #        else:
+                #            log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: Does not have permission')
+                #    else:
+                #        log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, request_json if store_ap_json else None, 'Lock: post not found')
+                #    return
 
                 if request_json['object']['object']['type'] == 'Block':                         # Announce of undo of user ban. Mod is unbanning a user from a community,
                     blocker = user                                                              # or an admin is unbanning a user from all the site's communities as part of a site unban
