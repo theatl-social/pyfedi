@@ -1303,11 +1303,13 @@ def is_activitypub_request():
     return 'application/ld+json' in request.headers.get('Accept', '') or 'application/activity+json' in request.headers.get('Accept', '')
 
 
-def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json):
+def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json, reason):
     id = request_json['id']
     community = to_delete.community
-    reason = request_json['object']['summary'] if 'summary' in request_json['object'] else ''
-    if to_delete.user_id == deletor.id or deletor.is_admin() or community.is_moderator(deletor) or community.is_instance_admin(deletor):
+    if (to_delete.user_id == deletor.id or
+        (deletor.instance_id == to_delete.author.instance_id and deletor.is_instance_admin()) or
+        community.is_moderator(deletor) or
+        community.is_instance_admin(deletor)):
         if isinstance(to_delete, Post):
             to_delete.deleted = True
             to_delete.deleted_by = deletor.id

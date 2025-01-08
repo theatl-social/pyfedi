@@ -839,19 +839,21 @@ def process_inbox_request(request_json, store_ap_json):
                     log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unacceptable type (create): ' + object_type)
             return
 
-        if request_json['type'] == 'Delete':
-            if isinstance(request_json['object'], str):
-                ap_id = request_json['object']  # lemmy
+        if core_activity['type'] == 'Delete':
+            if isinstance(core_activity['object'], str):
+                ap_id = core_activity['object']  # lemmy
             else:
-                ap_id = request_json['object']['id']  # kbin
+                ap_id = core_activity['object']['id']  # kbin
             to_delete = find_liked_object(ap_id)                        # Just for Posts and Replies (User deletes go through process_delete_request())
 
             if to_delete:
                 if to_delete.deleted:
                     log_incoming_ap(id, APLOG_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already deleted')
                 else:
-                    delete_post_or_comment(user, to_delete, store_ap_json, request_json)
-                    announce_activity_to_followers(to_delete.community, user, request_json)
+                    reason = core_activity['summary'] if 'summary' in core_activity else ''
+                    delete_post_or_comment(user, to_delete, store_ap_json, request_json, reason)
+                    if not announced:
+                        announce_activity_to_followers(to_delete.community, user, request_json)
             else:
                 log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Delete: cannot find ' + ap_id)
             return
@@ -1141,21 +1143,21 @@ def process_inbox_request(request_json, store_ap_json):
                     log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, request_json if store_ap_json else None, 'Unacceptable type (create): ' + object_type)
                 return
 
-            if request_json['object']['type'] == 'Delete':                                                  # Announced Delete
-                if isinstance(request_json['object']['object'], str):
-                    ap_id = request_json['object']['object']  # lemmy
-                else:
-                    ap_id = request_json['object']['object']['id']  # kbin
-                to_delete = find_liked_object(ap_id)                                # Just for Posts and Replies (User deletes aren't announced)
+            #if request_json['object']['type'] == 'Delete':                                                  # Announced Delete
+            #    if isinstance(request_json['object']['object'], str):
+            #        ap_id = request_json['object']['object']  # lemmy
+            #    else:
+            #        ap_id = request_json['object']['object']['id']  # kbin
+            #    to_delete = find_liked_object(ap_id)                                # Just for Posts and Replies (User deletes aren't announced)
 
-                if to_delete:
-                    if to_delete.deleted:
-                        log_incoming_ap(id, APLOG_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already deleted')
-                    else:
-                        delete_post_or_comment(user, to_delete, store_ap_json, request_json)
-                else:
-                    log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Delete: cannot find ' + ap_id)
-                return
+            #    if to_delete:
+            #        if to_delete.deleted:
+            #            log_incoming_ap(id, APLOG_DELETE, APLOG_IGNORED, request_json if store_ap_json else None, 'Activity about local content which is already deleted')
+            #        else:
+            #            delete_post_or_comment(user, to_delete, store_ap_json, request_json)
+            #    else:
+            #        log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, request_json if store_ap_json else None, 'Delete: cannot find ' + ap_id)
+            #    return
 
             #if request_json['object']['type'] == 'Like' or request_json['object']['type'] == 'EmojiReact':  # Announced Upvote
             #    process_upvote(user, store_ap_json, request_json)
