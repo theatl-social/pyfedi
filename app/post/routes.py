@@ -783,24 +783,7 @@ def post_edit(post_id: int):
             post.edited_at = utcnow()
 
             if post.url != old_url:
-                if post.cross_posts is not None:
-                    old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
-                    post.cross_posts.clear()
-                    for ocp in old_cross_posts:
-                        if ocp.cross_posts is not None:
-                            ocp.cross_posts.remove(post.id)
-
-                new_cross_posts = Post.query.filter(Post.id != post.id, Post.url == post.url, Post.deleted == False,
-                                                Post.posted_at > post.edited_at - timedelta(days=6)).all()
-                for ncp in new_cross_posts:
-                    if ncp.cross_posts is None:
-                        ncp.cross_posts = [post.id]
-                    else:
-                        ncp.cross_posts.append(post.id)
-                    if post.cross_posts is None:
-                        post.cross_posts = [ncp.id]
-                    else:
-                        post.cross_posts.append(ncp.id)
+                post.calculate_cross_posts(url_changed=True)
 
             db.session.commit()
 
@@ -1054,12 +1037,7 @@ def post_delete(post_id: int):
 def post_delete_post(community: Community, post: Post, user_id: int, federate_all_communities=True):
     user: User = User.query.get(user_id)
     if post.url:
-        if post.cross_posts is not None:
-            old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
-            post.cross_posts.clear()
-            for ocp in old_cross_posts:
-                if ocp.cross_posts is not None and post.id in ocp.cross_posts:
-                    ocp.cross_posts.remove(post.id)
+        post.calculate_cross_posts(delete_only=True)
     post.deleted = True
     post.deleted_by = user_id
     post.author.post_count -= 1

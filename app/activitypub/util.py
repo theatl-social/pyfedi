@@ -1317,11 +1317,7 @@ def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json, reas
             community.post_count -= 1
             to_delete.author.post_count -= 1
             if to_delete.url and to_delete.cross_posts is not None:
-                old_cross_posts = Post.query.filter(Post.id.in_(to_delete.cross_posts)).all()
-                to_delete.cross_posts.clear()
-                for ocp in old_cross_posts:
-                    if ocp.cross_posts is not None and to_delete.id in ocp.cross_posts:
-                        ocp.cross_posts.remove(to_delete.id)
+                to_delete.calculate_cross_posts(delete_only=True)
             db.session.commit()
             if to_delete.author.id != deletor.id:
                 add_to_modlog_activitypub('delete_post', deletor, community_id=community.id,
@@ -1359,17 +1355,7 @@ def restore_post_or_comment(restorer, to_restore, store_ap_json, request_json, r
             community.post_count += 1
             to_restore.author.post_count += 1
             if to_restore.url:
-                new_cross_posts = Post.query.filter(Post.id != to_restore.id, Post.url == to_restore.url, Post.deleted == False,
-                                                                Post.posted_at > utcnow() - timedelta(days=6)).all()
-                for ncp in new_cross_posts:
-                    if ncp.cross_posts is None:
-                        ncp.cross_posts = [to_restore.id]
-                    else:
-                        ncp.cross_posts.append(to_restore.id)
-                    if to_restore.cross_posts is None:
-                        to_restore.cross_posts = [ncp.id]
-                    else:
-                        to_restore.cross_posts.append(ncp.id)
+                to_restore.calculate_cross_posts()
             db.session.commit()
             if to_restore.author.id != restorer.id:
                 add_to_modlog_activitypub('restore_post', restorer, community_id=community.id,
@@ -1410,11 +1396,7 @@ def site_ban_remove_data(blocker_id, blocked):
         post.deleted_by = blocker_id
         post.community.post_count -= 1
         if post.url and post.cross_posts is not None:
-            old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
-            post.cross_posts.clear()
-            for ocp in old_cross_posts:
-                if ocp.cross_posts is not None and post.id in ocp.cross_posts:
-                    ocp.cross_posts.remove(post.id)
+            post.calculate_cross_posts(delete_only=True)
     blocked.post_count = 0
     db.session.commit()
 
@@ -1451,11 +1433,7 @@ def community_ban_remove_data(blocker_id, community_id, blocked):
         post.deleted_by = blocker_id
         post.community.post_count -= 1
         if post.url and post.cross_posts is not None:
-            old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
-            post.cross_posts.clear()
-            for ocp in old_cross_posts:
-                if ocp.cross_posts is not None and post.id in ocp.cross_posts:
-                    ocp.cross_posts.remove(post.id)
+            post.calculate_cross_posts(delete_only=True)
         blocked.post_count -= 1
     db.session.commit()
 
@@ -1860,34 +1838,14 @@ def update_post_from_activity(post: Post, request_json: dict):
 
             # Fix-up cross posts (Posts which link to the same url as other posts)
             if post.cross_posts is not None:
-                old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
-                post.cross_posts.clear()
-                for ocp in old_cross_posts:
-                    if ocp.cross_posts is not None and post.id in ocp.cross_posts:
-                        ocp.cross_posts.remove(post.id)
-
-            new_cross_posts = Post.query.filter(Post.id != post.id, Post.url == new_url, Post.deleted == False,
-                                    Post.posted_at > utcnow() - timedelta(days=6)).all()
-            for ncp in new_cross_posts:
-                if ncp.cross_posts is None:
-                    ncp.cross_posts = [post.id]
-                else:
-                    ncp.cross_posts.append(post.id)
-                if post.cross_posts is None:
-                    post.cross_posts = [ncp.id]
-                else:
-                    post.cross_posts.append(ncp.id)
+                post.calculate_cross_posts(url_changed=True)
 
         else:
             post.type = POST_TYPE_ARTICLE
             post.url = ''
             post.image_id = None
             if post.cross_posts is not None:                    # unlikely, but not impossible
-                old_cross_posts = Post.query.filter(Post.id.in_(post.cross_posts)).all()
-                post.cross_posts.clear()
-                for ocp in old_cross_posts:
-                    if ocp.cross_posts is not None and post.id in ocp.cross_posts:
-                        ocp.cross_posts.remove(post.id)
+                post.calculate_cross_posts(delete_only=True)
 
     db.session.commit()
     if old_db_entry_to_delete:

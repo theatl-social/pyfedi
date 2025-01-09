@@ -1383,18 +1383,7 @@ class Post(db.Model):
 
             # Update list of cross posts
             if post.url:
-                other_posts = Post.query.filter(Post.id != post.id, Post.url == post.url, Post.deleted == False,
-                                                Post.posted_at > post.posted_at - timedelta(days=6)).all()
-                for op in other_posts:
-                    if op.cross_posts is None:
-                        op.cross_posts = [post.id]
-                    else:
-                        op.cross_posts.append(post.id)
-                    if post.cross_posts is None:
-                        post.cross_posts = [op.id]
-                    else:
-                        post.cross_posts.append(op.id)
-                db.session.commit()
+                post.calculate_cross_posts()
 
             if post.community_id not in communities_banned_from(user.id):
                 notify_about_post(post)
@@ -1419,6 +1408,39 @@ class Post(db.Model):
     def epoch_seconds(self, date):
         td = date - self.epoch
         return td.days * 86400 + td.seconds + (float(td.microseconds) / 1000000)
+
+    def calculate_cross_posts(self, delete_only=False, url_changed=False, backfilled=False):
+        if not self.url and not delete_only:
+            return
+
+        if self.cross_posts and (url_changed or delete_only):
+            old_cross_posts = Post.query.filter(Post.id.in_(self.cross_posts)).all()
+            self.cross_posts.clear()
+            for ocp in old_cross_posts:
+                if ocp.cross_posts is not None:
+                    ocp.cross_posts.remove(self.id)
+
+        if delete_only:
+            db.session.commit()
+            return
+
+        if not backfilled:
+            new_cross_posts = Post.query.filter(Post.id != self.id, Post.url == self.url, Post.deleted == False,
+                                            Post.posted_at > self.posted_at - timedelta(days=6))
+        else:
+            new_cross_posts = Post.query.filter(Post.id != self.id, Post.url == self.url, Post.deleted == False,
+                                            Post.posted_at > self.posted_at - timedelta(days=3),
+                                            Post.posted_at < self.posted_at + timedelta(days=3))
+        for op in new_cross_posts:
+            if op.cross_posts is None:
+                op.cross_posts = [self.id]
+            else:
+                op.cross_posts.append(self.id)
+            if self.cross_posts is None:
+                self.cross_posts = [op.id]
+            else:
+                self.cross_posts.append(op.id)
+        db.session.commit()
 
     def delete_dependencies(self):
         db.session.query(PostBookmark).filter(PostBookmark.post_id == self.id).delete()
