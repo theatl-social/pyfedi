@@ -1747,7 +1747,12 @@ def update_post_from_activity(post: Post, request_json: dict):
                             upvotes += object['totalItems']
                         if endpoint == 'dislikes':
                             downvotes += object['totalItems']
-        post.up_votes = upvotes
+
+        # this uses the instance the post is from, rather the instances of individual votes. Useful for promoting PeerTube vids over Lemmy posts.
+        multiplier = post.instance.vote_weight
+        if not multiplier:
+            multiplier = 1.0
+        post.up_votes = upvotes * multiplier
         post.down_votes = downvotes
         post.score = upvotes - downvotes
         post.ranking = post.post_ranking(post.score, post.posted_at)
