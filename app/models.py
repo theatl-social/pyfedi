@@ -1424,6 +1424,14 @@ class Post(db.Model):
             db.session.commit()
             return
 
+        if self.url.count('/') < 3 or (self.url.count('/') == 3 and self.url.endswith('/')):
+            # reject if url is just a domain without a path
+            return
+
+        if self.community.ap_profile_id == 'https://lemmy.zip/c/dailygames':
+            # daily posts to this community (e.g. to https://travle.earth/usa or https://www.nytimes.com/games/wordle/index.html) shouldn't be treated as cross-posts
+            return
+
         if not backfilled:
             new_cross_posts = Post.query.filter(Post.id != self.id, Post.url == self.url, Post.deleted == False,
                                             Post.posted_at > self.posted_at - timedelta(days=6))
