@@ -34,7 +34,7 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     notification_subscribers, communities_banned_from, actor_contains_blocked_words, \
     html_to_text, add_to_modlog_activitypub, joined_communities, \
     moderating_communities, get_task_session, is_video_hosting_site, opengraph_parse, instance_banned, \
-    mastodon_extra_field_link
+    mastodon_extra_field_link, blocked_users
 
 from sqlalchemy import or_
 
@@ -1555,9 +1555,33 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
             language = find_language(next(iter(request_json['object']['contentMap'])))  # Combination of next and iter gets the first key in a dict
             language_id = language.id if language else None
 
+        # Check for Mentions of local users
+        reply_parent = parent_comment if parent_comment else post
+        local_users_to_notify = []
+        if 'tag' in request_json and isinstance(request_json['tag'], list):
+            for json_tag in request_json['tag']:
+                if 'type' in json_tag and json_tag['type'] == 'Mention':
+                    profile_id = json_tag['href'] if 'href' in json_tag else None
+                    if profile_id and isinstance(profile_id, str) and profile_id.startswith('https://' + current_app.config['SERVER_NAME']):
+                        profile_id = profile_id.lower()
+                        if profile_id != reply_parent.author.ap_profile_id:
+                            local_users_to_notify.append(profile_id)
+
         try:
             post_reply = PostReply.new(user, post, parent_comment, notify_author=True, body=body, body_html=body_html,
                                        language_id=language_id, request_json=request_json, announce_id=announce_id)
+            for lutn in local_users_to_notify:
+                recipient = User.query.filter_by(ap_profile_id=lutn, ap_id=None).first()
+                if recipient:
+                    blocked_senders = blocked_users(recipient.id)
+                    if post_reply.user_id not in blocked_senders:
+                        notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in comment {post_reply.id}"),
+                                                    url=f"https://{current_app.config['SERVER_NAME']}/comment/{post_reply.id}",
+                                                    author_id=user.id)
+                        recipient.unread_notifications += 1
+                        db.session.add(notification)
+                        db.session.commit()
+
             return post_reply
         except Exception as ex:
             log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, str(ex))
@@ -1651,6 +1675,31 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
         language = find_language_or_create(request_json['object']['language']['identifier'], request_json['object']['language']['name'])
         reply.language_id = language.id
     reply.edited_at = utcnow()
+
+    # Check for Mentions of local users (that weren't in the original)
+    if 'tag' in request_json and isinstance(request_json['tag'], list):
+        for json_tag in request_json['tag']:
+            if 'type' in json_tag and json_tag['type'] == 'Mention':
+                profile_id = json_tag['href'] if 'href' in json_tag else None
+                if profile_id and isinstance(profile_id, str) and profile_id.startswith('https://' + current_app.config['SERVER_NAME']):
+                    profile_id = profile_id.lower()
+                    if reply.parent_id:
+                        reply_parent = PostReply.query.get(reply.parent_id)
+                    else:
+                        reply_parent = reply.post
+                    if reply_parent and profile_id != reply_parent.author.ap_profile_id:
+                        recipient = User.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
+                        if recipient:
+                            blocked_senders = blocked_users(recipient.id)
+                            if reply.user_id not in blocked_senders:
+                                existing_notification = Notification.query.filter(Notification.user_id == recipient.id, Notification.url == f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}").first()
+                                if not existing_notification:
+                                    notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in comment {reply.id}"),
+                                                                url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
+                                                                author_id=reply.user_id)
+                                    recipient.unread_notifications += 1
+                                    db.session.add(notification)
+
     db.session.commit()
 
 
