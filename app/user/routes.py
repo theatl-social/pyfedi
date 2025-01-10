@@ -21,7 +21,7 @@ from app.models import Post, Community, CommunityMember, User, PostReply, PostVo
 from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, \
     FilterForm, KeywordFilterEditForm, RemoteFollowForm, ImportExportForm, UserNoteForm
-from app.user.utils import purge_user_then_delete, unsubscribe_from_community
+from app.user.utils import purge_user_then_delete, unsubscribe_from_community, search_for_user
 from app.utils import get_setting, render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     is_image_url, ensure_directory_exists, gibberish, file_get_contents, community_membership, user_filters_home, \
     user_filters_posts, user_filters_replies, moderating_communities, joined_communities, theme_list, blocked_instances, \
@@ -1381,3 +1381,40 @@ def user_preview(user_id):
     if (user.deleted or user.banned) and current_user.is_anonymous:
         abort(404)
     return render_template('user/user_preview.html', user=user)
+
+
+@bp.route('/user/lookup/<person>/<domain>')
+def lookup(person, domain):
+    if domain == current_app.config['SERVER_NAME']:
+        return redirect('/u/' + person)
+
+    exists = User.query.filter_by(user_name=person, ap_domain=domain).first()
+    if exists:
+        return redirect('/u/' + person + '@' + domain)
+    else:
+        address = '@' + person + '@' + domain
+        if current_user.is_authenticated:
+            new_person = None
+
+            try:
+                new_person = search_for_user(address)
+            except Exception as e:
+                if 'is blocked.' in str(e):
+                    flash(_('Sorry, that instance is blocked, check https://gui.fediseer.com/ for reasons.'), 'warning')
+            if not new_person or new_person.banned:
+                flash(_('That person could not be retreived or is banned from %(site)s.', site=g.site.name), 'warning')
+                referrer = request.headers.get('Referer', None)
+                if referrer is not None:
+                    return redirect(referrer)
+                else:
+                    return redirect('/')
+
+            return redirect('/u/' + new_person.ap_id)
+        else:
+            # send them back where they came from
+            flash('Searching for remote people requires login', 'error')
+            referrer = request.headers.get('Referer', None)
+            if referrer is not None:
+                return redirect(referrer)
+            else:
+                return redirect('/')
