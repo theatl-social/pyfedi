@@ -225,7 +225,9 @@ def show_community(community: Community):
     if current_user.is_anonymous:
         posts = posts.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
         content_filters = {}
+        user = None
     else:
+        user = current_user
         if current_user.ignore_bots == 1:
             posts = posts.filter(Post.from_bot == False)
         if current_user.hide_nsfl == 1:
@@ -330,7 +332,7 @@ def show_community(community: Community):
                            etag=f"{community.id}{sort}{post_layout}_{hash(community.last_active)}", related_communities=related_communities,
                            next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth, un_moderated=un_moderated,
                            recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
-                           canonical=community.profile_id(),
+                           canonical=community.profile_id(), can_upvote_here=can_upvote(user, community), can_downvote_here=can_downvote(user, community, g.site),
                            rss_feed=f"https://{current_app.config['SERVER_NAME']}/community/{community.link()}/feed", rss_feed_name=f"{community.title} on {g.site.name}",
                            content_filters=content_filters, moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),

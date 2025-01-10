@@ -32,7 +32,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     blocked_instances, blocked_domains, community_moderators, blocked_phrases, show_ban_message, recently_upvoted_posts, \
     recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, reply_is_stupid, \
     languages_for_form, menu_topics, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown, \
-    permission_required, blocked_users, get_request, is_local_image_url, is_video_url
+    permission_required, blocked_users, get_request, is_local_image_url, is_video_url, can_upvote, can_downvote
 from app.shared.reply import make_reply, edit_reply
 
 
@@ -161,9 +161,13 @@ def show_post(post_id: int):
 
     # for logged in users who have the 'hide read posts' function enabled
     # mark this post as read
-    if current_user.is_authenticated and current_user.hide_read_posts:
-        current_user.mark_post_as_read(post)
-        db.session.commit()
+    if current_user.is_authenticated:
+        user = current_user
+        if current_user.hide_read_posts:
+            current_user.mark_post_as_read(post)
+            db.session.commit()
+    else:
+        user = None
 
     response = render_template('post/post.html', title=post.title, post=post, is_moderator=is_moderator, is_owner=community.is_owner(),
                            community=post.community,
@@ -177,6 +181,8 @@ def show_post(post_id: int):
                            recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies,
                            reply_collapse_threshold=reply_collapse_threshold,
                            etag=f"{post.id}{sort}_{hash(post.last_active)}", markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
+                           can_upvote_here=can_upvote(user, community),
+                           can_downvote_here=can_downvote(user, community, g.site),
                            low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
