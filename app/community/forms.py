@@ -8,6 +8,8 @@ from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Le
 from flask_babel import _, lazy_gettext as _l
 
 from app import db
+from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_MEMBERS, DOWNVOTE_ACCEPT_INSTANCE, \
+    DOWNVOTE_ACCEPT_TRUSTED
 from app.models import Community, utcnow
 from app.utils import domain_from_url, MultiCheckboxField
 from PIL import Image, ImageOps
@@ -54,6 +56,13 @@ class EditCommunityForm(FlaskForm):
     local_only = BooleanField(_l('Only accept posts from current instance'))
     restricted_to_mods = BooleanField(_l('Only moderators can post'))
     new_mods_wanted = BooleanField(_l('New moderators wanted'))
+    downvote_accept_modes = [(DOWNVOTE_ACCEPT_ALL, _l('Everyone')),
+                             (DOWNVOTE_ACCEPT_MEMBERS, _l('Community members')),
+                             (DOWNVOTE_ACCEPT_INSTANCE, _l('This instance')),
+                             (DOWNVOTE_ACCEPT_TRUSTED, _l('Trusted instances')),
+
+    ]
+    downvote_accept_mode = SelectField(_l('Accept downvotes from'), coerce=int, choices=downvote_accept_modes, validators=[Optional()], render_kw={'class': 'form-select'})
     topic = SelectField(_l('Topic'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
     languages = SelectMultipleField(_l('Languages'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
     layouts = [('', _l('List')),

@@ -1019,6 +1019,7 @@ def community_edit(community_id: int):
             community.new_mods_wanted = form.new_mods_wanted.data
             community.topic_id = form.topic.data if form.topic.data != 0 else None
             community.default_layout = form.default_layout.data
+            community.downvote_accept_mode = form.downvote_accept_mode.data
 
             icon_file = request.files['icon_file']
             if icon_file and icon_file.filename != '':
@@ -1067,6 +1068,7 @@ def community_edit(community_id: int):
             form.topic.data = community.topic_id if community.topic_id else None
             form.languages.data = community.language_ids()
             form.default_layout.data = community.default_layout
+            form.downvote_accept_mode.data = community.downvote_accept_mode
         return render_template('community/community_edit.html', title=_('Edit community'), form=form,
                                current_app=current_app, current="edit_settings",
                                community=community, moderating_communities=moderating_communities(current_user.get_id()),

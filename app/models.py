@@ -75,7 +75,7 @@ class Instance(db.Model):
     start_trying_again = db.Column(db.DateTime)             # When to start trying again. Should grow exponentially with each failure.
     gone_forever = db.Column(db.Boolean, default=False)     # True once this instance is considered offline forever - never start trying again
     ip_address = db.Column(db.String(50))
-    trusted = db.Column(db.Boolean, default=False)
+    trusted = db.Column(db.Boolean, default=False, index=True)
     posting_warning = db.Column(db.String(512))
     nodeinfo_href = db.Column(db.String(100))
 
@@ -438,6 +438,7 @@ class Community(db.Model):
     topic_id = db.Column(db.Integer, db.ForeignKey('topic.id'), index=True)
     default_layout = db.Column(db.String(15))
     posting_warning = db.Column(db.String(512))
+    downvote_accept_mode = db.Column(db.Integer, default=0) # 0 = All, 2 = Community members, 4 = This instance, 6 = Trusted instances
 
     ap_id = db.Column(db.String(255), index=True)
     ap_profile_id = db.Column(db.String(255), index=True, unique=True)

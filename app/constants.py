@@ -35,6 +35,11 @@ NOTIF_REPLY = 4
 ROLE_STAFF = 3
 ROLE_ADMIN = 4
 
+DOWNVOTE_ACCEPT_ALL = 0
+DOWNVOTE_ACCEPT_MEMBERS = 2
+DOWNVOTE_ACCEPT_INSTANCE = 4
+DOWNVOTE_ACCEPT_TRUSTED = 6
+
 MICROBLOG_APPS = ["mastodon", "misskey", "akkoma", "iceshrimp", "pleroma"]
 
 APLOG_IN            = True

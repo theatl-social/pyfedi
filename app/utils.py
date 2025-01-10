@@ -19,6 +19,8 @@ from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
 import warnings
 import jwt
 
+from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_TRUSTED, DOWNVOTE_ACCEPT_INSTANCE, \
+    DOWNVOTE_ACCEPT_MEMBERS
 
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 import os
@@ -715,6 +717,20 @@ def can_downvote(user, community: Community, site=None) -> bool:
     if (user.attitude and user.attitude < -0.40) or user.reputation < -10:  # this should exclude about 3.7% of users.
         return False
 
+    if community.downvote_accept_mode != DOWNVOTE_ACCEPT_ALL:
+        if community.downvote_accept_mode == DOWNVOTE_ACCEPT_MEMBERS:
+            if not community.is_member(user):
+                return False
+        elif community.downvote_accept_mode == DOWNVOTE_ACCEPT_INSTANCE:
+            if user.instance_id != community.instance_id:
+                return False
+        elif community.downvote_accept_mode == DOWNVOTE_ACCEPT_TRUSTED:
+            if community.instance_id == user.instance_id:
+                pass
+            else:
+                if user.instance_id not in trusted_instance_ids():
+                    return False
+
     if community.id in communities_banned_from(user.id):
         return False
 
@@ -810,6 +826,11 @@ def reply_is_stupid(body) -> bool:
     if lower_body == 'this' or lower_body == 'this.' or lower_body == 'this!':
         return True
     return False
+
+
+@cache.memoize(timeout=10)
+def trusted_instance_ids() -> List[int]:
+    return [instance.id for instance in Instance.query.filter(Instance.trusted == True)]
 
 
 def inbox_domain(inbox: str) -> str:
