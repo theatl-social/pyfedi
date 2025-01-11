@@ -645,8 +645,8 @@ def add_post(actor, type):
             'object': {
                 'name': form.title.data,
                 'type': 'Page',
-                'sticky': form.sticky.data,
-                'nsfw': form.nsfw.data,
+                'stickied': form.sticky.data,
+                'sensitive': form.nsfw.data,
                 'nsfl': form.nsfl.data,
                 'id': gibberish(),   # this will  be updated once we have the post.id
                 'mediaType': 'text/markdown',
