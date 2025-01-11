@@ -460,8 +460,9 @@ def community_link_to_href(link: str) -> str:
 
 def person_link_to_href(link: str) -> str:
     pattern = r"@([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
-    server = r'<a href=https://' + current_app.config['SERVER_NAME'] + r'/user/lookup/'
-    return re.sub(pattern, server + r'\g<1>/\g<2>>' + r'@\g<1>@\g<2></a>', link)
+    server = f'https://{current_app.config["SERVER_NAME"]}/user/lookup/'
+    replacement = (r'<a href="' + server + r'\g<1>/\g<2>" rel="nofollow noindex">@\g<1>@\g<2></a>')
+    return re.sub(pattern, replacement, link)
 
 
 def domain_from_url(url: str, create=True) -> Domain:
