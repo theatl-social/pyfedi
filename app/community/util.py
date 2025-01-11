@@ -199,7 +199,7 @@ def retrieve_mods_and_backfill(community_id: int):
                                 post.ap_announce_id = activity['id']
                                 post.ranking = post.post_ranking(post.score, post.posted_at)
                                 if post.url:
-                                    post.calculate_cross_posts(backfilled=True)
+                                    post.calculate_cross_posts()
                                 db.session.commit()
                         else:
                             activity_log.exception_message = 'Could not find or create actor'
