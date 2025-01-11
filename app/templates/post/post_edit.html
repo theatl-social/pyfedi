@@ -6,6 +6,7 @@
 {% from 'bootstrap/form.html' import render_form, render_field %}
 
 {% block app_content %}
+<script src="/static/js/coolfieldset.js?v=3"></script>
 <div class="row">
     <div class="col-12 col-md-8 position-relative main_pane">
         {% block title %}<h1>{{ _('Edit post') }}</h1>{% endblock %}
@@ -32,9 +33,8 @@
                             </a>
                         {% endif -%}
                     </div>                
-                {% else %}
-                    {{ render_field(form.image_file) }}
                 {% endif %}
+                {{ render_field(form.image_file) }}
                 {{ render_field(form.image_alt_text) }}
                 <small class="field_hint">{{ _('Describe the image, to help visually impaired people.') }}</small>
             {% elif post_type == POST_TYPE_VIDEO %}
@@ -43,23 +43,35 @@
             {% endif %}
             {{ render_field(form.body) }}
 
-            {% if not low_bandwidth %}
-                {% if markdown_editor %}
-                    <script nonce="{{ session['nonce'] }}">
-                        window.addEventListener("load", function () {
-                            var downarea = new DownArea({
-                                elem: document.querySelector('#body'),
-                                resize: DownArea.RESIZE_VERTICAL,
-                                hide: ['heading', 'bold-italic'],
-                                value: document.getElementById("body").value
-                            });
-                            setupAutoResize('body');
-                        });
-                    </script>
-                {% else %}
-                    <a href="#" aria-hidden="true" class="markdown_editor_enabler create_post_markdown_editor_enabler" data-id="body">{{ _('Enable markdown editor') }}</a>
-                {% endif %}
-            {% endif %}
+            {% if not low_bandwidth -%}
+                <div class="row">
+                    <div class="col-6">
+                        <a href="#" hx-post="{{ url_for('post.preview') }}" hx-target="#preview">{{ _('Preview') }}</a>
+                    </div>
+                    <div class="col-6 text-right">
+                        {% if markdown_editor %}
+                            <script nonce="{{ session['nonce'] }}">
+                                window.addEventListener("load", function () {
+                                    var downarea = new DownArea({
+                                        elem: document.querySelector('#body'),
+                                        resize: DownArea.RESIZE_VERTICAL,
+                                        hide: ['heading', 'bold-italic'],
+                                        value: document.getElementById("body").value
+                                    });
+                                    setupAutoResize('body');
+                                });
+                            </script>
+                        {% else %}
+                            <a href="#" aria-hidden="true" class="markdown_editor_enabler create_post_markdown_editor_enabler" data-id="body">{{ _('Enable markdown editor') }}</a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <div id="preview"></div>
+                    </div>
+                </div>
+            {% endif -%}
 
             {% if post_type == POST_TYPE_POLL %}
                 <fieldset id="pollChoicesFieldset">
@@ -104,24 +116,14 @@
             {{ render_field(form.tags) }}
             <small class="field_hint">{{ _('Separate each tag with a comma.') }}</small>
 
-            <div class="row mt-4">
-                <div class="col-md-3">
-                    {{ render_field(form.notify_author) }}
-                </div>
-                <div class="col-md-1">
-                    {{ render_field(form.sticky) }}
-                </div>
-                <div class="col-md-1">
-                    {{ render_field(form.nsfw) }}
-                </div>
-                <div class="col-md-1">
-                    {{ render_field(form.nsfl) }}
-                </div>
-
-                <div class="col post_language_chooser">
-                    {{ render_field(form.language_id) }}
-                </div>
-            </div>
+            <fieldset id="post_more_options" class="mt-4 mb-4 coolfieldset {{ 'collapsed' if request.cookies.get('fieldset_post_more_options_state', 'collapsed') == 'collapsed' }}">
+                <legend class="w-auto">{{ _('More options') }}</legend>
+                {{ render_field(form.notify_author) }}
+                {{ render_field(form.sticky) }}
+                {{ render_field(form.nsfw) }}
+                {{ render_field(form.nsfl) }}
+                {{ render_field(form.language_id) }}
+            </fieldset>
 
             {{ render_field(form.submit) }}
         </form>

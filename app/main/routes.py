@@ -21,7 +21,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     ap_datetime, shorten_string, markdown_to_text, user_filters_home, \
     joined_communities, moderating_communities, markdown_to_html, allowlist_html, \
     blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
-    blocked_users, menu_topics, blocked_communities, get_request
+    blocked_users, menu_topics, blocked_communities, get_request, mastodon_extra_field_link
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, read_posts
 
@@ -290,10 +290,13 @@ def list_subscribed_communities():
     all_communities = Community.query.filter_by(banned=False)
     # get the user's joined communities
     user_joined_communities = joined_communities(current_user.id)
+    user_moderating_communities = moderating_communities(current_user.id)
     # get the joined community ids list
     joined_ids = []
     for jc in user_joined_communities:
         joined_ids.append(jc.id)
+    for mc in user_moderating_communities:
+        joined_ids.append(mc.id)
     # filter down to just the joined communities
     communities = all_communities.filter(Community.id.in_(joined_ids))
 
@@ -330,6 +333,7 @@ def list_subscribed_communities():
 
 
 @bp.route('/communities/notsubscribed', methods=['GET'])
+@login_required
 def list_not_subscribed_communities():
     verification_warning()
     search_param = request.args.get('search', '')
@@ -385,6 +389,7 @@ def list_not_subscribed_communities():
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site)
+
 
 @bp.route('/modlog', methods=['GET'])
 def modlog():
@@ -649,7 +654,7 @@ def activitypub_application():
         'summary': g.site.name + ' - ' + g.site.description,
         'published': ap_datetime(g.site.created_at),
         'updated': ap_datetime(g.site.updated),
-        'inbox': f"https://{current_app.config['SERVER_NAME']}/site_inbox",
+        'inbox': f"https://{current_app.config['SERVER_NAME']}/inbox",
         'outbox': f"https://{current_app.config['SERVER_NAME']}/site_outbox",
         'icon': {
           'type': 'Image',
@@ -685,7 +690,7 @@ def instance_actor():
           'publicKeyPem': g.site.public_key
         },
         'endpoints': {
-          'sharedInbox': f"https://{current_app.config['SERVER_NAME']}/site_inbox",
+          'sharedInbox': f"https://{current_app.config['SERVER_NAME']}/inbox",
         }
     }
     resp = jsonify(application_data)

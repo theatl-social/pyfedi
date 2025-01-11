@@ -72,7 +72,23 @@
                                 </div>
                             {% endfor %}
                             {{ render_form(form) }}
-                            <a class="conversation_options btn btn-outline-secondary" href="{{ url_for('chat.chat_options', conversation_id=current_conversation) }}" class="btn btn-outline-secondary">{{ _('Options') }}</a>
+                            <div class="dropdown">
+                                <a 
+                                    class="conversation_options btn btn-outline-secondary" 
+                                    data-bs-toggle="dropdown" rel="nofollow noindex" 
+                                    href="{{ url_for('chat.chat_options', conversation_id=current_conversation) }}" 
+                                    class="btn btn-outline-secondary">
+                                    {{ _('Options') }}
+                                </a>
+                                <ul class="dropdown-menu" style="max-width: 240px">
+                                    <div 
+                                        hx-get="{{ url_for('chat.chat_options', conversation_id=current_conversation) }}"
+                                        hx-trigger="intersect once"
+                                        hx-target="this"
+                                        hx-swap="outerHTML"
+                                    ></div>
+                                </ul>
+                            </div>
                         </div>
                     {% endif %}
                 </div>

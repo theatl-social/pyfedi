@@ -1,7 +1,31 @@
 {% if community %}
     {% if not community.restricted_to_mods or (community.restricted_to_mods and current_user.is_authenticated and community_membership(current_user, community) in [SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER]) %}
         <div class="mobile_create_post d-md-none mt-1">
-            <a class="btn btn-primary" href="/community/{{ community.link() }}/submit">{{ _('Create post') }}</a>
+            <div class="dropdown">
+                <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    {{ _('Actions') }}
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="/community/{{ community.link() }}/submit">{{ _('Create post') }}</a></li>
+                    <li><a class="dropdown-item" href="#search_community">{{ _('Search') }}</a></li>
+                    <li><a class="dropdown-item" href="#about_community">{{ _('About community') }}</a></li>
+                    <div class="dropdown-divider"></div>
+                    {% if current_user.is_authenticated and community_membership(current_user, community) in [SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER] -%}
+                        <li><a class="dropdown-item" href="/community/{{ community.link() }}/unsubscribe" rel="nofollow">{{ _('Leave') }}</a></li>
+                    {% elif current_user.is_authenticated and community_membership(current_user, community) == SUBSCRIPTION_PENDING -%}
+                        <li><a class="dropdown-item" href="/community/{{ community.link() }}/unsubscribe" rel="nofollow">{{ _('Pending') }}</a></li>
+                    {% else -%}
+                        <li><a class="dropdown-item" href="/community/{{ community.link() }}/subscribe" rel="nofollow">{{ _('Join') }}</a></li>
+                    {% endif -%}
+                    {% if is_moderator or is_owner or is_admin -%}
+                    <div class="dropdown-divider"></div>
+                    <li><a class="dropdown-item" href="/community/{{ community.link() }}/moderate">{{ _('Moderate') }}</a></li>
+                    {% endif -%}
+                    {% if is_owner or is_admin -%}
+                        <li><a class="dropdown-item" href="{{ url_for('community.community_edit', community_id=community.id) }}">{{ _('Settings') }}</a></li>
+                    {% endif -%}
+                </ul>
+            </div>
         </div>
     {% endif %}
 {% endif %}

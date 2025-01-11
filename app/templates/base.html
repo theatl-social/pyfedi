@@ -7,7 +7,7 @@
             [deleted]
         {% endif -%}
     {% else -%}
-        <a href="/u/{{ user.link() }}" title="{{ user.ap_id if user.ap_id != none else user.user_name }}" aria-label="{{ _('Author') }}">
+        <a href="/u/{{ user.link() }}" aria-label="{{ _('Author') }}" class="author_link" title="">
             {% if user.avatar_id and not low_bandwidth and not collapsed -%}
                 <img src="{{ user.avatar_thumbnail() }}" alt="" loading="lazy" />
             {% endif -%}
@@ -33,6 +33,12 @@
                 <span class="user_note" title="{{ _('User note: %(note)s', note=user_note) }}">[{{ user_note | truncate(12, True) }}]</span>
             {% endif -%}
         {% endif -%}
+        <div class="d-none user_preview" id="preview_{{ user.id }}"
+            hx-get="{{ url_for('user.user_preview', user_id=user.id) }}"
+            hx-trigger="intersect once"
+            hx-target="this"
+            hx-swap="innerHTML"
+        ></div>
     {% endif -%}
 </span>
 {% endmacro -%}
@@ -223,9 +229,7 @@
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_communities' }}" href="{{ url_for('admin.admin_communities') }}">{{ _('Communities') }}</a></li>
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_topics' }}" href="{{ url_for('admin.admin_topics') }}">{{ _('Topics') }}</a></li>
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_users' }}" href="{{ url_for('admin.admin_users', local_remote='local') }}">{{ _('Users') }}</a></li>
-                                      <li><a class="dropdown-item{{ ' active' if active_child == 'admin_content_trash' }}" href="{{ url_for('admin.admin_content_trash') }}">{{ _('Monitoring - content') }}</a></li>
-                                      <li><a class="dropdown-item{{ ' active' if active_child == 'admin_content_spam' }}" href="{{ url_for('admin.admin_content_spam') }}">{{ _('Monitoring - spammy content') }}</a></li>
-                                      <li><a class="dropdown-item{{ ' active' if active_child == 'admin_content_deleted' }}" href="{{ url_for('admin.admin_content_deleted') }}">{{ _('Deleted content') }}</a></li>
+                                      <li><a class="dropdown-item{{ ' active' if active_child == 'admin_content' }}" href="{{ url_for('admin.admin_content') }}">{{ _('Content') }}</a></li>
                                         {% if g.site.registration_mode == 'RequireApplication' %}
                                             <li><a class="dropdown-item{{ ' active' if active_child == 'admin_approve_registrations' }}" href="{{ url_for('admin.admin_approve_registrations') }}">{{ _('Registration applications') }}</a></li>
                                         {% endif %}
@@ -254,8 +258,7 @@
                             </li>
                         {% endif %}
                         <li class="nav-item" aria-label="{{ _('Search') }}"><a class="nav-link" id="search" href="/search" tabindex="" title="{{ _('Search') }}"><span class="fe fe-search"></span></a></li>
-                        <li class="nav-item" aria-label="{{ _('Light mode') }}"><a class="nav-link" id="light_mode" href="#" tabindex="" title="{{ _('Light mode') }}"><span class="fe fe-sun"></span></a></li>
-                        <li class="nav-item" aria-label="{{ _('Dark mode') }}"><a class="nav-link" id="dark_mode" href="#" tabindex="" title="{{ _('Dark mode') }}"><span class="fe fe-moon"></span></a></li>
+                        <li class="nav-item" aria-label="{{ _('Color mode') }}"><a class="nav-link" id="color_mode" href="#" tabindex="" title="{{ _('Color mode') }}"><span id="color_mode_icon" class="fe fe-eye"></span></a></li>
                     </ul>
             </div>
 

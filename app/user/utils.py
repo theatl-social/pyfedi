@@ -3,11 +3,13 @@ from time import sleep
 from flask import current_app, json
 
 from app import celery, db
-from app.activitypub.signature import post_request, default_context
+from app.activitypub.signature import post_request, default_context, signed_get_request
 from app.activitypub.util import actor_json_to_model
 from app.community.util import send_to_remote_instance
 from app.models import User, CommunityMember, Community, Instance, Site, utcnow, ActivityPubLog, BannedInstances
 from app.utils import gibberish, ap_datetime, instance_banned, get_request
+
+import httpx
 
 
 def purge_user_then_delete(user_id):
@@ -140,17 +142,47 @@ def search_for_user(address: str):
     webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
                                  params={'resource': f"acct:{address}"})
     if webfinger_data.status_code == 200:
-        webfinger_json = webfinger_data.json()
+        try:
+            webfinger_json = webfinger_data.json()
+            webfinger_data.close()
+        except:
+            webfinger_data.close()
+            return None
         for links in webfinger_json['links']:
             if 'rel' in links and links['rel'] == 'self':  # this contains the URL of the activitypub profile
                 type = links['type'] if 'type' in links else 'application/activity+json'
                 # retrieve the activitypub profile
-                user_data = get_request(links['href'], headers={'Accept': type})
-                # to see the structure of the json contained in community_data, do a GET to https://lemmy.world/c/technology with header Accept: application/activity+json
-                if user_data.status_code == 200:
-                    user_json = user_data.json()
-                    user_data.close()
-                    if user_json['type'] == 'Person' or user_json['type'] == 'Service':
-                        user = actor_json_to_model(user_json, name, server)
-                        return user
+                for attempt in [1,2]:
+                    try:
+                        object_request = get_request(links['href'], headers={'Accept': type})
+                    except httpx.HTTPError:
+                        if attempt == 1:
+                            time.sleep(3)
+                        else:
+                            return None
+                if object_request.status_code == 401:
+                    site = Site.query.get(1)
+                    for attempt in [1,2]:
+                        try:
+                            object_request = signed_get_request(links['href'], site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+                        except httpx.HTTPError:
+                            if attempt == 1:
+                                time.sleep(3)
+                            else:
+                                return None
+                if object_request.status_code == 200:
+                    try:
+                        object = object_request.json()
+                        object_request.close()
+                    except:
+                        object_request.close()
+                        return None
+                else:
+                    return None
+
+                if object['type'] == 'Person' or object['type'] == 'Service':
+                    user = actor_json_to_model(object, name, server)
+                    return user
+
     return None
+

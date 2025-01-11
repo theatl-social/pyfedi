@@ -87,16 +87,17 @@
                     {{ _('More') }}
                   </button>
                   <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{{ user.ap_profile_id }}" title="{{ _('View user profile on original server') }}" rel="nofollow"><span class="fe fe-external"></span>{{ _('View original profile') }}</a></li>
                     {% if current_user.has_blocked_user(user.id) -%}
-                        <a class="dropdown-item" href="{{ url_for('user.unblock_profile', actor=user.link()) }}" rel="nofollow">{{ _('Unblock') }}</a>
+                        <li><a class="dropdown-item" href="{{ url_for('user.unblock_profile', actor=user.link()) }}" rel="nofollow">{{ _('Unblock') }}</a></li>
                     {% else -%}
-                        <a class="dropdown-item confirm_first" href="{{ url_for('user.block_profile', actor=user.link()) }}" rel="nofollow">{{ _('Block %(user_name)s', user_name=user.display_name()) }}</a>
+                        <li><a class="dropdown-item confirm_first" href="{{ url_for('user.block_profile', actor=user.link()) }}" rel="nofollow">{{ _('Block %(user_name)s', user_name=user.display_name()) }}</a></li>
                     {% endif -%}
                     {% if not user.is_local() -%}
                         {% if current_user.has_blocked_instance(user.instance_id) -%}
-                            <a class="dropdown-item" href="{{ url_for('instance.instance_unblock', instance_id=user.instance_id, redirect='/u/' + user.link()) }}" rel="nofollow">{{ _('Unblock %(instance_name)s', instance_name=user.ap_domain) }}</a>
+                            <li><a class="dropdown-item" href="{{ url_for('instance.instance_unblock', instance_id=user.instance_id, redirect='/u/' + user.link()) }}" rel="nofollow">{{ _('Unblock %(instance_name)s', instance_name=user.ap_domain) }}</a></li>
                         {% else %}
-                            <a class="dropdown-item confirm_first" href="{{ url_for('user.user_block_instance', actor=user.link()) }}" rel="nofollow">{{ _('Block everyone from %(instance_name)s', instance_name=user.ap_domain) }}</a>
+                            <li><a class="dropdown-item confirm_first" href="{{ url_for('user.user_block_instance', actor=user.link()) }}" rel="nofollow">{{ _('Block everyone from %(instance_name)s', instance_name=user.ap_domain) }}</a></li>
                         {% endif -%}
                     {% endif -%}
                     <li><a class="dropdown-item" href="{{ url_for('user.report_profile', actor=user.link()) }}" rel="nofollow">{{ _('Report') }}</a></li>
@@ -109,21 +110,36 @@
             {% if user.is_instance_admin() or (user.is_local() and user.is_admin()) %}<span class="red">({{ _('Admin') }})</span>{% endif %}<br />
             {% if user.is_admin() or user.is_staff() %}{{ _('Role permissions') }}: {% if user.is_admin() %}{{ _('Admin') }}{% endif %} {% if user.is_staff() %}{{ _('Staff') }}{% endif %}<br />{% endif %}
             {{ _('Joined') }}: {{ arrow.get(user.created).humanize(locale=locale) }}<br />
+            {% if current_user.is_authenticated and current_user.is_admin() and user.last_seen %}{{ _('Active') }}: {{ arrow.get(user.last_seen).humanize(locale=locale) }}<br />{% endif %}
             {% if current_user.is_authenticated and current_user.is_admin() %}{{ _('Referer') }}: <span title="{{ _('Which website linked to PieFed when the user initially registered.') }}">{{ user.referrer if user.referrer }}</span><br />{% endif %}
             {% if current_user.is_authenticated and current_user.is_admin() %}{{ _('IP and country code') }}: <span title="{{ _('IP address of last interaction.') }}">{{ user.ip_address if user.ip_address }}{% if user.ip_address_country %} ({{ user.ip_address_country }}){% endif %}</span><br />{% endif %}
-            {% if current_user.is_authenticated and current_user.is_admin() and user.last_seen %}{{ _('Active') }}: {{ arrow.get(user.last_seen).humanize(locale=locale) }}<br />{% endif %}
             {% if user.bot %}
                 {{ _('Bot Account') }}<br />
             {% endif %}
-            {{ _('Attitude') }}: <span title="{{ _('Ratio of upvotes cast to downvotes cast. Higher is more positive.') }}">{{ (user.attitude * 100) | round | int }}%</span><br />
+            {{ _('Attitude') }}: <span title="{{ _('Ratio of upvotes cast to downvotes cast. Higher is more positive.') }}">{% if user.attitude %}{{ (user.attitude * 100) | round | int }}%{% endif %}</span><br />
             {% if current_user.is_authenticated and current_user.is_admin() and user.reputation %}{{ _('Reputation') }}: <span title="{{ _('Reputation: The Karma of the account. Total up votes minus down votes they got.') }}">{{ user.reputation | round | int }}</span><br />{% endif %}
             {{ _('Posts') }}: {{ user.post_count }}<br />
             {{ _('Comments') }}: {{ user.post_reply_count }}<br />
-            {% if current_user.is_authenticated %}{{ _('User note') }}: {{ user.get_note(current_user) }}<br />{% endif %}
+            {% if current_user.is_authenticated %}{{ _('Note') }}: {{ user.get_note(current_user) }}<br />{% endif %}
         </p>
         <div class="profile_bio">
             {{ user.about_html|safe }}
         </div>
+        {% if user.extra_fields -%}
+            <ul class="list-group">
+                {% for field in user.extra_fields -%}
+                    <li class="list-group-item">
+                        <p class="mb-0"><strong>{{ field.label }}</strong><br>
+                           {% if field.text.startswith('http') -%}
+                                <a href="{{ field.text }}" rel="nofollow noindex ugc">{{ field.text }}</a>
+                           {% else -%}
+                                {{ field.text }}
+                           {% endif -%}
+                        </p>
+                    </li>
+                {% endfor -%}
+            </ul>
+        {% endif -%}
         {% if posts %}
             <h2 class="mt-4">Posts</h2>
             <div class="post_list">

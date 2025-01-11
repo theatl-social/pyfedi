@@ -406,6 +406,7 @@ def alpha_emoji():
 
 # HTML routes
 from flask import abort, render_template
+from app.models import Community
 from app.utils import current_theme
 import os
 
@@ -463,3 +464,19 @@ def get_alpha_communities():
         return render_template(f'themes/{theme}/{template_name}')
     else:
         return render_template(template_name)
+
+
+@bp.route('/api/alpha/c/<actor>', methods=['GET'])
+def community_profile(actor):
+    if '@' in actor:
+        community = Community.query.filter_by(ap_id=actor.lower(), banned=False).first()
+    else:
+        community = Community.query.filter_by(name=actor, ap_id=None).first()
+
+    template_name = "community.html"
+
+    theme = current_theme()
+    if theme != '' and os.path.exists(f'app/templates/themes/{theme}/{template_name}'):
+        return render_template(f'themes/{theme}/{template_name}', community_id=community.id)
+    else:
+        return render_template(template_name, community_id=community.id)

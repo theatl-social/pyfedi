@@ -1,83 +1,62 @@
-{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
-    {% extends 'themes/' + theme() + '/base.html' -%}
-{% else -%}
-    {% extends "base.html" -%}
-{% endif -%} -%}
-{% from 'bootstrap/form.html' import render_form -%}
-
-{% block app_content -%}
-    <div class="row">
-        <div class="col col-login mx-auto">
-            <div class="card mt-5">
-                <div class="card-body p-6">
-                    <div class="card-title">{{ _('Options for "%(post_title)s"', post_title=post.title) }} {% if current_user.is_authenticated -%}{% include 'post/_post_notification_toggle.html' -%}{% endif -%}</div>
-                    <ul class="option_list">
-                        {% if current_user.is_authenticated -%}
-                            {% if post.user_id == current_user.id -%}
-                                <li><a href="{{ url_for('post.post_edit', post_id=post.id) }}" class="no-underline" rel="nofollow"><span class="fe fe-edit"></span>
-                                    {{ _('Edit') }}</a></li>
-                            {% endif -%}
-                            {% if post.user_id == current_user.id or post.community.is_moderator() or post.community.is_owner() or current_user.is_admin() -%}
-                                {% if post.deleted -%}
-                                    <li><a href="{{ url_for('post.post_restore', post_id=post.id) }}" class="no-underline confirm_first" rel="nofollow"><span class="fe fe-arrow-up"></span>
-                                        {{ _('Restore') }}</a></li>
-                                    <li><a href="{{ url_for('post.post_purge', post_id=post.id) }}" class="no-underline confirm_first" rel="nofollow"><span class="fe fe-delete red"></span>
-                                        {{ _('Purge') }}</a></li>
-                                {% else -%}
-                                    <li><a href="{{ url_for('post.post_delete', post_id=post.id) }}" class="no-underline confirm_first" rel="nofollow"><span class="fe fe-delete"></span>
-                                        {{ _('Delete') }}</a></li>
-                                {% endif -%}
-                            {% endif -%}
-                            {% if existing_bookmark -%}
-                                <li><a href="{{ url_for('post.post_remove_bookmark', post_id=post.id) }}" class="no-underline" rel="nofollow"><span class="fe fe-bookmark"></span>
-                                        {{ _('Remove bookmark') }}</a></li>
-                            {% else -%}
-                                <li><a href="{{ url_for('post.post_bookmark', post_id=post.id) }}" class="no-underline" rel="nofollow"><span class="fe fe-bookmark"></span>
-                                        {{ _('Bookmark') }}</a></li>
-                            {% endif -%}
-                            {% if post.user_id == current_user.id and not post.mea_culpa -%}
-                                <li><a href="{{ url_for('post.post_mea_culpa', post_id=post.id) }}" class="no-underline"><span class="fe fe-mea-culpa"></span>
-                                    {{ _("I made a mistake with this post and have changed my mind about the topic") }}</a></li>
-                            {% endif -%}
-                            {% if post.user_id != current_user.id -%}
-                                {% if post.type == POST_TYPE_LINK and post.author.bot and (post.cross_posts is none or len(post.cross_posts) == 0) -%}
-                                    <li><a class="no-underline" aria-label="{{ _('Cross-post') }}" href="{{ url_for('post.post_cross_post', post_id=post.id) }}"><span class="fe fe-cross-post"></span>
-                                    {{ _('Cross-post to another community') }}</a></li>
-                                {% endif -%}
-                                <li><a href="{{ url_for('post.post_block_user', post_id=post.id) }}" class="no-underline"><span class="fe fe-block"></span>
-                                    {{ _('Block post author @%(author_name)s', author_name=post.author.user_name) }}</a></li>
-                                <li><a href="{{ url_for('post.post_block_community', post_id=post.id) }}" class="no-underline"><span class="fe fe-block"></span>
-                                    {{ _('Block community %(community_name)s', community_name=post.community.display_name()) }}</a></li>
-                                {% if post.community.is_moderator() or current_user.is_admin() -%}
-                                    <li><a href="{{ url_for('community.community_ban_user', community_id=post.community.id, user_id=post.author.id) }}" class="no-underline"><span class="fe fe-block red"></span>
-                                        {{ _('Ban post author @%(author_name)s from %(community_name)s', author_name=post.author.user_name, community_name=post.community.title) }}</a></li>
-                                {% endif -%}
-                                {% if post.domain_id -%}
-                                <li><a href="{{ url_for('post.post_block_domain', post_id=post.id) }}" class="no-underline"><span class="fe fe-block"></span>
-                                    {{ _('Block domain %(domain)s', domain=post.domain.name) }}</a></li>
-                                {% endif -%}
-                                {% if post.instance_id and post.instance_id != 1 -%}
-                                <li><a href="{{ url_for('post.post_block_instance', post_id=post.id) }}" class="no-underline"><span class="fe fe-block"></span>
-                                    {{ _("Hide every post from author's instance: %(name)s", name=post.instance.domain) }}</a></li>
-                                {% endif -%}
-                            {% endif -%}
-                        {% endif -%}
-                        {% if post.ap_id -%}
-                            <li><a href="{{ post.ap_id }}" rel="nofollow" class="no-underline"><span class="fe fe-external"></span>
-                                {{ _('View original on %(domain)s', domain=post.instance.domain) }}</a></li>
-                        {% endif -%}
-                        <li><a href="{{ url_for('post.post_report', post_id=post.id) }}" class="no-underline" rel="nofollow"><span class="fe fe-report"></span>
-                                {{ _('Report to moderators') }}</a></li>
-                        {% if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()) -%}
-                            <li><a href="{{ url_for('post.post_view_voting_activity', post_id=post.id) }}" class="no-underline" rel="nofollow"><span class="fe fe-sticky-left"></span>
-                                        {{ _('View Voting Activity') }}</a></li>
-                            <li><a href="{{ url_for('post.post_fixup_from_remote', post_id=post.id) }}" class="no-underline" rel="nofollow"><span class="fe fe-sticky-right"></span>
-                                        {{ _('Fixup from remote') }}</a></li>
-                        {% endif -%}
-                    </ul>
-                    <p>{{ _('If you want to perform more than one of these (e.g. block and report), hold down Ctrl and click, then complete the operation in the new tabs that open.') }}</p>
-                </div>
-            </div>
-        </div>
-    </div>
-{% endblock -%}
+{% if current_user.is_authenticated -%}
+    {% if post.user_id == current_user.id -%}
+        <li><a href="{{ url_for('post.post_edit', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-edit"></span>
+            {{ _('Edit') }}</a></li>
+    {% endif -%}
+    {% if post.user_id == current_user.id or post.community.is_moderator() or post.community.is_owner() or current_user.is_admin() -%}
+        {% if post.deleted -%}
+            <li><a href="{{ url_for('post.post_restore', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline confirm_first" rel="nofollow"><span class="fe fe-arrow-up"></span>
+                {{ _('Restore') }}</a></li>
+            <li><a href="{{ url_for('post.post_purge', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline confirm_first" rel="nofollow"><span class="fe fe-delete red"></span>
+                {{ _('Purge') }}</a></li>
+        {% else -%}
+            <li><a href="{{ url_for('post.post_delete', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline confirm_first" rel="nofollow"><span class="fe fe-delete"></span>
+                {{ _('Delete') }}</a></li>
+        {% endif -%}
+    {% endif -%}
+    {% if existing_bookmark -%}
+        <li><a href="{{ url_for('post.post_remove_bookmark', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-bookmark"></span>
+                {{ _('Remove bookmark') }}</a></li>
+    {% else -%}
+        <li><a href="{{ url_for('post.post_bookmark', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-bookmark"></span>
+                {{ _('Bookmark') }}</a></li>
+    {% endif -%}
+    {% if post.user_id == current_user.id and not post.mea_culpa -%}
+        <li><a href="{{ url_for('post.post_mea_culpa', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline"><span class="fe fe-mea-culpa"></span>
+            {{ _("I made a mistake with this post and have changed my mind about the topic") }}</a></li>
+    {% endif -%}
+    {% if post.user_id != current_user.id -%}
+        {% if post.type == POST_TYPE_LINK and post.author.bot and (post.cross_posts is none or len(post.cross_posts) == 0) -%}
+            <li><a class="dropdown-item no-underline" style="white-space: normal" aria-label="{{ _('Cross-post') }}" href="{{ url_for('post.post_cross_post', post_id=post.id) }}"><span class="fe fe-cross-post"></span>
+            {{ _('Cross-post to another community') }}</a></li>
+        {% endif -%}
+        <li><a href="{{ url_for('post.post_block_user', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline"><span class="fe fe-block"></span>
+            {{ _('Block post author @%(author_name)s', author_name=post.author.user_name) }}</a></li>
+        <li><a href="{{ url_for('post.post_block_community', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline"><span class="fe fe-block"></span>
+            {{ _('Block community %(community_name)s', community_name=post.community.display_name()) }}</a></li>
+        {% if post.community.is_moderator() or current_user.is_admin() -%}
+            <li><a href="{{ url_for('community.community_ban_user', community_id=post.community.id, user_id=post.author.id) }}" style="white-space: normal" class="dropdown-item no-underline"><span class="fe fe-block red"></span>
+                {{ _('Ban post author @%(author_name)s from %(community_name)s', author_name=post.author.user_name, community_name=post.community.title) }}</a></li>
+        {% endif -%}
+        {% if post.domain_id -%}
+        <li><a href="{{ url_for('post.post_block_domain', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline"><span class="fe fe-block"></span>
+            {{ _('Block domain %(domain)s', domain=post.domain.name) }}</a></li>
+        {% endif -%}
+        {% if post.instance_id and post.instance_id != 1 -%}
+        <li><a href="{{ url_for('post.post_block_instance', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline"><span class="fe fe-block"></span>
+            {{ _("Hide every post from author's instance: %(name)s", name=post.instance.domain) }}</a></li>
+        {% endif -%}
+    {% endif -%}
+{% endif -%}
+{% if post.ap_id -%}
+    <li><a href="{{ post.ap_id }}" style="white-space: normal" rel="nofollow" class="dropdown-item no-underline"><span class="fe fe-external"></span>
+        {{ _('View original on %(domain)s', domain=post.instance.domain) }}</a></li>
+{% endif -%}
+<li><a href="{{ url_for('post.post_report', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-report"></span>
+        {{ _('Report to moderators') }}</a></li>
+{% if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()) -%}
+    <li><a href="{{ url_for('post.post_view_voting_activity', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-sticky-left"></span>
+                {{ _('View Voting Activity') }}</a></li>
+    <li><a href="{{ url_for('post.post_fixup_from_remote', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-sticky-right"></span>
+                {{ _('Fixup from remote') }}</a></li>
+{% endif -%}

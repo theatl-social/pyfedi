@@ -36,7 +36,6 @@ from app.models import User, Community, CommunityMember, CommunityJoinRequest, C
     NotificationSubscription, UserFollower, Instance, Language, Poll, PollChoice, ModLog, CommunityWikiPage, \
     CommunityWikiPageRevision, read_posts
 from app.community import bp
-from app.user.utils import search_for_user
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, gibberish, community_membership, ap_datetime, \
     request_etag_matches, return_304, instance_banned, can_create_post, can_upvote, can_downvote, user_filters_posts, \
@@ -226,7 +225,9 @@ def show_community(community: Community):
     if current_user.is_anonymous:
         posts = posts.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
         content_filters = {}
+        user = None
     else:
+        user = current_user
         if current_user.ignore_bots == 1:
             posts = posts.filter(Post.from_bot == False)
         if current_user.hide_nsfl == 1:
@@ -331,7 +332,7 @@ def show_community(community: Community):
                            etag=f"{community.id}{sort}{post_layout}_{hash(community.last_active)}", related_communities=related_communities,
                            next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth, un_moderated=un_moderated,
                            recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
-                           canonical=community.profile_id(),
+                           canonical=community.profile_id(), can_upvote_here=can_upvote(user, community), can_downvote_here=can_downvote(user, community, g.site),
                            rss_feed=f"https://{current_app.config['SERVER_NAME']}/community/{community.link()}/feed", rss_feed_name=f"{community.title} on {g.site.name}",
                            content_filters=content_filters, moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
@@ -439,6 +440,7 @@ def do_subscribe(actor, user_id, admin_preload=False):
             # for local communities, joining is instant
             member = CommunityMember(user_id=user.id, community_id=community.id)
             db.session.add(member)
+            community.subscriptions_count += 1
             db.session.commit()
             if remote:
                 # send ActivityPub message to remote community, asking to follow. Accept message will be sent to our shared inbox
@@ -533,6 +535,7 @@ def unsubscribe(actor):
                 if proceed:
                     db.session.query(CommunityMember).filter_by(user_id=current_user.id, community_id=community.id).delete()
                     db.session.query(CommunityJoinRequest).filter_by(user_id=current_user.id, community_id=community.id).delete()
+                    community.subscriptions_count -= 1
                     db.session.commit()
 
                     flash('You have left ' + community.title)
@@ -688,8 +691,13 @@ def add_post(actor, type):
                         img.thumbnail((2000, 2000))
                         img.save(final_place)
 
-                request_json['object']['attachment'] = [{'type': 'Image', 'url': f'https://{current_app.config["SERVER_NAME"]}/{final_place.replace("app/", "")}',
-                                                        'name': form.image_alt_text.data}]
+                request_json['object']['attachment'] = [{
+                    'type': 'Image', 
+                    'url': f'https://{current_app.config["SERVER_NAME"]}/{final_place.replace("app/", "")}',
+                    'name': form.image_alt_text.data,
+                    'file_path': final_place
+                }]
+        
         elif type == 'video':
             request_json['object']['attachment'] = [{'type': 'Document', 'url': form.video_url.data}]
         elif type == 'poll':
@@ -715,8 +723,6 @@ def add_post(actor, type):
         post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
         db.session.commit()
 
-        upvote_own_post(post)
-
         if post.type == POST_TYPE_POLL:
             poll = Poll.query.filter_by(post_id=post.id).first()
             if not poll.local_only:
@@ -728,7 +734,12 @@ def add_post(actor, type):
             if not community.local_only:
                 federate_post(community, post)
 
-        return redirect(f"/post/{post.id}")
+        resp = make_response(redirect(f"/post/{post.id}"))
+        # remove cookies used to maintain state when switching post type
+        resp.delete_cookie('post_title')
+        resp.delete_cookie('post_description')
+        resp.delete_cookie('post_tags')
+        return resp
     else: # GET
         form.communities.data = community.id
         form.notify_author.data = True
@@ -1010,6 +1021,7 @@ def community_edit(community_id: int):
             community.new_mods_wanted = form.new_mods_wanted.data
             community.topic_id = form.topic.data if form.topic.data != 0 else None
             community.default_layout = form.default_layout.data
+            community.downvote_accept_mode = form.downvote_accept_mode.data
 
             icon_file = request.files['icon_file']
             if icon_file and icon_file.filename != '':
@@ -1058,6 +1070,7 @@ def community_edit(community_id: int):
             form.topic.data = community.topic_id if community.topic_id else None
             form.languages.data = community.language_ids()
             form.default_layout.data = community.default_layout
+            form.downvote_accept_mode.data = community.downvote_accept_mode
         return render_template('community/community_edit.html', title=_('Edit community'), form=form,
                                current_app=current_app, current="edit_settings",
                                community=community, moderating_communities=moderating_communities(current_user.get_id()),
@@ -1995,11 +2008,3 @@ def check_url_already_posted():
         abort(404)
 
 
-def upvote_own_post(post):
-        post.score = 1
-        post.up_votes = 1
-        post.ranking = post.post_ranking(post.score, utcnow())
-        vote = PostVote(user_id=current_user.id, post_id=post.id, author_id=current_user.id, effect=1)
-        db.session.add(vote)
-        db.session.commit()
-        cache.delete_memoized(recently_upvoted_posts, current_user.id)

@@ -18,6 +18,7 @@
     if (!options.animation) {
       fieldset.dispatchEvent(new Event('update'));
     }
+    setCookie(`fieldset_${fieldset.id}_state`, 'collapsed', 365);
   }
 
   function showFieldsetContent(fieldset, options) {
@@ -39,13 +40,16 @@
     if (!options.animation) {
       fieldset.dispatchEvent(new Event('update'));
     }
+    setCookie(`fieldset_${fieldset.id}_state`, 'expanded', 365);
   }
 
   function doToggle(fieldset, setting) {
     if (fieldset.classList.contains('collapsed')) {
       showFieldsetContent(fieldset, setting);
+      setCookie(`fieldset_${fieldset.id}_state`, 'expanded', 365);
     } else if (fieldset.classList.contains('expanded')) {
       hideFieldsetContent(fieldset, setting);
+      setCookie(`fieldset_${fieldset.id}_state`, 'collapsed', 365);
     }
   }
 
@@ -55,14 +59,6 @@
 
     fieldsets.forEach((fieldset) => {
       const legend = fieldset.querySelector('legend');
-      const content = fieldset.querySelectorAll('*:not(legend)');
-
-      content.forEach((element) => {
-        const wrapper = document.createElement('div');
-        wrapper.classList.add('wrapper');
-        element.parentNode.insertBefore(wrapper, element);
-        wrapper.appendChild(element);
-      });
 
       if (setting.collapsed) {
         hideFieldsetContent(fieldset, { animation: false });
@@ -81,5 +77,6 @@
 // coolfieldset('.coolfieldset', { collapsed: true, animation: true, speed: 'slow' });
 
 document.addEventListener('DOMContentLoaded', function () {
-  coolfieldset('.coolfieldset', { collapsed: true, animation: true, speed: 'slow' });
+  coolfieldset('.coolfieldset.collapsed', { collapsed: true, animation: true, speed: 'slow' });
+  coolfieldset('.coolfieldset:not(.collapsed)', { collapsed: false, animation: true, speed: 'slow' });
 });

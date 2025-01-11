@@ -19,9 +19,12 @@ from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
 import warnings
 import jwt
 
+from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_TRUSTED, DOWNVOTE_ACCEPT_INSTANCE, \
+    DOWNVOTE_ACCEPT_MEMBERS
 
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 import os
+from furl import furl
 from flask import current_app, json, redirect, url_for, request, make_response, Response, g, flash
 from flask_babel import _
 from flask_login import current_user, logout_user
@@ -29,7 +32,7 @@ from sqlalchemy import text, or_
 from sqlalchemy.orm import Session
 from wtforms.fields  import SelectField, SelectMultipleField
 from wtforms.widgets import Select, html_params, ListWidget, CheckboxInput
-from app import db, cache, httpx_client
+from app import db, cache, httpx_client, celery
 import re
 from PIL import Image, ImageOps
 
@@ -193,6 +196,13 @@ def is_image_url(url):
         parsed_url = urlparse(url)
         path = parsed_url.path.lower()
         return any(path.endswith(extension) for extension in common_image_extensions)
+
+
+def is_local_image_url(url):
+    if not is_image_url(url):
+        return False
+    f = furl(url)
+    return f.host in ["127.0.0.1", current_app.config["SERVER_NAME"]]
 
 
 def is_video_url(url: str) -> bool:
@@ -376,6 +386,12 @@ def html_to_text(html) -> str:
     return soup.get_text()
 
 
+def mastodon_extra_field_link(extra_field: str) -> str:
+    soup = BeautifulSoup(extra_field, 'html.parser')
+    for tag in soup.find_all('a'):
+        return tag['href']
+
+
 def microblog_content_to_title(html: str) -> str:
     title = ''
     if '<p>' in html:
@@ -440,6 +456,13 @@ def community_link_to_href(link: str) -> str:
     pattern = r"!([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
     server = r'<a href=https://' + current_app.config['SERVER_NAME'] + r'/community/lookup/'
     return re.sub(pattern, server + r'\g<1>/\g<2>>' + r'!\g<1>@\g<2></a>', link)
+
+
+def person_link_to_href(link: str) -> str:
+    pattern = r"@([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
+    server = f'https://{current_app.config["SERVER_NAME"]}/user/lookup/'
+    replacement = (r'<a href="' + server + r'\g<1>/\g<2>" rel="nofollow noindex">@\g<1>@\g<2></a>')
+    return re.sub(pattern, replacement, link)
 
 
 def domain_from_url(url: str, create=True) -> Domain:
@@ -648,12 +671,21 @@ def user_ip_banned() -> bool:
         return current_ip_address in banned_ip_addresses()
 
 
-@cache.memoize(timeout=60)
+@cache.memoize(timeout=150)
 def instance_banned(domain: str) -> bool:   # see also activitypub.util.instance_blocked()
     if domain is None or domain == '':
         return False
+    domain = domain.lower().strip()
+    if 'https://' in domain or 'http://' in domain:
+        domain = urlparse(domain).hostname
     banned = BannedInstances.query.filter_by(domain=domain).first()
-    return banned is not None
+    if banned is not None:
+        return True
+
+    # Mastodon sometimes bans with a * in the domain name, meaning "any letter", e.g. "cum.**mp"
+    regex_patterns = [re.compile(f"^{cond.domain.replace('*', '[a-zA-Z0-9]')}$") for cond in
+                      BannedInstances.query.filter(BannedInstances.domain.like('%*%')).all()]
+    return any(pattern.match(domain) for pattern in regex_patterns)
 
 
 def user_cookie_banned() -> bool:
@@ -683,8 +715,22 @@ def can_downvote(user, community: Community, site=None) -> bool:
     if community.local_only and not user.is_local():
         return False
 
-    if user.attitude < -0.40 or user.reputation < -10:  # this should exclude about 3.7% of users.
+    if (user.attitude and user.attitude < -0.40) or user.reputation < -10:  # this should exclude about 3.7% of users.
         return False
+
+    if community.downvote_accept_mode != DOWNVOTE_ACCEPT_ALL:
+        if community.downvote_accept_mode == DOWNVOTE_ACCEPT_MEMBERS:
+            if not community.is_member(user):
+                return False
+        elif community.downvote_accept_mode == DOWNVOTE_ACCEPT_INSTANCE:
+            if user.instance_id != community.instance_id:
+                return False
+        elif community.downvote_accept_mode == DOWNVOTE_ACCEPT_TRUSTED:
+            if community.instance_id == user.instance_id:
+                pass
+            else:
+                if user.instance_id not in trusted_instance_ids():
+                    return False
 
     if community.id in communities_banned_from(user.id):
         return False
@@ -781,6 +827,11 @@ def reply_is_stupid(body) -> bool:
     if lower_body == 'this' or lower_body == 'this.' or lower_body == 'this!':
         return True
     return False
+
+
+@cache.memoize(timeout=10)
+def trusted_instance_ids() -> List[int]:
+    return [instance.id for instance in Instance.query.filter(Instance.trusted == True)]
 
 
 def inbox_domain(inbox: str) -> str:
@@ -1249,3 +1300,67 @@ def community_ids_from_instances(instance_ids) -> List[int]:
 def get_task_session() -> Session:
     # Use the same engine as the main app, but create an independent session
     return Session(bind=db.engine)
+
+
+def download_defeds(defederation_subscription_id: int, domain: str):
+    if current_app.debug:
+        download_defeds_worker(defederation_subscription_id, domain)
+    else:
+        download_defeds_worker.delay(defederation_subscription_id, domain)
+
+
+@celery.task
+def download_defeds_worker(defederation_subscription_id: int, domain: str):
+    session = get_task_session()
+    for defederation_url in retrieve_defederation_list(domain):
+        session.add(BannedInstances(domain=defederation_url, reason='auto', subscription_id=defederation_subscription_id))
+    session.commit()
+    session.close()
+
+
+def retrieve_defederation_list(domain: str) -> List[str]:
+    result = []
+    software = instance_software(domain)
+    if software == 'lemmy' or software == 'piefed':
+        try:
+            response = get_request(f'https://{domain}/api/v3/federated_instances')
+        except:
+            response = None
+        if response and response.status_code == 200:
+            instance_data = response.json()
+            for row in instance_data['federated_instances']['blocked']:
+                result.append(row['domain'])
+    else:   # Assume mastodon-compatible API
+        try:
+            response = get_request(f'https://{domain}/api/v1/instance/domain_blocks')
+        except:
+            response = None
+        if response and response.status_code == 200:
+            instance_data = response.json()
+            for row in instance_data:
+                result.append(row['domain'])
+
+    return result
+
+
+def instance_software(domain: str):
+    instance = Instance.query.filter(Instance.domain == domain).first()
+    return instance.software.lower() if instance else ''
+
+
+user2_cache = {}
+def jaccard_similarity(user1_upvoted: set, user2_id: int):
+    if user2_id not in user2_cache:
+        user2_upvoted_posts = ['post/' + str(id) for id in recently_upvoted_posts(user2_id)]
+        user2_upvoted_replies = ['reply/' + str(id) for id in recently_upvoted_post_replies(user2_id)]
+        user2_cache[user2_id] = set(user2_upvoted_posts + user2_upvoted_replies)
+
+    user2_upvoted = user2_cache[user2_id]
+
+    if len(user2_upvoted) > 12:
+        intersection = len(user1_upvoted.intersection(user2_upvoted))
+        union = len(user1_upvoted.union(user2_upvoted))
+
+        return (intersection / union) * 100
+    else:
+        return 0

@@ -9,7 +9,7 @@
     {# do nothing - blocked by keyword filter #}
 {% else -%}
     <div class="h-entry pb-0 post_teaser type_{{ post.type }}{{ ' reported' if post.reports > 0 and current_user.is_authenticated and post.community.is_moderator() }}{{ ' blocked' if content_blocked }}{{ ' blur' if blur_content }}"
-        {% if content_blocked -%} title="{{ _('Filtered: ') }}{{ content_blocked }}"{% else %} title="Post: {{ post.title }}" aria-label="Post: {{ post.title }}"{% endif -%} tabindex="0">
+        {% if content_blocked -%} title="{{ _('Filtered: ') }}{{ content_blocked }}"{% else %} title="Post: {{ post.title }}" aria-label="Post: {{ post.title }}"{% endif %} tabindex="0">
         <div class="row">
             {% if post.type == POST_TYPE_ARTICLE %}
                 {% include "post/post_teaser/_article.html" -%}

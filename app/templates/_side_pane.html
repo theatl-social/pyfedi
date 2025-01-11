@@ -20,20 +20,24 @@
                     {% endif -%}
                 </div>
                 <form method="get" action="/search">
-                    <input type="search" name="q" class="form-control mt-2" placeholder="{{ _('Search this community') }}" />
+                    <input type="search" id="search_community" name="q" class="form-control mt-2" placeholder="{{ _('Search this community') }}" />
                     <input type="hidden" name="community" value="{{ community.id }}">
                 </form>
             </div>
         </div>
     {% endblock %}
     {% block about_community %}
-        <div class="card mt-3">
+        <div class="card mt-3" id="about_community">
             <div class="card-header">
                  <h2>{{ community.title }}</h2>
             </div>
             <div class="card-body">
                 <p>{{ community.description_html|community_links|safe if community.description_html else '' }}</p>
                 <p>{{ community.rules_html|safe if community.rules_html else '' }}</p>
+                <p>{{ _('Members') if community.is_local() else _('Local members') }}: {{ community.subscriptions_count }}<br>
+                    {{ _('Posts') }}: {{ community.post_count }}<br>
+                    {{ _('Comments') }}: {{ community.post_reply_count }}
+                </p>
                 {% if len(mods) > 0 and not community.private_mods -%}
                     <h3>Moderators</h3>
                     <ul class="moderator_list">

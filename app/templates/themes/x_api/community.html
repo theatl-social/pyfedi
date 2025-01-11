@@ -1,0 +1,12 @@
+{% extends 'themes/' + theme() + '/base.html' %}
+
+{% block app_content %}
+  <p class="mb-0" id="site_request"></p>
+  <details><summary>JSON</summary><pre id="site_json"></pre></details>
+  <p class="mb-0" id="community_request" data-value="{{ community_id }}">GET <code>/api/alpha/community?id={{ community_id }}</code></p>
+  <details><summary>JSON</summary><pre id="community_json"></pre></details>
+  <p class="mb-0" id="community_post_list_request">GET <code>/api/alpha/post/list?sort=Hot&page=1&community_id={{ community_id }}</code></p>
+  <details><summary>JSON</summary><pre id="community_post_list_json"></pre></details>
+
+  <script src="{{ '/static/themes/' + theme() + '/js/community.js' }}" type="module" data-param1="{{ community_id }}"></script>
+{% endblock %}

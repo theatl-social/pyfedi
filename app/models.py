@@ -42,12 +42,18 @@ class BannedInstances(db.Model):
     reason = db.Column(db.String(256))
     initiator = db.Column(db.String(256))
     created_at = db.Column(db.DateTime, default=utcnow)
+    subscription_id = db.Column(db.Integer, db.ForeignKey('defederation_subscription.id'), index=True) # is None when the ban was done by a local admin
 
 
 class AllowedInstances(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     domain = db.Column(db.String(256), index=True)
     created_at = db.Column(db.DateTime, default=utcnow)
+
+
+class DefederationSubscription(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    domain = db.Column(db.String(256), index=True)
 
 
 class Instance(db.Model):
@@ -69,7 +75,7 @@ class Instance(db.Model):
     start_trying_again = db.Column(db.DateTime)             # When to start trying again. Should grow exponentially with each failure.
     gone_forever = db.Column(db.Boolean, default=False)     # True once this instance is considered offline forever - never start trying again
     ip_address = db.Column(db.String(50))
-    trusted = db.Column(db.Boolean, default=False)
+    trusted = db.Column(db.Boolean, default=False, index=True)
     posting_warning = db.Column(db.String(512))
     nodeinfo_href = db.Column(db.String(100))
 
@@ -323,7 +329,6 @@ class File(db.Model):
         if purge_from_cache:
             flush_cdn_cache(purge_from_cache)
 
-
     def filesize(self):
         size = 0
         if self.file_path and os.path.exists(self.file_path):
@@ -433,6 +438,7 @@ class Community(db.Model):
     topic_id = db.Column(db.Integer, db.ForeignKey('topic.id'), index=True)
     default_layout = db.Column(db.String(15))
     posting_warning = db.Column(db.String(512))
+    downvote_accept_mode = db.Column(db.Integer, default=0) # 0 = All, 2 = Community members, 4 = This instance, 6 = Trusted instances
 
     ap_id = db.Column(db.String(255), index=True)
     ap_profile_id = db.Column(db.String(255), index=True, unique=True)
@@ -682,7 +688,7 @@ class User(UserMixin, db.Model):
     bounces = db.Column(db.SmallInteger, default=0)
     timezone = db.Column(db.String(20))
     reputation = db.Column(db.Float, default=0.0)
-    attitude = db.Column(db.Float, default=1.0)  # (upvotes cast - downvotes cast) / (upvotes + downvotes). A number between 1 and -1 is the ratio between up and down votes they cast
+    attitude = db.Column(db.Float, default=None)  # (upvotes cast - downvotes cast) / (upvotes + downvotes). A number between 1 and -1 is the ratio between up and down votes they cast
     post_count = db.Column(db.Integer, default=0)
     post_reply_count = db.Column(db.Integer, default=0)
     stripe_customer_id = db.Column(db.String(50))
@@ -727,6 +733,7 @@ class User(UserMixin, db.Model):
     activity = db.relationship('ActivityLog', backref='account', lazy='dynamic', cascade="all, delete-orphan")
     posts = db.relationship('Post', lazy='dynamic', cascade="all, delete-orphan")
     post_replies = db.relationship('PostReply', lazy='dynamic', cascade="all, delete-orphan")
+    extra_fields = db.relationship('UserExtraField', lazy='dynamic', cascade="all, delete-orphan")
 
     roles = db.relationship('Role', secondary=user_role, lazy='dynamic', cascade="all, delete")
 
@@ -764,7 +771,6 @@ class User(UserMixin, db.Model):
         else:
             return '[deleted]'
 
-    @cache.memoize(timeout=500)
     def avatar_thumbnail(self) -> str:
         if self.avatar_id is not None:
             if self.avatar.thumbnail_path is not None:
@@ -776,7 +782,6 @@ class User(UserMixin, db.Model):
                 return self.avatar_image()
         return ''
 
-    @cache.memoize(timeout=500)
     def avatar_image(self) -> str:
         if self.avatar_id is not None:
             if self.avatar.file_path is not None:
@@ -791,7 +796,6 @@ class User(UserMixin, db.Model):
                     return self.avatar.source_url
         return ''
 
-    @cache.memoize(timeout=500)
     def cover_image(self) -> str:
         if self.cover_id is not None:
             if self.cover.thumbnail_path is not None:
@@ -931,13 +935,10 @@ class User(UserMixin, db.Model):
         total_upvotes = upvotes + comment_upvotes
         total_downvotes = downvotes + comment_downvotes
 
-        if total_downvotes == 0:    # guard against division by zero
-            self.attitude = 1.0
+        if total_upvotes + total_downvotes > 2:  # Only calculate attitude if they've done 3 or more votes as anything less than this could be an outlier and not representative of their overall attitude (also guard against division by zero)
+            self.attitude = (total_upvotes - total_downvotes) / (total_upvotes + total_downvotes)
         else:
-            if total_upvotes + total_downvotes > 2:  # Only calculate attitude if they've done 3 or more votes as anything less than this could be an outlier and not representative of their overall attitude
-                self.attitude = (total_upvotes - total_downvotes) / (total_upvotes + total_downvotes)
-            else:
-                self.attitude = 1.0
+            self.attitude = None
 
     def recalculate_post_stats(self, posts=True, replies=True):
         if posts:
@@ -1171,7 +1172,7 @@ class Post(db.Model):
             find_licence_or_create, make_image_sizes, notify_about_post
         from app.utils import allowlist_html, markdown_to_html, html_to_text, microblog_content_to_title, blocked_phrases, \
             is_image_url, is_video_url, domain_from_url, opengraph_parse, shorten_string, remove_tracking_from_link, \
-            is_video_hosting_site, communities_banned_from
+            is_video_hosting_site, communities_banned_from, recently_upvoted_posts
 
         microblog = False
         if 'name' not in request_json['object']:  # Microblog posts
@@ -1200,7 +1201,10 @@ class Post(db.Model):
                     microblog=microblog,
                     posted_at=utcnow()
                     )
-
+        if community.nsfw:
+            post.nsfw = True    # old Lemmy instances ( < 0.19.8 ) allow nsfw content in nsfw communities to be flagged as sfw which makes no sense
+        if community.nsfl:
+            post.nsfl = True
         if 'content' in request_json['object'] and request_json['object']['content'] is not None:
             if 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/html':
                 post.body_html = allowlist_html(request_json['object']['content'])
@@ -1239,6 +1243,7 @@ class Post(db.Model):
                 if blocked_phrase in post.body:
                     return None
 
+        file_path = None
         if ('attachment' in request_json['object'] and
             isinstance(request_json['object']['attachment'], list) and
             len(request_json['object']['attachment']) > 0 and
@@ -1251,9 +1256,10 @@ class Post(db.Model):
                 if 'name' in request_json['object']['attachment'][0]:
                     alt_text = request_json['object']['attachment'][0]['name']
             if request_json['object']['attachment'][0]['type'] == 'Image':
-                post.url = request_json['object']['attachment'][0]['url']  # PixelFed, PieFed, Lemmy >= 0.19.4
-                if 'name' in request_json['object']['attachment'][0]:
-                    alt_text = request_json['object']['attachment'][0]['name']
+                attachment = request_json['object']['attachment'][0]
+                post.url = attachment['url']  # PixelFed, PieFed, Lemmy >= 0.19.4
+                alt_text = attachment.get("name")
+                file_path = attachment.get("file_path")
 
         if 'attachment' in request_json['object'] and isinstance(request_json['object']['attachment'], dict):  # a.gup.pe (Mastodon)
             alt_text = None
@@ -1265,6 +1271,8 @@ class Post(db.Model):
                 image = File(source_url=post.url)
                 if alt_text:
                     image.alt_text = alt_text
+                if file_path:
+                    image.file_path = file_path
                 db.session.add(image)
                 post.image = image
             elif is_video_url(post.url):  # youtube is detected later
@@ -1379,27 +1387,21 @@ class Post(db.Model):
 
             # Update list of cross posts
             if post.url:
-                other_posts = Post.query.filter(Post.id != post.id, Post.url == post.url, Post.deleted == False,
-                                                Post.posted_at > post.posted_at - timedelta(days=6)).all()
-                for op in other_posts:
-                    if op.cross_posts is None:
-                        op.cross_posts = [post.id]
-                    else:
-                        op.cross_posts.append(post.id)
-                    if post.cross_posts is None:
-                        post.cross_posts = [op.id]
-                    else:
-                        post.cross_posts.append(op.id)
-                db.session.commit()
+                post.calculate_cross_posts()
 
             if post.community_id not in communities_banned_from(user.id):
                 notify_about_post(post)
 
+            # attach initial upvote to author
+            vote = PostVote(user_id=user.id, post_id=post.id, author_id=user.id, effect=1)
+            db.session.add(vote)
+            if user.is_local():
+                cache.delete_memoized(recently_upvoted_posts, user.id)
             if user.reputation > 100:
                 post.up_votes += 1
                 post.score += 1
                 post.ranking = post.post_ranking(post.score, post.posted_at)
-                db.session.commit()
+            db.session.commit()
 
         return post
 
@@ -1410,6 +1412,47 @@ class Post(db.Model):
     def epoch_seconds(self, date):
         td = date - self.epoch
         return td.days * 86400 + td.seconds + (float(td.microseconds) / 1000000)
+
+    def calculate_cross_posts(self, delete_only=False, url_changed=False, backfilled=False):
+        if not self.url and not delete_only:
+            return
+
+        if self.cross_posts and (url_changed or delete_only):
+            old_cross_posts = Post.query.filter(Post.id.in_(self.cross_posts)).all()
+            self.cross_posts.clear()
+            for ocp in old_cross_posts:
+                if ocp.cross_posts is not None:
+                    ocp.cross_posts.remove(self.id)
+
+        if delete_only:
+            db.session.commit()
+            return
+
+        if self.url.count('/') < 3 or (self.url.count('/') == 3 and self.url.endswith('/')):
+            # reject if url is just a domain without a path
+            return
+
+        if self.community.ap_profile_id == 'https://lemmy.zip/c/dailygames':
+            # daily posts to this community (e.g. to https://travle.earth/usa or https://www.nytimes.com/games/wordle/index.html) shouldn't be treated as cross-posts
+            return
+
+        if not backfilled:
+            new_cross_posts = Post.query.filter(Post.id != self.id, Post.url == self.url, Post.deleted == False,
+                                            Post.posted_at > self.posted_at - timedelta(days=6))
+        else:
+            new_cross_posts = Post.query.filter(Post.id != self.id, Post.url == self.url, Post.deleted == False,
+                                            Post.posted_at > self.posted_at - timedelta(days=3),
+                                            Post.posted_at < self.posted_at + timedelta(days=3))
+        for op in new_cross_posts:
+            if op.cross_posts is None:
+                op.cross_posts = [self.id]
+            else:
+                op.cross_posts.append(self.id)
+            if self.cross_posts is None:
+                self.cross_posts = [op.id]
+            else:
+                self.cross_posts.append(op.id)
+        db.session.commit()
 
     def delete_dependencies(self):
         db.session.query(PostBookmark).filter(PostBookmark.post_id == self.id).delete()
@@ -2051,6 +2094,13 @@ class UserNote(db.Model):
     target_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
     body = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=utcnow)
+
+
+class UserExtraField(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    label = db.Column(db.String(50))
+    text = db.Column(db.String(1024))
 
 
 class UserBlock(db.Model):

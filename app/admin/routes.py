@@ -16,7 +16,7 @@ from urllib.parse import urlparse
 from app import db, celery, cache
 from app.activitypub.routes import process_inbox_request, process_delete_request, replay_inbox_request
 from app.activitypub.signature import post_request, default_context
-from app.activitypub.util import instance_allowed, instance_blocked, extract_domain_and_actor
+from app.activitypub.util import instance_allowed, extract_domain_and_actor
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm, \
     EditInstanceForm, RemoteInstanceScanForm
@@ -28,10 +28,11 @@ from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED
 from app.email import send_welcome_email
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission, Domain, \
-    Tag
+    Tag, DefederationSubscription
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
-    topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents
+    topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents, \
+    download_defeds, instance_banned
 from app.admin import bp
 
 
@@ -661,11 +662,23 @@ def admin_federation():
                     cache.delete_memoized(instance_allowed, allow.strip())
         if form.use_blocklist.data:
             set_setting('use_allowlist', False)
-            db.session.execute(text('DELETE FROM banned_instances'))
+            db.session.execute(text('DELETE FROM banned_instances WHERE subscription_id is null'))
             for banned in form.blocklist.data.split('\n'):
                 if banned.strip():
                     db.session.add(BannedInstances(domain=banned.strip()))
-                    cache.delete_memoized(instance_blocked, banned.strip())
+                    cache.delete_memoized(instance_banned, banned.strip())
+
+        # update and sync defederation subscriptions
+        db.session.execute(text('DELETE FROM banned_instances WHERE subscription_id is not null'))
+        db.session.query(DefederationSubscription).delete()
+        db.session.commit()
+        for defed_subscription in form.defederation_subscription.data.split('\n'):
+            if defed_subscription.strip():
+                db.session.add(DefederationSubscription(domain=defed_subscription.strip().lower()))
+        db.session.commit()
+        for defederation_sub in DefederationSubscription.query.all():
+            download_defeds(defederation_sub.id, defederation_sub.domain)
+
         g.site.blocked_phrases = form.blocked_phrases.data
         set_setting('actor_blocked_words', form.blocked_actors.data)
         cache.delete_memoized(blocked_phrases)
@@ -678,10 +691,11 @@ def admin_federation():
     elif request.method == 'GET':
         form.use_allowlist.data = get_setting('use_allowlist', False)
         form.use_blocklist.data = not form.use_allowlist.data
-        instances = BannedInstances.query.all()
+        instances = BannedInstances.query.filter(BannedInstances.subscription_id == None).all()
         form.blocklist.data = '\n'.join([instance.domain for instance in instances])
         instances = AllowedInstances.query.all()
         form.allowlist.data = '\n'.join([instance.domain for instance in instances])
+        form.defederation_subscription.data = '\n'.join([instance.domain for instance in DefederationSubscription.query.all()])
         form.blocked_phrases.data = g.site.blocked_phrases
         form.blocked_actors.data = get_setting('actor_blocked_words', '88')
 
@@ -870,17 +884,21 @@ def admin_communities():
 
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
+    sort_by = request.args.get('sort_by', 'title ASC')
 
     communities = Community.query
     if search:
         communities = communities.filter(Community.title.ilike(f"%{search}%"))
-    communities = communities.order_by(Community.title).paginate(page=page, per_page=1000, error_out=False)
+    communities = communities.order_by(text('"community".' + sort_by))
+    communities = communities.paginate(page=page, per_page=1000, error_out=False)
 
-    next_url = url_for('admin.admin_communities', page=communities.next_num) if communities.has_next else None
-    prev_url = url_for('admin.admin_communities', page=communities.prev_num) if communities.has_prev and page != 1 else None
+    next_url = url_for('admin.admin_communities', page=communities.next_num, search=search, sort_by=sort_by) if communities.has_next else None
+    prev_url = url_for('admin.admin_communities', page=communities.prev_num, search=search, sort_by=sort_by) if communities.has_prev and page != 1 else None
 
     return render_template('admin/communities.html', title=_('Communities'), next_url=next_url, prev_url=prev_url,
-                           communities=communities, moderating_communities=moderating_communities(current_user.get_id()),
+                           communities=communities,
+                           search=search, sort_by=sort_by,
+                           moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(),
                            site=g.site)
@@ -1164,7 +1182,7 @@ def admin_users():
     if last_seen > 0:
         users = users.filter(User.last_seen > utcnow() - timedelta(days=last_seen))
     users = users.order_by(text('"user".' + sort_by))
-    users = users.paginate(page=page, per_page=1000, error_out=False)
+    users = users.paginate(page=page, per_page=500, error_out=False)
 
     next_url = url_for('admin.admin_users', page=users.next_num, search=search, local_remote=local_remote, sort_by=sort_by, last_seen=last_seen) if users.has_next else None
     prev_url = url_for('admin.admin_users', page=users.prev_num, search=search, local_remote=local_remote, sort_by=sort_by, last_seen=last_seen) if users.has_prev and page != 1 else None
@@ -1178,92 +1196,69 @@ def admin_users():
                            )
 
 
-@bp.route('/content/trash', methods=['GET'])
+@bp.route('/content', methods=['GET'])
 @login_required
 @permission_required('administer all users')
-def admin_content_trash():
-
-    page = request.args.get('page', 1, type=int)
-
-    posts = Post.query.filter(Post.posted_at > utcnow() - timedelta(days=3), Post.deleted == False, Post.down_votes > 0).order_by(Post.score)
-    posts = posts.paginate(page=page, per_page=100, error_out=False)
-
-    next_url = url_for('admin.admin_content_trash', page=posts.next_num) if posts.has_next else None
-    prev_url = url_for('admin.admin_content_trash', page=posts.prev_num) if posts.has_prev and page != 1 else None
-
-    return render_template('admin/posts.html', title=_('Bad posts'), next_url=next_url, prev_url=prev_url, posts=posts,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site
-                           )
-
-
-@bp.route('/content/spam', methods=['GET'])
-@login_required
-@permission_required('administer all users')
-def admin_content_spam():
-    # Essentially the same as admin_content_trash() except only shows heavily downvoted posts by new users - who are usually spammers
+def admin_content():
     page = request.args.get('page', 1, type=int)
     replies_page = request.args.get('replies_page', 1, type=int)
+    posts_replies = request.args.get('posts_replies', '')
+    show = request.args.get('show', 'trash')
+    days = request.args.get('days', 3, type=int)
 
-    posts = Post.query.join(User, User.id == Post.user_id).\
-        filter(User.created > utcnow() - timedelta(days=3)).\
-        filter(Post.posted_at > utcnow() - timedelta(days=3)).\
-        filter(Post.deleted == False).\
-        filter(Post.score <= 0).order_by(Post.score)
+    posts = Post.query.join(User, User.id == Post.user_id).filter(Post.deleted == False)
+    post_replies = PostReply.query.join(User, User.id == PostReply.user_id).filter(PostReply.deleted == False)
+    if show == 'trash':
+        title = _('Bad / Most downvoted')
+        posts = posts.filter(Post.down_votes > 1, Post.score < 10)
+        if days > 0:
+            posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=days))
+        posts = posts.order_by(Post.score)
+        post_replies = post_replies.filter(PostReply.down_votes > 1, PostReply.score < 10)
+        if days > 0:
+            post_replies = post_replies.filter(PostReply.posted_at > utcnow() - timedelta(days=days))
+        post_replies = post_replies.order_by(PostReply.score)
+    elif show == 'spammy':
+        title = _('Likely spam')
+        posts = posts.filter(Post.score <= 0)
+        if days > 0:
+            posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=days),
+                                 User.created > utcnow() - timedelta(days=days))
+        posts = posts.order_by(Post.score)
+        post_replies = post_replies.filter(PostReply.score <= 0)
+        if days > 0:
+            post_replies = post_replies.filter(PostReply.posted_at > utcnow() - timedelta(days=days),
+                                               User.created > utcnow() - timedelta(days=days))
+        post_replies = post_replies.order_by(PostReply.score)
+    elif show == 'deleted':
+        title = _('Deleted content')
+        posts = Post.query.filter(Post.deleted == True)
+        if days > 0:
+            posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=days))
+        posts = posts.order_by(desc(Post.posted_at))
+        post_replies = PostReply.query.filter(PostReply.deleted == True)
+        if days > 0:
+            post_replies = post_replies.filter(PostReply.posted_at > utcnow() - timedelta(days=days))
+        post_replies = post_replies.order_by(desc(PostReply.posted_at))
+
+    if posts_replies == 'posts':
+        post_replies = post_replies.filter(False)
+    elif posts_replies == 'replies':
+        posts = posts.filter(False)
+
     posts = posts.paginate(page=page, per_page=100, error_out=False)
-
-    post_replies = PostReply.query.join(User, User.id == PostReply.user_id). \
-        filter(User.created > utcnow() - timedelta(days=3)). \
-        filter(PostReply.posted_at > utcnow() - timedelta(days=3)). \
-        filter(PostReply.deleted == False). \
-        filter(PostReply.score <= 0).order_by(PostReply.score)
     post_replies = post_replies.paginate(page=replies_page, per_page=100, error_out=False)
 
-    next_url = url_for('admin.admin_content_spam', page=posts.next_num) if posts.has_next else None
-    prev_url = url_for('admin.admin_content_spam', page=posts.prev_num) if posts.has_prev and page != 1 else None
-    next_url_replies = url_for('admin.admin_content_spam', replies_page=post_replies.next_num) if post_replies.has_next else None
-    prev_url_replies = url_for('admin.admin_content_spam', replies_page=post_replies.prev_num) if post_replies.has_prev and replies_page != 1 else None
+    next_url = url_for('admin.admin_content', page=posts.next_num, replies_page=replies_page, posts_replies=posts_replies, show=show, days=days) if posts.has_next else None
+    prev_url = url_for('admin.admin_content', page=posts.prev_num, replies_page=replies_page, posts_replies=posts_replies, show=show, days=days) if posts.has_prev and page != 1 else None
+    next_url_replies = url_for('admin.admin_content', replies_page=post_replies.next_num, page=page, posts_replies=posts_replies, show=show, days=days) if post_replies.has_next else None
+    prev_url_replies = url_for('admin.admin_content', replies_page=post_replies.prev_num, page=page, posts_replies=posts_replies, show=show, days=days) if post_replies.has_prev and replies_page != 1 else None
 
-    return render_template('admin/spam_posts.html', title=_('Likely spam'),
+    return render_template('admin/content.html', title=title,
                            next_url=next_url, prev_url=prev_url,
                            next_url_replies=next_url_replies, prev_url_replies=prev_url_replies,
                            posts=posts, post_replies=post_replies,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site
-                           )
-
-
-@bp.route('/content/deleted', methods=['GET'])
-@login_required
-@permission_required('administer all users')
-def admin_content_deleted():
-    # Shows all soft deleted posts
-    page = request.args.get('page', 1, type=int)
-    replies_page = request.args.get('replies_page', 1, type=int)
-
-    posts = Post.query.\
-        filter(Post.deleted == True).\
-        order_by(desc(Post.posted_at))
-    posts = posts.paginate(page=page, per_page=100, error_out=False)
-
-    post_replies = PostReply.query. \
-        filter(PostReply.deleted == True). \
-        order_by(desc(PostReply.posted_at))
-    post_replies = post_replies.paginate(page=replies_page, per_page=100, error_out=False)
-
-    next_url = url_for('admin.admin_content_deleted', page=posts.next_num) if posts.has_next else None
-    prev_url = url_for('admin.admin_content_deleted', page=posts.prev_num) if posts.has_prev and page != 1 else None
-    next_url_replies = url_for('admin.admin_content_deleted', replies_page=post_replies.next_num) if post_replies.has_next else None
-    prev_url_replies = url_for('admin.admin_content_deleted', replies_page=post_replies.prev_num) if post_replies.has_prev and replies_page != 1 else None
-
-    return render_template('admin/deleted_posts.html', title=_('Deleted content'),
-                           next_url=next_url, prev_url=prev_url,
-                           next_url_replies=next_url_replies, prev_url_replies=prev_url_replies,
-                           posts=posts, post_replies=post_replies,
+                           posts_replies=posts_replies, show=show, days=days,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(),
@@ -1530,9 +1525,10 @@ def admin_instances():
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
     filter = request.args.get('filter', '')
+    sort_by = request.args.get('sort_by', 'domain ASC')
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
-    instances = Instance.query.order_by(Instance.domain)
+    instances = Instance.query
 
     if search:
         instances = instances.filter(Instance.domain.ilike(f"%{search}%"))
@@ -1550,16 +1546,18 @@ def admin_instances():
         elif filter == 'gone_forever':
             instances = instances.filter(Instance.gone_forever == True)
             title = 'Gone forever instances'
+        elif filter == 'blocked':
+            instances = instances.join(BannedInstances, BannedInstances.domain == Instance.domain)
 
-    # Pagination
+    instances = instances.order_by(text('"instance".' + sort_by))
     instances = instances.paginate(page=page,
                                        per_page=250 if current_user.is_authenticated and not low_bandwidth else 50,
                                        error_out=False)
-    next_url = url_for('admin.admin_instances', page=instances.next_num) if instances.has_next else None
-    prev_url = url_for('admin.admin_instances', page=instances.prev_num) if instances.has_prev and page != 1 else None
+    next_url = url_for('admin.admin_instances', page=instances.next_num, search=search, filter=filter, sort_by=sort_by) if instances.has_next else None
+    prev_url = url_for('admin.admin_instances', page=instances.prev_num, search=search, filter=filter, sort_by=sort_by) if instances.has_prev and page != 1 else None
 
     return render_template('admin/instances.html', instances=instances,
-                           title=_(title), search=search,
+                           title=_(title), search=search, filter=filter, sort_by=sort_by,
                            next_url=next_url, prev_url=prev_url,
                            low_bandwidth=low_bandwidth, 
                            moderating_communities=moderating_communities(current_user.get_id()),

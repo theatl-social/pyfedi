@@ -6,15 +6,15 @@
 {% from 'bootstrap/form.html' import render_form %}
 
 {% block app_content %}
-<script src="/static/js/coolfieldset.js"></script>
+<script src="/static/js/coolfieldset.js?v=3"></script>
 <div class="row">
     <div class="col-12 col-md-8 position-relative add_reply main_pane">
-        <fieldset class="coolfieldset mt-4"><legend class="w-auto">Original post</legend>
+        <fieldset id="post_reply_op" class="coolfieldset  {{ 'collapsed' if request.cookies.get('fieldset_post_reply_op_state', 'collapsed') == 'collapsed' }} mt-3"><legend class="w-auto">Original post</legend>
             <h3>{{ post.title }}</h3>
             {{ post.body_html|safe if post.body_html }}
         </fieldset>
         {% if comment %}
-            <fieldset class="coolfieldset mt-4"><legend class="w-auto">Comment you are replying to</legend>
+            <fieldset id="post_reply_comment" class="coolfieldset {{ 'collapsed' if request.cookies.get('fieldset_post_reply_comment_state', 'collapsed') == 'collapsed' }} mt-4 mb-4"><legend class="w-auto">Comment you are replying to</legend>
                 {{ comment.body_html|safe }}
             </fieldset>
         {% endif %}

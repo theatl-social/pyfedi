@@ -16,11 +16,12 @@ from app.constants import *
 from app.email import send_verification_email
 from app.models import Post, Community, CommunityMember, User, PostReply, PostVote, Notification, utcnow, File, Site, \
     Instance, Report, UserBlock, CommunityBan, CommunityJoinRequest, CommunityBlock, Filter, Domain, DomainBlock, \
-    InstanceBlock, NotificationSubscription, PostBookmark, PostReplyBookmark, read_posts, Topic, UserNote
+    InstanceBlock, NotificationSubscription, PostBookmark, PostReplyBookmark, read_posts, Topic, UserNote, \
+    UserExtraField
 from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, \
     FilterForm, KeywordFilterEditForm, RemoteFollowForm, ImportExportForm, UserNoteForm
-from app.user.utils import purge_user_then_delete, unsubscribe_from_community
+from app.user.utils import purge_user_then_delete, unsubscribe_from_community, search_for_user
 from app.utils import get_setting, render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     is_image_url, ensure_directory_exists, gibberish, file_get_contents, community_membership, user_filters_home, \
     user_filters_posts, user_filters_replies, moderating_communities, joined_communities, theme_list, blocked_instances, \
@@ -129,6 +130,15 @@ def edit_profile(actor):
         current_user.about = piefed_markdown_to_lemmy_markdown(form.about.data)
         current_user.about_html = markdown_to_html(form.about.data)
         current_user.matrix_user_id = form.matrixuserid.data
+        current_user.extra_fields = []
+        if form.extra_label_1.data.strip() != '' and form.extra_text_1.data.strip() != '':
+            current_user.extra_fields.append(UserExtraField(label=form.extra_label_1.data.strip(), text=form.extra_text_1.data.strip()))
+        if form.extra_label_2.data.strip() != '' and form.extra_text_2.data.strip() != '':
+            current_user.extra_fields.append(UserExtraField(label=form.extra_label_2.data.strip(), text=form.extra_text_2.data.strip()))
+        if form.extra_label_3.data.strip() != '' and form.extra_text_3.data.strip() != '':
+            current_user.extra_fields.append(UserExtraField(label=form.extra_label_3.data.strip(), text=form.extra_text_3.data.strip()))
+        if form.extra_label_4.data.strip() != '' and form.extra_text_4.data.strip() != '':
+            current_user.extra_fields.append(UserExtraField(label=form.extra_label_4.data.strip(), text=form.extra_text_4.data.strip()))
         current_user.bot = form.bot.data
         profile_file = request.files['profile_file']
         if profile_file and profile_file.filename != '':
@@ -143,8 +153,6 @@ def edit_profile(actor):
             file = save_icon_file(profile_file, 'users')
             if file:
                 current_user.avatar = file
-                cache.delete_memoized(User.avatar_image, current_user)
-                cache.delete_memoized(User.avatar_thumbnail, current_user)
         banner_file = request.files['banner_file']
         if banner_file and banner_file.filename != '':
             # remove old cover
@@ -158,7 +166,6 @@ def edit_profile(actor):
             file = save_banner_file(banner_file, 'users')
             if file:
                 current_user.cover = file
-                cache.delete_memoized(User.cover_image, current_user)
 
         db.session.commit()
 
@@ -169,7 +176,13 @@ def edit_profile(actor):
         form.title.data = current_user.title
         form.email.data = current_user.email
         form.about.data = current_user.about
+        i = 1
+        for extra_field in current_user.extra_fields:
+            getattr(form, f"extra_label_{i}").data = extra_field.label
+            getattr(form, f"extra_text_{i}").data = extra_field.text
+            i += 1
         form.matrixuserid.data = current_user.matrix_user_id
+        form.bot.data = current_user.bot
         form.password_field.data = ''
 
     return render_template('user/edit_profile.html', title=_('Edit profile'), form=form, user=current_user,
@@ -191,8 +204,6 @@ def remove_avatar():
             current_user.avatar_id = None
             db.session.delete(file)
             db.session.commit()
-            cache.delete_memoized(User.avatar_image, current_user)
-            cache.delete_memoized(User.avatar_thumbnail, current_user)
     return _('Avatar removed!')
 
 
@@ -207,7 +218,6 @@ def remove_cover():
             current_user.cover_id = None
             db.session.delete(file)
             db.session.commit()
-            cache.delete_memoized(User.cover_image, current_user)
     return '<div> ' + _('Banner removed!') + '</div>'
 
 
@@ -1363,3 +1373,48 @@ def edit_user_note(actor):
 
     return render_template('user/edit_note.html', title=_('Edit note'), form=form, user=user,
                            menu_topics=menu_topics(), site=g.site)
+
+
+@bp.route('/user/<int:user_id>/preview')
+def user_preview(user_id):
+    user = User.query.get_or_404(user_id)
+    if (user.deleted or user.banned) and current_user.is_anonymous:
+        abort(404)
+    return render_template('user/user_preview.html', user=user)
+
+
+@bp.route('/user/lookup/<person>/<domain>')
+def lookup(person, domain):
+    if domain == current_app.config['SERVER_NAME']:
+        return redirect('/u/' + person)
+
+    exists = User.query.filter_by(user_name=person, ap_domain=domain).first()
+    if exists:
+        return redirect('/u/' + person + '@' + domain)
+    else:
+        address = '@' + person + '@' + domain
+        if current_user.is_authenticated:
+            new_person = None
+
+            try:
+                new_person = search_for_user(address)
+            except Exception as e:
+                if 'is blocked.' in str(e):
+                    flash(_('Sorry, that instance is blocked, check https://gui.fediseer.com/ for reasons.'), 'warning')
+            if not new_person or new_person.banned:
+                flash(_('That person could not be retreived or is banned from %(site)s.', site=g.site.name), 'warning')
+                referrer = request.headers.get('Referer', None)
+                if referrer is not None:
+                    return redirect(referrer)
+                else:
+                    return redirect('/')
+
+            return redirect('/u/' + new_person.ap_id)
+        else:
+            # send them back where they came from
+            flash('Searching for remote people requires login', 'error')
+            referrer = request.headers.get('Referer', None)
+            if referrer is not None:
+                return redirect(referrer)
+            else:
+                return redirect('/')

@@ -9,7 +9,7 @@
             {% endif -%}
         </div>
     {% else -%}
-        <div class="thumbnail{{ ' lbw' if low_bandwidth }}" aria-hidden="true">
+        <div class="col_thumbnail thumbnail{{ ' lbw' if low_bandwidth }}" aria-hidden="true">
             <a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None) }}"><span class="fe fe-poll"></span></a>
         </div>
     {% endif -%}
