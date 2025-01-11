@@ -1201,7 +1201,10 @@ class Post(db.Model):
                     microblog=microblog,
                     posted_at=utcnow()
                     )
-
+        if community.nsfw:
+            post.nsfw = True    # old Lemmy instances ( < 0.19.8 ) allow nsfw content in nsfw communities to be flagged as sfw which makes no sense
+        if community.nsfl:
+            post.nsfl = True
         if 'content' in request_json['object'] and request_json['object']['content'] is not None:
             if 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/html':
                 post.body_html = allowlist_html(request_json['object']['content'])
