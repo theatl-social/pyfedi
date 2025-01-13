@@ -1413,7 +1413,7 @@ class Post(db.Model):
         td = date - self.epoch
         return td.days * 86400 + td.seconds + (float(td.microseconds) / 1000000)
 
-    def calculate_cross_posts(self, delete_only=False, url_changed=False, backfilled=False):
+    def calculate_cross_posts(self, delete_only=False, url_changed=False):
         if not self.url and not delete_only:
             return
 
@@ -1421,11 +1421,11 @@ class Post(db.Model):
             old_cross_posts = Post.query.filter(Post.id.in_(self.cross_posts)).all()
             self.cross_posts.clear()
             for ocp in old_cross_posts:
-                if ocp.cross_posts is not None:
+                if ocp.cross_posts and self.id in ocp.cross_posts:
                     ocp.cross_posts.remove(self.id)
 
-        if delete_only:
             db.session.commit()
+        if delete_only:
             return
 
         if self.url.count('/') < 3 or (self.url.count('/') == 3 and self.url.endswith('/')):
@@ -1436,22 +1436,19 @@ class Post(db.Model):
             # daily posts to this community (e.g. to https://travle.earth/usa or https://www.nytimes.com/games/wordle/index.html) shouldn't be treated as cross-posts
             return
 
-        if not backfilled:
-            new_cross_posts = Post.query.filter(Post.id != self.id, Post.url == self.url, Post.deleted == False,
-                                            Post.posted_at > self.posted_at - timedelta(days=6))
-        else:
-            new_cross_posts = Post.query.filter(Post.id != self.id, Post.url == self.url, Post.deleted == False,
-                                            Post.posted_at > self.posted_at - timedelta(days=3),
-                                            Post.posted_at < self.posted_at + timedelta(days=3))
-        for op in new_cross_posts:
-            if op.cross_posts is None:
-                op.cross_posts = [self.id]
-            else:
-                op.cross_posts.append(self.id)
-            if self.cross_posts is None:
-                self.cross_posts = [op.id]
-            else:
-                self.cross_posts.append(op.id)
+        limit = 9
+        new_cross_posts = Post.query.filter(Post.id != self.id, Post.url == self.url, Post.deleted == False).order_by(desc(Post.id)).limit(limit)
+
+        # other posts: update their cross_posts field with this post.id if they have less than the limit
+        for ncp in new_cross_posts:
+            if ncp.cross_posts is None:
+                ncp.cross_posts = [self.id]
+            elif len(ncp.cross_posts) < limit:
+                ncp.cross_posts.append(self.id)
+
+        # this post: set the cross_posts field to the limited list of ids from the most recent other posts
+        if new_cross_posts:
+            self.cross_posts = [ncp.id for ncp in new_cross_posts]
         db.session.commit()
 
     def delete_dependencies(self):
