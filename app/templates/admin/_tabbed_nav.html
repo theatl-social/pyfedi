@@ -1,7 +1,7 @@
 <div>
     <nav id="block_chooser">
         <div class="nav nav-tabs nav-justified" id="typeTab" role="tablist">
-            <a class="nav-link{% if active_child == 'admin_site' %} active{% endif %}" id="site-profile-tab" type="button" role="tab" href="/admin/site" style="view-transition-name: site">{{ _('Site Profile') }}</a>
+            <a class="nav-link{% if active_child == 'admin_site' %} active{% endif %}" id="site-profile-tab" type="button" role="tab" href="/admin/site" style="view-transition-name: site">{{ _('Site') }}</a>
             <a class="nav-link{% if active_child == 'admin_misc' %} active{% endif %}" id="misc-tab" type="button" role="tab" href="/admin/misc" style="view-transition-name: misc">{{ _('Misc') }}</a>
             <a class="nav-link{% if active_child == 'admin_communities' %} active{% endif %}" id="communities-tab" type="button" role="tab" href="/admin/communities" style="view-transition-name: communities">{{ _('Communities') }}</a>
             <a class="nav-link{% if active_child == 'admin_topics' %} active{% endif %}" id="topics-tab" type="button" role="tab" href="/admin/topics" style="view-transition-name: topics">{{ _('Topics') }}</a>
@@ -16,7 +16,6 @@
             <a class="nav-link{% if active_child == 'admin_newsletter' %} active{% endif %}" id="newsletter-tab" type="button" role="tab" href="/admin/newsletter" style="view-transition-name: newsletter">{{ _('Newsletter') }}</a>
             <a class="nav-link{% if active_child == 'admin_permissions' %} active{% endif %}" id="permissions-tab" type="button" role="tab" href="/admin/permissions" style="view-transition-name: permissions">{{ _('Permissions') }}</a>
             <a class="nav-link{% if active_child == 'admin_activities' %} active{% endif %}" id="activities-tab" type="button" role="tab" href="/admin/activities" style="view-transition-name: activities">{{ _('Activities') }}</a>
-            <!-- <a class="nav-link{% if active_child == 'modlog' %} active{% endif %}" id="modlog-tab" type="button" role="tab" href="/modlog">{{ _('Modlog') }}</a> -->
         </div>
     </nav>
 </div>
