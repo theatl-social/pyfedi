@@ -7,6 +7,7 @@ from datetime import timedelta, datetime, timezone
 from random import randint
 from typing import Union, Tuple, List
 
+import arrow
 import httpx
 import redis
 from flask import current_app, request, g, url_for, json
@@ -1454,10 +1455,22 @@ def ban_user(blocker, blocked, community, core_activity):
         else:
             reason = ''
         new_ban.reason = reason
-        if 'expires' in core_activity and datetime.fromisoformat(core_activity['expires']) > datetime.now(timezone.utc):
-            new_ban.ban_until = core_activity['expires']
-        elif 'endTime' in core_activity and datetime.fromisoformat(core_activity['endTime']) > datetime.now(timezone.utc):
-            new_ban.ban_until = core_activity['endTime']
+
+        ban_until = None
+        if 'expires' in core_activity:
+            try:
+                ban_until = datetime.fromisoformat(core_activity['expires'])
+            except ValueError as e:
+                ban_until = arrow.get(core_activity['expires']).datetime
+        elif 'endTime' in core_activity:
+            try:
+                ban_until = datetime.fromisoformat(core_activity['endTime'])
+            except ValueError as e:
+                ban_until = arrow.get(core_activity['endTime']).datetime
+
+        if ban_until and ban_until > datetime.now(timezone.utc):
+            new_ban.ban_until = ban_until
+
         db.session.add(new_ban)
 
         community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=blocked.id).first()
