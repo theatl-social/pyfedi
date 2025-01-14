@@ -19,7 +19,7 @@
                 <div id="urlUsed"></div>
             {% elif post_type == POST_TYPE_IMAGE %}
                 {% if post.image_id -%}
-                    <div class="post_image" style="view-transition-name: post-{{ post.id }}-image">
+                    <div class="post_image">
                         {% if low_bandwidth -%}
                             <a href="{{ post.image.view_url(resize=True) }}" rel="nofollow ugc"><img src="{{ post.image.medium_url() }}"
                                 alt="{{ post.image.alt_text if post.image.alt_text else post.title }}" fetchpriority="high" referrerpolicy="same-origin"
