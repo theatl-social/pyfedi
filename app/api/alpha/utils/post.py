@@ -1,9 +1,9 @@
 from app import cache
 from app.api.alpha.views import post_view
-from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
+from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
 from app.models import Post, Community, CommunityMember, utcnow
-from app.shared.post import vote_for_post, bookmark_the_post, remove_the_bookmark_from_post, toggle_post_notification
-from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, community_ids_from_instances
+from app.shared.post import vote_for_post, bookmark_the_post, remove_the_bookmark_from_post, toggle_post_notification, make_post
+from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, community_ids_from_instances, is_image_url
 
 from datetime import timedelta
 from sqlalchemy import desc
@@ -148,4 +148,35 @@ def put_post_subscribe(auth, data):
     user_id = toggle_post_notification(post_id, SRC_API, auth)
     post_json = post_view(post=post_id, variant=4, user_id=user_id)
     return post_json
+
+
+def post_post(auth, data):
+    required(['title', 'community_id'], data)
+    integer_expected(['language_id'], data)
+    boolean_expected(['nsfw'], data)
+    string_expected(['string', 'body'], data)
+
+    title = data['title']
+    community_id = data['community_id']
+    body = data['body'] if 'body' in data else ''
+    url = data['url'] if 'url' in data else None
+    nsfw = data['nsfw'] if 'nsfw' in data else False
+    language_id = data['language_id'] if 'language_id' in data else 2       # FIXME: use site language
+    if language_id < 2:
+        language_id = 2
+
+    if not url:
+        type = 'discussion'
+    elif is_image_url(url):
+        type = 'image'
+    else:
+        type = 'link'
+
+    input = {'title': title, 'body': body, 'url': url, 'nsfw': nsfw, 'language_id': language_id, 'notify_author': True}
+    community = Community.query.filter_by(id=community_id).one()
+    user_id, post = make_post(input, community, type, SRC_API, auth)
+
+    post_json = post_view(post=post, variant=4, user_id=user_id)
+    return post_json
+
 
