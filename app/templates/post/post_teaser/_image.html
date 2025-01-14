@@ -1,7 +1,7 @@
 <div class="col post_teaser_body">
     {% include "post/post_teaser/_title.html" %}
     {% if post.image_id and not low_bandwidth -%}
-        <div class="post_teaser_image_preview">
+        <div class="post_teaser_image_preview" style="view-transition-name: post-{{ post.id }}-image">
             <a href="{{ post.image.view_url() }}" rel="nofollow ugc" aria-label="{{ _('View image') }}" target="_blank"><img src="{{ post.image.medium_url() }}"
                     alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ ' blur' if blur_content }}" width="{{ post.image.width }}" height="{{ post.image.height }}" /></a>
         </div>

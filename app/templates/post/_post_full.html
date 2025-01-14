@@ -1,7 +1,7 @@
 <div class="row position-relative post_full">
         <div class="col post_col {% if post.type == POST_TYPE_IMAGE %}post_col post_type_image{% else %}post_type_normal{% endif %}">
             {% include "post/_breadcrumb_nav.html" %}
-            <h1 class="mt-2 post_title" {% if post.language_id and post.language.code != 'en' %}lang="{{ post.language.code }}"{% endif %}>{{ post.title }}
+            <h1 class="mt-2 post_title" style="view-transition-name: {{ post.id }}" {% if post.language_id and post.language.code != 'en' %}lang="{{ post.language.code }}"{% endif %}>{{ post.title }}
                 {% if post.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif -%}
                 {% if post.nsfl -%}<span class="warning_badge nsfl" title="{{ _('Potentially emotionally scarring content') }}">nsfl</span>{% endif -%}
             </h1>
@@ -21,7 +21,7 @@
                 {% if post.edited_at -%} edited <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post.edited_at).humanize(locale=locale) }}{% endif -%}</time></small>
             </p>
             {% if post.type == POST_TYPE_IMAGE -%}
-                <div class="post_image">
+                <div class="post_image" style="view-transition-name: post-{{ post.id }}-image">
                     {% if post.image_id -%}
                         {% if low_bandwidth -%}
                             <a href="{{ post.image.view_url(resize=True) }}" rel="nofollow ugc"><img src="{{ post.image.medium_url() }}"
@@ -90,7 +90,7 @@
                     <div style="padding-bottom: 56.25%; position: relative;"><iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.peertube_embed() }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
                 {% endif -%}
             {% elif post.type == POST_TYPE_IMAGE -%}
-                <div class="post_image">
+                <div class="post_image" style="view-transition-name: post-{{ post.id }}-image">
                     <a href="{{ post.image.view_url() }}" target="_blank" class="post_link" rel="nofollow ugc"><img src="{{ post.image.view_url() }}" alt="{{ post.image.alt_text if post.image.alt_text else post.title }}"
                             width="{{ post.image.width }}" height="{{ post.image.height }}" loading="lazy" /></a>
                 </div>
