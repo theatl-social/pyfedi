@@ -1,7 +1,7 @@
 from app.api.alpha import bp
 from app.api.alpha.utils import get_site, post_site_block, \
                                 get_search, \
-                                get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, post_post, \
+                                get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, post_post, put_post, \
                                 get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, put_reply, post_reply_delete, post_reply_report, \
                                 get_community_list, get_community, post_community_follow, post_community_block, \
                                 get_user, post_user_block
@@ -171,6 +171,18 @@ def post_alpha_post():
         return jsonify({"error": str(ex)}), 400
 
 
+@bp.route('/api/alpha/post', methods=['PUT'])
+def put_alpha_post():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(put_post(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
 # Reply
 @bp.route('/api/alpha/comment/list', methods=['GET'])
 def get_alpha_comment_list():
@@ -333,7 +345,6 @@ def alpha_community():
     return jsonify({"error": "not_yet_implemented"}), 400
 
 # Post - not yet implemented
-@bp.route('/api/alpha/post', methods=['PUT'])
 @bp.route('/api/alpha/post/delete', methods=['POST'])
 @bp.route('/api/alpha/post/remove', methods=['POST'])
 @bp.route('/api/alpha/post/lock', methods=['POST'])

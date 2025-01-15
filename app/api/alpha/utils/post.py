@@ -1,9 +1,10 @@
 from app import cache
 from app.api.alpha.views import post_view
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
+from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO
 from app.models import Post, Community, CommunityMember, utcnow
-from app.shared.post import vote_for_post, bookmark_the_post, remove_the_bookmark_from_post, toggle_post_notification, make_post
-from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, community_ids_from_instances, is_image_url
+from app.shared.post import vote_for_post, bookmark_the_post, remove_the_bookmark_from_post, toggle_post_notification, make_post, edit_post
+from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, community_ids_from_instances, is_image_url, is_video_url
 
 from datetime import timedelta
 from sqlalchemy import desc
@@ -154,7 +155,7 @@ def post_post(auth, data):
     required(['title', 'community_id'], data)
     integer_expected(['language_id'], data)
     boolean_expected(['nsfw'], data)
-    string_expected(['string', 'body'], data)
+    string_expected(['title', 'body', 'url'], data)
 
     title = data['title']
     community_id = data['community_id']
@@ -169,6 +170,8 @@ def post_post(auth, data):
         type = 'discussion'
     elif is_image_url(url):
         type = 'image'
+    elif is_video_url(url):
+        type = 'video'
     else:
         type = 'link'
 
@@ -180,3 +183,33 @@ def post_post(auth, data):
     return post_json
 
 
+def put_post(auth, data):
+    required(['post_id'], data)
+    integer_expected(['language_id'], data)
+    boolean_expected(['nsfw'], data)
+    string_expected(['title', 'body', 'url'], data)
+
+    post_id = data['post_id']
+    title = data['title']
+    body = data['body'] if 'body' in data else ''
+    url = data['url'] if 'url' in data else None
+    nsfw = data['nsfw'] if 'nsfw' in data else False
+    language_id = data['language_id'] if 'language_id' in data else 2       # FIXME: use site language
+    if language_id < 2:
+        language_id = 2
+
+    if not url:
+        type = POST_TYPE_ARTICLE
+    elif is_image_url(url):
+        type = POST_TYPE_IMAGE
+    elif is_video_url(url):
+        type = POST_TYPE_VIDEO
+    else:
+        type = POST_TYPE_LINK
+
+    input = {'title': title, 'body': body, 'url': url, 'nsfw': nsfw, 'language_id': language_id, 'notify_author': True}
+    post = Post.query.filter_by(id=post_id).one()
+    user_id, post = edit_post(input, post, type, SRC_API, auth)
+
+    post_json = post_view(post=post, variant=4, user_id=user_id)
+    return post_json
