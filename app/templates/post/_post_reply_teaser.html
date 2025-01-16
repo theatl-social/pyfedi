@@ -28,7 +28,7 @@
     <div class="row">
         <div class="col-auto comment_author">
             <span class="visually-hidden">by</span>
-            {{ render_username(post_reply.author, htmx_redirect_back_to=request.url + '#comment_' + str(post_reply.id)) }}
+            {{ render_username(post_reply.author, htmx_redirect_back_to=request.path + '#comment_' + str(post_reply.id)) }}
             {% if post_reply.author.id == post_reply.post.author.id -%}
                 <span title="Submitter of original post" aria-label="{{ _('Post creator') }}" class="small"> [OP]</span>
             {% endif -%}
@@ -55,9 +55,9 @@
         <div class="col-12">
             {% if post_reply.deleted and not show_deleted -%}
                 {% if post_reply.deleted_by is none or post_reply.deleted_by != post_reply.user_id -%}
-                    <p>Deleted by moderator</p>
+                    <p>{{ _('Deleted by moderator') }}</p>
                 {% else -%}
-                    <p>Deleted by author</p>
+                    <p>{{ _('Deleted by author') }}</p>
                 {% endif -%}
             {% else -%}
                 {{ post_reply.body_html | community_links | person_links | safe }}

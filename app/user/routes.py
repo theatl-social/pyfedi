@@ -1346,7 +1346,9 @@ def user_read_posts_delete():
 @login_required
 def edit_user_note(actor):
     actor = actor.strip()
-    return_to = request.args.get('return_to')
+    return_to = request.args.get('return_to', '').strip()
+    if return_to.startswith('http'):
+        abort(401)
     if '@' in actor:
         user: User = User.query.filter_by(ap_id=actor, deleted=False).first()
     else:

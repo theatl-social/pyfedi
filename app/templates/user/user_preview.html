@@ -55,7 +55,7 @@
             </div>
             {% if current_user.is_authenticated -%}
                 <div class="col-auto text-center">
-                    <a href="{{ url_for('user.edit_user_note', actor=user.link(), return_to=return_to) }}" class="btn btn-secondary btn-sm">{{ _('Edit note') }}</a>
+                    <a href="{{ url_for('user.edit_user_note', actor=user.link(), return_to=return_to) }}" class="btn btn-primary btn-sm">{{ _('Edit note') }}</a>
                 </div>
             {% endif -%}
         </div>
