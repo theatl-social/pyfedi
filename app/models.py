@@ -1457,7 +1457,7 @@ class Post(db.Model):
                 ncp.cross_posts.append(self.id)
 
         # this post: set the cross_posts field to the limited list of ids from the most recent other posts
-        if new_cross_posts:
+        if new_cross_posts.count() > 0:
             self.cross_posts = [ncp.id for ncp in new_cross_posts]
         db.session.commit()
 
