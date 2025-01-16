@@ -1346,6 +1346,7 @@ def user_read_posts_delete():
 @login_required
 def edit_user_note(actor):
     actor = actor.strip()
+    return_to = request.args.get('return_to')
     if '@' in actor:
         user: User = User.query.filter_by(ap_id=actor, deleted=False).first()
     else:
@@ -1365,22 +1366,25 @@ def edit_user_note(actor):
         cache.delete_memoized(User.get_note, user, current_user)
 
         flash(_('Your changes have been saved.'), 'success')
-        goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
-        return redirect(goto)
+        if return_to:
+            return redirect(return_to)
+        else:
+            return redirect(f'/u/{actor}')
 
     elif request.method == 'GET':
         form.note.data = user.get_note(current_user)
 
-    return render_template('user/edit_note.html', title=_('Edit note'), form=form, user=user,
+    return render_template('user/edit_note.html', title=_('Edit note'), form=form, user=user, return_to=return_to,
                            menu_topics=menu_topics(), site=g.site)
 
 
 @bp.route('/user/<int:user_id>/preview')
 def user_preview(user_id):
     user = User.query.get_or_404(user_id)
+    return_to = request.args.get('return_to')
     if (user.deleted or user.banned) and current_user.is_anonymous:
         abort(404)
-    return render_template('user/user_preview.html', user=user)
+    return render_template('user/user_preview.html', user=user, return_to=return_to)
 
 
 @bp.route('/user/lookup/<person>/<domain>')

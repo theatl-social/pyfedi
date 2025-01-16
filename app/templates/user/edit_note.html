@@ -42,6 +42,10 @@
                             <button id="vomit" class="emojitoggle">🤮</button>
                         </div>
                         {{ render_form(form) }}
+                        {% if return_to -%}
+                            <p></p>
+                            <a href="{{ return_to }}" class="go_back">{{ _('Back') }}</a>
+                        {% endif -%}
                         <div class="row mt-5"><small class="field_hint">{{ _('This note appears next to their username. It\'s meant just for you and not displayed to anyone else.') }}</small></div>
                     </div>
                 </div>
