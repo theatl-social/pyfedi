@@ -1087,7 +1087,7 @@ class User(UserMixin, db.Model):
         if user_note:
             return user_note.body
         else:
-            return None
+            return ''
 
 
 class ActivityLog(db.Model):
