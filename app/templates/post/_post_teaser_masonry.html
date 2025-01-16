@@ -11,7 +11,7 @@
 {% else %}
     {% set post_title = post.title.replace('`', "'") %}
     <div class="item{{ ' reported' if post.reports > 0 and current_user.is_authenticated and post.community.is_moderator() }}{{ ' blocked' if content_blocked }}{{ ' blur' if blur_content }}"
-        {% if content_blocked %} title="{{ _('Filtered: ') }}{{ content_blocked }}"{% endif %}>
+        {% if content_blocked %} title="{{ _('Filtered: ') }}{{ content_blocked }}"{% endif %} id="post_{{ post.id }}">
         {% if post.image_id and not (post.url and (post.url.endswith('.mp4') or post.url.endswith('.webm'))) %}
             <div class="masonry_thumb" title="{{ post_title }}">
                 {% if post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO %}

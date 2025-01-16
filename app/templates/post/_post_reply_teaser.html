@@ -28,7 +28,7 @@
     <div class="row">
         <div class="col-auto comment_author">
             <span class="visually-hidden">by</span>
-            {{ render_username(post_reply.author) }}
+            {{ render_username(post_reply.author, htmx_redirect_back_to=request.url + '#comment_' + str(post_reply.id)) }}
             {% if post_reply.author.id == post_reply.post.author.id -%}
                 <span title="Submitter of original post" aria-label="{{ _('Post creator') }}" class="small"> [OP]</span>
             {% endif -%}
