@@ -2569,21 +2569,7 @@ def verify_object_from_source(request_json):
     return request_json
 
 
-# This is for followers on microblog apps
-# Used to let them know a Poll has been updated with a new vote
-# The plan is to also use it for activities on local user's posts that aren't understood by being Announced (anything beyond the initial Create)
-# This would need for posts to have things like a 'Replies' collection and a 'Likes' collection, so these can be downloaded when the post updates
-# Using collecions like this (as PeerTube does) circumvents the problem of not having a remote user's private key.
-# The problem of what to do for remote user's activity on a remote user's post in a local community still exists (can't Announce it, can't inform of post update)
 def inform_followers_of_post_update(post_id: int, sending_instance_id: int):
-    if current_app.debug:
-        inform_followers_of_post_update_task(post_id, sending_instance_id)
-    else:
-        inform_followers_of_post_update_task.delay(post_id, sending_instance_id)
-
-
-@celery.task
-def inform_followers_of_post_update_task(post_id: int, sending_instance_id: int):
     post = Post.query.get(post_id)
     page_json = post_to_page(post)
     page_json['updated'] = ap_datetime(utcnow())
