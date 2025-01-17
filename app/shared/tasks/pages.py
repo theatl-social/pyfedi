@@ -23,6 +23,7 @@ import re
   'content':
   'mediaType':
   'source': {}
+  'inReplyTo':      (only added for Mentions and user followers, as Note with inReplyTo: None)
   'published':
   'updated':        (inner oject of Update only)
   'language': {}
@@ -48,7 +49,6 @@ import re
   'cc': []
   '@context':       (outer object only)
   'audience':       (not in Announce)
-  'tag': []         (not in Announce)
 }
 """
 
@@ -118,7 +118,7 @@ def send_post(user_id, post_id, edit=False):
 
     # local_only communities can also be used to send activity to User Followers
     # return now though, if there aren't any
-    followers = UserFollower.query.filter_by(local_user_id=post.user_id).first()
+    followers = UserFollower.query.filter_by(local_user_id=post.user_id).all()
     if not followers and community.local_only:
         return
 
@@ -197,8 +197,7 @@ def send_post(user_id, post_id, edit=False):
       'to': to,
       'cc': cc,
       '@context': default_context(),
-      'audience': community.public_url(),
-      'tag': tag
+      'audience': community.public_url()
     }
 
     domains_sent_to = [current_app.config['SERVER_NAME']]
@@ -247,15 +246,9 @@ def send_post(user_id, post_id, edit=False):
             post_request(community.ap_inbox_url, create, user.private_key, user.public_url() + '#main-key')
             domains_sent_to.append(community.instance.domain)
 
-        # send copy of the Create to anyone else Mentioned in post, but not on an instance that's already sent to.
-        if '@context' not in create:
-            create['@context'] = default_context()
-        for recipient in recipients:
-            if recipient.instance.domain not in domains_sent_to:
-                post_request(recipient.instance.inbox, create, user.private_key, user.public_url() + '#main-key')
-                domains_sent_to.append(recipient.instance.domain)
-
-    # send amended copy of the Create to anyone who is following the User, but hasn't already received something
+    # amend copy of the Create, for anyone Mentioned in post body or who is following the user, to a format more likely to be understood
+    if '@context' not in create:
+        create['@context'] = default_context()
     if 'name' in page:
         del page['name']
     note = page
@@ -263,13 +256,26 @@ def send_post(user_id, post_id, edit=False):
         note['type'] = 'Note'
     if post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO:
         note['content'] = '<p><a href=' + post.url + '>' + post.title + '</a></p>'
-    else:
+    elif post.type != POST_TYPE_POLL:
         note['content'] = '<p>' + post.title + '</p>'
     if post.body_html:
         note['content'] = note['content'] + post.body_html
     note['inReplyTo'] = None
     create['object'] = note
+    if not community.local_only:
+        for recipient in recipients:
+            if recipient.instance.domain not in domains_sent_to:
+                post_request(recipient.instance.inbox, create, user.private_key, user.public_url() + '#main-key')
+                domains_sent_to.append(recipient.instance.domain)
 
+    if not followers:
+        return
+
+    # send the amended copy of the Create to anyone who is following the User, but hasn't already received something
+    for follower in followers:
+        user_details = User.query.get(follower.remote_user_id)
+        if user_details:
+            create['cc'].append(user_details.public_url())
     instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower, UserFollower.remote_user_id == User.id)
     instances = instances.filter(UserFollower.local_user_id == post.user_id).filter(Instance.gone_forever == False)
     for instance in instances:
