@@ -1998,6 +1998,10 @@ form h5 {
   margin-bottom: 15px;
 }
 
+#typeTab a:not(.btn):active {
+  border-width: 1px;
+}
+
 /* high contrast */
 @media (prefers-contrast: more) {
   :root {
