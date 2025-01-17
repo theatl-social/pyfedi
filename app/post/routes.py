@@ -25,6 +25,7 @@ from app.models import Post, PostReply, \
     Topic, User, Instance, NotificationSubscription, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
     PostReplyBookmark, CommunityBlock, File
 from app.post import bp
+from app.shared.tasks import task_selector
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
     request_etag_matches, ip_address, user_ip_banned, instance_banned, \
@@ -471,6 +472,43 @@ def add_reply(post_id: int, comment_id: int):
                                joined_communities = joined_communities(current_user.id), community=post.community,
                                SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
+
+
+@bp.route('/post/<int:post_id>/comment/<int:comment_id>/reply_inline', methods=['GET', 'POST'])
+@login_required
+def add_reply_inline(post_id: int, comment_id: int):
+    if current_user.banned or current_user.ban_comments:
+        return _('You have been banned.')
+    post = Post.query.get_or_404(post_id)
+
+    if not post.comments_enabled:
+        return _('Comments have been disabled.')
+
+    in_reply_to = PostReply.query.get_or_404(comment_id)
+
+    if in_reply_to.author.has_blocked_user(current_user.id):
+        return _('You cannot reply to %(name)s', name=in_reply_to.author.display_name())
+
+    if request.method == 'GET':
+        return render_template('post/add_reply_inline.html', post_id=post_id, comment_id=comment_id, languages=languages_for_form())
+    else:
+        content = request.form.get('body', '').strip()
+        language_id = int(request.form.get('language_id'))
+
+        if content == '':
+            abort(406)  # stop htmx from replacing the form with anything
+        reply = PostReply.new(current_user, post, in_reply_to=in_reply_to, body=piefed_markdown_to_lemmy_markdown(content),
+                              body_html=markdown_to_html(content), notify_author=True,
+                              language_id=language_id)
+
+        current_user.language_id = language_id
+        reply.ap_id = reply.profile_id()
+        db.session.commit()
+
+        # Federate the reply
+        task_selector('make_reply', user_id=current_user.id, reply_id=reply.id, parent_id=in_reply_to.id)
+
+        return render_template('post/add_reply_inline_result.html', post_reply=reply)
 
 
 @bp.route('/post/<int:post_id>/options_menu', methods=['GET'])

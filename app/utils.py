@@ -1143,7 +1143,7 @@ def remove_tracking_from_link(url):
 
 
 def show_ban_message():
-    flash('You have been banned.', 'error')
+    flash(_('You have been banned.'), 'error')
     logout_user()
     resp = make_response(redirect(url_for('main.index')))
     resp.set_cookie('sesion', '17489047567495', expires=datetime(year=2099, month=12, day=30))

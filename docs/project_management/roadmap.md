@@ -2,7 +2,7 @@
 
 The following are our goals for 2025. We brainstormed ideas then [ranked them by voting](https://piefed.social/c/piefed_2025?sort=top).
 
-[Inline commenting](https://piefed.social/post/411646)
+✅ [Inline commenting](https://piefed.social/post/411646)
 
 [Cross-posting](https://piefed.social/post/411644)
 

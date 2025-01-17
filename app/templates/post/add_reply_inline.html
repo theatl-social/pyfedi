@@ -1,0 +1,24 @@
+<form>
+    <div class="row">
+        <div class="col">
+                <textarea name="body" class="form-control" rows="5" autofocus="autofocus" required="required" aria-required="true"></textarea>
+        </div>
+    </div>
+    <div class="row mb-3">
+        <div class="col-8">
+            <a href="#"
+                   class="btn btn-primary mt-2"
+                   hx-post="{{ url_for('post.add_reply_inline', post_id=post_id, comment_id=comment_id) }}"
+                   hx-target="#reply_to_{{ comment_id }}"
+                   hx-swap="outerHTML"
+                >{{ _('Comment') }}</a>
+        </div>
+        <div class="col-4 text-right">
+            <select name="language_id" class="form-select mt-2">
+                {% for language in languages %}
+                    <option value="{{ language[0] }}">{{ language[1] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+</form>
