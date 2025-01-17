@@ -4,6 +4,9 @@
   no_collapse: Don't collapse for admin and moderator views
   show_deleted: Show deleted content (for admin views)
   children: replies to this reply
+
+  NB: there is a clone of this file, add_reply_inline_result.html which is used for rendering the result of the ajax call
+      to create a new comment - that file needs to be kept in sync with this one.
 #}
 {% if current_user.is_authenticated -%}
     {% set collapsed = ((post_reply.score <= current_user.reply_collapse_threshold) or post_reply.deleted)
