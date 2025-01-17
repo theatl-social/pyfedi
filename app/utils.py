@@ -557,7 +557,14 @@ def blocked_users(user_id) -> List[int]:
 def blocked_phrases() -> List[str]:
     site = Site.query.get(1)
     if site.blocked_phrases:
-        return [phrase for phrase in site.blocked_phrases.split('\n') if phrase != '']
+        blocked_phrases = []
+        for phrase in site.blocked_phrases.split('\n'):
+            if phrase != '':
+                if phrase.endswith('\r'):
+                    blocked_phrases.append(phrase[:-1])
+                else:
+                    blocked_phrases.append(phrase)
+        return blocked_phrases
     else:
         return []
 
