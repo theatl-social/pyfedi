@@ -12,7 +12,7 @@ from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_MEMBERS, DOWNVOTE
     DOWNVOTE_ACCEPT_TRUSTED
 from app.models import Community, utcnow
 from app.utils import domain_from_url, MultiCheckboxField
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, UnidentifiedImageError
 from io import BytesIO
 import pytesseract
 
@@ -172,6 +172,8 @@ class CreateImageForm(CreatePostForm):
                     import pillow_avif
                 image_text = pytesseract.image_to_string(Image.open(BytesIO(uploaded_file.read())).convert('L'))
             except FileNotFoundError as e:
+                image_text = ''
+            except UnidentifiedImageError as e:
                 image_text = ''
             if 'Anonymous' in image_text and (
                     'No.' in image_text or ' N0' in image_text):  # chan posts usually contain the text 'Anonymous' and ' No.12345'
