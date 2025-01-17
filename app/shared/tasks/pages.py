@@ -1,7 +1,7 @@
 from app import celery, db
 from app.activitypub.signature import default_context, post_request
 from app.constants import POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, POST_TYPE_VIDEO, POST_TYPE_POLL, MICROBLOG_APPS
-from app.models import CommunityBan, Instance, Notification, Post, User, UserFollower, utcnow
+from app.models import CommunityBan, Instance, Notification, Poll, PollChoice, Post, User, UserFollower, utcnow
 from app.user.utils import search_for_user
 from app.utils import gibberish, instance_banned, ap_datetime
 
@@ -113,7 +113,13 @@ def send_post(user_id, post_id, edit=False):
                 db.session.add(notification)
                 db.session.commit()
 
-    if community.local_only or not community.instance.online():
+    if not community.instance.online():
+        return
+
+    # local_only communities can also be used to send activity to User Followers
+    # return now though, if there aren't any
+    followers = UserFollower.query.filter_by(local_user_id=post.user_id).first()
+    if not followers and community.local_only:
         return
 
     banned = CommunityBan.query.filter_by(user_id=user_id, community_id=community.id).first()
@@ -146,7 +152,7 @@ def send_post(user_id, post_id, edit=False):
       'cc': cc,
       'tag': tag,
       'audience': community.public_url(),
-      'content': post.body_html if post.type != POST_TYPE_POLL else '<p>' + post.title + '</p>',
+      'content': post.body_html if post.type != POST_TYPE_POLL else '<p>' + post.title + '</p>' + post.body_html,
       'mediaType': 'text/html',
       'source': source,
       'published': ap_datetime(post.posted_at),
@@ -161,7 +167,7 @@ def send_post(user_id, post_id, edit=False):
     if post.type != POST_TYPE_POLL:
         page['name'] = post.title
     if edit:
-        page['updated']: ap_datetime(utcnow())
+        page['updated'] = ap_datetime(utcnow())
     if post.image_id:
         image_url = ''
         if post.image.source_url:
@@ -174,10 +180,10 @@ def send_post(user_id, post_id, edit=False):
     if post.type == POST_TYPE_POLL:
         poll = Poll.query.filter_by(post_id=post.id).first()
         page['endTime'] = ap_datetime(poll.end_poll)
-        page['votersCount'] = 0
+        page['votersCount'] = poll.total_votes() if edit else 0
         choices = []
         for choice in PollChoice.query.filter_by(post_id=post.id).all():
-            choices.append({'type': 'Note', 'name': choice.choice_text, 'replies': {'type': 'Collection', 'totalItems': 0}})
+            choices.append({'type': 'Note', 'name': choice.choice_text, 'replies': {'type': 'Collection', 'totalItems': choice.num_votes if edit else 0}})
         page['oneOf' if poll.mode == 'single' else 'anyOf'] = choices
 
     activity = 'create' if not edit else 'update'
@@ -191,64 +197,70 @@ def send_post(user_id, post_id, edit=False):
       'to': to,
       'cc': cc,
       '@context': default_context(),
+      'audience': community.public_url(),
       'tag': tag
     }
 
     domains_sent_to = [current_app.config['SERVER_NAME']]
 
-    # send the activity as an Announce if the community is local, or as a Create if not
-    if community.is_local():
-        del create['@context']
+    # if the community is local, and remote instance is something like Lemmy, Announce the activity
+    # if the community is local, and remote instance is something like Mastodon, Announce creates (so the community Boosts it), but send updates directly and from the user
+    # Announce of Poll doesn't work for Mastodon, so don't add domain to domains_sent_to, so they receive it if they're also following the User or they get Mentioned
+    # if the community is remote, send activity directly
+    if not community.local_only:
+        if community.is_local():
+            del create['@context']
 
-        announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
-        actor = community.public_url()
-        cc = [community.ap_followers_url]
-        group_announce = {
-          'id': announce_id,
-          'type': 'Announce',
-          'actor': community.public_url(),
-          'object': create,
-          'to': to,
-          'cc': cc,
-          '@context': default_context()
-        }
-        microblog_announce = {
-          'id': announce_id,
-          'type': 'Announce',
-          'actor': community.public_url(),
-          'object': post.ap_id,
-          'to': to,
-          'cc': cc,
-          '@context': default_context()
-        }
-        for instance in community.following_instances():
-            if instance.inbox and instance.online() and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
-                if instance.software in MICROBLOG_APPS:
-                    post_request(instance.inbox, microblog_announce, community.private_key, community.public_url() + '#main-key')
-                else:
-                    post_request(instance.inbox, group_announce, community.private_key, community.public_url() + '#main-key')
-                domains_sent_to.append(instance.domain)
-    else:
-        post_request(community.ap_inbox_url, create, user.private_key, user.public_url() + '#main-key')
-        domains_sent_to.append(community.instance.domain)
+            announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+            actor = community.public_url()
+            cc = [community.ap_followers_url]
+            group_announce = {
+              'id': announce_id,
+              'type': 'Announce',
+              'actor': community.public_url(),
+              'object': create,
+              'to': to,
+              'cc': cc,
+              '@context': default_context()
+            }
+            microblog_announce = {
+              'id': announce_id,
+              'type': 'Announce',
+              'actor': community.public_url(),
+              'object': post.ap_id,
+              'to': to,
+              'cc': cc,
+              '@context': default_context()
+            }
+            for instance in community.following_instances():
+                if instance.inbox and instance.online() and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
+                    if instance.software in MICROBLOG_APPS:
+                        if activity == 'create':
+                            post_request(instance.inbox, microblog_announce, community.private_key, community.public_url() + '#main-key')
+                        else:
+                            post_request(instance.inbox, create, user.private_key, user.public_url() + '#main-key')
+                    else:
+                        post_request(instance.inbox, group_announce, community.private_key, community.public_url() + '#main-key')
+                    if post.type < POST_TYPE_POLL:
+                          domains_sent_to.append(instance.domain)
+        else:
+            post_request(community.ap_inbox_url, create, user.private_key, user.public_url() + '#main-key')
+            domains_sent_to.append(community.instance.domain)
 
-    # send copy of the Create to anyone else Mentioned in post, but not on an instance that's already sent to.
-    if '@context' not in create:
-        create['@context'] = default_context()
-    for recipient in recipients:
-        if recipient.instance.domain not in domains_sent_to:
-            post_request(recipient.instance.inbox, create, user.private_key, user.public_url() + '#main-key')
-            domains_sent_to.append(recipient.instance.domain)
+        # send copy of the Create to anyone else Mentioned in post, but not on an instance that's already sent to.
+        if '@context' not in create:
+            create['@context'] = default_context()
+        for recipient in recipients:
+            if recipient.instance.domain not in domains_sent_to:
+                post_request(recipient.instance.inbox, create, user.private_key, user.public_url() + '#main-key')
+                domains_sent_to.append(recipient.instance.domain)
 
     # send amended copy of the Create to anyone who is following the User, but hasn't already received something
-    followers = UserFollower.query.filter_by(local_user_id=post.user_id)
-    if not followers:
-        return
-
     if 'name' in page:
         del page['name']
     note = page
-    note['type'] = 'Note'
+    if note['type'] == 'Page':
+        note['type'] = 'Note'
     if post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO:
         note['content'] = '<p><a href=' + post.url + '>' + post.title + '</a></p>'
     else:

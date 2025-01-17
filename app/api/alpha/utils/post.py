@@ -166,14 +166,8 @@ def post_post(auth, data):
     if language_id < 2:
         language_id = 2
 
-    if not url:
-        type = 'discussion'
-    elif is_image_url(url):
-        type = 'image'
-    elif is_video_url(url):
-        type = 'video'
-    else:
-        type = 'link'
+    # change when Polls are supported
+    type = None
 
     input = {'title': title, 'body': body, 'url': url, 'nsfw': nsfw, 'language_id': language_id, 'notify_author': True}
     community = Community.query.filter_by(id=community_id).one()
@@ -198,14 +192,8 @@ def put_post(auth, data):
     if language_id < 2:
         language_id = 2
 
-    if not url:
-        type = POST_TYPE_ARTICLE
-    elif is_image_url(url):
-        type = POST_TYPE_IMAGE
-    elif is_video_url(url):
-        type = POST_TYPE_VIDEO
-    else:
-        type = POST_TYPE_LINK
+    # change when Polls are supported
+    type = None
 
     input = {'title': title, 'body': body, 'url': url, 'nsfw': nsfw, 'language_id': language_id, 'notify_author': True}
     post = Post.query.filter_by(id=post_id).one()
