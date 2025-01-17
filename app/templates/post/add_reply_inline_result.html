@@ -1,5 +1,8 @@
 {# This file is similar to _post_reply_teaser.html except it includes the render_username macro and removes
-   a few things that aren't needed on brand new comments #}
+   a few things that aren't needed on brand new comments.
+   We need to include that macro because this template is used as part of a full page (it's an ajax response) so
+   it does not inherit from base.html where the macro is normally defined.
+#}
 {% macro render_username(user, add_domain=True, htmx_redirect_back_to=None) -%}
 <span class="render_username">
     {% if user.deleted -%}

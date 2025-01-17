@@ -423,6 +423,7 @@ def continue_discussion(post_id, comment_id):
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/reply', methods=['GET', 'POST'])
 @login_required
 def add_reply(post_id: int, comment_id: int):
+    # this route is used when JS is disabled
     if current_user.banned or current_user.ban_comments:
         return show_ban_message()
     post = Post.query.get_or_404(post_id)
@@ -477,6 +478,8 @@ def add_reply(post_id: int, comment_id: int):
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/reply_inline', methods=['GET', 'POST'])
 @login_required
 def add_reply_inline(post_id: int, comment_id: int):
+    # this route is called by htmx and returns a html fragment representing a form that can be submitted to make a new reply
+    # it also accepts the POST from that form and makes the reply
     if current_user.banned or current_user.ban_comments:
         return _('You have been banned.')
     post = Post.query.get_or_404(post_id)
