@@ -940,6 +940,16 @@ class User(UserMixin, db.Model):
         else:
             self.attitude = None
 
+    def get_num_upvotes(self):
+        post_votes = db.session.execute(text('SELECT COUNT(*) FROM "post_vote" WHERE user_id = :user_id AND effect > 0'), {'user_id': self.id}).scalar()
+        post_reply_votes = db.session.execute(text('SELECT COUNT(*) FROM "post_reply_vote" WHERE user_id = :user_id AND effect > 0'), {'user_id': self.id}).scalar()
+        return post_votes + post_reply_votes
+
+    def get_num_downvotes(self):
+        post_votes = db.session.execute(text('SELECT COUNT(*) FROM "post_vote" WHERE user_id = :user_id AND effect < 0'), {'user_id': self.id}).scalar()
+        post_reply_votes = db.session.execute(text('SELECT COUNT(*) FROM "post_reply_vote" WHERE user_id = :user_id AND effect < 0'), {'user_id': self.id}).scalar()
+        return post_votes + post_reply_votes
+
     def recalculate_post_stats(self, posts=True, replies=True):
         if posts:
             self.post_count = db.session.execute(text('SELECT COUNT(id) as c FROM "post" WHERE user_id = :user_id AND deleted = false'),
