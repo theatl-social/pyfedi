@@ -672,6 +672,7 @@ def process_inbox_request(request_json, store_ap_json):
                     if community_membership(user, community) != SUBSCRIPTION_MEMBER:
                         member = CommunityMember(user_id=user.id, community_id=community.id)
                         db.session.add(member)
+                        community.subscriptions_count += 1
                         db.session.commit()
                         cache.delete_memoized(community_membership, user, community)
                         # send accept message to acknowledge the follow
