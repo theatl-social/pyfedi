@@ -42,7 +42,6 @@ import re
   'cc': []
   '@context':       (outer object only)
   'audience':       (not in Announce)
-  'tag': []         (not in Announce)
 }
 """
 
@@ -162,8 +161,7 @@ def send_reply(user_id, reply_id, parent_id, edit=False):
       'to': to,
       'cc': cc,
       '@context': default_context(),
-      'audience': community.public_url(),
-      'tag': tag
+      'audience': community.public_url()
     }
 
     domains_sent_to = [current_app.config['SERVER_NAME']]
