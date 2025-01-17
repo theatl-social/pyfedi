@@ -7,6 +7,8 @@
 {% set active_child = 'admin_topics' %}
 
 {% block app_content %}
+{% include 'admin/_tabbed_nav.html' %}
+<br>
 {% macro render_topic(topic, depth) %}
     <tr>
         <td nowrap="nowrap">{{ '--' * depth }} <a href="/topic/{{ topic['topic'].path() }}">{{ topic['topic'].name }}</a></td>
