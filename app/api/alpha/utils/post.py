@@ -167,7 +167,9 @@ def post_post(auth, data):
         language_id = 2
 
     # change when Polls are supported
-    type = None
+    type = POST_TYPE_ARTICLE
+    if url:
+        type = POST_TYPE_LINK
 
     input = {'title': title, 'body': body, 'url': url, 'nsfw': nsfw, 'language_id': language_id, 'notify_author': True}
     community = Community.query.filter_by(id=community_id).one()
@@ -193,11 +195,13 @@ def put_post(auth, data):
         language_id = 2
 
     # change when Polls are supported
-    type = None
+    type = POST_TYPE_ARTICLE
+    if url:
+        type = POST_TYPE_LINK
 
     input = {'title': title, 'body': body, 'url': url, 'nsfw': nsfw, 'language_id': language_id, 'notify_author': True}
     post = Post.query.filter_by(id=post_id).one()
-    user_id, post = edit_post(input, post, type, SRC_API, auth)
+    user_id, post = edit_post(input, post, type, SRC_API, auth=auth)
 
     post_json = post_view(post=post, variant=4, user_id=user_id)
     return post_json

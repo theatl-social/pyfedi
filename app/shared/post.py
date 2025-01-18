@@ -275,9 +275,10 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
                 if remove_file:
                     remove_file.delete_from_disk()
                 post.image_id = None
-            domain = domain_from_url(post.url)
-            if domain:
-                domain.post_count -= 1
+            if post.url:
+                domain = domain_from_url(post.url)
+                if domain:
+                    domain.post_count -= 1
 
         # remove any old tags
         db.session.execute(text('DELETE FROM "post_tag" WHERE post_id = :post_id'), {'post_id': post.id})
