@@ -1483,7 +1483,7 @@ def ban_user(blocker, blocked, community, core_activity):
 
             # Notify banned person
             notify = Notification(title=shorten_string('You have been banned from ' + community.title),
-                                  url=f'/notifications', user_id=blocked.id,
+                                  url=f'/chat/ban_from_mod/{blocked.id}/{community.id}', user_id=blocked.id,
                                   author_id=blocker.id)
             db.session.add(notify)
             if not current_app.debug:                           # user.unread_notifications += 1 hangs app if 'user' is the same person
@@ -1503,7 +1503,10 @@ def ban_user(blocker, blocked, community, core_activity):
 
 
 def unban_user(blocker, blocked, community, core_activity):
-    reason = core_activity['summary'] if 'summary' in core_activity else ''
+    if 'object' in core_activity and 'summary' in core_activity['object']:
+        reason = core_activity['object']['summary']
+    else:
+        reason = ''
     db.session.query(CommunityBan).filter(CommunityBan.community_id == community.id, CommunityBan.user_id == blocked.id).delete()
     community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=blocked.id).first()
     if community_membership_record:
@@ -1513,7 +1516,7 @@ def unban_user(blocker, blocked, community, core_activity):
     if blocked.is_local():
         # Notify unbanned person
         notify = Notification(title=shorten_string('You have been unbanned from ' + community.title),
-                              url=f'/notifications', user_id=blocked.id, author_id=blocker.id)
+                              url=f'/chat/ban_from_mod/{blocked.id}/{community.id}', user_id=blocked.id, author_id=blocker.id)
         db.session.add(notify)
         if not current_app.debug:                           # user.unread_notifications += 1 hangs app if 'user' is the same person
             blocked.unread_notifications += 1               # who pressed 'Re-submit this activity'.
