@@ -1,7 +1,7 @@
 from app.api.alpha import bp
 from app.api.alpha.utils import get_site, post_site_block, \
                                 get_search, \
-                                get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, post_post, put_post, post_post_delete, \
+                                get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, post_post, put_post, post_post_delete, post_post_report, \
                                 get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, put_reply, post_reply_delete, post_reply_report, \
                                 get_community_list, get_community, post_community_follow, post_community_block, \
                                 get_user, post_user_block
@@ -191,6 +191,18 @@ def post_alpha_post_delete():
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
         return jsonify(post_post_delete(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/post/report', methods=['POST'])
+def post_alpha_post_report():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(post_post_report(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 

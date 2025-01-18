@@ -2,7 +2,7 @@ from app import db, cache
 from app.activitypub.util import make_image_sizes
 from app.constants import *
 from app.community.util import tags_from_string_old, end_poll_date
-from app.models import File, Language, NotificationSubscription, Poll, PollChoice, Post, PostBookmark, PostVote, utcnow
+from app.models import File, Language, Notification, NotificationSubscription, Poll, PollChoice, Post, PostBookmark, PostVote, Report, Site, User, utcnow
 from app.shared.tasks import task_selector
 from app.utils import render_template, authorise_api_user, shorten_string, gibberish, ensure_directory_exists, \
                       piefed_markdown_to_lemmy_markdown, markdown_to_html, remove_tracking_from_link, domain_from_url, \
@@ -471,5 +471,63 @@ def restore_post(post_id, src, auth):
 
     if src == SRC_API:
         return user_id, post
+    else:
+        return
+
+
+def report_post(post_id, input, src, auth=None):
+    if src == SRC_API:
+        post = Post.query.filter_by(id=post_id).one()
+        user_id = authorise_api_user(auth)
+        reason = input['reason']
+        description = input['description']
+        report_remote = input['report_remote']
+    else:
+        post = Post.query.get_or_404(post_id)
+        user_id = current_user.id
+        reason = input.reasons_to_string(input.reasons.data)
+        description = input.description.data
+        report_remote = input.report_remote.data
+
+    if post.reports == -1:  # When a mod decides to ignore future reports, post.reports is set to -1
+        if src == SRC_API:
+            raise Exception('already_reported')
+        else:
+            flash(_('Post has already been reported, thank you!'))
+            return
+
+    report = Report(reasons=reason, description=description, type=1, reporter_id=user_id, suspect_post_id=post.id, suspect_community_id=post.community_id,
+                    suspect_user_id=post.user_id, in_community_id=post.community_id, source_instance_id=1)
+    db.session.add(report)
+
+    # Notify moderators
+    already_notified = set()
+    for mod in post.community.moderators():
+        moderator = User.query.get(mod.user_id)
+        if moderator and moderator.is_local():
+            notification = Notification(user_id=mod.user_id, title=_('A comment has been reported'),
+                                        url=f"https://{current_app.config['SERVER_NAME']}/comment/{post.id}",
+                                        author_id=user_id)
+            db.session.add(notification)
+            already_notified.add(mod.user_id)
+    post.reports += 1
+    # todo: only notify admins for certain types of report
+    for admin in Site.admins():
+        if admin.id not in already_notified:
+            notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, author_id=user_id)
+            db.session.add(notify)
+            admin.unread_notifications += 1
+    db.session.commit()
+
+    # federate report to originating instance
+    if not post.community.is_local() and report_remote:
+        summary = reason
+        if description:
+            summary += ' - ' + description
+
+        task_selector('report_post', user_id=user_id, post_id=post_id, summary=summary)
+
+    if src == SRC_API:
+        return user_id, report
     else:
         return
