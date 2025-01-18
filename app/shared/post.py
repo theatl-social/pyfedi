@@ -421,3 +421,55 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
     elif from_scratch:
         return post
 
+
+# just for deletes by owner (mod deletes are classed as 'remove')
+def delete_post(post_id, src, auth):
+    if src == SRC_API:
+        user_id = authorise_api_user(auth)
+    else:
+        user_id = current_user.id
+
+    post = Post.query.filter_by(id=post_id, user_id=user_id, deleted=False).one()
+    if post.url:
+        post.calculate_cross_posts(delete_only=True)
+
+    post.deleted = True
+    post.deleted_by = user_id
+    post.author.post_count -= 1
+    post.community.post_count -= 1
+    db.session.commit()
+    if src == SRC_WEB:
+        flash(_('Post deleted.'))
+
+    task_selector('delete_post', user_id=user_id, post_id=post.id)
+
+    if src == SRC_API:
+        return user_id, post
+    else:
+        return
+
+
+def restore_post(post_id, src, auth):
+    if src == SRC_API:
+        user_id = authorise_api_user(auth)
+    else:
+        user_id = current_user.id
+
+    post = Post.query.filter_by(id=post_id, user_id=user_id, deleted=True).one()
+    if post.url:
+        post.calculate_cross_posts()
+
+    post.deleted = False
+    post.deleted_by = None
+    post.author.post_count -= 1
+    post.community.post_count -= 1
+    db.session.commit()
+    if src == SRC_WEB:
+        flash(_('Post restored.'))
+
+    task_selector('restore_post', user_id=user_id, post_id=post.id)
+
+    if src == SRC_API:
+        return user_id, post
+    else:
+        return

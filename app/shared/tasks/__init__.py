@@ -1,7 +1,7 @@
 from app.shared.tasks.follows import join_community, leave_community
 from app.shared.tasks.likes import vote_for_post, vote_for_reply
 from app.shared.tasks.notes import make_reply, edit_reply
-from app.shared.tasks.deletes import delete_reply, restore_reply
+from app.shared.tasks.deletes import delete_reply, restore_reply, delete_post, restore_post
 from app.shared.tasks.flags import report_reply
 from app.shared.tasks.pages import make_post, edit_post
 
@@ -20,7 +20,9 @@ def task_selector(task_key, send_async=True, **kwargs):
         'restore_reply': restore_reply,
         'report_reply': report_reply,
         'make_post': make_post,
-        'edit_post': edit_post
+        'edit_post': edit_post,
+        'delete_post': delete_post,
+        'restore_post': restore_post
     }
 
     if current_app.debug:

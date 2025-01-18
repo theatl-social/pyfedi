@@ -3,7 +3,7 @@ from app.api.alpha.views import post_view
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
 from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO
 from app.models import Post, Community, CommunityMember, utcnow
-from app.shared.post import vote_for_post, bookmark_the_post, remove_the_bookmark_from_post, toggle_post_notification, make_post, edit_post
+from app.shared.post import vote_for_post, bookmark_the_post, remove_the_bookmark_from_post, toggle_post_notification, make_post, edit_post, delete_post, restore_post
 from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, community_ids_from_instances, is_image_url, is_video_url
 
 from datetime import timedelta
@@ -202,6 +202,23 @@ def put_post(auth, data):
     input = {'title': title, 'body': body, 'url': url, 'nsfw': nsfw, 'language_id': language_id, 'notify_author': True}
     post = Post.query.filter_by(id=post_id).one()
     user_id, post = edit_post(input, post, type, SRC_API, auth=auth)
+
+    post_json = post_view(post=post, variant=4, user_id=user_id)
+    return post_json
+
+
+def post_post_delete(auth, data):
+    required(['post_id', 'deleted'], data)
+    integer_expected(['post_id'], data)
+    boolean_expected(['deleted'], data)
+
+    post_id = data['post_id']
+    deleted = data['deleted']
+
+    if deleted == True:
+        user_id, post = delete_post(post_id, SRC_API, auth)
+    else:
+        user_id, post = restore_post(post_id, SRC_API, auth)
 
     post_json = post_view(post=post, variant=4, user_id=user_id)
     return post_json
