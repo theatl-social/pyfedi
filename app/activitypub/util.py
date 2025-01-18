@@ -1612,23 +1612,6 @@ def create_post(store_ap_json, community: Community, request_json: dict, user: U
         return None
     try:
         post = Post.new(user, community, request_json, announce_id)
-        # can't do this in app.models, 'cos can't import blocked_users
-        if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
-            for json_tag in request_json['object']['tag']:
-                if 'type' in json_tag and json_tag['type'] == 'Mention':
-                    profile_id = json_tag['href'] if 'href' in json_tag else None
-                    if profile_id and isinstance(profile_id, str) and profile_id.startswith('https://' + current_app.config['SERVER_NAME']):
-                        profile_id = profile_id.lower()
-                        recipient = User.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
-                        if recipient:
-                            blocked_senders = blocked_users(recipient.id)
-                            if post.user_id not in blocked_senders:
-                                notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in post {post.id}"),
-                                                            url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
-                                                            author_id=post.user_id)
-                                recipient.unread_notifications += 1
-                                db.session.add(notification)
-                                db.session.commit()
         return post
     except Exception as ex:
         log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, str(ex))
