@@ -492,7 +492,10 @@ def shorten_string(input_str, max_length=50):
 
 
 def shorten_url(input: str, max_length=20):
-    return shorten_string(input.replace('https://', '').replace('http://', ''))
+    if input:
+        return shorten_string(input.replace('https://', '').replace('http://', ''))
+    else:
+        ''
 
 
 # the number of digits in a number. e.g. 1000 would be 4
