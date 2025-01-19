@@ -1,13 +1,13 @@
-import multiprocessing
 
-workers = multiprocessing.cpu_count() * 2 + 1
-threads = multiprocessing.cpu_count() * 2 + 1
+workers = 1
 
 worker_tmp_dir = '/dev/shm'
 
 bind = '0.0.0.0:5000'
 umask = 0o007
 reload = False
+
+worker_class = 'gevent'
 
 #logging
 accesslog = '-'
