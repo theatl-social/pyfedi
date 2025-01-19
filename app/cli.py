@@ -205,7 +205,8 @@ def register(app):
 
             # Ensure accurate community stats
             for community in Community.query.filter(Community.banned == False).all():
-                community.subscriptions_count = CommunityMember.query.filter(CommunityMember.community_id == community.id).count()
+                community.subscriptions_count = db.session.execute(text('SELECT COUNT(user_id) as c FROM community_member WHERE community_id = :community_id AND is_banned = false'),
+                                                          {'community_id': community.id}).scalar()
                 community.post_count = db.session.execute(text('SELECT COUNT(id) as c FROM post WHERE deleted is false and community_id = :community_id'),
                                                           {'community_id': community.id}).scalar()
                 community.post_reply_count = db.session.execute(text('SELECT COUNT(id) as c FROM post_reply WHERE deleted is false and community_id = :community_id'),
