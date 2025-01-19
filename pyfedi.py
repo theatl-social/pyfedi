@@ -1,11 +1,13 @@
 # This file is part of pyfedi, which is licensed under the GNU General Public License (GPL) version 3.0.
 # You should have received a copy of the GPL along with this program. If not, see <http://www.gnu.org/licenses/>.
+import os
 
-from gevent import monkey
-monkey.patch_all()
+if os.environ.get('FLASK_ENV', '') != 'development':
+    from gevent import monkey
+    monkey.patch_all()
 
-from psycogreen.gevent import patch_psycopg
-patch_psycopg()
+    from psycogreen.gevent import patch_psycopg
+    patch_psycopg()
 
 from datetime import datetime
 
@@ -13,7 +15,7 @@ from flask_babel import get_locale
 from flask_login import current_user
 
 from app import create_app, db, cli
-import os, arrow
+import arrow
 from flask import session, g, json, request, current_app
 from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_ARTICLE, POST_TYPE_VIDEO, POST_TYPE_POLL, \
     SUBSCRIPTION_MODERATOR, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_PENDING
