@@ -7,7 +7,7 @@ from app.shared.tasks import task_selector
 from app.utils import render_template, authorise_api_user, shorten_string, gibberish, ensure_directory_exists, \
                       piefed_markdown_to_lemmy_markdown, markdown_to_html, remove_tracking_from_link, domain_from_url, \
                       opengraph_parse, url_to_thumbnail_file, can_create_post, is_video_hosting_site, recently_upvoted_posts, \
-                      is_image_url, is_video_hosting_site
+                      is_image_url, is_video_hosting_site, add_to_modlog_activitypub
 
 from flask import abort, flash, redirect, request, url_for, current_app, g
 from flask_babel import _
@@ -531,3 +531,35 @@ def report_post(post_id, input, src, auth=None):
         return user_id, report
     else:
         return
+
+
+def lock_post(post_id, locked, src, auth=None):
+    if src == SRC_API:
+        user = authorise_api_user(auth, return_type='model')
+    else:
+        user = current_user
+
+    post = Post.query.filter_by(id=post_id).one()
+    if locked:
+        comments_enabled = False
+        modlog_type = 'lock_post'
+    else:
+        comments_enabled = True
+        modlog_type = 'unlock_post'
+
+    if post.community.is_moderator(user) or post.community.is_instance_admin(user):
+        post.comments_enabled = comments_enabled
+        db.session.commit()
+        add_to_modlog_activitypub(modlog_type, user, community_id=post.community_id,
+                                  link_text=shorten_string(post.title), link=f'post/{post.id}', reason='')
+
+    if locked:
+        task_selector('lock_post', user_id=user.id, post_id=post_id)
+    else:
+        task_selector('unlock_post', user_id=user.id, post_id=post_id)
+
+    return user.id, post
+
+
+
+
