@@ -11,7 +11,7 @@ from pillow_heif import register_heif_opener
 
 from app import db, cache, celery
 from app.activitypub.signature import post_request, default_context, signed_get_request
-from app.activitypub.util import find_actor_or_create, actor_json_to_model, post_json_to_model, ensure_domains_match, \
+from app.activitypub.util import find_actor_or_create, actor_json_to_model, ensure_domains_match, \
     find_hashtag_or_create, create_post
 from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO, NOTIF_POST, \
     POST_TYPE_POLL
