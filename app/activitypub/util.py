@@ -2295,93 +2295,86 @@ def can_delete(user_ap_id, post):
     return can_edit(user_ap_id, post)
 
 
-def resolve_remote_post(uri: str, community_id: int, announce_actor=None, store_ap_json=False) -> Union[Post, PostReply, None]:
-    post = Post.query.filter_by(ap_id=uri).first()
-    if post:
-        return post
-
-    community = Community.query.get(community_id)
-    site = Site.query.get(1)
-
+# called from incoming activitypub, when the object in an Announce is just a URL
+# despite the name, it works for both posts and replies
+def resolve_remote_post(uri: str, community, announce_id, store_ap_json) -> Union[Post, PostReply, None]:
     parsed_url = urlparse(uri)
     uri_domain = parsed_url.netloc
-    if announce_actor:
-        parsed_url = urlparse(announce_actor)
-        announce_actor_domain = parsed_url.netloc
-        if announce_actor_domain != 'a.gup.pe' and announce_actor_domain != uri_domain:
-            return None
+    announce_actor = community.ap_profile_id
+    parsed_url = urlparse(announce_actor)
+    announce_actor_domain = parsed_url.netloc
+    if announce_actor_domain != 'a.gup.pe' and announce_actor_domain != uri_domain:
+        return None
     actor_domain = None
     actor = None
-    post_request = get_request(uri, headers={'Accept': 'application/activity+json'})
-    if post_request.status_code == 200:
-        post_data = post_request.json()
-        post_request.close()
-        # check again that it doesn't already exist (can happen with different but equivalent URLs)
-        post = Post.query.filter_by(ap_id=post_data['id']).first()
-        if post:
-            return post
-        if 'attributedTo' in post_data:
-            if isinstance(post_data['attributedTo'], str):
-                actor = post_data['attributedTo']
-                parsed_url = urlparse(post_data['attributedTo'])
-                actor_domain = parsed_url.netloc
-            elif isinstance(post_data['attributedTo'], list):
-                for a in post_data['attributedTo']:
-                    if a['type'] == 'Person':
-                        actor = a['id']
-                        parsed_url = urlparse(a['id'])
-                        actor_domain = parsed_url.netloc
-                        break
-        if uri_domain != actor_domain:
+
+    try:
+        object_request = get_request(uri, headers={'Accept': 'application/activity+json'})
+    except httpx.HTTPError:
+        time.sleep(3)
+        try:
+            object_request = get_request(uri, headers={'Accept': 'application/activity+json'})
+        except httpx.HTTPError:
             return None
+    if object_request.status_code == 200:
+        try:
+            post_data = object_request.json()
+        except:
+            object_request.close()
+            return None
+        object_request.close()
+    elif object_request.status_code == 401:
+        try:
+            site = Site.query.get(1)
+            object_request = signed_get_request(uri, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+        except httpx.HTTPError:
+            time.sleep(3)
+            try:
+                object_request = signed_get_request(uri, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+            except httpx.HTTPError:
+                return None
+        try:
+            post_data = object_request.json()
+        except:
+            object_request.close()
+            return None
+        object_request.close()
+    else:
+        return None
 
-        if not announce_actor:
-            # make sure that the post actually belongs in the community a user says it does
-            remote_community = None
-            if post_data['type'] == 'Page':                                          # lemmy
-                remote_community = post_data['audience'] if 'audience' in post_data else None
-                if remote_community and remote_community.lower() != community.ap_profile_id:
-                    return None
-            elif post_data['type'] == 'Video':                                       # peertube
-                if 'attributedTo' in post_data and isinstance(post_data['attributedTo'], list):
-                    for a in post_data['attributedTo']:
-                        if a['type'] == 'Group':
-                            remote_community = a['id']
-                            break
-                if remote_community and remote_community.lower() != community.ap_profile_id:
-                    return None
-            else:                                                                   # mastodon, etc
-                if 'inReplyTo' not in post_data or post_data['inReplyTo'] != None:
-                    return None
-                community_found = False
-                if not community_found and 'to' in post_data and isinstance(post_data['to'], str):
-                    remote_community = post_data['to']
-                    if remote_community.lower() == community.ap_profile_id:
-                        community_found = True
-                if not community_found and 'cc' in post_data and isinstance(post_data['cc'], str):
-                    remote_community = post_data['cc']
-                    if remote_community.lower() == community.ap_profile_id:
-                        community_found = True
-                if not community_found and 'to' in post_data and isinstance(post_data['to'], list):
-                    for t in post_data['to']:
-                        if t.lower() == community.ap_profile_id:
-                            community_found = True
-                            break
-                if not community_found and 'cc' in post_data and isinstance(post_data['cc'], list):
-                    for c in post_data['cc']:
-                        if c.lower() == community.ap_profile_id:
-                            community_found = True
-                            break
-                if not community_found:
-                    return None
+    # find the author. Make sure their domain matches the site hosting it to mitigate impersonation attempts
+    if 'attributedTo' in post_data:
+        attributed_to = post_data['attributedTo']
+        if isinstance(attributed_to, str):
+            actor = attributed_to
+            parsed_url = urlparse(actor)
+            actor_domain = parsed_url.netloc
+        elif isinstance(attributed_to, list):
+            for a in attributed_to:
+                if isinstance(a, dict) and a.get('type') == 'Person':
+                    actor = a.get('id')
+                    if isinstance(actor, str):  # Ensure `actor` is a valid string
+                        parsed_url = urlparse(actor)
+                        actor_domain = parsed_url.netloc
+                    break
+                elif isinstance(a, str):
+                    actor = a
+                    parsed_url = urlparse(actor)
+                    actor_domain = parsed_url.netloc
+                    break
+    if uri_domain != actor_domain:
+        return None
 
-        user = find_actor_or_create(actor)
-        if user and community and post_data:
-            request_json = {
-              'id': f"https://{uri_domain}/activities/create/{gibberish(15)}",
-              'object': post_data
-            }
-            if 'inReplyTo' in request_json['object'] and request_json['object']['inReplyTo']:
+    user = find_actor_or_create(actor)
+    if user and community and post_data:
+        activity = 'update' if 'updated' in post_data else 'create'
+        request_json = {'id': f"https://{uri_domain}/activities/{activity}/{gibberish(15)}", 'object': post_data}
+        if 'inReplyTo' in request_json['object'] and request_json['object']['inReplyTo']:
+            if activity == 'update':
+                post_reply = PostReply.get_by_ap_id(uri)
+                if post_reply:
+                    update_post_reply_from_activity(post_reply, request_json)
+            else:
                 post_reply = create_post_reply(store_ap_json, community, request_json['object']['inReplyTo'], request_json, user)
                 if post_reply:
                     if 'published' in post_data:
@@ -2389,21 +2382,28 @@ def resolve_remote_post(uri: str, community_id: int, announce_actor=None, store_
                         post_reply.post.last_active = post_data['published']
                         post_reply.community.last_active = utcnow()
                         db.session.commit()
-                    return post_reply
+            if post_reply:
+                return post_reply
+        else:
+            if activity == 'update':
+                post = Post.get_by_ap_id(uri)
+                if post:
+                    update_post_from_activity(post_reply, request_json)
             else:
-                post = create_post(store_ap_json, community, request_json, user)
+                post = create_post(store_ap_json, community, request_json, user, announce_id)
                 if post:
                     if 'published' in post_data:
                         post.posted_at=post_data['published']
                         post.last_active=post_data['published']
                         post.community.last_active = utcnow()
                         db.session.commit()
-                    return post
+            if post:
+                return post
 
     return None
 
 
-# called from UI, via 'search' option in navbar
+# called from UI, via 'search' option in navbar, or 'Retrieve a post from the original server' in community sidebar
 def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
     post = Post.query.filter_by(ap_id=uri).first()
     if post:

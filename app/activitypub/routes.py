@@ -614,7 +614,7 @@ def process_inbox_request(request_json, store_ap_json):
                 if request_json['object'].startswith('https://' + current_app.config['SERVER_NAME']):
                     log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json, 'Activity about local content which is already present')
                     return
-                post = resolve_remote_post(request_json['object'], community.id, announce_actor=community.ap_profile_id, store_ap_json=store_ap_json)
+                post = resolve_remote_post(request_json['object'], community, id, store_ap_json)
                 if post:
                     log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_SUCCESS, request_json)
                 else:
