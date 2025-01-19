@@ -10,8 +10,8 @@ from wtforms import SelectField, RadioField
 
 from app import db, constants, cache, celery
 from app.activitypub.signature import HttpSignature, post_request, default_context, post_request_in_background
-from app.activitypub.util import notify_about_post_reply, inform_followers_of_post_update, update_post_from_activity
-from app.community.util import save_post, send_to_remote_instance
+from app.activitypub.util import notify_about_post_reply, update_post_from_activity
+from app.community.util import send_to_remote_instance
 from app.inoculation import inoculation
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm
 from app.community.forms import CreateLinkForm, CreateImageForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm
@@ -35,6 +35,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     languages_for_form, menu_topics, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown, \
     permission_required, blocked_users, get_request, is_local_image_url, is_video_url, can_upvote, can_downvote
 from app.shared.reply import make_reply, edit_reply
+from app.shared.post import edit_post
 
 
 def show_post(post_id: int):
@@ -359,7 +360,8 @@ def poll_vote(post_id):
         poll_votes = PollChoice.query.join(PollChoiceVote, PollChoiceVote.choice_id == PollChoice.id).filter(PollChoiceVote.post_id == post.id, PollChoiceVote.user_id == current_user.id).all()
         for pv in poll_votes:
             if post.author.is_local():
-                inform_followers_of_post_update(post.id, 1)
+                from app.shared.tasks import task_selector
+                task_selector('edit_post', user_id=current_user.id, post_id=post.id)
             else:
                 pollvote_json = {
                   '@context': default_context(),
@@ -587,7 +589,7 @@ def post_edit(post_id: int):
         del form.finish_in
     else:
         abort(404)
-    
+
     del form.communities
 
     mods = post.community.moderators()
@@ -607,26 +609,16 @@ def post_edit(post_id: int):
             form.nsfl.data = True
             form.nsfw.render_kw = {'disabled': True}
 
-        old_url = post.url
-
         form.language_id.choices = languages_for_form()
 
         if form.validate_on_submit():
-            save_post(form, post, post_type)
-            post.community.last_active = utcnow()
-            post.edited_at = utcnow()
-
-            if post.url != old_url:
-                post.calculate_cross_posts(url_changed=True)
-
-            db.session.commit()
-
-            flash(_('Your changes have been saved.'), 'success')
-
-            # federate edit
-            if not post.community.local_only:
-                federate_post_update(post)
-            federate_post_edit_to_user_followers(post)
+            try:
+                uploaded_file = request.files['image_file'] if post_type == POST_TYPE_IMAGE else None
+                edit_post(form, post, post_type, 1, uploaded_file=uploaded_file)
+                flash(_('Your changes have been saved.'), 'success')
+            except Exception as ex:
+                flash(_('Your edit was not accepted because %(reason)s', reason=str(ex)), 'error')
+                abort(401)
 
             return redirect(url_for('activitypub.post_ap', post_id=post.id))
         else:
@@ -651,7 +643,7 @@ def post_edit(post_id: int):
                     )
                 with open(path, "rb")as file:
                     form.image_file.data = file.read()
-            
+
             elif post_type == POST_TYPE_VIDEO:
                 form.video_url.data = post.url
             elif post_type == POST_TYPE_POLL:
@@ -676,186 +668,6 @@ def post_edit(post_id: int):
                                    )
     else:
         abort(401)
-
-
-def federate_post_update(post):
-    page_json = {
-        'type': 'Page',
-        'id': post.ap_id,
-        'attributedTo': current_user.public_url(),
-        'to': [
-            post.community.public_url(),
-            'https://www.w3.org/ns/activitystreams#Public'
-        ],
-        'name': post.title,
-        'cc': [],
-        'content': post.body_html if post.body_html else '',
-        'mediaType': 'text/html',
-        'source': {'content': post.body if post.body else '', 'mediaType': 'text/markdown'},
-        'attachment': [],
-        'commentsEnabled': post.comments_enabled,
-        'sensitive': post.nsfw,
-        'nsfl': post.nsfl,
-        'stickied': post.sticky,
-        'published': ap_datetime(post.posted_at),
-        'updated': ap_datetime(post.edited_at),
-        'audience': post.community.public_url(),
-        'language': {
-            'identifier': post.language_code(),
-            'name': post.language_name()
-        },
-        'tag': post.tags_for_activitypub()
-    }
-    update_json = {
-        'id': f"https://{current_app.config['SERVER_NAME']}/activities/update/{gibberish(15)}",
-        'type': 'Update',
-        'actor': current_user.public_url(),
-        'audience': post.community.public_url(),
-        'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
-        'published': ap_datetime(utcnow()),
-        'cc': [
-            current_user.followers_url()
-        ],
-        'object': page_json,
-    }
-    if post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO:
-        page_json['attachment'] = [{'href': post.url, 'type': 'Link'}]
-    elif post.image_id:
-        if post.image.file_path:
-            image_url = post.image.file_path.replace('app/static/',
-                                                     f"https://{current_app.config['SERVER_NAME']}/static/")
-        elif post.image.thumbnail_path:
-            image_url = post.image.thumbnail_path.replace('app/static/',
-                                                          f"https://{current_app.config['SERVER_NAME']}/static/")
-        else:
-            image_url = post.image.source_url
-        # NB image is a dict while attachment is a list of dicts (usually just one dict in the list)
-        page_json['image'] = {'type': 'Image', 'url': image_url}
-        if post.type == POST_TYPE_IMAGE:
-            page_json['attachment'] = [{'type': 'Image',
-                                        'url': post.image.source_url,  # source_url is always a https link, no need for .replace() as done above
-                                        'name': post.image.alt_text}]
-    if post.type == POST_TYPE_POLL:
-        poll = Poll.query.filter_by(post_id=post.id).first()
-        page_json['type'] = 'Question'
-        page_json['endTime'] = ap_datetime(poll.end_poll)
-        page_json['votersCount'] = 0
-        choices = []
-        for choice in PollChoice.query.filter_by(post_id=post.id).all():
-            choices.append({
-                "type": "Note",
-                "name": choice.choice_text,
-                "replies": {
-                  "type": "Collection",
-                  "totalItems": 0
-                }
-            })
-        page_json['oneOf' if poll.mode == 'single' else 'anyOf'] = choices
-
-    if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
-        success = post_request(post.community.ap_inbox_url, update_json, current_user.private_key,
-                               current_user.public_url() + '#main-key')
-        if success is False or isinstance(success, str):
-            flash('Failed to send edit to remote server', 'error')
-    else:  # local community - send it to followers on remote instances
-        announce = {
-            "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
-            "type": 'Announce',
-            "to": [
-                "https://www.w3.org/ns/activitystreams#Public"
-            ],
-            "actor": post.community.ap_profile_id,
-            "cc": [
-                post.community.ap_followers_url
-            ],
-            '@context': default_context(),
-            'object': update_json
-        }
-
-        for instance in post.community.following_instances():
-            if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(
-                    instance.domain):
-                send_to_remote_instance(instance.id, post.community.id, announce)
-
-
-def federate_post_edit_to_user_followers(post):
-    followers = UserFollower.query.filter_by(local_user_id=post.user_id)
-    if not followers:
-        return
-
-    note = {
-        'type': 'Note',
-        'id': post.ap_id,
-        'inReplyTo': None,
-        'attributedTo': current_user.public_url(),
-        'to': [
-            'https://www.w3.org/ns/activitystreams#Public'
-        ],
-        'cc': [
-            current_user.followers_url()
-        ],
-        'content': '',
-        'mediaType': 'text/html',
-        'source': {'content': post.body if post.body else '', 'mediaType': 'text/markdown'},
-        'attachment': [],
-        'commentsEnabled': post.comments_enabled,
-        'sensitive': post.nsfw,
-        'nsfl': post.nsfl,
-        'stickied': post.sticky,
-        'published': ap_datetime(utcnow()),
-        'updated': ap_datetime(post.edited_at),
-        'language': {
-            'identifier': post.language_code(),
-            'name': post.language_name()
-        },
-        'tag': post.tags_for_activitypub()
-    }
-    update = {
-        "id": f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}",
-        "actor": current_user.public_url(),
-        "to": [
-            "https://www.w3.org/ns/activitystreams#Public"
-        ],
-        "cc": [
-            current_user.followers_url()
-        ],
-        "type": "Update",
-        "object": note,
-        '@context': default_context()
-    }
-    if post.type == POST_TYPE_ARTICLE:
-        note['content'] = '<p>' + post.title + '</p>'
-    elif post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO:
-        note['content'] = '<p><a href=' + post.url + '>' + post.title + '</a></p>'
-    elif post.type == POST_TYPE_IMAGE:
-        note['content'] = '<p>' + post.title + '</p>'
-        if post.image_id and post.image.source_url:
-            note['attachment'] = [{'type': 'Image', 'url': post.image.source_url, 'name': post.image.alt_text}]
-    elif post.type == POST_TYPE_POLL:
-        poll = Poll.query.filter_by(post_id=post.id).first()
-        note['type'] = 'Question'
-        note['endTime'] = ap_datetime(poll.end_poll)
-        note['votersCount'] = 0
-        choices = []
-        for choice in PollChoice.query.filter_by(post_id=post.id).all():
-            choices.append({
-                "type": "Note",
-                "name": choice.choice_text,
-                "replies": {
-                    "type": "Collection",
-                    "totalItems": 0
-                }
-            })
-        note['oneOf' if poll.mode == 'single' else 'anyOf'] = choices
-
-    if post.body_html:
-        note['content'] = note['content'] + '<p>' + post.body_html + '</p>'
-
-    instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower, UserFollower.remote_user_id == User.id)
-    instances = instances.filter(UserFollower.local_user_id == post.user_id)
-    for instance in instances:
-        if instance.inbox and not instance_banned(instance.domain):
-            post_request_in_background(instance.inbox, update, current_user.private_key, current_user.public_url() + '#main-key')
 
 
 @bp.route('/post/<int:post_id>/delete', methods=['GET', 'POST'])

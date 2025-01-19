@@ -6,7 +6,7 @@ from sqlalchemy import desc, or_, and_, text
 from app import db, celery
 from app.chat.forms import AddReply, ReportConversationForm
 from app.chat.util import send_message
-from app.models import Site, User, Report, ChatMessage, Notification, InstanceBlock, Conversation, conversation_member
+from app.models import Site, User, Report, ChatMessage, Notification, InstanceBlock, Conversation, conversation_member, CommunityBan, ModLog
 from app.user.forms import ReportUserForm
 from app.utils import render_template, moderating_communities, joined_communities, menu_topics
 from app.chat import bp
@@ -101,6 +101,19 @@ def blocked():
 @login_required
 def empty():
     return render_template('chat/empty.html')
+
+
+@bp.route('/chat/ban_from_mod/<int:user_id>/<int:community_id>', methods=['GET'])
+@login_required
+def ban_from_mod(user_id, community_id):
+    active_ban = CommunityBan.query.filter_by(user_id=user_id, community_id=community_id).order_by(desc(CommunityBan.created_at)).first()
+    user_link = 'u/' + current_user.user_name
+    past_bans = ModLog.query.filter(ModLog.community_id == community_id, ModLog.link == user_link, or_(ModLog.action == 'ban_user', ModLog.action == 'unban_user')).order_by(desc(ModLog.created_at))
+    if active_ban:
+        past_bans = past_bans.offset(1)
+    #if active_ban and len(past_bans) > 1:
+    #past_bans = past_bans
+    return render_template('chat/ban_from_mod.html', active_ban=active_ban, past_bans=past_bans)
 
 
 @bp.route('/chat/<int:conversation_id>/options', methods=['GET', 'POST'])

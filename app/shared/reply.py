@@ -233,12 +233,11 @@ def edit_reply(input, reply, post, src, auth=None):
 # just for deletes by owner (mod deletes are classed as 'remove')
 def delete_reply(reply_id, src, auth):
     if src == SRC_API:
-        reply = PostReply.query.filter_by(id=reply_id, deleted=False).one()
-        user_id = authorise_api_user(auth, id_match=reply.user_id)
+        user_id = authorise_api_user(auth)
     else:
-        reply = PostReply.query.get_or_404(reply_id)
         user_id = current_user.id
 
+    reply = PostReply.query.filter_by(id=reply_id, user_id=user_id, deleted=False).one()
     reply.deleted = True
     reply.deleted_by = user_id
 
@@ -259,14 +258,11 @@ def delete_reply(reply_id, src, auth):
 
 def restore_reply(reply_id, src, auth):
     if src == SRC_API:
-        reply = PostReply.query.filter_by(id=reply_id, deleted=True).one()
-        user_id = authorise_api_user(auth, id_match=reply.user_id)
-        if reply.user_id != reply.deleted_by:
-            raise Exception('incorrect_login')
+        user_id = authorise_api_user(auth)
     else:
-        reply = PostReply.query.get_or_404(reply_id)
         user_id = current_user.id
 
+    reply = PostReply.query.filter_by(id=reply_id, user_id=user_id, deleted=True).one()
     reply.deleted = False
     reply.deleted_by = None
 

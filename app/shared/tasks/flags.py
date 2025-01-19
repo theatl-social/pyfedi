@@ -1,6 +1,6 @@
 from app import celery
 from app.activitypub.signature import default_context, post_request
-from app.models import CommunityBan, PostReply, User
+from app.models import CommunityBan, Post, PostReply, User
 from app.utils import gibberish, instance_banned
 
 from flask import current_app
@@ -25,6 +25,12 @@ Flag:
 def report_reply(send_async, user_id, reply_id, summary):
     reply = PostReply.query.filter_by(id=reply_id).one()
     report_object(user_id, reply, summary)
+
+
+@celery.task
+def report_post(send_async, user_id, post_id, summary):
+    post = Post.query.filter_by(id=post_id).one()
+    report_object(user_id, post, summary)
 
 
 def report_object(user_id, object, summary):

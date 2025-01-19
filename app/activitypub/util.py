@@ -1483,7 +1483,7 @@ def ban_user(blocker, blocked, community, core_activity):
 
             # Notify banned person
             notify = Notification(title=shorten_string('You have been banned from ' + community.title),
-                                  url=f'/notifications', user_id=blocked.id,
+                                  url=f'/chat/ban_from_mod/{blocked.id}/{community.id}', user_id=blocked.id,
                                   author_id=blocker.id)
             db.session.add(notify)
             if not current_app.debug:                           # user.unread_notifications += 1 hangs app if 'user' is the same person
@@ -1503,7 +1503,10 @@ def ban_user(blocker, blocked, community, core_activity):
 
 
 def unban_user(blocker, blocked, community, core_activity):
-    reason = core_activity['summary'] if 'summary' in core_activity else ''
+    if 'object' in core_activity and 'summary' in core_activity['object']:
+        reason = core_activity['object']['summary']
+    else:
+        reason = ''
     db.session.query(CommunityBan).filter(CommunityBan.community_id == community.id, CommunityBan.user_id == blocked.id).delete()
     community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=blocked.id).first()
     if community_membership_record:
@@ -1513,7 +1516,7 @@ def unban_user(blocker, blocked, community, core_activity):
     if blocked.is_local():
         # Notify unbanned person
         notify = Notification(title=shorten_string('You have been unbanned from ' + community.title),
-                              url=f'/notifications', user_id=blocked.id, author_id=blocker.id)
+                              url=f'/chat/ban_from_mod/{blocked.id}/{community.id}', user_id=blocked.id, author_id=blocker.id)
         db.session.add(notify)
         if not current_app.debug:                           # user.unread_notifications += 1 hangs app if 'user' is the same person
             blocked.unread_notifications += 1               # who pressed 'Re-submit this activity'.
@@ -1571,8 +1574,8 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
         # Check for Mentions of local users
         reply_parent = parent_comment if parent_comment else post
         local_users_to_notify = []
-        if 'tag' in request_json and isinstance(request_json['tag'], list):
-            for json_tag in request_json['tag']:
+        if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
+            for json_tag in request_json['object']['tag']:
                 if 'type' in json_tag and json_tag['type'] == 'Mention':
                     profile_id = json_tag['href'] if 'href' in json_tag else None
                     if profile_id and isinstance(profile_id, str) and profile_id.startswith('https://' + current_app.config['SERVER_NAME']):
@@ -1690,8 +1693,8 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
     reply.edited_at = utcnow()
 
     # Check for Mentions of local users (that weren't in the original)
-    if 'tag' in request_json and isinstance(request_json['tag'], list):
-        for json_tag in request_json['tag']:
+    if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
+        for json_tag in request_json['object']['tag']:
             if 'type' in json_tag and json_tag['type'] == 'Mention':
                 profile_id = json_tag['href'] if 'href' in json_tag else None
                 if profile_id and isinstance(profile_id, str) and profile_id.startswith('https://' + current_app.config['SERVER_NAME']):
@@ -1778,6 +1781,21 @@ def update_post_from_activity(post: Post, request_json: dict):
                     hashtag = find_hashtag_or_create(json_tag['name'])
                     if hashtag:
                         post.tags.append(hashtag)
+            if 'type' in json_tag and json_tag['type'] == 'Mention':
+                profile_id = json_tag['href'] if 'href' in json_tag else None
+                if profile_id and isinstance(profile_id, str) and profile_id.startswith('https://' + current_app.config['SERVER_NAME']):
+                    profile_id = profile_id.lower()
+                    recipient = User.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
+                    if recipient:
+                        blocked_senders = blocked_users(recipient.id)
+                        if post.user_id not in blocked_senders:
+                            existing_notification = Notification.query.filter(Notification.user_id == recipient.id, Notification.url == f"https://{current_app.config['SERVER_NAME']}/post/{post.id}").first()
+                            if not existing_notification:
+                                notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in post {post.id}"),
+                                                            url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
+                                                            author_id=post.user_id)
+                                recipient.unread_notifications += 1
+                                db.session.add(notification)
 
     post.comments_enabled = request_json['object']['commentsEnabled'] if 'commentsEnabled' in request_json['object'] else True
     post.edited_at = utcnow()
@@ -2385,112 +2403,92 @@ def resolve_remote_post(uri: str, community_id: int, announce_actor=None, store_
     return None
 
 
+# called from UI, via 'search' option in navbar
 def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
     post = Post.query.filter_by(ap_id=uri).first()
     if post:
         return post
 
-    site = Site.query.get(1)
-
     parsed_url = urlparse(uri)
     uri_domain = parsed_url.netloc
     actor_domain = None
     actor = None
-    post_request = get_request(uri, headers={'Accept': 'application/activity+json'})
-    if post_request.status_code == 200:
-        post_data = post_request.json()
-        post_request.close()
-        # check again that it doesn't already exist (can happen with different but equivalent URLs)
-        post = Post.query.filter_by(ap_id=post_data['id']).first()
-        if post:
-            return post
 
-        # find the author of the post. Make sure their domain matches the site hosting it to mitigate impersonation attempts
-        if 'attributedTo' in post_data:
-            attributed_to = post_data['attributedTo']
-            if isinstance(attributed_to, str):
-                actor = attributed_to
-                parsed_url = urlparse(actor)
-                actor_domain = parsed_url.netloc
-            elif isinstance(attributed_to, list):
-                for a in attributed_to:
-                    if isinstance(a, dict) and a.get('type') == 'Person':
-                        actor = a.get('id')
-                        if isinstance(actor, str):  # Ensure `actor` is a valid string
-                            parsed_url = urlparse(actor)
-                            actor_domain = parsed_url.netloc
-                        break
-                    elif isinstance(a, str):
-                        actor = a
+    try:
+        object_request = get_request(uri, headers={'Accept': 'application/activity+json'})
+    except httpx.HTTPError:
+        time.sleep(3)
+        try:
+            object_request = get_request(uri, headers={'Accept': 'application/activity+json'})
+        except httpx.HTTPError:
+            return None
+    if object_request.status_code == 200:
+        try:
+            post_data = object_request.json()
+        except:
+            object_request.close()
+            return None
+        object_request.close()
+    elif object_request.status_code == 401:
+        try:
+            site = Site.query.get(1)
+            object_request = signed_get_request(uri, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+        except httpx.HTTPError:
+            time.sleep(3)
+            try:
+                object_request = signed_get_request(uri, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+            except httpx.HTTPError:
+                return None
+        try:
+            post_data = object_request.json()
+        except:
+            object_request.close()
+            return None
+        object_request.close()
+    else:
+        return None
+
+    # check again that it doesn't already exist (can happen with different but equivalent URLs)
+    post = Post.query.filter_by(ap_id=post_data['id']).first()
+    if post:
+        return post
+
+    # find the author of the post. Make sure their domain matches the site hosting it to mitigate impersonation attempts
+    if 'attributedTo' in post_data:
+        attributed_to = post_data['attributedTo']
+        if isinstance(attributed_to, str):
+            actor = attributed_to
+            parsed_url = urlparse(actor)
+            actor_domain = parsed_url.netloc
+        elif isinstance(attributed_to, list):
+            for a in attributed_to:
+                if isinstance(a, dict) and a.get('type') == 'Person':
+                    actor = a.get('id')
+                    if isinstance(actor, str):  # Ensure `actor` is a valid string
                         parsed_url = urlparse(actor)
                         actor_domain = parsed_url.netloc
-                        break
-        if uri_domain != actor_domain:
-            return None
+                    break
+                elif isinstance(a, str):
+                    actor = a
+                    parsed_url = urlparse(actor)
+                    actor_domain = parsed_url.netloc
+                    break
+    if uri_domain != actor_domain:
+        return None
 
-        # find the community the post was submitted to
-        community = None
-        if not community and post_data['type'] == 'Page':                                         # lemmy
-            if 'audience' in post_data:
-                community_id = post_data['audience']
-                community = find_actor_or_create(community_id, community_only=True)
-
-        if not community and post_data['type'] == 'Video':                                        # peertube
-            if 'attributedTo' in post_data and isinstance(post_data['attributedTo'], list):
-                for a in post_data['attributedTo']:
-                    if a['type'] == 'Group':
-                        community_id = a['id']
-                        community = find_actor_or_create(community_id, community_only=True)
-                        if community:
-                            break
-
-        if not community:                                                                         # mastodon, etc
-            if 'inReplyTo' not in post_data or post_data['inReplyTo'] != None:
-                return None
-
-        if not community and 'to' in post_data and isinstance(post_data['to'], str):
-            community_id = post_data['to'].lower()
-            if not community_id == 'https://www.w3.org/ns/activitystreams#Public' and not community_id.endswith('/followers'):
-                community = Community.query.filter_by(ap_profile_id=community_id).first()
-        if not community and 'cc' in post_data and isinstance(post_data['cc'], str):
-            community_id = post_data['cc'].lower()
-            if not community_id == 'https://www.w3.org/ns/activitystreams#Public' and not community_id.endswith('/followers'):
-                community = Community.query.filter_by(ap_profile_id=community_id).first()
-        if not community and 'to' in post_data and isinstance(post_data['to'], list):
-            for t in post_data['to']:
-                community_id = t.lower()
-                if not community_id == 'https://www.w3.org/ns/activitystreams#Public' and not community_id.endswith('/followers'):
-                    community = Community.query.filter_by(ap_profile_id=community_id).first()
-                    if community:
-                        break
-        if not community and 'cc' in post_data and isinstance(post_data['to'], list):
-            for c in post_data['cc']:
-                community_id = c.lower()
-                if not community_id == 'https://www.w3.org/ns/activitystreams#Public' and not community_id.endswith('/followers'):
-                    community = Community.query.filter_by(ap_profile_id=community_id).first()
-                    if community:
-                        break
-
-        if not community:
-            return None
-
-        activity_log = ActivityPubLog(direction='in', activity_id=post_data['id'], activity_type='Resolve Post', result='failure')
-        if site.log_activitypub_json:
-            activity_log.activity_json = json.dumps(post_data)
-        db.session.add(activity_log)
-        user = find_actor_or_create(actor)
-        if user and community and post_data:
-            request_json = {
-              'id': f"https://{uri_domain}/activities/create/gibberish(15)",
-              'object': post_data
-            }
-            post = create_post(activity_log, community, request_json, user)
-            if post:
-                if 'published' in post_data:
-                    post.posted_at=post_data['published']
-                    post.last_active=post_data['published']
-                    db.session.commit()
-                return post
+    # find the community the post was submitted to
+    community = find_community(post_data)
+    # find the post's author
+    user = find_actor_or_create(actor)
+    if user and community and post_data:
+        request_json = {'id': f"https://{uri_domain}/activities/create/gibberish(15)", 'object': post_data}
+        post = create_post(False, community, request_json, user)
+        if post:
+            if 'published' in post_data:
+                post.posted_at=post_data['published']
+                post.last_active=post_data['published']
+                db.session.commit()
+            return post
 
     return None
 
@@ -2569,21 +2567,7 @@ def verify_object_from_source(request_json):
     return request_json
 
 
-# This is for followers on microblog apps
-# Used to let them know a Poll has been updated with a new vote
-# The plan is to also use it for activities on local user's posts that aren't understood by being Announced (anything beyond the initial Create)
-# This would need for posts to have things like a 'Replies' collection and a 'Likes' collection, so these can be downloaded when the post updates
-# Using collecions like this (as PeerTube does) circumvents the problem of not having a remote user's private key.
-# The problem of what to do for remote user's activity on a remote user's post in a local community still exists (can't Announce it, can't inform of post update)
 def inform_followers_of_post_update(post_id: int, sending_instance_id: int):
-    if current_app.debug:
-        inform_followers_of_post_update_task(post_id, sending_instance_id)
-    else:
-        inform_followers_of_post_update_task.delay(post_id, sending_instance_id)
-
-
-@celery.task
-def inform_followers_of_post_update_task(post_id: int, sending_instance_id: int):
     post = Post.query.get(post_id)
     page_json = post_to_page(post)
     page_json['updated'] = ap_datetime(utcnow())

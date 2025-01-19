@@ -1182,7 +1182,7 @@ class Post(db.Model):
             find_licence_or_create, make_image_sizes, notify_about_post
         from app.utils import allowlist_html, markdown_to_html, html_to_text, microblog_content_to_title, blocked_phrases, \
             is_image_url, is_video_url, domain_from_url, opengraph_parse, shorten_string, remove_tracking_from_link, \
-            is_video_hosting_site, communities_banned_from, recently_upvoted_posts
+            is_video_hosting_site, communities_banned_from, recently_upvoted_posts, blocked_users
 
         microblog = False
         if 'name' not in request_json['object']:  # Microblog posts
@@ -1376,6 +1376,24 @@ class Post(db.Model):
                 db.session.rollback()
                 return Post.query.filter_by(ap_id=request_json['object']['id'].lower()).one()
 
+            # Mentions also need a post_id
+            if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
+                for json_tag in request_json['object']['tag']:
+                    if 'type' in json_tag and json_tag['type'] == 'Mention':
+                        profile_id = json_tag['href'] if 'href' in json_tag else None
+                        if profile_id and isinstance(profile_id, str) and profile_id.startswith('https://' + current_app.config['SERVER_NAME']):
+                            profile_id = profile_id.lower()
+                            recipient = User.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
+                            if recipient:
+                                blocked_senders = blocked_users(recipient.id)
+                                if post.user_id not in blocked_senders:
+                                    notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in post {post.id}"),
+                                                                url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
+                                                                author_id=post.user_id)
+                                    recipient.unread_notifications += 1
+                                    db.session.add(notification)
+                                    db.session.commit()
+
             # Polls need to be processed quite late because they need a post_id to refer to
             if request_json['object']['type'] == 'Question':
                 post.type = constants.POST_TYPE_POLL
@@ -1457,7 +1475,7 @@ class Post(db.Model):
                 ncp.cross_posts.append(self.id)
 
         # this post: set the cross_posts field to the limited list of ids from the most recent other posts
-        if new_cross_posts:
+        if new_cross_posts.count() > 0:
             self.cross_posts = [ncp.id for ncp in new_cross_posts]
         db.session.commit()
 

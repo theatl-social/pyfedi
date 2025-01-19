@@ -42,7 +42,6 @@ import re
   'cc': []
   '@context':       (outer object only)
   'audience':       (not in Announce)
-  'tag': []         (not in Announce)
 }
 """
 
@@ -149,7 +148,7 @@ def send_reply(user_id, reply_id, parent_id, edit=False):
       'distinguished': False,
     }
     if edit:
-        note['updated']: ap_datetime(utcnow())
+        note['updated'] = ap_datetime(utcnow())
 
     activity = 'create' if not edit else 'update'
     create_id = f"https://{current_app.config['SERVER_NAME']}/activities/{activity}/{gibberish(15)}"
@@ -162,7 +161,7 @@ def send_reply(user_id, reply_id, parent_id, edit=False):
       'to': to,
       'cc': cc,
       '@context': default_context(),
-      'tag': tag
+      'audience': community.public_url()
     }
 
     domains_sent_to = [current_app.config['SERVER_NAME']]

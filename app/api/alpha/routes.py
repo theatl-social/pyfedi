@@ -1,7 +1,7 @@
 from app.api.alpha import bp
 from app.api.alpha.utils import get_site, post_site_block, \
                                 get_search, \
-                                get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, \
+                                get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, post_post, put_post, post_post_delete, post_post_report, \
                                 get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, put_reply, post_reply_delete, post_reply_report, \
                                 get_community_list, get_community, post_community_follow, post_community_block, \
                                 get_user, post_user_block
@@ -9,12 +9,14 @@ from app.shared.auth import log_user_in
 
 from flask import current_app, jsonify, request
 
+def enable_api():
+    return True if current_app.debug else False
 
 # Site
 @bp.route('/api/alpha/site', methods=['GET'])
 def get_alpha_site():
-    if not current_app.debug:
-        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
     try:
         auth = request.headers.get('Authorization')
         return jsonify(get_site(auth))
@@ -24,8 +26,8 @@ def get_alpha_site():
 
 @bp.route('/api/alpha/site/block', methods=['POST'])
 def get_alpha_site_block():
-    if not current_app.debug:
-        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -37,8 +39,8 @@ def get_alpha_site_block():
 # Misc
 @bp.route('/api/alpha/search', methods=['GET'])
 def get_alpha_search():
-    if not current_app.debug:
-        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
     try:
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
@@ -50,8 +52,8 @@ def get_alpha_search():
 # Community
 @bp.route('/api/alpha/community', methods=['GET'])
 def get_alpha_community():
-    if not current_app.debug:
-        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
     try:
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
@@ -62,8 +64,8 @@ def get_alpha_community():
 
 @bp.route('/api/alpha/community/list', methods=['GET'])
 def get_alpha_community_list():
-    if not current_app.debug:
-        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
     try:
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
@@ -74,8 +76,8 @@ def get_alpha_community_list():
 
 @bp.route('/api/alpha/community/follow', methods=['POST'])
 def post_alpha_community_follow():
-    if not current_app.debug:
-        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -86,8 +88,8 @@ def post_alpha_community_follow():
 
 @bp.route('/api/alpha/community/block', methods=['POST'])
 def post_alpha_community_block():
-    if not current_app.debug:
-        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -99,8 +101,8 @@ def post_alpha_community_block():
 # Post
 @bp.route('/api/alpha/post/list', methods=['GET'])
 def get_alpha_post_list():
-    if not current_app.debug:
-        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
     try:
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
@@ -111,8 +113,8 @@ def get_alpha_post_list():
 
 @bp.route('/api/alpha/post', methods=['GET'])
 def get_alpha_post():
-    if not current_app.debug:
-        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
     try:
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
@@ -123,8 +125,8 @@ def get_alpha_post():
 
 @bp.route('/api/alpha/post/like', methods=['POST'])
 def post_alpha_post_like():
-    if not current_app.debug:
-        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -135,8 +137,8 @@ def post_alpha_post_like():
 
 @bp.route('/api/alpha/post/save', methods=['PUT'])
 def put_alpha_post_save():
-    if not current_app.debug:
-        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -147,8 +149,8 @@ def put_alpha_post_save():
 
 @bp.route('/api/alpha/post/subscribe', methods=['PUT'])
 def put_alpha_post_subscribe():
-    if not current_app.debug:
-        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -157,11 +159,59 @@ def put_alpha_post_subscribe():
         return jsonify({"error": str(ex)}), 400
 
 
+@bp.route('/api/alpha/post', methods=['POST'])
+def post_alpha_post():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(post_post(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/post', methods=['PUT'])
+def put_alpha_post():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(put_post(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/post/delete', methods=['POST'])
+def post_alpha_post_delete():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(post_post_delete(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/post/report', methods=['POST'])
+def post_alpha_post_report():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(post_post_report(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
 # Reply
 @bp.route('/api/alpha/comment/list', methods=['GET'])
 def get_alpha_comment_list():
-    if not current_app.debug:
-        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
     try:
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
@@ -172,8 +222,8 @@ def get_alpha_comment_list():
 
 @bp.route('/api/alpha/comment/like', methods=['POST'])
 def post_alpha_comment_like():
-    if not current_app.debug:
-        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -184,8 +234,8 @@ def post_alpha_comment_like():
 
 @bp.route('/api/alpha/comment/save', methods=['PUT'])
 def put_alpha_comment_save():
-    if not current_app.debug:
-        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -196,8 +246,8 @@ def put_alpha_comment_save():
 
 @bp.route('/api/alpha/comment/subscribe', methods=['PUT'])
 def put_alpha_comment_subscribe():
-    if not current_app.debug:
-        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -208,8 +258,8 @@ def put_alpha_comment_subscribe():
 
 @bp.route('/api/alpha/comment', methods=['POST'])
 def post_alpha_comment():
-    if not current_app.debug:
-        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -220,8 +270,8 @@ def post_alpha_comment():
 
 @bp.route('/api/alpha/comment', methods=['PUT'])
 def put_alpha_comment():
-    if not current_app.debug:
-        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -232,8 +282,8 @@ def put_alpha_comment():
 
 @bp.route('/api/alpha/comment/delete', methods=['POST'])
 def post_alpha_comment_delete():
-    if not current_app.debug:
-        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -244,8 +294,8 @@ def post_alpha_comment_delete():
 
 @bp.route('/api/alpha/comment/report', methods=['POST'])
 def post_alpha_comment_report():
-    if not current_app.debug:
-        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -257,8 +307,8 @@ def post_alpha_comment_report():
 # User
 @bp.route('/api/alpha/user', methods=['GET'])
 def get_alpha_user():
-    if not current_app.debug:
-        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
     try:
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
@@ -269,8 +319,8 @@ def get_alpha_user():
 
 @bp.route('/api/alpha/user/login', methods=['POST'])
 def post_alpha_user_login():
-    if not current_app.debug:
-        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
     try:
         SRC_API = 3                                     # would be in app.constants
         data = request.get_json(force=True) or {}
@@ -281,8 +331,8 @@ def post_alpha_user_login():
 
 @bp.route('/api/alpha/user/block', methods=['POST'])
 def post_alpha_user_block():
-    if not current_app.debug:
-        return jsonify({'error': 'alpha api routes only available in debug mode'})
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -319,9 +369,6 @@ def alpha_community():
     return jsonify({"error": "not_yet_implemented"}), 400
 
 # Post - not yet implemented
-@bp.route('/api/alpha/post', methods=['PUT'])
-@bp.route('/api/alpha/post', methods=['POST'])
-@bp.route('/api/alpha/post/delete', methods=['POST'])
 @bp.route('/api/alpha/post/remove', methods=['POST'])
 @bp.route('/api/alpha/post/lock', methods=['POST'])
 @bp.route('/api/alpha/post/feature', methods=['POST'])

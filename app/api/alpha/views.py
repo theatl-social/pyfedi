@@ -373,6 +373,47 @@ def reply_report_view(report, reply_id, user_id):
     return v1
 
 
+def post_report_view(report, post_id, user_id):
+    # views/post_report_view.dart - /post/report api endpoint
+    post_json = post_view(post=post_id, variant=2, user_id=user_id)
+    community_json = community_view(community=post_json['post']['community_id'], variant=1, stub=True)
+
+    banned = db.session.execute(text('SELECT user_id FROM "community_ban" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': report.reporter_id, 'community_id': community_json['id']}).scalar()
+    moderator = db.session.execute(text('SELECT is_moderator FROM "community_member" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': report.reporter_id, 'community_id': community_json['id']}).scalar()
+    admin = db.session.execute(text('SELECT user_id FROM "user_role" WHERE user_id = :user_id and role_id = 4'), {'user_id': report.reporter_id}).scalar()
+
+    creator_banned_from_community = True if banned else False
+    creator_is_moderator = True if moderator else False
+    creator_is_admin = True if admin else False
+
+    v1 = {
+      'post_report_view': {
+        'post_report': {
+          'id': report.id,
+          'creator_id': report.reporter_id,
+          'post_id': report.suspect_post_id,
+          'original_post_name': post_json['post']['title'],
+          'original_post_body': '',
+          'reason': report.reasons,
+          'resolved': report.status == 3,
+          'published': report.created_at.isoformat() + 'Z'
+        },
+        'post': post_json['post'],
+        'community': community_json,
+        'creator': user_view(user=user_id, variant=1, stub=True),
+        'post_creator': user_view(user=report.suspect_user_id, variant=1, stub=True),
+        'counts': post_json['counts'],
+        'creator_banned_from_community': creator_banned_from_community,
+        'creator_is_moderator': creator_is_moderator,
+        'creator_is_admin': creator_is_admin,
+        'creator_blocked': False,
+        'subscribed': post_json['subscribed'],
+        'saved': post_json['saved']
+      }
+    }
+    return v1
+
+
 def search_view(type):
     v1 = {
       'type_': type,
