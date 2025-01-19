@@ -561,5 +561,27 @@ def lock_post(post_id, locked, src, auth=None):
     return user.id, post
 
 
+def sticky_post(post_id, featured, src, auth=None):
+    if src == SRC_API:
+        user = authorise_api_user(auth, return_type='model')
+    else:
+        user = current_user
+
+    post = Post.query.filter_by(id=post_id).one()
+    community = post.community
+
+    if post.community.is_moderator(user) or post.community.is_instance_admin(user):
+        post.sticky = featured
+        if not community.ap_featured_url:
+            community.ap_featured_url = community.ap_profile_id + '/featured'
+        db.session.commit()
+
+    if featured:
+        task_selector('sticky_post', user_id=user.id, post_id=post_id)
+    else:
+        task_selector('unsticky_post', user_id=user.id, post_id=post_id)
+
+    return user.id, post
+
 
 
