@@ -572,9 +572,15 @@ def sticky_post(post_id, featured, src, auth=None):
 
     if post.community.is_moderator(user) or post.community.is_instance_admin(user):
         post.sticky = featured
+        if featured:
+            modlog_type = 'featured_post'
+        else:
+            modlog_type = 'unfeatured_post'
         if not community.ap_featured_url:
             community.ap_featured_url = community.ap_profile_id + '/featured'
         db.session.commit()
+        add_to_modlog_activitypub(modlog_type, user, community_id=post.community_id,
+                                  link_text=shorten_string(post.title), link=f'post/{post.id}', reason='')
 
     if featured:
         task_selector('sticky_post', user_id=user.id, post_id=post_id)
@@ -583,5 +589,69 @@ def sticky_post(post_id, featured, src, auth=None):
 
     return user.id, post
 
+
+# mod deletes
+def mod_remove_post(post_id, reason, src, auth):
+    if src == SRC_API:
+        user = authorise_api_user(auth, return_type='model')
+    else:
+        user = current_user
+
+    post = Post.query.filter_by(id=post_id, user_id=user.id, deleted=False).one()
+    if not post.community.is_moderator(user) and not post.community.is_instance_admin(user):
+        raise Exception('Does not have permission')
+
+    if post.url:
+        post.calculate_cross_posts(delete_only=True)
+
+    post.deleted = True
+    post.deleted_by = user.id
+    post.author.post_count -= 1
+    post.community.post_count -= 1
+    db.session.commit()
+    if src == SRC_WEB:
+        flash(_('Post deleted.'))
+
+    add_to_modlog_activitypub('delete_post', user, community_id=post.community_id,
+                              link_text=shorten_string(post.title), link=f'post/{post.id}', reason=reason)
+
+    task_selector('delete_post', user_id=user.id, post_id=post.id, reason=reason)
+
+    if src == SRC_API:
+        return user.id, post
+    else:
+        return
+
+
+def mod_restore_post(post_id, reason, src, auth):
+    if src == SRC_API:
+        user = authorise_api_user(auth, return_type='model')
+    else:
+        user = current_user
+
+    post = Post.query.filter_by(id=post_id, user_id=user.id, deleted=True).one()
+    if not post.community.is_moderator(user) and not post.community.is_instance_admin(user):
+        raise Exception('Does not have permission')
+
+    if post.url:
+        post.calculate_cross_posts()
+
+    post.deleted = False
+    post.deleted_by = None
+    post.author.post_count -= 1
+    post.community.post_count -= 1
+    db.session.commit()
+    if src == SRC_WEB:
+        flash(_('Post restored.'))
+
+    add_to_modlog_activitypub('restore_post', user, community_id=post.community_id,
+                              link_text=shorten_string(post.title), link=f'post/{post.id}', reason=reason)
+
+    task_selector('restore_post', user_id=user.id, post_id=post.id, reason=reason)
+
+    if src == SRC_API:
+        return user.id, post
+    else:
+        return
 
 
