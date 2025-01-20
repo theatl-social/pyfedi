@@ -2181,6 +2181,45 @@ def can_delete(user_ap_id, post):
     return can_edit(user_ap_id, post)
 
 
+# TODO: import this into community/util for backfilling, instead of having 2 copies, and - also - call it from resolve_remote_post()
+def remote_object_to_json(uri):
+    try:
+        object_request = get_request(uri, headers={'Accept': 'application/activity+json'})
+    except httpx.HTTPError:
+        time.sleep(3)
+        try:
+            object_request = get_request(uri, headers={'Accept': 'application/activity+json'})
+        except httpx.HTTPError:
+            return None
+    if object_request.status_code == 200:
+        try:
+            object = object_request.json()
+            return object
+        except:
+            object_request.close()
+            return None
+        object_request.close()
+    elif object_request.status_code == 401:
+        try:
+            site = Site.query.get(1)
+            object_request = signed_get_request(uri, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+        except httpx.HTTPError:
+            time.sleep(3)
+            try:
+                object_request = signed_get_request(uri, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+            except httpx.HTTPError:
+                return None
+        try:
+            object = object_request.json()
+            return object
+        except:
+            object_request.close()
+            return None
+        object_request.close()
+    else:
+        return None
+
+
 # called from incoming activitypub, when the object in an Announce is just a URL
 # despite the name, it works for both posts and replies
 def resolve_remote_post(uri: str, community, announce_id, store_ap_json) -> Union[Post, PostReply, None]:
@@ -2304,39 +2343,17 @@ def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
     actor_domain = None
     actor = None
 
-    try:
-        object_request = get_request(uri, headers={'Accept': 'application/activity+json'})
-    except httpx.HTTPError:
-        time.sleep(3)
-        try:
-            object_request = get_request(uri, headers={'Accept': 'application/activity+json'})
-        except httpx.HTTPError:
-            return None
-    if object_request.status_code == 200:
-        try:
-            post_data = object_request.json()
-        except:
-            object_request.close()
-            return None
-        object_request.close()
-    elif object_request.status_code == 401:
-        try:
-            site = Site.query.get(1)
-            object_request = signed_get_request(uri, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
-        except httpx.HTTPError:
-            time.sleep(3)
-            try:
-                object_request = signed_get_request(uri, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
-            except httpx.HTTPError:
-                return None
-        try:
-            post_data = object_request.json()
-        except:
-            object_request.close()
-            return None
-        object_request.close()
-    else:
-        return None
+    post_data = remote_object_to_json(uri)
+
+    # nodebb. the post is the first entry in orderedItems, and the replies are the remaining entries
+    # just gets orderedItems[0] the retrieve the post
+    if ('type' in post_data and post_data['type'] == 'OrderedCollection' and
+       'totalItems' in post_data and post_data['totalItems'] > 0 and
+       'orderedItems' in post_data and isinstance(post_data['orderedItems'], list)):
+        uri = post_data['orderedItems'][0]
+        parsed_url = urlparse(uri)
+        uri_domain = parsed_url.netloc
+        post_data = remote_object_to_json(uri)
 
     # check again that it doesn't already exist (can happen with different but equivalent URLs)
     post = Post.get_by_ap_id(post_data['id'])
