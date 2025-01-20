@@ -2291,7 +2291,7 @@ def resolve_remote_post(uri: str, community, announce_id, store_ap_json) -> Unio
 
 # called from UI, via 'search' option in navbar, or 'Retrieve a post from the original server' in community sidebar
 def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
-    post = Post.query.filter_by(ap_id=uri).first()
+    post = Post.get_by_ap_id(uri)
     if post:
         return post
 
@@ -2335,7 +2335,7 @@ def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
         return None
 
     # check again that it doesn't already exist (can happen with different but equivalent URLs)
-    post = Post.query.filter_by(ap_id=post_data['id']).first()
+    post = Post.get_by_ap_id(post_data['id'])
     if post:
         return post
 
@@ -2367,7 +2367,7 @@ def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
     # find the post's author
     user = find_actor_or_create(actor)
     if user and community and post_data:
-        request_json = {'id': f"https://{uri_domain}/activities/create/gibberish(15)", 'object': post_data}
+        request_json = {'id': f"https://{uri_domain}/activities/create/{gibberish(15)}", 'object': post_data}
         post = create_post(False, community, request_json, user)
         if post:
             if 'published' in post_data:
@@ -2508,6 +2508,8 @@ def log_incoming_ap(id, aplog_type, aplog_result, saved_json, message=None):
 
 
 def find_community(request_json):
+    # Create/Update from platform that included Community in 'audience', 'cc', or 'to' in outer or inner object
+    # Also works for manually retrieved posts
     locations = ['audience', 'cc', 'to']
     if 'object' in request_json and isinstance(request_json['object'], dict):
         rjs = [request_json, request_json['object']]
@@ -2529,9 +2531,20 @@ def find_community(request_json):
                             if potential_community:
                                 return potential_community
 
+    # used for manual retrieval of a PeerTube vid
+    if request_json['type'] == 'Video':
+        if 'attributedTo' in request_json and isinstance(request_json['attributedTo'], list):
+            for a in request_json['attributedTo']:
+                if a['type'] == 'Group':
+                    potential_community = Community.query.filter_by(ap_profile_id=a['id'].lower()).first()
+                    if potential_community:
+                        return potential_community
+
+    # change this if manual retrieval of comments is allowed in future
     if not 'object' in request_json:
         return None
 
+    # Create/Update Note from platform that didn't include the Community in 'audience', 'cc', or 'to' (e.g. Mastodon reply to Lemmy post)
     if 'inReplyTo' in request_json['object'] and request_json['object']['inReplyTo'] is not None:
         post_being_replied_to = Post.query.filter_by(ap_id=request_json['object']['inReplyTo'].lower()).first()
         if post_being_replied_to:
@@ -2541,7 +2554,8 @@ def find_community(request_json):
             if comment_being_replied_to:
                 return comment_being_replied_to.community
 
-    if request_json['object']['type'] == 'Video': # PeerTube
+    # Update / Video from PeerTube (possibly an edit, more likely an invite to query Likes / Replies endpoints)
+    if request_json['object']['type'] == 'Video':
         if 'attributedTo' in request_json['object'] and isinstance(request_json['object']['attributedTo'], list):
             for a in request_json['object']['attributedTo']:
                 if a['type'] == 'Group':
