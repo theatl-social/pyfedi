@@ -26,13 +26,13 @@ For Announce, remove @context from inner object, and use same fields except audi
 @celery.task
 def delete_reply(send_async, user_id, reply_id, reason=None):
     reply = PostReply.query.filter_by(id=reply_id).one()
-    delete_object(user_id, reply)
+    delete_object(user_id, reply, reason=reason)
 
 
 @celery.task
 def restore_reply(send_async, user_id, reply_id, reason=None):
     reply = PostReply.query.filter_by(id=reply_id).one()
-    delete_object(user_id, reply, is_restore=True)
+    delete_object(user_id, reply, is_restore=True, reason=reason)
 
 
 @celery.task

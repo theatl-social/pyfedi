@@ -4,7 +4,7 @@ from app.api.alpha.utils import get_site, post_site_block, \
                                 get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, post_post, \
                                 put_post, post_post_delete, post_post_report, post_post_lock, post_post_feature, post_post_remove, \
                                 get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, put_reply, \
-                                post_reply_delete, post_reply_report, \
+                                post_reply_delete, post_reply_report, post_reply_remove, \
                                 get_community_list, get_community, post_community_follow, post_community_block, \
                                 get_user, post_user_block
 from app.shared.auth import log_user_in
@@ -237,12 +237,12 @@ def post_alpha_post_feature():
 def post_alpha_post_remove():
     if not enable_api():
         return jsonify({'error': 'alpha api is not enabled'})
-    #try:
-    auth = request.headers.get('Authorization')
-    data = request.get_json(force=True) or {}
-    return jsonify(post_post_remove(auth, data))
-    #except Exception as ex:
-    #    return jsonify({"error": str(ex)}), 400
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(post_post_remove(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
 
 
 # Reply
@@ -342,6 +342,18 @@ def post_alpha_comment_report():
         return jsonify({"error": str(ex)}), 400
 
 
+@bp.route('/api/alpha/comment/remove', methods=['POST'])
+def post_alpha_comment_remove():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(post_reply_remove(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
 # User
 @bp.route('/api/alpha/user', methods=['GET'])
 def get_alpha_user():
@@ -415,7 +427,6 @@ def alpha_post():
 
 # Reply - not yet implemented
 @bp.route('/api/alpha/comment', methods=['GET'])                                  # Stage 1 if needed for search
-@bp.route('/api/alpha/comment/remove', methods=['POST'])                          # Stage 1
 @bp.route('/api/alpha/comment/mark_as_read', methods=['POST'])                    # No DB support
 @bp.route('/api/alpha/comment/distinguish', methods=['POST'])                     # Not really used
 @bp.route('/api/alpha/comment/report/resolve', methods=['PUT'])                   # Stage 2
