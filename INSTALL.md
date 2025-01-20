@@ -178,6 +178,9 @@ sudo apt install git
 sudo apt install tesseract-ocr
 ```
 
+Developers might want to use `ruff` as a pre-commit linter. Install it with `pip install ruff` then use `ruff check` to analyze code.
+We have supplied a ruff.toml config file in the root of the project.
+
 <div id="setup-pyfedi"></div>
 
 ## Setup PyFedi
