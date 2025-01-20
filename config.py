@@ -58,3 +58,6 @@ class Config(object):
     SPICY_UNDER_60 = float(os.environ.get('SPICY_UNDER_60', 1.0))
 
     IPINFO_TOKEN = os.environ.get('IPINFO_TOKEN') or ''
+
+    DB_POOL_SIZE = os.environ.get('DB_POOL_SIZE') or 10
+    DB_MAX_OVERFLOW = os.environ.get('DB_MAX_OVERFLOW') or 30

@@ -32,7 +32,7 @@ def get_locale():
         return 'en'
 
 
-db = SQLAlchemy(session_options={"autoflush": False})  # engine_options={'pool_size': 5, 'max_overflow': 10} # session_options={"autoflush": False}
+db = SQLAlchemy(session_options={"autoflush": False}, engine_options={'pool_size': Config.DB_POOL_SIZE, 'max_overflow': Config.DB_MAX_OVERFLOW})  # engine_options={'pool_size': 5, 'max_overflow': 10} # session_options={"autoflush": False}
 migrate = Migrate()
 login = LoginManager()
 login.login_view = 'auth.login'
