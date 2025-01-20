@@ -2260,7 +2260,9 @@ def resolve_remote_post(uri: str, community, announce_id, store_ap_json) -> Unio
                 post_reply = PostReply.get_by_ap_id(uri)
                 if post_reply:
                     update_post_reply_from_activity(post_reply, request_json)
-            else:
+                else:
+                    activity = 'create'
+            if activity == 'create':
                 post_reply = create_post_reply(store_ap_json, community, request_json['object']['inReplyTo'], request_json, user)
                 if post_reply:
                     if 'published' in post_data:
@@ -2274,8 +2276,10 @@ def resolve_remote_post(uri: str, community, announce_id, store_ap_json) -> Unio
             if activity == 'update':
                 post = Post.get_by_ap_id(uri)
                 if post:
-                    update_post_from_activity(post_reply, request_json)
-            else:
+                    update_post_from_activity(post, request_json)
+                else:
+                    activity = 'create'
+            if activity == 'create':
                 post = create_post(store_ap_json, community, request_json, user, announce_id)
                 if post:
                     if 'published' in post_data:
