@@ -6,33 +6,46 @@ from app.models import Community, CommunityMember
 from app.shared.community import join_community, leave_community, block_community, unblock_community
 from app.utils import communities_banned_from, blocked_instances
 
+from sqlalchemy import desc
+
 
 @cache.memoize(timeout=3)
-def cached_community_list(type, user_id):
-    if type == 'Subscribed' and user_id is not None:
-        communities = Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == user_id)
+def cached_community_list(type, sort, limit, user_id):
+    if user_id:
         banned_from = communities_banned_from(user_id)
-        if banned_from:
-            communities = communities.filter(Community.id.not_in(banned_from))
+    else:
+        banned_from = None
+
+    if type == 'Subscribed':
+        communities = Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == user_id)
+    elif type == 'Local':
+        communities = Community.query.filter_by(ap_id=None, banned=False)
     else:
         communities = Community.query.filter_by(banned=False)
 
-    if user_id is not None:
+    if banned_from:
+        communities = communities.filter(Community.id.not_in(banned_from))
+
+    if user_id:
         blocked_instance_ids = blocked_instances(user_id)
         if blocked_instance_ids:
             communities = communities.filter(Community.instance_id.not_in(blocked_instance_ids))
+
+    if sort == 'Active':    # 'Trending Communities' screen
+        communities = communities.order_by(desc(Community.last_active)).limit(limit)
 
     return communities.all()
 
 
 def get_community_list(auth, data):
     type = data['type_'] if data and 'type_' in data else "All"
+    sort = data['sort'] if data and 'sort' in data else "Hot"
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 10
 
     user_id = authorise_api_user(auth) if auth else None
 
-    communities = cached_community_list(type, user_id)
+    communities = cached_community_list(type, sort, limit, user_id)
 
     start = (page - 1) * limit
     end = start + limit
