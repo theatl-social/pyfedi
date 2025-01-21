@@ -1001,35 +1001,34 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
 
 
 def find_reply_parent(in_reply_to: str) -> Tuple[int, int, int]:
+    parent_comment = post = None
+    post_id = parent_comment_id = root_id = None
+
+    # 'comment' is hint that in_reply_to was another comment
     if 'comment' in in_reply_to:
         parent_comment = PostReply.get_by_ap_id(in_reply_to)
-        if not parent_comment:
-            return (None, None, None)
-        parent_comment_id = parent_comment.id
-        post_id = parent_comment.post_id
-        root_id = parent_comment.root_id
-    elif 'post' in in_reply_to:
-        parent_comment_id = None
-        post = Post.get_by_ap_id(in_reply_to)
-        if not post:
-            return (None, None, None)
-        post_id = post.id
-        root_id = None
-    else:
-        parent_comment_id = None
-        root_id = None
-        post_id = None
+        if parent_comment:
+            parent_comment_id = parent_comment.id
+            post_id = parent_comment.post_id
+            root_id = parent_comment.root_id
+
+    # 'post' is hint that in_reply_to was a post
+    if not parent_comment and 'post' in in_reply_to:
         post = Post.get_by_ap_id(in_reply_to)
         if post:
             post_id = post.id
+
+    # no hint in in_reply_to, or it was misleading (e.g. replies to nodebb comments have '/post/' in them)
+    if not parent_comment and not post:
+        parent_comment = PostReply.get_by_ap_id(in_reply_to)
+        if parent_comment:
+            parent_comment_id = parent_comment.id
+            post_id = parent_comment.post_id
+            root_id = parent_comment.root_id
         else:
-            parent_comment = PostReply.get_by_ap_id(in_reply_to)
-            if parent_comment:
-                parent_comment_id = parent_comment.id
-                post_id = parent_comment.post_id
-                root_id = parent_comment.root_id
-            else:
-                return (None, None, None)
+            post = Post.get_by_ap_id(in_reply_to)
+            if post:
+                post_id = post.id
 
     return post_id, parent_comment_id, root_id
 

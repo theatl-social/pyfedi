@@ -420,6 +420,7 @@ def shared_inbox():
         object = request_json['object']
         if not 'actor' in object:
             missing_actor_in_announce_object = True
+            log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_MONITOR, request_json, 'Actor is missing in Announce object')
         if not 'id' in object or not 'type' in object or not 'object' in object:
             if 'type' in object and (object['type'] == 'Page' or object['type'] == 'Note'):
                 log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_IGNORED, saved_json, 'Intended for Mastodon')
@@ -541,6 +542,7 @@ def replay_inbox_request(request_json):
         object = request_json['object']
         if not 'actor' in object:
             missing_actor_in_announce_object = True
+            log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_MONITOR, request_json, 'REPLAY: Actor is missing in Announce object')
         if not 'id' in object or not 'type' in object or not 'object' in object:
             if 'type' in object and (object['type'] == 'Page' or object['type'] == 'Note'):
                 log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_IGNORED, request_json, 'REPLAY: Intended for Mastodon')

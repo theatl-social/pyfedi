@@ -1106,8 +1106,6 @@ def theme_list():
         for dir in dirs:
             if os.path.exists(f'app/templates/themes/{dir}/{dir}.json'):
                 theme_settings = json.loads(file_get_contents(f'app/templates/themes/{dir}/{dir}.json'))
-                if 'debug' in theme_settings and theme_settings['debug'] == True and not current_app.debug:
-                  continue
                 result.append((dir, theme_settings['name']))
     return result
 
