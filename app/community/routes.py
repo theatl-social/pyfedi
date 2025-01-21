@@ -21,8 +21,7 @@ from app.chat.util import send_message
 from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, CreateImageForm, CreateLinkForm, \
     ReportCommunityForm, \
     DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm, \
-    EscalateReportForm, ResolveReportForm, CreateVideoForm, CreatePollForm, RetrieveRemotePost, \
-    EditCommunityWikiPageForm
+    EscalateReportForm, ResolveReportForm, CreateVideoForm, CreatePollForm, EditCommunityWikiPageForm
 from app.community.util import search_for_community, actor_to_community, \
     save_icon_file, save_banner_file, send_to_remote_instance, \
     delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users, tags_from_string, \
@@ -150,24 +149,6 @@ def add_remote():
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(),
                            site=g.site)
-
-
-@bp.route('/retrieve_remote_post/<int:community_id>', methods=['GET', 'POST'])
-@login_required
-def retrieve_remote_post(community_id: int):
-    if current_user.banned:
-        return show_ban_message()
-    form = RetrieveRemotePost()
-    new_post = None
-    community = Community.query.get_or_404(community_id)
-    if form.validate_on_submit():
-        address = form.address.data.strip()
-        new_post = resolve_remote_post(address, community_id)
-        if new_post is None:
-            flash(_('Post not found.'), 'warning')
-
-    return render_template('community/retrieve_remote_post.html',
-                           title=_('Retrieve Remote Post'), form=form, new_post=new_post, community=community)
 
 
 # @bp.route('/c/<actor>', methods=['GET']) - defined in activitypub/routes.py, which calls this function for user requests. A bit weird.

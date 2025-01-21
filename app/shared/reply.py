@@ -5,7 +5,7 @@ from app.constants import *
 from app.models import Instance, Notification, NotificationSubscription, Post, PostReply, PostReplyBookmark, Report, Site, User, utcnow
 from app.shared.tasks import task_selector
 from app.utils import gibberish, instance_banned, render_template, authorise_api_user, recently_upvoted_post_replies, recently_downvoted_post_replies, shorten_string, \
-                      piefed_markdown_to_lemmy_markdown, markdown_to_html, ap_datetime
+                      piefed_markdown_to_lemmy_markdown, markdown_to_html, ap_datetime, add_to_modlog_activitypub
 
 from flask import abort, current_app, flash, redirect, request, url_for
 from flask_babel import _
@@ -335,5 +335,68 @@ def report_reply(reply_id, input, src, auth=None):
 
     if src == SRC_API:
         return user_id, report
+    else:
+        return
+
+
+# mod deletes
+def mod_remove_reply(reply_id, reason, src, auth):
+    if src == SRC_API:
+        user = authorise_api_user(auth, return_type='model')
+    else:
+        user = current_user
+
+    reply = PostReply.query.filter_by(id=reply_id, deleted=False).one()
+    if not reply.community.is_moderator(user) and not reply.community.is_instance_admin(user):
+        raise Exception('Does not have permission')
+
+    reply.deleted = True
+    reply.deleted_by = user.id
+    if not reply.author.bot:
+        reply.post.reply_count -= 1
+    reply.author.post_reply_count -= 1
+    db.session.commit()
+    if src == SRC_WEB:
+        flash(_('Comment deleted.'))
+
+    add_to_modlog_activitypub('delete_post_reply', user, community_id=reply.community_id,
+                              link_text=shorten_string(f'comment on {shorten_string(reply.post.title)}'),
+                              link=f'post/{reply.post_id}#comment_{reply.id}', reason=reason)
+
+    task_selector('delete_reply', user_id=user.id, reply_id=reply.id, reason=reason)
+
+    if src == SRC_API:
+        return user.id, reply
+    else:
+        return
+
+
+def mod_restore_reply(reply_id, reason, src, auth):
+    if src == SRC_API:
+        user = authorise_api_user(auth, return_type='model')
+    else:
+        user = current_user
+
+    reply = PostReply.query.filter_by(id=reply_id, deleted=True).one()
+    if not reply.community.is_moderator(user) and not reply.community.is_instance_admin(user):
+        raise Exception('Does not have permission')
+
+    reply.deleted = False
+    reply.deleted_by = None
+    if not reply.author.bot:
+        reply.post.reply_count += 1
+    reply.author.post_reply_count += 1
+    db.session.commit()
+    if src == SRC_WEB:
+        flash(_('Comment restored.'))
+
+    add_to_modlog_activitypub('restore_post_reply', user, community_id=reply.community_id,
+                              link_text=shorten_string(f'comment on {shorten_string(reply.post.title)}'),
+                              link=f'post/{reply.post_id}#comment_{reply.id}', reason=reason)
+
+    task_selector('restore_reply', user_id=user.id, reply_id=reply.id, reason=reason)
+
+    if src == SRC_API:
+        return user.id, reply
     else:
         return

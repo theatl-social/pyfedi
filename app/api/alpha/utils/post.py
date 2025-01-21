@@ -3,7 +3,8 @@ from app.api.alpha.views import post_view, post_report_view
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
 from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO
 from app.models import Post, Community, CommunityMember, utcnow
-from app.shared.post import vote_for_post, bookmark_the_post, remove_the_bookmark_from_post, toggle_post_notification, make_post, edit_post, delete_post, restore_post, report_post
+from app.shared.post import vote_for_post, bookmark_the_post, remove_the_bookmark_from_post, toggle_post_notification, make_post, edit_post, \
+                            delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post
 from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, community_ids_from_instances, is_image_url, is_video_url
 
 from datetime import timedelta
@@ -239,3 +240,51 @@ def post_post_report(auth, data):
     post_json = post_report_view(report=report, post_id=post_id, user_id=user_id)
     return post_json
 
+
+def post_post_lock(auth, data):
+    required(['post_id', 'locked'], data)
+    integer_expected(['post_id'], data)
+    boolean_expected(['locked'], data)
+
+    post_id = data['post_id']
+    locked = data['locked']
+
+    user_id, post = lock_post(post_id, locked, SRC_API, auth)
+
+    post_json = post_view(post=post, variant=4, user_id=user_id)
+    return post_json
+
+
+def post_post_feature(auth, data):
+    required(['post_id', 'featured', 'feature_type'], data)
+    integer_expected(['post_id'], data)
+    boolean_expected(['featured'], data)
+    string_expected(['feature_type'], data)
+
+    post_id = data['post_id']
+    featured = data['featured']
+
+    user_id, post = sticky_post(post_id, featured, SRC_API, auth)
+
+    post_json = post_view(post=post, variant=4, user_id=user_id)
+    return post_json
+
+
+def post_post_remove(auth, data):
+    required(['post_id', 'removed'], data)
+    integer_expected(['post_id'], data)
+    boolean_expected(['removed'], data)
+    string_expected(['reason'], data)
+
+    post_id = data['post_id']
+    removed = data['removed']
+
+    if removed == True:
+        reason = data['reason'] if 'reason' in data else 'Removed by mod'
+        user_id, post = mod_remove_post(post_id, reason, SRC_API, auth)
+    else:
+        reason = data['reason'] if 'reason' in data else 'Restored by mod'
+        user_id, post = mod_restore_post(post_id, reason, SRC_API, auth)
+
+    post_json = post_view(post=post, variant=4, user_id=user_id)
+    return post_json

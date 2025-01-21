@@ -521,7 +521,7 @@ def refresh_user_profile_task(user_id):
                     if field_data['type'] == 'PropertyValue':
                         if '<a ' in field_data['value']:
                             field_data['value'] = mastodon_extra_field_link(field_data['value'])
-                        user.extra_fields.append(UserExtraField(label=field_data['name'].strip(), text=field_data['value'].strip()))
+                        user.extra_fields.append(UserExtraField(shorten_string(label=field_data['name'].strip()), text=field_data['value'].strip()))
             if 'type' in activity_json:
                 user.bot = True if activity_json['type'] == 'Service' else False
             user.ap_fetched_at = utcnow()
@@ -772,7 +772,7 @@ def actor_json_to_model(activity_json, address, server):
                 if field_data['type'] == 'PropertyValue':
                     if '<a ' in field_data['value']:
                         field_data['value'] = mastodon_extra_field_link(field_data['value'])
-                    user.extra_fields.append(UserExtraField(label=field_data['name'].strip(), text=field_data['value'].strip()))
+                    user.extra_fields.append(UserExtraField(label=shorten_string(field_data['name'].strip()), text=field_data['value'].strip()))
         try:
             db.session.add(user)
             db.session.commit()
@@ -883,120 +883,6 @@ def actor_json_to_model(activity_json, address, server):
         if community.image_id:
             make_image_sizes(community.image_id, 700, 1600, 'communities')
         return community
-
-
-def post_json_to_model(activity_log, post_json, user, community) -> Post:
-    try:
-        nsfl_in_title = '[NSFL]' in post_json['name'].upper() or '(NSFL)' in post_json['name'].upper()
-        post = Post(user_id=user.id, community_id=community.id,
-                    title=html.unescape(post_json['name']),
-                    comments_enabled=post_json['commentsEnabled'] if 'commentsEnabled' in post_json else True,
-                    sticky=post_json['stickied'] if 'stickied' in post_json else False,
-                    nsfw=post_json['sensitive'],
-                    nsfl=post_json['nsfl'] if 'nsfl' in post_json else nsfl_in_title,
-                    ap_id=post_json['id'],
-                    type=constants.POST_TYPE_ARTICLE,
-                    posted_at=post_json['published'],
-                    last_active=post_json['published'],
-                    instance_id=user.instance_id,
-                    indexable = user.indexable
-                    )
-        if 'content' in post_json:
-            if post_json['mediaType'] == 'text/html':
-                post.body_html = allowlist_html(post_json['content'])
-                if 'source' in post_json and post_json['source']['mediaType'] == 'text/markdown':
-                    post.body = post_json['source']['content']
-                    post.body_html = markdown_to_html(post.body)          # prefer Markdown if provided, overwrite version obtained from HTML
-                else:
-                    post.body = html_to_text(post.body_html)
-            elif post_json['mediaType'] == 'text/markdown':
-                post.body = post_json['content']
-                post.body_html = markdown_to_html(post.body)
-        if 'attachment' in post_json and len(post_json['attachment']) > 0 and 'type' in post_json['attachment'][0]:
-            alt_text = None
-            if post_json['attachment'][0]['type'] == 'Link':
-                post.url = post_json['attachment'][0]['href']                       # Lemmy < 0.19.4
-            if post_json['attachment'][0]['type'] == 'Image':
-                post.url = post_json['attachment'][0]['url']                        # PieFed, Lemmy >= 0.19.4
-                if 'name' in post_json['attachment'][0]:
-                    alt_text = post_json['attachment'][0]['name']
-            if post.url:
-                if is_image_url(post.url):
-                    post.type = POST_TYPE_IMAGE
-                    image = File(source_url=post.url)
-                    if alt_text:
-                        image.alt_text = alt_text
-                    db.session.add(image)
-                    post.image = image
-                elif is_video_url(post.url):
-                    post.type = POST_TYPE_VIDEO
-                else:
-                    post.type = POST_TYPE_LINK
-                    post.url = remove_tracking_from_link(post.url)
-                domain = domain_from_url(post.url)
-
-                # notify about links to banned websites.
-                already_notified = set()        # often admins and mods are the same people - avoid notifying them twice
-                if domain:
-                    if domain.notify_mods:
-                        for community_member in post.community.moderators():
-                            notify = Notification(title='Suspicious content', url=post.ap_id, user_id=community_member.user_id, author_id=user.id)
-                            db.session.add(notify)
-                            already_notified.add(community_member.user_id)
-
-                    if domain.notify_admins:
-                        for admin in Site.admins():
-                            if admin.id not in already_notified:
-                                notify = Notification(title='Suspicious content', url=post.ap_id, user_id=admin.id, author_id=user.id)
-                                db.session.add(notify)
-                                admin.unread_notifications += 1
-                    if domain.banned:
-                        post = None
-                        activity_log.exception_message = domain.name + ' is blocked by admin'
-                    if not domain.banned:
-                        domain.post_count += 1
-                        post.domain = domain
-
-        if post is not None:
-            if post_json['type'] == 'Video':
-                post.type = POST_TYPE_VIDEO
-                post.url = post_json['id']
-                if 'icon' in post_json and isinstance(post_json['icon'], list):
-                    icon = File(source_url=post_json['icon'][-1]['url'])
-                    db.session.add(icon)
-                    post.image = icon
-
-            if 'language' in post_json:
-                language = find_language_or_create(post_json['language']['identifier'], post_json['language']['name'])
-                if language:
-                    post.language_id = language.id
-
-            if 'tag' in post_json:
-                for json_tag in post_json['tag']:
-                    if json_tag['type'] == 'Hashtag':
-                        # Lemmy adds the community slug as a hashtag on every post in the community, which we want to ignore
-                        if json_tag['name'][1:].lower() != community.name.lower():
-                            hashtag = find_hashtag_or_create(json_tag['name'])
-                            if hashtag:
-                                post.tags.append(hashtag)
-
-            if 'image' in post_json and post.image is None:
-                image = File(source_url=post_json['image']['url'])
-                db.session.add(image)
-                post.image = image
-            db.session.add(post)
-            community.post_count += 1
-            user.post_count += 1
-            activity_log.result = 'success'
-            db.session.commit()
-
-            if post.image_id:
-                make_image_sizes(post.image_id, 170, 512, 'posts')  # the 512 sized image is for masonry view
-
-        return post
-    except KeyError as e:
-        current_app.logger.error(f'KeyError in post_json_to_model: ' + str(post_json))
-        return None
 
 
 # Save two different versions of a File, after downloading it from file.source_url. Set a width parameter to None to avoid generating one of that size
@@ -2295,125 +2181,7 @@ def can_delete(user_ap_id, post):
     return can_edit(user_ap_id, post)
 
 
-def resolve_remote_post(uri: str, community_id: int, announce_actor=None, store_ap_json=False) -> Union[Post, PostReply, None]:
-    post = Post.query.filter_by(ap_id=uri).first()
-    if post:
-        return post
-
-    community = Community.query.get(community_id)
-    site = Site.query.get(1)
-
-    parsed_url = urlparse(uri)
-    uri_domain = parsed_url.netloc
-    if announce_actor:
-        parsed_url = urlparse(announce_actor)
-        announce_actor_domain = parsed_url.netloc
-        if announce_actor_domain != 'a.gup.pe' and announce_actor_domain != uri_domain:
-            return None
-    actor_domain = None
-    actor = None
-    post_request = get_request(uri, headers={'Accept': 'application/activity+json'})
-    if post_request.status_code == 200:
-        post_data = post_request.json()
-        post_request.close()
-        # check again that it doesn't already exist (can happen with different but equivalent URLs)
-        post = Post.query.filter_by(ap_id=post_data['id']).first()
-        if post:
-            return post
-        if 'attributedTo' in post_data:
-            if isinstance(post_data['attributedTo'], str):
-                actor = post_data['attributedTo']
-                parsed_url = urlparse(post_data['attributedTo'])
-                actor_domain = parsed_url.netloc
-            elif isinstance(post_data['attributedTo'], list):
-                for a in post_data['attributedTo']:
-                    if a['type'] == 'Person':
-                        actor = a['id']
-                        parsed_url = urlparse(a['id'])
-                        actor_domain = parsed_url.netloc
-                        break
-        if uri_domain != actor_domain:
-            return None
-
-        if not announce_actor:
-            # make sure that the post actually belongs in the community a user says it does
-            remote_community = None
-            if post_data['type'] == 'Page':                                          # lemmy
-                remote_community = post_data['audience'] if 'audience' in post_data else None
-                if remote_community and remote_community.lower() != community.ap_profile_id:
-                    return None
-            elif post_data['type'] == 'Video':                                       # peertube
-                if 'attributedTo' in post_data and isinstance(post_data['attributedTo'], list):
-                    for a in post_data['attributedTo']:
-                        if a['type'] == 'Group':
-                            remote_community = a['id']
-                            break
-                if remote_community and remote_community.lower() != community.ap_profile_id:
-                    return None
-            else:                                                                   # mastodon, etc
-                if 'inReplyTo' not in post_data or post_data['inReplyTo'] != None:
-                    return None
-                community_found = False
-                if not community_found and 'to' in post_data and isinstance(post_data['to'], str):
-                    remote_community = post_data['to']
-                    if remote_community.lower() == community.ap_profile_id:
-                        community_found = True
-                if not community_found and 'cc' in post_data and isinstance(post_data['cc'], str):
-                    remote_community = post_data['cc']
-                    if remote_community.lower() == community.ap_profile_id:
-                        community_found = True
-                if not community_found and 'to' in post_data and isinstance(post_data['to'], list):
-                    for t in post_data['to']:
-                        if t.lower() == community.ap_profile_id:
-                            community_found = True
-                            break
-                if not community_found and 'cc' in post_data and isinstance(post_data['cc'], list):
-                    for c in post_data['cc']:
-                        if c.lower() == community.ap_profile_id:
-                            community_found = True
-                            break
-                if not community_found:
-                    return None
-
-        user = find_actor_or_create(actor)
-        if user and community and post_data:
-            request_json = {
-              'id': f"https://{uri_domain}/activities/create/{gibberish(15)}",
-              'object': post_data
-            }
-            if 'inReplyTo' in request_json['object'] and request_json['object']['inReplyTo']:
-                post_reply = create_post_reply(store_ap_json, community, request_json['object']['inReplyTo'], request_json, user)
-                if post_reply:
-                    if 'published' in post_data:
-                        post_reply.posted_at = post_data['published']
-                        post_reply.post.last_active = post_data['published']
-                        post_reply.community.last_active = utcnow()
-                        db.session.commit()
-                    return post_reply
-            else:
-                post = create_post(store_ap_json, community, request_json, user)
-                if post:
-                    if 'published' in post_data:
-                        post.posted_at=post_data['published']
-                        post.last_active=post_data['published']
-                        post.community.last_active = utcnow()
-                        db.session.commit()
-                    return post
-
-    return None
-
-
-# called from UI, via 'search' option in navbar
-def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
-    post = Post.query.filter_by(ap_id=uri).first()
-    if post:
-        return post
-
-    parsed_url = urlparse(uri)
-    uri_domain = parsed_url.netloc
-    actor_domain = None
-    actor = None
-
+def remote_object_to_json(uri):
     try:
         object_request = get_request(uri, headers={'Accept': 'application/activity+json'})
     except httpx.HTTPError:
@@ -2424,7 +2192,8 @@ def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
             return None
     if object_request.status_code == 200:
         try:
-            post_data = object_request.json()
+            object = object_request.json()
+            return object
         except:
             object_request.close()
             return None
@@ -2440,7 +2209,8 @@ def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
             except httpx.HTTPError:
                 return None
         try:
-            post_data = object_request.json()
+            object = object_request.json()
+            return object
         except:
             object_request.close()
             return None
@@ -2448,8 +2218,129 @@ def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
     else:
         return None
 
+
+# called from incoming activitypub, when the object in an Announce is just a URL
+# despite the name, it works for both posts and replies
+def resolve_remote_post(uri: str, community, announce_id, store_ap_json, nodebb=False) -> Union[Post, PostReply, None]:
+    parsed_url = urlparse(uri)
+    uri_domain = parsed_url.netloc
+    announce_actor = community.ap_profile_id
+    parsed_url = urlparse(announce_actor)
+    announce_actor_domain = parsed_url.netloc
+    if announce_actor_domain != 'a.gup.pe' and not nodebb and announce_actor_domain != uri_domain:
+        return None
+    actor_domain = None
+    actor = None
+
+    post_data = remote_object_to_json(uri)
+
+    # find the author. Make sure their domain matches the site hosting it to mitigate impersonation attempts
+    if 'attributedTo' in post_data:
+        attributed_to = post_data['attributedTo']
+        if isinstance(attributed_to, str):
+            actor = attributed_to
+            parsed_url = urlparse(actor)
+            actor_domain = parsed_url.netloc
+        elif isinstance(attributed_to, list):
+            for a in attributed_to:
+                if isinstance(a, dict) and a.get('type') == 'Person':
+                    actor = a.get('id')
+                    if isinstance(actor, str):  # Ensure `actor` is a valid string
+                        parsed_url = urlparse(actor)
+                        actor_domain = parsed_url.netloc
+                    break
+                elif isinstance(a, str):
+                    actor = a
+                    parsed_url = urlparse(actor)
+                    actor_domain = parsed_url.netloc
+                    break
+    if uri_domain != actor_domain:
+        return None
+
+    user = find_actor_or_create(actor)
+    if user and community and post_data:
+        activity = 'update' if 'updated' in post_data else 'create'
+        request_json = {'id': f"https://{uri_domain}/activities/{activity}/{gibberish(15)}", 'object': post_data}
+        if 'inReplyTo' in request_json['object'] and request_json['object']['inReplyTo']:
+            if activity == 'update':
+                post_reply = PostReply.get_by_ap_id(uri)
+                if post_reply:
+                    update_post_reply_from_activity(post_reply, request_json)
+                else:
+                    activity = 'create'
+            if activity == 'create':
+                post_reply = create_post_reply(store_ap_json, community, request_json['object']['inReplyTo'], request_json, user)
+                if post_reply:
+                    if 'published' in post_data:
+                        post_reply.posted_at = post_data['published']
+                        post_reply.post.last_active = post_data['published']
+                        post_reply.community.last_active = utcnow()
+                        db.session.commit()
+            if post_reply:
+                return post_reply
+        else:
+            if activity == 'update':
+                post = Post.get_by_ap_id(uri)
+                if post:
+                    update_post_from_activity(post, request_json)
+                else:
+                    activity = 'create'
+            if activity == 'create':
+                post = create_post(store_ap_json, community, request_json, user, announce_id)
+                if post:
+                    if 'published' in post_data:
+                        post.posted_at=post_data['published']
+                        post.last_active=post_data['published']
+                        post.community.last_active = utcnow()
+                        db.session.commit()
+            if post:
+                return post
+
+    return None
+
+
+@celery.task
+def get_nodebb_replies_in_background(replies_uri_list, community_id):
+    max = 10 if not current_app.debug else 2           # magic number alert
+    community = Community.query.get(community_id)
+    if not community:
+        return
+    reply_count = 0
+    for uri in replies_uri_list:
+        reply_count += 1
+        post_reply = resolve_remote_post(uri, community, None, False, nodebb=True)
+        if reply_count >= max:
+            break
+
+
+# called from UI, via 'search' option in navbar, or 'Retrieve a post from the original server' in community sidebar
+def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
+    post = Post.get_by_ap_id(uri)
+    if post:
+        return post
+
+    parsed_url = urlparse(uri)
+    uri_domain = parsed_url.netloc
+    actor_domain = None
+    actor = None
+
+    post_data = remote_object_to_json(uri)
+
+    # nodebb. the post is the first entry in orderedItems of a topic, and the replies are the remaining entries
+    # just gets orderedItems[0] to retrieve the post, and then replies are retrieved in the background
+    topic_post_data = post_data
+    nodebb = False
+    if ('type' in post_data and post_data['type'] == 'OrderedCollection' and
+       'totalItems' in post_data and post_data['totalItems'] > 0 and
+       'orderedItems' in post_data and isinstance(post_data['orderedItems'], list)):
+        nodebb = True
+        uri = post_data['orderedItems'][0]
+        parsed_url = urlparse(uri)
+        uri_domain = parsed_url.netloc
+        post_data = remote_object_to_json(uri)
+
     # check again that it doesn't already exist (can happen with different but equivalent URLs)
-    post = Post.query.filter_by(ap_id=post_data['id']).first()
+    post = Post.get_by_ap_id(post_data['id'])
     if post:
         return post
 
@@ -2478,16 +2369,23 @@ def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
 
     # find the community the post was submitted to
     community = find_community(post_data)
+    if not community and nodebb:
+        community = find_community(topic_post_data)       # use 'audience' from topic if post has no info for how it got there
     # find the post's author
     user = find_actor_or_create(actor)
     if user and community and post_data:
-        request_json = {'id': f"https://{uri_domain}/activities/create/gibberish(15)", 'object': post_data}
+        request_json = {'id': f"https://{uri_domain}/activities/create/{gibberish(15)}", 'object': post_data}
         post = create_post(False, community, request_json, user)
         if post:
             if 'published' in post_data:
                 post.posted_at=post_data['published']
                 post.last_active=post_data['published']
                 db.session.commit()
+            if nodebb and topic_post_data['totalItems'] > 1:
+                if current_app.debug:
+                    get_nodebb_replies_in_background(topic_post_data['orderedItems'][1:], community.id)
+                else:
+                    get_nodebb_replies_in_background.delay(topic_post_data['orderedItems'][1:], community.id)
             return post
 
     return None
@@ -2622,6 +2520,8 @@ def log_incoming_ap(id, aplog_type, aplog_result, saved_json, message=None):
 
 
 def find_community(request_json):
+    # Create/Update from platform that included Community in 'audience', 'cc', or 'to' in outer or inner object
+    # Also works for manually retrieved posts
     locations = ['audience', 'cc', 'to']
     if 'object' in request_json and isinstance(request_json['object'], dict):
         rjs = [request_json, request_json['object']]
@@ -2643,9 +2543,20 @@ def find_community(request_json):
                             if potential_community:
                                 return potential_community
 
+    # used for manual retrieval of a PeerTube vid
+    if request_json['type'] == 'Video':
+        if 'attributedTo' in request_json and isinstance(request_json['attributedTo'], list):
+            for a in request_json['attributedTo']:
+                if a['type'] == 'Group':
+                    potential_community = Community.query.filter_by(ap_profile_id=a['id'].lower()).first()
+                    if potential_community:
+                        return potential_community
+
+    # change this if manual retrieval of comments is allowed in future
     if not 'object' in request_json:
         return None
 
+    # Create/Update Note from platform that didn't include the Community in 'audience', 'cc', or 'to' (e.g. Mastodon reply to Lemmy post)
     if 'inReplyTo' in request_json['object'] and request_json['object']['inReplyTo'] is not None:
         post_being_replied_to = Post.query.filter_by(ap_id=request_json['object']['inReplyTo'].lower()).first()
         if post_being_replied_to:
@@ -2655,7 +2566,8 @@ def find_community(request_json):
             if comment_being_replied_to:
                 return comment_being_replied_to.community
 
-    if request_json['object']['type'] == 'Video': # PeerTube
+    # Update / Video from PeerTube (possibly an edit, more likely an invite to query Likes / Replies endpoints)
+    if request_json['object']['type'] == 'Video':
         if 'attributedTo' in request_json['object'] and isinstance(request_json['object']['attributedTo'], list):
             for a in request_json['object']['attributedTo']:
                 if a['type'] == 'Group':

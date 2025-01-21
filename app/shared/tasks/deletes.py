@@ -13,6 +13,7 @@ Delete:
   'type':
   'actor':
   'object':
+  'summary':    (if deleted by mod / admin)
   '@context':
   'audience':
   'to': []
@@ -23,30 +24,30 @@ For Announce, remove @context from inner object, and use same fields except audi
 
 
 @celery.task
-def delete_reply(send_async, user_id, reply_id):
+def delete_reply(send_async, user_id, reply_id, reason=None):
     reply = PostReply.query.filter_by(id=reply_id).one()
-    delete_object(user_id, reply)
+    delete_object(user_id, reply, reason=reason)
 
 
 @celery.task
-def restore_reply(send_async, user_id, reply_id):
+def restore_reply(send_async, user_id, reply_id, reason=None):
     reply = PostReply.query.filter_by(id=reply_id).one()
-    delete_object(user_id, reply, is_restore=True)
+    delete_object(user_id, reply, is_restore=True, reason=reason)
 
 
 @celery.task
-def delete_post(send_async, user_id, post_id):
+def delete_post(send_async, user_id, post_id, reason=None):
     post = Post.query.filter_by(id=post_id).one()
-    delete_object(user_id, post, is_post=True)
+    delete_object(user_id, post, is_post=True, reason=reason)
 
 
 @celery.task
-def restore_post(send_async, user_id, post_id):
+def restore_post(send_async, user_id, post_id, reason=None):
     post = Post.query.filter_by(id=post_id).one()
-    delete_object(user_id, post, is_post=True, is_restore=True)
+    delete_object(user_id, post, is_post=True, is_restore=True, reason=reason)
 
 
-def delete_object(user_id, object, is_post=False, is_restore=False):
+def delete_object(user_id, object, is_post=False, is_restore=False, reason=None):
     user = User.query.filter_by(id=user_id).one()
     community = object.community
 
@@ -81,6 +82,8 @@ def delete_object(user_id, object, is_post=False, is_restore=False):
       'to': to,
       'cc': cc
     }
+    if reason:
+        delete['summary'] = reason
 
     if is_restore:
         del delete['@context']
@@ -126,6 +129,9 @@ def delete_object(user_id, object, is_post=False, is_restore=False):
         payload = undo if is_restore else delete
         post_request(community.ap_inbox_url, payload, user.private_key, user.public_url() + '#main-key')
         domains_sent_to.append(community.instance.domain)
+
+    if reason:
+        return
 
     if is_post and followers:
         payload = undo if is_restore else delete
