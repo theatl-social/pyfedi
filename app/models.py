@@ -1629,22 +1629,26 @@ class Post(db.Model):
             if existing_vote.effect > 0:  # previous vote was up
                 if vote_direction == 'upvote':  # new vote is also up, so remove it
                     db.session.delete(existing_vote)
+                    db.session.commit()
                     self.up_votes -= 1
                     self.score -= existing_vote.effect              # score - (+1) = score-1
                     undo = 'Like'
                 else:  # new vote is down while previous vote was up, so reverse their previous vote
                     existing_vote.effect = -1
+                    db.session.commit()
                     self.up_votes -= 1
                     self.down_votes += 1
                     self.score += existing_vote.effect * 2          # score + (-2) = score-2
             else:  # previous vote was down
                 if vote_direction == 'downvote':  # new vote is also down, so remove it
                     db.session.delete(existing_vote)
+                    db.session.commit()
                     self.down_votes -= 1
                     self.score -= existing_vote.effect              # score - (-1) = score+1
                     undo = 'Dislike'
                 else:  # new vote is up while previous vote was down, so reverse their previous vote
                     existing_vote.effect = 1
+                    db.session.commit()
                     self.up_votes += 1
                     self.down_votes -= 1
                     self.score += existing_vote.effect * 2          # score + (+2) = score+2
@@ -1964,22 +1968,26 @@ class PostReply(db.Model):
             if existing_vote.effect > 0:  # previous vote was up
                 if vote_direction == 'upvote':  # new vote is also up, so remove it
                     db.session.delete(existing_vote)
+                    db.session.commit()
                     self.up_votes -= 1
                     self.score -= 1
                     undo = 'Like'
                 else:  # new vote is down while previous vote was up, so reverse their previous vote
                     existing_vote.effect = -1
+                    db.session.commit()
                     self.up_votes -= 1
                     self.down_votes += 1
                     self.score -= 2
             else:  # previous vote was down
                 if vote_direction == 'downvote':  # new vote is also down, so remove it
                     db.session.delete(existing_vote)
+                    db.session.commit()
                     self.down_votes -= 1
                     self.score += 1
                     undo = 'Dislike'
                 else:  # new vote is up while previous vote was down, so reverse their previous vote
                     existing_vote.effect = 1
+                    db.session.commit()
                     self.up_votes += 1
                     self.down_votes -= 1
                     self.score += 2
