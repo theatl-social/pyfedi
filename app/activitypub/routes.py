@@ -420,7 +420,6 @@ def shared_inbox():
         object = request_json['object']
         if not 'actor' in object:
             missing_actor_in_announce_object = True
-            log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_MONITOR, request_json, 'Actor is missing in Announce object')
         if not 'id' in object or not 'type' in object or not 'object' in object:
             if 'type' in object and (object['type'] == 'Page' or object['type'] == 'Note'):
                 log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_IGNORED, saved_json, 'Intended for Mastodon')
@@ -507,6 +506,7 @@ def shared_inbox():
         if ((request_json['object']['type'] == 'Create' or request_json['object']['type']) and
             'attributedTo' in request_json['object']['object'] and isinstance(request_json['object']['object']['attributedTo'], str)):
             request_json['object']['actor'] = request_json['object']['object']['attributedTo']
+            log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_MONITOR, request_json, 'nodebb: Actor is missing in the Create')
 
     if current_app.debug:
         process_inbox_request(request_json, store_ap_json)
