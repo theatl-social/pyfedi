@@ -232,7 +232,7 @@ def register(app):
             try:
                 # Check for dormant or dead instances
                 instances = Instance.query.filter(Instance.gone_forever == False, Instance.id != 1).all()
-                HEADERS = {'User-Agent': 'PieFed/1.0', 'Accept': 'application/activity+json'}
+                HEADERS = {'Accept': 'application/activity+json'}
 
                 for instance in instances:
                     if instance_banned(instance.domain) or instance.domain == 'flipboard.com':

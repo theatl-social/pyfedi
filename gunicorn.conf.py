@@ -13,5 +13,5 @@ worker_class = 'gevent'
 accesslog = '-'
 errorlog = '-'
 
-max_requests = 5000
+max_requests = 500
 max_requests_jitter = 50

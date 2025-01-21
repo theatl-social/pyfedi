@@ -85,9 +85,9 @@ def getmtime(filename):
 def get_request(uri, params=None, headers=None) -> httpx.Response:
     timeout = 15 if 'washingtonpost.com' in uri else 5  # Washington Post is really slow on og:image for some reason
     if headers is None:
-        headers = {'User-Agent': 'PieFed/1.0'}
+        headers = {'User-Agent': f'PieFed/1.0; +https://{current_app.config["SERVER_NAME"]}'}
     else:
-        headers.update({'User-Agent': 'PieFed/1.0'})
+        headers.update({'User-Agent': f'PieFed/1.0; +https://{current_app.config["SERVER_NAME"]}'})
     if params and '/webfinger' in uri:
         payload_str = urllib.parse.urlencode(params, safe=':@')
     else:
@@ -129,9 +129,9 @@ def get_request_instance(uri, instance: Instance, params=None, headers=None) -> 
 # do a HEAD request to a uri, return the result
 def head_request(uri, params=None, headers=None) -> httpx.Response:
     if headers is None:
-        headers = {'User-Agent': 'PieFed/1.0'}
+        headers = {'User-Agent': f'PieFed/1.0; +https://{current_app.config["SERVER_NAME"]}'}
     else:
-        headers.update({'User-Agent': 'PieFed/1.0'})
+        headers.update({'User-Agent': f'PieFed/1.0; +https://{current_app.config["SERVER_NAME"]}'})
     try:
         response = httpx_client.head(uri, params=params, headers=headers, timeout=5, allow_redirects=True)
     except httpx.HTTPError as er:

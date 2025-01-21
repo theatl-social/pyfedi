@@ -1262,7 +1262,7 @@ def new_instance_profile_task(instance_id: int):
         instance.updated_at = utcnow()
         session.commit()
 
-    headers = {'User-Agent': 'PieFed/1.0', 'Accept': 'application/activity+json'}
+    headers = {'Accept': 'application/activity+json'}
     try:
         nodeinfo = get_request(f"https://{instance.domain}/.well-known/nodeinfo", headers=headers)
         if nodeinfo.status_code == 200:

@@ -387,7 +387,7 @@ class HttpSignature:
             }
         )
 
-        headers["User-Agent"] = 'PieFed/1.0'
+        headers["User-Agent"] = f'PieFed/1.0; +https://{current_app.config["SERVER_NAME"]}'
 
         # Send the request with all those headers except the pseudo one
         del headers["(request-target)"]
