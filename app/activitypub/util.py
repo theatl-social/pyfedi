@@ -2222,13 +2222,13 @@ def remote_object_to_json(uri):
 
 # called from incoming activitypub, when the object in an Announce is just a URL
 # despite the name, it works for both posts and replies
-def resolve_remote_post(uri: str, community, announce_id, store_ap_json) -> Union[Post, PostReply, None]:
+def resolve_remote_post(uri: str, community, announce_id, store_ap_json, nodebb=False) -> Union[Post, PostReply, None]:
     parsed_url = urlparse(uri)
     uri_domain = parsed_url.netloc
     announce_actor = community.ap_profile_id
     parsed_url = urlparse(announce_actor)
     announce_actor_domain = parsed_url.netloc
-    if announce_actor_domain != 'a.gup.pe' and announce_actor_domain != uri_domain:
+    if announce_actor_domain != 'a.gup.pe' and not nodebb and announce_actor_domain != uri_domain:
         return None
     actor_domain = None
     actor = None
@@ -2332,6 +2332,20 @@ def resolve_remote_post(uri: str, community, announce_id, store_ap_json) -> Unio
     return None
 
 
+@celery.task
+def get_nodebb_replies_in_background(replies_uri_list, community_id):
+    max = 10 if not current_app.debug else 2           # magic number alert
+    community = Community.query.get(community_id)
+    if not community:
+        return
+    reply_count = 0
+    for uri in replies_uri_list:
+        reply_count += 1
+        post_reply = resolve_remote_post(uri, community, None, False, nodebb=True)
+        if reply_count >= max:
+            break
+
+
 # called from UI, via 'search' option in navbar, or 'Retrieve a post from the original server' in community sidebar
 def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
     post = Post.get_by_ap_id(uri)
@@ -2345,11 +2359,14 @@ def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
 
     post_data = remote_object_to_json(uri)
 
-    # nodebb. the post is the first entry in orderedItems, and the replies are the remaining entries
-    # just gets orderedItems[0] the retrieve the post
+    # nodebb. the post is the first entry in orderedItems of a topic, and the replies are the remaining entries
+    # just gets orderedItems[0] to retrieve the post, and then replies are retrieved in the background
+    topic_post_data = post_data
+    nodebb = False
     if ('type' in post_data and post_data['type'] == 'OrderedCollection' and
        'totalItems' in post_data and post_data['totalItems'] > 0 and
        'orderedItems' in post_data and isinstance(post_data['orderedItems'], list)):
+        nodebb = True
         uri = post_data['orderedItems'][0]
         parsed_url = urlparse(uri)
         uri_domain = parsed_url.netloc
@@ -2385,6 +2402,8 @@ def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
 
     # find the community the post was submitted to
     community = find_community(post_data)
+    if not community and nodebb:
+        community = find_community(topic_post_data)       # use 'audience' from topic if post has no info for how it got there
     # find the post's author
     user = find_actor_or_create(actor)
     if user and community and post_data:
@@ -2395,6 +2414,11 @@ def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
                 post.posted_at=post_data['published']
                 post.last_active=post_data['published']
                 db.session.commit()
+            if nodebb and topic_post_data['totalItems'] > 1:
+                if current_app.debug:
+                    get_nodebb_replies_in_background(topic_post_data['orderedItems'][1:], community.id)
+                else:
+                    get_nodebb_replies_in_background.delay(topic_post_data['orderedItems'][1:], community.id)
             return post
 
     return None
