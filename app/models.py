@@ -2124,7 +2124,7 @@ class UserNote(db.Model):
 class UserExtraField(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
-    label = db.Column(db.String(50))
+    label = db.Column(db.String(1024))
     text = db.Column(db.String(1024))
 
 
