@@ -521,7 +521,7 @@ def refresh_user_profile_task(user_id):
                     if field_data['type'] == 'PropertyValue':
                         if '<a ' in field_data['value']:
                             field_data['value'] = mastodon_extra_field_link(field_data['value'])
-                        user.extra_fields.append(UserExtraField(shorten_string(label=field_data['name'].strip()), text=field_data['value'].strip()))
+                        user.extra_fields.append(UserExtraField(label=field_data['name'].strip(), text=field_data['value'].strip()))
             if 'type' in activity_json:
                 user.bot = True if activity_json['type'] == 'Service' else False
             user.ap_fetched_at = utcnow()
