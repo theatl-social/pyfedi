@@ -12,7 +12,7 @@ from pillow_heif import register_heif_opener
 from app import db, cache, celery
 from app.activitypub.signature import post_request, default_context, signed_get_request
 from app.activitypub.util import find_actor_or_create, actor_json_to_model, ensure_domains_match, \
-    find_hashtag_or_create, create_post
+    find_hashtag_or_create, create_post, remote_object_to_json
 from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO, NOTIF_POST, \
     POST_TYPE_POLL
 from app.models import Community, File, BannedInstances, PostReply, Post, utcnow, CommunityMember, Site, \
@@ -76,44 +76,6 @@ def search_for_community(address: str):
                                 else:
                                     retrieve_mods_and_backfill.delay(community.id, server, name, community_json)
                             return community
-        return None
-
-
-def remote_object_to_json(uri):
-    try:
-        object_request = get_request(uri, headers={'Accept': 'application/activity+json'})
-    except httpx.HTTPError:
-        time.sleep(3)
-        try:
-            object_request = get_request(uri, headers={'Accept': 'application/activity+json'})
-        except httpx.HTTPError:
-            return None
-    if object_request.status_code == 200:
-        try:
-            object = object_request.json()
-            return object
-        except:
-            object_request.close()
-            return None
-        object_request.close()
-    elif object_request.status_code == 401:
-        try:
-            site = Site.query.get(1)
-            object_request = signed_get_request(uri, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
-        except httpx.HTTPError:
-            time.sleep(3)
-            try:
-                object_request = signed_get_request(uri, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
-            except httpx.HTTPError:
-                return None
-        try:
-            object = object_request.json()
-            return object
-        except:
-            object_request.close()
-            return None
-        object_request.close()
-    else:
         return None
 
 

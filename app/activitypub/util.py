@@ -2181,7 +2181,6 @@ def can_delete(user_ap_id, post):
     return can_edit(user_ap_id, post)
 
 
-# TODO: import this into community/util for backfilling, instead of having 2 copies, and - also - call it from resolve_remote_post()
 def remote_object_to_json(uri):
     try:
         object_request = get_request(uri, headers={'Accept': 'application/activity+json'})
@@ -2233,39 +2232,7 @@ def resolve_remote_post(uri: str, community, announce_id, store_ap_json, nodebb=
     actor_domain = None
     actor = None
 
-    try:
-        object_request = get_request(uri, headers={'Accept': 'application/activity+json'})
-    except httpx.HTTPError:
-        time.sleep(3)
-        try:
-            object_request = get_request(uri, headers={'Accept': 'application/activity+json'})
-        except httpx.HTTPError:
-            return None
-    if object_request.status_code == 200:
-        try:
-            post_data = object_request.json()
-        except:
-            object_request.close()
-            return None
-        object_request.close()
-    elif object_request.status_code == 401:
-        try:
-            site = Site.query.get(1)
-            object_request = signed_get_request(uri, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
-        except httpx.HTTPError:
-            time.sleep(3)
-            try:
-                object_request = signed_get_request(uri, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
-            except httpx.HTTPError:
-                return None
-        try:
-            post_data = object_request.json()
-        except:
-            object_request.close()
-            return None
-        object_request.close()
-    else:
-        return None
+    post_data = remote_object_to_json(uri)
 
     # find the author. Make sure their domain matches the site hosting it to mitigate impersonation attempts
     if 'attributedTo' in post_data:
