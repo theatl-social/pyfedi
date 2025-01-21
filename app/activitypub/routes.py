@@ -505,8 +505,8 @@ def shared_inbox():
     if missing_actor_in_announce_object:
         if ((request_json['object']['type'] == 'Create' or request_json['object']['type']) and
             'attributedTo' in request_json['object']['object'] and isinstance(request_json['object']['object']['attributedTo'], str)):
-            request_json['object']['actor'] = request_json['object']['object']['attributedTo']
             log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_MONITOR, request_json, 'nodebb: Actor is missing in the Create')
+            request_json['object']['actor'] = request_json['object']['object']['attributedTo']
 
     if current_app.debug:
         process_inbox_request(request_json, store_ap_json)
