@@ -1,6 +1,7 @@
 from app import cache
 from app.api.alpha.views import community_view
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
+from app.community.util import search_for_community
 from app.utils import authorise_api_user
 from app.models import Community, CommunityMember
 from app.shared.community import join_community, leave_community, block_community, unblock_community
@@ -44,7 +45,12 @@ def get_community_list(auth, data):
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 10
 
+    user_id = authorise_api_user(auth) if auth else None
+
     query = data['q'] if data and 'q' in data else ''
+    if user_id and '@' in query and '.' in query and query.startswith('!'):
+        search_for_community(query)
+        query = query[1:]
 
     user_id = authorise_api_user(auth) if auth else None
 
