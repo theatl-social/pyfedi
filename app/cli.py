@@ -264,7 +264,6 @@ def register(app):
                                 current_app.logger.info(f"{instance.domain} has no well-known/nodeinfo response")
                         except Exception as e:
                             db.session.rollback()
-                            current_app.logger.error(f"Error processing instance {instance.domain}: {e}")
                             instance.failures += 1
                         finally:
                             nodeinfo.close()
@@ -284,7 +283,7 @@ def register(app):
                                 instance.nodeinfo_href = None
                         except Exception as e:
                             db.session.rollback()
-                            current_app.logger.error(f"Error processing nodeinfo for {instance.domain}: {e}")
+                            instance.failures += 1
                         finally:
                             node.close()
                         db.session.commit()
@@ -314,7 +313,7 @@ def register(app):
                                            InstanceRole.role == 'admin').delete()
                         except Exception as e:
                             db.session.rollback()
-                            current_app.logger.error(f"Error updating admins for {instance.domain}: {e}")
+                            instance.failures += 1
                         finally:
                             if response:
                                 response.close()
