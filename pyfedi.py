@@ -6,9 +6,6 @@ if os.environ.get('FLASK_ENV', '') != 'development':
     from gevent import monkey
     monkey.patch_all()
 
-    from psycogreen.gevent import patch_psycopg
-    patch_psycopg()
-
 from datetime import datetime
 
 from flask_babel import get_locale
