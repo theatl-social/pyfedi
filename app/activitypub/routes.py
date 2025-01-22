@@ -1447,8 +1447,11 @@ def process_new_content(user, community, store_ap_json, request_json, announced)
     else:
         in_reply_to = request_json['object']['object']['inReplyTo'] if 'inReplyTo' in request_json['object']['object'] else None
         ap_id = request_json['object']['object']['id']
-        announce_id = request_json['id']
+        announce_id = shorten_string(request_json['id'], 100)
         activity_json = request_json['object']
+
+    # announce / create IDs that are too long will crash the app. Not referred to again, so it shouldn't matter if they're truncated
+    activity_json['id'] = shorten_string(activity_json['id'], 100)
 
     if not in_reply_to: # Creating a new post
         post = Post.query.filter_by(ap_id=ap_id).first()

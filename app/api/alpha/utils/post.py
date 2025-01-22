@@ -1,7 +1,7 @@
 from app import cache
 from app.api.alpha.views import post_view, post_report_view
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
-from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO
+from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO, POST_TYPE_POLL
 from app.models import Post, Community, CommunityMember, utcnow
 from app.shared.post import vote_for_post, bookmark_the_post, remove_the_bookmark_from_post, toggle_post_notification, make_post, edit_post, \
                             delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post
@@ -12,7 +12,7 @@ from sqlalchemy import desc
 
 
 @cache.memoize(timeout=3)
-def cached_post_list(type, sort, user_id, community_id, community_name, person_id):
+def cached_post_list(type, sort, user_id, community_id, community_name, person_id, query='', search_type='Posts'):
     if type == "All":
         if community_name:
             name, ap_domain = community_name.split('@')
@@ -32,6 +32,9 @@ def cached_post_list(type, sort, user_id, community_id, community_name, person_i
     else:
         posts = Post.query.filter_by(deleted=False)
 
+    # change when polls are supported
+    posts = posts.filter(Post.type != POST_TYPE_POLL)
+
     if user_id is not None:
         blocked_person_ids = blocked_users(user_id)
         if blocked_person_ids:
@@ -43,6 +46,12 @@ def cached_post_list(type, sort, user_id, community_id, community_name, person_i
         if blocked_instance_ids:
             posts = posts.filter(Post.instance_id.not_in(blocked_instance_ids))                                         # users from blocked instance
             posts = posts.filter(Post.community_id.not_in(community_ids_from_instances(blocked_instance_ids)))          # communities from blocked instance
+
+    if query:
+        if search_type == 'Url':
+            posts = posts.filter(Post.url.ilike(f"%{query}%"))
+        else:
+            posts = posts.filter(Post.title.ilike(f"%{query}%"))
 
     if sort == "Hot":
         posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
@@ -56,11 +65,13 @@ def cached_post_list(type, sort, user_id, community_id, community_name, person_i
     return posts.all()
 
 
-def get_post_list(auth, data, user_id=None):
+def get_post_list(auth, data, user_id=None, search_type='Posts'):
     type = data['type_'] if data and 'type_' in data else "All"
     sort = data['sort'] if data and 'sort' in data else "Hot"
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 10
+
+    query = data['q'] if data and 'q' in data else ''
 
     if auth:
         user_id = authorise_api_user(auth)
@@ -72,7 +83,7 @@ def get_post_list(auth, data, user_id=None):
     community_name = data['community_name'] if data and 'community_name' in data else None
     person_id = int(data['person_id']) if data and 'person_id' in data else None
 
-    posts = cached_post_list(type, sort, user_id, community_id, community_name, person_id)
+    posts = cached_post_list(type, sort, user_id, community_id, community_name, person_id, query, search_type)
 
     start = (page - 1) * limit
     end = start + limit

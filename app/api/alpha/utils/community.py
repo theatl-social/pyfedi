@@ -1,21 +1,17 @@
 from app import cache
 from app.api.alpha.views import community_view
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
+from app.community.util import search_for_community
 from app.utils import authorise_api_user
 from app.models import Community, CommunityMember
 from app.shared.community import join_community, leave_community, block_community, unblock_community
-from app.utils import communities_banned_from, blocked_instances
+from app.utils import communities_banned_from, blocked_instances, blocked_communities
 
-from sqlalchemy import desc
+from sqlalchemy import desc, or_
 
 
 @cache.memoize(timeout=3)
-def cached_community_list(type, sort, limit, user_id):
-    if user_id:
-        banned_from = communities_banned_from(user_id)
-    else:
-        banned_from = None
-
+def cached_community_list(type, sort, limit, user_id, query=''):
     if type == 'Subscribed':
         communities = Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == user_id)
     elif type == 'Local':
@@ -23,13 +19,19 @@ def cached_community_list(type, sort, limit, user_id):
     else:
         communities = Community.query.filter_by(banned=False)
 
-    if banned_from:
-        communities = communities.filter(Community.id.not_in(banned_from))
-
     if user_id:
+        banned_from = communities_banned_from(user_id)
+        if banned_from:
+            communities = communities.filter(Community.id.not_in(banned_from))
         blocked_instance_ids = blocked_instances(user_id)
         if blocked_instance_ids:
             communities = communities.filter(Community.instance_id.not_in(blocked_instance_ids))
+        blocked_community_ids = blocked_communities(user_id)
+        if blocked_community_ids:
+            communities = communities.filter(Community.id.not_in(blocked_community_ids))
+
+    if query:
+        communities = communities.filter(or_(Community.title.ilike(f"%{query}%"), Community.ap_id.ilike(f"%{query}%")))
 
     if sort == 'Active':    # 'Trending Communities' screen
         communities = communities.order_by(desc(Community.last_active)).limit(limit)
@@ -45,7 +47,14 @@ def get_community_list(auth, data):
 
     user_id = authorise_api_user(auth) if auth else None
 
-    communities = cached_community_list(type, sort, limit, user_id)
+    query = data['q'] if data and 'q' in data else ''
+    if user_id and '@' in query and '.' in query and query.startswith('!'):
+        search_for_community(query)
+        query = query[1:]
+
+    user_id = authorise_api_user(auth) if auth else None
+
+    communities = cached_community_list(type, sort, limit, user_id, query)
 
     start = (page - 1) * limit
     end = start + limit

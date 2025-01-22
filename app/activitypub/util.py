@@ -2329,6 +2329,10 @@ def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
     # just gets orderedItems[0] to retrieve the post, and then replies are retrieved in the background
     topic_post_data = post_data
     nodebb = False
+    if ('type' in post_data and post_data['type'] == 'Conversation' and
+        'posts' in post_data and isinstance(post_data['posts'], str)):
+        post_data = remote_object_to_json(post_data['posts'])
+        topic_post_data = post_data
     if ('type' in post_data and post_data['type'] == 'OrderedCollection' and
        'totalItems' in post_data and post_data['totalItems'] > 0 and
        'orderedItems' in post_data and isinstance(post_data['orderedItems'], list)):
