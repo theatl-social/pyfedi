@@ -1,11 +1,5 @@
 # This file is part of pyfedi, which is licensed under the GNU General Public License (GPL) version 3.0.
 # You should have received a copy of the GPL along with this program. If not, see <http://www.gnu.org/licenses/>.
-import os
-
-if os.environ.get('FLASK_ENV', '') != 'development':
-    from gevent import monkey
-    monkey.patch_all()
-
 from datetime import datetime
 
 from flask_babel import get_locale
