@@ -6,7 +6,7 @@ from flask_babel import get_locale
 from flask_login import current_user
 
 from app import create_app, db, cli
-import arrow
+import arrow, os
 from flask import session, g, json, request, current_app
 from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_ARTICLE, POST_TYPE_VIDEO, POST_TYPE_POLL, \
     SUBSCRIPTION_MODERATOR, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_PENDING
