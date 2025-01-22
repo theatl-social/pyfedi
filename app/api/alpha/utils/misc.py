@@ -13,11 +13,12 @@ def get_search(auth, data):
 
     data['type_'] = listing_type
 
-    search_json = search_view(type)
+    search_type = 'Posts' if type == 'Url' else type
+    search_json = search_view(search_type)
     if type == 'Communities':
         search_json['communities'] = get_community_list(auth, data)['communities']
-    elif type == 'Posts':
-        search_json['posts'] = get_post_list(auth, data)['posts']
+    elif type == 'Posts' or type == 'Url':
+        search_json['posts'] = get_post_list(auth, data, search_type=type)['posts']
     elif type == 'Users':
         search_json['users'] = get_user_list(auth, data)['users']
 

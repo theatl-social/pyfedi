@@ -45,7 +45,16 @@ def get_user_list(auth, data):
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 10
 
-    users = User.query.filter_by(instance_id=1, deleted=False).order_by(User.id)
+    query = data['q'] if data and 'q' in data else ''
+
+    if type == 'Local':
+        users = User.query.filter_by(instance_id=1, deleted=False).order_by(User.id)
+    else:
+        users = User.query.filter_by(deleted=False).order_by(User.id)
+
+    if query:
+        users = users.filter(User.user_name.ilike(f"%{query}%"))
+
     users = users.paginate(page=page, per_page=limit, error_out=False)
 
     user_list = []
