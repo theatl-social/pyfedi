@@ -80,8 +80,17 @@ def get_community(auth, data):
 
     user_id = authorise_api_user(auth) if auth else None
 
-    community_json = community_view(community=community, variant=3, stub=False, user_id=user_id)
-    return community_json
+    try:
+        community_json = community_view(community=community, variant=3, stub=False, user_id=user_id)
+        return community_json
+    except:
+        if 'name' in data:
+            query = data['name']
+            if user_id and '@' in query and '.' in query:
+                if not query.startswith('!'):
+                    query = '!' + query
+                search_for_community(query)
+        raise Exception('error - unknown community. Please wait a sec and try again.')
 
 
 # would be in app/constants.py
