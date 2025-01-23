@@ -1,10 +1,13 @@
-from app.api.alpha.views import user_view
+from app import db
+from app.api.alpha.views import user_view, reply_view
 from app.utils import authorise_api_user
 from app.api.alpha.utils.post import get_post_list
 from app.api.alpha.utils.reply import get_reply_list
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
-from app.models import User
+from app.models import PostReply, User
 from app.shared.user import block_another_user, unblock_another_user
+
+from sqlalchemy import text, desc
 
 
 def get_user(auth, data):
@@ -27,8 +30,9 @@ def get_user(auth, data):
         auth = None                 # avoid authenticating user again in get_post_list and get_reply_list
 
     # bit unusual. have to help construct the json here rather than in views, to avoid circular dependencies
-    post_list = get_post_list(auth, data, user_id)
-    reply_list = get_reply_list(auth, data, user_id)
+    # lists are empty when viewing own account, to deal with a bug I've yet to identify
+    post_list = get_post_list(auth, data, user_id) if not user_id == person_id else {'posts': []}
+    reply_list = get_reply_list(auth, data, user_id) if not user_id == person_id else {'comments': []}
 
     user_json = user_view(user=person_id, variant=3)
     user_json['posts'] = post_list['posts']
@@ -81,3 +85,50 @@ def post_user_block(auth, data):
     user_id = block_another_user(person_id, SRC_API, auth) if block else unblock_another_user(person_id, SRC_API, auth)
     user_json = user_view(user=person_id, variant=4, user_id=user_id)
     return user_json
+
+
+def get_user_unread_count(auth):
+    user_id = authorise_api_user(auth)
+
+    # Mentions are just included in replies
+
+    unread_notifications = db.session.execute(text("SELECT COUNT(id) as c FROM notification WHERE user_id = :user_id AND read = false"), {'user_id': user_id}).scalar()
+    unread_messages = db.session.execute(text("SELECT * from chat_message AS cm INNER JOIN conversation c ON cm.conversation_id =c.id WHERE c.read = false AND cm.recipient_id = :user_id"), {'user_id': user_id}).scalar()
+    if not unread_messages:
+        unread_messages = 0
+
+    unread_count = {
+        "replies": unread_notifications - unread_messages,
+        "mentions": 0,
+        "private_messages": unread_messages
+    }
+
+    return unread_count
+
+
+def get_user_replies(auth, data):
+    page = int(data['page']) if data and 'page' in data else 1
+    limit = int(data['limit']) if data and 'limit' in data else 10
+
+    user_id = authorise_api_user(auth)
+
+    unread_urls = db.session.execute(text("select url from notification where user_id = :user_id and read = false and url ilike '%comment%'"), {'user_id': user_id}).scalars()
+    unread_ids = []
+    for url in unread_urls:
+        if '#comment_' in url:                                  # reply format
+            unread_ids.append(url.rpartition('_')[-1])
+        elif '/comment/' in url:                                # mention format
+            unread_ids.append(url.rpartition('/')[-1])
+
+    replies = PostReply.query.filter(PostReply.id.in_(unread_ids)).order_by(desc(PostReply.posted_at)).paginate(page=page, per_page=limit, error_out=False)
+
+    reply_list = []
+    for reply in replies:
+        reply_list.append(reply_view(reply=reply, variant=5, user_id=user_id))
+    list_json = {
+        "replies": reply_list
+    }
+
+    return list_json
+
+
