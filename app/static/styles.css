@@ -1475,10 +1475,6 @@ fieldset legend {
   float: right;
 }
 
-.post_body {
-  padding-top: 10px;
-}
-
 .post_body, .comment_body {
   word-wrap: break-word;
 }
