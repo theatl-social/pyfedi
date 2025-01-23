@@ -503,7 +503,7 @@ def shared_inbox():
         return ''
 
     if missing_actor_in_announce_object:
-        if ((request_json['object']['type'] == 'Create' or request_json['object']['type']) and
+        if ((request_json['object']['type'] == 'Create' or request_json['object']['type'] == 'Update') and
             'attributedTo' in request_json['object']['object'] and isinstance(request_json['object']['object']['attributedTo'], str)):
             log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_MONITOR, request_json, 'nodebb: Actor is missing in the Create')
             request_json['object']['actor'] = request_json['object']['object']['attributedTo']
@@ -587,7 +587,7 @@ def replay_inbox_request(request_json):
         return
 
     if missing_actor_in_announce_object:
-        if ((request_json['object']['type'] == 'Create' or request_json['object']['type']) and
+        if ((request_json['object']['type'] == 'Create' or request_json['object']['type'] == 'Update') and
             'attributedTo' in request_json['object']['object'] and isinstance(request_json['object']['object']['attributedTo'], str)):
             request_json['object']['actor'] = request_json['object']['object']['attributedTo']
 
@@ -770,7 +770,7 @@ def process_inbox_request(request_json, store_ap_json):
         if core_activity['type'] == 'Create' or core_activity['type'] == 'Update':
             if isinstance(core_activity['object'], str):
                 core_activity = verify_object_from_source(core_activity)             # change core_activity['object'] from str to dict, then process normally
-                if not request_json:
+                if not core_activity:
                     log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Could not verify unsigned request from source')
                     return
 
