@@ -431,7 +431,7 @@ def shared_inbox():
             log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json, 'Activity about local content which is already present')
             return '', 200
 
-        # id = object['id']
+        id = object['id']
 
     redis_client = get_redis_connection()
     if redis_client.exists(id):                 # Something is sending same activity multiple times
