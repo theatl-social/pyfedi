@@ -262,7 +262,7 @@ def calculate_if_has_children(reply):    # result used as True / False
     return db.session.execute(text('SELECT COUNT(id) AS c FROM "post_reply" WHERE parent_id = :id'), {'id': reply.id}).scalar()
 
 
-def reply_view(reply: PostReply | int, variant, user_id=None, my_vote=0):
+def reply_view(reply: PostReply | int, variant, user_id=None, my_vote=0, read=False):
     if isinstance(reply, int):
         reply = PostReply.query.filter_by(id=reply).one()
 
@@ -329,6 +329,38 @@ def reply_view(reply: PostReply | int, variant, user_id=None, my_vote=0):
         v4 = {'comment_view': reply_view(reply=reply, variant=2, user_id=user_id)}
 
         return v4
+
+    # Variant 5 - views/comment_reply_view.dart - /user/replies api endpoint
+    if variant == 5:
+        bookmarked = db.session.execute(text('SELECT user_id FROM "post_reply_bookmark" WHERE post_reply_id = :post_reply_id and user_id = :user_id'), {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
+        reply_sub = db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'), {'type': NOTIF_REPLY, 'entity_id': reply.id, 'user_id': user_id}).scalar()
+        banned = db.session.execute(text('SELECT user_id FROM "community_ban" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': reply.user_id, 'community_id': reply.community_id}).scalar()
+        moderator = db.session.execute(text('SELECT is_moderator FROM "community_member" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': reply.user_id, 'community_id': reply.community_id}).scalar()
+        admin = db.session.execute(text('SELECT user_id FROM "user_role" WHERE user_id = :user_id and role_id = 4'), {'user_id': reply.user_id}).scalar()
+
+        saved = True if bookmarked else False
+        activity_alert = True if reply_sub else False
+        creator_banned_from_community = True if banned else False
+        creator_is_moderator = True if moderator else False
+        creator_is_admin = True if admin else False
+
+        v5 = {'comment_reply': {'id': reply.id, 'recipient_id': user_id, 'comment_id': reply.id, 'read': read, 'published': reply.posted_at.isoformat() + 'Z'},
+              'comment': reply_view(reply=reply, variant=1),
+              'creator': user_view(user=reply.author, variant=1),
+              'post': post_view(post=reply.post, variant=1),
+              'community': community_view(community=reply.community, variant=1),
+              'recipient': user_view(user=user_id, variant=1),
+              'counts': {'comment_id': reply.id, 'score': reply.score, 'upvotes': reply.up_votes, 'downvotes': reply.down_votes, 'published': reply.posted_at.isoformat() + 'Z', 'child_count': 0},
+              'activity_alert': activity_alert,
+              'creator_banned_from_community': creator_banned_from_community,
+              'creator_is_moderator': creator_is_moderator,
+              'creator_is_admin': creator_is_admin,
+              'subscribed': 'NotSubscribed',
+              'saved': saved,
+              'creator_blocked': False
+             }
+
+        return v5
 
 
 def reply_report_view(report, reply_id, user_id):

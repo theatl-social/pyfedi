@@ -72,7 +72,7 @@ def get_community_list(auth, data):
 
 def get_community(auth, data):
     if not data or ('id' not in data and 'name' not in data):
-        raise Exception('missing_parameters')
+        raise Exception('missing parameters for community')
     if 'id' in data:
         community = int(data['id'])
     elif 'name' in data:

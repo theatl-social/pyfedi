@@ -107,19 +107,19 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                             else:
                                 new_membership = CommunityMember(community_id=community.id, user_id=mod.id, is_moderator=True)
                                 db.session.add(new_membership)
-        elif community.ap_moderators_url:
-            mods_data = remote_object_to_json(community.ap_moderators_url)
-            if mods_data and mods_data['type'] == 'OrderedCollection' and 'orderedItems' in mods_data:
-                for actor in mods_data['orderedItems']:
-                    sleep(0.5)
-                    mod = find_actor_or_create(actor)
-                    if mod:
-                        existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=mod.id).first()
-                        if existing_membership:
-                            existing_membership.is_moderator = True
-                        else:
-                            new_membership = CommunityMember(community_id=community.id, user_id=mod.id, is_moderator=True)
-                            db.session.add(new_membership)
+            elif community.ap_moderators_url:
+                mods_data = remote_object_to_json(community.ap_moderators_url)
+                if mods_data and mods_data['type'] == 'OrderedCollection' and 'orderedItems' in mods_data:
+                    for actor in mods_data['orderedItems']:
+                        sleep(0.5)
+                        mod = find_actor_or_create(actor)
+                        if mod:
+                            existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=mod.id).first()
+                            if existing_membership:
+                                existing_membership.is_moderator = True
+                            else:
+                                new_membership = CommunityMember(community_id=community.id, user_id=mod.id, is_moderator=True)
+                                db.session.add(new_membership)
         if is_peertube:
             community.restricted_to_mods = True
         db.session.commit()

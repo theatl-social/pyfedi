@@ -6,7 +6,7 @@ from app.api.alpha.views import search_view
 
 def get_search(auth, data):
     if not data or ('q' not in data and 'type_' not in data):
-        raise Exception('missing_parameters')
+        raise Exception('missing parameters for search')
 
     type = data['type_']
     listing_type = data['listing_type'] if 'listing_type' in data else 'Local'

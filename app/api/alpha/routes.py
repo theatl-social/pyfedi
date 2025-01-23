@@ -3,10 +3,10 @@ from app.api.alpha.utils import get_site, post_site_block, \
                                 get_search, \
                                 get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, post_post, \
                                 put_post, post_post_delete, post_post_report, post_post_lock, post_post_feature, post_post_remove, \
-                                get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, put_reply, \
+                                get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, put_reply, post_reply_mark_as_read, \
                                 post_reply_delete, post_reply_report, post_reply_remove, \
                                 get_community_list, get_community, post_community_follow, post_community_block, \
-                                get_user, post_user_block
+                                get_user, post_user_block, get_user_unread_count, get_user_replies
 from app.shared.auth import log_user_in
 
 from flask import current_app, jsonify, request
@@ -354,6 +354,18 @@ def post_alpha_comment_remove():
         return jsonify({"error": str(ex)}), 400
 
 
+@bp.route('/api/alpha/comment/mark_as_read', methods=['POST'])
+def post_alpha_comment_mark_as_read():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(post_reply_mark_as_read(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
 # User
 @bp.route('/api/alpha/user', methods=['GET'])
 def get_alpha_user():
@@ -375,6 +387,29 @@ def post_alpha_user_login():
         SRC_API = 3                                     # would be in app.constants
         data = request.get_json(force=True) or {}
         return jsonify(log_user_in(data, SRC_API))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/user/unread_count', methods=['GET'])
+def get_alpha_user_unread_count():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
+    try:
+        auth = request.headers.get('Authorization')
+        return jsonify(get_user_unread_count(auth))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/user/replies', methods=['GET'])
+def get_alpha_user_replies():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.args.to_dict() or None
+        return jsonify(get_user_replies(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
@@ -426,8 +461,7 @@ def alpha_post():
     return jsonify({"error": "not_yet_implemented"}), 400
 
 # Reply - not yet implemented
-@bp.route('/api/alpha/comment', methods=['GET'])                                  # Stage 1 if needed for search
-@bp.route('/api/alpha/comment/mark_as_read', methods=['POST'])                    # No DB support
+@bp.route('/api/alpha/comment', methods=['GET'])                                  # Stage 2
 @bp.route('/api/alpha/comment/distinguish', methods=['POST'])                     # Not really used
 @bp.route('/api/alpha/comment/report/resolve', methods=['PUT'])                   # Stage 2
 @bp.route('/api/alpha/comment/report/list', methods=['GET'])                      # Stage 2
@@ -451,7 +485,6 @@ def alpha_chat():
 @bp.route('/api/alpha/user/get_captcha', methods=['GET'])                         # Not available in app
 @bp.route('/api/alpha/user/mention', methods=['GET'])                             # No DB support
 @bp.route('/api/alpha/user/mention/mark_as_read', methods=['POST'])               # No DB support
-@bp.route('/api/alpha/user/replies', methods=['GET'])                             # Stage 1
 @bp.route('/api/alpha/user/ban', methods=['POST'])                                # Admin function. No plans to implement
 @bp.route('/api/alpha/user/banned', methods=['GET'])                              # Admin function. No plans to implement
 @bp.route('/api/alpha/user/delete_account', methods=['POST'])                     # Not available in app
@@ -461,7 +494,6 @@ def alpha_chat():
 @bp.route('/api/alpha/user/save_user_settings', methods=['PUT'])                  # Not available in app
 @bp.route('/api/alpha/user/change_password', methods=['PUT'])                     # Not available in app
 @bp.route('/api/alpha/user/report_count', methods=['GET'])                        # Stage 2
-@bp.route('/api/alpha/user/unread_count', methods=['GET'])                        # Stage 1
 @bp.route('/api/alpha/user/verify_email', methods=['POST'])                       # Admin function. No plans to implement
 @bp.route('/api/alpha/user/leave_admin', methods=['POST'])                        # Admin function. No plans to implement
 @bp.route('/api/alpha/user/totp/generate', methods=['POST'])                      # Not available in app

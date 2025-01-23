@@ -35,7 +35,7 @@ def cached_post_list(type, sort, user_id, community_id, community_name, person_i
     # change when polls are supported
     posts = posts.filter(Post.type != POST_TYPE_POLL)
 
-    if user_id is not None:
+    if user_id and user_id != person_id:
         blocked_person_ids = blocked_users(user_id)
         if blocked_person_ids:
             posts = posts.filter(Post.user_id.not_in(blocked_person_ids))
@@ -104,7 +104,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts'):
 
 def get_post(auth, data):
     if not data or 'id' not in data:
-        raise Exception('missing_parameters')
+        raise Exception('missing parameters for post')
 
     id = int(data['id'])
 

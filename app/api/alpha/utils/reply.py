@@ -1,12 +1,12 @@
-from app import cache
+from app import cache, db
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
 from app.api.alpha.views import reply_view, reply_report_view
-from app.models import PostReply, Post
+from app.models import Notification, PostReply, Post
 from app.shared.reply import vote_for_reply, bookmark_the_post_reply, remove_the_bookmark_from_post_reply, toggle_post_reply_notification, make_reply, edit_reply, \
                              delete_reply, restore_reply, report_reply, mod_remove_reply, mod_restore_reply
 from app.utils import authorise_api_user, blocked_users, blocked_instances
 
-from sqlalchemy import desc
+from sqlalchemy import desc, or_
 
 # person_id param: the author of the reply; user_id param: the current logged-in user
 @cache.memoize(timeout=3)
@@ -16,7 +16,7 @@ def cached_reply_list(post_id, person_id, sort, max_depth, user_id):
     if person_id:
         replies = PostReply.query.filter_by(user_id=person_id)
 
-    if user_id is not None:
+    if user_id and user_id != person_id:
         blocked_person_ids = blocked_users(user_id)
         if blocked_person_ids:
             replies = replies.filter(PostReply.user_id.not_in(blocked_person_ids))
@@ -43,7 +43,7 @@ def get_reply_list(auth, data, user_id=None):
     person_id = data['person_id'] if data and 'person_id' in data else None
 
     if data and not post_id and not person_id:
-        raise Exception('missing_parameters')
+        raise Exception('missing parameters for reply')
     else:
         if auth:
             user_id = authorise_api_user(auth)
@@ -62,6 +62,7 @@ def get_reply_list(auth, data, user_id=None):
             replylist.append(reply_view(reply=reply, variant=2, user_id=user_id))
         except:
             continue
+        break
     list_json = {
         "comments": replylist
     }
@@ -210,3 +211,33 @@ def post_reply_remove(auth, data):
 
     reply_json = reply_view(reply=reply, variant=4, user_id=user_id)
     return reply_json
+
+
+def post_reply_mark_as_read(auth, data):
+    required(['comment_reply_id', 'read'], data)
+    integer_expected(['comment_reply_id'], data)
+    boolean_expected(['read'], data)
+
+    reply_id = data['comment_reply_id']
+    read = data['read']
+
+    user_id = authorise_api_user(auth)
+
+    # no real support for this. Just marking the Notification for the reply really
+    # notification has its own id, which would be handy, but reply_view is currently just returning the reply.id for that
+    reply = PostReply.query.filter_by(id=reply_id).one()
+
+    reply_url = '#comment_' + str(reply.id)
+    mention_url = '/comment/' + str(reply.id)
+    notification = Notification.query.filter(Notification.user_id == user_id, or_(Notification.url.ilike(f"%{reply_url}%"), Notification.url.ilike(f"%{mention_url}%"))).first()
+    if notification:
+        notification.read = read
+        db.session.commit()
+
+    reply_json = {'comment_reply_view': reply_view(reply=reply, variant=5, user_id=user_id, read=True)}
+    return reply_json
+
+
+
+
+
