@@ -338,7 +338,7 @@ def admin_federation():
         remote_url = remote_scan_form.remote_url.data
 
         # test to make sure its a valid fqdn
-        regex_pattern = '^(https:\/\/)(?=.{1,255}$)((.{1,63}\.){1,127}(?![0-9]*$)[a-z0-9-]+\.?)$'
+        regex_pattern = '^(https:\\/\\/)(?=.{1,255}$)((.{1,63}\\.){1,127}(?![0-9]*$)[a-z0-9-]+\\.?)$'
         result = re.match(regex_pattern, remote_url)
         if result is None:
             flash(_(f'{remote_url} does not appear to be a valid url. Make sure input is in the form "https://server-name.tld" without trailing slashes or paths.'))
