@@ -1,7 +1,7 @@
 import multiprocessing
 
-workers = 1
-threads = multiprocessing.cpu_count() * 4 + 1
+workers = 2
+threads = multiprocessing.cpu_count() * 3 + 1
 
 worker_tmp_dir = '/dev/shm'
 
@@ -15,5 +15,5 @@ worker_class = 'gthread'
 accesslog = '-'
 errorlog = '-'
 
-max_requests = 500
+max_requests = 2000
 max_requests_jitter = 50
