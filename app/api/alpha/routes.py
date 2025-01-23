@@ -6,7 +6,8 @@ from app.api.alpha.utils import get_site, post_site_block, \
                                 get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, put_reply, post_reply_mark_as_read, \
                                 post_reply_delete, post_reply_report, post_reply_remove, \
                                 get_community_list, get_community, post_community_follow, post_community_block, \
-                                get_user, post_user_block, get_user_unread_count, get_user_replies
+                                get_user, post_user_block, get_user_unread_count, get_user_replies, post_user_mark_all_as_read, \
+                                get_private_message_list
 from app.shared.auth import log_user_in
 
 from flask import current_app, jsonify, request
@@ -366,6 +367,19 @@ def post_alpha_comment_mark_as_read():
         return jsonify({"error": str(ex)}), 400
 
 
+# Private Message
+@bp.route('/api/alpha/private_message/list', methods=['GET'])
+def get_alpha_private_message_list():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.args.to_dict() or None
+        return jsonify(get_private_message_list(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
 # User
 @bp.route('/api/alpha/user', methods=['GET'])
 def get_alpha_user():
@@ -426,6 +440,17 @@ def post_alpha_user_block():
         return jsonify({"error": str(ex)}), 400
 
 
+@bp.route('/api/alpha/user/mark_all_as_read', methods=['POST'])
+def post_alpha_user_mark_all_as_read():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
+    try:
+        auth = request.headers.get('Authorization')
+        return jsonify(post_user_mark_all_as_read(auth))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
 # Not yet implemented. Copied from lemmy's V3 api, so some aren't needed, and some need changing
 
 # Site - not yet implemented
@@ -436,7 +461,7 @@ def alpha_site():
 
 # Miscellaneous - not yet implemented
 @bp.route('/api/alpha/modlog', methods=['GET'])                                   # Get Modlog. Not usually public
-@bp.route('/api/alpha/resolve_object', methods=['GET'])                           # Stage 1: Needed for search
+@bp.route('/api/alpha/resolve_object', methods=['GET'])                           # Stage 2
 @bp.route('/api/alpha/federated_instances', methods=['GET'])                      # No plans to implement - only V3 version needed
 def alpha_miscellaneous():
     return jsonify({"error": "not_yet_implemented"}), 400
@@ -469,12 +494,11 @@ def alpha_reply():
     return jsonify({"error": "not_yet_implemented"}), 400
 
 # Chat - not yet implemented
-@bp.route('/api/alpha/private_message/list', methods=['GET'])                     # Stage 1
-@bp.route('/api/alpha/private_message', methods=['PUT'])                          # Stage 1
-@bp.route('/api/alpha/private_message', methods=['POST'])                         # Stage 1
-@bp.route('/api/alpha/private_message/delete', methods=['POST'])                  # Stage 1
-@bp.route('/api/alpha/private_message/mark_as_read', methods=['POST'])            # Stage 1
-@bp.route('/api/alpha/private_message/report', methods=['POST'])                  # Stage 1
+@bp.route('/api/alpha/private_message', methods=['PUT'])                          # Not available in app
+@bp.route('/api/alpha/private_message', methods=['POST'])                         # Not available in app
+@bp.route('/api/alpha/private_message/delete', methods=['POST'])                  # Not available in app
+@bp.route('/api/alpha/private_message/mark_as_read', methods=['POST'])            # Not available in app
+@bp.route('/api/alpha/private_message/report', methods=['POST'])                  # Not available in app
 @bp.route('/api/alpha/private_message/report/resolve', methods=['PUT'])           # Stage 2
 @bp.route('/api/alpha/private_message/report/list', methods=['GET'])              # Stage 2
 def alpha_chat():
@@ -484,15 +508,14 @@ def alpha_chat():
 @bp.route('/api/alpha/user/register', methods=['POST'])                           # Not available in app
 @bp.route('/api/alpha/user/get_captcha', methods=['GET'])                         # Not available in app
 @bp.route('/api/alpha/user/mention', methods=['GET'])                             # No DB support
-@bp.route('/api/alpha/user/mention/mark_as_read', methods=['POST'])               # No DB support
+@bp.route('/api/alpha/user/mention/mark_as_read', methods=['POST'])               # No DB support / Not available in app (using mark_all instead)
 @bp.route('/api/alpha/user/ban', methods=['POST'])                                # Admin function. No plans to implement
 @bp.route('/api/alpha/user/banned', methods=['GET'])                              # Admin function. No plans to implement
 @bp.route('/api/alpha/user/delete_account', methods=['POST'])                     # Not available in app
 @bp.route('/api/alpha/user/password_reset', methods=['POST'])                     # Not available in app
 @bp.route('/api/alpha/user/password_change', methods=['POST'])                    # Not available in app
-@bp.route('/api/alpha/user/mark_all_as_read', methods=['POST'])                   # Stage 1
-@bp.route('/api/alpha/user/save_user_settings', methods=['PUT'])                  # Not available in app
-@bp.route('/api/alpha/user/change_password', methods=['PUT'])                     # Not available in app
+@bp.route('/api/alpha/user/save_user_settings', methods=['PUT'])                  # Stage 2
+@bp.route('/api/alpha/user/change_password', methods=['PUT'])                     # Stage 2
 @bp.route('/api/alpha/user/report_count', methods=['GET'])                        # Stage 2
 @bp.route('/api/alpha/user/verify_email', methods=['POST'])                       # Admin function. No plans to implement
 @bp.route('/api/alpha/user/leave_admin', methods=['POST'])                        # Admin function. No plans to implement
@@ -502,7 +525,7 @@ def alpha_chat():
 @bp.route('/api/alpha/user/import_settings', methods=['POST'])                    # Not available in app
 @bp.route('/api/alpha/user/list_logins', methods=['GET'])                         # Not available in app
 @bp.route('/api/alpha/user/validate_auth', methods=['GET'])                       # Not available in app
-@bp.route('/api/alpha/user/logout', methods=['POST'])                             # Stage 1
+@bp.route('/api/alpha/user/logout', methods=['POST'])                             # Stage 2
 def alpha_user():
     return jsonify({"error": "not_yet_implemented"}), 400
 

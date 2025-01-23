@@ -4,7 +4,7 @@ from app.utils import authorise_api_user
 from app.api.alpha.utils.post import get_post_list
 from app.api.alpha.utils.reply import get_reply_list
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
-from app.models import PostReply, User
+from app.models import Conversation, ChatMessage, Notification, PostReply, User
 from app.shared.user import block_another_user, unblock_another_user
 
 from sqlalchemy import text, desc
@@ -96,6 +96,8 @@ def get_user_unread_count(auth):
     unread_messages = db.session.execute(text("SELECT * from chat_message AS cm INNER JOIN conversation c ON cm.conversation_id =c.id WHERE c.read = false AND cm.recipient_id = :user_id"), {'user_id': user_id}).scalar()
     if not unread_messages:
         unread_messages = 0
+    if unread_notifications == 0:
+        unread_messages = 0
 
     unread_count = {
         "replies": unread_notifications - unread_messages,
@@ -130,5 +132,21 @@ def get_user_replies(auth, data):
     }
 
     return list_json
+
+
+def post_user_mark_all_as_read(auth):
+    user_id = authorise_api_user(auth)
+
+    notifications = Notification.query.filter_by(user_id=user_id, read=False)
+    for notification in notifications:
+        notification.read = True
+
+    conversations = Conversation.query.filter_by(read=False).join(ChatMessage, ChatMessage.conversation_id == Conversation.id).filter_by(recipient_id=user_id)
+    for conversation in conversations:
+        conversation.read = True
+
+    db.session.commit()
+
+    return {'replies': []}
 
 

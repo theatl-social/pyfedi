@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from app import cache, db
 from app.constants import *
-from app.models import Community, CommunityMember, Instance, Post, PostReply, PostVote, User
+from app.models import ChatMessage, Community, CommunityMember, Instance, Post, PostReply, PostVote, User
 from app.utils import blocked_communities
 
 from sqlalchemy import text
@@ -469,6 +469,30 @@ def instance_view(instance: Instance | int, variant):
         v1.update({'published': instance.created_at.isoformat() + 'Z', 'updated': instance.updated_at.isoformat() + 'Z'})
 
         return v1
+
+
+def private_message_view(cm: ChatMessage, user_id, ap_id):
+    creator = user_view(cm.sender_id, variant=1)
+    recipient = user_view(cm.recipient_id, variant=1)
+    is_local = creator['instance_id'] == 1
+
+    v1 = {
+      'private_message': {
+        'id': cm.id,
+        'creator_id': cm.sender_id,
+        'recipient_id': user_id,
+        'content': cm.body,
+        'deleted': False,
+        'read': cm.read,
+        'published': cm.created_at.isoformat() + 'Z',
+        'ap_id': ap_id,
+        'local': is_local
+      },
+      'creator': creator,
+      'recipient': recipient
+    }
+
+    return v1
 
 
 @cache.memoize(timeout=86400)
