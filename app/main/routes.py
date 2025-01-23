@@ -465,14 +465,8 @@ def robots():
 @bp.route('/sitemap.xml')
 @cache.cached(timeout=6000)
 def sitemap():
-    posts = Post.query.filter(Post.from_bot == False, Post.deleted == False)
-    posts = posts.join(Community, Community.id == Post.community_id)
-    posts = posts.filter(Community.show_all == True, Community.ap_id == None)   # sitemap.xml only includes local posts
-    if not g.site.enable_nsfw:
-        posts = posts.filter(Community.nsfw == False)
-    if not g.site.enable_nsfl:
-        posts = posts.filter(Community.nsfl == False)
-    posts = posts.order_by(desc(Post.posted_at))
+    posts = Post.query.filter(Post.from_bot == False, Post.deleted == False, Post.instance_id == 1, Post.indexable == True)
+    posts = posts.order_by(desc(Post.posted_at)).limit(100)
 
     resp = make_response(render_template('sitemap.xml', posts=posts, current_app=current_app))
     resp.mimetype = 'text/xml'
