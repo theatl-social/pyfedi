@@ -466,7 +466,7 @@ def robots():
 @cache.cached(timeout=6000)
 def sitemap():
     posts = Post.query.filter(Post.from_bot == False, Post.deleted == False, Post.instance_id == 1, Post.indexable == True)
-    posts = posts.order_by(desc(Post.posted_at)).limit(100)
+    posts = posts.order_by(desc(Post.posted_at)).limit(500)
 
     resp = make_response(render_template('sitemap.xml', posts=posts, current_app=current_app))
     resp.mimetype = 'text/xml'
