@@ -2232,6 +2232,8 @@ def resolve_remote_post(uri: str, community, announce_id, store_ap_json, nodebb=
     actor = None
 
     post_data = remote_object_to_json(uri)
+    if not post_data:
+        return None
 
     # find the author. Make sure their domain matches the site hosting it to mitigate impersonation attempts
     if 'attributedTo' in post_data:
@@ -2324,6 +2326,8 @@ def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
     actor = None
 
     post_data = remote_object_to_json(uri)
+    if not post_data:
+        return None
 
     # nodebb. the post is the first entry in orderedItems of a topic, and the replies are the remaining entries
     # just gets orderedItems[0] to retrieve the post, and then replies are retrieved in the background
@@ -2332,6 +2336,8 @@ def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
     if ('type' in post_data and post_data['type'] == 'Conversation' and
         'posts' in post_data and isinstance(post_data['posts'], str)):
         post_data = remote_object_to_json(post_data['posts'])
+        if not post_data:
+            return None
         topic_post_data = post_data
     if ('type' in post_data and post_data['type'] == 'OrderedCollection' and
        'totalItems' in post_data and post_data['totalItems'] > 0 and
@@ -2341,6 +2347,8 @@ def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
         parsed_url = urlparse(uri)
         uri_domain = parsed_url.netloc
         post_data = remote_object_to_json(uri)
+        if not post_data:
+            return None
 
     # check again that it doesn't already exist (can happen with different but equivalent URLs)
     post = Post.get_by_ap_id(post_data['id'])
