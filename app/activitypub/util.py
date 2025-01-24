@@ -1469,7 +1469,7 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
                             local_users_to_notify.append(profile_id)
 
         try:
-            post_reply = PostReply.new(user, post, parent_comment, notify_author=True, body=body, body_html=body_html,
+            post_reply = PostReply.new(user, post, parent_comment, notify_author=False, body=body, body_html=body_html,
                                        language_id=language_id, request_json=request_json, announce_id=announce_id)
             for lutn in local_users_to_notify:
                 recipient = User.query.filter_by(ap_profile_id=lutn, ap_id=None).first()
