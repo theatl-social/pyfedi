@@ -1368,7 +1368,7 @@ time {
   margin-top: -18px;
   display: flex;
   min-height: 44px;
-  /* justify-content: space-between; */
+  container-type: inline-size;
   justify-content: left;
 }
 @media (min-width: 992px) {
@@ -1393,6 +1393,14 @@ time {
 }
 .comment .comment_actions .dropdown-item:active {
   line-height: 26px;
+}
+@container (max-width: 267px) {
+  .comment .comment_actions .post_replies_link a {
+    width: 44px;
+  }
+  .comment .comment_actions .hide_skinny_mobile {
+    display: none;
+  }
 }
 .comment .replies {
   margin-top: 0;
