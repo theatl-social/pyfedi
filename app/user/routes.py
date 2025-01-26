@@ -375,6 +375,7 @@ def user_settings():
     form.interface_language.choices = [
         ('', _l('Auto-detect')),
         ('ca', _l('Catalan')),
+        ('zh', _l('Chinese')),
         ('en', _l('English')),
         ('fr', _l('French')),
         ('de', _l('German')),
