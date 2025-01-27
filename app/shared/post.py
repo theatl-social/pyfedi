@@ -1,5 +1,5 @@
 from app import db, cache
-from app.activitypub.util import make_image_sizes
+from app.activitypub.util import make_image_sizes, notify_about_post
 from app.constants import *
 from app.community.util import tags_from_string_old, end_poll_date
 from app.models import File, Language, Notification, NotificationSubscription, Poll, PollChoice, Post, PostBookmark, PostVote, Report, Site, User, utcnow
@@ -203,6 +203,8 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
     db.session.commit()
 
     post = edit_post(input, post, type, src, user, auth, uploaded_file, from_scratch=True)
+
+    notify_about_post(post)
 
     if src == SRC_API:
         return user.id, post
