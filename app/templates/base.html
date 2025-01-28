@@ -213,7 +213,7 @@
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/u/{{ current_user.link() }}" aria-haspopup="true" aria-expanded="false">{{ _('Account') }}</a>
                                 <ul class="dropdown-menu">
                                   <li><a class="dropdown-item{% if active_child == 'view_profile' %} active{% endif %}" href="/u/{{ current_user.link() }}">{{ _('View profile') }}</a></li>
-                                  <li><a class="dropdown-item{% if active_child == 'edit_profile' %} active{% endif %}" href="/user/settings">{{ _('Edit profile & settings') }}</a></li>
+                                  <li><a class="dropdown-item{% if active_child == 'edit_profile' %} active{% endif %}" href="/u/{{ current_user.link() }}/profile">{{ _('Edit profile') }}</a></li>
                                   <li><a class="dropdown-item{% if active_child == 'chats' %} active{% endif %}" href="/chat">{{ _('Chats') }}</a></li>
                                   <li><a class="dropdown-item{% if active_child == 'bookmarks' %} active{% endif %}" href="/bookmarks">{{ _('Bookmarks') }}</a></li>
                                   <li><a class="dropdown-item{% if active_child == 'alerts' %} active{% endif %}" href="/alerts">{{ _('Activity Alerts') }}</a></li>
@@ -250,6 +250,7 @@
                             </li>
                         {% endif %}
                         <li class="nav-item {% if current_user.is_anonymous %}right{% endif %}" aria-label="{{ _('Search') }}"><a class="nav-link" id="search" href="/search" tabindex="" title="{{ _('Search') }}"><span class="fe fe-search"></span></a></li>
+                        <li class="nav-item"  aria-label="{{ _('Settings') }}"><a class="nav-link" href="/user/settings" tabindex="" title="{{ _('Settings') }}"><span class="fe fe-settings"></span></a></li>
                         <li class="nav-item"  aria-label="{{ _('Color mode') }}"><a class="nav-link" id="color_mode" href="#" tabindex="" title="{{ _('Color mode') }}"><span id="color_mode_icon" class="fe fe-eye"></span></a></li>
                     </ul>
             </div>
