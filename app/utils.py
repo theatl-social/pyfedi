@@ -1275,6 +1275,7 @@ def add_to_modlog_activitypub(action: str, actor: User, community_id: int = None
         action_type = 'admin'
     else:
         action_type = 'mod'
+    reason=shorten_string(reason, 512)
     db.session.add(ModLog(user_id=actor.id, community_id=community_id, type=action_type, action=action,
                           reason=reason, link=link, link_text=link_text, public=get_setting('public_modlog', False)))
     db.session.commit()
