@@ -142,7 +142,7 @@
     {% block navbar -%}
     <div class="navbar navbar-expand-lg sticky-md-top">
         <div class="{{ 'container-lg' if post_layout != 'masonry_wide' else 'container-fluid' }}" role="banner">
-            <a class="navbar-brand" href="/">{% if not low_bandwidth %}<img src="{{ g.site.logo if g.site.logo else '/static/images/logo.svg' }}" alt="Logo" width="50" height="50" />{% endif %}{{ g.site.name }}</a>
+            <a class="navbar-brand" href="/" aria-label="{{ _('To home page') }}">{% if not low_bandwidth %}<img src="{{ g.site.logo if g.site.logo else '/static/images/logo.svg' }}" alt="Logo" width="50" height="50" />{% endif %}{{ g.site.name }}</a>
             {% if current_user.is_authenticated -%}
                 <a class="nav-link d-lg-none" href="/notifications" aria-label="{{ _('Notifications') }}">
                     {% if current_user.unread_notifications -%}
@@ -158,8 +158,8 @@
             </button>
 
             <div class="collapse navbar-collapse" id="navbarSupportedContent" role="navigation">
-                    <ul class="nav navbar-nav ml-md-4">
-                        {% if current_user.is_anonymous %}
+                    <ul class="nav navbar-nav">
+                        {% if current_user.is_anonymous -%}
                             <li class="nav-item"><a class="nav-link" href="/">{{ _('Home') }}</a></li>
                             <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %}">
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/topics" aria-haspopup="true" aria-expanded="false">{{ _('Topics') }}</a>
@@ -180,7 +180,6 @@
                             <li class="nav-item"><a class="nav-link" href="/auth/register">{{ _('Register') }}</a></li>
                             <li class="nav-item"><a class="nav-link" href="/donate">{{ _('Donate') }}</a></li>
                         {% else %}
-                            <li class="nav-item"><a class="nav-link" href="/">{{ _('Home') }}</a></li>
                             <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %}">
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/topics"  aria-haspopup="true" aria-expanded="false">{{ _('Topics') }}</a>
                                 <ul class="dropdown-menu">
@@ -240,7 +239,7 @@
                                     </ul>
                                 </li>
                             {% endif %}
-                            <li class="nav-item d-none d-md-inline-block">
+                            <li class="nav-item right d-none d-md-inline-block">
                                 <a class="nav-link" href="/notifications" aria-label="{{ _('%(num)d unread notifications', num=current_user.unread_notifications) if current_user.unread_notifications else _('Notifications') }}">
                                     {% if current_user.unread_notifications %}
                                     <span class="fe fe-bell red"></span> <span class="red">{{ current_user.unread_notifications }}</span>
@@ -250,8 +249,8 @@
                                 </a>
                             </li>
                         {% endif %}
-                        <li class="nav-item" aria-label="{{ _('Search') }}"><a class="nav-link" id="search" href="/search" tabindex="" title="{{ _('Search') }}"><span class="fe fe-search"></span></a></li>
-                        <li class="nav-item" aria-label="{{ _('Color mode') }}"><a class="nav-link" id="color_mode" href="#" tabindex="" title="{{ _('Color mode') }}"><span id="color_mode_icon" class="fe fe-eye"></span></a></li>
+                        <li class="nav-item {% if current_user.is_anonymous %}right{% endif %}" aria-label="{{ _('Search') }}"><a class="nav-link" id="search" href="/search" tabindex="" title="{{ _('Search') }}"><span class="fe fe-search"></span></a></li>
+                        <li class="nav-item"  aria-label="{{ _('Color mode') }}"><a class="nav-link" id="color_mode" href="#" tabindex="" title="{{ _('Color mode') }}"><span id="color_mode_icon" class="fe fe-eye"></span></a></li>
                     </ul>
             </div>
 

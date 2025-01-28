@@ -114,6 +114,30 @@ div.navbar {
   outline-style: none;
 }
 
+@include breakpoint(tablet) {
+  ul.navbar-nav {
+    width: 100%;
+    display: flex;
+    align-items: center;
+
+    &> .right {
+      margin-left: auto;
+    }
+
+    *> * {
+      margin-left: 10px;
+    }
+
+    .dropdown-menu li {
+      margin-left: 0;
+
+      a {
+        margin-left: 0;
+      }
+    }
+  }
+}
+
 .navbar-toggler {
   border: none;
   height: 48px;
