@@ -1,13 +1,7 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, TextAreaField, BooleanField, HiddenField, SelectField, FileField
-from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Optional
+from wtforms import StringField, SubmitField, TextAreaField
+from wtforms.validators import ValidationError, DataRequired, Length, Optional
 from flask_babel import _, lazy_gettext as _l
-from app.utils import MultiCheckboxField
-
-
-class ChooseTopicsForm(FlaskForm):
-    chosen_topics = MultiCheckboxField(_l('Choose some topics you are interested in'), coerce=int)
-    submit = SubmitField(_l('Choose'))
 
 
 class SuggestTopicsForm(FlaskForm):

@@ -5,21 +5,19 @@ from typing import List
 
 from feedgen.feed import FeedGenerator
 from flask import request, flash, json, url_for, current_app, redirect, abort, make_response, g
-from flask import render_template as flask_render_template
 from flask_login import login_required, current_user
 from flask_babel import _
 from sqlalchemy import text, desc, or_
 
-from app.activitypub.signature import post_request
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
     POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_TOPIC
 from app.inoculation import inoculation
 from app.models import Topic, Community, Post, utcnow, CommunityMember, CommunityJoinRequest, User, \
     NotificationSubscription, read_posts
 from app.topic import bp
-from app.email import send_email, send_topic_suggestion
-from app import db, celery, cache
-from app.topic.forms import ChooseTopicsForm, SuggestTopicsForm
+from app.email import send_topic_suggestion
+from app import db, cache
+from app.topic.forms import SuggestTopicsForm
 from app.utils import render_template, user_filters_posts, moderating_communities, joined_communities, \
     community_membership, blocked_domains, validation_required, mimetype_from_url, blocked_instances, \
     communities_banned_from, blocked_users, menu_topics, blocked_communities
@@ -191,29 +189,6 @@ def show_topic_rss(topic_path):
         abort(404)
 
 
-@bp.route('/choose_topics', methods=['GET', 'POST'])
-@login_required
-def choose_topics():
-    form = ChooseTopicsForm()
-    form.chosen_topics.choices = topics_for_form()
-    if form.validate_on_submit():
-        if form.chosen_topics.data:
-            for topic_id in form.chosen_topics.data:
-                join_topic(topic_id)
-            flash(_('You have joined some communities relating to those interests. Find them on the Topics menu or browse the home page.'))
-            cache.delete_memoized(joined_communities, current_user.id)
-            return redirect(url_for('main.index'))
-        else:
-            flash(_('You did not choose any topics. Would you like to choose individual communities instead?'))
-            return redirect(url_for('main.list_communities'))
-    else:
-        return render_template('topic/choose_topics.html', form=form,
-                               moderating_communities=moderating_communities(current_user.get_id()),
-                               joined_communities=joined_communities(current_user.get_id()),
-                               menu_topics=menu_topics(), site=g.site,
-                               )
-
-
 @bp.route('/topic/<topic_name>/submit', methods=['GET', 'POST'])
 @login_required
 @validation_required
@@ -290,48 +265,4 @@ def get_all_child_topic_ids(topic: Topic) -> List[int]:
         topic_ids.extend(get_all_child_topic_ids(child_topic))
     return topic_ids
 
-def topics_for_form():
-    topics = Topic.query.filter_by(parent_id=None).order_by(Topic.name).all()
-    result = []
-    for topic in topics:
-        result.append((topic.id, topic.name))
-        sub_topics = Topic.query.filter_by(parent_id=topic.id).order_by(Topic.name).all()
-        for sub_topic in sub_topics:
-            result.append((sub_topic.id, ' --- ' + sub_topic.name))
-    return result
 
-
-def join_topic(topic_id):
-    communities = Community.query.filter_by(topic_id=topic_id, banned=False).all()
-    for community in communities:
-        if not community.user_is_banned(current_user) and community_membership(current_user, community) == SUBSCRIPTION_NONMEMBER:
-            if not community.is_local():
-                join_request = CommunityJoinRequest(user_id=current_user.id, community_id=community.id)
-                db.session.add(join_request)
-                db.session.commit()
-                if current_app.debug:
-                    send_community_follow(community.id, join_request, current_user.id)
-                else:
-                    send_community_follow.delay(community.id, join_request.id, current_user.id)
-
-            member = CommunityMember(user_id=current_user.id, community_id=community.id)
-            db.session.add(member)
-            db.session.commit()
-            cache.delete_memoized(community_membership, current_user, community)
-
-
-@celery.task
-def send_community_follow(community_id, join_request_id, user_id):
-    with current_app.app_context():
-        user = User.query.get(user_id)
-        community = Community.query.get(community_id)
-        if not community.instance.gone_forever:
-            follow = {
-              "actor": user.public_url(),
-              "to": [community.public_url()],
-              "object": community.public_url(),
-              "type": "Follow",
-              "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request_id}"
-            }
-            post_request(community.ap_inbox_url, follow, user.private_key,
-                                        user.public_url() + '#main-key')

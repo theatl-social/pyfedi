@@ -1,4 +1,7 @@
-from app import db
+from flask_login import login_user
+from werkzeug.urls import url_parse
+
+from app import db, cache
 from app.auth.util import ip2location
 from app.models import IpBan, User, utcnow
 from app.utils import ip_address, user_ip_banned, user_cookie_banned, banned_ip_addresses, gibberish
@@ -84,7 +87,7 @@ def log_user_in(input, src):
         next_page = request.args.get('next')
         if not next_page or url_parse(next_page).netloc != '':
             if len(user.communities()) == 0:
-                next_page = url_for('topic.choose_topics')
+                next_page = url_for('auth.trump_musk')
             else:
                 next_page = url_for('main.index')
         response = make_response(redirect(next_page))

@@ -1,9 +1,11 @@
 from flask_wtf import FlaskForm, RecaptchaField
-from wtforms import StringField, PasswordField, SubmitField, HiddenField, BooleanField
+from wtforms import StringField, PasswordField, SubmitField, HiddenField, BooleanField, SelectField, RadioField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length
 from flask_babel import _, lazy_gettext as _l
 from app.models import User, Community
 from sqlalchemy import func
+
+from app.utils import MultiCheckboxField
 
 
 class LoginForm(FlaskForm):
@@ -79,3 +81,18 @@ class ResetPasswordForm(FlaskForm):
         _l('Repeat password'), validators=[DataRequired(),
                                            EqualTo('password')])
     submit = SubmitField(_l('Set password'))
+
+
+class ChooseTrumpMuskForm(FlaskForm):
+    options = [(1, _l('Please make it stop')),
+               (0, _l('A little is ok')),
+               (-1, _l('Bring it on')),
+               ]
+    trump_musk_level = RadioField(_l('How tired of Trump and Musk news are you?'), choices=options, default=1, coerce=int,
+                                    render_kw={'class': 'form-select'})
+    submit = SubmitField(_l('Choose'))
+
+
+class ChooseTopicsForm(FlaskForm):
+    chosen_topics = MultiCheckboxField(_l('Choose some topics you are interested in'), coerce=int)
+    submit = SubmitField(_l('Choose'))

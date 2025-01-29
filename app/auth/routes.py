@@ -66,7 +66,7 @@ def login():
         next_page = request.args.get('next')
         if not next_page or url_parse(next_page).netloc != '':
             if len(current_user.communities()) == 0:
-                next_page = url_for('topic.choose_topics')
+                next_page = url_for('auth.trump_musk')
             else:
                 next_page = url_for('main.index')
         response = make_response(redirect(next_page))
@@ -152,7 +152,7 @@ def register():
                 else:
                     return redirect(url_for('auth.check_email'))
 
-        resp = make_response(redirect(url_for('topic.choose_topics')))
+        resp = make_response(redirect(url_for('auth.trump_musk')))
         if user_ip_banned():
             resp.set_cookie('sesion', '17489047567495', expires=datetime(year=2099, month=12, day=30))
         return resp
@@ -236,7 +236,7 @@ def verify_email(token):
         else:
             login_user(user, remember=True)
             if len(user.communities()) == 0:
-                return redirect(url_for('topic.choose_topics'))
+                return redirect(url_for('auth.trump_musk'))
             else:
                 return redirect(url_for('main.index'))
 
