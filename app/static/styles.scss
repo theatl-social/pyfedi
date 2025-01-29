@@ -1083,6 +1083,7 @@ time {
 
     .dropdown-menu.show {
       z-index: 100;
+      background-color: var(--bs-body-bg);
     }
 
     .dropdown-item {
