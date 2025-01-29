@@ -1420,7 +1420,7 @@ time {
   font-size: 87%;
 }
 .comment .comment_actions .dropdown-menu.show {
-  z-index: 100;
+  z-index: 1001;
   background-color: var(--bs-body-bg);
 }
 .comment .comment_actions .dropdown-item {

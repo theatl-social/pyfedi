@@ -1082,8 +1082,9 @@ time {
     }
 
     .dropdown-menu.show {
-      z-index: 100;
+      z-index: 1001;
       background-color: var(--bs-body-bg);
+
     }
 
     .dropdown-item {
