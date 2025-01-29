@@ -1081,6 +1081,10 @@ time {
       font-size: 87%;
     }
 
+    .dropdown-menu.show {
+      z-index: 100;
+    }
+
     .dropdown-item {
       white-space: unset;
       line-height: 30px;
