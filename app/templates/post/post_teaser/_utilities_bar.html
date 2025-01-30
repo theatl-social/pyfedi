@@ -20,7 +20,7 @@
             </div>
         {% endif -%}
         <div class="post_options_link pull-right">
-            <div class="dropdown">
+            <div class="dropdown" id="post_options_dropdown_{{ post.id }}">
                 <a href="{{ url_for('post.post_options', post_id=post.id) if low_bandwidth else '#' }}"
                    data-bs-toggle="dropdown"
                    rel="nofollow noindex"><span class="fe fe-options" title="Options"></span></a>
