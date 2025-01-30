@@ -3,13 +3,13 @@
     "short_name": "PieFed",
     "icons": [
         {
-            "src": "/static/images/piefed_logo_t_192.png",
+            "src": "/static/images/piefed_logo_icon_t_192.png",
             "sizes": "192x192",
             "type": "image/png",
             "purpose": "maskable"
         },
         {
-            "src": "/static/images/piefed_logo_t_512.png",
+            "src": "/static/images/piefed_logo_icon_t_512.png",
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "maskable"
