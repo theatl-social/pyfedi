@@ -66,7 +66,7 @@ def get_site(auth):
     else:
         user = None
 
-    logo = g.site.logo if g.site.logo else '/static/images/logo2.png'
+    logo = g.site.logo if g.site.logo else '/static/images/piefed_logo_icon_t_75.png'
     logo_152 = g.site.logo_152 if g.site.logo_152 else '/static/images/apple-touch-icon.png'
     logo_32 = g.site.logo_32 if g.site.logo_32 else '/static/images/favicon-32x32.png'
     logo_16 = g.site.logo_16 if g.site.logo_16 else '/static/images/favicon-16x16.png'

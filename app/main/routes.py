@@ -654,7 +654,7 @@ def activitypub_application():
         'outbox': f"https://{current_app.config['SERVER_NAME']}/site_outbox",
         'icon': {
           'type': 'Image',
-          'url': f"https://{current_app.config['SERVER_NAME']}/static/images/logo2.png"
+          'url': f"https://{current_app.config['SERVER_NAME']}/static/images/piefed_logo_icon_t_75.png"
         },
         'publicKey': {
           'id': f"https://{current_app.config['SERVER_NAME']}/#main-key",
