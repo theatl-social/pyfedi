@@ -18,6 +18,7 @@ def send_message(message: str, conversation_id: int) -> ChatMessage:
     db.session.commit()
     for recipient in conversation.members:
         if recipient.id != current_user.id:
+            reply.recipient_id = recipient.id
             if recipient.is_local():
                 # Notify local recipient
                 notify = Notification(title=shorten_string('New message from ' + current_user.display_name()),
