@@ -806,7 +806,7 @@ def process_inbox_request(request_json, store_ap_json):
 
                         # Notify recipient
                         notify = Notification(title=shorten_string('New message from ' + sender.display_name()),
-                                              url=f'/chat/{existing_conversation.id}#message_{new_message}', user_id=recipient.id,
+                                              url=f'/chat/{existing_conversation.id}#message_{new_message.id}', user_id=recipient.id,
                                               author_id=sender.id)
                         db.session.add(notify)
                         recipient.unread_notifications += 1

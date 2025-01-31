@@ -1725,6 +1725,56 @@ def update_post_from_activity(post: Post, request_json: dict):
         db.session.commit()
         return
 
+    if request_json['object']['type'] == 'Question':
+        # an Update is probably just informing us of new totals, but it could be an Edit to the Poll itself (totalItems for all choices will be 0)
+        mode = 'single'
+        if 'oneOf' in request_json['object']:
+            votes = request_json['object']['oneOf']
+        elif 'anyOf' in request_json['object']:
+            votes = request_json['object']['anyOf']
+            mode = 'multiple'
+        else:
+            return
+
+        total_vote_count = 0
+        for vote in votes:
+            if not 'name' in vote:
+                continue
+            if not 'replies' in vote:
+                continue
+            if not 'totalItems' in vote['replies']:
+                continue
+
+            total_vote_count += vote['replies']['totalItems']
+
+        if total_vote_count == 0:    # Edit, not a totals update
+            poll = Poll.query.filter_by(post_id=post.id).first()
+            if poll:
+                if not 'endTime' in request_json['object']:
+                    return
+                poll.end_poll = request_json['object']['endTime']
+                poll.mode = mode
+
+                db.session.execute(text('DELETE FROM "poll_choice_vote" WHERE post_id = :post_id'), {'post_id': post.id})
+                db.session.execute(text('DELETE FROM "poll_choice" WHERE post_id = :post_id'), {'post_id': post.id})
+
+                i = 1
+                for vote in votes:
+                    new_choice = PollChoice(post_id=post.id, choice_text=vote['name'], sort_order=i)
+                    db.session.add(new_choice)
+                    i += 1
+                db.session.commit()
+            return
+
+        # totals Update
+        for vote in votes:
+            choice = PollChoice.query.filter_by(post_id=post.id, choice_text=vote['name']).first()
+            if choice:
+                choice.num_votes = vote['replies']['totalItems']
+        db.session.commit()
+        # no URLs in Polls to worry about, so return now
+        return
+
     # Links
     old_url = post.url
     new_url = None
@@ -2508,7 +2558,6 @@ def inform_followers_of_post_update(post_id: int, sending_instance_id: int):
     # then community followers
     instances = Instance.query.join(User, User.instance_id == Instance.id).join(CommunityMember, CommunityMember.user_id == User.id)
     instances = instances.filter(CommunityMember.community_id == post.community.id, CommunityMember.is_banned == False)
-    instances = instances.filter(Instance.software.in_(MICROBLOG_APPS))
     for i in instances:
         if sending_instance_id != i.id:
             try:

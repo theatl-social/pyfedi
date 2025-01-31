@@ -2321,7 +2321,7 @@ class PollChoice(db.Model):
     num_votes = db.Column(db.Integer, default=0)
 
     def percentage(self, poll_total_votes):
-        return math.ceil(self.num_votes / poll_total_votes * 100)
+        return math.floor(self.num_votes / poll_total_votes * 100)
 
 
 class PollChoiceVote(db.Model):

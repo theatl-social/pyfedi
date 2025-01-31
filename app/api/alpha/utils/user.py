@@ -41,7 +41,7 @@ def get_user(auth, data):
 
 
 def get_user_list(auth, data):
-    # only support 'api/alpha/search?q&type_=Users&sort=TopAll&listing_type=Local&page=1&limit=15' for now
+    # only support 'api/alpha/search?q&type_=Users&sort=Top&listing_type=Local&page=1&limit=15' for now
     # (enough for instance view)
 
     type = data['type_'] if data and 'type_' in data else "All"
@@ -88,16 +88,20 @@ def post_user_block(auth, data):
 
 
 def get_user_unread_count(auth):
-    user_id = authorise_api_user(auth)
+    user = authorise_api_user(auth, return_type='model')
+    if user.unread_notifications == 0:
+        unread_notifications = unread_messages = 0
+    else:
+        # Mentions are just included in replies
 
-    # Mentions are just included in replies
+        unread_notifications = db.session.execute(text("SELECT COUNT(id) as c FROM notification WHERE user_id = :user_id AND read = false"), {'user_id': user.id}).scalar()
+        unread_messages = db.session.execute(text("SELECT COUNT(id) as c FROM chat_message WHERE recipient_id = :user_id AND read = false"), {'user_id': user.id}).scalar()
 
-    unread_notifications = db.session.execute(text("SELECT COUNT(id) as c FROM notification WHERE user_id = :user_id AND read = false"), {'user_id': user_id}).scalar()
-    unread_messages = db.session.execute(text("SELECT * from chat_message AS cm INNER JOIN conversation c ON cm.conversation_id =c.id WHERE c.read = false AND cm.recipient_id = :user_id"), {'user_id': user_id}).scalar()
-    if not unread_messages:
-        unread_messages = 0
-    if unread_notifications == 0:
-        unread_messages = 0
+        # Old ChatMessages will be out-of-sync with Notifications.
+        if unread_notifications == 0:
+            unread_messages = 0
+        if unread_messages > unread_notifications:
+            unread_notifications = unread_messages
 
     unread_count = {
         "replies": unread_notifications - unread_messages,
@@ -135,15 +139,21 @@ def get_user_replies(auth, data):
 
 
 def post_user_mark_all_as_read(auth):
-    user_id = authorise_api_user(auth)
+    user = authorise_api_user(auth, return_type='model')
 
-    notifications = Notification.query.filter_by(user_id=user_id, read=False)
+    notifications = Notification.query.filter_by(user_id=user.id, read=False)
     for notification in notifications:
         notification.read = True
 
-    conversations = Conversation.query.filter_by(read=False).join(ChatMessage, ChatMessage.conversation_id == Conversation.id).filter_by(recipient_id=user_id)
+    user.unread_notifications = 0
+
+    conversations = Conversation.query.filter_by(read=False).join(ChatMessage, ChatMessage.conversation_id == Conversation.id).filter_by(recipient_id=user.id)
     for conversation in conversations:
         conversation.read = True
+
+    chat_messages = ChatMessage.query.filter_by(recipient_id=user.id)
+    for chat_message in chat_messages:
+        chat_message.read = True
 
     db.session.commit()
 
