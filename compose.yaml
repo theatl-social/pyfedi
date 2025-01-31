@@ -3,6 +3,7 @@ services:
   db:
     shm_size: 128mb
     image: postgres
+    restart: always
     env_file:
      - ./.env.docker
     volumes:
@@ -12,6 +13,7 @@ services:
 
   redis:
     image: redis
+    restart: always
     env_file:
      - ./.env.docker
     networks:
@@ -22,6 +24,7 @@ services:
       context: .
       target: builder
     container_name: piefed_celery1
+    restart: always
     depends_on:
       - db
       - redis
@@ -38,6 +41,7 @@ services:
       context: .
       target: builder
     container_name: piefed_app1
+    restart: always
     depends_on:
       - db
       - redis
