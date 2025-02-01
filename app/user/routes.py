@@ -9,7 +9,7 @@ from flask_babel import _, lazy_gettext as _l
 
 from app import db, cache, celery
 from app.activitypub.signature import post_request, default_context
-from app.activitypub.util import find_actor_or_create
+from app.activitypub.util import find_actor_or_create, extract_domain_and_actor
 from app.auth.util import random_token
 from app.community.util import save_icon_file, save_banner_file, retrieve_mods_and_backfill
 from app.constants import *
@@ -937,10 +937,11 @@ def import_settings_task(user_id, filename):
         community = find_actor_or_create(community_ap_id, community_only=True)
         if community:
             if community.posts.count() == 0:
+                server, name = extract_domain_and_actor(community.ap_profile_id)
                 if current_app.debug:
-                    retrieve_mods_and_backfill(community.id)
+                    retrieve_mods_and_backfill(community.id, server, name)
                 else:
-                    retrieve_mods_and_backfill.delay(community.id)
+                    retrieve_mods_and_backfill.delay(community.id, server, name)
             if community_membership(user, community) != SUBSCRIPTION_MEMBER and community_membership(
                     user, community) != SUBSCRIPTION_PENDING:
                 if not community.is_local():
