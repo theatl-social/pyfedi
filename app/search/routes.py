@@ -1,4 +1,4 @@
-from flask import request, flash, json, url_for, current_app, redirect, g
+from flask import request, flash, json, url_for, current_app, redirect, g, abort
 from flask_login import login_required, current_user
 from flask_babel import _
 from sqlalchemy import or_, desc
@@ -14,6 +14,8 @@ from app.activitypub.util import resolve_remote_post_from_search
 
 @bp.route('/search', methods=['GET', 'POST'])
 def run_search():
+    if 'bingbot' in request.user_agent.string:  # Stop bingbot from running nonsense searches
+        abort(404)
     languages = Language.query.order_by(Language.name).all()
     communities = Community.query.filter(Community.banned == False).order_by(Community.name)
     instance_software = Instance.unique_software_names()
