@@ -182,7 +182,7 @@ def send_post(user_id, post_id, edit=False):
         page['endTime'] = ap_datetime(poll.end_poll)
         page['votersCount'] = poll.total_votes() if edit else 0
         choices = []
-        for choice in PollChoice.query.filter_by(post_id=post.id).all():
+        for choice in PollChoice.query.filter_by(post_id=post.id).order_by(PollChoice.sort_order).all():
             choices.append({'type': 'Note', 'name': choice.choice_text, 'replies': {'type': 'Collection', 'totalItems': choice.num_votes if edit else 0}})
         page['oneOf' if poll.mode == 'single' else 'anyOf'] = choices
 
