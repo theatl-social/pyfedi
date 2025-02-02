@@ -174,6 +174,7 @@ def register(app):
     def daily_maintenance():
         with app.app_context():
             # Remove old content from communities
+            print(f'Start removing old content from communities {datetime.now()}')
             communities = Community.query.filter(Community.content_retention > 0).all()
             for community in communities:
                 cut_off = utcnow() - timedelta(days=community.content_retention)
@@ -182,7 +183,9 @@ def register(app):
                     post_delete_post(community, post, post.user_id, federate_all_communities=False)
                     community.post_count -= 1
 
+
             # Ensure accurate count of posts associated with each hashtag
+            print(f'Ensure accurate count of posts associated with each hashtag {datetime.now()}')
             for tag in Tag.query.all():
                 post_count = db.session.execute(text('SELECT COUNT(post_id) as c FROM "post_tag" WHERE tag_id = :tag_id'),
                                                 { 'tag_id': tag.id}).scalar()
@@ -190,6 +193,7 @@ def register(app):
                 db.session.commit()
 
             # Delete soft-deleted content after 7 days
+            print(f'Delete soft-deleted content {datetime.now()}')
             for post_reply in PostReply.query.filter(PostReply.deleted == True,
                                                      PostReply.posted_at < utcnow() - timedelta(days=7)).all():
                 post_reply.delete_dependencies()
@@ -204,6 +208,7 @@ def register(app):
             db.session.commit()
 
             # Ensure accurate community stats
+            print(f'Ensure accurate community stats {datetime.now()}')
             for community in Community.query.filter(Community.banned == False).all():
                 community.subscriptions_count = db.session.execute(text('SELECT COUNT(user_id) as c FROM community_member WHERE community_id = :community_id AND is_banned = false'),
                                                           {'community_id': community.id}).scalar()
@@ -214,21 +219,25 @@ def register(app):
                 db.session.commit()
 
             # Delete voting data after 6 months
+            print(f'Delete old voting data {datetime.now()}')
             db.session.execute(text('DELETE FROM "post_vote" WHERE created_at < :cutoff'), {'cutoff': utcnow() - timedelta(days=28 * 6)})
             db.session.execute(text('DELETE FROM "post_reply_vote" WHERE created_at < :cutoff'), {'cutoff': utcnow() - timedelta(days=28 * 6)})
             db.session.commit()
 
             # Un-ban after ban expires
+            print(f'Un-ban after ban expires {datetime.now()}')
             db.session.execute(text('UPDATE "user" SET banned = false WHERE banned is true AND banned_until < :cutoff AND banned_until is not null'),
                                {'cutoff': utcnow()})
             db.session.commit()
 
             # update and sync defederation subscriptions
+            print(f'update and sync defederation subscriptions {datetime.now()}')
             db.session.execute(text('DELETE FROM banned_instances WHERE subscription_id is not null'))
             for defederation_sub in DefederationSubscription.query.all():
                 download_defeds(defederation_sub.id, defederation_sub.domain)
 
             # Check for dormant or dead instances
+            print(f'Check for dormant or dead instances {datetime.now()}')
             try:
                 # Check for dormant or dead instances
                 instances = Instance.query.filter(Instance.gone_forever == False, Instance.id != 1).all()
@@ -331,6 +340,7 @@ def register(app):
                                 #            InstanceRole.instance_id == instance.id,
                                 #            InstanceRole.role == 'admin').delete()
                                 #        db.session.commit()
+            print(f'Done {datetime.now()}')
 
     @app.cli.command("spaceusage")
     def spaceusage():
