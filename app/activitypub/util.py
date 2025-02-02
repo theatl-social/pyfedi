@@ -2059,7 +2059,7 @@ def parse_redis_socket_string(connection_string: str):
 
 def lemmy_site_data():
     site = g.site
-    logo = site.logo if site.logo else '/static/images/logo2.png'
+    logo = site.logo if site.logo else '/static/images/piefed_logo_icon_t_75.png'
     data = {
       "site_view": {
         "site": {

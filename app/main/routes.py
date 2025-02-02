@@ -1,10 +1,12 @@
 import os.path
+import json
 from datetime import timedelta
 from random import randint
 
 import flask
 from pyld import jsonld
 from sqlalchemy.sql.operators import or_, and_
+from ua_parser import parse as uaparse
 
 from app import db, cache
 from app.activitypub.util import users_total, active_month, local_posts, local_communities
@@ -652,7 +654,7 @@ def activitypub_application():
         'outbox': f"https://{current_app.config['SERVER_NAME']}/site_outbox",
         'icon': {
           'type': 'Image',
-          'url': f"https://{current_app.config['SERVER_NAME']}/static/images/logo2.png"
+          'url': f"https://{current_app.config['SERVER_NAME']}/static/images/piefed_logo_icon_t_75.png"
         },
         'publicKey': {
           'id': f"https://{current_app.config['SERVER_NAME']}/#main-key",
@@ -690,3 +692,23 @@ def instance_actor():
     resp = jsonify(application_data)
     resp.content_type = 'application/activity+json'
     return resp
+
+
+# intercept requests for the PWA manifest.json and provide platform specific ones
+@bp.route('/static/manifest.json', methods=['GET'])
+def static_manifest():
+    # get the user agent from the headers
+    # then return platform/agent specific manifests
+    # if we dont have a matching os folder, return the default manifest
+    try:
+        res = uaparse(request.user_agent.string)
+        manifest_file = os.path.join('app/static/pwa_manifests/', res.os.family.lower(), 'manifest.json')
+        with open(manifest_file, 'r') as f:
+            manifest = json.load(f)
+        return jsonify(manifest)
+    except:
+        manifest_file = os.path.join('app/static/pwa_manifests/default/manifest.json')
+        with open(manifest_file, 'r') as f:
+            manifest = json.load(f)
+        return jsonify(manifest)
+    
