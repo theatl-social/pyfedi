@@ -2536,7 +2536,7 @@ def inform_followers_of_post_update(post_id: int, sending_instance_id: int):
         'actor': post.author.public_url(),
         'audience': post.community.public_url(),
         'to': ['https://www.w3.org/ns/activitystreams#Public'],
-        'published': ap_datetime(utcnow()),
+        'published': page_json['published'],
         'cc': [
             post.author.followers_url(), post.community.ap_followers_url
         ],
@@ -2545,25 +2545,23 @@ def inform_followers_of_post_update(post_id: int, sending_instance_id: int):
 
     # inform user followers first
     followers = UserFollower.query.filter_by(local_user_id=post.user_id)
-    if followers:
+    if followers.count() > 0:
         instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower, UserFollower.remote_user_id == User.id)
         instances = instances.filter(UserFollower.local_user_id == post.user_id, Instance.software.in_(MICROBLOG_APPS))
         for i in instances:
-            if sending_instance_id != i.id:
-                try:
-                    post_request(i.inbox, update_json, post.author.private_key, post.author.public_url() + '#main-key')
-                except Exception:
-                    pass
-
-    # then community followers
-    instances = Instance.query.join(User, User.instance_id == Instance.id).join(CommunityMember, CommunityMember.user_id == User.id)
-    instances = instances.filter(CommunityMember.community_id == post.community.id, CommunityMember.is_banned == False)
-    for i in instances:
-        if sending_instance_id != i.id:
             try:
                 post_request(i.inbox, update_json, post.author.private_key, post.author.public_url() + '#main-key')
             except Exception:
                 pass
+
+    # then community followers
+    instances = Instance.query.filter(Instance.id != 1).join(User, User.instance_id == Instance.id).join(CommunityMember, CommunityMember.user_id == User.id)
+    instances = instances.filter(CommunityMember.community_id == post.community.id, CommunityMember.is_banned == False)
+    for i in instances:
+        try:
+            post_request(i.inbox, update_json, post.author.private_key, post.author.public_url() + '#main-key')
+        except Exception:
+            pass
 
 
 def log_incoming_ap(id, aplog_type, aplog_result, saved_json, message=None):
