@@ -158,6 +158,41 @@ def nodeinfo2():
     return jsonify(nodeinfo_data)
 
 
+@bp.route('/nodeinfo/2.1')
+@bp.route('/nodeinfo/2.1.json')
+@cache.cached(timeout=600)
+def nodeinfo21():
+
+    nodeinfo_data = {
+                "version": "2.1",
+                "software": {
+                    "name": "PieFed",
+                    "version": "0.1",
+                    "repository": "https://codeberg.org/rimu/pyfedi",
+                    "homepage": "https://join.piefed.social"
+                },
+                "protocols": [
+                    "activitypub"
+                ],
+                "usage": {
+                    "users": {
+                        "total": users_total(),
+                        "activeHalfyear": active_half_year(),
+                        "activeMonth": active_month()
+                    },
+                    "localPosts": local_posts(),
+                    "localComments": local_comments()
+                },
+                "openRegistrations": g.site.registration_mode != 'Closed',
+                "services": {
+                    "inbound": [],
+                    "outbound": []
+                },
+                "metadata": {}
+            }
+    return jsonify(nodeinfo_data)
+
+
 @bp.route('/api/v1/instance')
 @cache.cached(timeout=600)
 def api_v1_instance():
