@@ -186,11 +186,15 @@ def register(app):
 
             # Ensure accurate count of posts associated with each hashtag
             print(f'Ensure accurate count of posts associated with each hashtag {datetime.now()}')
-            for tag in Tag.query.all():
-                post_count = db.session.execute(text('SELECT COUNT(post_id) as c FROM "post_tag" WHERE tag_id = :tag_id'),
-                                                { 'tag_id': tag.id}).scalar()
-                tag.post_count = post_count
-                db.session.commit()
+            db.session.execute(text('''
+                UPDATE tag 
+                SET post_count = (
+                    SELECT COUNT(post_tag.post_id)
+                    FROM post_tag 
+                    WHERE post_tag.tag_id = tag.id
+                )
+            '''))
+            db.session.commit()
 
             # Delete soft-deleted content after 7 days
             print(f'Delete soft-deleted content {datetime.now()}')
@@ -209,7 +213,7 @@ def register(app):
 
             # Ensure accurate community stats
             print(f'Ensure accurate community stats {datetime.now()}')
-            for community in Community.query.filter(Community.banned == False).all():
+            for community in Community.query.filter(Community.banned == False, Community.last_active > utcnow() - timedelta(days=3)).all():
                 community.subscriptions_count = db.session.execute(text('SELECT COUNT(user_id) as c FROM community_member WHERE community_id = :community_id AND is_banned = false'),
                                                           {'community_id': community.id}).scalar()
                 community.post_count = db.session.execute(text('SELECT COUNT(id) as c FROM post WHERE deleted is false and community_id = :community_id'),
@@ -266,11 +270,13 @@ def register(app):
                                         instance.nodeinfo_href = links['href']
                                         instance.failures = 0
                                         instance.dormant = False
+                                        instance.gone_forever = False
                                         break
                                     else:
                                         instance.failures += 1
                             elif nodeinfo.status_code >= 400:
                                 current_app.logger.info(f"{instance.domain} has no well-known/nodeinfo response")
+                                instance.failures += 1
                         except Exception as e:
                             db.session.rollback()
                             instance.failures += 1
@@ -288,6 +294,7 @@ def register(app):
                                     instance.version = node_json['software']['version'][:50]
                                     instance.failures = 0
                                     instance.dormant = False
+                                    instance.gone_forever = False
                             elif node.status_code >= 400:
                                 instance.nodeinfo_href = None
                         except Exception as e:

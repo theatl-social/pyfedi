@@ -691,6 +691,7 @@ def process_inbox_request(request_json, store_ap_json):
                         member = CommunityMember(user_id=user.id, community_id=community.id)
                         db.session.add(member)
                         community.subscriptions_count += 1
+                        community.last_active = utcnow()
                         db.session.commit()
                         cache.delete_memoized(community_membership, user, community)
                         # send accept message to acknowledge the follow
@@ -742,6 +743,7 @@ def process_inbox_request(request_json, store_ap_json):
                     member = CommunityMember(user_id=join_request.user_id, community_id=join_request.community_id)
                     db.session.add(member)
                     community.subscriptions_count += 1
+                    community.last_active = utcnow()
                     db.session.commit()
                     cache.delete_memoized(community_membership, user, community)
                 log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json)
@@ -1084,6 +1086,7 @@ def process_inbox_request(request_json, store_ap_json):
                     if member:
                         db.session.delete(member)
                         community.subscriptions_count -= 1
+                        community.last_active = utcnow()
                     if join_request:
                         db.session.delete(join_request)
                     db.session.commit()
