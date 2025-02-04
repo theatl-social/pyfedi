@@ -1,4 +1,4 @@
-from app import cache, db
+from app import db
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
 from app.api.alpha.views import reply_view, reply_report_view
 from app.models import Notification, PostReply, Post
@@ -8,12 +8,31 @@ from app.utils import authorise_api_user, blocked_users, blocked_instances
 
 from sqlalchemy import desc, or_
 
-# person_id param: the author of the reply; user_id param: the current logged-in user
-@cache.memoize(timeout=3)
-def cached_reply_list(post_id, person_id, sort, max_depth, user_id):
-    if post_id:
+
+def get_reply_list(auth, data, user_id=None):
+    sort = data['sort'] if data and 'sort' in data else "New"
+    max_depth = data['max_depth'] if data and 'max_depth' in data else 8
+    page = int(data['page']) if data and 'page' in data else 1
+    limit = int(data['limit']) if data and 'limit' in data else 10
+    post_id = data['post_id'] if data and 'post_id' in data else None
+    parent_id = data['parent_id'] if data and 'parent_id' in data else None
+    person_id = data['person_id'] if data and 'person_id' in data else None
+
+    if data and not post_id and not person_id:
+        raise Exception('missing parameters for reply')
+
+    # user_id: the logged in user
+    # person_id: the author of the posts being requested
+
+    if auth:
+        user_id = authorise_api_user(auth)
+
+    if parent_id and post_id:
+        replies = PostReply.query.filter(PostReply.parent_id == parent_id, PostReply.post_id == post_id)
+        page = 1
+    elif post_id:
         replies = PostReply.query.filter(PostReply.post_id == post_id, PostReply.depth <= max_depth)
-    if person_id:
+    elif person_id:
         replies = PostReply.query.filter_by(user_id=person_id)
 
     if user_id and user_id != person_id:
@@ -31,30 +50,7 @@ def cached_reply_list(post_id, person_id, sort, max_depth, user_id):
     elif sort == "New":
         replies = replies.order_by(desc(PostReply.posted_at))
 
-    return replies.all()
-
-
-def get_reply_list(auth, data, user_id=None):
-    sort = data['sort'] if data and 'sort' in data else "New"
-    max_depth = data['max_depth'] if data and 'max_depth' in data else 8
-    page = int(data['page']) if data and 'page' in data else 1
-    limit = int(data['limit']) if data and 'limit' in data else 10
-    post_id = data['post_id'] if data and 'post_id' in data else None
-    person_id = data['person_id'] if data and 'person_id' in data else None
-
-    if data and not post_id and not person_id:
-        raise Exception('missing parameters for reply')
-    else:
-        if auth:
-            user_id = authorise_api_user(auth)
-        replies = cached_reply_list(post_id, person_id, sort, max_depth, user_id)
-
-    # user_id: the logged in user
-    # person_id: the author of the posts being requested
-
-    start = (page - 1) * limit
-    end = start + limit
-    replies = replies[start:end]
+    replies = replies.paginate(page=page, per_page=limit, error_out=False)
 
     replylist = []
     for reply in replies:
@@ -62,7 +58,6 @@ def get_reply_list(auth, data, user_id=None):
             replylist.append(reply_view(reply=reply, variant=2, user_id=user_id))
         except:
             continue
-        break
     list_json = {
         "comments": replylist
     }
@@ -88,7 +83,6 @@ def post_reply_like(auth, data):
         direction = 'reversal'
 
     user_id = vote_for_reply(reply_id, direction, SRC_API, auth)
-    cache.delete_memoized(cached_reply_list)
     reply_json = reply_view(reply=reply_id, variant=4, user_id=user_id, my_vote=score)
     return reply_json
 

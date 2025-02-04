@@ -32,7 +32,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0):
             if post.url:
                 v1['url'] = post.url
             if post.image_id:
-                v1['thumbnail_url'] = post.image.thumbnail_url()
+                v1['thumbnail_url'] = post.image.medium_url()
                 if post.image.alt_text:
                     v1['alt_text'] = post.image.alt_text
         if post.type == POST_TYPE_IMAGE:
@@ -110,24 +110,6 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0):
         return v4
 
 
-@cache.memoize(timeout=600)
-def cached_user_view_variant_1(user: User, stub=False):
-    include = ['id', 'user_name', 'title', 'banned', 'deleted', 'bot']
-    v1 = {column.name: getattr(user, column.name) for column in user.__table__.columns if column.name in include}
-    v1.update({'published': user.created.isoformat() + 'Z',
-                    'actor_id': user.public_url(),
-                    'local': user.is_local(),
-                    'instance_id': user.instance_id if user.instance_id else 1})
-    if user.about and not stub:
-        v1['about'] = user.about
-    if user.avatar_id:
-        v1['avatar'] = user.avatar.view_url()
-    if user.cover_id and not stub:
-        v1['banner'] = user.cover.view_url()
-
-    return v1
-
-
 # 'user' param can be anyone (including the logged in user), 'user_id' param belongs to the user making the request
 def user_view(user: User | int, variant, stub=False, user_id=None):
     if isinstance(user, int):
@@ -135,7 +117,20 @@ def user_view(user: User | int, variant, stub=False, user_id=None):
 
     # Variant 1 - models/person/person.dart
     if variant == 1:
-        return cached_user_view_variant_1(user=user, stub=stub)
+        include = ['id', 'user_name', 'title', 'banned', 'deleted', 'bot']
+        v1 = {column.name: getattr(user, column.name) for column in user.__table__.columns if column.name in include}
+        v1.update({'published': user.created.isoformat() + 'Z',
+                   'actor_id': user.public_url(),
+                   'local': user.is_local(),
+                   'instance_id': user.instance_id if user.instance_id else 1})
+        if user.about and not stub:
+            v1['about'] = user.about
+        if user.avatar_id:
+            v1['avatar'] = user.avatar.view_url()
+        if user.cover_id and not stub:
+            v1['banner'] = user.cover.view_url()
+
+        return v1
 
     # Variant 2 - views/person_view.dart
     if variant == 2:
@@ -162,29 +157,6 @@ def user_view(user: User | int, variant, stub=False, user_id=None):
         return v4
 
 
-@cache.memoize(timeout=600)
-def cached_community_view_variant_1(community: Community, stub=False):
-    include = ['id', 'name', 'title', 'banned', 'nsfw', 'restricted_to_mods']
-    v1 = {column.name: getattr(community, column.name) for column in community.__table__.columns if column.name in include}
-    v1.update({'published': community.created_at.isoformat() + 'Z',
-               'updated': community.created_at.isoformat() + 'Z',
-               'deleted': False,
-               'removed': False,
-               'actor_id': community.public_url(),
-               'local': community.is_local(),
-               'hidden': not community.show_all,
-               'instance_id': community.instance_id if community.instance_id else 1,
-               'ap_domain': community.ap_domain})
-    if community.description and not stub:
-        v1['description'] = community.description
-    if community.icon_id:
-        v1['icon'] = community.icon.view_url()
-    if community.image_id and not stub:
-        v1['banner'] = community.image.view_url()
-
-    return v1
-
-
 def community_view(community: Community | int | str, variant, stub=False, user_id=None):
     if isinstance(community, int):
         community = Community.query.filter_by(id=community).one()
@@ -194,7 +166,25 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
 
     # Variant 1 - models/community/community.dart
     if variant == 1:
-        return cached_community_view_variant_1(community=community, stub=stub)
+        include = ['id', 'name', 'title', 'banned', 'nsfw', 'restricted_to_mods']
+        v1 = {column.name: getattr(community, column.name) for column in community.__table__.columns if column.name in include}
+        v1.update({'published': community.created_at.isoformat() + 'Z',
+                   'updated': community.created_at.isoformat() + 'Z',
+                   'deleted': False,
+                   'removed': False,
+                   'actor_id': community.public_url(),
+                   'local': community.is_local(),
+                   'hidden': not community.show_all,
+                   'instance_id': community.instance_id if community.instance_id else 1,
+                   'ap_domain': community.ap_domain})
+        if community.description and not stub:
+            v1['description'] = community.description
+        if community.icon_id:
+            v1['icon'] = community.icon.view_url()
+        if community.image_id and not stub:
+            v1['banner'] = community.image.view_url()
+
+        return v1
 
     # Variant 2 - views/community_view.dart - /community/list api endpoint
     if variant == 2:

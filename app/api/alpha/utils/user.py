@@ -30,9 +30,8 @@ def get_user(auth, data):
         auth = None                 # avoid authenticating user again in get_post_list and get_reply_list
 
     # bit unusual. have to help construct the json here rather than in views, to avoid circular dependencies
-    # lists are empty when viewing own account, to deal with a bug I've yet to identify
-    post_list = get_post_list(auth, data, user_id) if not user_id == person_id else {'posts': []}
-    reply_list = get_reply_list(auth, data, user_id) if not user_id == person_id else {'comments': []}
+    post_list = get_post_list(auth, data, user_id)
+    reply_list = get_reply_list(auth, data, user_id)
 
     user_json = user_view(user=person_id, variant=3)
     user_json['posts'] = post_list['posts']

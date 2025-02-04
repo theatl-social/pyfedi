@@ -1,4 +1,3 @@
-from app import cache
 from app.api.alpha.views import post_view, post_report_view
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
 from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO, POST_TYPE_POLL
@@ -11,8 +10,24 @@ from datetime import timedelta
 from sqlalchemy import desc
 
 
-@cache.memoize(timeout=3)
-def cached_post_list(type, sort, user_id, community_id, community_name, person_id, query='', search_type='Posts'):
+def get_post_list(auth, data, user_id=None, search_type='Posts'):
+    type = data['type_'] if data and 'type_' in data else "All"
+    sort = data['sort'] if data and 'sort' in data else "Hot"
+    page = int(data['page']) if data and 'page' in data else 1
+    limit = int(data['limit']) if data and 'limit' in data else 50
+
+    query = data['q'] if data and 'q' in data else ''
+
+    if auth:
+        user_id = authorise_api_user(auth)
+
+    # user_id: the logged in user
+    # person_id: the author of the posts being requested
+
+    community_id = int(data['community_id']) if data and 'community_id' in data else None
+    community_name = data['community_name'] if data and 'community_name' in data else None
+    person_id = int(data['person_id']) if data and 'person_id' in data else None
+
     if type == "All":
         if community_name:
             name, ap_domain = community_name.split('@')
@@ -55,39 +70,14 @@ def cached_post_list(type, sort, user_id, community_id, community_name, person_i
 
     if sort == "Hot":
         posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
-    elif sort == "TopDay":
-        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=1)).order_by(desc(Post.up_votes - Post.down_votes))
+    elif sort == "Top":
+        posts = posts.order_by(desc(Post.up_votes - Post.down_votes))
     elif sort == "New":
         posts = posts.order_by(desc(Post.posted_at))
     elif sort == "Active":
         posts = posts.order_by(desc(Post.last_active))
 
-    return posts.all()
-
-
-def get_post_list(auth, data, user_id=None, search_type='Posts'):
-    type = data['type_'] if data and 'type_' in data else "All"
-    sort = data['sort'] if data and 'sort' in data else "Hot"
-    page = int(data['page']) if data and 'page' in data else 1
-    limit = int(data['limit']) if data and 'limit' in data else 10
-
-    query = data['q'] if data and 'q' in data else ''
-
-    if auth:
-        user_id = authorise_api_user(auth)
-
-    # user_id: the logged in user
-    # person_id: the author of the posts being requested
-
-    community_id = int(data['community_id']) if data and 'community_id' in data else None
-    community_name = data['community_name'] if data and 'community_name' in data else None
-    person_id = int(data['person_id']) if data and 'person_id' in data else None
-
-    posts = cached_post_list(type, sort, user_id, community_id, community_name, person_id, query, search_type)
-
-    start = (page - 1) * limit
-    end = start + limit
-    posts = posts[start:end]
+    posts = posts.paginate(page=page, per_page=limit, error_out=False)
 
     postlist = []
     for post in posts:
@@ -132,7 +122,6 @@ def post_post_like(auth, data):
         direction = 'reversal'
 
     user_id = vote_for_post(post_id, direction, SRC_API, auth)
-    cache.delete_memoized(cached_post_list)
     post_json = post_view(post=post_id, variant=4, user_id=user_id, my_vote=score)
     return post_json
 
