@@ -360,8 +360,7 @@ def poll_vote(post_id):
         poll_votes = PollChoice.query.join(PollChoiceVote, PollChoiceVote.choice_id == PollChoice.id).filter(PollChoiceVote.post_id == post.id, PollChoiceVote.user_id == current_user.id).all()
         for pv in poll_votes:
             if post.author.is_local():
-                from app.shared.tasks import task_selector
-                task_selector('edit_post', user_id=current_user.id, post_id=post.id)
+                task_selector('edit_post', user_id=post.user_id, post_id=post.id)
             else:
                 pollvote_json = {
                   '@context': default_context(),

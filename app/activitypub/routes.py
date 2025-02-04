@@ -24,12 +24,13 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
     user_removed_from_remote_server, create_post, create_post_reply, update_post_reply_from_activity, \
     update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection, find_reported_object, \
     process_report, ensure_domains_match, can_edit, can_delete, resolve_remote_post, \
-    inform_followers_of_post_update, comment_model_to_json, restore_post_or_comment, ban_user, unban_user, \
+    comment_model_to_json, restore_post_or_comment, ban_user, unban_user, \
     log_incoming_ap, find_community, site_ban_remove_data, community_ban_remove_data, verify_object_from_source
 from app.utils import gibberish, get_setting, render_template, \
     community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
     community_moderators, html_to_text, add_to_modlog_activitypub, instance_banned
+from app.shared.tasks import task_selector
 
 
 @bp.route('/testredis')
@@ -864,8 +865,8 @@ def process_inbox_request(request_json, store_ap_json):
                             poll_data.vote_for_choice(choice.id, user.id)
                             db.session.commit()
                             log_incoming_ap(id, APLOG_CREATE, APLOG_SUCCESS, saved_json)
-                        if post_being_replied_to.author.is_local():
-                            inform_followers_of_post_update(post_being_replied_to.id, user.instance_id)
+                            if post_being_replied_to.author.is_local():
+                                task_selector('edit_post', user_id=post_being_replied_to.user_id, post_id=post_being_replied_to.id)
                     return
                 if not announced:
                     community = find_community(request_json)
