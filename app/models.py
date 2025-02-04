@@ -1260,7 +1260,10 @@ class Post(db.Model):
             'type' in request_json['object']['attachment'][0]):
             alt_text = None
             if request_json['object']['attachment'][0]['type'] == 'Link':
-                post.url = request_json['object']['attachment'][0]['href']  # Lemmy < 0.19.4
+                if 'href' in request_json['object']['attachment'][0]:
+                    post.url = request_json['object']['attachment'][0]['href']  # Lemmy < 0.19.4
+                elif 'url' in request_json['object']['attachment'][0]:
+                    post.url = request_json['object']['attachment'][0]['url']   # NodeBB
             if request_json['object']['attachment'][0]['type'] == 'Document':
                 post.url = request_json['object']['attachment'][0]['url']  # Mastodon
                 if 'name' in request_json['object']['attachment'][0]:

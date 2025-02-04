@@ -1783,7 +1783,10 @@ def update_post_from_activity(post: Post, request_json: dict):
         len(request_json['object']['attachment']) > 0 and
         'type' in request_json['object']['attachment'][0]):
         if request_json['object']['attachment'][0]['type'] == 'Link':
-            new_url = request_json['object']['attachment'][0]['href']              # Lemmy < 0.19.4
+            if 'href' in request_json['object']['attachment'][0]:
+                new_url = request_json['object']['attachment'][0]['href']              # Lemmy < 0.19.4
+            elif 'url' in request_json['object']['attachment'][0]:
+                new_url = request_json['object']['attachment'][0]['url']               # NodeBB
         if request_json['object']['attachment'][0]['type'] == 'Document':
             new_url = request_json['object']['attachment'][0]['url']               # Mastodon
         if request_json['object']['attachment'][0]['type'] == 'Image':
