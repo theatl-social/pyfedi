@@ -24,7 +24,7 @@ import math
 
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER, \
     SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER, NOTIF_COMMUNITY, NOTIF_TOPIC, NOTIF_POST, NOTIF_REPLY, \
-    ROLE_ADMIN, ROLE_STAFF
+    ROLE_ADMIN, ROLE_STAFF, NOTIF_FEED
 
 
 # datetime.utcnow() is depreciated in Python 3.12 so it will need to be swapped out eventually
@@ -2440,3 +2440,181 @@ class Site(db.Model):
 @login.user_loader
 def load_user(id):
     return User.query.get(int(id))
+
+
+# --- Feeds Models ---
+
+class FeedItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    feed_id = db.Column(db.Integer, db.ForeignKey('feed.id'), index=True)
+    community_id = db.Column(db.Integer, db.ForeignKey('community.id'), index=True)
+
+class FeedMember(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    feed_id = db.Column(db.Integer, db.ForeignKey('feed.id'), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+
+class Feed(db.Model):
+    query_class = FullTextSearchQuery
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    title = db.Column(db.String(256))
+    name = db.Column(db.String(256), index=True, unique=True)
+    machine_name = db.Column(db.String(50), index=True)
+    description = db.Column(db.Text)        # markdown
+    description_html = db.Column(db.Text)   # html equivalent of above markdown
+    nsfw = db.Column(db.Boolean, default=False)
+    nsfl = db.Column(db.Boolean, default=False)
+    public_key = db.Column(db.Text)
+    private_key = db.Column(db.Text)
+    subscriptions_count = db.Column(db.Integer, default=0)
+    instance_id = db.Column(db.Integer, db.ForeignKey('instance.id'), index=True)
+
+    icon_id = db.Column(db.Integer, db.ForeignKey('file.id'))
+    image_id = db.Column(db.Integer, db.ForeignKey('file.id'))
+
+    num_communities = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=utcnow)
+    public = db.Column(db.Boolean, default=False)
+    last_edit = db.Column(db.DateTime, default=utcnow)
+    parent_feed_id = db.Column(db.Integer, db.ForeignKey('feed.id'), index=True)
+
+    ap_id = db.Column(db.String(255), index=True)
+    ap_profile_id = db.Column(db.String(255), index=True, unique=True)
+    ap_public_url = db.Column(db.String(255))
+    ap_followers_url = db.Column(db.String(255))
+    ap_following_url = db.Column(db.String(255))
+    ap_domain = db.Column(db.String(255))
+    ap_preferred_username = db.Column(db.String(255))
+    ap_discoverable = db.Column(db.Boolean, default=False)
+    ap_fetched_at = db.Column(db.DateTime)
+    ap_deleted_at = db.Column(db.DateTime)
+    ap_inbox_url = db.Column(db.String(255))
+    ap_outbox_url = db.Column(db.String(255))
+    ap_moderators_url = db.Column(db.String(255))
+
+    banned = db.Column(db.Boolean, default=False)
+    searchable = db.Column(db.Boolean, default=True)
+
+    show_posts_in_children = db.Column(db.Boolean, default=False)
+    member_communities = db.relationship('FeedItem', lazy='dynamic', cascade="all, delete-orphan")
+
+    search_vector = db.Column(TSVectorType('name', 'description'))
+
+    icon = db.relationship('File', foreign_keys=[icon_id], single_parent=True, backref='feed', cascade="all, delete-orphan")
+    image = db.relationship('File', foreign_keys=[image_id], single_parent=True, cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return '<Feed {}_{}>'.format(self.name, self.id)
+
+    @cache.memoize(timeout=500)
+    def icon_image(self, size='default') -> str:
+        if self.icon_id is not None:
+            if size == 'default':
+                if self.icon.file_path is not None:
+                    if self.icon.file_path.startswith('app/'):
+                        return self.icon.file_path.replace('app/', '/')
+                    else:
+                        return self.icon.file_path
+                if self.icon.source_url is not None:
+                    if self.icon.source_url.startswith('app/'):
+                        return self.icon.source_url.replace('app/', '/')
+                    else:
+                        return self.icon.source_url
+            elif size == 'tiny':
+                if self.icon.thumbnail_path is not None:
+                    if self.icon.thumbnail_path.startswith('app/'):
+                        return self.icon.thumbnail_path.replace('app/', '/')
+                    else:
+                        return self.icon.thumbnail_path
+                if self.icon.source_url is not None:
+                    if self.icon.source_url.startswith('app/'):
+                        return self.icon.source_url.replace('app/', '/')
+                    else:
+                        return self.icon.source_url
+        return '/static/images/1px.gif'
+
+    @cache.memoize(timeout=500)
+    def header_image(self) -> str:
+        if self.image_id is not None:
+            if self.image.file_path is not None:
+                if self.image.file_path.startswith('app/'):
+                    return self.image.file_path.replace('app/', '/')
+                else:
+                    return self.image.file_path
+            if self.image.source_url is not None:
+                if self.image.source_url.startswith('app/'):
+                    return self.image.source_url.replace('app/', '/')
+                else:
+                    return self.image.source_url
+        return ''
+
+    def display_name(self) -> str:
+        if self.ap_id is None:
+            return self.title
+        else:
+            return f"{self.title}@{self.ap_domain}"
+
+    def link(self) -> str:
+        if self.ap_id is None:
+            return self.name
+        else:
+            return self.ap_id.lower()
+
+    def path(self):
+        return_value = [self.machine_name]
+        parent_id = self.parent_feed_id
+        while parent_id is not None:
+            parent_feed = Feed.query.get(parent_id)
+            if parent_feed is None:
+                break
+            return_value.append(parent_feed.machine_name)
+            parent_id = parent_feed.parent_id
+        return_value = list(reversed(return_value))
+        return '/'.join(return_value)
+
+    def profile_id(self):
+        retval = self.ap_profile_id if self.ap_profile_id else f"https://{current_app.config['SERVER_NAME']}/f/{self.name}"
+        return retval.lower()
+
+    def public_url(self):
+        result = self.ap_public_url if self.ap_public_url else f"https://{current_app.config['SERVER_NAME']}/f/{self.name}"
+        return result
+
+    def is_local(self):
+        return self.ap_id is None or self.profile_id().startswith('https://' + current_app.config['SERVER_NAME'])
+
+    def local_url(self):
+        if self.is_local():
+            return self.ap_profile_id
+        else:
+            return f"https://{current_app.config['SERVER_NAME']}/f/{self.ap_id}"
+
+    def notify_new_posts(self, user_id: int) -> bool:
+        existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == self.id,
+                                                                      NotificationSubscription.user_id == user_id,
+                                                                      NotificationSubscription.type == NOTIF_FEED).first()
+        return existing_notification is not None
+
+    # ids of all the users who want to be notified when there is an edit in this feed's communities
+    def notification_subscribers(self):
+        return list(db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE entity_id = :feed_id AND type = :type '),
+                                  {'feed_id': self.id, 'type': NOTIF_FEED}).scalars())
+
+    # instances that have users which are members of this community. (excluding the current instance)
+    def following_instances(self, include_dormant=False) -> List[Instance]:
+        instances = Instance.query.join(User, User.instance_id == Instance.id).join(FeedMember, FeedMember.user_id == User.id)
+        instances = instances.filter(FeedMember.community_id == self.id, FeedMember.is_banned == False)
+        if not include_dormant:
+            instances = instances.filter(Instance.dormant == False)
+        instances = instances.filter(Instance.id != 1, Instance.gone_forever == False)
+        return instances.all()
+
+    def has_followers_from_domain(self, domain: str) -> bool:
+        instances = Instance.query.join(User, User.instance_id == Instance.id).join(FeedMember, FeedMember.user_id == User.id)
+        instances = instances.filter(FeedMember.community_id == self.id, FeedMember.is_banned == False)
+        for instance in instances:
+            if instance.domain == domain:
+                return True
+        return False
+

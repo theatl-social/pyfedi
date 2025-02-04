@@ -29,11 +29,12 @@ from app.community.util import search_for_community, actor_to_community, \
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
     REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, NOTIF_POST, POST_TYPE_POLL, MICROBLOG_APPS
+from app.feed.util import feeds_for_form
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, \
     File, PostVote, utcnow, Report, Notification, InstanceBlock, ActivityPubLog, Topic, Conversation, PostReply, \
     NotificationSubscription, UserFollower, Instance, Language, Poll, PollChoice, ModLog, CommunityWikiPage, \
-    CommunityWikiPageRevision, read_posts
+    CommunityWikiPageRevision, read_posts, Feed, FeedItem
 from app.community import bp
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, gibberish, community_membership, ap_datetime, \
@@ -156,6 +157,23 @@ def show_community(community: Community):
 
     if community.banned:
         abort(404)
+
+    # If current user is logged in check if they have any feeds
+    # if they have feeds, find the first feed that contains
+    # this community
+    user_has_feeds = False
+    current_feed_id = 0
+    current_feed_name = "None"
+    if current_user.is_authenticated and len(Feed.query.filter_by(user_id=current_user.id).all()) > 0:
+        user_has_feeds = True
+        user_feeds = Feed.query.filter_by(user_id=current_user.id).all()
+        for feed in user_feeds:
+            feed_items = FeedItem.query.join(Feed, FeedItem.feed_id == feed.id).all()
+            for fi in feed_items:
+                if fi.community_id == community.id:
+                    current_feed_id = feed.id
+                    current_feed_name = feed.name
+                    break
 
     page = request.args.get('page', 1, type=int)
     sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)
@@ -320,7 +338,9 @@ def show_community(community: Community):
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site, sort=sort,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                           post_layout=post_layout, current_app=current_app)
+                           post_layout=post_layout, current_app=current_app,
+                           user_has_feeds=user_has_feeds, current_feed_id=current_feed_id,
+                           current_feed_name=current_feed_name)
 
 
 # RSS feed of the community

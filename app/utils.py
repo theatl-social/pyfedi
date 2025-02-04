@@ -45,7 +45,7 @@ from captcha.image import ImageCaptcha
 
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, ActivityPubLog, IpBan, \
     Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
-    File, ModLog, CommunityBlock
+    File, ModLog, CommunityBlock, Feed
 
 
 # Flask's render_template function, with support for themes added
@@ -1000,6 +1000,21 @@ def topic_tree() -> List:
                 parent_comment['children'].append(topics_dict[topic.id])
 
     return [topic for topic in topics_dict.values() if topic['topic'].parent_id is None]
+
+
+# feeds, in a tree
+def feed_tree() -> List:
+    feeds = Feed.query.order_by(Feed.name)
+
+    feeds_dict = {feed.id: {'feed': feed, 'children': []} for feed in feeds.all()}
+
+    for feed in feeds:
+        if feed.parent_feed_id is not None:
+            parent_comment = feeds_dict.get(feed.parent_feed_id)
+            if parent_comment:
+                parent_comment['children'].append(feeds_dict[feed.id])
+
+    return [feed for feed in feeds_dict.values() if feed['feed'].parent_feed_id is None]
 
 
 def opengraph_parse(url):
