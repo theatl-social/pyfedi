@@ -55,18 +55,18 @@ import re
 
 
 @celery.task
-def make_post(send_async, user_id, post_id):
-    send_post(user_id, post_id)
+def make_post(send_async, post_id):
+    send_post(post_id)
 
 
 @celery.task
-def edit_post(send_async, user_id, post_id):
-    send_post(user_id, post_id, edit=True)
+def edit_post(send_async, post_id):
+    send_post(post_id, edit=True)
 
 
-def send_post(user_id, post_id, edit=False):
-    user = User.query.filter_by(id=user_id).one()
+def send_post(post_id, edit=False):
     post = Post.query.filter_by(id=post_id).one()
+    user = post.author
     community = post.community
 
     # Find any users Mentioned in post body with @user@instance syntax
@@ -122,7 +122,7 @@ def send_post(user_id, post_id, edit=False):
     if not followers and community.local_only:
         return
 
-    banned = CommunityBan.query.filter_by(user_id=user_id, community_id=community.id).first()
+    banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
     if banned:
         return
     if not community.is_local():

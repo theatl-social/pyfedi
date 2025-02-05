@@ -360,7 +360,7 @@ def poll_vote(post_id):
         poll_votes = PollChoice.query.join(PollChoiceVote, PollChoiceVote.choice_id == PollChoice.id).filter(PollChoiceVote.post_id == post.id, PollChoiceVote.user_id == current_user.id).all()
         for pv in poll_votes:
             if post.author.is_local():
-                task_selector('edit_post', user_id=post.user_id, post_id=post.id)
+                task_selector('edit_post', post_id=post.id)
             else:
                 pollvote_json = {
                   '@context': default_context(),
@@ -510,7 +510,7 @@ def add_reply_inline(post_id: int, comment_id: int):
         db.session.commit()
 
         # Federate the reply
-        task_selector('make_reply', user_id=current_user.id, reply_id=reply.id, parent_id=in_reply_to.id)
+        task_selector('make_reply', reply_id=reply.id, parent_id=in_reply_to.id)
 
         return render_template('post/add_reply_inline_result.html', post_reply=reply)
 

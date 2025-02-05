@@ -411,9 +411,9 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
 
     if from_scratch:
         if federate:
-            task_selector('make_post', user_id=user.id, post_id=post.id)
+            task_selector('make_post', post_id=post.id)
     elif federate:
-        task_selector('edit_post', user_id=user.id, post_id=post.id)
+        task_selector('edit_post', post_id=post.id)
 
     if src == SRC_API:
         if from_scratch:

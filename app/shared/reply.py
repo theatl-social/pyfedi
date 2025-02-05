@@ -190,7 +190,7 @@ def make_reply(input, post, parent_id, src, auth=None):
         input.body.data = ''
         flash('Your comment has been added.')
 
-    task_selector('make_reply', user_id=user.id, reply_id=reply.id, parent_id=parent_id)
+    task_selector('make_reply', reply_id=reply.id, parent_id=parent_id)
 
     if src == SRC_API:
         return user.id, reply
@@ -222,7 +222,7 @@ def edit_reply(input, reply, post, src, auth=None):
     if src == SRC_WEB:
         flash(_('Your changes have been saved.'), 'success')
 
-    task_selector('edit_reply', user_id=user.id, reply_id=reply.id, parent_id=reply.parent_id)
+    task_selector('edit_reply', reply_id=reply.id, parent_id=reply.parent_id)
 
     if src == SRC_API:
         return user.id, reply

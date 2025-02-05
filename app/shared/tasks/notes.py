@@ -1,6 +1,6 @@
 from app import cache, celery, db
 from app.activitypub.signature import default_context, post_request
-from app.models import Community, CommunityBan, CommunityJoinRequest, CommunityMember, Notification, Post, PostReply, User, utcnow
+from app.models import Community, CommunityBan, CommunityJoinRequest, CommunityMember, Notification, Post, PostReply, utcnow
 from app.user.utils import search_for_user
 from app.utils import community_membership, gibberish, joined_communities, instance_banned, ap_datetime, \
                       recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies
@@ -48,18 +48,18 @@ import re
 
 
 @celery.task
-def make_reply(send_async, user_id, reply_id, parent_id):
-    send_reply(user_id, reply_id, parent_id)
+def make_reply(send_async, reply_id, parent_id):
+    send_reply(reply_id, parent_id)
 
 
 @celery.task
-def edit_reply(send_async, user_id, reply_id, parent_id):
-    send_reply(user_id, reply_id, parent_id, edit=True)
+def edit_reply(send_async, reply_id, parent_id):
+    send_reply(reply_id, parent_id, edit=True)
 
 
-def send_reply(user_id, reply_id, parent_id, edit=False):
-    user = User.query.filter_by(id=user_id).one()
+def send_reply(reply_id, parent_id, edit=False):
     reply = PostReply.query.filter_by(id=reply_id).one()
+    user = reply.author
     if parent_id:
         parent = PostReply.query.filter_by(id=parent_id).one()
     else:
@@ -113,7 +113,7 @@ def send_reply(user_id, reply_id, parent_id, edit=False):
     if community.local_only or not community.instance.online():
         return
 
-    banned = CommunityBan.query.filter_by(user_id=user_id, community_id=community.id).first()
+    banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
     if banned:
         return
     if not community.is_local():

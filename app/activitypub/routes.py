@@ -866,7 +866,7 @@ def process_inbox_request(request_json, store_ap_json):
                             db.session.commit()
                             log_incoming_ap(id, APLOG_CREATE, APLOG_SUCCESS, saved_json)
                             if post_being_replied_to.author.is_local():
-                                task_selector('edit_post', user_id=post_being_replied_to.user_id, post_id=post_being_replied_to.id)
+                                task_selector('edit_post', post_id=post_being_replied_to.id)
                     return
                 if not announced:
                     community = find_community(request_json)
