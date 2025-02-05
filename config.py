@@ -22,7 +22,7 @@ class Config(object):
     RECAPTCHA_PUBLIC_KEY = os.environ.get("RECAPTCHA_PUBLIC_KEY") or None
     RECAPTCHA_PRIVATE_KEY = os.environ.get("RECAPTCHA_PRIVATE_KEY") or None
     MODE = os.environ.get('MODE') or 'development'
-    LANGUAGES = ['ca', 'de', 'en', 'fr', 'ja', 'zh']
+    LANGUAGES = ['ca', 'de', 'en', 'es', 'fr', 'ja', 'zh']
     FULL_AP_CONTEXT = bool(int(os.environ.get('FULL_AP_CONTEXT', 0)))
     CACHE_TYPE = os.environ.get('CACHE_TYPE') or 'FileSystemCache'
     CACHE_REDIS_URL = os.environ.get('CACHE_REDIS_URL') or 'redis://localhost:6379/1'

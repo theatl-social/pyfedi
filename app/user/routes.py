@@ -380,6 +380,7 @@ def user_settings():
         ('fr', _l('French')),
         ('de', _l('German')),
         ('ja', _l('Japanese')),
+        ('es', _l('Spanish')),
     ]
     if form.validate_on_submit():
         propagate_indexable = form.indexable.data != current_user.indexable
