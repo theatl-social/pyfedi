@@ -431,6 +431,8 @@ def find_hashtag_or_create(hashtag: str) -> Tag:
 
 def extract_domain_and_actor(url_string: str):
     # Parse the URL
+    if url_string.endswith('/'):              # WordPress
+        url_string = url_string[:-1]
     parsed_url = urlparse(url_string)
 
     # Extract the server domain name
@@ -499,6 +501,11 @@ def refresh_user_profile_task(user_id):
                 session.execute(text('UPDATE "post" set indexable = :indexable WHERE user_id = :user_id'),
                                 {'user_id': user.id,
                                 'indexable': new_indexable})
+
+            # fix ap_id for WordPress actors
+            if user.ap_id.startswith('@'):
+                server, address = extract_domain_and_actor(user.ap_profile_id)
+                user.ap_id = f"{address.lower()}@{server.lower()}"
 
             user.user_name = activity_json['preferredUsername'].strip()
             if 'name' in activity_json:
