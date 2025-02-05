@@ -1,0 +1,11 @@
+<tr>
+    <td>{{ feed.name }}</td>
+    <td>{{ feed.num_communities }}</td>
+    <td>{{ feed.creator }}</td>
+    <td>{{ feed.public }}</td>
+    {% if active_child == 'user_feeds' %}
+        <td>Edit Feed Button</td>
+    {% elif active_child == 'server_public_feeds' %}
+        <td>Copy/Subscribe Button</td>
+    {% endif %}
+</tr>

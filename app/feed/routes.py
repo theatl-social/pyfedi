@@ -7,7 +7,7 @@ from app import db
 from app.activitypub.signature import RsaKeys
 from app.community.util import save_icon_file, save_banner_file
 from app.feed import  bp
-from app.feed.forms import AddFeedForm
+from app.feed.forms import AddFeedForm, EditFeedForm
 from app.models import Feed, FeedMember, FeedItem
 from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markdown_to_html, render_template, back
 from slugify import slugify
@@ -71,6 +71,62 @@ def feed_new():
 
     return render_template('feed/feed_new.html', title=_('Create a Feed'), form=form,
                            current_app=current_app)
+
+@bp.route('/feed/<int:feed_id>/edit', methods=['GET','POST'])
+@login_required
+def feed_edit(feed_id: int):
+    if current_user.banned:
+        return show_ban_message()
+    # load the feed
+    feed_to_edit = Feed.query.get_or_404(feed_id)
+    # make sure the user has owns this feed
+    if feed_to_edit.user_id != current_user.id:
+        abort(404)
+    edit_feed_form = EditFeedForm()
+    
+    if edit_feed_form.validate_on_submit():
+        feed_to_edit.title = edit_feed_form.feed_name.data
+        feed_to_edit.name = edit_feed_form.url.data
+        feed_to_edit.description = piefed_markdown_to_lemmy_markdown(edit_feed_form.description.data)
+        feed_to_edit.description_html = markdown_to_html(edit_feed_form.description.data)
+        icon_file = request.files['icon_file']
+        if icon_file and icon_file.filename != '':
+            file = save_icon_file(icon_file, directory='feeds')
+            if file:
+                feed_to_edit.icon = file
+        banner_file = request.files['banner_file']
+        if banner_file and banner_file.filename != '':
+            file = save_banner_file(banner_file, directory='feeds')
+            if file:
+                feed_to_edit.image = file
+        if g.site.enable_nsfw:
+            feed_to_edit.nsfw = edit_feed_form.nsfw.data
+        if g.site.enable_nsfl:
+            feed_to_edit.nsfl = edit_feed_form.nsfl.data
+        feed_to_edit.public = edit_feed_form.public.data
+        db.session.add(feed_to_edit)
+        db.session.commit()
+
+        flash(_('Congrats, your Feed edit has been saved!'))
+        return redirect(url_for('main.index'))
+
+    # add the current data to the form
+    edit_feed_form.feed_name.data = feed_to_edit.title
+    edit_feed_form.url.data = feed_to_edit.name
+    edit_feed_form.description.data = feed_to_edit.description
+    if g.site.enable_nsfw is False:
+        edit_feed_form.nsfw.render_kw = {'disabled': True}
+    else:
+        edit_feed_form.nsfw.data = feed_to_edit.nsfw
+    if g.site.enable_nsfl is False:
+        edit_feed_form.nsfl.render_kw = {'disabled': True}
+    else:
+        edit_feed_form.nsfw.data = feed_to_edit.nsfw
+    edit_feed_form.public.data = feed_to_edit.public
+
+    return render_template('feed/feed_edit.html', form=edit_feed_form)
+
+
 
 
 @bp.route('/feed/add_community', methods=['GET'])
@@ -172,7 +228,10 @@ def feed_list():
 
     # setup html base to send back
     options_html = ""
-    options_html = options_html + f'<li><a class="dropdown-item" href="/feed/remove_community?user_id={user_id}&new_feed_id=0&current_feed_id={current_feed_id}&community_id={community_id}">None</li>'
+
+    # add the none option if already in a feed
+    if current_feed_id != 0:
+        options_html = options_html + f'<li><a class="dropdown-item" href="/feed/remove_community?user_id={user_id}&new_feed_id=0&current_feed_id={current_feed_id}&community_id={community_id}">None</li>'
     
     # for loop to add the rest of the options to the html
     for feed in user_feeds:

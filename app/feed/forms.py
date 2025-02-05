@@ -9,10 +9,6 @@ from app.models import Feed, utcnow
 from flask_babel import _, lazy_gettext as _l
 
 
-
-
-
-
 class AddFeedForm(FlaskForm):
     feed_name = StringField(_l('Name'), validators=[DataRequired()])
     url = StringField(_l('Url'))
@@ -39,3 +35,15 @@ class AddFeedForm(FlaskForm):
                 self.url.errors.append(_l('A Feed with this url already exists.'))
                 return False
         return True
+
+class EditFeedForm(FlaskForm):
+    feed_name = StringField(_l('Name'), validators=[DataRequired()])
+    url = StringField(_l('Url'))
+    description = TextAreaField(_l('Description'))
+    icon_file = FileField(_l('Icon image'), render_kw={'accept': 'image/*'})
+    banner_file = FileField(_l('Banner image'), render_kw={'accept': 'image/*'})
+    nsfw = BooleanField('NSFW')
+    nsfl = BooleanField('NSFL')
+    public = BooleanField('Make Feed Public')
+    submit = SubmitField(_l('Save'))
+

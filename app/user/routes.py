@@ -17,7 +17,7 @@ from app.email import send_verification_email
 from app.models import Post, Community, CommunityMember, User, PostReply, PostVote, Notification, utcnow, File, Site, \
     Instance, Report, UserBlock, CommunityBan, CommunityJoinRequest, CommunityBlock, Filter, Domain, DomainBlock, \
     InstanceBlock, NotificationSubscription, PostBookmark, PostReplyBookmark, read_posts, Topic, UserNote, \
-    UserExtraField
+    UserExtraField, Feed
 from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, \
     FilterForm, KeywordFilterEditForm, RemoteFollowForm, ImportExportForm, UserNoteForm
@@ -1427,3 +1427,31 @@ def lookup(person, domain):
                 return redirect(referrer)
             else:
                 return redirect('/')
+
+
+# ----- user feed related routes
+
+@bp.route('/u/myfeeds', methods=['GET','POST'])
+@login_required
+def user_myfeeds():
+    # this will show a user's personal feeds
+    user_has_feeds = False
+    if current_user.is_authenticated and len(Feed.query.filter_by(user_id=current_user.id).all()) > 0:
+        user_has_feeds = True
+    current_user_feeds = Feed.query.filter_by(user_id=current_user.id).all()
+    user_feeds_list = []
+    for cuf in current_user_feeds:
+        feed_dict = {}
+        feed_dict['name'] = cuf.name
+        feed_dict['num_communities'] = cuf.num_communities if cuf.num_communities else 0
+        feed_dict['creator'] = current_user.user_name
+        feed_dict['public'] = cuf.public
+        user_feeds_list.append(feed_dict)
+    
+    return render_template('user/user_feeds.html', user_has_feeds=user_has_feeds, user_feeds_list=user_feeds_list)
+
+
+@bp.route('/u/<actor>/feeds', methods=['GET','POST'])
+def user_feeds():
+    # this will show a specific user's public feeds
+    pass

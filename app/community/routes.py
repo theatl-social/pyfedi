@@ -166,14 +166,10 @@ def show_community(community: Community):
     current_feed_name = "None"
     if current_user.is_authenticated and len(Feed.query.filter_by(user_id=current_user.id).all()) > 0:
         user_has_feeds = True
-        user_feeds = Feed.query.filter_by(user_id=current_user.id).all()
-        for feed in user_feeds:
-            feed_items = FeedItem.query.join(Feed, FeedItem.feed_id == feed.id).all()
-            for fi in feed_items:
-                if fi.community_id == community.id:
-                    current_feed_id = feed.id
-                    current_feed_name = feed.name
-                    break
+        current_feed = Feed.query.filter(Feed.user_id == current_user.id).join(FeedItem, FeedItem.feed_id == Feed.id).filter(FeedItem.community_id == community.id).first()
+        if current_feed is not None:
+            current_feed_id = current_feed.id
+            current_feed_name = current_feed.name
 
     page = request.args.get('page', 1, type=int)
     sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)
