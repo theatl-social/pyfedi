@@ -320,7 +320,7 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                 if actor_data.status_code == 200:
                     try:
                         actor_json = actor_data.json()
-                    except Exception as e:
+                    except Exception:
                         actor_data.close()
                         return None
                     actor_data.close()
@@ -336,7 +336,7 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                         if actor_data.status_code == 200:
                             try:
                                 actor_json = actor_data.json()
-                            except Exception as e:
+                            except Exception:
                                 actor_data.close()
                                 return None
                             actor_data.close()
@@ -586,7 +586,7 @@ def refresh_community_profile_task(community_id):
             time.sleep(randint(3, 10))
             try:
                 actor_data = get_request(community.ap_public_url, headers={'Accept': 'application/activity+json'})
-            except Exception as e:
+            except Exception:
                 return
         if actor_data.status_code == 200:
             activity_json = actor_data.json()
@@ -739,7 +739,7 @@ def actor_json_to_model(activity_json, address, server):
                         instance_id=find_instance_id(server)
                         # language=community_json['language'][0]['identifier'] # todo: language
                         )
-        except KeyError as e:
+        except KeyError:
             current_app.logger.error(f'KeyError for {address}@{server} while parsing ' + str(activity_json))
             return None
 
@@ -969,7 +969,6 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                         image = Image.open(BytesIO(source_image))
                         image = ImageOps.exif_transpose(image)
                         img_width = image.width
-                        img_height = image.height
 
                         # Resize the image to medium
                         if medium_width:
@@ -995,7 +994,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                         if toxic_community and img_width < 2000:    # images > 2000px tend to be real photos instead of 4chan screenshots.
                             try:
                                 image_text = pytesseract.image_to_string(Image.open(BytesIO(source_image)).convert('L'), timeout=30)
-                            except Exception as e:
+                            except Exception:
                                 image_text = ''
                             if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):   # chan posts usually contain the text 'Anonymous' and ' No.12345'
                                 post = Post.query.filter_by(image_id=file.id).first()
@@ -1107,7 +1106,7 @@ def new_instance_profile_task(instance_id: int):
         try:
             instance_json = instance_data.json()
             instance_data.close()
-        except Exception as ex:
+        except Exception:
             instance_json = {}
         if 'type' in instance_json and instance_json['type'] == 'Application':
             instance.inbox = instance_json['inbox']
@@ -1352,12 +1351,12 @@ def ban_user(blocker, blocked, community, core_activity):
         if 'expires' in core_activity:
             try:
                 ban_until = datetime.fromisoformat(core_activity['expires'])
-            except ValueError as e:
+            except ValueError:
                 ban_until = arrow.get(core_activity['expires']).datetime
         elif 'endTime' in core_activity:
             try:
                 ban_until = datetime.fromisoformat(core_activity['endTime'])
-            except ValueError as e:
+            except ValueError:
                 ban_until = arrow.get(core_activity['endTime']).datetime
 
         if ban_until and ban_until > datetime.now(timezone.utc):
@@ -2050,11 +2049,7 @@ def parse_redis_socket_string(connection_string: str):
     # Parse the connection string
     parsed_url = urlparse(connection_string)
 
-    # Extract username (if provided) and password
-    if parsed_url.username:
-        username = parsed_url.username
-    else:
-        username = None
+    # Extract password
     password = parsed_url.password
 
     # Extract host and port
@@ -2062,9 +2057,9 @@ def parse_redis_socket_string(connection_string: str):
     port = parsed_url.port
 
     # Extract database number (default to 0 if not provided)
-    db = int(parsed_url.path.lstrip('/') or 0)
+    db_num = int(parsed_url.path.lstrip('/') or 0)
 
-    return host, port, db, password
+    return host, port, db_num, password
 
 
 def lemmy_site_data():
@@ -2369,7 +2364,7 @@ def get_nodebb_replies_in_background(replies_uri_list, community_id):
     reply_count = 0
     for uri in replies_uri_list:
         reply_count += 1
-        post_reply = resolve_remote_post(uri, community, None, False, nodebb=True)
+        resolve_remote_post(uri, community, None, False, nodebb=True)
         if reply_count >= max:
             break
 

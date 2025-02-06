@@ -1251,7 +1251,7 @@ def post_reply_delete(post_id: int, comment_id: int):
 def post_reply_restore(post_id: int, comment_id: int):
     post = Post.query.get_or_404(post_id)
     post_reply = PostReply.query.get_or_404(comment_id)
-    community = post.community
+
     if post_reply.user_id == current_user.id or post.community.is_moderator() or current_user.is_admin():
         if post_reply.deleted_by == post_reply.user_id:
             was_mod_deletion = False

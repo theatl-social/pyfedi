@@ -1516,7 +1516,7 @@ def process_new_content(user, community, store_ap_json, request_json, announced)
                         if not announced:
                             announce_activity_to_followers(community, user, request_json)
                         return
-                except TypeError as e:
+                except TypeError:
                     current_app.logger.error('TypeError: ' + str(request_json))
                     log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'TypeError. See log file.')
                     return
@@ -1547,7 +1547,7 @@ def process_new_content(user, community, store_ap_json, request_json, announced)
                         if not announced:
                             announce_activity_to_followers(community, user, request_json)
                     return
-                except TypeError as e:
+                except TypeError:
                     current_app.logger.error('TypeError: ' + str(request_json))
                     log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'TypeError. See log file.')
                     return

@@ -171,14 +171,14 @@ class CreateImageForm(CreatePostForm):
                 if '.avif' in uploaded_file.filename:
                     import pillow_avif
                 image_text = pytesseract.image_to_string(Image.open(BytesIO(uploaded_file.read())).convert('L'))
-            except FileNotFoundError as e:
+            except FileNotFoundError:
                 image_text = ''
-            except UnidentifiedImageError as e:
+            except UnidentifiedImageError:
                 image_text = ''
             if 'Anonymous' in image_text and (
                     'No.' in image_text or ' N0' in image_text):  # chan posts usually contain the text 'Anonymous' and ' No.12345'
                 self.image_file.errors.append(
-                    f"This image is an invalid file type.")  # deliberately misleading error message
+                    "This image is an invalid file type.")  # deliberately misleading error message
                 current_user.reputation -= 1
                 db.session.commit()
                 return False

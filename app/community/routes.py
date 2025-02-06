@@ -1024,7 +1024,7 @@ def community_ban_user(community_id: int, user_id: int):
             cache.delete_memoized(joined_communities, user.id)
             cache.delete_memoized(moderating_communities, user.id)
             notify = Notification(title=shorten_string('You have been banned from ' + community.title),
-                                  url=f'/notifications', user_id=user.id,
+                                  url='/notifications', user_id=user.id,
                                   author_id=1)
             db.session.add(notify)
             user.unread_notifications += 1
@@ -1076,7 +1076,7 @@ def community_unban_user(community_id: int, user_id: int):
         cache.delete_memoized(joined_communities, user.id)
         cache.delete_memoized(moderating_communities, user.id)
         notify = Notification(title=shorten_string('You have been un-banned from ' + community.title),
-                              url=f'/notifications', user_id=user.id,
+                              url='/notifications', user_id=user.id,
                               author_id=1)
         db.session.add(notify)
         user.unread_notifications += 1
@@ -1135,7 +1135,6 @@ def community_moderate(actor):
         if community.is_moderator() or current_user.is_admin():
 
             page = request.args.get('page', 1, type=int)
-            search = request.args.get('search', '')
             local_remote = request.args.get('local_remote', '')
 
             reports = Report.query.filter_by(status=0, in_community_id=community.id)
@@ -1206,7 +1205,7 @@ def community_kick_user(community_id: int, user_id: int):
     if community is not None:
         if current_user.is_admin():
 
-            db.session.query(CommunityMember).filter_by(user_id=user_id, community_id=community.id).delete()
+            db.session.query(CommunityMember).filter_by(user_id=user.id, community_id=community.id).delete()
             db.session.commit()
 
         else:

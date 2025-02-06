@@ -458,7 +458,7 @@ def user_settings_import_export():
                 abort(400)
             new_filename = gibberish(15) + '.json'
 
-            directory = f'app/static/media/'
+            directory = 'app/static/media/'
 
             # save the file
             final_place = os.path.join(directory, new_filename + file_ext)

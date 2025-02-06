@@ -244,7 +244,7 @@ def mime_type_using_head(url):
             return content_type
         else:
             return ''
-    except httpx.HTTPError as e:
+    except httpx.HTTPError:
         return ''
 
 
@@ -993,7 +993,7 @@ def opengraph_parse(url):
         url = url[0]
     try:
         return parse_page(url)
-    except Exception as ex:
+    except Exception:
         return None
 
 

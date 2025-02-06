@@ -7,7 +7,7 @@ from app.shared.tasks import task_selector
 from app.utils import render_template, authorise_api_user, shorten_string, gibberish, ensure_directory_exists, \
                       piefed_markdown_to_lemmy_markdown, markdown_to_html, remove_tracking_from_link, domain_from_url, \
                       opengraph_parse, url_to_thumbnail_file, can_create_post, is_video_hosting_site, recently_upvoted_posts, \
-                      is_image_url, is_video_hosting_site, add_to_modlog_activitypub
+                      is_image_url, add_to_modlog_activitypub
 
 from flask import abort, flash, redirect, request, url_for, current_app, g
 from flask_babel import _

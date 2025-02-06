@@ -68,7 +68,7 @@ def register(app):
         print(public_key)
 
     @app.cli.command("admin-keys")
-    def keys():
+    def admin_keys():
         private_key, public_key = RsaKeys.generate_keypair()
         u: User = User.query.get(1)
         u.private_key = private_key
@@ -277,7 +277,7 @@ def register(app):
                             elif nodeinfo.status_code >= 400:
                                 current_app.logger.info(f"{instance.domain} has no well-known/nodeinfo response")
                                 instance.failures += 1
-                        except Exception as e:
+                        except Exception:
                             db.session.rollback()
                             instance.failures += 1
                         finally:
@@ -297,7 +297,7 @@ def register(app):
                                     instance.gone_forever = False
                             elif node.status_code >= 400:
                                 instance.nodeinfo_href = None
-                        except Exception as e:
+                        except Exception:
                             db.session.rollback()
                             instance.failures += 1
                         finally:
@@ -327,7 +327,7 @@ def register(app):
                                            InstanceRole.user_id == instance_admin.user.id,
                                            InstanceRole.instance_id == instance.id,
                                            InstanceRole.role == 'admin').delete()
-                        except Exception as e:
+                        except Exception:
                             db.session.rollback()
                             instance.failures += 1
                         finally:

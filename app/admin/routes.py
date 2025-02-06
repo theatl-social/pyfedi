@@ -308,7 +308,7 @@ def admin_federation():
                 message = do_subscribe(new_community.ap_id, user.id, admin_preload=True)
                 pre_load_messages.append(message)
             else:
-                message_we_wont_do_anything_with = do_subscribe.delay(new_community.ap_id, user.id, admin_preload=True)
+                do_subscribe.delay(new_community.ap_id, user.id, admin_preload=True)
 
         if current_app.debug:
             flash(_('Results: %(results)s', results=str(pre_load_messages)))
@@ -552,7 +552,7 @@ def admin_federation():
                 message = do_subscribe(new_community.ap_id, user.id, admin_preload=True)
                 remote_scan_messages.append(message)
             else:
-                message_we_wont_do_anything_with = do_subscribe.delay(new_community.ap_id, user.id, admin_preload=True)
+                do_subscribe.delay(new_community.ap_id, user.id, admin_preload=True)
 
         if current_app.debug:
             flash(_('Results: %(results)s', results=str(remote_scan_messages)))
@@ -572,7 +572,7 @@ def admin_federation():
                 abort(400)
             new_filename = gibberish(15) + '.json'
 
-            directory = f'app/static/media/'
+            directory = 'app/static/media/'
 
             # save the file
             final_place = os.path.join(directory, new_filename + file_ext)
@@ -584,10 +584,10 @@ def admin_federation():
                 return redirect(url_for('admin.admin_federation'))
             else:
                 import_bans_task.delay(final_place)
-                flash(_(f'Ban imports started in a background process.'))
+                flash(_('Ban imports started in a background process.'))
                 return redirect(url_for('admin.admin_federation'))
         else:
-            flash(_(f'Ban imports requested, but no json provided.'))
+            flash(_('Ban imports requested, but no json provided.'))
             return redirect(url_for('admin.admin_federation'))
 
     # this is the export bans button

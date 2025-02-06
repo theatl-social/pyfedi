@@ -1,12 +1,13 @@
 # This file is part of pyfedi, which is licensed under the GNU General Public License (GPL) version 3.0.
 # You should have received a copy of the GPL along with this program. If not, see <http://www.gnu.org/licenses/>.
 from datetime import datetime
+import os
 
 from flask_babel import get_locale
 from flask_login import current_user
 
 from app import create_app, db, cli
-import arrow, os
+import arrow
 from flask import session, g, json, request, current_app
 from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_ARTICLE, POST_TYPE_VIDEO, POST_TYPE_POLL, \
     SUBSCRIPTION_MODERATOR, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_PENDING
@@ -21,8 +22,6 @@ cli.register(app)
 
 @app.context_processor
 def app_context_processor():
-    def getmtime(filename):
-        return os.path.getmtime('app/static/' + filename)
     return dict(getmtime=getmtime, instance_domain=current_app.config['SERVER_NAME'], debug_mode=current_app.debug,
                 arrow=arrow, locale=g.locale if hasattr(g, 'locale') else None,
                 POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,

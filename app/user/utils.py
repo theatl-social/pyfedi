@@ -1,3 +1,5 @@
+import random
+import time
 from time import sleep
 
 from flask import current_app, json
@@ -40,8 +42,7 @@ def purge_user_then_delete_task(user_id):
                 }
 
                 if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
-                    success = post_request(post.community.ap_inbox_url, delete_json, user.private_key,
-                                           user.public_url() + '#main-key')
+                    post_request(post.community.ap_inbox_url, delete_json, user.private_key, user.public_url() + '#main-key')
 
                 else:  # local community - send it to followers on remote instances, using Announce
                     announce = {
@@ -157,7 +158,7 @@ def search_for_user(address: str):
                         object_request = get_request(links['href'], headers={'Accept': type})
                     except httpx.HTTPError:
                         if attempt == 1:
-                            time.sleep(3)
+                            time.sleep(3 + random.randrange(3))
                         else:
                             return None
                 if object_request.status_code == 401:

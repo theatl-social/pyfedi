@@ -309,20 +309,20 @@ class File(db.Model):
         if self.file_path and os.path.isfile(self.file_path):
             try:
                 os.unlink(self.file_path)
-            except FileNotFoundError as e:
+            except FileNotFoundError:
                 ...
             purge_from_cache.append(self.file_path.replace('app/', f"https://{current_app.config['SERVER_NAME']}/"))
         if self.thumbnail_path and os.path.isfile(self.thumbnail_path):
             try:
                 os.unlink(self.thumbnail_path)
-            except FileNotFoundError as e:
+            except FileNotFoundError:
                 ...
             purge_from_cache.append(self.thumbnail_path.replace('app/', f"https://{current_app.config['SERVER_NAME']}/"))
         if self.source_url and self.source_url.startswith('http') and current_app.config['SERVER_NAME'] in self.source_url:
             # self.source_url is always a url rather than a file path, which makes deleting the file a bit fiddly
             try:
                 os.unlink(self.source_url.replace(f"https://{current_app.config['SERVER_NAME']}/", 'app/'))
-            except FileNotFoundError as e:
+            except FileNotFoundError:
                 ...
             purge_from_cache.append(self.source_url) # otoh it makes purging the cdn cache super easy.
 
@@ -373,7 +373,7 @@ def flush_cdn_cache_task(to_purge: Union[str, List[str]]):
             }
 
     if body:
-        response = httpx_client.request(
+        httpx_client.request(
             'POST',
             f'https://api.cloudflare.com/client/v4/zones/{zone_id}/purge_cache',
             headers=headers,
@@ -1436,14 +1436,6 @@ class Post(db.Model):
 
         return post
 
-    # All the following post/comment ranking math is explained at https://medium.com/hacking-and-gonzo/how-reddit-ranking-algorithms-work-ef111e33d0d9
-    epoch = datetime(1970, 1, 1)
-
-    @classmethod
-    def epoch_seconds(self, date):
-        td = date - self.epoch
-        return td.days * 86400 + td.seconds + (float(td.microseconds) / 1000000)
-
     def calculate_cross_posts(self, delete_only=False, url_changed=False):
         if not self.url and not delete_only:
             return
@@ -1566,7 +1558,7 @@ class Post(db.Model):
         # some locales do not have a definition for 'weeks' so are unable to display some dates in some languages. Fall back to english for those languages.
         try:
             return arrow.get(self.last_active if sort == 'active' else self.posted_at).humanize(locale=locale)
-        except ValueError as v:
+        except ValueError:
             return arrow.get(self.last_active if sort == 'active' else self.posted_at).humanize(locale='en')
 
     def notify_new_replies(self, user_id: int) -> bool:
@@ -1602,19 +1594,19 @@ class Post(db.Model):
     # All the following post/comment ranking math is explained at https://medium.com/hacking-and-gonzo/how-reddit-ranking-algorithms-work-ef111e33d0d9
     epoch = datetime(1970, 1, 1)
 
-    def epoch_seconds(self, date):
-        td = date - self.epoch
+    def epoch_seconds(self, post_date):
+        td = post_date - self.epoch
         return td.days * 86400 + td.seconds + (float(td.microseconds) / 1000000)
 
     # All the following post/comment ranking math is explained at https://medium.com/hacking-and-gonzo/how-reddit-ranking-algorithms-work-ef111e33d0d9
-    def post_ranking(self, score, date: datetime):
-        if date is None:
-            date = datetime.utcnow()
+    def post_ranking(self, score, post_date: datetime):
+        if post_date is None:
+            post_date = datetime.utcnow()
         if score is None:
             score = 1
         order = math.log(max(abs(score), 1), 10)
         sign = 1 if score > 0 else -1 if score < 0 else 0
-        seconds = self.epoch_seconds(date) - 1685766018
+        seconds = self.epoch_seconds(post_date) - 1685766018
         return round(sign * order + seconds / 45000, 7)
 
     def vote(self, user: User, vote_direction: str):
@@ -1868,7 +1860,7 @@ class PostReply(db.Model):
     def posted_at_localized(self, locale):
         try:
             return arrow.get(self.posted_at).humanize(locale=locale)
-        except ValueError as v:
+        except ValueError:
             return arrow.get(self.posted_at).humanize(locale='en')
 
     # the ap_id of the parent object, whether it's another PostReply or a Post
