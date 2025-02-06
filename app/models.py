@@ -708,7 +708,7 @@ class User(UserMixin, db.Model):
     referrer = db.Column(db.String(256))
     markdown_editor = db.Column(db.Boolean, default=False)
     interface_language = db.Column(db.String(10))           # a locale that the translation system understands e.g. 'en' or 'en-us'. If empty, use browser default
-    language_id = db.Column(db.Integer, db.ForeignKey('language.id'))   # the default choice in the language dropdown when composing posts & comments
+    language_id = db.Column(db.Integer, db.ForeignKey('language.id'))   # the default choice in the language dropdown when composing posts & comments. NOT UI language
     reply_collapse_threshold = db.Column(db.Integer, default=-10)
     reply_hide_threshold = db.Column(db.Integer, default=-20)
 
@@ -1161,7 +1161,7 @@ class Post(db.Model):
     author = db.relationship('User', lazy='joined', overlaps='posts', foreign_keys=[user_id])
     community = db.relationship('Community', lazy='joined', overlaps='posts', foreign_keys=[community_id])
     replies = db.relationship('PostReply', lazy='dynamic', backref='post')
-    language = db.relationship('Language', foreign_keys=[language_id])
+    language = db.relationship('Language', foreign_keys=[language_id], lazy='joined')
     licence = db.relationship('Licence', foreign_keys=[licence_id])
 
     # db relationship tracked by the "read_posts" table
@@ -1732,7 +1732,7 @@ class PostReply(db.Model):
 
     author = db.relationship('User', lazy='joined', foreign_keys=[user_id], single_parent=True, overlaps="post_replies")
     community = db.relationship('Community', lazy='joined', overlaps='replies', foreign_keys=[community_id])
-    language = db.relationship('Language', foreign_keys=[language_id])
+    language = db.relationship('Language', foreign_keys=[language_id], lazy='joined')
 
     @classmethod
     def new(cls, user: User, post: Post, in_reply_to, body, body_html, notify_author, language_id, request_json: dict = None, announce_id=None):

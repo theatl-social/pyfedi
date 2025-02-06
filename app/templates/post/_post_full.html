@@ -1,7 +1,7 @@
 <div class="row position-relative post_full">
         <div class="col post_col {% if post.type == POST_TYPE_IMAGE %}post_col post_type_image{% else %}post_type_normal{% endif %}">
             {% include "post/_breadcrumb_nav.html" %}
-            <h1 class="mt-2 post_title" {% if post.language_id and post.language.code != 'en' %}lang="{{ post.language.code }}"{% endif %}>{{ post.title }}
+            <h1 class="mt-2 post_title" lang="{{ post.language_code() }}">{{ post.title }}
                 {% if post.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif -%}
                 {% if post.nsfl -%}<span class="warning_badge nsfl" title="{{ _('Potentially emotionally scarring content') }}">nsfl</span>{% endif -%}
             </h1>
@@ -99,17 +99,17 @@
                             width="{{ post.image.thumbnail_width }}" height="{{ post.image.thumbnail_height }}" loading="lazy" /></a>
                 {% endif -%}
             {% endif -%}
-            <div class="post_body"{% if post.language_id and post.language.code != 'en' %} lang="{{ post.language.code }}"{% endif %}>
+            <div class="post_body" lang="{{ post.language_code() }}">
                 {{ post.body_html | community_links | person_links | safe if post.body_html else '' }}
                 {% if archive_link -%}
                     <p><a href="{{ archive_link }}" rel="nofollow ucg noindex" target="_blank">{{ _('Archive.ph link') }} <span class="fe fe-external"></span></a></p>
                 {% endif -%}
                 {% if post.licence_id -%}
-                    <p>Licence: {{ post.licence.name }}</p>
+                    <p>{{ _('Licence') }}: {{ post.licence.name }}</p>
                 {% endif -%}
             </div>
             {% if post.type == POST_TYPE_POLL -%}
-                <div class="post_poll">
+                <div class="post_poll" lang="{{ post.language_code() }}">
                     {% if poll_results and poll_total_votes == 0 -%}
                         <p>{{ _('The poll has finished, yet no votes were cast.') }}</p>
                     {% elif poll_results and poll_total_votes -%}
@@ -145,7 +145,7 @@
                                 {% endif -%}
                             {% endfor -%}
                             </ul>
-                            <input type="submit" class="btn btn-primary" value="Vote">
+                            <input type="submit" class="btn btn-primary" value="{{ _('Vote') }}">
                         </form>
                     {% endif -%}
                 </div>

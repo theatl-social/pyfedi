@@ -12,7 +12,7 @@
 
     {% include "post/post_teaser/_title.html" %}
     {% if post.body_html -%}
-        <div class="post_teaser_article_preview small post_teaser_clickable">
+        <div class="post_teaser_article_preview small post_teaser_clickable" lang="{{ post.language_code() }}">
             {{ first_paragraph(post.body_html) | safe }}
         </div>
     {% endif -%}

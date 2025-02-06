@@ -57,7 +57,7 @@
     </span>
 {% endmacro -%}
 <!doctype html>
-<html lang="en">
+<html lang="{{ 'en' if current_user.is_anonymous else current_user.interface_language }}">
   <head>
     {% block head -%}
         <meta charset="utf-8">

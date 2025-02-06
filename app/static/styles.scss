@@ -784,6 +784,19 @@ time {
   border-top: solid 1px $grey;
   margin-right: 8px;
 
+  .comment_time {
+    font-size: 87%;
+    --bs-text-opacity: 1;
+    color: var(--bs-secondary-color) !important;
+    position: relative;
+    top: 4px;
+
+    a {
+      --bs-text-opacity: 1;
+      color: var(--bs-secondary-color) !important;
+    }
+  }
+
   .comment_body {
     hr {
       margin-left: 15px;

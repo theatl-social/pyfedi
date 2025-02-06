@@ -1169,6 +1169,17 @@ time {
   border-top: solid 1px #bbb;
   margin-right: 8px;
 }
+.comments > .comment .comment_time {
+  font-size: 87%;
+  --bs-text-opacity: 1;
+  color: var(--bs-secondary-color) !important;
+  position: relative;
+  top: 4px;
+}
+.comments > .comment .comment_time a {
+  --bs-text-opacity: 1;
+  color: var(--bs-secondary-color) !important;
+}
 .comments > .comment .comment_body hr {
   margin-left: 15px;
   margin-right: 15px;

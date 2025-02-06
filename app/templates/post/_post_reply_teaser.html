@@ -36,8 +36,10 @@
                 <span title="Submitter of original post" aria-label="{{ _('Post creator') }}" class="small"> [OP]</span>
             {% endif -%}
         </div>
-        <div class="col-auto text-muted small pt-05">
-            <time datetime="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post_reply.posted_at).humanize(locale=locale) }}</time>{% if post_reply.edited_at -%}, edited <time datetime="{{ arrow.get(post_reply.posted_at) }}" title="{{ arrow.get(post_reply.posted_at) }}">{{ arrow.get(post_reply.edited_at).humanize(locale=locale) }}</time>{% endif -%}
+        <div class="col-auto comment_time">
+            <a href="/post/{{ post.id }}#comment_{{ post_reply.id }}">
+                <time datetime="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post_reply.posted_at).humanize(locale=locale) }}</time>{% if post_reply.edited_at -%}, edited <time datetime="{{ arrow.get(post_reply.posted_at) }}" title="{{ arrow.get(post_reply.posted_at) }}">{{ arrow.get(post_reply.edited_at).humanize(locale=locale) }}</time>{% endif -%}
+            </a>
         </div>
         <div class="col-auto">
             {% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) -%}
@@ -55,7 +57,7 @@
     </div>
 
     <div class="row comment_body hidable{% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) %} reported{% endif %}">
-        <div class="col-12">
+        <div class="col-12" lang="{{ post_reply.language_code() }}">
             {% if post_reply.deleted and not show_deleted -%}
                 {% if post_reply.deleted_by is none or post_reply.deleted_by != post_reply.user_id -%}
                     <p>{{ _('Deleted by moderator') }}</p>
