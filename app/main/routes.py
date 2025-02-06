@@ -26,7 +26,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     blocked_users, menu_topics, blocked_communities, get_request, mastodon_extra_field_link, \
     permission_required, debug_mode_only, ip_address
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
-    Notification, Language, community_language, ModLog, read_posts
+    Notification, Language, community_language, ModLog, read_posts, Feed
 
 
 @bp.route('/', methods=['HEAD', 'GET', 'POST'])
@@ -723,3 +723,28 @@ def static_manifest():
         with open(manifest_file, 'r') as f:
             manifest = json.load(f)
         return jsonify(manifest)
+    
+
+@bp.route('/feeds', methods=['GET','POST'])
+def public_feeds():
+    # default to no public feeds
+    server_has_feeds = False
+    public_feeds_list = []
+
+    # find all the feeds marked as public
+    public_feeds = Feed.query.filter_by(public=True).all()
+
+    if len(public_feeds) > 0:
+        # make the list of feed data
+        for pf in public_feeds:
+            feed_dict = {}
+            feed_dict['name'] = pf.name
+            feed_dict['num_communities'] = pf.num_communities if pf.num_communities else 0
+            user = User.query.get(pf.user_id)
+            creator = user.ap_id if user.ap_id else user.username
+            feed_dict['creator'] = creator
+            # feed_dict['public'] = cuf.public
+            public_feeds_list.append(feed_dict)
+
+    # render the page
+    return render_template('feed/public_feeds.html', server_has_feeds=server_has_feeds, public_feeds_list=public_feeds_list)

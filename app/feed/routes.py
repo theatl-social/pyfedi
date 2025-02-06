@@ -79,7 +79,7 @@ def feed_edit(feed_id: int):
         return show_ban_message()
     # load the feed
     feed_to_edit = Feed.query.get_or_404(feed_id)
-    # make sure the user has owns this feed
+    # make sure the user owns this feed
     if feed_to_edit.user_id != current_user.id:
         abort(404)
     edit_feed_form = EditFeedForm()
@@ -127,8 +127,6 @@ def feed_edit(feed_id: int):
     return render_template('feed/feed_edit.html', form=edit_feed_form)
 
 
-
-
 @bp.route('/feed/add_community', methods=['GET'])
 @login_required
 def feed_add_community():
@@ -151,10 +149,23 @@ def feed_add_community():
         current_feed_item = FeedItem.query.filter_by(feed_id=current_feed_id).filter_by(community_id=community_id).first()
         db.session.delete(current_feed_item)
         db.session.commit()
+        
+        # also update the num_communities for the old feed
+        current_feed = Feed.query.get(current_feed_id)
+        current_feed.num_communities = current_feed.num_communities - 1
+        db.session.add(current_feed)
+        db.session.commit()
+
 
     # make the new feeditem and commit it
     feed_item = FeedItem(feed_id=feed_id, community_id=community_id)
     db.session.add(feed_item)
+    db.session.commit()
+
+    # also update the num_communities for the new feed
+    feed = Feed.query.get(feed_id)
+    feed.num_communities = feed.num_communities + 1
+    db.session.add(feed)
     db.session.commit()
 
     # send the user back to the page they came from or main
@@ -175,6 +186,7 @@ def feed_add_community():
 def feed_remove_community():
     # this takes a user_id, new_feed_id (0), current_feed_id,
     # and community_id then removes the community from the feed
+
     # get the user id
     user_id = int(request.args.get('user_id'))
     # get the community id
@@ -184,7 +196,8 @@ def feed_remove_community():
     # get the new_feed_id 
     new_feed_id = int(request.args.get('new_feed_id'))
     # get the user's feeds
-    user_feeds = Feed.query.filter_by(user_id=user_id).all()
+    # user_feeds = Feed.query.filter_by(user_id=user_id).all()
+
     # make sure the user owns this feed
     if Feed.query.get(current_feed_id).user_id != user_id:
         abort(404)
@@ -193,6 +206,11 @@ def feed_remove_community():
     if new_feed_id == 0:
         current_feed_item = FeedItem.query.filter_by(feed_id=current_feed_id).filter_by(community_id=community_id).first()
         db.session.delete(current_feed_item)
+        db.session.commit()
+        # also update the num_communities for the old feed
+        current_feed = Feed.query.get(current_feed_id)
+        current_feed.num_communities = current_feed.num_communities - 1
+        db.session.add(current_feed)
         db.session.commit()
     else:
         abort(404)
@@ -208,7 +226,6 @@ def feed_remove_community():
 
     # If referrer is not available or is the same as the current request URL, redirect to the default URL
     return redirect(url_for('main.index'))        
-
 
 
 @bp.route('/feed/list', methods=['GET'])
