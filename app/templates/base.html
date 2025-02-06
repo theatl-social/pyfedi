@@ -179,9 +179,9 @@
                             <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %}">
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/feeds"  aria-haspopup="true" aria-expanded="false">{{ _('Feeds') }}</a>
                                 <ul class="dropdown-menu">
-                                  {% if menu_public_feeds -%}
-                                       {% for feed_menu_item in menu_public_feeds -%}
-                                            <li><a class="dropdown-item{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.path() }}">{{ feed_menu_item.name }}</a></li>
+                                  {% if menu_instance_feeds -%}
+                                       {% for feed_menu_item in menu_instance_feeds -%}
+                                            <li><a class="dropdown-item{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.path() }}">{{ feed_menu_item.title }}</a></li>
                                        {% endfor -%}
                                        <li><hr class="dropdown-divider"></li>
                                   {% else -%}
@@ -226,6 +226,12 @@
                             <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %}">
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/u/myfeeds"  aria-haspopup="true" aria-expanded="false">{{ _('Feeds') }}</a>
                                 <ul class="dropdown-menu">
+                                  {% if menu_instance_feeds -%}
+                                       {% for feed_menu_item in menu_instance_feeds -%}
+                                            <li><a class="dropdown-item{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.path() }}">{{ feed_menu_item.title }}</a></li>
+                                       {% endfor -%}
+                                       <li><hr class="dropdown-divider"></li>
+                                  {% endif -%}
                                   {% if menu_my_feeds -%}
                                        {% for feed_menu_item in menu_my_feeds -%}
                                             <li><a class="dropdown-item{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.path() }}">{{ feed_menu_item.name }}</a></li>

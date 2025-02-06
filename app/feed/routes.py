@@ -6,7 +6,7 @@ from typing import List
 from flask import g, current_app, request, redirect, url_for, flash, abort
 from flask_login import current_user, login_required
 from flask_babel import _
-from app import db
+from app import db, cache
 from app.activitypub.signature import RsaKeys
 from app.community.util import save_icon_file, save_banner_file
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
@@ -17,7 +17,7 @@ from app.inoculation import inoculation
 from app.models import Feed, FeedMember, FeedItem, Post, Community, read_posts, utcnow
 from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markdown_to_html, render_template, user_filters_posts, \
     blocked_domains, blocked_instances, blocked_communities, blocked_users, communities_banned_from, moderating_communities, \
-    joined_communities, menu_topics
+    joined_communities, menu_topics, menu_instance_feeds
 from collections import namedtuple
 from sqlalchemy import desc, or_
 from slugify import slugify
@@ -146,6 +146,56 @@ def feed_edit(feed_id: int):
     return render_template('feed/feed_edit.html', form=edit_feed_form)
 
 
+@bp.route('/feed/<int:feed_id>/delete', methods=['GET','POST'])
+@login_required
+def feed_delete(feed_id: int):
+    # get the user_id
+    user_id = int(request.args.get('user_id'))
+    # get the feed
+    feed = Feed.query.get_or_404(feed_id)
+
+    # is it an instance_feed?
+    instance_feed = feed.is_instance_feed
+
+    # does the user own the feed
+    if feed.user_id != user_id:
+        abort(404)
+
+    # is the feed empty
+    if feed.num_communities == 0:
+        feed_empty = True
+
+    # strip out any feedmembers before deleting
+    feed_members = FeedMember.query.filter_by(feed_id=feed.id)
+    for fm in feed_members.all():
+        db.session.delete(fm)
+
+    # delete the feed if its empty
+    if feed.num_communities == 0:
+        db.session.delete(feed)
+        flash(_('Feed deleted'))
+    else:
+        flash(_('Cannot delete feed with communities assigned to it.', 'error'))
+
+    # commit the  removal changes
+    db.session.commit()
+
+    # clear instance feeds for dropdown menu cache
+    if instance_feed:
+        cache.delete_memoized(menu_instance_feeds)
+
+    # send the user back to the page they came from or main
+    # Get the referrer from the request headers
+    referrer = request.referrer
+
+    # If the referrer exists and is not the same as the current request URL, redirect to the referrer
+    if referrer and referrer != request.url:
+        return redirect(referrer)
+
+    # If referrer is not available or is the same as the current request URL, redirect to the default URL
+    return redirect(url_for('main.index'))
+
+
 @bp.route('/feed/add_community', methods=['GET'])
 @login_required
 def feed_add_community():
@@ -188,7 +238,6 @@ def feed_add_community():
     db.session.commit()
 
     # send the user back to the page they came from or main
-    # back(url_for('main.index'))
     # Get the referrer from the request headers
     referrer = request.referrer
 
@@ -418,7 +467,7 @@ def show_topic(feed_path):
 
 
 def get_all_child_feed_ids(feed: Feed) -> List[int]:
-    # recurse down the topic tree, gathering all the topic IDs found
+    # recurse down the feed tree, gathering all the feed IDs found
     feed_ids = [feed.id]
     for child_feed in Feed.query.filter(Feed.parent_feed_id == feed.id):
         feed_ids.extend(get_all_child_feed_ids(child_feed))

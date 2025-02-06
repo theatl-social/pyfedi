@@ -24,7 +24,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     joined_communities, moderating_communities, markdown_to_html, allowlist_html, \
     blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
     blocked_users, menu_topics, blocked_communities, get_request, mastodon_extra_field_link, \
-    permission_required, debug_mode_only, ip_address
+    permission_required, debug_mode_only, ip_address, menu_instance_feeds
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, read_posts, Feed
 
@@ -166,7 +166,8 @@ def home_page(sort, view_filter):
                            announcement=allowlist_html(get_setting('announcement', '')),
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site,
+                           menu_topics=menu_topics(), menu_instance_feeds=menu_instance_feeds(), 
+                           site=g.site,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
                            )
 
@@ -729,24 +730,12 @@ def static_manifest():
 def public_feeds():
     # default to no public feeds
     server_has_feeds = False
-    public_feeds_list = []
 
     # find all the feeds marked as public
     public_feeds = Feed.query.filter_by(public=True).all()
 
     if len(public_feeds) > 0:
         server_has_feeds = True
-        # make the list of feed data
-        for pf in public_feeds:
-            feed_dict = {}
-            feed_dict['id'] = pf.id
-            feed_dict['name'] = pf.name
-            feed_dict['num_communities'] = pf.num_communities if pf.num_communities else 0
-            user = User.query.get(pf.user_id)
-            creator = user.ap_id if user.ap_id else user.user_name
-            feed_dict['creator'] = creator
-            # feed_dict['public'] = cuf.public
-            public_feeds_list.append(feed_dict)
 
     # render the page
-    return render_template('feed/public_feeds.html', server_has_feeds=server_has_feeds, public_feeds_list=public_feeds_list)
+    return render_template('feed/public_feeds.html', server_has_feeds=server_has_feeds, public_feeds_list=public_feeds)

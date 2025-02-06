@@ -958,6 +958,10 @@ def menu_topics():
     return Topic.query.filter(Topic.parent_id == None).order_by(Topic.name).all()
 
 
+@cache.memoize(timeout=3000)
+def menu_instance_feeds():
+    return Feed.query.filter(Feed.parent_feed_id == None).filter(Feed.is_instance_feed == True).order_by(Feed.name).all()
+
 @cache.memoize(timeout=300)
 def community_moderators(community_id):
     return CommunityMember.query.filter((CommunityMember.community_id == community_id) &

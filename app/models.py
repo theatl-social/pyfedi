@@ -2574,6 +2574,10 @@ class Feed(db.Model):
         return_value = list(reversed(return_value))
         return '/'.join(return_value)
 
+    def creator(self):
+        owner = User.query.get(self.user_id)
+        return owner.ap_id if owner.ap_id else owner.user_name
+
     def profile_id(self):
         retval = self.ap_profile_id if self.ap_profile_id else f"https://{current_app.config['SERVER_NAME']}/f/{self.name}"
         return retval.lower()
