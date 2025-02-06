@@ -353,7 +353,8 @@ def allowlist_html(html: str, a_target='_blank') -> str:
 def markdown_to_html(markdown_text, anchors_new_tab=True) -> str:
     if markdown_text:
         raw_html = markdown2.markdown(markdown_text,
-                    extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True, 'breaks': {'on_newline': True, 'on_backslash': True}})
+                    extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True,
+                            'breaks': {'on_newline': True, 'on_backslash': True}, 'tag-friendly': True})
         return allowlist_html(raw_html, a_target='_blank' if anchors_new_tab else '')
     else:
         return ''
