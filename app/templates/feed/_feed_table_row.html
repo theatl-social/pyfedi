@@ -1,10 +1,15 @@
 <tr>
-    <td>{{ feed.name }}</td>
+    <!-- <td>{{ feed.name }}</td> -->
+    <td><a href="/f/{{ feed.name }}">{{ feed.name }}</a></td>
     <td>{{ feed.num_communities }}</td>
     <td>{{ feed.creator }}</td>
     {% if active_child == 'user_feeds' %}
         <td>{{ feed.public }}</td>
-        <td>Edit Feed Button</td>
+        {% if current_user.is_admin() %}
+            <td>{{ feed.is_instance_feed }}</td>
+        {% endif %}
+        <!-- <td>Edit Feed Button</td> -->
+        <td><a class="btn btn-primary" href="/feed/{{ feed.id }}/edit" style="float: right;">{{ _('Edit Feed') }}</a></td>
     {% elif active_child == 'public_feeds' %}
         <td>Copy/Subscribe Button</td>
     {% endif %}

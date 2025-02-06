@@ -2478,6 +2478,7 @@ class Feed(db.Model):
     public = db.Column(db.Boolean, default=False)
     last_edit = db.Column(db.DateTime, default=utcnow)
     parent_feed_id = db.Column(db.Integer, db.ForeignKey('feed.id'), index=True)
+    is_instance_feed = db.Column(db.Boolean, default=False)
 
     ap_id = db.Column(db.String(255), index=True)
     ap_profile_id = db.Column(db.String(255), index=True, unique=True)

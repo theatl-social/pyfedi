@@ -1,15 +1,25 @@
 # ----- imports -----
 import flask
+from datetime import timedelta
+from random import randint
+from typing import List
 from flask import g, current_app, request, redirect, url_for, flash, abort
 from flask_login import current_user, login_required
 from flask_babel import _
 from app import db
 from app.activitypub.signature import RsaKeys
 from app.community.util import save_icon_file, save_banner_file
+from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
+    POST_TYPE_LINK, POST_TYPE_VIDEO
 from app.feed import  bp
 from app.feed.forms import AddFeedForm, EditFeedForm
-from app.models import Feed, FeedMember, FeedItem
-from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markdown_to_html, render_template, back
+from app.inoculation import inoculation
+from app.models import Feed, FeedMember, FeedItem, Post, Community, read_posts, utcnow
+from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markdown_to_html, render_template, user_filters_posts, \
+    blocked_domains, blocked_instances, blocked_communities, blocked_users, communities_banned_from, moderating_communities, \
+    joined_communities, menu_topics
+from collections import namedtuple
+from sqlalchemy import desc, or_
 from slugify import slugify
 
 
@@ -27,6 +37,8 @@ def feed_new():
         form.nsfw.render_kw = {'disabled': True}
     if g.site.enable_nsfl is False:
         form.nsfl.render_kw = {'disabled': True}
+    if not current_user.is_admin():
+        form.is_instance_feed.render_kw = {'disabled': True}
 
     if form.validate_on_submit():
         if form.url.data.strip().lower().startswith('/f/'):
@@ -39,6 +51,7 @@ def feed_new():
                     nsfw=form.nsfw.data, nsfl=form.nsfl.data,
                     private_key=private_key,
                     public_key=public_key,
+                    public=form.public.data, is_instance_feed=form.is_instance_feed.data,
                     ap_profile_id='https://' + current_app.config['SERVER_NAME'] + '/f/' + form.url.data.lower(),
                     ap_public_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + form.url.data,
                     ap_followers_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + form.url.data + '/followers',
@@ -72,6 +85,7 @@ def feed_new():
     return render_template('feed/feed_new.html', title=_('Create a Feed'), form=form,
                            current_app=current_app)
 
+
 @bp.route('/feed/<int:feed_id>/edit', methods=['GET','POST'])
 @login_required
 def feed_edit(feed_id: int):
@@ -83,6 +97,9 @@ def feed_edit(feed_id: int):
     if feed_to_edit.user_id != current_user.id:
         abort(404)
     edit_feed_form = EditFeedForm()
+
+    if not current_user.is_admin():
+        edit_feed_form.is_instance_feed.render_kw = {'disabled': True}
     
     if edit_feed_form.validate_on_submit():
         feed_to_edit.title = edit_feed_form.feed_name.data
@@ -104,6 +121,7 @@ def feed_edit(feed_id: int):
         if g.site.enable_nsfl:
             feed_to_edit.nsfl = edit_feed_form.nsfl.data
         feed_to_edit.public = edit_feed_form.public.data
+        feed_to_edit.is_instance_feed = edit_feed_form.is_instance_feed.data
         db.session.add(feed_to_edit)
         db.session.commit()
 
@@ -123,6 +141,7 @@ def feed_edit(feed_id: int):
     else:
         edit_feed_form.nsfw.data = feed_to_edit.nsfw
     edit_feed_form.public.data = feed_to_edit.public
+    edit_feed_form.is_instance_feed.data = feed_to_edit.is_instance_feed
 
     return render_template('feed/feed_edit.html', form=edit_feed_form)
 
@@ -259,3 +278,148 @@ def feed_list():
     
     return options_html
 
+
+@bp.route('/f/<path:feed_path>', methods=['GET'])
+def show_topic(feed_path):
+
+    page = request.args.get('page', 1, type=int)
+    sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)
+    low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+    post_layout = request.args.get('layout', 'list' if not low_bandwidth else None)
+
+    # translate topic_name from /topic/fediverse to topic_id
+    feed_url_parts = feed_path.split('/')
+    last_feed_machine_name = feed_url_parts[-1]
+    breadcrumbs = []
+    existing_url = '/f'
+    feed = None
+    for url_part in feed_url_parts:
+        feed = Feed.query.filter(Feed.machine_name == url_part.strip().lower()).first()
+        if feed:
+            breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+            breadcrumb.text = feed.name
+            breadcrumb.url = f"{existing_url}/{feed.machine_name}" if feed.machine_name != last_feed_machine_name else ''
+            breadcrumbs.append(breadcrumb)
+            existing_url = breadcrumb.url
+        else:
+            abort(404)
+    current_feed = feed
+
+    if current_feed:
+        # get the feed_ids
+        if current_feed.show_posts_in_children:    # include posts from child topics
+            feed_ids = get_all_child_feed_ids(current_feed)
+        else:
+            feed_ids = [current_feed.id]
+        
+        # for each feed get the community ids (FeedItem) in the feed
+        # used for the posts searching
+        feed_community_ids = []
+        for fid in feed_ids:
+            feed_items = FeedItem.query.join(Feed, FeedItem.feed_id == fid).all()
+            for item in feed_items:
+                feed_community_ids.append(item.community_id)
+
+        # get the communities objects
+        # feed_communities = []
+        # for fc_id in feed_community_ids:
+        #     c = Community.query.get(fc_id)
+        #     feed_communities.append(c)
+
+
+        posts = Post.query.join(Community, Post.community_id == Community.id).filter(Community.id.in_(feed_community_ids),
+                                                                                     Community.banned == False)
+
+        # filter out nsfw and nsfl if desired
+        if current_user.is_anonymous:
+            posts = posts.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
+            content_filters = {}
+        else:
+            if current_user.ignore_bots == 1:
+                posts = posts.filter(Post.from_bot == False)
+            if current_user.hide_nsfl == 1:
+                posts = posts.filter(Post.nsfl == False)
+            if current_user.hide_nsfw == 1:
+                posts = posts.filter(Post.nsfw == False)
+            if current_user.hide_read_posts:
+                posts = posts.outerjoin(read_posts, (Post.id == read_posts.c.read_post_id) & (read_posts.c.user_id == current_user.id))
+                posts = posts.filter(read_posts.c.read_post_id.is_(None))  # Filter where there is no corresponding read post for the current user
+            posts = posts.filter(Post.deleted == False)
+            content_filters = user_filters_posts(current_user.id)
+
+            # filter blocked domains and instances
+            domains_ids = blocked_domains(current_user.id)
+            if domains_ids:
+                posts = posts.filter(or_(Post.domain_id.not_in(domains_ids), Post.domain_id == None))
+            instance_ids = blocked_instances(current_user.id)
+            if instance_ids:
+                posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
+            community_ids = blocked_communities(current_user.id)
+            if community_ids:
+                posts = posts.filter(Post.community_id.not_in(community_ids))
+            # filter blocked users
+            blocked_accounts = blocked_users(current_user.id)
+            if blocked_accounts:
+                posts = posts.filter(Post.user_id.not_in(blocked_accounts))
+
+            banned_from = communities_banned_from(current_user.id)
+            if banned_from:
+                posts = posts.filter(Post.community_id.not_in(banned_from))
+
+        # sorting
+        if sort == '' or sort == 'hot':
+            posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
+        elif sort == 'top':
+            posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=7)).order_by(desc(Post.up_votes - Post.down_votes))
+        elif sort == 'new':
+            posts = posts.order_by(desc(Post.posted_at))
+        elif sort == 'active':
+            posts = posts.order_by(desc(Post.last_active))
+
+        # paging
+        per_page = 100
+        if post_layout == 'masonry':
+            per_page = 200
+        elif post_layout == 'masonry_wide':
+            per_page = 300
+        posts = posts.paginate(page=page, per_page=per_page, error_out=False)
+
+        # topic_communities = Community.query.filter(Community.topic_id == current_topic.id, Community.banned == False).order_by(Community.name)
+        # feed_communities = FeedItem.query.join(Feed, FeedItem.feed_id == feed.id).all()
+        feed_communities = Community.query.filter(Community.id.in_(feed_community_ids),Community.banned == False)
+
+
+        next_url = url_for('feed.show_feed',
+                           feed_path=feed_path,
+                           page=posts.next_num, sort=sort, layout=post_layout) if posts.has_next else None
+        prev_url = url_for('feed.show_feed',
+                           feed_path=feed_path,
+                           page=posts.prev_num, sort=sort, layout=post_layout) if posts.has_prev and page != 1 else None
+
+        # sub_topics = Topic.query.filter_by(parent_id=current_topic.id).order_by(Topic.name).all()
+        sub_feeds = Feed.query.filter_by(parent_feed_id=current_feed.id).order_by(Feed.name).all()
+
+        return render_template('feed/show_feed.html', title=_(current_feed.name), posts=posts, feed=current_feed, sort=sort,
+                               page=page, post_layout=post_layout, next_url=next_url, prev_url=prev_url,
+                               feed_communities=feed_communities, content_filters=content_filters,
+                               sub_feeds=sub_feeds, feed_path=feed_path, breadcrumbs=breadcrumbs,
+                               rss_feed=f"https://{current_app.config['SERVER_NAME']}/f/{feed_path}.rss",
+                               rss_feed_name=f"{current_feed.name} on {g.site.name}",
+                               show_post_community=True, moderating_communities=moderating_communities(current_user.get_id()),
+                               joined_communities=joined_communities(current_user.get_id()),
+                               menu_topics=menu_topics(),
+                               inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                               POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
+                               POST_TYPE_VIDEO=POST_TYPE_VIDEO,
+                               SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
+                               )
+    else:
+        abort(404)
+
+
+def get_all_child_feed_ids(feed: Feed) -> List[int]:
+    # recurse down the topic tree, gathering all the topic IDs found
+    feed_ids = [feed.id]
+    for child_feed in Feed.query.filter(Feed.parent_feed_id == feed.id):
+        feed_ids.extend(get_all_child_feed_ids(child_feed))
+    return feed_ids

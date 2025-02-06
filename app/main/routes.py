@@ -735,13 +735,15 @@ def public_feeds():
     public_feeds = Feed.query.filter_by(public=True).all()
 
     if len(public_feeds) > 0:
+        server_has_feeds = True
         # make the list of feed data
         for pf in public_feeds:
             feed_dict = {}
+            feed_dict['id'] = pf.id
             feed_dict['name'] = pf.name
             feed_dict['num_communities'] = pf.num_communities if pf.num_communities else 0
             user = User.query.get(pf.user_id)
-            creator = user.ap_id if user.ap_id else user.username
+            creator = user.ap_id if user.ap_id else user.user_name
             feed_dict['creator'] = creator
             # feed_dict['public'] = cuf.public
             public_feeds_list.append(feed_dict)

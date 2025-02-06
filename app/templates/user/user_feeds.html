@@ -18,6 +18,9 @@
             <th>Communities</th>
             <th>Creator</th>
             <th>Public</th>
+            {% if current_user.is_admin() %}
+                <th>Instance</th>
+            {% endif %}
             <th>Actions</th>
         </tr>
         {% for feed in user_feeds_list -%}

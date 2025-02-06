@@ -18,6 +18,8 @@ class AddFeedForm(FlaskForm):
     nsfw = BooleanField('NSFW')
     nsfl = BooleanField('NSFL')
     public = BooleanField('Make Feed Public')
+    is_instance_feed = BooleanField('Make Instance Feed')
+
     submit = SubmitField(_l('Create'))
 
     def validate(self, extra_validators=None):
@@ -45,5 +47,6 @@ class EditFeedForm(FlaskForm):
     nsfw = BooleanField('NSFW')
     nsfl = BooleanField('NSFL')
     public = BooleanField('Make Feed Public')
+    is_instance_feed = BooleanField('Make Instance Feed')
     submit = SubmitField(_l('Save'))
 

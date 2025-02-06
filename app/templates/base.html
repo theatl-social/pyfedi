@@ -176,6 +176,20 @@
                                   <li><a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a></li>
                                 </ul>
                             </li>
+                            <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %}">
+                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/feeds"  aria-haspopup="true" aria-expanded="false">{{ _('Feeds') }}</a>
+                                <ul class="dropdown-menu">
+                                  {% if menu_public_feeds -%}
+                                       {% for feed_menu_item in menu_public_feeds -%}
+                                            <li><a class="dropdown-item{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.path() }}">{{ feed_menu_item.name }}</a></li>
+                                       {% endfor -%}
+                                       <li><hr class="dropdown-divider"></li>
+                                  {% else -%}
+                                    <li><a class="dropdown-item{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></li>
+                                  {% endif -%}
+                                  <!-- <li><a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a></li> -->
+                                </ul>
+                            </li>                               
                             <li class="nav-item"><a class="nav-link" href="/auth/login">{{ _('Log in') }}</a></li>
                             <li class="nav-item"><a class="nav-link" href="/auth/register">{{ _('Register') }}</a></li>
                             <li class="nav-item"><a class="nav-link" href="/donate">{{ _('Donate') }}</a></li>
@@ -217,8 +231,8 @@
                                             <li><a class="dropdown-item{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.path() }}">{{ feed_menu_item.name }}</a></li>
                                        {% endfor -%}
                                        <li><hr class="dropdown-divider"></li>
-                                       <li><a class="dropdown-item{% if active_child == 'user_feeds' %} active{% endif %}" href="/u/myfeeds">{{ _('My Feeds') }}</a></li>
                                   {% else -%}
+                                    <li><a class="dropdown-item{% if active_child == 'user_feeds' %} active{% endif %}" href="/u/myfeeds">{{ _('My Feeds') }}</a></li>
                                     <li><a class="dropdown-item{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></li>
                                   {% endif -%}
                                   <!-- <li><a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a></li> -->

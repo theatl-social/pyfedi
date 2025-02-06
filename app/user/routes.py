@@ -1442,10 +1442,12 @@ def user_myfeeds():
     user_feeds_list = []
     for cuf in current_user_feeds:
         feed_dict = {}
+        feed_dict['id'] = cuf.id
         feed_dict['name'] = cuf.name
         feed_dict['num_communities'] = cuf.num_communities if cuf.num_communities else 0
         feed_dict['creator'] = current_user.user_name
         feed_dict['public'] = cuf.public
+        feed_dict['is_instance_feed'] = cuf.is_instance_feed
         user_feeds_list.append(feed_dict)
     
     return render_template('user/user_feeds.html', user_has_feeds=user_has_feeds, user_feeds_list=user_feeds_list)
