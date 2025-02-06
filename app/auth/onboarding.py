@@ -70,7 +70,7 @@ def join_topic(topic_id):
                 join_request = CommunityJoinRequest(user_id=current_user.id, community_id=community.id)
                 db.session.add(join_request)
                 db.session.commit()
-                send_community_follow(community.id, join_request, current_user.id)
+                send_community_follow(community.id, join_request.id, current_user.id)
 
             member = CommunityMember(user_id=current_user.id, community_id=community.id)
             db.session.add(member)
@@ -88,7 +88,7 @@ def topics_for_form():
     return result
 
 
-def send_community_follow(community_id, join_request_id, user_id):
+def send_community_follow(community_id: int, join_request_id: int, user_id: int):
     with current_app.app_context():
         user = User.query.get(user_id)
         community = Community.query.get(community_id)
