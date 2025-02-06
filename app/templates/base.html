@@ -168,8 +168,8 @@
                                        {% for topic_menu_item in menu_topics -%}
                                             <li><a class="dropdown-item{% if topic and topic.id == topic_menu_item.id%} active{% endif %}" href="/topic/{{ topic_menu_item.path() }}">{{ topic_menu_item.name }}</a></li>
                                        {% endfor -%}
-                                       <li><hr class="dropdown-divider"></li>
                                        <li><a class="dropdown-item{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('More topics') }}</a></li>
+                                       <li><hr class="dropdown-divider"></li>
                                   {% else %}
                                     <li><a class="dropdown-item{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('Browse by topic') }}</a></li>
                                   {% endif %}
@@ -184,6 +184,7 @@
                                             <li><a class="dropdown-item{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.path() }}">{{ feed_menu_item.title }}</a></li>
                                        {% endfor -%}
                                        <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></li>
                                   {% else -%}
                                     <li><a class="dropdown-item{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></li>
                                   {% endif -%}
