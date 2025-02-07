@@ -1,4 +1,3 @@
-from app import cache
 from app.api.alpha.views import community_view
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
 from app.community.util import search_for_community
@@ -10,8 +9,21 @@ from app.utils import communities_banned_from, blocked_instances, blocked_commun
 from sqlalchemy import desc, or_
 
 
-@cache.memoize(timeout=3)
-def cached_community_list(type, sort, limit, user_id, query=''):
+def get_community_list(auth, data):
+    type = data['type_'] if data and 'type_' in data else "All"
+    sort = data['sort'] if data and 'sort' in data else "Hot"
+    page = int(data['page']) if data and 'page' in data else 1
+    limit = int(data['limit']) if data and 'limit' in data else 10
+
+    user_id = authorise_api_user(auth) if auth else None
+
+    query = data['q'] if data and 'q' in data else ''
+    if user_id and '@' in query and '.' in query and query.startswith('!'):
+        search_for_community(query)
+        query = query[1:]
+
+    user_id = authorise_api_user(auth) if auth else None
+
     if type == 'Subscribed':
         communities = Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == user_id)
     elif type == 'Local':
@@ -34,31 +46,9 @@ def cached_community_list(type, sort, limit, user_id, query=''):
         communities = communities.filter(or_(Community.title.ilike(f"%{query}%"), Community.ap_id.ilike(f"%{query}%")))
 
     if sort == 'Active':    # 'Trending Communities' screen
-        communities = communities.order_by(desc(Community.last_active)).limit(limit)
+        communities = communities.order_by(desc(Community.last_active))
 
-    return communities.all()
-
-
-def get_community_list(auth, data):
-    type = data['type_'] if data and 'type_' in data else "All"
-    sort = data['sort'] if data and 'sort' in data else "Hot"
-    page = int(data['page']) if data and 'page' in data else 1
-    limit = int(data['limit']) if data and 'limit' in data else 10
-
-    user_id = authorise_api_user(auth) if auth else None
-
-    query = data['q'] if data and 'q' in data else ''
-    if user_id and '@' in query and '.' in query and query.startswith('!'):
-        search_for_community(query)
-        query = query[1:]
-
-    user_id = authorise_api_user(auth) if auth else None
-
-    communities = cached_community_list(type, sort, limit, user_id, query)
-
-    start = (page - 1) * limit
-    end = start + limit
-    communities = communities[start:end]
+    communities = communities.paginate(page=page, per_page=limit, error_out=False)
 
     communitylist = []
     for community in communities:
