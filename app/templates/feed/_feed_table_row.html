@@ -1,6 +1,8 @@
 <tr>
     <td><a href="/f/{{ feed.name }}">{{ feed.title }}</a></td>
-    <td>{{ feed.parent_feed_name() }}</td>
+    {% if active_child == 'user_feeds' %}
+        <td>{{ feed.parent_feed_name() }}</td>
+    {% endif %}
     <td>{{ feed.num_communities }}</td>
     <td>{{ feed.creator() }}</td>
     {% if active_child == 'user_feeds' %}
