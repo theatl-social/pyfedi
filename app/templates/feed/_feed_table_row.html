@@ -20,11 +20,11 @@
         </td>
     {% elif active_child == 'public_feeds' %}
         {% if current_user.is_authenticated %}
-            <td>Copy/Subscribe Button</td>
+            <td><a href="/feed/{{ feed.id }}/copy">Copy</a></td>
         {% endif %}
     {% elif active_child == 'user_public_feeds' %}
         {% if current_user.is_authenticated %}
-            <td>Copy/Subscribe Button</td>
+            <td><a href="/feed/{{ feed.id }}/copy">Copy</a></td>
         {% endif %}
     {% endif %}
 </tr>

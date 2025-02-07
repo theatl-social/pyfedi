@@ -12,7 +12,7 @@ from app.community.util import save_icon_file, save_banner_file
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
     POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_FEED
 from app.feed import  bp
-from app.feed.forms import AddFeedForm, EditFeedForm
+from app.feed.forms import EditFeedForm
 from app.feed.util import feeds_for_form
 from app.inoculation import inoculation
 from app.models import Feed, FeedMember, FeedItem, Post, Community, read_posts, utcnow, NotificationSubscription
@@ -33,7 +33,8 @@ from slugify import slugify
 def feed_new():
     if current_user.banned:
         return show_ban_message()
-    form = AddFeedForm()
+
+    form = EditFeedForm()
     if g.site.enable_nsfw is False:
         form.nsfw.render_kw = {'disabled': True}
     if g.site.enable_nsfl is False:
@@ -210,6 +211,94 @@ def feed_delete(feed_id: int):
 
     # If referrer is not available or is the same as the current request URL, redirect to the default URL
     return redirect(url_for('main.index'))
+
+
+@bp.route('/feed/<int:feed_id>/copy', methods=['GET','POST'])
+@login_required
+def feed_copy(feed_id: int):
+    if current_user.banned:
+        return show_ban_message()
+    # load the feed
+    feed_to_copy = Feed.query.get_or_404(feed_id)
+    copy_feed_form = EditFeedForm()
+    copy_feed_form.parent_feed_id.choices = feeds_for_form(0)
+
+    if not current_user.is_admin():
+        copy_feed_form.is_instance_feed.render_kw = {'disabled': True}
+    
+    if copy_feed_form.validate_on_submit():
+        if copy_feed_form.url.data.strip().lower().startswith('/f/'):
+            copy_feed_form.url.data = copy_feed_form.url.data[3:]
+        copy_feed_form.url.data = slugify(copy_feed_form.url.data.strip(), separator='_').lower()
+        private_key, public_key = RsaKeys.generate_keypair()
+        feed = Feed(user_id=current_user.id, title=copy_feed_form.feed_name.data, name=copy_feed_form.url.data, machine_name=copy_feed_form.url.data, 
+                    description=piefed_markdown_to_lemmy_markdown(copy_feed_form.description.data),
+                    description_html=markdown_to_html(copy_feed_form.description.data),
+                    show_posts_in_children=copy_feed_form.show_child_posts.data,
+                    nsfw=copy_feed_form.nsfw.data, nsfl=copy_feed_form.nsfl.data,
+                    private_key=private_key,
+                    public_key=public_key,
+                    public=copy_feed_form.public.data, is_instance_feed=copy_feed_form.is_instance_feed.data,
+                    ap_profile_id='https://' + current_app.config['SERVER_NAME'] + '/f/' + copy_feed_form.url.data.lower(),
+                    ap_public_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + copy_feed_form.url.data,
+                    ap_followers_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + copy_feed_form.url.data + '/followers',
+                    ap_following_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + copy_feed_form.url.data + '/following',
+                    ap_domain=current_app.config['SERVER_NAME'],
+                    subscriptions_count=1, instance_id=1)
+        if copy_feed_form.parent_feed_id.data:
+            feed.parent_feed_id = copy_feed_form.parent_feed_id.data
+        else:
+            feed.parent_feed_id = None
+        icon_file = request.files['icon_file']
+        if icon_file and icon_file.filename != '':
+            file = save_icon_file(icon_file, directory='feeds')
+            if file:
+                feed.icon = file
+        banner_file = request.files['banner_file']
+        if banner_file and banner_file.filename != '':
+            file = save_banner_file(banner_file, directory='feeds')
+            if file:
+                feed.image = file
+        db.session.add(feed)
+        db.session.commit()
+
+        # get the FeedItems from the feed being copied and 
+        # make sure they all come over to the new Feed
+        old_feed_items = FeedItem.query.join(Feed, FeedItem.feed_id == feed_to_copy.id).all()
+        for item in old_feed_items:
+            fi = FeedItem(feed_id=feed.id, community_id=item.community_id)
+            db.session.add(fi)
+            db.session.commit()
+
+        feed.num_communities = len(old_feed_items)
+        db.session.add(feed)
+        db.session.commit()
+
+        membership = FeedMember(user_id=current_user.id, feed_id=feed.id)
+        db.session.add(membership)
+        db.session.commit()
+
+        flash(_('Your new Feed has been created.'))
+        return redirect(url_for('main.index'))        
+
+    # add the current data to the form
+    copy_feed_form.feed_name.data = feed_to_copy.title
+    copy_feed_form.url.data = feed_to_copy.name
+    copy_feed_form.description.data = feed_to_copy.description
+    copy_feed_form.show_child_posts.data = feed_to_copy.show_posts_in_children
+    if g.site.enable_nsfw is False:
+        copy_feed_form.nsfw.render_kw = {'disabled': True}
+    else:
+        copy_feed_form.nsfw.data = feed_to_copy.nsfw
+    if g.site.enable_nsfl is False:
+        copy_feed_form.nsfl.render_kw = {'disabled': True}
+    else:
+        copy_feed_form.nsfw.data = feed_to_copy.nsfw
+    copy_feed_form.public.data = feed_to_copy.public
+    copy_feed_form.is_instance_feed.data = feed_to_copy.is_instance_feed
+
+    return render_template('feed/feed_copy.html', form=copy_feed_form, menu_topics=menu_topics(), menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None)
 
 
 @bp.route('/feed/<int:feed_id>/notification', methods=['GET', 'POST'])
