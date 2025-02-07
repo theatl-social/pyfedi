@@ -4,7 +4,7 @@
         <td>{{ feed.parent_feed_name() }}</td>
     {% endif %}
     <td>{{ feed.num_communities }}</td>
-    <td>{{ feed.creator() }}</td>
+    <td><a href="/u/{{ feed.creator() }}/feeds">{{ feed.creator() }}</a></td>
     {% if active_child == 'user_feeds' %}
         <td>{{ feed.public }}</td>
         {% if current_user.is_admin() %}
@@ -19,6 +19,12 @@
             {% endif %}
         </td>
     {% elif active_child == 'public_feeds' %}
-        <td>Copy/Subscribe Button</td>
+        {% if current_user.is_authenticated %}
+            <td>Copy/Subscribe Button</td>
+        {% endif %}
+    {% elif active_child == 'user_public_feeds' %}
+        {% if current_user.is_authenticated %}
+            <td>Copy/Subscribe Button</td>
+        {% endif %}
     {% endif %}
 </tr>

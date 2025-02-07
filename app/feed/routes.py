@@ -343,14 +343,14 @@ def feed_list():
 
 
 @bp.route('/f/<path:feed_path>', methods=['GET'])
-def show_topic(feed_path):
+def show_feed(feed_path):
 
     page = request.args.get('page', 1, type=int)
     sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
     post_layout = request.args.get('layout', 'list' if not low_bandwidth else None)
 
-    # translate topic_name from /topic/fediverse to topic_id
+    # translate feed_name from /f/myfunfeed to feed_id
     feed_url_parts = feed_path.split('/')
     last_feed_machine_name = feed_url_parts[-1]
     breadcrumbs = []

@@ -1444,6 +1444,24 @@ def user_myfeeds():
 
 
 @bp.route('/u/<actor>/feeds', methods=['GET','POST'])
-def user_feeds():
+def user_feeds(actor):
     # this will show a specific user's public feeds
-    pass
+    user_has_public_feeds = False
+
+    # find the actor, local or remote
+    actor = actor.strip()
+    user = User.query.filter_by(user_name=actor, deleted=False).first()
+    if user is None:
+        user = User.query.filter_by(ap_id=actor, deleted=False).first()
+        if user is None:
+            abort(404)
+    
+    # find all user feeds marked as public
+    user_public_feeds = Feed.query.filter_by(public=True).filter_by(user_id=user.id).all()
+
+    if len(user_public_feeds) > 0:
+        user_has_public_feeds = True
+
+    return render_template('user/user_public_feeds.html', user_has_public_feeds=user_has_public_feeds, 
+                           creator_name=user.user_name, user_feeds_list=user_public_feeds)
+
