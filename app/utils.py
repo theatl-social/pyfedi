@@ -77,8 +77,8 @@ def return_304(etag, content_type=None):
 
 # Jinja: when a file was modified. Useful for cache-busting
 def getmtime(filename):
-    if os.path.exists('static/' + filename):
-        return os.path.getmtime('static/' + filename)
+    if os.path.exists('app/static/' + filename):
+        return os.path.getmtime('app/static/' + filename)
 
 
 # do a GET request to a uri, return the result
