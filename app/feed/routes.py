@@ -390,7 +390,7 @@ def show_feed(feed_path):
 
     if current_feed:
         # get the feed_ids
-        if current_feed.show_posts_in_children:    # include posts from child topics
+        if current_feed.show_posts_in_children:    # include posts from child feeds
             feed_ids = get_all_child_feed_ids(current_feed)
         else:
             feed_ids = [current_feed.id]
@@ -402,13 +402,6 @@ def show_feed(feed_path):
             feed_items = FeedItem.query.join(Feed, FeedItem.feed_id == fid).all()
             for item in feed_items:
                 feed_community_ids.append(item.community_id)
-
-        # get the communities objects
-        # feed_communities = []
-        # for fc_id in feed_community_ids:
-        #     c = Community.query.get(fc_id)
-        #     feed_communities.append(c)
-
 
         posts = Post.query.join(Community, Post.community_id == Community.id).filter(Community.id.in_(feed_community_ids),
                                                                                      Community.banned == False)
