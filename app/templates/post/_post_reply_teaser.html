@@ -37,7 +37,7 @@
             {% endif -%}
         </div>
         <div class="col-auto comment_time">
-            <a href="/post/{{ post.id }}#comment_{{ post_reply.id }}">
+            <a href="/post/{{ post_reply.post_id }}#comment_{{ post_reply.id }}">
                 <time datetime="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post_reply.posted_at).humanize(locale=locale) }}</time>{% if post_reply.edited_at -%}, edited <time datetime="{{ arrow.get(post_reply.posted_at) }}" title="{{ arrow.get(post_reply.posted_at) }}">{{ arrow.get(post_reply.edited_at).humanize(locale=locale) }}</time>{% endif -%}
             </a>
         </div>
