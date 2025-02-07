@@ -80,6 +80,13 @@ def show_profile(user):
     user.recalculate_post_stats()
     db.session.commit()
 
+    # find all user feeds marked as public
+    user_has_public_feeds = False
+    user_public_feeds = Feed.query.filter_by(public=True).filter_by(user_id=user.id).all()
+
+    if len(user_public_feeds) > 0:
+        user_has_public_feeds = True
+
     # pagination urls
     post_next_url = url_for('activitypub.user_profile', actor=user.ap_id if user.ap_id is not None else user.user_name,
                        post_page=posts.next_num) if posts.has_next else None
@@ -99,7 +106,9 @@ def show_profile(user):
                            noindex=not user.indexable, show_post_community=True, hide_vote_buttons=True,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site
+                           menu_topics=menu_topics(), site=g.site,
+                           user_has_public_feeds=user_has_public_feeds,
+                           user_public_feeds=user_public_feeds
                            )
 
 

@@ -10,12 +10,12 @@ from app import db, cache
 from app.activitypub.signature import RsaKeys
 from app.community.util import save_icon_file, save_banner_file
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
-    POST_TYPE_LINK, POST_TYPE_VIDEO
+    POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_FEED
 from app.feed import  bp
 from app.feed.forms import AddFeedForm, EditFeedForm
 from app.feed.util import feeds_for_form
 from app.inoculation import inoculation
-from app.models import Feed, FeedMember, FeedItem, Post, Community, read_posts, utcnow
+from app.models import Feed, FeedMember, FeedItem, Post, Community, read_posts, utcnow, NotificationSubscription
 from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markdown_to_html, render_template, user_filters_posts, \
     blocked_domains, blocked_instances, blocked_communities, blocked_users, communities_banned_from, moderating_communities, \
     joined_communities, menu_topics, menu_instance_feeds, validation_required
@@ -208,6 +208,26 @@ def feed_delete(feed_id: int):
 
     # If referrer is not available or is the same as the current request URL, redirect to the default URL
     return redirect(url_for('main.index'))
+
+
+@bp.route('/feed/<int:feed_id>/notification', methods=['GET', 'POST'])
+@login_required
+def feed_notification(feed_id: int):
+    # Toggle whether the current user is subscribed to notifications about this feed's posts or not
+    feed = Feed.query.get_or_404(feed_id)
+    existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == feed.id,
+                                                                  NotificationSubscription.user_id == current_user.id,
+                                                                  NotificationSubscription.type == NOTIF_FEED).first()
+    if existing_notification:
+        db.session.delete(existing_notification)
+        db.session.commit()
+    else:  # no subscription yet, so make one
+        new_notification = NotificationSubscription(name=feed.name, user_id=current_user.id, entity_id=feed.id,
+                                                    type=NOTIF_FEED)
+        db.session.add(new_notification)
+        db.session.commit()
+
+    return render_template('feed/_notification_toggle.html', feed=feed)
 
 
 @bp.route('/feed/add_community', methods=['GET'])
