@@ -44,7 +44,7 @@ def get_user_list(auth, data):
     # (enough for instance view)
 
     type = data['type_'] if data and 'type_' in data else "All"
-    sort = data['sort'] if data and 'sort' in data else "Hot"
+    sort = data['sort'] if data and 'sort' in data else "New"
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 10
 
@@ -53,10 +53,13 @@ def get_user_list(auth, data):
     if type == 'Local':
         users = User.query.filter_by(instance_id=1, deleted=False).order_by(User.id)
     else:
-        users = User.query.filter_by(deleted=False).order_by(User.id)
+        users = User.query.filter(User.instance_id != 1, User.deleted == False).order_by(desc(User.id))
 
     if query:
-        users = users.filter(User.user_name.ilike(f"%{query}%"))
+        if '@' in query:
+            users = users.filter(User.ap_id.ilike(f"%{query}%"))
+        else:
+            users = users.filter(User.user_name.ilike(f"%{query}%"))
 
     users = users.paginate(page=page, per_page=limit, error_out=False)
 

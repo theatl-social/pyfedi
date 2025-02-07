@@ -9,7 +9,7 @@ def get_search(auth, data):
         raise Exception('missing parameters for search')
 
     type = data['type_']
-    listing_type = data['listing_type'] if 'listing_type' in data else 'Local'
+    listing_type = data['listing_type'] if 'listing_type' in data else 'All'
 
     data['type_'] = listing_type
 
