@@ -8,7 +8,7 @@ from app.chat.forms import AddReply, ReportConversationForm
 from app.chat.util import send_message
 from app.models import Site, User, Report, ChatMessage, Notification, InstanceBlock, Conversation, conversation_member, CommunityBan, ModLog
 from app.user.forms import ReportUserForm
-from app.utils import render_template, moderating_communities, joined_communities, menu_topics
+from app.utils import render_template, moderating_communities, joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds
 from app.chat import bp
 
 
@@ -55,7 +55,9 @@ def chat_home(conversation_id=None):
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(),
-                                   site=g.site)
+                                   site=g.site, menu_instance_feeds=menu_instance_feeds(), 
+                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                                   )
 
 
 @bp.route('/chat/<int:to>/new', methods=['GET', 'POST'])
@@ -85,7 +87,9 @@ def new_message(to):
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
                                menu_topics=menu_topics(),
-                               site=g.site)
+                               site=g.site, menu_instance_feeds=menu_instance_feeds(), 
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                               )
 
 
 @bp.route('/chat/denied', methods=['GET'])
@@ -128,7 +132,8 @@ def chat_options(conversation_id):
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(),
-                           site=g.site
+                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -190,5 +195,6 @@ def chat_report(conversation_id):
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
                                menu_topics=menu_topics(),
-                               site=g.site
+                               site=g.site, menu_instance_feeds=menu_instance_feeds(), 
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                                )

@@ -20,7 +20,8 @@ from app import db, cache
 from app.topic.forms import SuggestTopicsForm
 from app.utils import render_template, user_filters_posts, moderating_communities, joined_communities, \
     community_membership, blocked_domains, validation_required, mimetype_from_url, blocked_instances, \
-    communities_banned_from, blocked_users, menu_topics, blocked_communities
+    communities_banned_from, blocked_users, menu_topics, blocked_communities, menu_instance_feeds, \
+    menu_my_feeds
 
 
 @bp.route('/topic/<path:topic_path>', methods=['GET'])
@@ -136,6 +137,8 @@ def show_topic(topic_path):
                                POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
                                POST_TYPE_VIDEO=POST_TYPE_VIDEO,
                                SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
+                               menu_instance_feeds=menu_instance_feeds(), 
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                                )
     else:
         abort(404)
@@ -207,7 +210,10 @@ def topic_create_post(topic_name):
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(),
-                           SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR)
+                           SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           )
 
 
 @bp.route('/topic/<int:topic_id>/notification', methods=['GET', 'POST'])
@@ -249,7 +255,9 @@ def suggest_topics():
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
                                menu_topics=menu_topics(),
-                               site=g.site)
+                               site=g.site, menu_instance_feeds=menu_instance_feeds(), 
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                               )
 
 
 @bp.route('/topic/suggestion-denied', methods=['GET'])

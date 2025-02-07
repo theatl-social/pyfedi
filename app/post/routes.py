@@ -33,7 +33,8 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     blocked_instances, blocked_domains, community_moderators, blocked_phrases, show_ban_message, recently_upvoted_posts, \
     recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, reply_is_stupid, \
     languages_for_form, menu_topics, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown, \
-    permission_required, blocked_users, get_request, is_local_image_url, is_video_url, can_upvote, can_downvote
+    permission_required, blocked_users, get_request, is_local_image_url, is_video_url, can_upvote, can_downvote, \
+    menu_instance_feeds, menu_my_feeds
 from app.shared.reply import make_reply, edit_reply
 from app.shared.post import edit_post
 
@@ -192,7 +193,9 @@ def show_post(post_id: int):
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
-                           inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                           inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
     response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
     response.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/post/{post.id}>; rel="alternate"; type="application/activity+json"')
@@ -414,6 +417,8 @@ def continue_discussion(post_id, comment_id):
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
                            community=post.community,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
@@ -473,7 +478,10 @@ def add_reply(post_id: int, comment_id: int):
                                moderating_communities=moderating_communities(current_user.get_id()), mods=mod_list,
                                joined_communities = joined_communities(current_user.id), community=post.community,
                                SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                               inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
+                               inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                               menu_topics=menu_topics(), menu_instance_feeds=menu_instance_feeds(), 
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                               )
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/reply_inline', methods=['GET', 'POST'])
@@ -533,7 +541,9 @@ def post_options(post_id: int):
     return render_template('post/post_options.html', post=post, existing_bookmark=existing_bookmark,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site)
+                           menu_topics=menu_topics(), site=g.site, menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           )
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/options_menu', methods=['GET'])
@@ -557,7 +567,9 @@ def post_reply_options(post_id: int, comment_id: int):
                            existing_bookmark=existing_bookmark,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site
+                           menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -663,7 +675,9 @@ def post_edit(post_id: int):
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                                   menu_instance_feeds=menu_instance_feeds(), 
+                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                                    )
     else:
         abort(401)
@@ -949,7 +963,8 @@ def post_report(post_id: int):
     return render_template('post/post_report.html', title=_('Report post'), form=form, post=post,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site
+                           menu_topics=menu_topics(), site=g.site, menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -1024,7 +1039,9 @@ def post_mea_culpa(post_id: int):
     return render_template('post/post_mea_culpa.html', title=_('I changed my mind'), form=form, post=post,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site
+                           menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -1100,7 +1117,8 @@ def post_reply_report(post_id: int, comment_id: int):
     return render_template('post/post_reply_report.html', title=_('Report comment'), form=form, post=post, post_reply=post_reply,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site
+                           menu_topics=menu_topics(), site=g.site, menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -1177,7 +1195,10 @@ def post_reply_edit(post_id: int, comment_id: int):
                                    joined_communities=joined_communities(current_user.get_id()), menu_topics=menu_topics(),
                                    community=post.community, site=g.site,
                                    SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                                   menu_instance_feeds=menu_instance_feeds(), 
+                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                                   )
     else:
         abort(401)
 
@@ -1411,7 +1432,9 @@ def post_view_voting_activity(post_id: int):
                            post_title=post_title, upvoters=upvoters, downvoters=downvoters,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site
+                           menu_topics=menu_topics(), site=g.site, 
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -1431,7 +1454,9 @@ def post_reply_view_voting_activity(comment_id: int):
                            reply_text=reply_text, upvoters=upvoters, downvoters=downvoters,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site
+                           menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -1507,7 +1532,9 @@ def post_cross_post(post_id: int):
                                breadcrumbs=breadcrumbs,
                                moderating_communities=moderating,
                                joined_communities=joined,
-                               menu_topics=menu_topics(), site=g.site
+                               menu_topics=menu_topics(), site=g.site,
+                               menu_instance_feeds=menu_instance_feeds(), 
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                                )
 
 

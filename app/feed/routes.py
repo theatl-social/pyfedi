@@ -18,7 +18,7 @@ from app.inoculation import inoculation
 from app.models import Feed, FeedMember, FeedItem, Post, Community, read_posts, utcnow, NotificationSubscription
 from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markdown_to_html, render_template, user_filters_posts, \
     blocked_domains, blocked_instances, blocked_communities, blocked_users, communities_banned_from, moderating_communities, \
-    joined_communities, menu_topics, menu_instance_feeds, validation_required
+    joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, validation_required
 from collections import namedtuple
 from sqlalchemy import desc, or_
 from slugify import slugify
@@ -90,7 +90,8 @@ def feed_new():
         return redirect(url_for('main.index'))
 
     return render_template('feed/feed_new.html', title=_('Create a Feed'), form=form,
-                           current_app=current_app)
+                           current_app=current_app, menu_topics=menu_topics(), menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None)
 
 
 @bp.route('/feed/<int:feed_id>/edit', methods=['GET','POST'])
@@ -157,7 +158,8 @@ def feed_edit(feed_id: int):
     edit_feed_form.public.data = feed_to_edit.public
     edit_feed_form.is_instance_feed.data = feed_to_edit.is_instance_feed
 
-    return render_template('feed/feed_edit.html', form=edit_feed_form)
+    return render_template('feed/feed_edit.html', form=edit_feed_form, menu_topics=menu_topics(), menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None)
 
 
 @bp.route('/feed/<int:feed_id>/delete', methods=['GET','POST'])
@@ -460,8 +462,6 @@ def show_feed(feed_path):
             per_page = 300
         posts = posts.paginate(page=page, per_page=per_page, error_out=False)
 
-        # topic_communities = Community.query.filter(Community.topic_id == current_topic.id, Community.banned == False).order_by(Community.name)
-        # feed_communities = FeedItem.query.join(Feed, FeedItem.feed_id == feed.id).all()
         feed_communities = Community.query.filter(Community.id.in_(feed_community_ids),Community.banned == False)
 
 
@@ -472,7 +472,6 @@ def show_feed(feed_path):
                            feed_path=feed_path,
                            page=posts.prev_num, sort=sort, layout=post_layout) if posts.has_prev and page != 1 else None
 
-        # sub_topics = Topic.query.filter_by(parent_id=current_topic.id).order_by(Topic.name).all()
         sub_feeds = Feed.query.filter_by(parent_feed_id=current_feed.id).order_by(Feed.name).all()
 
         return render_template('feed/show_feed.html', title=_(current_feed.name), posts=posts, feed=current_feed, sort=sort,
@@ -485,6 +484,8 @@ def show_feed(feed_path):
                                joined_communities=joined_communities(current_user.get_id()),
                                menu_topics=menu_topics(),
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                               menu_instance_feeds=menu_instance_feeds(), 
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
                                POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
                                POST_TYPE_VIDEO=POST_TYPE_VIDEO,
                                SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
@@ -531,4 +532,6 @@ def feed_create_post(feed_name):
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(),
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR)

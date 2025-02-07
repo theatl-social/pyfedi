@@ -26,7 +26,7 @@ from app.utils import get_setting, render_template, markdown_to_html, user_acces
     is_image_url, ensure_directory_exists, gibberish, file_get_contents, community_membership, user_filters_home, \
     user_filters_posts, user_filters_replies, moderating_communities, joined_communities, theme_list, blocked_instances, \
     allowlist_html, recently_upvoted_posts, recently_downvoted_posts, blocked_users, menu_topics, add_to_modlog, \
-    blocked_communities, piefed_markdown_to_lemmy_markdown
+    blocked_communities, piefed_markdown_to_lemmy_markdown, menu_instance_feeds, menu_my_feeds
 from sqlalchemy import desc, or_, text, asc
 import os
 import json as python_json
@@ -108,7 +108,9 @@ def show_profile(user):
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
                            user_has_public_feeds=user_has_public_feeds,
-                           user_public_feeds=user_public_feeds
+                           user_public_feeds=user_public_feeds,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -198,7 +200,9 @@ def edit_profile(actor):
                            markdown_editor=current_user.markdown_editor,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site
+                           menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -434,7 +438,9 @@ def user_settings():
     return render_template('user/edit_settings.html', title=_('Edit profile'), form=form, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site
+                           menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -486,7 +492,9 @@ def user_settings_import_export():
     return render_template('user/import_export.html', title=_('Import & Export'), form=form, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site
+                           menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -700,7 +708,9 @@ def report_profile(actor):
     return render_template('user/user_report.html', title=_('Report user'), form=form, user=user,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics = menu_topics(), site=g.site
+                           menu_topics = menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -788,7 +798,9 @@ def delete_account():
     return render_template('user/delete_account.html', title=_('Delete my account'), form=form, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site
+                           menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -889,7 +901,9 @@ def notifications():
     return render_template('user/notifications.html', title=_('Notifications'), notifications=notification_list, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site
+                           menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -1040,7 +1054,9 @@ def user_settings_filters():
                            blocked_domains=blocked_domains, blocked_instances=blocked_instances,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site
+                           menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -1065,7 +1081,9 @@ def user_settings_filters_add():
     return render_template('user/edit_filters.html', title=_('Add filter'), form=form, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site
+                           menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -1106,7 +1124,9 @@ def user_settings_filters_edit(filter_id):
     return render_template('user/edit_filters.html', title=_('Edit filter'), form=form, content_filter=content_filter, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site
+                           menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -1162,7 +1182,10 @@ def user_bookmarks():
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
-                           next_url=next_url, prev_url=prev_url)
+                           next_url=next_url, prev_url=prev_url,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           )
 
 
 @bp.route('/bookmarks/comments')
@@ -1184,7 +1207,10 @@ def user_bookmarks_comments():
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
-                           next_url=next_url, prev_url=prev_url)
+                           next_url=next_url, prev_url=prev_url,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           )
 
 
 @bp.route('/alerts')
@@ -1264,7 +1290,10 @@ def user_alerts(type='posts', filter='all'):
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
-                           next_url=next_url, prev_url=prev_url)
+                           next_url=next_url, prev_url=prev_url,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           )
 
 
 @bp.route('/u/<actor>/fediverse_redirect', methods=['GET', 'POST'])
@@ -1342,7 +1371,10 @@ def user_read_posts(sort=None):
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
-                           next_url=next_url, prev_url=prev_url)
+                           next_url=next_url, prev_url=prev_url,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           )
 
 
 @bp.route('/read-posts/delete')
@@ -1389,7 +1421,8 @@ def edit_user_note(actor):
         form.note.data = user.get_note(current_user)
 
     return render_template('user/edit_note.html', title=_('Edit note'), form=form, user=user, return_to=return_to,
-                           menu_topics=menu_topics(), site=g.site)
+                           menu_topics=menu_topics(), site=g.site, menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None)
 
 
 @bp.route('/user/<int:user_id>/preview')
@@ -1449,7 +1482,10 @@ def user_myfeeds():
         user_has_feeds = True
     current_user_feeds = Feed.query.filter_by(user_id=current_user.id)
     
-    return render_template('user/user_feeds.html', user_has_feeds=user_has_feeds, user_feeds_list=current_user_feeds)
+    return render_template('user/user_feeds.html', user_has_feeds=user_has_feeds, user_feeds_list=current_user_feeds,
+                           menu_topics=menu_topics(), menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           )
 
 
 @bp.route('/u/<actor>/feeds', methods=['GET','POST'])
@@ -1472,5 +1508,8 @@ def user_feeds(actor):
         user_has_public_feeds = True
 
     return render_template('user/user_public_feeds.html', user_has_public_feeds=user_has_public_feeds, 
-                           creator_name=user.user_name, user_feeds_list=user_public_feeds)
+                           creator_name=user.user_name, user_feeds_list=user_public_feeds,
+                           menu_topics=menu_topics(), menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           )
 

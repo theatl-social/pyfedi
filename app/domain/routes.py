@@ -9,7 +9,7 @@ from app.inoculation import inoculation
 from app.models import Post, Domain, Community, DomainBlock, read_posts
 from app.domain import bp
 from app.utils import render_template, permission_required, joined_communities, moderating_communities, \
-    user_filters_posts, blocked_domains, blocked_instances, menu_topics
+    user_filters_posts, blocked_domains, blocked_instances, menu_topics, menu_instance_feeds, menu_my_feeds
 from sqlalchemy import desc, or_
 
 
@@ -56,7 +56,9 @@ def show_domain(domain_id):
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
                                menu_topics=menu_topics(), site=g.site,
-                               inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                               inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                               menu_instance_feeds=menu_instance_feeds(), 
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                                )
     else:
         abort(404)

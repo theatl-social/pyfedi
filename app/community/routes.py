@@ -42,7 +42,8 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     joined_communities, moderating_communities, blocked_domains, mimetype_from_url, blocked_instances, \
     community_moderators, communities_banned_from, show_ban_message, recently_upvoted_posts, recently_downvoted_posts, \
     blocked_users, languages_for_form, menu_topics, add_to_modlog, \
-    blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, ensure_directory_exists
+    blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, ensure_directory_exists, \
+    menu_instance_feeds, menu_my_feeds
 from app.shared.post import make_post
 from feedgen.feed import FeedGenerator
 from datetime import timezone, timedelta
@@ -105,7 +106,9 @@ def add_local():
                            joined_communities=joined_communities(current_user.get_id()),
                            current_app=current_app,
                            menu_topics=menu_topics(),
-                           site=g.site)
+                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           )
 
 
 @bp.route('/add_remote', methods=['GET', 'POST'])
@@ -149,7 +152,9 @@ def add_remote():
                            subscribed=community_membership(current_user, new_community) >= SUBSCRIPTION_MEMBER, moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(),
-                           site=g.site)
+                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           )
 
 
 # @bp.route('/c/<actor>', methods=['GET']) - defined in activitypub/routes.py, which calls this function for user requests. A bit weird.
@@ -336,7 +341,9 @@ def show_community(community: Community):
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                            post_layout=post_layout, current_app=current_app,
                            user_has_feeds=user_has_feeds, current_feed_id=current_feed_id,
-                           current_feed_name=current_feed_name)
+                           current_feed_name=current_feed_name, menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           )
 
 
 # RSS feed of the community
@@ -673,8 +680,10 @@ def add_post(actor, type):
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.id),
                            menu_topics=menu_topics(), site=g.site,
-                           inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
-    )
+                           inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           )
 
 
 @bp.route('/community/<int:community_id>/report', methods=['GET', 'POST'])
@@ -786,7 +795,10 @@ def community_edit(community_id: int):
                                current_app=current_app, current="edit_settings",
                                community=community, moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
-                               menu_topics=menu_topics(), site=g.site)
+                               menu_topics=menu_topics(), site=g.site,
+                               menu_instance_feeds=menu_instance_feeds(), 
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                               )
     else:
         abort(401)
 
@@ -851,7 +863,10 @@ def community_delete(community_id: int):
         return render_template('community/community_delete.html', title=_('Delete community'), form=form,
                                community=community, moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
-                               menu_topics=menu_topics(), site=g.site)
+                               menu_topics=menu_topics(), site=g.site,
+                               menu_instance_feeds=menu_instance_feeds(), 
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                               )
     else:
         abort(401)
 
@@ -871,7 +886,8 @@ def community_mod_list(community_id: int):
                         moderators=moderators, community=community, current="moderators",
                         moderating_communities=moderating_communities(current_user.get_id()),
                         joined_communities=joined_communities(current_user.get_id()),
-                        menu_topics=menu_topics(), site=g.site
+                        menu_topics=menu_topics(), site=g.site, menu_instance_feeds=menu_instance_feeds(), 
+                        menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                         )
     else:
         abort(401)
@@ -944,7 +960,9 @@ def community_find_moderator(community_id: int):
                                community=community, form=form, potential_moderators=potential_moderators,
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
-                               menu_topics=menu_topics(), site=g.site
+                               menu_topics=menu_topics(), site=g.site,
+                               menu_instance_feeds=menu_instance_feeds(), 
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                                )
     else:
         abort(401)
@@ -1064,7 +1082,9 @@ def community_ban_user(community_id: int, user_id: int):
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
                                menu_topics=menu_topics(), site=g.site,
-                               inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                               inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                               menu_instance_feeds=menu_instance_feeds(), 
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                                )
 
 
@@ -1171,7 +1191,9 @@ def community_moderate(actor):
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                                   menu_instance_feeds=menu_instance_feeds(), 
+                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                                    )
         else:
             abort(401)
@@ -1206,7 +1228,9 @@ def community_moderate_subscribers(actor):
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                                   menu_instance_feeds=menu_instance_feeds(), 
+                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                                    )
         else:
             abort(401)
@@ -1248,7 +1272,9 @@ def community_wiki_list(actor):
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                                   menu_instance_feeds=menu_instance_feeds(), 
+                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                                    )
         else:
             abort(401)
@@ -1286,7 +1312,9 @@ def community_wiki_add(actor):
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                                   menu_instance_feeds=menu_instance_feeds(), 
+                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                                    )
         else:
             abort(401)
@@ -1345,7 +1373,9 @@ def community_wiki_view(actor, slug):
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
                                    inoculation=inoculation[
-                                       randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                       randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                                   menu_instance_feeds=menu_instance_feeds(), 
+                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                                    )
 
 
@@ -1402,7 +1432,9 @@ def community_wiki_view_revision(actor, slug, revision_id):
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
                                    inoculation=inoculation[
-                                       randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                       randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                                   menu_instance_feeds=menu_instance_feeds(), 
+                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                                    )
 
 
@@ -1473,7 +1505,9 @@ def community_wiki_edit(actor, page_id):
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                                   menu_instance_feeds=menu_instance_feeds(), 
+                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                                    )
         else:
             abort(401)
@@ -1502,7 +1536,9 @@ def community_wiki_revisions(actor, page_id):
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                                   menu_instance_feeds=menu_instance_feeds(), 
+                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                                    )
         else:
             abort(401)
@@ -1553,7 +1589,9 @@ def community_modlog(actor):
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                                   menu_instance_feeds=menu_instance_feeds(), 
+                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                                    )
 
         else:

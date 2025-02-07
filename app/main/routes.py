@@ -182,7 +182,9 @@ def list_topics():
                            low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site)
+                           menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None)
 
 
 @bp.route('/communities', methods=['GET'])
@@ -255,7 +257,9 @@ def list_communities():
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site, feed_id=feed_id,
-                           server_has_feeds=server_has_feeds, public_feeds=public_feeds)
+                           server_has_feeds=server_has_feeds, public_feeds=public_feeds,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None)
 
 
 @bp.route('/communities/local', methods=['GET'])
@@ -306,7 +310,9 @@ def list_local_communities():
                            next_url=next_url, prev_url=prev_url, current_user=current_user,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site)
+                           menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None)
 
 
 @bp.route('/communities/subscribed', methods=['GET'])
@@ -364,7 +370,9 @@ def list_subscribed_communities():
                            next_url=next_url, prev_url=prev_url, current_user=current_user,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site)
+                           menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None)
 
 
 @bp.route('/communities/notsubscribed', methods=['GET'])
@@ -423,7 +431,9 @@ def list_not_subscribed_communities():
                            next_url=next_url, prev_url=prev_url, current_user=current_user,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site)
+                           menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None)
 
 
 @bp.route('/modlog', methods=['GET'])
@@ -453,8 +463,9 @@ def modlog():
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
-                           inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
-                           )
+                           inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None)
 
 
 @bp.route('/donate')
@@ -758,4 +769,6 @@ def public_feeds():
         server_has_feeds = True
 
     # render the page
-    return render_template('feed/public_feeds.html', server_has_feeds=server_has_feeds, public_feeds_list=public_feeds)
+    return render_template('feed/public_feeds.html', server_has_feeds=server_has_feeds, public_feeds_list=public_feeds,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None)

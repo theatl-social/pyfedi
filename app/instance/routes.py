@@ -10,7 +10,7 @@ from app.instance import bp
 from app.models import Instance, User, Post, read_posts, InstanceBlock
 from app.utils import render_template, moderating_communities, joined_communities, menu_topics, blocked_domains, \
     blocked_instances, blocked_communities, blocked_users, user_filters_home, recently_upvoted_posts, \
-    recently_downvoted_posts
+    recently_downvoted_posts, menu_instance_feeds, menu_my_feeds
 
 
 @bp.route('/instances', methods=['GET'])
@@ -51,7 +51,9 @@ def list_instances():
                            low_bandwidth=low_bandwidth,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site)
+                           menu_topics=menu_topics(), site=g.site, menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           )
 
 
 @bp.route('/instance/<instance_domain>', methods=['GET'])
@@ -66,7 +68,10 @@ def instance_overview(instance_domain):
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
-                           title=_('%(instance)s overview', instance=instance.domain))
+                           title=_('%(instance)s overview', instance=instance.domain),
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           )
 
 
 @bp.route('/instance/<instance_domain>/people', methods=['GET'])
@@ -94,7 +99,10 @@ def instance_people(instance_domain):
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
-                           title=_('People from %(instance)s', instance=instance.domain))
+                           title=_('People from %(instance)s', instance=instance.domain),
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           )
 
 
 @bp.route('/instance/<instance_domain>/posts', methods=['GET'])
@@ -178,7 +186,10 @@ def instance_posts(instance_domain):
                            content_filters=content_filters,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site,)
+                           menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           )
 
 
 @bp.route('/instance/<int:instance_id>/block', methods=['GET'])
