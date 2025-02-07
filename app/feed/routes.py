@@ -13,11 +13,12 @@ from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_
     POST_TYPE_LINK, POST_TYPE_VIDEO
 from app.feed import  bp
 from app.feed.forms import AddFeedForm, EditFeedForm
+from app.feed.util import feeds_for_form
 from app.inoculation import inoculation
 from app.models import Feed, FeedMember, FeedItem, Post, Community, read_posts, utcnow
 from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markdown_to_html, render_template, user_filters_posts, \
     blocked_domains, blocked_instances, blocked_communities, blocked_users, communities_banned_from, moderating_communities, \
-    joined_communities, menu_topics, menu_instance_feeds
+    joined_communities, menu_topics, menu_instance_feeds, validation_required
 from collections import namedtuple
 from sqlalchemy import desc, or_
 from slugify import slugify
@@ -39,6 +40,7 @@ def feed_new():
         form.nsfl.render_kw = {'disabled': True}
     if not current_user.is_admin():
         form.is_instance_feed.render_kw = {'disabled': True}
+    form.parent_feed_id.choices = feeds_for_form(0)
 
     if form.validate_on_submit():
         if form.url.data.strip().lower().startswith('/f/'):
@@ -48,6 +50,7 @@ def feed_new():
         feed = Feed(user_id=current_user.id, title=form.feed_name.data, name=form.url.data, machine_name=form.url.data, 
                     description=piefed_markdown_to_lemmy_markdown(form.description.data),
                     description_html=markdown_to_html(form.description.data),
+                    show_posts_in_children=form.show_child_posts.data,
                     nsfw=form.nsfw.data, nsfl=form.nsfl.data,
                     private_key=private_key,
                     public_key=public_key,
@@ -58,6 +61,10 @@ def feed_new():
                     ap_following_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + form.url.data + '/following',
                     ap_domain=current_app.config['SERVER_NAME'],
                     subscriptions_count=1, instance_id=1)
+        if form.parent_feed_id.data:
+            feed.parent_feed_id = form.parent_feed_id.data
+        else:
+            feed.parent_feed_id = None
         icon_file = request.files['icon_file']
         if icon_file and icon_file.filename != '':
             file = save_icon_file(icon_file, directory='feeds')
@@ -97,6 +104,7 @@ def feed_edit(feed_id: int):
     if feed_to_edit.user_id != current_user.id:
         abort(404)
     edit_feed_form = EditFeedForm()
+    edit_feed_form.parent_feed_id.choices = feeds_for_form(feed_id)
 
     if not current_user.is_admin():
         edit_feed_form.is_instance_feed.render_kw = {'disabled': True}
@@ -106,6 +114,11 @@ def feed_edit(feed_id: int):
         feed_to_edit.name = edit_feed_form.url.data
         feed_to_edit.description = piefed_markdown_to_lemmy_markdown(edit_feed_form.description.data)
         feed_to_edit.description_html = markdown_to_html(edit_feed_form.description.data)
+        feed_to_edit.show_posts_in_children = edit_feed_form.show_child_posts.data
+        if edit_feed_form.parent_feed_id.data:
+            feed_to_edit.parent_feed_id = edit_feed_form.parent_feed_id.data
+        else:
+            feed_to_edit.parent_feed_id = None
         icon_file = request.files['icon_file']
         if icon_file and icon_file.filename != '':
             file = save_icon_file(icon_file, directory='feeds')
@@ -132,6 +145,7 @@ def feed_edit(feed_id: int):
     edit_feed_form.feed_name.data = feed_to_edit.title
     edit_feed_form.url.data = feed_to_edit.name
     edit_feed_form.description.data = feed_to_edit.description
+    edit_feed_form.show_child_posts.data = feed_to_edit.show_posts_in_children
     if g.site.enable_nsfw is False:
         edit_feed_form.nsfw.render_kw = {'disabled': True}
     else:
@@ -472,3 +486,36 @@ def get_all_child_feed_ids(feed: Feed) -> List[int]:
     for child_feed in Feed.query.filter(Feed.parent_feed_id == feed.id):
         feed_ids.extend(get_all_child_feed_ids(child_feed))
     return feed_ids
+
+
+@bp.route('/f/<feed_name>/submit', methods=['GET', 'POST'])
+@login_required
+@validation_required
+def feed_create_post(feed_name):
+    feed = Feed.query.filter(Feed.machine_name == feed_name.strip().lower()).first()
+    if not feed:
+        abort(404)
+    
+    feed_community_ids = []
+    feed_items = FeedItem.query.join(Feed, FeedItem.feed_id == feed.id).all()
+    for item in feed_items:
+        feed_community_ids.append(item.community_id)
+
+    communities = Community.query.filter(Community.id.in_(feed_community_ids)).filter_by(banned=False).order_by(Community.title).all()
+    sub_feed_community_ids = []
+    child_feeds = [feed.id for feed in Feed.query.filter(Feed.parent_feed_id == feed.id).all()]
+    for cf in child_feeds:
+        feed_items = FeedItem.query.join(Feed, FeedItem.feed_id == cf.id).all()
+        for item in feed_items:
+            sub_feed_community_ids.append(item.community_id)
+
+    sub_communities = Community.query.filter_by(banned=False).filter(Community.id.in_(sub_feed_community_ids)).order_by(Community.title).all()
+    if request.form.get('community_id', '') != '':
+        community = Community.query.get_or_404(int(request.form.get('community_id')))
+        return redirect(url_for('community.join_then_add', actor=community.link()))
+    return render_template('feed/feed_create_post.html', communities=communities, sub_communities=sub_communities,
+                           feed=feed,
+                           moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
+                           SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR)

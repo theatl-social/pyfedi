@@ -77,7 +77,7 @@
                     <div class="col-6">
                     </div>
                     <div class="col-6">
-                        <p>the create a post button will go here</p>
+                        <a class="w-100 btn btn-primary" href="{{ url_for('feed.feed_create_post', feed_name=feed.machine_name) }}" rel="nofollow">{{ _('Create post') }}</a>
                     </div>
                 </div>
             </div>

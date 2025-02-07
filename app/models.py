@@ -2578,6 +2578,10 @@ class Feed(db.Model):
         owner = User.query.get(self.user_id)
         return owner.ap_id if owner.ap_id else owner.user_name
 
+    def parent_feed_name(self):
+        parent_feed = Feed.query.get(self.parent_feed_id)
+        return parent_feed.title if parent_feed else ""
+
     def profile_id(self):
         retval = self.ap_profile_id if self.ap_profile_id else f"https://{current_app.config['SERVER_NAME']}/f/{self.name}"
         return retval.lower()
