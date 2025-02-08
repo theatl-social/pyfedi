@@ -1126,6 +1126,7 @@ def sha256_digest(input_string):
     return sha256_hash.hexdigest()
 
 
+# still used to hint to a local user that a post to a URL has already been submitted
 def remove_tracking_from_link(url):
     parsed_url = urlparse(url)
 
@@ -1149,6 +1150,61 @@ def remove_tracking_from_link(url):
         return cleaned_url
     else:
         return url
+
+
+# Fixes URLs so we're more likely to get a thumbnail from youtube, and more posts from streaming sites are embedded
+# Also duplicates link tracking removal from the function above.
+def fixup_url(url):
+    thumbnail_url = embed_url = url
+    parsed_url = urlparse(url)
+
+    # fixup embed_url for peertube videos shared outside of the channel
+    if len(url) > 25 and url[-25:][:3] == '/w/':
+        peertube_domains = db.session.execute(text("SELECT domain FROM instance WHERE software = 'peertube'")).scalars()
+        if parsed_url.netloc in peertube_domains:
+            try:
+                response = get_request(url, headers={'Accept': 'application/activity+json'})
+                if response.status_code == 200:
+                    try:
+                        video_json = response.json()
+                        if 'id' in video_json:
+                            embed_url = video_json['id']
+                        response.close()
+                    except:
+                        response.close()
+            except:
+                pass
+
+    youtube_domains = ['www.youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtube.com', 'youtu.be']
+
+    if not parsed_url.netloc in youtube_domains:
+        return thumbnail_url, embed_url
+    else:
+        video_id = timestamp = None
+        path = parsed_url.path
+        query_params = parse_qs(parsed_url.query)
+        if path:
+            if path.startswith('/shorts/') and len(path) > 8:
+                video_id = path[8:]
+            elif path == '/watch' and 'v' in query_params:
+                video_id = query_params['v'][0]
+            else:
+                video_id = path[1:]
+        if not video_id:
+            return thumbnail_url, embed_url
+        if 'start' in query_params:
+            timestamp = query_params['start'][0]
+        elif 't' in query_params:
+            timestamp = query_params['t'][0]
+
+        thumbnail_url = 'https://youtu.be/' + video_id
+        embed_url = 'https://www.youtube.com/watch?v=' + video_id
+        if timestamp:
+            timestamp_param = {'start': timestamp}
+            timestamp_query = urlencode(timestamp_param, doseq=True)
+            embed_url += f"&{timestamp_query}"
+
+        return thumbnail_url, embed_url
 
 
 def show_ban_message():

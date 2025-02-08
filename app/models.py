@@ -1181,7 +1181,7 @@ class Post(db.Model):
         from app.activitypub.util import instance_weight, find_language_or_create, find_language, find_hashtag_or_create, \
             find_licence_or_create, make_image_sizes, notify_about_post
         from app.utils import allowlist_html, markdown_to_html, html_to_text, microblog_content_to_title, blocked_phrases, \
-            is_image_url, is_video_url, domain_from_url, opengraph_parse, shorten_string, remove_tracking_from_link, \
+            is_image_url, is_video_url, domain_from_url, opengraph_parse, shorten_string, fixup_url, \
             is_video_hosting_site, communities_banned_from, recently_upvoted_posts, blocked_users
 
         microblog = False
@@ -1279,6 +1279,8 @@ class Post(db.Model):
             post.url = request_json['object']['attachment']['url']
 
         if post.url:
+            thumbnail_url, embed_url = fixup_url(post.url)
+            post.url = embed_url
             if is_image_url(post.url):
                 post.type = constants.POST_TYPE_IMAGE
                 image = File(source_url=post.url)
@@ -1288,9 +1290,8 @@ class Post(db.Model):
                     image.file_path = file_path
                 db.session.add(image)
                 post.image = image
-            elif is_video_url(post.url):  # youtube is detected later
+            elif is_video_url(post.url) or is_video_hosting_site(post.url):
                 post.type = constants.POST_TYPE_VIDEO
-                # custom thumbnails will be added below in the "if 'image' in request_json['object'] and post.image is None:" section
             else:
                 post.type = constants.POST_TYPE_LINK
             domain = domain_from_url(post.url)
@@ -1315,6 +1316,20 @@ class Post(db.Model):
             else:
                 domain.post_count += 1
                 post.domain = domain
+
+            if 'image' in request_json['object'] and post.image is None:
+                image = File(source_url=request_json['object']['image']['url'])
+                db.session.add(image)
+                post.image = image
+            if post.image is None: # This is a link post but the source instance has not provided a thumbnail image
+                # Let's see if we can do better than the source instance did!
+                opengraph = opengraph_parse(thumbnail_url)
+                if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
+                    filename = opengraph.get('og:image') or opengraph.get('og:image:url')
+                    if not filename.startswith('/'):
+                        file = File(source_url=filename, alt_text=shorten_string(opengraph.get('og:title'), 295))
+                        post.image = file
+                        db.session.add(file)
 
         if post is not None:
             if request_json['object']['type'] == 'Video':
@@ -1343,31 +1358,9 @@ class Post(db.Model):
                             hashtag = find_hashtag_or_create(json_tag['name'])
                             if hashtag:
                                 post.tags.append(hashtag)
-            if 'image' in request_json['object'] and post.image is None:
-                image = File(source_url=request_json['object']['image']['url'])
-                db.session.add(image)
-                post.image = image
-            if post.image is None and post.type == constants.POST_TYPE_LINK:  # This is a link post but the source instance has not provided a thumbnail image
-                # Let's see if we can do better than the source instance did!
-                tn_url = post.url
-                if tn_url[:32] == 'https://www.youtube.com/watch?v=':
-                    tn_url = 'https://youtu.be/' + tn_url[
-                                                   32:43]  # better chance of thumbnail from youtu.be than youtube.com
-                opengraph = opengraph_parse(tn_url)
-                if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
-                    filename = opengraph.get('og:image') or opengraph.get('og:image:url')
-                    if not filename.startswith('/'):
-                        file = File(source_url=filename, alt_text=shorten_string(opengraph.get('og:title'), 295))
-                        post.image = file
-                        db.session.add(file)
-
             if 'searchableBy' in request_json['object'] and request_json['object']['searchableBy'] != 'https://www.w3.org/ns/activitystreams#Public':
                 post.indexable = False
 
-            if post.url:
-                post.url = remove_tracking_from_link(post.url)  # moved here as changes youtu.be to youtube.com
-                if is_video_hosting_site(post.url):
-                    post.type = constants.POST_TYPE_VIDEO
             db.session.add(post)
             post.ranking = post.post_ranking(post.score, post.posted_at)
             community.post_count += 1

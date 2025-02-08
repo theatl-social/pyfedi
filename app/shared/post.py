@@ -5,7 +5,7 @@ from app.community.util import tags_from_string_old, end_poll_date
 from app.models import File, Language, Notification, NotificationSubscription, Poll, PollChoice, Post, PostBookmark, PostVote, Report, Site, User, utcnow
 from app.shared.tasks import task_selector
 from app.utils import render_template, authorise_api_user, shorten_string, gibberish, ensure_directory_exists, \
-                      piefed_markdown_to_lemmy_markdown, markdown_to_html, remove_tracking_from_link, domain_from_url, \
+                      piefed_markdown_to_lemmy_markdown, markdown_to_html, fixup_url, domain_from_url, \
                       opengraph_parse, url_to_thumbnail_file, can_create_post, is_video_hosting_site, recently_upvoted_posts, \
                       is_image_url, add_to_modlog_activitypub
 
@@ -345,6 +345,8 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
                     if admin.id not in already_notified:
                         notify = Notification(title='Suspicious content', url=post.ap_id, user_id=admin.id, author_id=user.id)
                         db.session.add(notify)
+
+        thumbnail_url, embed_url = fixup_url(url)
         if is_image_url(url):
             file = File(source_url=url)
             if uploaded_file and type == POST_TYPE_IMAGE:
@@ -357,7 +359,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
             post.url = url
             post.type = POST_TYPE_IMAGE
         else:
-            opengraph = opengraph_parse(url)
+            opengraph = opengraph_parse(thumbnail_url)
             if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
                 filename = opengraph.get('og:image') or opengraph.get('og:image:url')
                 if not filename.startswith('/'):
@@ -367,9 +369,9 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
                         post.image = file
                         db.session.add(file)
 
-            post.url = remove_tracking_from_link(url)
+            post.url = embed_url
 
-            if url.endswith('.mp4') or url.endswith('.webm') or is_video_hosting_site(url):
+            if url.endswith('.mp4') or url.endswith('.webm') or is_video_hosting_site(embed_url):
                 post.type = POST_TYPE_VIDEO
             else:
                 post.type = POST_TYPE_LINK

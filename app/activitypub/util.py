@@ -30,7 +30,7 @@ import pytesseract
 
 from app.utils import get_request, allowlist_html, get_setting, ap_datetime, markdown_to_html, \
     is_image_url, domain_from_url, gibberish, ensure_directory_exists, head_request, \
-    shorten_string, remove_tracking_from_link, \
+    shorten_string, fixup_url, \
     microblog_content_to_title, is_video_url, \
     notification_subscribers, communities_banned_from, actor_contains_blocked_words, \
     html_to_text, add_to_modlog_activitypub, joined_communities, \
@@ -1800,7 +1800,6 @@ def update_post_from_activity(post: Post, request_json: dict):
     if 'attachment' in request_json['object'] and isinstance(request_json['object']['attachment'], dict):   # Mastodon / a.gup.pe
         new_url = request_json['object']['attachment']['url']
     if new_url:
-        new_url = remove_tracking_from_link(new_url)
         new_domain = domain_from_url(new_url)
         if new_domain.banned:
             db.session.commit()
@@ -1811,7 +1810,8 @@ def update_post_from_activity(post: Post, request_json: dict):
             post.image.delete_from_disk()
             old_db_entry_to_delete = post.image_id
         if new_url:
-            post.url = new_url
+            thumbnail_url, embed_url = fixup_url(new_url)
+            post.url = embed_url
             image = None
             if is_image_url(new_url):
                 post.type = POST_TYPE_IMAGE
@@ -1823,15 +1823,12 @@ def update_post_from_activity(post: Post, request_json: dict):
                     image = File(source_url=request_json['object']['image']['url'])
                 else:
                     # Let's see if we can do better than the source instance did!
-                    tn_url = new_url
-                    if tn_url[:32] == 'https://www.youtube.com/watch?v=':
-                        tn_url = 'https://youtu.be/' + tn_url[32:43]  # better chance of thumbnail from youtu.be than youtube.com
-                    opengraph = opengraph_parse(tn_url)
+                    opengraph = opengraph_parse(thumbnail_url)
                     if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
                         filename = opengraph.get('og:image') or opengraph.get('og:image:url')
                         if not filename.startswith('/'):
                             image = File(source_url=filename, alt_text=shorten_string(opengraph.get('og:title'), 295))
-                if is_video_hosting_site(new_url) or is_video_url(new_url):
+                if is_video_hosting_site(embed_url) or is_video_url(new_url):
                     post.type = POST_TYPE_VIDEO
                 else:
                     post.type = POST_TYPE_LINK
