@@ -8,6 +8,7 @@ from flask_login import current_user, login_required
 from flask_babel import _
 from app import db, cache
 from app.activitypub.signature import RsaKeys
+# from app.community.routes import do_subscribe
 from app.community.util import save_icon_file, save_banner_file
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
     POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_FEED
@@ -15,7 +16,8 @@ from app.feed import  bp
 from app.feed.forms import EditFeedForm
 from app.feed.util import feeds_for_form
 from app.inoculation import inoculation
-from app.models import Feed, FeedMember, FeedItem, Post, Community, read_posts, utcnow, NotificationSubscription
+from app.models import Feed, FeedMember, FeedItem, Post, Community, read_posts, utcnow, NotificationSubscription, \
+    CommunityMember
 from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markdown_to_html, render_template, user_filters_posts, \
     blocked_domains, blocked_instances, blocked_communities, blocked_users, communities_banned_from, moderating_communities, \
     joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, validation_required
@@ -269,6 +271,19 @@ def feed_copy(feed_id: int):
             fi = FeedItem(feed_id=feed.id, community_id=item.community_id)
             db.session.add(fi)
             db.session.commit()
+        
+
+        # also subscribe the user to any community they are not already subscribed to
+        member_of_ids = []
+        member_of = CommunityMember.query.filter_by(user_id=current_user.id).all()
+        for cm in member_of:
+            member_of_ids.append(cm.community_id)
+        for item in old_feed_items:
+            if item.community_id not in member_of_ids:
+                from app.community.routes import do_subscribe
+                community = Community.query.get(item.community_id)
+                actor = community.ap_id if community.ap_id else community.name
+                do_subscribe(actor, current_user.id)
 
         feed.num_communities = len(old_feed_items)
         db.session.add(feed)
@@ -333,7 +348,7 @@ def feed_add_community():
     current_feed_id = int(request.args.get('current_feed_id'))
     community_id = int(request.args.get('community_id'))
 
-    # make sure the user has owns this feed
+    # make sure the user owns this feed
     if Feed.query.get(feed_id).user_id != user_id:
         abort(404)
 
@@ -361,6 +376,15 @@ def feed_add_community():
     feed.num_communities = feed.num_communities + 1
     db.session.add(feed)
     db.session.commit()
+
+    # subscribe the user to the community if they are not already subscribed
+    current_membership = CommunityMember.query.filter_by(user_id=user_id, community_id=community_id).first()
+    if current_membership is None:
+        # import do_subscribe here, otherwise we get import errors from circular import problems
+        from app.community.routes import do_subscribe
+        community = Community.query.get(community_id)
+        actor = community.ap_id if community.ap_id else community.name
+        do_subscribe(actor, user_id)
 
     # send the user back to the page they came from or main
     # Get the referrer from the request headers
