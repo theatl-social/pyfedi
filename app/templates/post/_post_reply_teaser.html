@@ -35,20 +35,18 @@
             {% if post_reply.author.id == post_reply.post.author.id -%}
                 <span title="Submitter of original post" aria-label="{{ _('Post creator') }}" class="small"> [OP]</span>
             {% endif -%}
-        </div>
-        <div class="col-auto comment_time">
-            <a href="/post/{{ post_reply.post_id }}#comment_{{ post_reply.id }}">
-                <time datetime="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post_reply.posted_at).humanize(locale=locale) }}</time>{% if post_reply.edited_at -%}, edited <time datetime="{{ arrow.get(post_reply.posted_at) }}" title="{{ arrow.get(post_reply.posted_at) }}">{{ arrow.get(post_reply.edited_at).humanize(locale=locale) }}</time>{% endif -%}
-            </a>
-        </div>
-        <div class="col-auto">
+            <span class="comment_time"><a href="/post/{{ post_reply.post_id }}#comment_{{ post_reply.id }}">
+                {% if post_reply.edited_at -%}
+                    edited <time datetime="{{ arrow.get(post_reply.posted_at) }}" title="{{ arrow.get(post_reply.posted_at) }}">{{ arrow.get(post_reply.edited_at).humanize(locale=locale) }}</time>
+                {% else -%}
+                    <time datetime="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post_reply.posted_at).humanize(locale=locale) }}</time>
+                {% endif -%}
+            </a></span>
             {% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) -%}
-                <span class="red fe fe-report" title="{{ _('Reported. Check comment for issues.') }}"></span>
+                    <span class="red fe fe-report" title="{{ _('Reported. Check comment for issues.') }}"></span>
             {% endif -%}
-        </div>
-        <div class="col-auto">
             {% if post_reply.deleted -%}
-                <span class="red fe fe-delete" title="{{ _('Comment deleted') }}"></span>
+                    <span class="red fe fe-delete" title="{{ _('Comment deleted') }}"></span>
             {% endif -%}
         </div>
         <div class="col-auto">
