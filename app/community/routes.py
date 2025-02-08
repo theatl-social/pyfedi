@@ -1656,7 +1656,10 @@ def lookup(community, domain):
     if domain == current_app.config['SERVER_NAME']:
         return redirect('/c/' + community)
 
-    exists = Community.query.filter_by(name=community, ap_domain=domain).first()
+    community = community.lower()
+    domain = domain.lower()
+
+    exists = Community.query.filter_by(ap_id=f'{community}@{domain}').first()
     if exists:
         return redirect('/c/' + community + '@' + domain)
     else:

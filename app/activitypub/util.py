@@ -814,7 +814,7 @@ def actor_json_to_model(activity_json, address, server):
                               private_mods=activity_json['privateMods'] if 'privateMods' in activity_json else False,
                               created_at=activity_json['published'] if 'published' in activity_json else utcnow(),
                               last_active=activity_json['updated'] if 'updated' in activity_json else utcnow(),
-                              ap_id=f"{address[1:].lower()}@{server.lower()}" if address.startswith('!') else f"{address}@{server}",
+                              ap_id=f"{address[1:].lower()}@{server.lower()}" if address.startswith('!') else f"{address.lower()}@{server.lower()}",
                               ap_public_url=activity_json['id'],
                               ap_profile_id=activity_json['id'].lower(),
                               ap_followers_url=activity_json['followers'] if 'followers' in activity_json else None,
@@ -823,7 +823,7 @@ def actor_json_to_model(activity_json, address, server):
                               ap_featured_url=activity_json['featured'] if 'featured' in activity_json else '',
                               ap_moderators_url=mods_url,
                               ap_fetched_at=utcnow(),
-                              ap_domain=server,
+                              ap_domain=server.lower(),
                               public_key=activity_json['publicKey']['publicKeyPem'],
                               # language=community_json['language'][0]['identifier'] # todo: language
                               instance_id=find_instance_id(server),
