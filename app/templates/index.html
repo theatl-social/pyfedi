@@ -46,6 +46,23 @@
             </div>
         </div> -->
 
+        {% if new_communities and len(new_communities) > 0 -%}
+        <div class="card mb-3">
+            <div class="card-header">
+                 <h2>{{ _('New communities') }}</h2>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    {% for community in new_communities %}
+                        <li class="list-group-item">
+                            {{ render_communityname(community) }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif -%}
+
         <div class="card">
             <div class="card-header">
                  <h2>{{ _('Active communities') }}</h2>

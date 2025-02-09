@@ -133,6 +133,17 @@ def home_page(sort, view_filter):
             active_communities = active_communities.filter(Community.id.not_in(community_ids))
     active_communities = active_communities.order_by(desc(Community.last_active)).limit(5).all()
 
+    # New Communities
+    new_communities = Community.query.filter_by(banned=False)
+    if current_user.is_authenticated:   # do not show communities current user is banned from
+        banned_from = communities_banned_from(current_user.id)
+        if banned_from:
+            new_communities = new_communities.filter(Community.id.not_in(banned_from))
+        community_ids = blocked_communities(current_user.id)
+        if community_ids:
+            new_communities = new_communities.filter(Community.id.not_in(community_ids))
+    new_communities = new_communities.order_by(desc(Community.created_at)).limit(5).all()
+
     # Voting history
     if current_user.is_authenticated:
         recently_upvoted = recently_upvoted_posts(current_user.id)
@@ -141,8 +152,8 @@ def home_page(sort, view_filter):
         recently_upvoted = []
         recently_downvoted = []
 
-    return render_template('index.html', posts=posts, active_communities=active_communities, show_post_community=True,
-                           low_bandwidth=low_bandwidth, recently_upvoted=recently_upvoted,
+    return render_template('index.html', posts=posts, active_communities=active_communities, new_communities=new_communities,
+                           show_post_community=True, low_bandwidth=low_bandwidth, recently_upvoted=recently_upvoted,
                            recently_downvoted=recently_downvoted,
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            etag=f"{sort}_{view_filter}_{hash(str(g.site.last_active))}", next_url=next_url, prev_url=prev_url,
