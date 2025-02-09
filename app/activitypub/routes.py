@@ -12,12 +12,13 @@ from app.activitypub import bp
 from app.activitypub.signature import HttpSignature, post_request, VerificationError, default_context, LDSignature
 from app.community.routes import show_community
 from app.community.util import send_to_remote_instance
+from app.feed.routes import show_feed
 from app.post.routes import continue_discussion, show_post
 from app.user.routes import show_profile
 from app.constants import *
 from app.models import User, Community, CommunityJoinRequest, CommunityMember, CommunityBan, ActivityPubLog, Post, \
     PostReply, Instance, PostVote, PostReplyVote, File, AllowedInstances, BannedInstances, utcnow, Site, Notification, \
-    ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice
+    ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice, Feed
 from app.activitypub.util import public_key, users_total, active_half_year, active_month, local_posts, local_comments, \
     post_to_activity, find_actor_or_create, find_reply_parent, find_liked_object, \
     lemmy_site_data, is_activitypub_request, delete_post_or_comment, community_members, \
@@ -1626,3 +1627,71 @@ def process_chat(user, store_ap_json, core_activity):
         return True
 
     return False
+# ---- Feeds ----
+
+@bp.route('/f/<actor>', methods=['GET'])
+def feed_profile(actor):
+    """ Requests to this endpoint can be for a JSON representation of the feed, or an HTML rendering of it.
+        The two types of requests are differentiated by the header """
+    actor = actor.strip()
+    if '@' in actor:
+        # don't provide activitypub info for remote communities
+        if 'application/ld+json' in request.headers.get('Accept', '') or 'application/activity+json' in request.headers.get('Accept', ''):
+            abort(400)
+        feed: Feed = Feed.query.filter_by(ap_id=actor.lower(), banned=False).first()
+    else:
+        feed: Feed = Feed.query.filter_by(name=actor.lower(), ap_id=None).first()
+    if feed is not None:
+        if is_activitypub_request():
+            # check if feed is public, if not abort
+            # with 403 (forbidden)
+            if not feed.public:
+                abort(403) 
+            server = current_app.config['SERVER_NAME']
+            actor_data = {"@context": default_context(),
+                "type": "Feed",
+                "id": f"https://{server}/f/{actor}",
+                "name": feed.title,
+                "sensitive": True if feed.nsfw or feed.nsfl else False,
+                "preferredUsername": actor,
+                "inbox": f"https://{server}/f/{actor}/inbox",
+                "outbox": f"https://{server}/f/{actor}/outbox",
+                "followers": f"https://{server}/f/{actor}/followers",
+                "following": f"https://{server}/f/{actor}/following",
+                "moderators": f"https://{server}/f/{actor}/moderators",
+                "featured": f"https://{server}/f/{actor}/featured",
+                "attributedTo": f"https://{server}/f/{actor}/moderators",
+                "url": f"https://{server}/f/{actor}",
+                "publicKey": {
+                    "id": f"https://{server}/f/{actor}#main-key",
+                    "owner": f"https://{server}/f/{actor}",
+                    "publicKeyPem": feed.public_key
+                },
+                "endpoints": {
+                    "sharedInbox": f"https://{server}/inbox"
+                },
+                "published": ap_datetime(feed.created_at),
+                "updated": ap_datetime(feed.last_edit),
+            }
+            if feed.description_html:
+                actor_data["summary"] = feed.description_html
+                actor_data['source'] = {'content': feed.description, 'mediaType': 'text/markdown'}
+            if feed.icon_id is not None:
+                actor_data["icon"] = {
+                    "type": "Image",
+                    "url": f"https://{current_app.config['SERVER_NAME']}{feed.icon_image()}"
+                }
+            if feed.image_id is not None:
+                actor_data["image"] = {
+                    "type": "Image",
+                    "url": f"https://{current_app.config['SERVER_NAME']}{feed.header_image()}"
+                }
+            resp = jsonify(actor_data)
+            resp.content_type = 'application/activity+json'
+            resp.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/f/{actor}>; rel="alternate"; type="text/html"')
+            return resp
+        else:   # browser request - return html
+            return show_feed(feed)
+    else:
+        abort(404)
+

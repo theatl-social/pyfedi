@@ -13,7 +13,7 @@ from app.community.util import save_icon_file, save_banner_file
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
     POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_FEED
 from app.feed import  bp
-from app.feed.forms import EditFeedForm
+from app.feed.forms import AddCopyFeedForm, EditFeedForm
 from app.feed.util import feeds_for_form
 from app.inoculation import inoculation
 from app.models import Feed, FeedMember, FeedItem, Post, Community, read_posts, utcnow, NotificationSubscription, \
@@ -36,14 +36,14 @@ def feed_new():
     if current_user.banned:
         return show_ban_message()
 
-    form = EditFeedForm()
+    form = AddCopyFeedForm()
     if g.site.enable_nsfw is False:
         form.nsfw.render_kw = {'disabled': True}
     if g.site.enable_nsfl is False:
         form.nsfl.render_kw = {'disabled': True}
     if not current_user.is_admin():
         form.is_instance_feed.render_kw = {'disabled': True}
-    form.parent_feed_id.choices = feeds_for_form(0)
+    form.parent_feed_id.choices = feeds_for_form(0, current_user.id)
 
     if form.validate_on_submit():
         if form.url.data.strip().lower().startswith('/f/'):
@@ -108,7 +108,7 @@ def feed_edit(feed_id: int):
     if feed_to_edit.user_id != current_user.id:
         abort(404)
     edit_feed_form = EditFeedForm()
-    edit_feed_form.parent_feed_id.choices = feeds_for_form(feed_id)
+    edit_feed_form.parent_feed_id.choices = feeds_for_form(feed_id, current_user.id)
 
     if not current_user.is_admin():
         edit_feed_form.is_instance_feed.render_kw = {'disabled': True}
@@ -222,8 +222,8 @@ def feed_copy(feed_id: int):
         return show_ban_message()
     # load the feed
     feed_to_copy = Feed.query.get_or_404(feed_id)
-    copy_feed_form = EditFeedForm()
-    copy_feed_form.parent_feed_id.choices = feeds_for_form(0)
+    copy_feed_form = AddCopyFeedForm()
+    copy_feed_form.parent_feed_id.choices = feeds_for_form(0, current_user.id)
 
     if not current_user.is_admin():
         copy_feed_form.is_instance_feed.render_kw = {'disabled': True}
@@ -477,30 +477,45 @@ def feed_list():
     return options_html
 
 
-@bp.route('/f/<path:feed_path>', methods=['GET'])
-def show_feed(feed_path):
+# @bp.route('/f/<actor>', methods=['GET']) - defined in activitypub/routes.py, which calls this function for user requests. A bit weird.
+def show_feed(feed):
+    # if the feed is private abort, unless the logged in user is the owner of the feed
+    if not feed.public:
+        if current_user.is_authenticated and current_user.id == feed.user_id:
+            ...
+        else:
+            flash(_('That feed is not public. Try one of these!'))
+            return redirect(url_for('main.public_feeds'))
 
     page = request.args.get('page', 1, type=int)
     sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
     post_layout = request.args.get('layout', 'list' if not low_bandwidth else None)
 
-    # translate feed_name from /f/myfunfeed to feed_id
-    feed_url_parts = feed_path.split('/')
-    last_feed_machine_name = feed_url_parts[-1]
+    
     breadcrumbs = []
     existing_url = '/f'
-    feed = None
-    for url_part in feed_url_parts:
-        feed = Feed.query.filter(Feed.machine_name == url_part.strip().lower()).first()
-        if feed:
-            breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
-            breadcrumb.text = feed.name
-            breadcrumb.url = f"{existing_url}/{feed.machine_name}" if feed.machine_name != last_feed_machine_name else ''
-            breadcrumbs.append(breadcrumb)
-            existing_url = breadcrumb.url
-        else:
-            abort(404)
+    # check the path to see if this is a sub feed of some other feed
+    if '/' in feed.path():
+        feed_url_parts = feed.path().split('/')
+        last_feed_machine_name = feed_url_parts[-1]
+        breadcrumb_feed = None
+        for url_part in feed_url_parts:
+            breadcrumb_feed = Feed.query.filter(Feed.machine_name == url_part.strip().lower()).first()
+            if breadcrumb_feed:
+                breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+                breadcrumb.text = breadcrumb_feed.name
+                breadcrumb.url = f"{existing_url}/{breadcrumb_feed.machine_name}" if breadcrumb_feed.machine_name != last_feed_machine_name else ''
+                breadcrumbs.append(breadcrumb)
+                existing_url = breadcrumb.url
+            else:
+                abort(404)
+    else:
+        breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+        breadcrumb.text = feed.name
+        breadcrumb.url = f"{existing_url}/{feed.machine_name}"
+        breadcrumbs.append(breadcrumb)
+
     current_feed = feed
 
     if current_feed:
@@ -577,21 +592,18 @@ def show_feed(feed_path):
 
         feed_communities = Community.query.filter(Community.id.in_(feed_community_ids),Community.banned == False)
 
-
-        next_url = url_for('feed.show_feed',
-                           feed_path=feed_path,
-                           page=posts.next_num, sort=sort, layout=post_layout) if posts.has_next else None
-        prev_url = url_for('feed.show_feed',
-                           feed_path=feed_path,
-                           page=posts.prev_num, sort=sort, layout=post_layout) if posts.has_prev and page != 1 else None
+        next_url = url_for('activitypub.feed_profile', actor=feed.ap_id if feed.ap_id is not None else feed.name,
+                       page=posts.next_num, sort=sort, layout=post_layout) if posts.has_next else None
+        prev_url = url_for('activitypub.feed_profile', actor=feed.ap_id if feed.ap_id is not None else feed.name,
+                       page=posts.prev_num, sort=sort, layout=post_layout) if posts.has_prev and page != 1 else None
 
         sub_feeds = Feed.query.filter_by(parent_feed_id=current_feed.id).order_by(Feed.name).all()
 
         return render_template('feed/show_feed.html', title=_(current_feed.name), posts=posts, feed=current_feed, sort=sort,
                                page=page, post_layout=post_layout, next_url=next_url, prev_url=prev_url,
                                feed_communities=feed_communities, content_filters=content_filters,
-                               sub_feeds=sub_feeds, feed_path=feed_path, breadcrumbs=breadcrumbs,
-                               rss_feed=f"https://{current_app.config['SERVER_NAME']}/f/{feed_path}.rss",
+                               sub_feeds=sub_feeds, feed_path=feed.path(), breadcrumbs=breadcrumbs,
+                               rss_feed=f"https://{current_app.config['SERVER_NAME']}/f/{feed.path()}.rss",
                                rss_feed_name=f"{current_feed.name} on {g.site.name}",
                                show_post_community=True, moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),

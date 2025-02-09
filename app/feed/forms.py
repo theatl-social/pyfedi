@@ -9,7 +9,7 @@ from app.models import Feed, utcnow
 from flask_babel import _, lazy_gettext as _l
 
 
-class EditFeedForm(FlaskForm):
+class AddCopyFeedForm(FlaskForm):
     feed_name = StringField(_l('Name'), validators=[DataRequired()])
     url = StringField(_l('Url'))
     description = TextAreaField(_l('Description'))
@@ -39,3 +39,16 @@ class EditFeedForm(FlaskForm):
                 return False
         return True    
 
+class EditFeedForm(FlaskForm):
+    feed_name = StringField(_l('Name'), validators=[DataRequired()])
+    url = StringField(_l('Url'))
+    description = TextAreaField(_l('Description'))
+    parent_feed_id = SelectField(_l('Parent feed'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
+    show_child_posts = BooleanField('Show posts from child feeds')
+    icon_file = FileField(_l('Icon image'), render_kw={'accept': 'image/*'})
+    banner_file = FileField(_l('Banner image'), render_kw={'accept': 'image/*'})
+    nsfw = BooleanField('NSFW')
+    nsfl = BooleanField('NSFL')
+    public = BooleanField('Make Feed Public')
+    is_instance_feed = BooleanField('Make Instance Feed')
+    submit = SubmitField(_l('Save'))

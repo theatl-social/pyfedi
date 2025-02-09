@@ -2570,7 +2570,7 @@ class Feed(db.Model):
             if parent_feed is None:
                 break
             return_value.append(parent_feed.machine_name)
-            parent_id = parent_feed.parent_id
+            parent_id = parent_feed.parent_feed_id
         return_value = list(reversed(return_value))
         return '/'.join(return_value)
 

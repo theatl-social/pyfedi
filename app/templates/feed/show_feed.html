@@ -26,7 +26,7 @@
         <h5 class="mb-0" id="sub-feeds">{{ _('Sub-feeds') }}</h5>
         <ul id="subfeed_nav" class="nav" role="listbox" aria-labelledby="sub-feeds">
         {% for sub_feed in sub_feeds %}
-            <li class="nav-item" role="option"><a class="nav-link" href="/f/{{ feed_path }}/{{ sub_feed.machine_name }}">{{ sub_feed.name }}</a></li>
+            <li class="nav-item" role="option"><a class="nav-link" href="/f/{{ sub_feed.machine_name }}">{{ sub_feed.title }}</a></li>
         {% endfor %}
         </ul>
         {% endif %}

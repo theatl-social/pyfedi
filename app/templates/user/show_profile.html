@@ -291,7 +291,7 @@
                 <div class="card-body">
                         <ul>
                             {% for feed in user_public_feeds %}
-                                <li><a href="{{ url_for('feed.show_feed', feed_path=feed.path() ) }}">{{ feed.title }}</a></li>
+                                <li><a href="/f/{{ feed.link() }}">{{ feed.title }}</a></li>
                             {% endfor %}
                         </ul>
                 </div>

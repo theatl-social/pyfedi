@@ -1012,8 +1012,8 @@ def topic_tree() -> List:
 
 
 # feeds, in a tree
-def feed_tree() -> List:
-    feeds = Feed.query.order_by(Feed.name)
+def feed_tree(user_id) -> List:
+    feeds = Feed.query.filter(Feed.user_id == user_id).order_by(Feed.name)
 
     feeds_dict = {feed.id: {'feed': feed, 'children': []} for feed in feeds.all()}
 

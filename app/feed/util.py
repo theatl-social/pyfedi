@@ -5,9 +5,9 @@ from flask_babel import _
 
 
 
-def feeds_for_form(current_feed: int) -> List[Tuple[int, str]]:
+def feeds_for_form(current_feed: int, user_id: int) -> List[Tuple[int, str]]:
     result = [(0, _('None'))]
-    feeds = feed_tree()
+    feeds = feed_tree(user_id)
     for feed in feeds:
         if feed['feed'].id != current_feed:
             result.append((feed['feed'].id, feed['feed'].name))
