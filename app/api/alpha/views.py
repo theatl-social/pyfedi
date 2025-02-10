@@ -327,7 +327,13 @@ def reply_view(reply: PostReply | int, variant, user_id=None, my_vote=0, read=Fa
         banned = db.session.execute(text('SELECT user_id FROM "community_ban" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': reply.user_id, 'community_id': reply.community_id}).scalar()
         moderator = db.session.execute(text('SELECT is_moderator FROM "community_member" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': reply.user_id, 'community_id': reply.community_id}).scalar()
         admin = db.session.execute(text('SELECT user_id FROM "user_role" WHERE user_id = :user_id and role_id = 4'), {'user_id': reply.user_id}).scalar()
+        if my_vote == 0 and user_id is not None:
+            reply_vote = db.session.execute(text('SELECT effect FROM "post_reply_vote" WHERE post_reply_id = :post_reply_id and user_id = :user_id'), {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
+            effect = reply_vote if reply_vote else 0
+        else:
+            effect = my_vote
 
+        my_vote = int(effect)
         saved = True if bookmarked else False
         activity_alert = True if reply_sub else False
         creator_banned_from_community = True if banned else False
@@ -347,7 +353,8 @@ def reply_view(reply: PostReply | int, variant, user_id=None, my_vote=0, read=Fa
               'creator_is_admin': creator_is_admin,
               'subscribed': 'NotSubscribed',
               'saved': saved,
-              'creator_blocked': False
+              'creator_blocked': False,
+              'my_vote': my_vote
              }
 
         return v5
