@@ -18,7 +18,7 @@ from app.user.routes import show_profile
 from app.constants import *
 from app.models import User, Community, CommunityJoinRequest, CommunityMember, CommunityBan, ActivityPubLog, Post, \
     PostReply, Instance, PostVote, PostReplyVote, File, AllowedInstances, BannedInstances, utcnow, Site, Notification, \
-    ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice, Feed
+    ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice, Feed, FeedItem
 from app.activitypub.util import public_key, users_total, active_half_year, active_month, local_posts, local_comments, \
     post_to_activity, find_actor_or_create, find_reply_parent, find_liked_object, \
     lemmy_site_data, is_activitypub_request, delete_post_or_comment, community_members, \
@@ -1659,7 +1659,7 @@ def feed_profile(actor):
                 "followers": f"https://{server}/f/{actor}/followers",
                 "following": f"https://{server}/f/{actor}/following",
                 "moderators": f"https://{server}/f/{actor}/moderators",
-                "featured": f"https://{server}/f/{actor}/featured",
+                # "featured": f"https://{server}/f/{actor}/featured",
                 "attributedTo": f"https://{server}/f/{actor}/moderators",
                 "url": f"https://{server}/f/{actor}",
                 "publicKey": {
@@ -1695,3 +1695,40 @@ def feed_profile(actor):
     else:
         abort(404)
 
+
+@bp.route('/f/<actor>/inbox', methods=['POST'])
+def feed_inbox(actor):
+    return shared_inbox()
+
+
+@bp.route('/f/<actor>/following', methods=['POST'])
+def feed_following(actor):
+    actor = actor.strip()
+    if '@' in actor:
+        # don't provide activitypub info for remote feeds
+        abort(400)
+    else:
+        feed: Feed = Feed.query.filter_by(name=actor.lower(), ap_id=None).first()
+    
+    # check if feed is public, if not abort
+    # with 403 (forbidden)
+    if not feed.public:
+        abort(403) 
+
+    # get the feed items
+    feed_items = FeedItem.query.join(Feed, FeedItem.feed_id == feed.id).all()
+    # make the ap data json
+    items = []
+    for fi in feed_items:
+        items.append(fi.ap_public_url)
+    result = {
+        "@context": default_context(),
+        "id": feed.ap_following_url,
+        "type": "Collection",
+        "totalItems": len(items),
+        "items": items
+    }
+    resp = jsonify(result)
+    resp.content_type = 'application/activity+json'
+    return resp
+    
