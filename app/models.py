@@ -2469,6 +2469,7 @@ class Feed(db.Model):
     private_key = db.Column(db.Text)
     subscriptions_count = db.Column(db.Integer, default=0)
     instance_id = db.Column(db.Integer, db.ForeignKey('instance.id'), index=True)
+    instance = db.relationship('Instance', lazy='joined', foreign_keys=[instance_id])
 
     icon_id = db.Column(db.Integer, db.ForeignKey('file.id'))
     image_id = db.Column(db.Integer, db.ForeignKey('file.id'))
@@ -2582,6 +2583,27 @@ class Feed(db.Model):
         parent_feed = Feed.query.get(self.parent_feed_id)
         return parent_feed.title if parent_feed else ""
 
+    def subscribed(self, user_id: int) -> int:
+        if user_id is None:
+            return False
+        subscription:FeedMember = FeedMember.query.filter_by(user_id=user_id, feed_id=self.id).first()
+        if subscription:
+            # if subscription.is_banned:
+            #     return SUBSCRIPTION_BANNED
+            # elif subscription.is_owner:
+            #     return SUBSCRIPTION_OWNER
+            # elif subscription.is_moderator:
+            #     return SUBSCRIPTION_MODERATOR
+            # else:
+                # return SUBSCRIPTION_MEMBER
+            return SUBSCRIPTION_MEMBER
+        else:
+            join_request = FeedJoinRequest.query.filter_by(user_id=user_id, feed_id=self.id).first()
+            if join_request:
+                return SUBSCRIPTION_PENDING
+            else:
+                return SUBSCRIPTION_NONMEMBER
+            
     def profile_id(self):
         retval = self.ap_profile_id if self.ap_profile_id else f"https://{current_app.config['SERVER_NAME']}/f/{self.name}"
         return retval.lower()
@@ -2627,3 +2649,8 @@ class Feed(db.Model):
                 return True
         return False
 
+
+class FeedJoinRequest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    feed_id = db.Column(db.Integer, db.ForeignKey('feed.id'), index=True)

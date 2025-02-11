@@ -530,6 +530,12 @@ def community_membership(user: User, community: Community) -> int:
     return user.subscribed(community.id)
 
 
+@cache.memoize(timeout=10)
+def feed_membership(user: User, feed: Feed) -> int:
+    if feed is None:
+        return False
+    return feed.subscribed(user.id)
+
 @cache.memoize(timeout=86400)
 def communities_banned_from(user_id: int) -> List[int]:
     community_bans = CommunityBan.query.filter(CommunityBan.user_id == user_id).all()

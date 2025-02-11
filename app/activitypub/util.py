@@ -19,7 +19,7 @@ from app import db, cache, constants, celery
 from app.models import User, Post, Community, BannedInstances, File, PostReply, AllowedInstances, Instance, utcnow, \
     PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation, \
     Language, Tag, Poll, PollChoice, UserFollower, CommunityBan, CommunityJoinRequest, NotificationSubscription, \
-    Licence, UserExtraField
+    Licence, UserExtraField, Feed
 from app.activitypub.signature import signed_get_request, post_request
 import time
 from app.constants import *
@@ -263,6 +263,10 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
     if current_app.config['SERVER_NAME'] + '/c/' in actor:
         return Community.query.filter(Community.ap_profile_id == actor).first()  # finds communities formatted like https://localhost/c/*
 
+    # for Feeds check if feed exists
+    if current_app.config['SERVER_NAME'] + '/f/' in actor:
+        return Feed.query.filter(Feed.ap_profile_id == actor).first()  # finds feeds formatted like https://localhost/f/*
+    
     if current_app.config['SERVER_NAME'] + '/u/' in actor:
         alt_user_name = actor_url.rsplit('/', 1)[-1]
         user = User.query.filter(or_(User.ap_profile_id == actor, User.alt_user_name == alt_user_name)).filter_by(ap_id=None, banned=False).first()  # finds local users
