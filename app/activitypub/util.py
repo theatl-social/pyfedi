@@ -315,6 +315,8 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                     refresh_user_profile(user.id)
                 elif isinstance(user, Community):
                     refresh_community_profile(user.id)
+                elif isinstance(user, Feed):
+                    refresh_feed_profile(user.id)
                     # refresh_instance_profile(user.instance_id) # disable in favour of cron job - see app.cli.daily_maintenance()
         if community_only and not isinstance(user, Community):
             return None
@@ -894,8 +896,6 @@ def refresh_feed_profile_task(feed_id):
     session.close()
 
 
-
-
 def actor_json_to_model(activity_json, address, server):
     if activity_json['type'] == 'Person' or activity_json['type'] == 'Service':
         try:
@@ -1071,6 +1071,99 @@ def actor_json_to_model(activity_json, address, server):
         if community.image_id:
             make_image_sizes(community.image_id, 700, 1600, 'communities')
         return community
+    elif activity_json['type'] == 'Feed':
+        if 'attributedTo' in activity_json and isinstance(activity_json['attributedTo'], str):  # lemmy, mbin, and our feeds
+            owners_url = activity_json['attributedTo']
+        elif 'moderators' in activity_json:  # kbin, and our feeds
+            owners_url = activity_json['moderators']
+        else:
+            owners_url = None
+
+        # only allow nsfw communities if enabled for this instance
+        site = Site.query.get(1)    # can't use g.site because actor_json_to_model can be called from celery
+        if 'sensitive' in activity_json and activity_json['sensitive'] and not site.enable_nsfw:
+            return None
+        if 'nsfl' in activity_json and activity_json['nsfl'] and not site.enable_nsfl:
+            return None
+
+        feed = Feed(name=activity_json['preferredUsername'].strip(),
+                              title=activity_json['name'].strip(),
+                              nsfw=activity_json['sensitive'] if 'sensitive' in activity_json else False,
+                            #   restricted_to_mods=activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else False,
+                            #   new_mods_wanted=activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False,
+                            #   private_mods=activity_json['privateMods'] if 'privateMods' in activity_json else False,
+                              created_at=activity_json['published'] if 'published' in activity_json else utcnow(),
+                              last_edit=activity_json['updated'] if 'updated' in activity_json else utcnow(),
+                              ap_id=f"{address[1:].lower()}@{server.lower()}" if address.startswith('!') else f"{address.lower()}@{server.lower()}",
+                              ap_public_url=activity_json['id'],
+                              ap_profile_id=activity_json['id'].lower(),
+                              ap_followers_url=activity_json['followers'] if 'followers' in activity_json else None,
+                              ap_following_url=activity_json['following'] if 'following' in activity_json else None,
+                              ap_inbox_url=activity_json['endpoints']['sharedInbox'] if 'endpoints' in activity_json else activity_json['inbox'],
+                              ap_outbox_url=activity_json['outbox'],
+                            #   ap_featured_url=activity_json['featured'] if 'featured' in activity_json else '',
+                              ap_moderators_url=owners_url,
+                              ap_fetched_at=utcnow(),
+                              ap_domain=server.lower(),
+                              public_key=activity_json['publicKey']['publicKeyPem'],
+                              # language=community_json['language'][0]['identifier'] # todo: language
+                              instance_id=find_instance_id(server)
+                              )
+
+        description_html = ''
+        if 'summary' in activity_json:
+            description_html = activity_json['summary']
+        elif 'content' in activity_json:
+            description_html = activity_json['content']
+        else:
+            description_html = ''
+
+        if description_html is not None and description_html != '':
+            if not description_html.startswith('<'):                    # PeerTube
+                description_html = '<p>' + description_html + '</p>'
+            feed.description_html = allowlist_html(description_html)
+            if 'source' in activity_json and activity_json['source'].get('mediaType') == 'text/markdown':
+                feed.description = activity_json['source']['content']
+                feed.description_html = markdown_to_html(feed.description)          # prefer Markdown if provided, overwrite version obtained from HTML
+            else:
+                feed.description = html_to_text(feed.description_html)
+
+        if 'icon' in activity_json and activity_json['icon'] is not None:
+            if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
+                icon_entry = activity_json['icon']['url']
+            elif isinstance(activity_json['icon'], list) and 'url' in activity_json['icon'][-1]:
+                icon_entry = activity_json['icon'][-1]['url']
+            elif isinstance(activity_json['icon'], str):
+                icon_entry = activity_json['icon']
+            else:
+                icon_entry = None
+            if icon_entry:
+                icon = File(source_url=icon_entry)
+                feed.icon = icon
+                db.session.add(icon)
+        if 'image' in activity_json and activity_json['image'] is not None:
+            if isinstance(activity_json['image'], dict) and 'url' in activity_json['image']:
+                image_entry = activity_json['image']['url']
+            elif isinstance(activity_json['image'], list) and 'url' in activity_json['image'][0]:
+                image_entry = activity_json['image'][0]['url']
+            else:
+                image_entry = None
+            if image_entry:
+                image = File(source_url=image_entry)
+                feed.image = image
+                db.session.add(image)
+        try:
+            db.session.add(feed)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            return Feed.query.filter_by(ap_profile_id=activity_json['id'].lower()).one()
+        if feed.icon_id:
+            make_image_sizes(feed.icon_id, 60, 250, 'feeds')
+        if feed.image_id:
+            make_image_sizes(feed.image_id, 700, 1600, 'feeds')
+        return feed
+
 
 
 # Save two different versions of a File, after downloading it from file.source_url. Set a width parameter to None to avoid generating one of that size
