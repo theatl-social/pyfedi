@@ -2453,6 +2453,9 @@ class FeedMember(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     feed_id = db.Column(db.Integer, db.ForeignKey('feed.id'), index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    is_owner = db.Column(db.Boolean, default=False)
+    notify_new_communities = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=utcnow)
 
 class Feed(db.Model):
     query_class = FullTextSearchQuery

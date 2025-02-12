@@ -1165,6 +1165,19 @@ def process_inbox_request(request_json, store_ap_json):
                     cache.delete_memoized(community_membership, user, community)
                     log_incoming_ap(id, APLOG_UNDO_FOLLOW, APLOG_SUCCESS, saved_json)
                     return
+                if isinstance(target, Feed):
+                    feed = target
+                    member = FeedMember.query.filter_by(user_id=user.id, feed_id=feed.id).first()
+                    join_request = FeedJoinRequest.query.filter_by(user_id=user.id, feed_id=community.id).first()
+                    if member:
+                        db.session.delete(member)
+                        feed.subscriptions_count -= 1
+                    if join_request:
+                        db.session.delete(join_request)
+                    db.session.commit()
+                    cache.delete_memoized(feed_membership, user, feed)
+                    log_incoming_ap(id, APLOG_UNDO_FOLLOW, APLOG_SUCCESS, saved_json)
+                    return                
                 if isinstance(target, User):
                     local_user = target
                     remote_user = user

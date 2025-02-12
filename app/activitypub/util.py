@@ -19,7 +19,7 @@ from app import db, cache, constants, celery
 from app.models import User, Post, Community, BannedInstances, File, PostReply, AllowedInstances, Instance, utcnow, \
     PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation, \
     Language, Tag, Poll, PollChoice, UserFollower, CommunityBan, CommunityJoinRequest, NotificationSubscription, \
-    Licence, UserExtraField, Feed
+    Licence, UserExtraField, Feed, FeedMember
 from app.activitypub.signature import signed_get_request, post_request
 import time
 from app.constants import *
@@ -250,7 +250,7 @@ def instance_allowed(host: str) -> bool:
     return instance is not None
 
 
-def find_actor_or_create(actor: str, create_if_not_found=True, community_only=False) -> Union[User, Community, None]:
+def find_actor_or_create(actor: str, create_if_not_found=True, community_only=False, feed_only=False) -> Union[User, Community, Feed, None]:
     if isinstance(actor, dict):     # Discourse does this
         actor = actor['id']
     actor_url = actor.strip()
@@ -259,19 +259,22 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
     server = ''
     # actor parameter must be formatted as https://server/u/actor or https://server/c/actor
 
-    # Initially, check if the user exists in the local DB already
+    # Initially, check if the community exists in the local DB already
     if current_app.config['SERVER_NAME'] + '/c/' in actor:
         return Community.query.filter(Community.ap_profile_id == actor).first()  # finds communities formatted like https://localhost/c/*
 
     # for Feeds check if feed exists
     if current_app.config['SERVER_NAME'] + '/f/' in actor:
         return Feed.query.filter(Feed.ap_profile_id == actor).first()  # finds feeds formatted like https://localhost/f/*
-    
+
+    # for Users check if user exists 
     if current_app.config['SERVER_NAME'] + '/u/' in actor:
         alt_user_name = actor_url.rsplit('/', 1)[-1]
         user = User.query.filter(or_(User.ap_profile_id == actor, User.alt_user_name == alt_user_name)).filter_by(ap_id=None, banned=False).first()  # finds local users
         if user is None:
             return None
+
+    # if none of the above trigger then this is a remote actor    
     elif actor.startswith('https://'):
         server, address = extract_domain_and_actor(actor)
         if get_setting('use_allowlist', False):
@@ -282,9 +285,11 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                 return None
         if actor_contains_blocked_words(actor):
             return None
+        # see if the actor is a remote user we know
         user = User.query.filter(User.ap_profile_id == actor).first()  # finds users formatted like https://kbin.social/u/tables
         if (user and user.banned) or (user and user.deleted) :
             return None
+        # actor is not a remote user, see if its a remote community or feed
         if user is None:
             user = Community.query.filter(Community.ap_profile_id == actor).first()
             if user and user.banned:
@@ -292,6 +297,11 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                 user = Community.query.filter(Community.ap_profile_id == actor).filter(Community.banned == False).first()
                 if user is None:    # no un-banned version of this community exists, only the banned one. So it was banned for being bad, not for being a duplicate.
                     return None
+            else:
+                user = Feed.query.filter(Feed.ap_profile_id == actor).first()
+                if user is None:
+                    return
+
 
     if user is not None:
         if not user.is_local() and (user.ap_fetched_at is None or user.ap_fetched_at < utcnow() - timedelta(days=7)):
@@ -307,6 +317,8 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                     refresh_community_profile(user.id)
                     # refresh_instance_profile(user.instance_id) # disable in favour of cron job - see app.cli.daily_maintenance()
         if community_only and not isinstance(user, Community):
+            return None
+        elif feed_only and not isinstance(user, Feed):
             return None
         return user
     else:   # User does not exist in the DB, it's going to need to be created from it's remote home instance
@@ -331,6 +343,8 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                     actor_model = actor_json_to_model(actor_json, address, server)
                     if community_only and not isinstance(actor_model, Community):
                         return None
+                    if feed_only and not isinstance(actor_model, Feed):
+                        return None
                     return actor_model
                 elif actor_data.status_code == 401:
                     try:
@@ -346,6 +360,8 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                             actor_data.close()
                             actor_model = actor_json_to_model(actor_json, address, server)
                             if community_only and not isinstance(actor_model, Community):
+                                return None
+                            if feed_only and not isinstance(actor_model, Feed):
                                 return None
                             return actor_model
                     except Exception:
@@ -377,6 +393,8 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                                 actor_data.close()
                                 actor_model = actor_json_to_model(actor_json, address, server)
                                 if community_only and not isinstance(actor_model, Community):
+                                    return None
+                                if feed_only and not isinstance(actor_model, Feed):
                                     return None
                                 return actor_model
     return None
@@ -727,6 +745,155 @@ def refresh_community_profile_task(community_id, activity_json):
                                                                             is_moderator=True).delete()
                                 db.session.commit()
     session.close()
+
+
+def refresh_feed_profile(feed_id):
+    if current_app.debug:
+        refresh_feed_profile_task(feed_id)
+    else:
+        refresh_feed_profile_task.apply_async(args=(feed_id,), countdown=randint(1, 10))
+
+
+@celery.task
+def refresh_feed_profile_task(feed_id):
+    session = get_task_session()
+    feed: Feed = session.query(Feed).get(feed_id)
+    if feed and feed.instance.online() and not feed.is_local():
+        try:
+            actor_data = get_request(feed.ap_public_url, headers={'Accept': 'application/activity+json'})
+        except httpx.HTTPError:
+            time.sleep(randint(3, 10))
+            try:
+                actor_data = get_request(feed.ap_public_url, headers={'Accept': 'application/activity+json'})
+            except Exception:
+                return
+        if actor_data.status_code == 200:
+            activity_json = actor_data.json()
+            actor_data.close()
+
+            if 'attributedTo' in activity_json and isinstance(activity_json['attributedTo'], str):  # lemmy, mbin, and our feeds
+                owners_url = activity_json['attributedTo']
+            elif 'moderators' in activity_json:  # kbin, and our feeds
+                owners_url = activity_json['moderators']
+            else:
+                owners_url = None
+
+            feed.nsfw = activity_json['sensitive'] if 'sensitive' in activity_json else False
+            if 'nsfl' in activity_json and activity_json['nsfl']:
+                feed.nsfl = activity_json['nsfl']
+            feed.title = activity_json['name'].strip()
+            # community.restricted_to_mods = activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else False
+            # community.new_mods_wanted = activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False
+            # community.private_mods = activity_json['privateMods'] if 'privateMods' in activity_json else False
+            feed.ap_moderators_url = owners_url
+            feed.ap_fetched_at = utcnow()
+            feed.public_key=activity_json['publicKey']['publicKeyPem']
+
+            description_html = ''
+            if 'summary' in activity_json:
+                description_html = activity_json['summary']
+            elif 'content' in activity_json:
+                description_html = activity_json['content']
+            else:
+                description_html = ''
+
+            if description_html is not None and description_html != '':
+                if not description_html.startswith('<'):                    # PeerTube
+                    description_html = '<p>' + description_html + '</p>'
+                feed.description_html = allowlist_html(description_html)
+                if 'source' in activity_json and activity_json['source'].get('mediaType') == 'text/markdown':
+                    feed.description = activity_json['source']['content']
+                    feed.description_html = markdown_to_html(feed.description)          # prefer Markdown if provided, overwrite version obtained from HTML
+                else:
+                    feed.description = html_to_text(feed.description_html)
+
+            icon_changed = cover_changed = False
+            if 'icon' in activity_json:
+                if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
+                    icon_entry = activity_json['icon']['url']
+                elif isinstance(activity_json['icon'], list) and 'url' in activity_json['icon'][-1]:
+                    icon_entry = activity_json['icon'][-1]['url']
+                else:
+                    icon_entry = None
+                if icon_entry:
+                    if feed.icon_id and icon_entry != feed.icon.source_url:
+                        feed.icon.delete_from_disk()
+                    if not feed.icon_id or (feed.icon_id and icon_entry != feed.icon.source_url):
+                        icon = File(source_url=icon_entry)
+                        feed.icon = icon
+                        session.add(icon)
+                        icon_changed = True
+            if 'image' in activity_json:
+                if isinstance(activity_json['image'], dict) and 'url' in activity_json['image']:
+                    image_entry = activity_json['image']['url']
+                elif isinstance(activity_json['image'], list) and 'url' in activity_json['image'][0]:
+                    image_entry = activity_json['image'][0]['url']
+                else:
+                    image_entry = None
+                if image_entry:
+                    if feed.image_id and image_entry != feed.image.source_url:
+                        feed.image.delete_from_disk()
+                    if not feed.image_id or (feed.image_id and image_entry != feed.image.source_url):
+                        image = File(source_url=image_entry)
+                        feed.image = image
+                        session.add(image)
+                        cover_changed = True
+            # if 'language' in activity_json and isinstance(activity_json['language'], list) and not community.ignore_remote_language:
+            #     for ap_language in activity_json['language']:
+            #         new_language = find_language_or_create(ap_language['identifier'], ap_language['name'], session)
+            #         if new_language not in community.languages:
+            #             community.languages.append(new_language)
+
+            # instance = session.query(Instance).get(feed.instance_id)
+            # if instance and instance.software == 'peertube':
+            #     community.restricted_to_mods = True
+            session.commit()
+
+            if feed.icon_id and icon_changed:
+                make_image_sizes(feed.icon_id, 60, 250, 'feeds')
+            if feed.image_id and cover_changed:
+                make_image_sizes(feed.image_id, 700, 1600, 'feeds')
+
+            if feed.ap_moderators_url:
+                owners_request = get_request(feed.ap_moderators_url, headers={'Accept': 'application/activity+json'})
+                if owners_request.status_code == 200:
+                    owners_data = owners_request.json()
+                    owners_request.close()
+                    if owners_data and owners_data['type'] == 'OrderedCollection' and 'orderedItems' in owners_data:
+                        for actor in owners_data['orderedItems']:
+                            time.sleep(0.5)
+                            user = find_actor_or_create(actor)
+                            if user:
+                                existing_membership = FeedMember.query.filter_by(feed_id=feed.id,
+                                                                                      user_id=user.id).first()
+                                if existing_membership:
+                                    existing_membership.is_owner = True
+                                    db.session.commit()
+                                else:
+                                    new_membership = FeedMember(feed_id=feed.id, user_id=user.id,
+                                                                     is_owner=True)
+                                    db.session.add(new_membership)
+                                    db.session.commit()
+
+                        # Remove people who are no longer mods
+                        # this should not get triggered as feeds just have the one owner
+                        # right now, but that may change later so this is here for 
+                        # future proofing
+                        for member in FeedMember.query.filter_by(feed_id=feed.id, is_owner=True).all():
+                            member_user = User.query.get(member.user_id)
+                            is_owner = False
+                            for actor in owners_data['orderedItems']:
+                                if actor.lower() == member_user.profile_id().lower():
+                                    is_owner = True
+                                    break
+                            if not is_owner:
+                                db.session.query(FeedMember).filter_by(feed_id=feed.id,
+                                                                            user_id=member_user.id,
+                                                                            is_owner=True).delete()
+                                db.session.commit()
+    session.close()
+
+
 
 
 def actor_json_to_model(activity_json, address, server):
