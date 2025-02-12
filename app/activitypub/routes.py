@@ -78,15 +78,20 @@ def webfinger():
             resp.headers.add_header('Access-Control-Allow-Origin', '*')
             return resp
 
+        # look for the User first, then the Community, then the Feed that matches
         seperator = 'u'
         type = 'Person'
         user = User.query.filter(or_(User.user_name == actor.strip(), User.alt_user_name == actor.strip())).filter_by(deleted=False, banned=False, ap_id=None).first()
         if user is None:
             community = Community.query.filter_by(name=actor.strip(), ap_id=None).first()
-            if community is None:
-                return ''
             seperator = 'c'
             type = 'Group'
+            if community is None:
+                feed = Feed.query.filter_by(name=actor.strip(), ap_id=None).first()
+                if feed is None:
+                    return ''
+                seperator = 'f'
+                type = 'Feed'
 
         webfinger_data = {
             "subject": f"acct:{actor}@{current_app.config['SERVER_NAME']}",
