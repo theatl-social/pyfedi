@@ -6,21 +6,21 @@ from typing import List
 from flask import g, current_app, request, redirect, url_for, flash, abort
 from flask_login import current_user, login_required
 from flask_babel import _
-from app import db, cache
-from app.activitypub.signature import RsaKeys
+from app import db, cache, celery
+from app.activitypub.signature import RsaKeys, post_request
 # from app.community.routes import do_subscribe
 from app.community.util import save_icon_file, save_banner_file
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
-    POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_FEED
+    POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_FEED, SUBSCRIPTION_MEMBER, SUBSCRIPTION_PENDING
 from app.feed import  bp
 from app.feed.forms import AddCopyFeedForm, EditFeedForm
 from app.feed.util import feeds_for_form
 from app.inoculation import inoculation
 from app.models import Feed, FeedMember, FeedItem, Post, Community, read_posts, utcnow, NotificationSubscription, \
-    CommunityMember
+    CommunityMember, User, FeedJoinRequest
 from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markdown_to_html, render_template, user_filters_posts, \
     blocked_domains, blocked_instances, blocked_communities, blocked_users, communities_banned_from, moderating_communities, \
-    joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, validation_required
+    joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, validation_required, feed_membership
 from collections import namedtuple
 from sqlalchemy import desc, or_
 from slugify import slugify
@@ -656,3 +656,105 @@ def feed_create_post(feed_name):
                            menu_instance_feeds=menu_instance_feeds(), 
                            menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR)
+
+
+@bp.route('/<actor>/subscribe', methods=['GET'])
+@login_required
+@validation_required
+def subscribe(actor):
+    do_feed_subscribe(actor, current_user.id)
+    referrer = request.headers.get('Referer', None)
+    if referrer is not None:
+        return redirect(referrer)
+    else:
+        return redirect('/c/' + actor)
+
+
+@celery.task
+def do_feed_subscribe(actor, user_id, admin_preload=False):
+    remote = False
+    actor = actor.strip()
+    user = User.query.get(user_id)
+    # pre_load_message = {}
+    if '@' in actor:
+        feed = Feed.query.filter_by(ap_id=actor).first()
+        remote = True
+    else:
+        feed = Feed.query.filter_by(name=actor, ap_id=None).first()
+
+    if feed is not None:
+        # pre_load_message['community'] = community.ap_id
+        # if community.id in communities_banned_from(user.id):
+        #     if not admin_preload:
+        #         abort(401)
+        #     else:
+        #         pre_load_message['user_banned'] = True
+        if feed_membership(user, feed) != SUBSCRIPTION_MEMBER and feed_membership(user, feed) != SUBSCRIPTION_PENDING:
+            # banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
+            # if banned:
+            #     if not admin_preload:
+            #         flash(_('You cannot join this community'))
+            #     else:
+            #         pre_load_message['community_banned_by_local_instance'] = True
+            success = True
+            # for local feeds, joining is instant
+            member = FeedMember(user_id=user.id, feed_id=feed.id)
+            db.session.add(member)
+            feed.subscriptions_count += 1
+            db.session.commit()
+            if remote:
+                # send ActivityPub message to remote feed, asking to follow. Accept message will be sent to our shared inbox
+                join_request = FeedJoinRequest(user_id=user.id, feed_id=feed.id)
+                db.session.add(join_request)
+                db.session.commit()
+                if feed.instance.online():
+                    follow = {
+                      "actor": user.public_url(),
+                      "to": [feed.public_url()],
+                      "object": feed.public_url(),
+                      "type": "Follow",
+                      "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+                    }
+                    success = post_request(feed.ap_inbox_url, follow, user.private_key,
+                                                           user.public_url() + '#main-key', timeout=10)
+                if success is False or isinstance(success, str):
+                    if 'is not in allowlist' in success:
+                        msg_to_user = f'{feed.instance.domain} does not allow us to subscribe to their feeds.'
+                        flash(_(msg_to_user), 'error')
+                        # if not admin_preload:
+                        #     flash(_(msg_to_user), 'error')
+                        # else:
+                        #     pre_load_message['status'] = msg_to_user
+                    else:
+                        msg_to_user = "There was a problem while trying to communicate with remote server. If other people have already subscribed to this feed it won't matter."
+                        flash(_(msg_to_user), 'error')
+                        # if not admin_preload:
+                        #     flash(_(msg_to_user), 'error')
+                        # else:
+                        #     pre_load_message['status'] = msg_to_user
+
+            if success is True:
+                flash('You subscribed to ' + feed.title)
+                # if not admin_preload:
+                #     flash('You joined ' + community.title)
+                # else:
+                #     pre_load_message['status'] = 'joined'
+        else:
+            msg_to_user = "Already subscribed, or subscription pending"
+            flash(_(msg_to_user))
+            # if admin_preload:
+            #     pre_load_message['status'] = 'already subscribed, or subsciption pending'
+
+        cache.delete_memoized(feed_membership, user, feed)
+        cache.delete_memoized(joined_communities, user.id)
+        # if admin_preload:
+        #     return pre_load_message
+    else:
+        abort(404)
+        # if not admin_preload:
+        #     abort(404)
+        # else:
+        #     pre_load_message['community'] = actor
+        #     pre_load_message['status'] = 'community not found'
+        #     return pre_load_message
+
