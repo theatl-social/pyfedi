@@ -8,7 +8,7 @@ from flask_login import current_user, login_required
 from flask_babel import _
 from app import db, cache, celery
 from app.activitypub.signature import RsaKeys, post_request
-# from app.community.routes import do_subscribe
+from app.activitypub.util import find_actor_or_create
 from app.community.util import save_icon_file, save_banner_file
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
     POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_FEED, SUBSCRIPTION_MEMBER, SUBSCRIPTION_PENDING
@@ -20,7 +20,7 @@ from app.models import Feed, FeedMember, FeedItem, Post, Community, read_posts, 
     CommunityMember, User, FeedJoinRequest
 from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markdown_to_html, render_template, user_filters_posts, \
     blocked_domains, blocked_instances, blocked_communities, blocked_users, communities_banned_from, moderating_communities, \
-    joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, validation_required, feed_membership
+    joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, validation_required, feed_membership, get_request
 from collections import namedtuple
 from sqlalchemy import desc, or_
 from slugify import slugify
@@ -667,11 +667,11 @@ def subscribe(actor):
     if referrer is not None:
         return redirect(referrer)
     else:
-        return redirect('/c/' + actor)
+        return redirect('/f/' + actor)
 
 
 @celery.task
-def do_feed_subscribe(actor, user_id, admin_preload=False):
+def do_feed_subscribe(actor, user_id):
     remote = False
     actor = actor.strip()
     user = User.query.get(user_id)
@@ -683,25 +683,24 @@ def do_feed_subscribe(actor, user_id, admin_preload=False):
         feed = Feed.query.filter_by(name=actor, ap_id=None).first()
 
     if feed is not None:
-        # pre_load_message['community'] = community.ap_id
-        # if community.id in communities_banned_from(user.id):
-        #     if not admin_preload:
-        #         abort(401)
-        #     else:
-        #         pre_load_message['user_banned'] = True
         if feed_membership(user, feed) != SUBSCRIPTION_MEMBER and feed_membership(user, feed) != SUBSCRIPTION_PENDING:
-            # banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
-            # if banned:
-            #     if not admin_preload:
-            #         flash(_('You cannot join this community'))
-            #     else:
-            #         pre_load_message['community_banned_by_local_instance'] = True
             success = True
+
             # for local feeds, joining is instant
             member = FeedMember(user_id=user.id, feed_id=feed.id)
             db.session.add(member)
             feed.subscriptions_count += 1
             db.session.commit()
+
+            # also subscribe the user to the feeditem communities
+            from app.community.routes import do_subscribe
+            feed_items = FeedItem.query.filter_by(feed_id=feed.id).all()
+            for fi in feed_items:
+                community = Community.query.get(fi.community_id)
+                actor = community.ap_id if community.ap_id else community.name
+                do_subscribe(actor, user.id)
+ 
+            # feed is remote
             if remote:
                 # send ActivityPub message to remote feed, asking to follow. Accept message will be sent to our shared inbox
                 join_request = FeedJoinRequest(user_id=user.id, feed_id=feed.id)
@@ -717,6 +716,23 @@ def do_feed_subscribe(actor, user_id, admin_preload=False):
                     }
                     success = post_request(feed.ap_inbox_url, follow, user.private_key,
                                                            user.public_url() + '#main-key', timeout=10)
+                    
+                    # reach out and get the feeditems from the remote /following collection
+                    res = get_request(feed.ap_following_url)
+                    following_collection = res.json()
+
+                    # for each of those subscribe the user to the communities
+                    for fci in following_collection['items']:
+                        community_ap_id = fci 
+                        community = find_actor_or_create(community_ap_id, community_only=True)
+                        if community and isinstance(community, Community):
+                            actor = community.ap_id if community.ap_id else community.name
+                            do_subscribe(actor, user.id)
+                            # also make a feeditem in the local db
+                            feed_item = FeedItem(feed_id=feed.id, community_id=community.id)
+                            db.session.add(feed_item)
+                            db.session.commit()
+
                 if success is False or isinstance(success, str):
                     if 'is not in allowlist' in success:
                         msg_to_user = f'{feed.instance.domain} does not allow us to subscribe to their feeds.'

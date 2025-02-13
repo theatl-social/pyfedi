@@ -19,7 +19,7 @@ from app import db, cache, constants, celery
 from app.models import User, Post, Community, BannedInstances, File, PostReply, AllowedInstances, Instance, utcnow, \
     PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation, \
     Language, Tag, Poll, PollChoice, UserFollower, CommunityBan, CommunityJoinRequest, NotificationSubscription, \
-    Licence, UserExtraField, Feed, FeedMember
+    Licence, UserExtraField, Feed, FeedMember, FeedItem
 from app.activitypub.signature import signed_get_request, post_request
 import time
 from app.constants import *
@@ -893,6 +893,20 @@ def refresh_feed_profile_task(feed_id):
                                                                             user_id=member_user.id,
                                                                             is_owner=True).delete()
                                 db.session.commit()
+            
+            # also make sure we have all the feeditems from the /following collection
+            res = get_request(feed.ap_following_url)
+            following_collection = res.json()
+
+            # for each of those get the communities and make feeditems
+            for fci in following_collection['items']:
+                community_ap_id = fci 
+                community = find_actor_or_create(community_ap_id, community_only=True)
+                if community and isinstance(community, Community):
+                    feed_item = FeedItem(feed_id=feed.id, community_id=community.id)
+                    db.session.add(feed_item)
+                    db.session.commit()
+    
     session.close()
 
 
