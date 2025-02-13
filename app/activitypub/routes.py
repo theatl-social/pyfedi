@@ -653,12 +653,28 @@ def process_inbox_request(request_json, store_ap_json):
         id = request_json['id']
         actor_id = request_json['actor']
         if request_json['type'] == 'Announce' or request_json['type'] == 'Accept' or request_json['type'] == 'Reject':
-            actor = find_actor_or_create(actor_id, community_only=True, create_if_not_found=False)
-            if actor and isinstance(actor, Community):
-                community = actor
+            # get the actor
+            # do the find or create
+            target = find_actor_or_create(request_json['actor'], create_if_not_found=False)
+            if target and isinstance(target, Community):
+                community_ap_id = request_json['actor']
+                community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False)
+                feed_ap_id = None
+                user_ap_id = None
+            elif isinstance(target, Feed):
+                feed_ap_id = request_json['actor']
+                feed = find_actor_or_create(feed_ap_id, feed_only=True, create_if_not_found=False)
+                community_ap_id = None
+                user_ap_id = None
             else:
-                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Actor was not a community')
+                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Actor was not a community, or a feed')
                 return
+
+            # community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False)
+            # if not community or not isinstance(community, Community):
+                # log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Actor was not a community')
+                # return
+            # user_ap_id = None               # found in 'if request_json['type'] == 'Announce', or it's a local user (for 'Accept'/'Reject')
         else:
             actor = find_actor_or_create(actor_id, create_if_not_found=False)
             if actor and isinstance(actor, User):
@@ -699,23 +715,33 @@ def process_inbox_request(request_json, store_ap_json):
                     log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'Could not resolve post')
                 return
 
-            user_ap_id = request_json['object']['actor']
-            user = find_actor_or_create(user_ap_id)
-            if not user or not isinstance(user, User):
-                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Blocked or unfound user for Announce object actor ' + user_ap_id)
-                return
+            # handle Feed Announce/Add or Announce/Remove
+            if request_json['object']['type'] == 'Add':
+                if request_json['object']['object']['type'] == 'Group' and request_json['object']['target']['id'].endswith('/following'):
+                    announced = True
+                    core_activity = request_json['object']
+            elif request_json['object']['type'] == 'Remove':
+                if request_json['object']['object']['type'] == 'Group' and request_json['object']['target']['id'].endswith('/following'):
+                    announced = True
+                    core_activity = request_json['object']
+            else: 
+                user_ap_id = request_json['object']['actor']
+                user = find_actor_or_create(user_ap_id)
+                if not user or not isinstance(user, User):
+                    log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Blocked or unfound user for Announce object actor ' + user_ap_id)
+                    return
 
-            user.last_seen = site.last_active = utcnow()
-            user.instance.last_seen = utcnow()
-            user.instance.dormant = False
-            user.instance.gone_forever = False
-            user.instance.failures = 0
-            db.session.commit()
+                user.last_seen = site.last_active = utcnow()
+                user.instance.last_seen = utcnow()
+                user.instance.dormant = False
+                user.instance.gone_forever = False
+                user.instance.failures = 0
+                db.session.commit()
 
-            # Now that we have the community and the user from an Announce, we can save repeating code by removing it
-            # core_activity is checked for its Type, but the original request_json is sometimes passed to any other functions
-            announced = True
-            core_activity = request_json['object']
+                # Now that we have the community and the user from an Announce, we can save repeating code by removing it
+                # core_activity is checked for its Type, but the original request_json is sometimes passed to any other functions
+                announced = True
+                core_activity = request_json['object']
         else:
             announced = False
             core_activity = request_json
@@ -860,7 +886,7 @@ def process_inbox_request(request_json, store_ap_json):
                 if not user:
                     log_incoming_ap(id, APLOG_ACCEPT, APLOG_FAILURE, saved_json, 'Could not find recipient of Reject')
                     return
-                # check if the Accept is for a community follow or a feed follow
+                # check if the Reject is for a community follow or a feed follow
                 if current_app.config['SERVER_NAME'] + '/c/' in core_activity['object']['object']:
                     join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
                     if join_request:
@@ -871,7 +897,7 @@ def process_inbox_request(request_json, store_ap_json):
                         cache.delete_memoized(community_membership, user, community)
                     db.session.commit()
                     log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json)
-                # check if the Accept is for a feed follow
+                # check if the Reject is for a feed follow
                 elif current_app.config['SERVER_NAME'] + '/f/' in core_activity['object']['object']:
                     join_request = FeedJoinRequest.query.filter_by(user_id=user.id, feed_id=feed.id).first()
                     if join_request:
@@ -1011,7 +1037,22 @@ def process_inbox_request(request_json, store_ap_json):
             mod = user
             if not announced:
                 community = find_community(core_activity)
-            if community:
+            # check if the add is for a feed
+            if core_activity['object']['type'] == 'Group' and core_activity['target']['id'].endswith('/following'):
+                # find the feed based on core_activity.actor
+                feed = find_actor_or_create(core_activity['actor'], feed_only=True)
+                # if we found the feed attempt to find the community based on core_activity.object.id
+                if feed and isinstance(feed, Feed):
+                    community_to_add = find_actor_or_create(core_activity['object']['id'], community_only=True)
+                    # if community found or created - add the FeedItem and update Feed info
+                    if community_to_add and isinstance(community_to_add, Community):
+                        feed_item = FeedItem(feed_id=feed.id, community_id=community_to_add.id)
+                        db.session.add(feed_item)
+                        feed.num_communities += 1
+                        db.session.commit()
+                else:
+                    log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json, "Cannot find Feed.")
+            elif community:
                 if not community.is_moderator(mod) and not community.is_instance_admin(mod):
                     log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json, 'Does not have permission')
                     return
@@ -1050,7 +1091,21 @@ def process_inbox_request(request_json, store_ap_json):
             mod = user
             if not announced:
                 community = find_community(core_activity)
-            if community:
+            if core_activity['object']['type'] == 'Group' and core_activity['target']['id'].endswith('/following'):
+                # find the feed based on core_activity.actor
+                feed = find_actor_or_create(core_activity['actor'], feed_only=True)
+                # if we found the feed attempt to find the community based on core_activity.object.id
+                if feed and isinstance(feed, Feed):
+                    community_to_remove = find_actor_or_create(core_activity['object']['id'], community_only=True)
+                    # if community found or created - remove the FeedItem and update Feed info
+                    if community_to_remove and isinstance(community_to_add, Community):
+                        feed_item = FeedItem.query.filter_by(feed_id=feed.id, community_id=community_to_remove.id).first()
+                        db.session.delete(feed_item)
+                        feed.num_communities -= 1
+                        db.session.commit()
+                else:
+                    log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json, "Cannot find Feed.")                
+            elif community:
                 if not community.is_moderator(mod) and not community.is_instance_admin(mod):
                     log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json, 'Does not have permission')
                     return
