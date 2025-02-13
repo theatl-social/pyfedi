@@ -1020,7 +1020,7 @@ def community_ban_user(community_id: int, user_id: int):
 
         # Notify banned person
         if user.is_local():
-            cache.delete_memoized(communities_banned_from, user.id)
+
             cache.delete_memoized(joined_communities, user.id)
             cache.delete_memoized(moderating_communities, user.id)
             notify = Notification(title=shorten_string('You have been banned from ' + community.title),
@@ -1032,6 +1032,7 @@ def community_ban_user(community_id: int, user_id: int):
         else:
             ...
             # todo: send chatmessage to remote user and federate it
+        cache.delete_memoized(communities_banned_from, user.id)
 
         # Remove their notification subscription,  if any
         db.session.query(NotificationSubscription).filter(NotificationSubscription.entity_id == community.id,
@@ -1072,7 +1073,6 @@ def community_unban_user(community_id: int, user_id: int):
 
     # notify banned person
     if user.is_local():
-        cache.delete_memoized(communities_banned_from, user.id)
         cache.delete_memoized(joined_communities, user.id)
         cache.delete_memoized(moderating_communities, user.id)
         notify = Notification(title=shorten_string('You have been un-banned from ' + community.title),
@@ -1084,6 +1084,8 @@ def community_unban_user(community_id: int, user_id: int):
     else:
         ...
         # todo: send chatmessage to remote user and federate it
+
+    cache.delete_memoized(communities_banned_from, user.id)
 
     add_to_modlog('unban_user', community_id=community.id, link_text=user.display_name(), link=user.link())
 
