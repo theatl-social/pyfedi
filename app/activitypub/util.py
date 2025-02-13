@@ -568,30 +568,32 @@ def refresh_user_profile_task(user_id):
             session.close()
 
 
-def refresh_community_profile(community_id):
+def refresh_community_profile(community_id, activity_json=None):
     if current_app.debug:
-        refresh_community_profile_task(community_id)
+        refresh_community_profile_task(community_id, activity_json)
     else:
-        refresh_community_profile_task.apply_async(args=(community_id,), countdown=randint(1, 10))
+        refresh_community_profile_task.apply_async(args=(community_id,activity_json), countdown=randint(1, 10))
 
 
 @celery.task
-def refresh_community_profile_task(community_id):
+def refresh_community_profile_task(community_id, activity_json):
     session = get_task_session()
     community: Community = session.query(Community).get(community_id)
     if community and community.instance.online() and not community.is_local():
-        try:
-            actor_data = get_request(community.ap_public_url, headers={'Accept': 'application/activity+json'})
-        except httpx.HTTPError:
-            time.sleep(randint(3, 10))
+        if not activity_json:
             try:
                 actor_data = get_request(community.ap_public_url, headers={'Accept': 'application/activity+json'})
-            except Exception:
-                return
-        if actor_data.status_code == 200:
-            activity_json = actor_data.json()
-            actor_data.close()
+            except httpx.HTTPError:
+                time.sleep(randint(3, 10))
+                try:
+                    actor_data = get_request(community.ap_public_url, headers={'Accept': 'application/activity+json'})
+                except Exception:
+                    return
+            if actor_data.status_code == 200:
+                activity_json = actor_data.json()
+                actor_data.close()
 
+        if activity_json:
             if 'attributedTo' in activity_json and isinstance(activity_json['attributedTo'], str):  # lemmy and mbin
                 mods_url = activity_json['attributedTo']
             elif 'moderators' in activity_json:  # kbin

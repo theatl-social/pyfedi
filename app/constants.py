@@ -70,8 +70,8 @@ APLOG_UNDO_DELETE   = (True, 'Undo Delete')
 APLOG_UNDO_VOTE     = (True, 'Undo Vote')
 APLOG_UNDO_USERBAN  = (True, 'Undo User Ban')
 
-APLOG_ADD           = (True, 'Add Mod/Sticky')
-APLOG_REMOVE        = (True, 'Remove Mod/Sticky')
+APLOG_ADD           = (True, 'Add')
+APLOG_REMOVE        = (True, 'Remove')
 
 APLOG_ANNOUNCE      = (True, 'Announce')
 APLOG_PT_VIEW       = (True, 'PeerTube View')

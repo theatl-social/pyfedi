@@ -26,10 +26,10 @@ def log_user_in(input, src):
         password = input.password.data
         user = User.query.filter_by(user_name=username, ap_id=None).first()
     elif src == SRC_API:
-        required(["username_or_email", "password"], input)
-        string_expected(["username_or_email", "password"], input)
+        required(["username", "password"], input)
+        string_expected(["username", "password"], input)
 
-        username = input['username_or_email']
+        username = input['username']
         password = input['password']
         user = User.query.filter_by(user_name=username, ap_id=None, deleted=False).one()
     else:
@@ -97,9 +97,5 @@ def log_user_in(input, src):
             response.set_cookie('low_bandwidth', '0', expires=datetime(year=2099, month=12, day=30))
         return response
     elif src == SRC_API:
-        login_json = {
-          'jwt': user.encode_jwt_token(),
-          'registration_created': user.verified,
-          'verify_email_sent': True
-        }
+        login_json = {'jwt': user.encode_jwt_token()}
         return login_json
