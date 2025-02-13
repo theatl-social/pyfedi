@@ -23,7 +23,7 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
     lemmy_site_data, is_activitypub_request, delete_post_or_comment, community_members, \
     user_removed_from_remote_server, create_post, create_post_reply, update_post_reply_from_activity, \
     update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection, find_reported_object, \
-    process_report, ensure_domains_match, can_edit, can_delete, resolve_remote_post, \
+    process_report, ensure_domains_match, can_edit, can_delete, resolve_remote_post, refresh_community_profile, \
     comment_model_to_json, restore_post_or_comment, ban_user, unban_user, \
     log_incoming_ap, find_community, site_ban_remove_data, community_ban_remove_data, verify_object_from_source
 from app.utils import gibberish, get_setting, render_template, \
@@ -645,22 +645,40 @@ def process_inbox_request(request_json, store_ap_json):
         #   Using actors from inner objects has a vulnerability to spoofing attacks (e.g. if 'attributedTo' doesn't match the 'Create' actor)
         saved_json = request_json if store_ap_json else None
         id = request_json['id']
+        actor_id = request_json['actor']
         if request_json['type'] == 'Announce' or request_json['type'] == 'Accept' or request_json['type'] == 'Reject':
-            community_ap_id = request_json['actor']
-            community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False)
-            if not community or not isinstance(community, Community):
+            actor = find_actor_or_create(actor_id, community_only=True, create_if_not_found=False)
+            if actor and isinstance(actor, Community):
+                community = actor
+            else:
                 log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Actor was not a community')
                 return
-            user_ap_id = None               # found in 'if request_json['type'] == 'Announce', or it's a local user (for 'Accept'/'Reject')
         else:
-            user_ap_id = request_json['actor']
-            user = find_actor_or_create(user_ap_id, create_if_not_found=False)
-            if not user or not isinstance(user, User):
-                log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Actor was not a user')
+            actor = find_actor_or_create(actor_id, create_if_not_found=False)
+            if actor and isinstance(actor, User):
+                user = actor
+                user.last_seen = site.last_active = utcnow()
+                db.session.commit()
+                community = None                # found as needed
+            elif actor and isinstance(actor, Community):                  # Process a few activities from NodeBB and a.gup.pe
+                if request_json['type'] == 'Add' or request_json['type'] == 'Remove':
+                    log_incoming_ap(id, APLOG_ADD, APLOG_IGNORED, saved_json, 'NodeBB Topic Management')
+                    return
+                elif request_json['type'] == 'Update' and 'type' in request_json['object']:
+                    if request_json['object']['type'] == 'Group':
+                        community = actor            # process it same as Update/Group from Lemmy
+                    elif request_json['object']['type'] == 'OrderedCollection':
+                        log_incoming_ap(id, APLOG_ADD, APLOG_IGNORED, saved_json, 'Follower count update from a.gup.pe')
+                        return
+                    else:
+                        log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Unexpected Update activity from Group')
+                        return
+                else:
+                    log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Unexpected activity from Group')
+                    return
+            else:
+                log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Actor was not a user or a community')
                 return
-            user.last_seen = site.last_active = utcnow()
-            db.session.commit()
-            community = None                # found as needed
 
         # Announce: take care of inner objects that are just a URL (PeerTube, a.gup.pe), or find the user if the inner object is a dict
         if request_json['type'] == 'Announce':
@@ -868,7 +886,7 @@ def process_inbox_request(request_json, store_ap_json):
                             if post_being_replied_to.author.is_local():
                                 task_selector('edit_post', post_id=post_being_replied_to.id)
                     return
-                if not announced:
+                if not announced and not community:
                     community = find_community(request_json)
                     if not community:
                         log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Blocked or unfound community')
@@ -898,10 +916,8 @@ def process_inbox_request(request_json, store_ap_json):
                     else:
                         log_incoming_ap(id, APLOG_UPDATE, APLOG_FAILURE, saved_json, 'PeerTube post not found')
                         return
-                elif announced and core_activity['type'] == 'Update' and core_activity['object']['type'] == 'Group':
-                    # force refresh next time community is heard from
-                    community.ap_fetched_at = None
-                    db.session.commit()
+                elif object_type == 'Group' and core_activity['type'] == 'Update':      # update community/category info
+                    refresh_community_profile(community.id, core_activity['object'])
                     log_incoming_ap(id, APLOG_UPDATE, APLOG_SUCCESS, saved_json)
                 else:
                     log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Unacceptable type (create): ' + object_type)
