@@ -180,10 +180,6 @@ def feed_delete(feed_id: int):
     if feed.user_id != user_id:
         abort(404)
 
-    # is the feed empty
-    if feed.num_communities == 0:
-        feed_empty = True
-
     # strip out any feedmembers before deleting
     feed_members = FeedMember.query.filter_by(feed_id=feed.id)
     for fm in feed_members.all():

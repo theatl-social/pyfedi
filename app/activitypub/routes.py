@@ -976,6 +976,36 @@ def process_inbox_request(request_json, store_ap_json):
             return
 
         if core_activity['type'] == 'Delete':
+            # check if its a feed being deleted
+            if core_activity['object']['type'] == 'Feed':
+                # find the user in the traffic
+                user = User.query.filter_by(ap_profile_id=core_activity['actor']).first()
+                # find the feed
+                feed = Feed.query.filter_by(ap_public_url=core_activity['object']['id']).first()
+
+                # make sure the user sending the delete owns the feed
+                if not user.id == feed.user_id:
+                    log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, saved_json, 'Delete rejected, request came from non-owner.')
+                    return
+
+                # if found, remove all the feeditems and feedmembers
+                if feed:
+                    # find the feeditems and remove them
+                    feed_items = FeedItem.query.filter_by(feed_id=feed.id).all()
+                    for fi in feed_items:
+                        db.session.delete(fi)
+                        db.session.commit()
+                    # find the feedmembers and remove them
+                    feed_members = FeedMember.query.filter_by(feed_id=feed.id).all()
+                    for fm in feed_members:
+                        db.session.delete(fm)
+                        db.session.commit()
+                    # finally remove the feed itself
+                    db.session.delete(feed)
+                    db.session.commit()
+                else:
+                    log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, saved_json, f'Delete: cannot find {core_activity['object']['id]']}')
+                    return
             if isinstance(core_activity['object'], str):
                 ap_id = core_activity['object']  # lemmy
             else:
