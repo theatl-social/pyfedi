@@ -7,7 +7,7 @@ from flask import g, current_app, request, redirect, url_for, flash, abort
 from flask_login import current_user, login_required
 from flask_babel import _
 from app import db, cache, celery
-from app.activitypub.signature import RsaKeys, post_request
+from app.activitypub.signature import RsaKeys, post_request, default_context
 from app.activitypub.util import find_actor_or_create
 from app.community.util import save_icon_file, save_banner_file
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
@@ -17,10 +17,11 @@ from app.feed.forms import AddCopyFeedForm, EditFeedForm
 from app.feed.util import feeds_for_form
 from app.inoculation import inoculation
 from app.models import Feed, FeedMember, FeedItem, Post, Community, read_posts, utcnow, NotificationSubscription, \
-    CommunityMember, User, FeedJoinRequest
+    CommunityMember, User, FeedJoinRequest, Instance
 from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markdown_to_html, render_template, user_filters_posts, \
     blocked_domains, blocked_instances, blocked_communities, blocked_users, communities_banned_from, moderating_communities, \
-    joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, validation_required, feed_membership, get_request
+    joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, validation_required, feed_membership, get_request, \
+    gibberish, get_task_session, instance_banned
 from collections import namedtuple
 from sqlalchemy import desc, or_
 from slugify import slugify
@@ -179,6 +180,14 @@ def feed_delete(feed_id: int):
     # does the user own the feed
     if feed.user_id != user_id:
         abort(404)
+    
+    # announce the change to any potential subscribers
+    # have to do it here before the feed members are cleared out
+    if feed.public:
+        if current_app.debug:
+            announce_feed_delete_to_subscribers(user_id, feed)
+        else:
+            announce_feed_delete_to_subscribers.delay(user_id, feed)
 
     # strip out any feedmembers before deleting
     feed_members = FeedMember.query.filter_by(feed_id=feed.id)
@@ -198,6 +207,7 @@ def feed_delete(feed_id: int):
     # clear instance feeds for dropdown menu cache
     if instance_feed:
         cache.delete_memoized(menu_instance_feeds)
+
 
     # send the user back to the page they came from or main
     # Get the referrer from the request headers
@@ -361,6 +371,13 @@ def feed_add_community():
         db.session.add(current_feed)
         db.session.commit()
 
+        # announce the change to any potential subscribers
+        if feed.public:
+            community = Community.query.get(community_id)
+            if current_app.debug:
+                announce_feed_add_remove_to_subscribers("Remove", current_feed, community)
+            else:
+                announce_feed_add_remove_to_subscribers.delay("Remove", current_feed, community)
 
     # make the new feeditem and commit it
     feed_item = FeedItem(feed_id=feed_id, community_id=community_id)
@@ -372,6 +389,14 @@ def feed_add_community():
     feed.num_communities = feed.num_communities + 1
     db.session.add(feed)
     db.session.commit()
+
+    # announce the change to any potential subscribers
+    if feed.public:
+        community = Community.query.get(community_id)
+        if current_app.debug:
+            announce_feed_add_remove_to_subscribers("Add", current_feed, community)
+        else:
+            announce_feed_add_remove_to_subscribers.delay("Add", current_feed, community)
 
     # subscribe the user to the community if they are not already subscribed
     current_membership = CommunityMember.query.filter_by(user_id=user_id, community_id=community_id).first()
@@ -399,6 +424,7 @@ def feed_add_community():
 def feed_remove_community():
     # this takes a user_id, new_feed_id (0), current_feed_id,
     # and community_id then removes the community from the feed
+    # this is only called when changing a community from a feed to 'None'
 
     # get the user id
     user_id = int(request.args.get('user_id'))
@@ -413,7 +439,8 @@ def feed_remove_community():
 
     # make sure the user owns this feed
     if Feed.query.get(current_feed_id).user_id != user_id:
-        abort(404)
+        abort(403) # 403 Forbidden
+
     # if new_feed_id is 0, remove the right FeedItem
     # if its not 0 abort
     if new_feed_id == 0:
@@ -425,11 +452,18 @@ def feed_remove_community():
         current_feed.num_communities = current_feed.num_communities - 1
         db.session.add(current_feed)
         db.session.commit()
+
+        # announce the change to any potential subscribers
+        if current_feed.public:
+            community = Community.query.get(community_id)
+            if current_app.debug:
+                announce_feed_add_remove_to_subscribers("Remove", current_feed, community)
+            else:
+                announce_feed_add_remove_to_subscribers.delay("Remove", current_feed, community)
     else:
         abort(404)
 
     # send the user back to the page they came from or main
-    # back(url_for('main.index'))
     # Get the referrer from the request headers
     referrer = request.referrer
 
@@ -468,7 +502,7 @@ def feed_list():
         # skip the current_feed if it has one
         if feed.id == current_feed_id:
             continue
-        options_html = options_html + f'<li><a class="dropdown-item" href="/feed/add_community?user_id={user_id}&new_feed_id={feed.id}&current_feed_id={current_feed_id}&community_id={community_id}">{feed.name}</li>'
+        options_html = options_html + f'<li><a class="dropdown-item" href="/feed/add_community?user_id={user_id}&new_feed_id={feed.id}&current_feed_id={current_feed_id}&community_id={community_id}">{feed.title}</li>'
     
     return options_html
 
@@ -774,3 +808,106 @@ def do_feed_subscribe(actor, user_id):
         #     pre_load_message['status'] = 'community not found'
         #     return pre_load_message
 
+
+@celery.task
+def announce_feed_add_remove_to_subscribers(action, feed, community):
+    # build the Announce json
+    activity_json = {
+        "@context": default_context(),
+        "type": "Announce",
+        "actor": feed.ap_public_url,
+        "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+    }
+
+    # build the object json
+    object_json = {
+        "@context": "https://www.w3.org/ns/activitystreams",
+        "type": action,
+        "actor": feed.ap_public_url,
+        "id": f"https://{current_app.config['SERVER_NAME']}/activities/feedadd/{gibberish(15)}",
+        "object": {
+            "type": "Group",
+            "id": community.ap_public_url
+        },
+        "target": {
+            "type": "Collection",
+            "id": feed.ap_following_url
+        }
+    }
+
+    # embed the object json in the Announce json
+    activity_json['object'] = object_json
+
+    # look up the feedmembers
+    feed_members = FeedMember.query.filter_by(feed_id=feed.id).all()
+
+    # for each member
+    #  - if its the owner, skip
+    #  - if its a local server user, skip
+    #  - if its a remote user
+    # setup a db session for this task
+    session = get_task_session()
+    for fm in feed_members:
+        if fm.id == feed.user_id:
+            continue
+        if fm.is_local():
+            continue
+        # if we get here the feedmember is a remote user
+        instance: Instance = session.query(Instance).get(fm.instance.id)
+        if instance.inbox and instance.online() and not instance_banned(instance.domain):
+            if post_request(instance.inbox, activity_json, feed.private_key, feed.ap_profile_id + '#main-key', timeout=10) is True:
+                instance.last_successful_send = utcnow()
+                instance.failures = 0
+            else:
+                instance.failures += 1
+                instance.most_recent_attempt = utcnow()
+                instance.start_trying_again = utcnow() + timedelta(seconds=instance.failures ** 4)
+                if instance.failures > 10:
+                    instance.dormant = True
+            session.commit()
+    session.close()
+
+
+@celery.task
+def announce_feed_delete_to_subscribers(user_id, feed: Feed):
+    # get the user
+    user = User.query.get(user_id)
+    # create the delete json
+    delete_json = {
+        "@context": default_context(),
+        "type": "Delete",
+        "actor": user.ap_public_url,
+        "id": f"https://{current_app.config['SERVER_NAME']}/delete/{gibberish(15)}",
+        "object": {
+            "type": "Feed",
+            "id": feed.ap_public_url
+        }
+    }
+
+    # find the feed members
+    feed_members = FeedMember.query.filter_by(feed_id=feed.id).all()
+    
+    # for each member
+    #  - if its the owner, skip
+    #  - if its a local server user, skip
+    #  - if its a remote user
+    session = get_task_session()
+    for fm in feed_members:
+        if fm.id == feed.user_id:
+            continue
+        if fm.is_local():
+            continue
+        # if we get here the feedmember is a remote user
+        instance: Instance = session.query(Instance).get(fm.instance.id)
+        if instance.inbox and instance.online() and not instance_banned(instance.domain):
+            if post_request(instance.inbox, delete_json, feed.private_key, feed.ap_profile_id + '#main-key', timeout=10) is True:
+                instance.last_successful_send = utcnow()
+                instance.failures = 0
+            else:
+                instance.failures += 1
+                instance.most_recent_attempt = utcnow()
+                instance.start_trying_again = utcnow() + timedelta(seconds=instance.failures ** 4)
+                if instance.failures > 10:
+                    instance.dormant = True
+            session.commit()
+    session.close()    
