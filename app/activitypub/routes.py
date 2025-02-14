@@ -1860,6 +1860,42 @@ def feed_inbox(actor):
     return shared_inbox()
 
 
+@bp.route('/f/<actor>/outbox', methods=['GET'])
+def feed_outbox(actor):
+    # every AP actor has to have an /outbox
+    # but I dont think it makes sense to have the Add/Remove activities in a list
+    # for a Feed, so for now this will just be the same as the /following collection
+    actor = actor.strip()
+    if '@' in actor:
+        # don't provide activitypub info for remote feeds
+        abort(400)
+    else:
+        feed: Feed = Feed.query.filter_by(name=actor.lower(), ap_id=None).first()
+    
+    # check if feed is public, if not abort
+    # with 403 (forbidden)
+    if not feed.public:
+        abort(403) 
+
+    # get the feed items
+    feed_items = FeedItem.query.join(Feed, FeedItem.feed_id == feed.id).order_by(desc(FeedItem.id)).all()
+    # make the ap data json
+    items = []
+    for fi in feed_items:
+        c = Community.query.get(fi.community_id)
+        items.append(c.ap_public_url)
+    result = {
+        "@context": default_context(),
+        "id": feed.ap_outbox_url,
+        "type": "OrderedCollection",
+        "totalItems": len(items),
+        "items": items
+    }
+    resp = jsonify(result)
+    resp.content_type = 'application/activity+json'
+    return resp
+
+
 @bp.route('/f/<actor>/following', methods=['GET'])
 def feed_following(actor):
     actor = actor.strip()
@@ -1875,7 +1911,7 @@ def feed_following(actor):
         abort(403) 
 
     # get the feed items
-    feed_items = FeedItem.query.join(Feed, FeedItem.feed_id == feed.id).all()
+    feed_items = FeedItem.query.join(Feed, FeedItem.feed_id == feed.id).order_by(desc(FeedItem.id)).all()
     # make the ap data json
     items = []
     for fi in feed_items:
@@ -1884,7 +1920,7 @@ def feed_following(actor):
     result = {
         "@context": default_context(),
         "id": feed.ap_following_url,
-        "type": "Collection",
+        "type": "OrderedCollection",
         "totalItems": len(items),
         "items": items
     }
