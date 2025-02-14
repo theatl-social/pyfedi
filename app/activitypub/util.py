@@ -4,6 +4,7 @@ import html
 import os
 import re
 from datetime import timedelta, datetime, timezone
+from json import JSONDecodeError
 from random import randint
 from typing import Union, Tuple, List
 
@@ -483,6 +484,7 @@ def refresh_user_profile_task(user_id):
             try:
                 actor_data = get_request(user.ap_public_url, headers={'Accept': 'application/activity+json'})
             except httpx.HTTPError:
+                session.close()
                 return
         except:
             try:
@@ -490,10 +492,17 @@ def refresh_user_profile_task(user_id):
                 actor_data = signed_get_request(user.ap_public_url, site.private_key,
                                 f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
             except:
+                session.close()
                 return
         if actor_data.status_code == 200:
-            activity_json = actor_data.json()
-            actor_data.close()
+            try:
+                activity_json = actor_data.json()
+                actor_data.close()
+            except JSONDecodeError:
+                user.instance.failures += 1
+                session.commit()
+                session.close()
+                return
 
             # update indexible state on their posts, if necessary
             new_indexable = activity_json['indexable'] if 'indexable' in activity_json else True
