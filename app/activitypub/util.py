@@ -2552,11 +2552,11 @@ def find_community(request_json):
 
     # Create/Update Note from platform that didn't include the Community in 'audience', 'cc', or 'to' (e.g. Mastodon reply to Lemmy post)
     if 'inReplyTo' in request_json['object'] and request_json['object']['inReplyTo'] is not None:
-        post_being_replied_to = Post.query.filter_by(ap_id=request_json['object']['inReplyTo'].lower()).first()
+        post_being_replied_to = Post.get_by_ap_id(request_json['object']['inReplyTo'])
         if post_being_replied_to:
             return post_being_replied_to.community
         else:
-            comment_being_replied_to = PostReply.query.filter_by(ap_id=request_json['object']['inReplyTo'].lower()).first()
+            comment_being_replied_to = PostReply.get_by_ap_id(request_json['object']['inReplyTo'])
             if comment_being_replied_to:
                 return comment_being_replied_to.community
 

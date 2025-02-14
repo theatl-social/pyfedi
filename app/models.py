@@ -1174,7 +1174,7 @@ class Post(db.Model):
 
     @classmethod
     def get_by_ap_id(cls, ap_id):
-        return cls.query.filter_by(ap_id=ap_id.lower()).first()
+        return cls.query.filter_by(ap_id=ap_id).first()
 
     @classmethod
     def new(cls, user: User, community: Community, request_json: dict, announce_id=None):
@@ -1200,7 +1200,7 @@ class Post(db.Model):
                     sticky=request_json['object']['stickied'] if 'stickied' in request_json['object'] else False,
                     nsfw=request_json['object']['sensitive'] if 'sensitive' in request_json['object'] else False,
                     nsfl=request_json['object']['nsfl'] if 'nsfl' in request_json['object'] else nsfl_in_title,
-                    ap_id=request_json['object']['id'].lower(),
+                    ap_id=request_json['object']['id'],
                     ap_create_id=request_json['id'],
                     ap_announce_id=announce_id,
                     up_votes=1,
@@ -1370,7 +1370,7 @@ class Post(db.Model):
                 db.session.commit()
             except IntegrityError:
                 db.session.rollback()
-                return Post.query.filter_by(ap_id=request_json['object']['id'].lower()).one()
+                return Post.query.filter_by(ap_id=request_json['object']['id']).one()
 
             # Mentions also need a post_id
             if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
@@ -1753,7 +1753,7 @@ class PostReply(db.Model):
                           from_bot=user.bot, nsfw=post.nsfw, nsfl=post.nsfl,
                           notify_author=notify_author, instance_id=user.instance_id,
                           language_id=language_id,
-                          ap_id=request_json['object']['id'].lower() if request_json else None,
+                          ap_id=request_json['object']['id'] if request_json else None,
                           ap_create_id=request_json['id'] if request_json else None,
                           ap_announce_id=announce_id)
         if reply.body:
@@ -1783,7 +1783,7 @@ class PostReply(db.Model):
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
-            return PostReply.query.filter_by(ap_id=request_json['object']['id'].lower()).one()
+            return PostReply.query.filter_by(ap_id=request_json['object']['id']).one()
 
         # Notify subscribers
         notify_about_post_reply(in_reply_to, reply)
@@ -1839,7 +1839,7 @@ class PostReply(db.Model):
 
     @classmethod
     def get_by_ap_id(cls, ap_id):
-        return cls.query.filter_by(ap_id=ap_id.lower()).first()
+        return cls.query.filter_by(ap_id=ap_id).first()
 
     def profile_id(self):
         if self.ap_id:
