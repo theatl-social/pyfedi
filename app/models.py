@@ -1148,7 +1148,7 @@ class Post(db.Model):
     reports = db.Column(db.Integer, default=0)                          # how many times this post has been reported. Set to -1 to ignore reports
     language_id = db.Column(db.Integer, db.ForeignKey('language.id'), index=True)
     cross_posts = db.Column(MutableList.as_mutable(ARRAY(db.Integer)))
-    tags = db.relationship('Tag', lazy='dynamic', secondary=post_tag, backref=db.backref('posts', lazy='dynamic'))
+    tags = db.relationship('Tag', lazy='joined', secondary=post_tag, backref=db.backref('posts', lazy='dynamic'))
 
     ap_id = db.Column(db.String(255), index=True, unique=True)
     ap_create_id = db.Column(db.String(100))

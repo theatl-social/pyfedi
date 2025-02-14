@@ -82,7 +82,7 @@ def get_post_reply_count(post_id) -> int:
 
 
 def tags_to_string(post: Post) -> str:
-    if post.tags.count() > 0:
+    if len(post.tags) > 0:
         return ', '.join([tag.name for tag in post.tags])
 
 

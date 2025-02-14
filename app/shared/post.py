@@ -283,7 +283,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
                     domain.post_count -= 1
 
         # remove any old tags
-        db.session.execute(text('DELETE FROM "post_tag" WHERE post_id = :post_id'), {'post_id': post.id})
+        post.tags.clear()
 
         post.edited_at = utcnow()
 

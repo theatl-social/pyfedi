@@ -152,7 +152,7 @@
             {% endif -%}
         </div>
 
-    {% if post.tags.count() > 0 -%}
+    {% if len(post.tags) > 0 -%}
         <nav role="navigation">
             <h3 class="visually-hidden">{{ _('Hashtags') }}</h3>
             <ul class="post_tags">
