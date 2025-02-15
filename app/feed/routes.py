@@ -98,7 +98,7 @@ def feed_new():
                            menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None)
 
 
-@bp.route('/add_remote', methods=['GET','POST'])
+@bp.route('/feed/add_remote', methods=['GET','POST'])
 def feed_add_remote():
     if current_user.banned:
         return show_ban_message()
@@ -927,8 +927,6 @@ def feed_unsubscribe(actor):
             return redirect('/f/' + actor)
     else:
         abort(404)
-
-
 
 
 @celery.task
