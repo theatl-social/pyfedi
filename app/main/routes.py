@@ -62,7 +62,7 @@ def home_page(sort, view_filter):
     if current_user.is_anonymous:
         flash(_('Create an account to tailor this feed to your interests.'))
         posts = Post.query.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
-        content_filters = {'trump': {'trump', 'elon', 'musk'}}
+        content_filters = {'-1': {'trump', 'elon', 'musk'}}
     else:
         posts = Post.query.filter(Post.deleted == False)
 
