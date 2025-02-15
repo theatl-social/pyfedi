@@ -878,42 +878,42 @@ def feed_unsubscribe(actor):
             if subscription != SUBSCRIPTION_OWNER:
                 proceed = True
                 # Undo the Follow
-                if '@' in actor:    # this is a remote community, so activitypub is needed
+                if '@' in actor:    # this is a remote feed, so activitypub is needed
                     success = True
-                    if not community.instance.gone_forever:
+                    if not feed.instance.gone_forever:
                         follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
-                        if community.instance.domain == 'a.gup.pe':
-                            join_request = CommunityJoinRequest.query.filter_by(user_id=current_user.id, community_id=community.id).first()
+                        if feed.instance.domain == 'a.gup.pe':
+                            join_request = FeedJoinRequest.query.filter_by(user_id=current_user.id, feed_id=feed.id).first()
                             if join_request:
                                 follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
                         undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
                         follow = {
                           "actor": current_user.public_url(),
-                          "to": [community.public_url()],
-                          "object": community.public_url(),
+                          "to": [feed.public_url()],
+                          "object": feed.public_url(),
                           "type": "Follow",
                           "id": follow_id
                         }
                         undo = {
                           'actor': current_user.public_url(),
-                          'to': [community.public_url()],
+                          'to': [fee.public_url()],
                           'type': 'Undo',
                           'id': undo_id,
                           'object': follow
                         }
-                        success = post_request(community.ap_inbox_url, undo, current_user.private_key,
+                        success = post_request(feed.ap_inbox_url, undo, current_user.private_key,
                                                                current_user.public_url() + '#main-key', timeout=10)
                     if success is False or isinstance(success, str):
                         flash('There was a problem while trying to unsubscribe', 'error')
 
                 if proceed:
-                    db.session.query(CommunityMember).filter_by(user_id=current_user.id, community_id=community.id).delete()
-                    db.session.query(CommunityJoinRequest).filter_by(user_id=current_user.id, community_id=community.id).delete()
-                    community.subscriptions_count -= 1
+                    db.session.query(FeedMember).filter_by(user_id=current_user.id, feed_id=feed.id).delete()
+                    db.session.query(FeedJoinRequest).filter_by(user_id=current_user.id, feed_id=feed.id).delete()
+                    feed.subscriptions_count -= 1
                     db.session.commit()
 
-                    flash('You have left ' + community.title)
-                cache.delete_memoized(community_membership, current_user, community)
+                    flash('You have left ' + feed.title)
+                cache.delete_memoized(feed_membership, current_user, feed)
                 cache.delete_memoized(joined_communities, current_user.id)
             else:
                 # todo: community deletion
@@ -924,7 +924,7 @@ def feed_unsubscribe(actor):
         if referrer is not None:
             return redirect(referrer)
         else:
-            return redirect('/c/' + actor)
+            return redirect('/f/' + actor)
     else:
         abort(404)
 
