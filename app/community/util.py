@@ -189,10 +189,9 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
             featured_data = remote_object_to_json(community.ap_featured_url)
             if featured_data and 'type' in featured_data and featured_data['type'] == 'OrderedCollection' and 'orderedItems' in featured_data:
                 for item in featured_data['orderedItems']:
-                    featured_id = item['id']
-                    p = Post.query.filter(Post.ap_id == featured_id).first()
-                    if p:
-                        p.sticky = True
+                    post = Post.get_by_ap_id(item['id'])
+                    if post:
+                        post.sticky = True
                         db.session.commit()
 
 

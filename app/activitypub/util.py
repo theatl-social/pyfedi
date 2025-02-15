@@ -1890,36 +1890,6 @@ def update_post_from_activity(post: Post, request_json: dict):
         db.session.commit()
 
 
-def undo_downvote(activity_log, comment, post, target_ap_id, user):
-    if '/comment/' in target_ap_id:
-        comment = PostReply.query.filter_by(ap_id=target_ap_id).first()
-    if '/post/' in target_ap_id:
-        post = Post.query.filter_by(ap_id=target_ap_id).first()
-    if (user and not user.is_local()) and post:
-        existing_vote = PostVote.query.filter_by(user_id=user.id, post_id=post.id).first()
-        if existing_vote:
-            post.author.reputation -= existing_vote.effect
-            post.down_votes -= 1
-            post.score -= existing_vote.effect
-            db.session.delete(existing_vote)
-            activity_log.result = 'success'
-    if (user and not user.is_local()) and comment:
-        existing_vote = PostReplyVote.query.filter_by(user_id=user.id,
-                                                      post_reply_id=comment.id).first()
-        if existing_vote:
-            comment.author.reputation -= existing_vote.effect
-            comment.down_votes -= 1
-            comment.score -= existing_vote.effect
-            db.session.delete(existing_vote)
-            activity_log.result = 'success'
-    if user is None:
-        activity_log.exception_message = 'Blocked or unfound user'
-    if user and user.is_local():
-        activity_log.exception_message = 'Activity about local content which is already present'
-        activity_log.result = 'ignored'
-    return post
-
-
 def undo_vote(comment, post, target_ap_id, user):
     voted_on = find_liked_object(target_ap_id)
     if isinstance(voted_on, Post):
@@ -2591,11 +2561,11 @@ def find_community(request_json):
 
     # Create/Update Note from platform that didn't include the Community in 'audience', 'cc', or 'to' (e.g. Mastodon reply to Lemmy post)
     if 'inReplyTo' in request_json['object'] and request_json['object']['inReplyTo'] is not None:
-        post_being_replied_to = Post.query.filter_by(ap_id=request_json['object']['inReplyTo'].lower()).first()
+        post_being_replied_to = Post.get_by_ap_id(request_json['object']['inReplyTo'])
         if post_being_replied_to:
             return post_being_replied_to.community
         else:
-            comment_being_replied_to = PostReply.query.filter_by(ap_id=request_json['object']['inReplyTo'].lower()).first()
+            comment_being_replied_to = PostReply.get_by_ap_id(request_json['object']['inReplyTo'])
             if comment_being_replied_to:
                 return comment_being_replied_to.community
 

@@ -22,7 +22,7 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
     post_to_activity, find_actor_or_create, find_reply_parent, find_liked_object, \
     lemmy_site_data, is_activitypub_request, delete_post_or_comment, community_members, \
     user_removed_from_remote_server, create_post, create_post_reply, update_post_reply_from_activity, \
-    update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection, find_reported_object, \
+    update_post_from_activity, undo_vote, post_to_page, get_redis_connection, find_reported_object, \
     process_report, ensure_domains_match, can_edit, can_delete, resolve_remote_post, refresh_community_profile, \
     comment_model_to_json, restore_post_or_comment, ban_user, unban_user, \
     log_incoming_ap, find_community, site_ban_remove_data, community_ban_remove_data, verify_object_from_source
@@ -875,7 +875,7 @@ def process_inbox_request(request_json, store_ap_json):
                 if (core_activity['object']['type'] == 'Note' and 'name' in core_activity['object'] and                           # Poll Votes
                     'inReplyTo' in core_activity['object'] and 'attributedTo' in core_activity['object'] and
                     not 'published' in core_activity['object']):
-                    post_being_replied_to = Post.query.filter_by(ap_id=core_activity['object']['inReplyTo']).first()
+                    post_being_replied_to = Post.get_by_ap_id(core_activity['object']['inReplyTo'])
                     if post_being_replied_to:
                         poll_data = Poll.query.get(post_being_replied_to.id)
                         choice = PollChoice.query.filter_by(post_id=post_being_replied_to.id, choice_text=core_activity['object']['name']).first()
@@ -904,7 +904,7 @@ def process_inbox_request(request_json, store_ap_json):
                     process_new_content(user, community, store_ap_json, request_json, announced)
                     return
                 elif object_type == 'Video':  # PeerTube: editing a video (mostly used to update post score)
-                    post = Post.query.filter_by(ap_id=core_activity['object']['id']).first()
+                    post = Post.get_by_ap_id(core_activity['object']['id'])
                     if post:
                         if user.id == post.user_id:
                             update_post_from_activity(post, request_json)
@@ -965,8 +965,7 @@ def process_inbox_request(request_json, store_ap_json):
 
         if core_activity['type'] == 'Lock':     # Post lock
             mod = user
-            post_id = core_activity['object']
-            post = Post.query.filter_by(ap_id=post_id).first()
+            post = Post.get_by_ap_id(core_activity['object'])
             reason = core_activity['summary'] if 'summary' in core_activity else ''
             if post:
                 if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
@@ -994,7 +993,7 @@ def process_inbox_request(request_json, store_ap_json):
                 featured_url = community.ap_featured_url
                 moderators_url = community.ap_moderators_url
                 if target == featured_url:
-                    post = Post.query.filter_by(ap_id=core_activity['object']).first()
+                    post = Post.get_by_ap_id(core_activity['object'])
                     if post:
                         post.sticky = True
                         db.session.commit()
@@ -1033,7 +1032,7 @@ def process_inbox_request(request_json, store_ap_json):
                 featured_url = community.ap_featured_url
                 moderators_url = community.ap_moderators_url
                 if target == featured_url:
-                    post = Post.query.filter_by(ap_id=core_activity['object']).first()
+                    post = Post.get_by_ap_id(core_activity['object'])
                     if post:
                         post.sticky = False
                         db.session.commit()
@@ -1192,8 +1191,7 @@ def process_inbox_request(request_json, store_ap_json):
 
             if core_activity['object']['type'] == 'Lock':                                                                      # Undo of post lock
                 mod = user
-                post_id = core_activity['object']['object']
-                post = Post.query.filter_by(ap_id=post_id).first()
+                post = Post.get_by_ap_id(core_activity['object']['object'])
                 reason = core_activity['summary'] if 'summary' in core_activity else ''
                 if post:
                     if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
@@ -1509,7 +1507,7 @@ def process_new_content(user, community, store_ap_json, request_json, announced)
     activity_json['id'] = shorten_string(activity_json['id'], 100)
 
     if not in_reply_to: # Creating a new post
-        post = Post.query.filter_by(ap_id=ap_id).first()
+        post = Post.get_by_ap_id(ap_id)
         if post:
             if activity_json['type'] == 'Create':
                 log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Create processed after Update')
@@ -1540,7 +1538,7 @@ def process_new_content(user, community, store_ap_json, request_json, announced)
                 log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'User cannot create post in Community')
                 return
     else:   # Creating a reply / comment
-        reply = PostReply.query.filter_by(ap_id=ap_id).first()
+        reply = PostReply.get_by_ap_id(ap_id)
         if reply:
             if activity_json['type'] == 'Create':
                 log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Create processed after Update')
