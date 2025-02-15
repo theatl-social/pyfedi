@@ -32,7 +32,7 @@
                                     {{ render_feedname(new_feed) }}
                                 </p>
                                 <p> {% if subscribed %}
-                                        <a class="btn btn-primary mt-4" href="/community/{{ new_community.link() }}/unsubscribe">{{ _('Leave') }}</a>
+                                        <a class="btn btn-primary mt-4" href="/feed/{{ new_feed.link() }}/unsubscribe">{{ _('Leave') }}</a>
                                     {% else %}
                                         <a class="btn btn-primary mt-4" href="/feed/{{ new_feed.link() }}/subscribe">{{ _('Subscribe') }}</a>
                                     {% endif %}
