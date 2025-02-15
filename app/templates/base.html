@@ -56,6 +56,16 @@
         </a>
     </span>
 {% endmacro -%}
+{% macro render_feedname(feed, add_domain=True) -%}
+    <span class="render_community">
+        <a href="/f/{{ feed.link() }}" aria-label="{{ _('Go to feed %(name)s', name=feed.name) }}">
+            {% if feed.icon_id and not low_bandwidth and not collapsed -%}
+                <img src="{{ feed.icon_image('tiny') }}" class="community_icon rounded-circle" alt="" loading="lazy" />
+            {% endif -%}
+            {{ feed.title }}{% if add_domain and not feed.is_local() %}<span class="text-muted">@{{ feed.ap_domain }}</span>{% endif %}
+        </a>
+    </span>
+{% endmacro -%}
 <!doctype html>
 <html lang="{{ 'en' if current_user.is_anonymous else current_user.interface_language }}">
   <head>

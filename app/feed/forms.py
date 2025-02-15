@@ -52,3 +52,8 @@ class EditFeedForm(FlaskForm):
     public = BooleanField('Make Feed Public')
     is_instance_feed = BooleanField('Make Instance Feed')
     submit = SubmitField(_l('Save'))
+
+
+class SearchRemoteFeed(FlaskForm):
+    address = StringField(_l('Feed address'), render_kw={'placeholder': 'e.g. https://server.name/f/feedname', 'autofocus': True}, validators=[DataRequired()])
+    submit = SubmitField(_l('Search'))

@@ -3,18 +3,18 @@ import flask
 from datetime import timedelta
 from random import randint
 from typing import List
-from flask import g, current_app, request, redirect, url_for, flash, abort
+from flask import g, current_app, request, redirect, url_for, flash, abort, Markup
 from flask_login import current_user, login_required
 from flask_babel import _
 from app import db, cache, celery
 from app.activitypub.signature import RsaKeys, post_request, default_context
-from app.activitypub.util import find_actor_or_create
+from app.activitypub.util import find_actor_or_create, extract_domain_and_actor
 from app.community.util import save_icon_file, save_banner_file
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
     POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_FEED, SUBSCRIPTION_MEMBER, SUBSCRIPTION_PENDING
 from app.feed import  bp
-from app.feed.forms import AddCopyFeedForm, EditFeedForm
-from app.feed.util import feeds_for_form
+from app.feed.forms import AddCopyFeedForm, EditFeedForm, SearchRemoteFeed
+from app.feed.util import feeds_for_form, search_for_feed, actor_to_feed
 from app.inoculation import inoculation
 from app.models import Feed, FeedMember, FeedItem, Post, Community, read_posts, utcnow, NotificationSubscription, \
     CommunityMember, User, FeedJoinRequest, Instance
@@ -96,6 +96,64 @@ def feed_new():
     return render_template('feed/feed_new.html', title=_('Create a Feed'), form=form,
                            current_app=current_app, menu_topics=menu_topics(), menu_instance_feeds=menu_instance_feeds(), 
                            menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None)
+
+
+@bp.route('/add_remote', methods=['GET','POST'])
+def feed_add_remote():
+    if current_user.banned:
+        return show_ban_message()
+    form = SearchRemoteFeed()
+    new_feed = None
+    if form.validate_on_submit():
+        address = form.address.data.strip().lower()
+        
+        # make sure the format is right
+        # if not address.startswith('https://'):
+        #     message = Markup(
+        #         'Accepted address format: https://server.name/f/feedname.')
+        #     flash(message, 'error')
+        
+        # # get the server and feedname bits
+        # server, feed = extract_domain_and_actor(address)
+        # new_feed = search_for_feed('~' + feed + server)
+
+
+
+        if address.startswith('~') and '@' in address:
+            try:
+                new_feed = search_for_feed(address)
+            except Exception as e:
+                if 'is blocked.' in str(e):
+                    flash(_('Sorry, that instance is blocked, check https://gui.fediseer.com/ for reasons.'), 'warning')
+        elif address.startswith('@') and '@' in address[1:]:
+            # todo: the user is searching for a person instead
+            ...
+        elif '@' in address:
+            new_feed = search_for_feed('~' + address)
+        elif address.startswith('https://'):
+            server, feed = extract_domain_and_actor(address)
+            new_feed = search_for_feed('~' + feed + '@' + server)
+        else:
+            message = Markup(
+                'Accepted address formats: ~feedname@server.name or https://server.name/f/feedname.')
+            flash(message, 'error')
+        if new_feed is None:
+            if g.site.enable_nsfw:
+                flash(_('Feed not found.'), 'warning')
+            else:
+                flash(_('Feed not found. If you are searching for a nsfw feed it is blocked by this instance.'), 'warning')
+        # else:
+        #     if new_community.banned:
+        #         flash(_('That community is banned from %(site)s.', site=g.site.name), 'warning')
+
+    return render_template('feed/add_remote.html',
+                           title=_('Add remote feed'), form=form, new_feed=new_feed,
+                           subscribed=feed_membership(current_user, new_feed) >= SUBSCRIPTION_MEMBER, moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
+                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           )    
 
 
 @bp.route('/feed/<int:feed_id>/edit', methods=['GET','POST'])
@@ -807,6 +865,70 @@ def do_feed_subscribe(actor, user_id):
         #     pre_load_message['community'] = actor
         #     pre_load_message['status'] = 'community not found'
         #     return pre_load_message
+
+
+@bp.route('/<actor>/unsubscribe', methods=['GET'])
+@login_required
+def feed_unsubscribe(actor):
+    feed = actor_to_feed(actor)
+
+    if feed is not None:
+        subscription = feed_membership(current_user, feed)
+        if subscription:
+            if subscription != SUBSCRIPTION_OWNER:
+                proceed = True
+                # Undo the Follow
+                if '@' in actor:    # this is a remote community, so activitypub is needed
+                    success = True
+                    if not community.instance.gone_forever:
+                        follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
+                        if community.instance.domain == 'a.gup.pe':
+                            join_request = CommunityJoinRequest.query.filter_by(user_id=current_user.id, community_id=community.id).first()
+                            if join_request:
+                                follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+                        undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
+                        follow = {
+                          "actor": current_user.public_url(),
+                          "to": [community.public_url()],
+                          "object": community.public_url(),
+                          "type": "Follow",
+                          "id": follow_id
+                        }
+                        undo = {
+                          'actor': current_user.public_url(),
+                          'to': [community.public_url()],
+                          'type': 'Undo',
+                          'id': undo_id,
+                          'object': follow
+                        }
+                        success = post_request(community.ap_inbox_url, undo, current_user.private_key,
+                                                               current_user.public_url() + '#main-key', timeout=10)
+                    if success is False or isinstance(success, str):
+                        flash('There was a problem while trying to unsubscribe', 'error')
+
+                if proceed:
+                    db.session.query(CommunityMember).filter_by(user_id=current_user.id, community_id=community.id).delete()
+                    db.session.query(CommunityJoinRequest).filter_by(user_id=current_user.id, community_id=community.id).delete()
+                    community.subscriptions_count -= 1
+                    db.session.commit()
+
+                    flash('You have left ' + community.title)
+                cache.delete_memoized(community_membership, current_user, community)
+                cache.delete_memoized(joined_communities, current_user.id)
+            else:
+                # todo: community deletion
+                flash('You need to make someone else the owner before unsubscribing.', 'warning')
+
+        # send them back where they came from
+        referrer = request.headers.get('Referer', None)
+        if referrer is not None:
+            return redirect(referrer)
+        else:
+            return redirect('/c/' + actor)
+    else:
+        abort(404)
+
+
 
 
 @celery.task
