@@ -1015,7 +1015,7 @@ def announce_feed_delete_to_subscribers(user_id, feed: Feed):
     for fm in feed_members:
         if fm.id == feed.user_id:
             continue
-        fm_user = User.query.get(fm.user_id).first()
+        fm_user = User.query.get(fm.user_id)
         if fm_user.is_local():
             continue
         # if we get here the feedmember is a remote user
