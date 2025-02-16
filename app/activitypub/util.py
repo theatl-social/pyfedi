@@ -290,13 +290,14 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
         if actor_contains_blocked_words(actor):
             return None
         # see if the actor is a remote user we know
+        print('looking for user in local db')
         user = User.query.filter(User.ap_profile_id == actor).first()  # finds users formatted like https://kbin.social/u/tables
-        print('looking for user')
         if (user and user.banned) or (user and user.deleted) :
             return None
         # actor is not a remote user, see if its a remote community or feed
+        print('user not in local db')
         if user is None:
-            print('looking for community')
+            print('looking for community in local db')
             user = Community.query.filter(Community.ap_profile_id == actor).first()
             if user and user.banned:
                 # Try to find a non-banned copy of the community. Sometimes duplicates happen and one copy is banned.
@@ -304,10 +305,11 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                 if user is None:    # no un-banned version of this community exists, only the banned one. So it was banned for being bad, not for being a duplicate.
                     return None
             elif user is None:
-                print('looking for feed')
+                print('community not in local db')
+                print('looking for feed in local db')
                 user = Feed.query.filter(Feed.ap_profile_id == actor).first()
-                # if user is None:
-                #     return
+                if user is None:
+                    print('feed not found in local db')
 
 
     if user is not None:
