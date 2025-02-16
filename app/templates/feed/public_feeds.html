@@ -24,9 +24,7 @@
         <th>Name</th>
         <th>Communities</th>
         <th>Creator</th>
-        {% if current_user.is_authenticated %}
-            <th>Actions</th>
-        {% endif %}
+        <th>Actions</th>
     </tr>
     {% for feed in public_feeds_list -%}
         {% include 'feed/_feed_table_row.html' -%}

@@ -79,6 +79,7 @@
                         <a class="w-100 btn btn-primary" href="{{ url_for('feed.feed_edit', feed_id=feed.id) }}" rel="nofollow">{{ _('Edit Feed') }}</a>
                         {% else %}
                         <a class="w-100 btn btn-primary" href="{{ url_for('feed.feed_copy', feed_id=feed.id) }}" rel="nofollow">{{ _('Copy Feed') }}</a>
+                        <a class="w-100 btn btn-primary" href="{{ url_for('feed.subscribe', feed_id=feed.id) }}" rel="nofollow">{{ _('Subscribe') }}</a>
                         {% endif %}
                     </div>
                     <div class="col-6">
@@ -101,9 +102,6 @@
                     {% endfor %}
                 </ul>
                 <p class="mt-4"><a class="btn btn-primary" href="/communities">{{ _('More communities') }}</a></p>
-                <p>
-                    <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> </a><a href="{{ rss_feed }}" rel="nofollow">RSS feed</a>
-                </p>
             </div>
         </div>
         {% endif %}

@@ -20,11 +20,23 @@
         </td>
     {% elif active_child == 'public_feeds' %}
         {% if current_user.is_authenticated %}
-            <td><a href="/feed/{{ feed.id }}/copy">Copy</a></td>
+            {% if current_user.id == feed.user_id %}
+                <td><a href="{{ url_for('feed.feed_edit', feed_id=feed.id) }}" rel="nofollow">{{ _('Edit Feed') }}</a></td>
+            {% else %}
+                <td><a href="/feed/{{ feed.id }}/copy">Copy</a> | <a href="{{ url_for('feed.subscribe', actor=feed.ap_id if feed.ap_id else feed.name) }}">Subscribe</a></td>
+            {% endif %}
+        {% else %}
+            <td><a href="/feed/{{ feed.id }}/copy">Copy</a> | <a href="{{ url_for('feed.subscribe', actor=feed.ap_id if feed.ap_id else feed.name) }}">Subscribe</a></td>
         {% endif %}
     {% elif active_child == 'user_public_feeds' %}
         {% if current_user.is_authenticated %}
-            <td><a href="/feed/{{ feed.id }}/copy">Copy</a></td>
+            {% if current_user.id == feed.user_id %}
+                <td><a href="{{ url_for('feed.feed_edit', feed_id=feed.id) }}" rel="nofollow">{{ _('Edit Feed') }}</a></td>
+            {% else %}
+                <td><a href="/feed/{{ feed.id }}/copy">Copy</a> | <a href="{{ url_for('feed.subscribe', actor=feed.ap_id if feed.ap_id else feed.name) }}">Subscribe</a></td>
+            {% endif %}
+        {% else %}
+            <td><a href="/feed/{{ feed.id }}/copy">Copy</a> | <a href="{{ url_for('feed.subscribe', actor=feed.ap_id if feed.ap_id else feed.name) }}">Subscribe</a></td>
         {% endif %}
     {% endif %}
 </tr>
