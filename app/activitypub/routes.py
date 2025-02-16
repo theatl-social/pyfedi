@@ -501,7 +501,7 @@ def shared_inbox():
 
     if not actor:
         actor_name = request_json['actor']
-        log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, f'Actor could not be found 1: {actor_name}')
+        log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, f'Actor could not be found 1 - : {actor_name}, actor object: {actor}')
         return '', 200
 
     if actor.is_local():        # should be impossible (can be Announced back, but not sent without access to privkey)

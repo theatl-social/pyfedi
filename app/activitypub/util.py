@@ -258,7 +258,10 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
     user = None
     server = ''
     # actor parameter must be formatted as https://server/u/actor or https://server/c/actor
-
+        
+    # log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, f'test actor: {actor}, actor_url: {actor_url}')
+    print(f'actor: {actor}, actor_url: {actor_url}')
+    
     # Initially, check if the community exists in the local DB already
     if current_app.config['SERVER_NAME'] + '/c/' in actor:
         return Community.query.filter(Community.ap_profile_id == actor).first()  # finds communities formatted like https://localhost/c/*
@@ -277,6 +280,7 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
     # if none of the above trigger then this is a remote actor    
     elif actor.startswith('https://'):
         server, address = extract_domain_and_actor(actor)
+        print(f'server: {server}, address: {address}')
         if get_setting('use_allowlist', False):
             if not instance_allowed(server):
                 return None
@@ -287,23 +291,27 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
             return None
         # see if the actor is a remote user we know
         user = User.query.filter(User.ap_profile_id == actor).first()  # finds users formatted like https://kbin.social/u/tables
+        print('looking for user')
         if (user and user.banned) or (user and user.deleted) :
             return None
         # actor is not a remote user, see if its a remote community or feed
         if user is None:
+            print('looking for community')
             user = Community.query.filter(Community.ap_profile_id == actor).first()
             if user and user.banned:
                 # Try to find a non-banned copy of the community. Sometimes duplicates happen and one copy is banned.
                 user = Community.query.filter(Community.ap_profile_id == actor).filter(Community.banned == False).first()
                 if user is None:    # no un-banned version of this community exists, only the banned one. So it was banned for being bad, not for being a duplicate.
                     return None
-            else:
+            elif user is None:
+                print('looking for feed')
                 user = Feed.query.filter(Feed.ap_profile_id == actor).first()
-                if user is None:
-                    return
+                # if user is None:
+                #     return
 
 
     if user is not None:
+        print(f'found user: {user}')
         if not user.is_local() and (user.ap_fetched_at is None or user.ap_fetched_at < utcnow() - timedelta(days=7)):
             # To reduce load on remote servers, refreshing the user profile happens after a delay of 1 to 10 seconds. Meanwhile, subsequent calls to
             # find_actor_or_create() which happen to be for the same actor might queue up refreshes of the same user. To avoid this, set a flag to
@@ -324,6 +332,7 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
             return None
         return user
     else:   # User does not exist in the DB, it's going to need to be created from it's remote home instance
+        print(f'user not found, creating')
         if create_if_not_found:
             if actor.startswith('https://'):
                 try:
