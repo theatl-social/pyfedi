@@ -168,13 +168,13 @@ def show_community(community: Community):
     # this community
     user_has_feeds = False
     current_feed_id = 0
-    current_feed_name = "None"
+    current_feed_title = "None"
     if current_user.is_authenticated and len(Feed.query.filter_by(user_id=current_user.id).all()) > 0:
         user_has_feeds = True
         current_feed = Feed.query.filter(Feed.user_id == current_user.id).join(FeedItem, FeedItem.feed_id == Feed.id).filter(FeedItem.community_id == community.id).first()
         if current_feed is not None:
             current_feed_id = current_feed.id
-            current_feed_name = current_feed.name
+            current_feed_title = current_feed.title
 
     page = request.args.get('page', 1, type=int)
     sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)
@@ -341,7 +341,7 @@ def show_community(community: Community):
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                            post_layout=post_layout, current_app=current_app,
                            user_has_feeds=user_has_feeds, current_feed_id=current_feed_id,
-                           current_feed_name=current_feed_name, menu_instance_feeds=menu_instance_feeds(), 
+                           current_feed_title=current_feed_title, menu_instance_feeds=menu_instance_feeds(), 
                            menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
