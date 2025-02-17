@@ -159,7 +159,7 @@ def block_instance(instance_id):
 @login_required
 def chat_report(conversation_id):
     conversation = Conversation.query.get_or_404(conversation_id)
-    if current_user.is_admin() or current_user.is_member(current_user):
+    if current_user.is_admin() or conversation.is_member(current_user):
         form = ReportConversationForm()
 
         if form.validate_on_submit():
