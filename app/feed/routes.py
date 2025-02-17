@@ -430,7 +430,7 @@ def feed_add_community():
         db.session.commit()
 
         # announce the change to any potential subscribers
-        if feed.public:
+        if current_feed.public:
             community = Community.query.get(community_id)
             if current_app.debug:
                 announce_feed_add_remove_to_subscribers("Remove", current_feed, community)
@@ -970,7 +970,8 @@ def announce_feed_add_remove_to_subscribers(action, feed, community):
     for fm in feed_members:
         if fm.id == feed.user_id:
             continue
-        if fm.is_local():
+        fm_user = User.query.get(fm.user_id)
+        if fm_user.is_local():
             continue
         # if we get here the feedmember is a remote user
         instance: Instance = session.query(Instance).get(fm.instance.id)
