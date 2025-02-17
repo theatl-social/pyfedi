@@ -353,7 +353,7 @@ def feed_copy(feed_id: int):
         db.session.add(feed)
         db.session.commit()
 
-        membership = FeedMember(user_id=current_user.id, feed_id=feed.id)
+        membership = FeedMember(user_id=current_user.id, feed_id=feed.id, is_owner=True)
         db.session.add(membership)
         db.session.commit()
 
