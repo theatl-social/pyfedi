@@ -977,7 +977,7 @@ def process_inbox_request(request_json, store_ap_json):
 
         if core_activity['type'] == 'Delete':
             # check if its a feed being deleted
-            if core_activity['object']['type'] == 'Feed':
+            if isinstance(core_activity['object'], dict) and core_activity['object']['type'] == 'Feed':
                 # find the user in the traffic
                 user = User.query.filter_by(ap_profile_id=core_activity['actor']).first()
                 # find the feed
@@ -1006,7 +1006,7 @@ def process_inbox_request(request_json, store_ap_json):
                 else:
                     log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, saved_json, f'Delete: cannot find {core_activity['object']['id]']}')
                     return
-            if isinstance(core_activity['object'], str):
+            elif isinstance(core_activity['object'], str):
                 ap_id = core_activity['object']  # lemmy
             else:
                 ap_id = core_activity['object']['id']  # kbin
