@@ -452,9 +452,9 @@ def feed_add_community():
     if feed.public:
         community = Community.query.get(community_id)
         if current_app.debug:
-            announce_feed_add_remove_to_subscribers("Add", current_feed, community)
+            announce_feed_add_remove_to_subscribers("Add", feed, community)
         else:
-            announce_feed_add_remove_to_subscribers.delay("Add", current_feed, community)
+            announce_feed_add_remove_to_subscribers.delay("Add", feed, community)
 
     # subscribe the user to the community if they are not already subscribed
     current_membership = CommunityMember.query.filter_by(user_id=user_id, community_id=community_id).first()
