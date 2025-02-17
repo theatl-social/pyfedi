@@ -242,6 +242,8 @@ def tags_from_string_old(tags: str) -> List[Tag]:
     tags = tags.strip()
     if tags == '':
         return []
+    if tags[-1:] == ',':
+        tags = tags[:-1]
     tag_list = tags.split(',')
     tag_list = [tag.strip() for tag in tag_list]
     for tag in tag_list:
