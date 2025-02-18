@@ -1111,7 +1111,21 @@ def actor_json_to_model(activity_json, address, server):
         if 'nsfl' in activity_json and activity_json['nsfl'] and not site.enable_nsfl:
             return None
 
+        # get the owners list
+        owner_users = []
+        owners_data = get_request(owners_url, headers={'Accept': 'application/activity+json'})
+        if owners_data.status_code == 200:
+            owners_json = owners_data.json()
+            print(f'in actor_json_to_model, owners_json: {owners_json}')
+            for owner in owners_json['orderedItems']:
+                owner_user = find_actor_or_create(owner)
+                print(f'in loop, owner_user: {owner_user}')
+                owner_users.append(owner_user)
+        
+
+        print(f'owner_users list: {owner_users}')
         feed = Feed(name=activity_json['preferredUsername'].strip(),
+                            user_id=owner_users[0].id,
                               title=activity_json['name'].strip(),
                               nsfw=activity_json['sensitive'] if 'sensitive' in activity_json else False,
                             #   restricted_to_mods=activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else False,
@@ -1134,6 +1148,14 @@ def actor_json_to_model(activity_json, address, server):
                               # language=community_json['language'][0]['identifier'] # todo: language
                               instance_id=find_instance_id(server)
                               )
+
+
+        # also add the owners as feedmembers
+        for ou in owner_users:
+            fm = FeedMember(feed_id=feed.id, user_id=ou.id, is_owner=True)
+            db.session.add(fm)
+            db.session.close()
+
 
         description_html = ''
         if 'summary' in activity_json:

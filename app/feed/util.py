@@ -83,6 +83,11 @@ def search_for_feed(address: str):
                             feed = actor_json_to_model(feed_json, name, server)
                             print(f'feed after actor_json_to_model: {feed}')
                             if feed:
+                                # get the feed owner from the /moderators list endpoint for the feed
+                                # do the request
+                                # convert to json
+                                # get the list of moderators (just the one user at the moment)
+                                # for each mod make a feedmember
                                 return feed
                             #     if current_app.debug:
                             #         retrieve_mods_and_backfill(community.id, server, name, community_json)
