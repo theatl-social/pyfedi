@@ -117,11 +117,13 @@ def feed_add_remote():
         # server, feed = extract_domain_and_actor(address)
         # new_feed = search_for_feed('~' + feed + server)
 
-
+        print('in feed_add_remote, validate step')
 
         if address.startswith('~') and '@' in address:
+            print(f'address starts with ~ and @ in address')
             try:
                 new_feed = search_for_feed(address)
+                print(f'new feed after search_for_feed(address): {new_feed}')
             except Exception as e:
                 if 'is blocked.' in str(e):
                     flash(_('Sorry, that instance is blocked, check https://gui.fediseer.com/ for reasons.'), 'warning')
@@ -130,9 +132,12 @@ def feed_add_remote():
             ...
         elif '@' in address:
             new_feed = search_for_feed('~' + address)
+            print(f'only @ in address, new feed after search_for_feed(address): {new_feed}')
         elif address.startswith('https://'):
             server, feed = extract_domain_and_actor(address)
+            print(f'https:// startswith for address, server {server}, feed: {feed} after extract_domain_and_actor')
             new_feed = search_for_feed('~' + feed + '@' + server)
+            print(f'https:// startswith for address, new feed after search_for_feed(address): {new_feed}')
         else:
             message = Markup(
                 'Accepted address formats: ~feedname@server.name or https://server.name/f/feedname.')
