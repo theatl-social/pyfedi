@@ -416,6 +416,8 @@ def feed_add_community():
     if Feed.query.get(feed_id).user_id != user_id:
         abort(404)
 
+    print(f'in feed_add_community')
+
     # if current_feed_id is not 0 then we are moving a community from
     # one feed to another
     if current_feed_id != 0:
@@ -439,6 +441,7 @@ def feed_add_community():
 
     # make the new feeditem and commit it
     feed_item = FeedItem(feed_id=feed_id, community_id=community_id)
+    print(f'new feed item {feed_item}')
     db.session.add(feed_item)
     db.session.commit()
 
@@ -450,8 +453,10 @@ def feed_add_community():
 
     # announce the change to any potential subscribers
     if feed.public:
+        print(f'feed is public')
         community = Community.query.get(community_id)
         if current_app.debug:
+            print(f'running announce_feed_add_remove in debug, feed: {feed}, community: {community}')
             announce_feed_add_remove_to_subscribers("Add", feed, community)
         else:
             announce_feed_add_remove_to_subscribers.delay("Add", feed, community)
@@ -773,13 +778,15 @@ def do_feed_subscribe(actor, user_id):
         remote = True
     else:
         feed = Feed.query.filter_by(name=actor, ap_id=None).first()
-
+    
+    print(f'in do_feed_subscribe, actor: {actor}, user: {user}, feed: {feed}')
     if feed is not None:
         if feed_membership(user, feed) != SUBSCRIPTION_MEMBER and feed_membership(user, feed) != SUBSCRIPTION_PENDING:
             success = True
 
             # for local feeds, joining is instant
             member = FeedMember(user_id=user.id, feed_id=feed.id)
+            print(f'feed_member: {member}')
             db.session.add(member)
             feed.subscriptions_count += 1
             db.session.commit()
@@ -787,9 +794,11 @@ def do_feed_subscribe(actor, user_id):
             # also subscribe the user to the feeditem communities
             from app.community.routes import do_subscribe
             feed_items = FeedItem.query.filter_by(feed_id=feed.id).all()
+            print(f'feed_items: {feed_items}')
             for fi in feed_items:
                 community = Community.query.get(fi.community_id)
                 actor = community.ap_id if community.ap_id else community.name
+                print(f'feed_item actor in loop: {actor}')
                 do_subscribe(actor, user.id)
  
             # feed is remote
@@ -931,6 +940,7 @@ def feed_unsubscribe(actor):
 
 @celery.task
 def announce_feed_add_remove_to_subscribers(action, feed, community):
+    print(f'in announce_feed_add_remove_to_subscribers, action: {action}, feed: {feed}, community: {community} ')
     # build the Announce json
     activity_json = {
         "@context": default_context(),
@@ -972,7 +982,13 @@ def announce_feed_add_remove_to_subscribers(action, feed, community):
             continue
         fm_user = User.query.get(fm.user_id)
         if fm_user.is_local():
+            print(f'fm_user is local, fm_user: {fm_user}')
+            # user is local so lets auto-subscribe them to the community
+            from app.community.routes import do_subscribe
+            actor = community.ap_id if community.ap_id else community.name
+            do_subscribe(actor, fm_user.id)
             continue
+
         # if we get here the feedmember is a remote user
         instance: Instance = session.query(Instance).get(fm.instance.id)
         if instance.inbox and instance.online() and not instance_banned(instance.domain):

@@ -427,6 +427,8 @@ def do_subscribe(actor, user_id, admin_preload=False):
     else:
         community = Community.query.filter_by(name=actor, banned=False, ap_id=None).first()
 
+    print(f'in do_subscribe. actor: {actor}, user: {user}, community: {community}')
+
     if community is not None:
         pre_load_message['community'] = community.ap_id
         if community.id in communities_banned_from(user.id):
@@ -438,7 +440,8 @@ def do_subscribe(actor, user_id, admin_preload=False):
             banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
             if banned:
                 if not admin_preload:
-                    flash(_('You cannot join this community'))
+                    if current_user.id == user_id:
+                        flash(_('You cannot join this community'))
                 else:
                     pre_load_message['community_banned_by_local_instance'] = True
             success = True
@@ -447,9 +450,14 @@ def do_subscribe(actor, user_id, admin_preload=False):
             db.session.add(member)
             community.subscriptions_count += 1
             db.session.commit()
+
+            print(f'in do_subscribe, local community membership: {member}')
             if remote:
                 # send ActivityPub message to remote community, asking to follow. Accept message will be sent to our shared inbox
                 join_request = CommunityJoinRequest(user_id=user.id, community_id=community.id)
+
+                print(f'in do_subscribe, remote is true, join_request: {join_request}')
+
                 db.session.add(join_request)
                 db.session.commit()
                 if community.instance.online():
@@ -462,23 +470,29 @@ def do_subscribe(actor, user_id, admin_preload=False):
                     }
                     success = post_request(community.ap_inbox_url, follow, user.private_key,
                                                            user.public_url() + '#main-key', timeout=10)
+                    
+                    print(f'do_subscribe, remote, follow json: {follow}, success response: {success}')
+
                 if success is False or isinstance(success, str):
                     if 'is not in allowlist' in success:
                         msg_to_user = f'{community.instance.domain} does not allow us to join their communities.'
                         if not admin_preload:
-                            flash(_(msg_to_user), 'error')
+                            if current_user.id == user_id:
+                                flash(_(msg_to_user), 'error')
                         else:
                             pre_load_message['status'] = msg_to_user
                     else:
                         msg_to_user = "There was a problem while trying to communicate with remote server. If other people have already joined this community it won't matter."
                         if not admin_preload:
-                            flash(_(msg_to_user), 'error')
+                            if current_user.id == user_id:
+                                flash(_(msg_to_user), 'error')
                         else:
                             pre_load_message['status'] = msg_to_user
 
             if success is True:
                 if not admin_preload:
-                    flash('You joined ' + community.title)
+                    if current_user.id == user_id:
+                        flash('You joined ' + community.title)
                 else:
                     pre_load_message['status'] = 'joined'
         else:
