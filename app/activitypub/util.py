@@ -1112,6 +1112,7 @@ def actor_json_to_model(activity_json, address, server):
             return None
 
         # get the owners list
+        # these users will be added to feedmember db entries at the bottom of this function
         owner_users = []
         owners_data = get_request(owners_url, headers={'Accept': 'application/activity+json'})
         if owners_data.status_code == 200:
@@ -1121,7 +1122,16 @@ def actor_json_to_model(activity_json, address, server):
                 owner_user = find_actor_or_create(owner)
                 print(f'in loop, owner_user: {owner_user}')
                 owner_users.append(owner_user)
-        
+
+        # also get the communities in the remote feed's /following list 
+        feed_following = []
+        following_data = get_request(activity_json['following'], headers={'Accept': 'application/activity+json'})
+        if following_data.status_code == 200:
+            following_json = following_data.json()
+            print(f'in actor_json_to_model, following_json: {following_json}')
+            for c_ap_id in following_json['orderedItems']:
+                community = find_actor_or_create(c_ap_id, community_only=True)
+                feed_following.append(community)
 
         print(f'owner_users list: {owner_users}')
         feed = Feed(name=activity_json['preferredUsername'].strip(),
@@ -1195,11 +1205,15 @@ def actor_json_to_model(activity_json, address, server):
                 feed.image = image
                 db.session.add(image)
         
-        # also add the owners as feedmembers
+        # add the owners as feedmembers
         for ou in owner_users:
             fm = FeedMember(feed_id=feed.id, user_id=ou.id, is_owner=True)
             db.session.add(fm)
-            # db.session.commit()
+
+        # add the communities from the remote /following list as feeditems
+        for c in feed_following:
+            fi = FeedItem(feed_id=feed.id, community_id=c.id)
+            db.session.add(fi)
 
         try:
             db.session.add(feed)
