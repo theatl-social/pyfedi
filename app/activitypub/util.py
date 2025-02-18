@@ -1194,6 +1194,13 @@ def actor_json_to_model(activity_json, address, server):
                 image = File(source_url=image_entry)
                 feed.image = image
                 db.session.add(image)
+        
+        # also add the owners as feedmembers
+        for ou in owner_users:
+            fm = FeedMember(feed_id=feed.id, user_id=ou.id, is_owner=True)
+            db.session.add(fm)
+            # db.session.commit()
+
         try:
             db.session.add(feed)
             db.session.commit()
@@ -1201,11 +1208,6 @@ def actor_json_to_model(activity_json, address, server):
             db.session.rollback()
             return Feed.query.filter_by(ap_profile_id=activity_json['id'].lower()).one()
         
-        # also add the owners as feedmembers
-        for ou in owner_users:
-            fm = FeedMember(feed_id=feed.id, user_id=ou.id, is_owner=True)
-            db.session.add(fm)
-            db.session.commit()
 
         if feed.icon_id:
             make_image_sizes(feed.icon_id, 60, 250, 'feeds')
