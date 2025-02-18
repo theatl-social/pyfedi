@@ -1205,7 +1205,7 @@ def actor_json_to_model(activity_json, address, server):
         for ou in owner_users:
             fm = FeedMember(feed_id=feed.id, user_id=ou.id, is_owner=True)
             db.session.add(fm)
-            db.session.close()
+            db.session.commit()
 
         if feed.icon_id:
             make_image_sizes(feed.icon_id, 60, 250, 'feeds')
