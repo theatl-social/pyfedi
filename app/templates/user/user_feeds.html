@@ -27,6 +27,11 @@
         {% for feed in user_feeds_list -%}
             {% include 'feed/_feed_table_row.html' -%}
         {% endfor -%}
+        {% if user_has_feed_subscriptions %}
+            {% for feed in subbed_feeds -%}
+                {% include 'feed/_feed_table_row.html' -%}
+            {% endfor -%}
+        {% endif %}
     </table>
 {% else -%}
     <p>{{ _('You do not have any Feeds yet..') }}</p>

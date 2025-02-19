@@ -17,7 +17,7 @@ from app.email import send_verification_email
 from app.models import Post, Community, CommunityMember, User, PostReply, PostVote, Notification, utcnow, File, Site, \
     Instance, Report, UserBlock, CommunityBan, CommunityJoinRequest, CommunityBlock, Filter, Domain, DomainBlock, \
     InstanceBlock, NotificationSubscription, PostBookmark, PostReplyBookmark, read_posts, Topic, UserNote, \
-    UserExtraField, Feed
+    UserExtraField, Feed, FeedMember
 from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, \
     FilterForm, KeywordFilterEditForm, RemoteFollowForm, ImportExportForm, UserNoteForm
@@ -1481,8 +1481,16 @@ def user_myfeeds():
     if current_user.is_authenticated and len(Feed.query.filter_by(user_id=current_user.id).all()) > 0:
         user_has_feeds = True
     current_user_feeds = Feed.query.filter_by(user_id=current_user.id)
+
+    # this is for feeds the user is subscribed to
+    user_has_feed_subscriptions = False
+    if current_user.is_authenticated and len(Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter_by(user_id=current_user.id).all()) > 0:
+        user_has_feed_subscriptions = True
+    subbed_feeds = Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter_by(user_id=current_user.id)
     
     return render_template('user/user_feeds.html', user_has_feeds=user_has_feeds, user_feeds_list=current_user_feeds,
+                           user_has_feed_subscriptions=user_has_feed_subscriptions,
+                           subbed_feeds=subbed_feeds,
                            menu_topics=menu_topics(), menu_instance_feeds=menu_instance_feeds(), 
                            menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
