@@ -10,7 +10,6 @@ from typing import Union, Tuple, List
 
 import arrow
 import httpx
-import redis
 from flask import current_app, request, g, url_for, json
 from flask_babel import _
 from sqlalchemy import text, func, desc
@@ -1991,53 +1990,6 @@ def process_report(user, reported, request_json):
         ...
     elif isinstance(reported, Conversation):
         ...
-
-
-def get_redis_connection() -> redis.Redis:
-    connection_string = current_app.config['CACHE_REDIS_URL']
-    if connection_string.startswith('unix://'):
-        unix_socket_path, db, password = parse_redis_pipe_string(connection_string)
-        return redis.Redis(unix_socket_path=unix_socket_path, db=db, password=password)
-    else:
-        host, port, db, password = parse_redis_socket_string(connection_string)
-        return redis.Redis(host=host, port=port, db=db, password=password)
-
-
-def parse_redis_pipe_string(connection_string: str):
-    if connection_string.startswith('unix://'):
-        # Parse the connection string
-        parsed_url = urlparse(connection_string)
-
-        # Extract the path (Unix socket path)
-        unix_socket_path = parsed_url.path
-
-        # Extract query parameters (if any)
-        query_params = parse_qs(parsed_url.query)
-
-        # Extract database number (default to 0 if not provided)
-        db = int(query_params.get('db', [0])[0])
-
-        # Extract password (if provided)
-        password = query_params.get('password', [None])[0]
-
-        return unix_socket_path, db, password
-
-
-def parse_redis_socket_string(connection_string: str):
-    # Parse the connection string
-    parsed_url = urlparse(connection_string)
-
-    # Extract password
-    password = parsed_url.password
-
-    # Extract host and port
-    host = parsed_url.hostname
-    port = parsed_url.port
-
-    # Extract database number (default to 0 if not provided)
-    db_num = int(parsed_url.path.lstrip('/') or 0)
-
-    return host, port, db_num, password
 
 
 def lemmy_site_data():
