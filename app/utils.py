@@ -27,7 +27,7 @@ from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_TRUSTED, DOWNVOTE
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 import os
 from furl import furl
-from flask import current_app, json, redirect, url_for, request, make_response, Response, g, flash
+from flask import current_app, json, redirect, url_for, request, make_response, Response, g, flash, abort
 from flask_babel import _, lazy_gettext as _l
 from flask_login import current_user, logout_user
 from sqlalchemy import text, or_
@@ -651,6 +651,17 @@ def permission_required(permission):
         return decorated_view
 
     return decorator
+
+
+def developer_mode_only(func):
+    @wraps(func)
+    def decorated_function(*args, **kwargs):
+        if current_app.config['MODE'] == 'development' or current_app.debug:
+            return func(*args, **kwargs)
+        else:
+            return abort(403, description="Not available in production mode")
+
+    return decorated_function
 
 
 # sends the user back to where they came from
