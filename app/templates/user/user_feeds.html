@@ -11,7 +11,7 @@
 <hr>
 <h1>{{ _('My Feeds') }}</h1>
 <a class="btn btn-primary" href="{{ url_for('feed.feed_new') }}" style="float: right;">{{ _('New Feed') }}</a>
-{% if user_has_feeds %}
+{% if user_has_feeds or user_has_feed_subscriptions %}
     <table class="table table-striped mt-1">
         <tr>
             <th>Name</th>
@@ -27,11 +27,9 @@
         {% for feed in user_feeds_list -%}
             {% include 'feed/_feed_table_row.html' -%}
         {% endfor -%}
-        {% if user_has_feed_subscriptions %}
-            {% for feed in subbed_feeds -%}
-                {% include 'feed/_feed_table_row.html' -%}
-            {% endfor -%}
-        {% endif %}
+        {% for feed in subbed_feeds -%}
+            {% include 'feed/_feed_table_row.html' -%}
+        {% endfor -%}
     </table>
 {% else -%}
     <p>{{ _('You do not have any Feeds yet..') }}</p>
