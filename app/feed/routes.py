@@ -760,7 +760,7 @@ def feed_create_post(feed_name):
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR)
 
 
-@bp.route('/<actor>/subscribe', methods=['GET'])
+@bp.route('/feed/<actor>/subscribe', methods=['GET'])
 @login_required
 @validation_required
 def subscribe(actor):
