@@ -19,8 +19,6 @@ class Config(object):
     MAIL_FROM = os.environ.get('MAIL_FROM') or 'noreply@' + os.environ.get('SERVER_NAME')
     MAIL_ERRORS = os.environ.get('MAIL_ERRORS') is not None
     ADMINS = os.environ.get('ADMINS')
-    RECAPTCHA_PUBLIC_KEY = os.environ.get("RECAPTCHA_PUBLIC_KEY") or None
-    RECAPTCHA_PRIVATE_KEY = os.environ.get("RECAPTCHA_PRIVATE_KEY") or None
     MODE = os.environ.get('MODE') or 'development'
     LANGUAGES = ['ca', 'de', 'en', 'es', 'fr', 'ja', 'zh']
     FULL_AP_CONTEXT = bool(int(os.environ.get('FULL_AP_CONTEXT', 0)))

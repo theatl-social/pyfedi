@@ -23,12 +23,6 @@ To allow registration:
 After registration is set to open/require application, the common user flow is to 
 navigate to your instance and click **Register**.
 
-### Disabling ReCAPCHA
-
-If you ensure your `.env` file has empty values for `RECAPTCHA3_PUBLIC_KEY` and 
-`RECAPTCHA3_PRIVATE_KEY`, then you can bypass the ReCAPCHA step. The only problem is
-you will need to ensure the users email address is verified, and this may be a hassle.
-
 ## Admin screen
 
 1. Login to your instance as your admin user
