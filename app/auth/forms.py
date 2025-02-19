@@ -1,11 +1,11 @@
-from flask_wtf import FlaskForm, RecaptchaField
+from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, HiddenField, BooleanField, SelectField, RadioField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length
 from flask_babel import _, lazy_gettext as _l
 from app.models import User, Community
 from sqlalchemy import func
 
-from app.utils import MultiCheckboxField
+from app.utils import MultiCheckboxField, CaptchaField
 
 
 class LoginForm(FlaskForm):
@@ -24,7 +24,7 @@ class RegistrationForm(FlaskForm):
         _l('Repeat password'), validators=[DataRequired(),
                                            EqualTo('password')])
     question = StringField(_l('Why would you like to join this site?'), validators=[DataRequired(), Length(min=1, max=512)])
-    recaptcha = RecaptchaField()
+    captcha = CaptchaField(_l('Enter captcha code'), validators=[DataRequired()])
 
     submit = SubmitField(_l('Register'))
 

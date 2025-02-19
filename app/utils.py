@@ -19,6 +19,7 @@ import flask
 from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
 import warnings
 import jwt
+import base64
 
 from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_TRUSTED, DOWNVOTE_ACCEPT_INSTANCE, \
     DOWNVOTE_ACCEPT_MEMBERS
@@ -27,15 +28,20 @@ warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 import os
 from furl import furl
 from flask import current_app, json, redirect, url_for, request, make_response, Response, g, flash
-from flask_babel import _
+from flask_babel import _, lazy_gettext as _l
 from flask_login import current_user, logout_user
 from sqlalchemy import text, or_
 from sqlalchemy.orm import Session
-from wtforms.fields  import SelectField, SelectMultipleField
-from wtforms.widgets import Select, html_params, ListWidget, CheckboxInput
+from wtforms.fields  import SelectField, SelectMultipleField, StringField
+from wtforms.widgets import Select, html_params, ListWidget, CheckboxInput, TextInput
+from wtforms.validators import ValidationError
+from markupsafe import Markup
 from app import db, cache, httpx_client, celery
 import re
 from PIL import Image, ImageOps
+
+from captcha.audio import AudioCaptcha
+from captcha.image import ImageCaptcha
 
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, ActivityPubLog, IpBan, \
     Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
@@ -1460,6 +1466,59 @@ def retrieve_defederation_list(domain: str) -> List[str]:
 def instance_software(domain: str):
     instance = Instance.query.filter(Instance.domain == domain).first()
     return instance.software.lower() if instance else ''
+
+
+def create_captcha(length=4):
+    code = ""
+    for i in range(length):
+        code += str(random.choice(['2', '3', '4', '5', '6', '8', '9']))
+
+    imagedata = ImageCaptcha().generate(code)
+    image = "data:image/jpeg;base64,"+base64.encodebytes(imagedata.read()).decode()
+
+    audiodata = AudioCaptcha().generate(code)
+    audio = "data:audio/wav;base64,"+base64.encodebytes(audiodata).decode()
+
+    uuid = os.urandom(12).hex()
+
+    redis_client = get_redis_connection()
+    redis_client.set("captcha_" + uuid, code, ex=30*60)
+
+    return {"uuid":uuid, "audio":audio, "image":image}
+
+
+def decode_captcha(uuid, code):
+    re_uuid = re.compile(r'^([a-fA-F0-9]{24})$')
+    if not re.fullmatch(re_uuid, uuid):
+        return False
+
+    redis_client = get_redis_connection()
+    saved_code = redis_client.getdel("captcha_" + uuid)
+    if saved_code is not None:
+        if code.lower() == saved_code.lower():
+            return True
+    return False
+
+
+class CaptchaField(StringField):
+    widget = TextInput()
+
+    def  __call__(self, *args, **kwargs):
+        self.data = ''
+        captcha = create_captcha()
+        input_field_html = super(CaptchaField, self).__call__(*args,**kwargs)
+        return Markup("""<input type="hidden" name="captcha_uuid" value="{uuid}" id="captcha-uuid">
+                         <img src="{image}" class="border mb-2" id="captcha-image">
+                         <audio src="{audio}" type="audio/wav" controls></audio>
+                         <!--<button type="button" id="captcha-refresh-button">Refresh</button>-->
+                         <br />
+                      """).format(uuid=captcha["uuid"], image=captcha["image"], audio=captcha["audio"]) + input_field_html
+
+    def post_validate(self, form, validation_stopped):
+        if decode_captcha(request.form.get('captcha_uuid', None), self.data):
+            pass
+        else:
+            raise ValidationError(_l('Wrong Captcha text.'))
 
 
 user2_cache = {}

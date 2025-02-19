@@ -109,8 +109,6 @@ docker-compose down && docker-compose up -d
 There are also regular cron jobs that need to be run. Set up cron on the host to run those scripts inside the container - see the Cron
 section of this document for details.
 
-You probably want a Captcha on the registration form - more environment variables.
-
 CDN, CloudFlare. More environment variables.
 
 All this is explained in the bare metal guide, below.
@@ -224,7 +222,6 @@ pip install -r requirements.txt
 
 * `SERVER_NAME` should be the domain of the site/instance. Use `127.0.0.1:5000` during development unless using ngrok. Just use the bare
 domain name, without https:// on the front or a slash on the end.
-* `RECAPTCHA_PUBLIC_KEY` and `RECAPTCHA_PRIVATE_KEY` can be generated at https://www.google.com/recaptcha/admin/create (this is optional - omit to allow registration without RECAPCHA).
 * `CACHE_TYPE` can be `FileSystemCache` or `RedisCache`. `FileSystemCache` is fine during development (set `CACHE_DIR` to `/tmp/piefed` or `/dev/shm/piefed`)
 while `RedisCache` **should** be used in production. If using `RedisCache`, set `CACHE_REDIS_URL` to `redis://localhost:6379/1`. Visit https://yourdomain/testredis to check if your redis url is working.
 
