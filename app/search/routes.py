@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from flask_babel import _
 from sqlalchemy import or_, desc
 
+from app import limiter
 from app.models import Post, Language, Community, Instance
 from app.search import bp
 from app.utils import moderating_communities, joined_communities, render_template, blocked_domains, blocked_instances, \
@@ -13,6 +14,7 @@ from app.activitypub.util import resolve_remote_post_from_search
 
 
 @bp.route('/search', methods=['GET', 'POST'])
+@limiter.limit("100 per day;20 per 5 minutes", exempt_when=lambda: current_user.is_authenticated)
 def run_search():
     if 'bingbot' in request.user_agent.string:  # Stop bingbot from running nonsense searches
         abort(404)
