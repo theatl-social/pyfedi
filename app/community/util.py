@@ -66,8 +66,12 @@ def search_for_community(address: str):
                     community_data = get_request(links['href'], headers={'Accept': type})
                     # to see the structure of the json contained in community_data, do a GET to https://lemmy.world/c/technology with header Accept: application/activity+json
                     if community_data.status_code == 200:
-                        community_json = community_data.json()
-                        community_data.close()
+                        try:
+                            community_json = community_data.json()
+                            community_data.close()
+                        except:
+                            community_data.close()
+                            return None
                         if community_json['type'] == 'Group':
                             community = actor_json_to_model(community_json, name, server)
                             if community:

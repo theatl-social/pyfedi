@@ -301,6 +301,8 @@ def admin_federation():
 
             # find the community
             new_community = search_for_community('!' + community + '@' + server)
+            if not new_community:
+                continue
             # subscribe to the community
             # capture the messages returned by do_subscibe
             # and show to user if instance is in debug mode
@@ -545,6 +547,8 @@ def admin_federation():
             server, community = extract_domain_and_actor(community)
             # find the community
             new_community = search_for_community('!' + community + '@' + server)
+            if not new_community:
+                continue
             # subscribe to the community
             # capture the messages returned by do_subscribe
             # and show to user if instance is in debug mode
