@@ -262,7 +262,9 @@ def list_communities():
                            menu_topics=menu_topics(), site=g.site, feed_id=feed_id,
                            server_has_feeds=server_has_feeds, public_feeds=public_feeds,
                            menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None)
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                           )
 
 
 @bp.route('/communities/local', methods=['GET'])
@@ -315,7 +317,9 @@ def list_local_communities():
                            low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
                            menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None)
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                           )
 
 
 @bp.route('/communities/subscribed', methods=['GET'])
@@ -375,7 +379,9 @@ def list_subscribed_communities():
                            low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
                            menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None)
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                           )
 
 
 @bp.route('/communities/notsubscribed', methods=['GET'])
@@ -436,7 +442,9 @@ def list_not_subscribed_communities():
                            low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
                            menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None)
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                           )
 
 
 @bp.route('/modlog', methods=['GET'])
@@ -468,7 +476,9 @@ def modlog():
                            menu_topics=menu_topics(), site=g.site,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                            menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None)
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                           )
 
 
 @bp.route('/donate')
@@ -774,4 +784,6 @@ def public_feeds():
     # render the page
     return render_template('feed/public_feeds.html', server_has_feeds=server_has_feeds, public_feeds_list=public_feeds,
                            menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None)
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                           )
