@@ -997,7 +997,7 @@ def announce_feed_add_remove_to_subscribers(action, feed, community):
             continue
 
         # if we get here the feedmember is a remote user
-        instance: Instance = session.query(Instance).get(fm.instance.id)
+        instance: Instance = session.query(Instance).get(fm_user.instance.id)
         if instance.inbox and instance.online() and not instance_banned(instance.domain):
             if post_request(instance.inbox, activity_json, feed.private_key, feed.ap_profile_id + '#main-key', timeout=10) is True:
                 instance.last_successful_send = utcnow()

@@ -720,10 +720,12 @@ def process_inbox_request(request_json, store_ap_json):
                 if request_json['object']['object']['type'] == 'Group' and request_json['object']['target']['id'].endswith('/following'):
                     announced = True
                     core_activity = request_json['object']
+                    user = None
             elif request_json['object']['type'] == 'Remove':
                 if request_json['object']['object']['type'] == 'Group' and request_json['object']['target']['id'].endswith('/following'):
                     announced = True
                     core_activity = request_json['object']
+                    user = None
             else: 
                 user_ap_id = request_json['object']['actor']
                 user = find_actor_or_create(user_ap_id)
@@ -1064,7 +1066,8 @@ def process_inbox_request(request_json, store_ap_json):
             return
 
         if core_activity['type'] == 'Add':       # Add mods, or sticky a post
-            mod = user
+            if user is not None:
+                mod = user
             if not announced:
                 community = find_community(core_activity)
             # check if the add is for a feed
@@ -1118,7 +1121,8 @@ def process_inbox_request(request_json, store_ap_json):
             return
 
         if core_activity['type'] == 'Remove':       # Remove mods, or unsticky a post
-            mod = user
+            if user is not None:
+                mod = user
             if not announced:
                 community = find_community(core_activity)
             # check if the remove is for a feed
