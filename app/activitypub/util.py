@@ -35,7 +35,7 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     notification_subscribers, communities_banned_from, actor_contains_blocked_words, \
     html_to_text, add_to_modlog_activitypub, joined_communities, \
     moderating_communities, get_task_session, is_video_hosting_site, opengraph_parse, instance_banned, \
-    mastodon_extra_field_link, blocked_users
+    mastodon_extra_field_link, blocked_users, piefed_markdown_to_lemmy_markdown
 
 from sqlalchemy import or_
 
@@ -1138,6 +1138,9 @@ def actor_json_to_model(activity_json, address, server):
                             user_id=owner_users[0].id,
                               title=activity_json['name'].strip(),
                               nsfw=activity_json['sensitive'] if 'sensitive' in activity_json else False,
+                              machine_name=activity_json['preferredUsername'],
+                              description_html=activity_json['summary'] if 'summary' in activity_json else '',
+                              description=piefed_markdown_to_lemmy_markdown(activity_json['source']['content']) if 'source' in activity_json else '',
                             #   restricted_to_mods=activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else False,
                             #   new_mods_wanted=activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False,
                             #   private_mods=activity_json['privateMods'] if 'privateMods' in activity_json else False,
