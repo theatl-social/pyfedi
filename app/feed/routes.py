@@ -21,7 +21,7 @@ from app.models import Feed, FeedMember, FeedItem, Post, Community, read_posts, 
 from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markdown_to_html, render_template, user_filters_posts, \
     blocked_domains, blocked_instances, blocked_communities, blocked_users, communities_banned_from, moderating_communities, \
     joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, validation_required, feed_membership, get_request, \
-    gibberish, get_task_session, instance_banned
+    gibberish, get_task_session, instance_banned, menu_subscribed_feeds
 from collections import namedtuple
 from sqlalchemy import desc, or_
 from slugify import slugify

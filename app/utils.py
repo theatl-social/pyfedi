@@ -45,7 +45,7 @@ from captcha.image import ImageCaptcha
 
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, ActivityPubLog, IpBan, \
     Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
-    File, ModLog, CommunityBlock, Feed
+    File, ModLog, CommunityBlock, Feed, FeedMember
 
 
 # Flask's render_template function, with support for themes added
@@ -972,6 +972,10 @@ def menu_instance_feeds():
 def menu_my_feeds(user_id):
     return Feed.query.filter(Feed.parent_feed_id == None).filter(Feed.user_id == user_id).order_by(Feed.name).all()
 
+
+# @cache.memoize(timeout=3000)
+def menu_subscribed_feeds(user_id):
+    return Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter_by(user_id=user_id)
 
 @cache.memoize(timeout=300)
 def community_moderators(community_id):

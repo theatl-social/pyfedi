@@ -24,7 +24,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     joined_communities, moderating_communities, markdown_to_html, allowlist_html, \
     blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
     blocked_users, menu_topics, blocked_communities, get_request, mastodon_extra_field_link, \
-    permission_required, debug_mode_only, ip_address, menu_instance_feeds, menu_instance_feeds
+    permission_required, debug_mode_only, ip_address, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, read_posts, Feed, FeedItem
 
@@ -168,6 +168,7 @@ def home_page(sort, view_filter):
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), menu_instance_feeds=menu_instance_feeds(), 
                            menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                            site=g.site,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
                            )
@@ -184,7 +185,9 @@ def list_topics():
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
                            menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None)
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                           )
 
 
 @bp.route('/communities', methods=['GET'])

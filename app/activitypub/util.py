@@ -1216,6 +1216,7 @@ def actor_json_to_model(activity_json, address, server):
         # add the communities from the remote /following list as feeditems
         for c in feed_following:
             fi = FeedItem(feed_id=feed.id, community_id=c.id)
+            feed.num_communities += 1
             db.session.add(fi)
 
         try:

@@ -1121,6 +1121,7 @@ def process_inbox_request(request_json, store_ap_json):
             mod = user
             if not announced:
                 community = find_community(core_activity)
+            # check if the remove is for a feed
             if core_activity['object']['type'] == 'Group' and core_activity['target']['id'].endswith('/following'):
                 # find the feed based on core_activity.actor
                 feed = find_actor_or_create(core_activity['actor'], feed_only=True)
