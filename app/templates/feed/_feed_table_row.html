@@ -11,11 +11,15 @@
             <td>{{ feed.is_instance_feed }}</td>
         {% endif %}
         <td>
-            <a href="/feed/{{ feed.id }}/edit">{{ _('Edit') }}</a> |
-            {% if feed.num_communities == 0 %}
-              <a href="/feed/{{ feed.id }}/delete?user_id={{ current_user.id }}" class="confirm_first">{{ _('Delete') }}</a>
+            {% if feed.subscribed(current_user.id) == 1 %}
+                <td><a href="/feed/{{ feed.id }}/copy">Copy</a> | <a href="{{ url_for('feed.feed_unsubscribe', actor=feed.ap_id if feed.ap_id else feed.name) }}">Unsubscribe</a></td>
             {% else %}
-              Delete
+                <a href="/feed/{{ feed.id }}/edit">{{ _('Edit') }}</a> |
+                {% if feed.num_communities == 0 %}
+                    <a href="/feed/{{ feed.id }}/delete?user_id={{ current_user.id }}" class="confirm_first">{{ _('Delete') }}</a>
+                {% else %}
+                    Delete
+                {% endif %}
             {% endif %}
         </td>
     {% elif active_child == 'public_feeds' %}
