@@ -536,6 +536,7 @@ def feed_membership(user: User, feed: Feed) -> int:
         return False
     return feed.subscribed(user.id)
 
+
 @cache.memoize(timeout=86400)
 def communities_banned_from(user_id: int) -> List[int]:
     community_bans = CommunityBan.query.filter(CommunityBan.user_id == user_id).all()
@@ -963,6 +964,7 @@ def joined_communities(user_id):
 def menu_topics():
     return Topic.query.filter(Topic.parent_id == None).order_by(Topic.name).all()
 
+
 @cache.memoize(timeout=3000)
 def menu_instance_feeds():
     return Feed.query.filter(Feed.parent_feed_id == None).filter(Feed.is_instance_feed == True).order_by(Feed.name).all()
@@ -975,7 +977,8 @@ def menu_my_feeds(user_id):
 
 # @cache.memoize(timeout=3000)
 def menu_subscribed_feeds(user_id):
-    return Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter_by(user_id=user_id)
+    return Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter_by(user_id=user_id).filter_by(is_owner=False)
+
 
 @cache.memoize(timeout=300)
 def community_moderators(community_id):
