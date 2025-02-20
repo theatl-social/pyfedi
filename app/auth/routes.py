@@ -133,7 +133,7 @@ def register():
                 db.session.add(user)
                 db.session.commit()
                 send_verification_email(user)
-                if current_app.config['MODE'] == 'development':
+                if current_app.debug:
                     current_app.logger.info('Verify account:' + url_for('auth.verify_email', token=user.verification_token, _external=True))
                 if g.site.registration_mode == 'RequireApplication':
                     application = UserRegistration(user_id=user.id, answer=form.question.data)

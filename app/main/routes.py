@@ -24,7 +24,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     joined_communities, moderating_communities, markdown_to_html, allowlist_html, \
     blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
     blocked_users, menu_topics, blocked_communities, get_request, mastodon_extra_field_link, \
-    permission_required, developer_mode_only
+    permission_required, debug_mode_only
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, read_posts
 
@@ -520,7 +520,7 @@ def replay_inbox():
 
 
 @bp.route('/test')
-@developer_mode_only
+@debug_mode_only
 def test():
 
     response = get_request('https://rimu.geek.nz')
@@ -606,7 +606,7 @@ def test():
 
 
 @bp.route('/test_email')
-@developer_mode_only
+@debug_mode_only
 def test_email():
     if current_user.is_anonymous:
         email = request.args.get('email')

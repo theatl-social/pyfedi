@@ -653,10 +653,10 @@ def permission_required(permission):
     return decorator
 
 
-def developer_mode_only(func):
+def debug_mode_only(func):
     @wraps(func)
     def decorated_function(*args, **kwargs):
-        if current_app.config['MODE'] == 'development' or current_app.debug:
+        if current_app.debug:
             return func(*args, **kwargs)
         else:
             return abort(403, description="Not available in production mode")
