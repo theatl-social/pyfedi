@@ -1487,9 +1487,12 @@ def create_captcha(length=4):
     return {"uuid":uuid, "audio":audio, "image":image}
 
 
-def decode_captcha(uuid, code):
+def decode_captcha(uuid: str, code: str):
     re_uuid = re.compile(r'^([a-fA-F0-9]{24})$')
-    if not re.fullmatch(re_uuid, uuid):
+    try:
+        if not re.fullmatch(re_uuid, uuid):
+            return False
+    except TypeError:
         return False
 
     redis_client = get_redis_connection()
