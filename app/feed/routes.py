@@ -581,6 +581,8 @@ def show_feed(feed):
     if not feed.public:
         if current_user.is_authenticated and current_user.id == feed.user_id:
             ...
+        elif current_user.is_authenticated and feed.subcribed(current_user.id):
+            ...
         else:
             flash(_('That feed is not public. Try one of these!'))
             return redirect(url_for('main.public_feeds'))
