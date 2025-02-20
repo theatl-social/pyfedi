@@ -10,7 +10,7 @@ from app.instance import bp
 from app.models import Instance, User, Post, read_posts, InstanceBlock
 from app.utils import render_template, moderating_communities, joined_communities, menu_topics, blocked_domains, \
     blocked_instances, blocked_communities, blocked_users, user_filters_home, recently_upvoted_posts, \
-    recently_downvoted_posts, menu_instance_feeds, menu_my_feeds
+    recently_downvoted_posts, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds
 
 
 @bp.route('/instances', methods=['GET'])
@@ -52,7 +52,8 @@ def list_instances():
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                            )
 
 
@@ -70,7 +71,8 @@ def instance_overview(instance_domain):
                            menu_topics=menu_topics(), site=g.site,
                            title=_('%(instance)s overview', instance=instance.domain),
                            menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                            )
 
 
@@ -101,7 +103,8 @@ def instance_people(instance_domain):
                            menu_topics=menu_topics(), site=g.site,
                            title=_('People from %(instance)s', instance=instance.domain),
                            menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                            )
 
 
@@ -188,7 +191,8 @@ def instance_posts(instance_domain):
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
                            menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                            )
 
 

@@ -8,7 +8,7 @@ from app.models import Post, Language, Community, Instance
 from app.search import bp
 from app.utils import moderating_communities, joined_communities, render_template, blocked_domains, blocked_instances, \
     communities_banned_from, recently_upvoted_posts, recently_downvoted_posts, blocked_users, menu_topics, \
-    blocked_communities, show_ban_message, menu_instance_feeds, menu_my_feeds
+    blocked_communities, show_ban_message, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds
 from app.community.forms import RetrieveRemotePost
 from app.activitypub.util import resolve_remote_post_from_search
 
@@ -105,7 +105,8 @@ def run_search():
                                joined_communities=joined_communities(current_user.get_id()),
                                menu_topics=menu_topics(),
                                site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                               menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                                )
 
     else:
@@ -115,7 +116,8 @@ def run_search():
                                joined_communities=joined_communities(current_user.get_id()),
                                menu_topics=menu_topics(),
                                site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                               menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                                )
 
 

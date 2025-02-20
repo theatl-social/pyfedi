@@ -8,7 +8,8 @@ from app.chat.forms import AddReply, ReportConversationForm
 from app.chat.util import send_message
 from app.models import Site, User, Report, ChatMessage, Notification, InstanceBlock, Conversation, conversation_member, CommunityBan, ModLog
 from app.user.forms import ReportUserForm
-from app.utils import render_template, moderating_communities, joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds
+from app.utils import render_template, moderating_communities, joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, \
+    menu_subscribed_feeds
 from app.chat import bp
 
 
@@ -56,7 +57,8 @@ def chat_home(conversation_id=None):
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(),
                                    site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                                   menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                                    )
 
 
@@ -88,7 +90,8 @@ def new_message(to):
                                joined_communities=joined_communities(current_user.get_id()),
                                menu_topics=menu_topics(),
                                site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                               menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                                )
 
 
@@ -133,7 +136,8 @@ def chat_options(conversation_id):
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(),
                            site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                            )
 
 
@@ -196,5 +200,6 @@ def chat_report(conversation_id):
                                joined_communities=joined_communities(current_user.get_id()),
                                menu_topics=menu_topics(),
                                site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                               menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                                )
