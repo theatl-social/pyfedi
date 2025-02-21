@@ -1165,7 +1165,7 @@ def process_inbox_request(request_json, store_ap_json):
                 if feed and isinstance(feed, Feed):
                     community_to_remove = find_actor_or_create(core_activity['object']['id'], community_only=True)
                     # if community found or created - remove the FeedItem and update Feed info
-                    if community_to_remove and isinstance(community_to_add, Community):
+                    if community_to_remove and isinstance(community_to_remove, Community):
                         feed_item = FeedItem.query.filter_by(feed_id=feed.id, community_id=community_to_remove.id).first()
                         db.session.delete(feed_item)
                         feed.num_communities -= 1
