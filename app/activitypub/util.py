@@ -1129,7 +1129,7 @@ def actor_json_to_model(activity_json, address, server):
         if following_data.status_code == 200:
             following_json = following_data.json()
             print(f'in actor_json_to_model, following_json: {following_json}')
-            for c_ap_id in following_json['orderedItems']:
+            for c_ap_id in following_json['items']:
                 community = find_actor_or_create(c_ap_id, community_only=True)
                 feed_following.append(community)
 
