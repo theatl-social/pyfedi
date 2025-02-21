@@ -1025,6 +1025,7 @@ def announce_feed_add_remove_to_subscribers(action, feed, community):
 def announce_feed_delete_to_subscribers(user_id, feed: Feed):
     # get the user
     user = User.query.get(user_id)
+    print(f'in announce_feed_delete, user: {user}')
     # create the delete json
     delete_json = {
         "@context": default_context(),
@@ -1036,9 +1037,11 @@ def announce_feed_delete_to_subscribers(user_id, feed: Feed):
             "id": feed.ap_public_url
         }
     }
+    print(f'in announce_feed_delete, delete_json: {delete_json}')
 
     # find the feed members
     feed_members = FeedMember.query.filter_by(feed_id=feed.id).all()
+    print(f'in announce_feed_delete, feed_members: {feed_members}')
     
     # for each member
     #  - if its the owner, skip
@@ -1047,11 +1050,13 @@ def announce_feed_delete_to_subscribers(user_id, feed: Feed):
     session = get_task_session()
     for fm in feed_members:
         fm_user = User.query.get(fm.user_id)
+        print(f'in announce_feed_delete, loop fm_user: {fm_user}')
         if fm_user.id == feed.user_id:
             continue
         if fm_user.is_local():
             continue
         # if we get here the feedmember is a remote user
+        print(f'in announce_feed_delete, loop fm_user is remote: {fm_user}')
         instance: Instance = session.query(Instance).get(fm_user.instance.id)
         if instance.inbox and instance.online() and not instance_banned(instance.domain):
             if post_request(instance.inbox, delete_json, feed.private_key, feed.ap_profile_id + '#main-key', timeout=10) is True:
