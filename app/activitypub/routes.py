@@ -1021,6 +1021,7 @@ def process_inbox_request(request_json, store_ap_json):
                     print(f'feed_items after delete loop: {FeedItem.query.filter_by(feed_id=feed.id).all()}')
                     # find the feedmembers and remove them
                     feed_members = FeedMember.query.filter_by(feed_id=feed.id).all()
+                    print(f'feed_members BEFORE delete loop: {FeedMember.query.filter_by(feed_id=feed.id).all()}')
                     for fm in feed_members:
                         db.session.delete(fm)
                         db.session.commit()
