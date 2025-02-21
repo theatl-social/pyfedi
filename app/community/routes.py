@@ -494,7 +494,7 @@ def do_subscribe(actor, user_id, admin_preload=False):
 
             if success is True:
                 if not admin_preload:
-                    if current_user.id == user_id:
+                    if current_user.is_authenticated and current_user.id == user_id:
                         flash('You joined ' + community.title)
                 else:
                     pre_load_message['status'] = 'joined'
