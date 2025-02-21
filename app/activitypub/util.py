@@ -1800,13 +1800,18 @@ def update_post_from_activity(post: Post, request_json: dict):
         'type' in request_json['object']['attachment'][0]):
         if request_json['object']['attachment'][0]['type'] == 'Link':
             if 'href' in request_json['object']['attachment'][0]:
-                new_url = request_json['object']['attachment'][0]['href']              # Lemmy < 0.19.4
+                new_url = request_json['object']['attachment'][0]['href']         # Lemmy < 0.19.4
             elif 'url' in request_json['object']['attachment'][0]:
-                new_url = request_json['object']['attachment'][0]['url']               # NodeBB
+                new_url = request_json['object']['attachment'][0]['url']          # NodeBB
         if request_json['object']['attachment'][0]['type'] == 'Document':
-            new_url = request_json['object']['attachment'][0]['url']               # Mastodon
+            new_url = request_json['object']['attachment'][0]['url']              # Mastodon
         if request_json['object']['attachment'][0]['type'] == 'Image':
-            new_url = request_json['object']['attachment'][0]['url']               # PixelFed / PieFed / Lemmy >= 0.19.4
+            new_url = request_json['object']['attachment'][0]['url']              # PixelFed / PieFed / Lemmy >= 0.19.4
+        if request_json['object']['attachment'][0]['type'] == 'Audio':            # WordPress podcast
+            new_url = request_json['object']['attachment'][0]['url']
+            if 'name' in request_json['object']['attachment'][0]:
+                post.title = request_json['object']['attachment'][0]['name']
+
     if 'attachment' in request_json['object'] and isinstance(request_json['object']['attachment'], dict):   # Mastodon / a.gup.pe
         new_url = request_json['object']['attachment']['url']
     if new_url:

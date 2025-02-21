@@ -1260,18 +1260,22 @@ class Post(db.Model):
             alt_text = None
             if request_json['object']['attachment'][0]['type'] == 'Link':
                 if 'href' in request_json['object']['attachment'][0]:
-                    post.url = request_json['object']['attachment'][0]['href']  # Lemmy < 0.19.4
+                    post.url = request_json['object']['attachment'][0]['href']    # Lemmy < 0.19.4
                 elif 'url' in request_json['object']['attachment'][0]:
-                    post.url = request_json['object']['attachment'][0]['url']   # NodeBB
+                    post.url = request_json['object']['attachment'][0]['url']     # NodeBB
             if request_json['object']['attachment'][0]['type'] == 'Document':
-                post.url = request_json['object']['attachment'][0]['url']  # Mastodon
+                post.url = request_json['object']['attachment'][0]['url']         # Mastodon
                 if 'name' in request_json['object']['attachment'][0]:
                     alt_text = request_json['object']['attachment'][0]['name']
             if request_json['object']['attachment'][0]['type'] == 'Image':
                 attachment = request_json['object']['attachment'][0]
-                post.url = attachment['url']  # PixelFed, PieFed, Lemmy >= 0.19.4
+                post.url = attachment['url']                                      # PixelFed, PieFed, Lemmy >= 0.19.4
                 alt_text = attachment.get("name")
                 file_path = attachment.get("file_path")
+            if request_json['object']['attachment'][0]['type'] == 'Audio':        # WordPress podcast
+                post.url = request_json['object']['attachment'][0]['url']
+                if 'name' in request_json['object']['attachment'][0]:
+                    post.title = request_json['object']['attachment'][0]['name']
 
         if 'attachment' in request_json['object'] and isinstance(request_json['object']['attachment'], dict):  # a.gup.pe (Mastodon)
             alt_text = None
