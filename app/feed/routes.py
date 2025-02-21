@@ -1059,7 +1059,7 @@ def announce_feed_delete_to_subscribers(user_id, feed: Feed):
         print(f'in announce_feed_delete, loop fm_user is remote: {fm_user}')
         instance: Instance = session.query(Instance).get(fm_user.instance.id)
         if instance.inbox and instance.online() and not instance_banned(instance.domain):
-            if post_request(instance.inbox, delete_json, feed.private_key, feed.ap_profile_id + '#main-key', timeout=10) is True:
+            if post_request(instance.inbox, delete_json, user.private_key, user.ap_profile_id + '#main-key', timeout=10) is True:
                 instance.last_successful_send = utcnow()
                 instance.failures = 0
             else:

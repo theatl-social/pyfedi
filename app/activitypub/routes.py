@@ -509,6 +509,7 @@ def shared_inbox():
         return '', 200
 
     bounced = False
+    print(f'in shared_inbox, request: {request}, actor: {actor}')
     try:
         HttpSignature.verify_request(request, actor.public_key, skip_date=True)
     except VerificationError as e:
@@ -998,7 +999,8 @@ def process_inbox_request(request_json, store_ap_json):
             if isinstance(core_activity['object'], dict) and core_activity['object']['type'] == 'Feed':
                 print('in process_inbox_request, feed delete traffic detected')
                 # find the user in the traffic
-                user = User.query.filter_by(ap_profile_id=core_activity['actor']).first()
+                # user = User.query.filter_by(ap_profile_id=core_activity['actor']).first()
+                user = find_actor_or_create(actor_id)
                 # find the feed
                 feed = Feed.query.filter_by(ap_public_url=core_activity['object']['id']).first()
 
