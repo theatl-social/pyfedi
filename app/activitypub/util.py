@@ -1117,10 +1117,10 @@ def actor_json_to_model(activity_json, address, server):
         owners_data = get_request(owners_url, headers={'Accept': 'application/activity+json'})
         if owners_data.status_code == 200:
             owners_json = owners_data.json()
-            print(f'in actor_json_to_model, owners_json: {owners_json}')
+            # print(f'in actor_json_to_model, owners_json: {owners_json}')
             for owner in owners_json['orderedItems']:
                 owner_user = find_actor_or_create(owner)
-                print(f'in loop, owner_user: {owner_user}')
+                # print(f'in loop, owner_user: {owner_user}')
                 owner_users.append(owner_user)
 
         # also get the communities in the remote feed's /following list 
@@ -1128,12 +1128,12 @@ def actor_json_to_model(activity_json, address, server):
         following_data = get_request(activity_json['following'], headers={'Accept': 'application/activity+json'})
         if following_data.status_code == 200:
             following_json = following_data.json()
-            print(f'in actor_json_to_model, following_json: {following_json}')
+            # print(f'in actor_json_to_model, following_json: {following_json}')
             for c_ap_id in following_json['items']:
                 community = find_actor_or_create(c_ap_id, community_only=True)
                 feed_following.append(community)
 
-        print(f'owner_users list: {owner_users}')
+        # print(f'owner_users list: {owner_users}')
         feed = Feed(name=activity_json['preferredUsername'].strip(),
                             user_id=owner_users[0].id,
                               title=activity_json['name'].strip(),

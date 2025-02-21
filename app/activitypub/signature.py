@@ -102,7 +102,7 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str, con
         log.exception_message = 'empty uri'
     else:
         try:
-            print(f'in post_request, uri: {uri}, body: {body}, private_key: {private_key}, key_id: {key_id}, content_type: {content_type}, method: {method}, timeout: {timeout}')
+            # print(f'in post_request, uri: {uri}, body: {body}, private_key: {private_key}, key_id: {key_id}, content_type: {content_type}, method: {method}, timeout: {timeout}')
             result = HttpSignature.signed_request(uri, body, private_key, key_id, content_type, method, timeout)
             if result.status_code != 200 and result.status_code != 202 and result.status_code != 204:
                 log.result = 'failure'

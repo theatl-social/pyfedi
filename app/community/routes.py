@@ -430,7 +430,7 @@ def do_subscribe(actor, user_id, admin_preload=False):
     else:
         community = Community.query.filter_by(name=actor, banned=False, ap_id=None).first()
 
-    print(f'in do_subscribe. actor: {actor}, user: {user}, community: {community}')
+    # print(f'in do_subscribe. actor: {actor}, user: {user}, community: {community}')
 
     if community is not None:
         pre_load_message['community'] = community.ap_id
@@ -454,12 +454,12 @@ def do_subscribe(actor, user_id, admin_preload=False):
             community.subscriptions_count += 1
             db.session.commit()
 
-            print(f'in do_subscribe, local community membership: {member}')
+            # print(f'in do_subscribe, local community membership: {member}')
             if remote:
                 # send ActivityPub message to remote community, asking to follow. Accept message will be sent to our shared inbox
                 join_request = CommunityJoinRequest(user_id=user.id, community_id=community.id)
 
-                print(f'in do_subscribe, remote is true, join_request: {join_request}')
+                # print(f'in do_subscribe, remote is true, join_request: {join_request}')
 
                 db.session.add(join_request)
                 db.session.commit()
@@ -471,11 +471,11 @@ def do_subscribe(actor, user_id, admin_preload=False):
                       "type": "Follow",
                       "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
                     }
-                    print(f'in do_subscribe, remote is true, follow json: {follow}')
+                    # print(f'in do_subscribe, remote is true, follow json: {follow}')
                     success = post_request(community.ap_inbox_url, follow, user.private_key,
                                                            user.public_url() + '#main-key', timeout=10)
                     
-                    print(f'do_subscribe, remote, follow json: {follow}, success response: {success}')
+                    # print(f'do_subscribe, remote, follow json: {follow}, success response: {success}')
 
                 if success is False or isinstance(success, str):
                     if 'is not in allowlist' in success:

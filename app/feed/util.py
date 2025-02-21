@@ -32,11 +32,11 @@ def feeds_for_form_children(feeds, current_feed: int, depth: int) -> List[Tuple[
 
 
 def search_for_feed(address: str):
-    print('in search_for_feed()')
+    # print('in search_for_feed()')
     if address.startswith('~'):
         name, server = address[1:].split('@')
 
-        print(f'address started with ~, name: {name}, server: {server}')
+        # print(f'address started with ~, name: {name}, server: {server}')
 
         banned = BannedInstances.query.filter_by(domain=server).first()
         if banned:
@@ -45,19 +45,19 @@ def search_for_feed(address: str):
 
         if current_app.config['SERVER_NAME'] == server:
             already_exists = Feed.query.filter_by(name=name, ap_id=None).first()
-            print(f'server == current_app.config SERVERNAME, already_exists: {already_exists}')
+            # print(f'server == current_app.config SERVERNAME, already_exists: {already_exists}')
             return already_exists
 
         already_exists = Feed.query.filter_by(ap_id=address[1:]).first()
         if already_exists:
-            print(f'server does not equal SERVER_NAME, already_exists: {already_exists}')
+            # print(f'server does not equal SERVER_NAME, already_exists: {already_exists}')
             return already_exists
 
         # Look up the profile address of the Feed using WebFinger
         try:
             webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
                                          params={'resource': f"acct:{address[1:]}"})
-            print(f'webfinger_data: {webfinger_data}')
+            # print(f'webfinger_data: {webfinger_data}')
         except httpx.HTTPError:
             sleep(randint(3, 10))
             try:
@@ -68,20 +68,20 @@ def search_for_feed(address: str):
 
         if webfinger_data.status_code == 200:
             webfinger_json = webfinger_data.json()
-            print(f'webfinger_data was 200, webfinger_json: {webfinger_json}')
+            # print(f'webfinger_data was 200, webfinger_json: {webfinger_json}')
             for links in webfinger_json['links']:
                 if 'rel' in links and links['rel'] == 'self':  # this contains the URL of the activitypub profile
                     type = links['type'] if 'type' in links else 'application/activity+json'
                     # retrieve the activitypub profile
                     feed_data = get_request(links['href'], headers={'Accept': type})
                     if feed_data.status_code == 200:
-                        print(f'feed_data: {feed_data}')
+                        # print(f'feed_data: {feed_data}')
                         feed_json = feed_data.json()
-                        print(f'feed_json: {feed_json}')
+                        # print(f'feed_json: {feed_json}')
                         feed_data.close()
                         if feed_json['type'] == 'Feed':
                             feed = actor_json_to_model(feed_json, name, server)
-                            print(f'feed after actor_json_to_model: {feed}')
+                            # print(f'feed after actor_json_to_model: {feed}')
                             if feed:
                                 # get the feed owner from the /moderators list endpoint for the feed
                                 # do the request
