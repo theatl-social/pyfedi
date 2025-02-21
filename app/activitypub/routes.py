@@ -996,10 +996,13 @@ def process_inbox_request(request_json, store_ap_json):
         if core_activity['type'] == 'Delete':
             # check if its a feed being deleted
             if isinstance(core_activity['object'], dict) and core_activity['object']['type'] == 'Feed':
+                print('in process_inbox_request, feed delete traffic detected')
                 # find the user in the traffic
                 user = User.query.filter_by(ap_profile_id=core_activity['actor']).first()
                 # find the feed
                 feed = Feed.query.filter_by(ap_public_url=core_activity['object']['id']).first()
+
+                print(f'in feed/delete, user: {user}, feed: {feed}')
 
                 # make sure the user sending the delete owns the feed
                 if not user.id == feed.user_id:
@@ -1013,14 +1016,17 @@ def process_inbox_request(request_json, store_ap_json):
                     for fi in feed_items:
                         db.session.delete(fi)
                         db.session.commit()
+                    print(f'feed_items after delete loop: {FeedItem.query.filter_by(feed_id=feed.id).all()}')
                     # find the feedmembers and remove them
                     feed_members = FeedMember.query.filter_by(feed_id=feed.id).all()
                     for fm in feed_members:
                         db.session.delete(fm)
                         db.session.commit()
+                    print(f'feed_members after delete loop: {FeedMember.query.filter_by(feed_id=feed.id).all()}')
                     # finally remove the feed itself
                     db.session.delete(feed)
                     db.session.commit()
+                    log_incoming_ap(id, APLOG_DELETE, APLOG_SUCCESS, saved_json, f'Delete: Feed {core_activity['object']['id]']} deleted')
                 else:
                     log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, saved_json, f'Delete: cannot find {core_activity['object']['id]']}')
                     return
