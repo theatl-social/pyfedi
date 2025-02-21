@@ -1209,16 +1209,16 @@ def actor_json_to_model(activity_json, address, server):
                 feed.image = image
                 db.session.add(image)
         
-        # add the owners as feedmembers
-        for ou in owner_users:
-            fm = FeedMember(feed_id=feed.id, user_id=ou.id, is_owner=True)
-            db.session.add(fm)
+        # # add the owners as feedmembers
+        # for ou in owner_users:
+        #     fm = FeedMember(feed_id=feed.id, user_id=ou.id, is_owner=True)
+        #     db.session.add(fm)
 
-        # add the communities from the remote /following list as feeditems
-        for c in feed_following:
-            fi = FeedItem(feed_id=feed.id, community_id=c.id)
-            feed.num_communities += 1
-            db.session.add(fi)
+        # # add the communities from the remote /following list as feeditems
+        # for c in feed_following:
+        #     fi = FeedItem(feed_id=feed.id, community_id=c.id)
+        #     feed.num_communities += 1
+        #     db.session.add(fi)
 
         try:
             db.session.add(feed)
@@ -1227,6 +1227,18 @@ def actor_json_to_model(activity_json, address, server):
             db.session.rollback()
             return Feed.query.filter_by(ap_profile_id=activity_json['id'].lower()).one()
         
+        # add the owners as feedmembers
+        for ou in owner_users:
+            fm = FeedMember(feed_id=feed.id, user_id=ou.id, is_owner=True)
+            db.session.add(fm)
+            db.session.commit()
+
+        # add the communities from the remote /following list as feeditems
+        for c in feed_following:
+            fi = FeedItem(feed_id=feed.id, community_id=c.id)
+            feed.num_communities += 1
+            db.session.add(fi)
+            db.session.commit()
 
         if feed.icon_id:
             make_image_sizes(feed.icon_id, 60, 250, 'feeds')
