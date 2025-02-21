@@ -471,6 +471,7 @@ def do_subscribe(actor, user_id, admin_preload=False):
                       "type": "Follow",
                       "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
                     }
+                    print(f'in do_subscribe, remote is true, follow json: {follow}')
                     success = post_request(community.ap_inbox_url, follow, user.private_key,
                                                            user.public_url() + '#main-key', timeout=10)
                     
@@ -480,14 +481,14 @@ def do_subscribe(actor, user_id, admin_preload=False):
                     if 'is not in allowlist' in success:
                         msg_to_user = f'{community.instance.domain} does not allow us to join their communities.'
                         if not admin_preload:
-                            if current_user.id == user_id:
+                            if current_user.is_authenticated and current_user.id == user_id:
                                 flash(_(msg_to_user), 'error')
                         else:
                             pre_load_message['status'] = msg_to_user
                     else:
                         msg_to_user = "There was a problem while trying to communicate with remote server. If other people have already joined this community it won't matter."
                         if not admin_preload:
-                            if current_user.id == user_id:
+                            if current_user.is_authenticated and current_user.id == user_id:
                                 flash(_(msg_to_user), 'error')
                         else:
                             pre_load_message['status'] = msg_to_user
