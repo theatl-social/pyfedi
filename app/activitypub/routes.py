@@ -1025,6 +1025,12 @@ def process_inbox_request(request_json, store_ap_json):
                         db.session.delete(fm)
                         db.session.commit()
                     print(f'feed_members after delete loop: {FeedMember.query.filter_by(feed_id=feed.id).all()}')
+                    # find any feedjoinrequests and remove them
+                    feed_join_requests = FeedJoinRequest.query.filter_by(feed_id=feed.id).all()
+                    for fjr in feed_join_requests:
+                        db.session.delete(fjr)
+                        db.session.commit()
+                    print(f'feed_join_requests after delete loop: {FeedJoinRequest.query.filter_by(feed_id=feed.id).all()}')
                     # finally remove the feed itself
                     db.session.delete(feed)
                     db.session.commit()
