@@ -23,7 +23,8 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     ap_datetime, shorten_string, markdown_to_text, user_filters_home, \
     joined_communities, moderating_communities, markdown_to_html, allowlist_html, \
     blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
-    blocked_users, menu_topics, blocked_communities, get_request, mastodon_extra_field_link
+    blocked_users, menu_topics, blocked_communities, get_request, mastodon_extra_field_link, \
+    permission_required, debug_mode_only
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, read_posts
 
@@ -519,6 +520,7 @@ def replay_inbox():
 
 
 @bp.route('/test')
+@debug_mode_only
 def test():
 
     response = get_request('https://rimu.geek.nz')
@@ -604,6 +606,7 @@ def test():
 
 
 @bp.route('/test_email')
+@debug_mode_only
 def test_email():
     if current_user.is_anonymous:
         email = request.args.get('email')
@@ -616,6 +619,8 @@ def test_email():
 
 
 @bp.route('/find_voters')
+@login_required
+@permission_required('change instance settings')
 def find_voters():
     user_ids = db.session.execute(text('SELECT id from "user" ORDER BY last_seen DESC LIMIT 5000')).scalars()
     voters = {}
@@ -722,4 +727,3 @@ def static_manifest():
         with open(manifest_file, 'r') as f:
             manifest = json.load(f)
         return jsonify(manifest)
-    
