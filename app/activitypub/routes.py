@@ -1083,6 +1083,18 @@ def process_inbox_request(request_json, store_ap_json):
                         db.session.add(feed_item)
                         feed.num_communities += 1
                         db.session.commit()
+                    # also autosubscribe any feedmembers to the new community
+                    feed_members = FeedMember.query.filter_by(feed_id=feed.id).all()
+                    for fm in feed_members:
+                        if fm.id == feed.user_id:
+                            continue
+                        fm_user = User.query.get(fm.user_id)
+                        if fm_user.is_local():
+                            print(f'fm_user is local, fm_user: {fm_user}')
+                            # user is local so lets auto-subscribe them to the community
+                            from app.community.routes import do_subscribe
+                            actor = community.ap_id if community.ap_id else community.name
+                            do_subscribe(actor, fm_user.id)
                 else:
                     log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json, "Cannot find Feed.")
             elif community:
