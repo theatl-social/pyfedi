@@ -1046,13 +1046,13 @@ def announce_feed_delete_to_subscribers(user_id, feed: Feed):
     #  - if its a remote user
     session = get_task_session()
     for fm in feed_members:
-        if fm.id == feed.user_id:
-            continue
         fm_user = User.query.get(fm.user_id)
+        if fm_user.id == feed.user_id:
+            continue
         if fm_user.is_local():
             continue
         # if we get here the feedmember is a remote user
-        instance: Instance = session.query(Instance).get(fm.instance.id)
+        instance: Instance = session.query(Instance).get(fm_user.instance.id)
         if instance.inbox and instance.online() and not instance_banned(instance.domain):
             if post_request(instance.inbox, delete_json, feed.private_key, feed.ap_profile_id + '#main-key', timeout=10) is True:
                 instance.last_successful_send = utcnow()
