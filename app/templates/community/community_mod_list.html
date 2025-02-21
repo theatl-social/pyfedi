@@ -22,7 +22,7 @@
                 <h1 class="mt-2">{{ _('Moderators for %(community)s', community=community.display_name()) }}</h1>
             </div>
             <p>{{ _('See and change who moderates this community') }}</p>
-            {% if community.is_owner() -%}
+            {% if community.is_owner() or (current_user.is_admin() and community.is_local()) -%}
                 <div class="col-12 text-right">
                     <a class="btn btn-primary" href="{{ url_for('community.community_find_moderator', community_id=community.id) }}">{{ _('Add moderator') }}</a>
                 </div>
