@@ -60,7 +60,7 @@ def create_app(config_class=Config):
             enable_tracing=False,
         )
 
-    #app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
 
     db.init_app(app)
     migrate.init_app(app, db, render_as_batch=True)
