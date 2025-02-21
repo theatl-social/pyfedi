@@ -921,7 +921,7 @@ def feed_unsubscribe(actor):
                         }
                         undo = {
                           'actor': current_user.public_url(),
-                          'to': [fee.public_url()],
+                          'to': [feed.public_url()],
                           'type': 'Undo',
                           'id': undo_id,
                           'object': follow
