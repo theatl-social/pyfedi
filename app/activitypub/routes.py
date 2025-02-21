@@ -831,46 +831,8 @@ def process_inbox_request(request_json, store_ap_json):
                     return
 
             if core_activity['object']['type'] == 'ChatMessage':
-                sender = user
-                recipient_ap_id = core_activity['object']['to'][0]
-                recipient = find_actor_or_create(recipient_ap_id, create_if_not_found=False)
-                if recipient and recipient.is_local():
-                    if sender.created_recently() or sender.reputation <= -10:
-                        log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender not eligible to send')
-                        return
-                    elif recipient.has_blocked_user(sender.id) or recipient.has_blocked_instance(sender.instance_id):
-                        log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender blocked by recipient')
-                        return
-                    else:
-                        # Find existing conversation to add to
-                        existing_conversation = Conversation.find_existing_conversation(recipient=recipient, sender=sender)
-                        if not existing_conversation:
-                            existing_conversation = Conversation(user_id=sender.id)
-                            existing_conversation.members.append(recipient)
-                            existing_conversation.members.append(sender)
-                            db.session.add(existing_conversation)
-                            db.session.commit()
-                        # Save ChatMessage to DB
-                        encrypted = core_activity['object']['encrypted'] if 'encrypted' in core_activity['object'] else None
-                        new_message = ChatMessage(sender_id=sender.id, recipient_id=recipient.id, conversation_id=existing_conversation.id,
-                                                  body_html=core_activity['object']['content'],
-                                                  body=html_to_text(core_activity['object']['content']),
-                                                  encrypted=encrypted)
-                        db.session.add(new_message)
-                        existing_conversation.updated_at = utcnow()
-                        db.session.commit()
-
-                        # Notify recipient
-                        notify = Notification(title=shorten_string('New message from ' + sender.display_name()),
-                                              url=f'/chat/{existing_conversation.id}#message_{new_message.id}', user_id=recipient.id,
-                                              author_id=sender.id)
-                        db.session.add(notify)
-                        recipient.unread_notifications += 1
-                        existing_conversation.read = False
-                        db.session.commit()
-                        log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_SUCCESS, saved_json)
+                process_chat(user, store_ap_json, core_activity)
                 return
-            # inner object of Create is not a ChatMessage
             else:
                 if (core_activity['object']['type'] == 'Note' and 'name' in core_activity['object'] and                           # Poll Votes
                     'inReplyTo' in core_activity['object'] and 'attributedTo' in core_activity['object'] and
@@ -889,7 +851,9 @@ def process_inbox_request(request_json, store_ap_json):
                 if not announced and not community:
                     community = find_community(request_json)
                     if not community:
-                        log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Blocked or unfound community')
+                        was_chat_message = process_chat(user, store_ap_json, core_activity)
+                        if not was_chat_message:
+                            log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Blocked or unfound community')
                         return
                     if not ensure_domains_match(core_activity['object']):
                         log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Domains do not match')
@@ -1608,3 +1572,57 @@ def process_downvote(user, store_ap_json, request_json, announced):
                 announce_activity_to_followers(liked.community, user, request_json)
     else:
         log_incoming_ap(id, APLOG_DISLIKE, APLOG_IGNORED, saved_json, 'Cannot downvote this')
+
+
+# Private Messages, for both Create / ChatMessage (PieFed / Lemmy), and Create / Note (Mastodon, NodeBB)
+# returns True if Create / Note was a PM (irrespective of whether the chat was successful)
+def process_chat(user, store_ap_json, core_activity):
+    saved_json = core_activity if store_ap_json else None
+    id = core_activity['id']
+    sender = user
+    if not ('to' in core_activity['object'] and
+        isinstance(core_activity['object']['to'], list) and
+        len(core_activity['object']['to']) > 0):
+        return False
+    recipient_ap_id = core_activity['object']['to'][0]
+    recipient = find_actor_or_create(recipient_ap_id, create_if_not_found=False)
+    if recipient and recipient.is_local():
+        if sender.created_recently() or sender.reputation <= -10:
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender not eligible to send')
+            return True
+        elif recipient.has_blocked_user(sender.id) or recipient.has_blocked_instance(sender.instance_id):
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender blocked by recipient')
+            return True
+        else:
+            # Find existing conversation to add to
+            existing_conversation = Conversation.find_existing_conversation(recipient=recipient, sender=sender)
+            if not existing_conversation:
+                existing_conversation = Conversation(user_id=sender.id)
+                existing_conversation.members.append(recipient)
+                existing_conversation.members.append(sender)
+                db.session.add(existing_conversation)
+                db.session.commit()
+            # Save ChatMessage to DB
+            encrypted = core_activity['object']['encrypted'] if 'encrypted' in core_activity['object'] else None
+            new_message = ChatMessage(sender_id=sender.id, recipient_id=recipient.id, conversation_id=existing_conversation.id,
+                                      body_html=core_activity['object']['content'],
+                                      body=html_to_text(core_activity['object']['content']),
+                                      encrypted=encrypted)
+            db.session.add(new_message)
+            existing_conversation.updated_at = utcnow()
+            db.session.commit()
+
+            # Notify recipient
+            notify = Notification(title=shorten_string('New message from ' + sender.display_name()),
+                                  url=f'/chat/{existing_conversation.id}#message_{new_message.id}', user_id=recipient.id,
+                                  author_id=sender.id)
+            db.session.add(notify)
+            recipient.unread_notifications += 1
+            existing_conversation.read = False
+            db.session.commit()
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_SUCCESS, saved_json)
+
+
+        return True
+
+    return False
