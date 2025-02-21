@@ -1311,7 +1311,7 @@ def process_inbox_request(request_json, store_ap_json):
                 if isinstance(target, Feed):
                     feed = target
                     member = FeedMember.query.filter_by(user_id=user.id, feed_id=feed.id).first()
-                    join_request = FeedJoinRequest.query.filter_by(user_id=user.id, feed_id=community.id).first()
+                    join_request = FeedJoinRequest.query.filter_by(user_id=user.id, feed_id=feed.id).first()
                     if member:
                         db.session.delete(member)
                         feed.subscriptions_count -= 1
