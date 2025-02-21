@@ -33,7 +33,6 @@
                    <th>Name</th>
                    <th>Local/Remote</th>
                    <th>Last Seen</th>
-                   <th>IP</th>
                    <th>Actions</th>
                 </tr>
                 {% for user in subscribers.items %}
@@ -43,7 +42,6 @@
                         </td>
                         <td>{% if user.is_local() %} Local {% else %} <a href="{{ user.ap_profile_id }}">{{ user.ap_domain }}</a>{% endif %}</td>
                         <td>{{ arrow.get(user.last_seen).humanize(locale=locale) }} </td>
-                        <td>{{ user.ip_address if user.ip_address }} </td>
                         <td>
                             <div class="dropdown">
                               <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -94,7 +92,6 @@
                    <th>Name</th>
                    <th>Local/Remote</th>
                    <th>Reports</th>
-                   <th>IP</th>
                    <th>Actions</th>
                 </tr>
                 {% for user in banned_people %}
@@ -102,7 +99,6 @@
                         <td>{{ render_username(user) }}</td>
                         <td>{% if user.is_local() %} Local {% else %} <a href="{{ user.ap_profile_id }}">{{ user.ap_domain }}</a>{% endif %}</td>
                         <td>{{ user.reports if user.reports > 0 }} </td>
-                        <td>{{ user.ip_address if user.ip_address }} </td>
                         <td>
                             <div class="dropdown">
                               <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
