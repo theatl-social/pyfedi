@@ -6,7 +6,7 @@ from flask_login import login_user, logout_user, current_user
 from flask_babel import _
 from wtforms import Label
 
-from app import db, cache
+from app import db, cache, limiter
 from app.auth import bp
 from app.auth.forms import LoginForm, RegistrationForm, ResetPasswordRequestForm, ResetPasswordForm
 from app.auth.util import random_token, normalize_utf, ip2location, no_admins_logged_in_recently
@@ -17,6 +17,7 @@ from app.utils import render_template, ip_address, user_ip_banned, user_cookie_b
 
 
 @bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit("100 per day;20 per 5 minutes", methods=['POST'])
 def login():
     if current_user.is_authenticated:
         next_page = request.args.get('next')
@@ -63,6 +64,7 @@ def login():
         ip_address_info = ip2location(current_user.ip_address)
         current_user.ip_address_country = ip_address_info['country'] if ip_address_info else current_user.ip_address_country
         db.session.commit()
+        [limiter.limiter.clear(limit.limit, *limit.request_args) for limit in  limiter.current_limits]
         next_page = request.args.get('next')
         if not next_page or url_parse(next_page).netloc != '':
             if len(current_user.communities()) == 0:
@@ -87,6 +89,7 @@ def logout():
 
 
 @bp.route('/register', methods=['GET', 'POST'])
+@limiter.limit("100 per day;20 per 5 minutes", methods=['POST'])
 def register():
     disallowed_usernames = ['admin']
     if current_user.is_authenticated:
@@ -172,6 +175,7 @@ def check_email():
 
 
 @bp.route('/reset_password_request', methods=['GET', 'POST'])
+@limiter.limit("20 per day;10 per 5 minutes", methods=['POST'])
 def reset_password_request():
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
