@@ -1036,6 +1036,7 @@ def process_inbox_request(request_json, store_ap_json):
                     db.session.delete(feed)
                     db.session.commit()
                     log_incoming_ap(id, APLOG_DELETE, APLOG_SUCCESS, saved_json, f'Delete: Feed {core_activity['object']['id']} deleted')
+                    return
                 else:
                     log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, saved_json, f'Delete: cannot find {core_activity['object']['id']}')
                     return
