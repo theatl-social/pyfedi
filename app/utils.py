@@ -312,10 +312,6 @@ def allowlist_html(html: str, a_target='_blank') -> str:
 
     clean_html = str(soup)
 
-    # avoid wrapping anchors around existing anchors (e.g. if raw URL already wrapped by remote PieFed instance)
-    re_double_anchor = re.compile(r'<a href=".*?" rel="nofollow ugc" target="_blank">(<a href=".*?" rel="nofollow ugc" target="_blank">.*?<\/a>)<\/a>')
-    clean_html = re_double_anchor.sub(r'\1', clean_html)
-
     # avoid returning empty anchors
     re_empty_anchor = re.compile(r'<a href="(.*?)" rel="nofollow ugc" target="_blank"><\/a>')
     clean_html = re_empty_anchor.sub(r'<a href="\1" rel="nofollow ugc" target="_blank">\1</a>', clean_html)

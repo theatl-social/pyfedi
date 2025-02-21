@@ -1216,14 +1216,13 @@ class Post(db.Model):
         if community.nsfl:
             post.nsfl = True
         if 'content' in request_json['object'] and request_json['object']['content'] is not None:
-            if 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/html':
+            # prefer Markdown in 'source' in provided
+            if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and request_json['object']['source']['mediaType'] == 'text/markdown':
+                post.body = request_json['object']['source']['content']
+                post.body_html = markdown_to_html(post.body)
+            elif 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/html':
                 post.body_html = allowlist_html(request_json['object']['content'])
-                if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
-                        request_json['object']['source']['mediaType'] == 'text/markdown':
-                    post.body = request_json['object']['source']['content']
-                    post.body_html = markdown_to_html(post.body)  # prefer Markdown if provided, overwrite version obtained from HTML
-                else:
-                    post.body = html_to_text(post.body_html)
+                post.body = html_to_text(post.body_html)
             elif 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/markdown':
                 post.body = request_json['object']['content']
                 post.body_html = markdown_to_html(post.body)
