@@ -1,0 +1,10 @@
+{
+    "@context": "https://www.w3.org/ns/activitystreams",
+    "type": "Delete",
+    "actor": "https://server.name/u/username",
+    "id": "https://server.name/activities/delete/d3ade180-f641-4d6b-8ae7-ceab824f2b72",
+    "object": {
+        "type": "Feed",
+        "id": "https://server.name/f/feedname"
+    }
+}
