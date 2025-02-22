@@ -258,9 +258,6 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
     user = None
     server = ''
     # actor parameter must be formatted as https://server/u/actor or https://server/c/actor
-        
-    # log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, f'test actor: {actor}, actor_url: {actor_url}')
-    # print(f'actor: {actor}, actor_url: {actor_url}')
     
     # Initially, check if the community exists in the local DB already
     if current_app.config['SERVER_NAME'] + '/c/' in actor:
@@ -280,7 +277,6 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
     # if none of the above trigger then this is a remote actor    
     elif actor.startswith('https://'):
         server, address = extract_domain_and_actor(actor)
-        # print(f'server: {server}, address: {address}')
         if get_setting('use_allowlist', False):
             if not instance_allowed(server):
                 return None
@@ -290,14 +286,11 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
         if actor_contains_blocked_words(actor):
             return None
         # see if the actor is a remote user we know
-        # print('looking for user in local db')
         user = User.query.filter(User.ap_profile_id == actor).first()  # finds users formatted like https://kbin.social/u/tables
         if (user and user.banned) or (user and user.deleted) :
             return None
         # actor is not a remote user, see if its a remote community or feed
-        # print('user not in local db')
         if user is None:
-            # print('looking for community in local db')
             user = Community.query.filter(Community.ap_profile_id == actor).first()
             if user and user.banned:
                 # Try to find a non-banned copy of the community. Sometimes duplicates happen and one copy is banned.
@@ -305,15 +298,9 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                 if user is None:    # no un-banned version of this community exists, only the banned one. So it was banned for being bad, not for being a duplicate.
                     return None
             elif user is None:
-                # print('community not in local db')
-                # print('looking for feed in local db')
                 user = Feed.query.filter(Feed.ap_profile_id == actor).first()
-                # if user is None:
-                #     print('feed not found in local db')
-
 
     if user is not None:
-        # print(f'found user: {user}')
         if not user.is_local() and (user.ap_fetched_at is None or user.ap_fetched_at < utcnow() - timedelta(days=7)):
             # To reduce load on remote servers, refreshing the user profile happens after a delay of 1 to 10 seconds. Meanwhile, subsequent calls to
             # find_actor_or_create() which happen to be for the same actor might queue up refreshes of the same user. To avoid this, set a flag to
@@ -334,7 +321,6 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
             return None
         return user
     else:   # User does not exist in the DB, it's going to need to be created from it's remote home instance
-        # print(f'user not found, creating')
         if create_if_not_found:
             if actor.startswith('https://'):
                 try:
@@ -795,9 +781,6 @@ def refresh_feed_profile_task(feed_id):
             if 'nsfl' in activity_json and activity_json['nsfl']:
                 feed.nsfl = activity_json['nsfl']
             feed.title = activity_json['name'].strip()
-            # community.restricted_to_mods = activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else False
-            # community.new_mods_wanted = activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False
-            # community.private_mods = activity_json['privateMods'] if 'privateMods' in activity_json else False
             feed.ap_moderators_url = owners_url
             feed.ap_fetched_at = utcnow()
             feed.public_key=activity_json['publicKey']['publicKeyPem']
@@ -851,15 +834,6 @@ def refresh_feed_profile_task(feed_id):
                         feed.image = image
                         session.add(image)
                         cover_changed = True
-            # if 'language' in activity_json and isinstance(activity_json['language'], list) and not community.ignore_remote_language:
-            #     for ap_language in activity_json['language']:
-            #         new_language = find_language_or_create(ap_language['identifier'], ap_language['name'], session)
-            #         if new_language not in community.languages:
-            #             community.languages.append(new_language)
-
-            # instance = session.query(Instance).get(feed.instance_id)
-            # if instance and instance.software == 'peertube':
-            #     community.restricted_to_mods = True
             session.commit()
 
             if feed.icon_id and icon_changed:
@@ -1117,10 +1091,8 @@ def actor_json_to_model(activity_json, address, server):
         owners_data = get_request(owners_url, headers={'Accept': 'application/activity+json'})
         if owners_data.status_code == 200:
             owners_json = owners_data.json()
-            # print(f'in actor_json_to_model, owners_json: {owners_json}')
             for owner in owners_json['orderedItems']:
                 owner_user = find_actor_or_create(owner)
-                # print(f'in loop, owner_user: {owner_user}')
                 owner_users.append(owner_user)
 
         # also get the communities in the remote feed's /following list 
@@ -1128,12 +1100,10 @@ def actor_json_to_model(activity_json, address, server):
         following_data = get_request(activity_json['following'], headers={'Accept': 'application/activity+json'})
         if following_data.status_code == 200:
             following_json = following_data.json()
-            # print(f'in actor_json_to_model, following_json: {following_json}')
             for c_ap_id in following_json['items']:
                 community = find_actor_or_create(c_ap_id, community_only=True)
                 feed_following.append(community)
 
-        # print(f'owner_users list: {owner_users}')
         feed = Feed(name=activity_json['preferredUsername'].strip(),
                             user_id=owner_users[0].id,
                               title=activity_json['name'].strip(),
@@ -1141,9 +1111,6 @@ def actor_json_to_model(activity_json, address, server):
                               machine_name=activity_json['preferredUsername'],
                               description_html=activity_json['summary'] if 'summary' in activity_json else '',
                               description=piefed_markdown_to_lemmy_markdown(activity_json['source']['content']) if 'source' in activity_json else '',
-                            #   restricted_to_mods=activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else False,
-                            #   new_mods_wanted=activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False,
-                            #   private_mods=activity_json['privateMods'] if 'privateMods' in activity_json else False,
                               created_at=activity_json['published'] if 'published' in activity_json else utcnow(),
                               last_edit=activity_json['updated'] if 'updated' in activity_json else utcnow(),
                               num_communities=0,
@@ -1154,17 +1121,12 @@ def actor_json_to_model(activity_json, address, server):
                               ap_following_url=activity_json['following'] if 'following' in activity_json else None,
                               ap_inbox_url=activity_json['endpoints']['sharedInbox'] if 'endpoints' in activity_json else activity_json['inbox'],
                               ap_outbox_url=activity_json['outbox'],
-                            #   ap_featured_url=activity_json['featured'] if 'featured' in activity_json else '',
                               ap_moderators_url=owners_url,
                               ap_fetched_at=utcnow(),
                               ap_domain=server.lower(),
                               public_key=activity_json['publicKey']['publicKeyPem'],
-                              # language=community_json['language'][0]['identifier'] # todo: language
                               instance_id=find_instance_id(server)
                               )
-
-
-
 
         description_html = ''
         if 'summary' in activity_json:
@@ -1209,17 +1171,6 @@ def actor_json_to_model(activity_json, address, server):
                 feed.image = image
                 db.session.add(image)
         
-        # # add the owners as feedmembers
-        # for ou in owner_users:
-        #     fm = FeedMember(feed_id=feed.id, user_id=ou.id, is_owner=True)
-        #     db.session.add(fm)
-
-        # # add the communities from the remote /following list as feeditems
-        # for c in feed_following:
-        #     fi = FeedItem(feed_id=feed.id, community_id=c.id)
-        #     feed.num_communities += 1
-        #     db.session.add(fi)
-
         try:
             db.session.add(feed)
             db.session.commit()
@@ -1245,7 +1196,6 @@ def actor_json_to_model(activity_json, address, server):
         if feed.image_id:
             make_image_sizes(feed.image_id, 700, 1600, 'feeds')
         return feed
-
 
 
 # Save two different versions of a File, after downloading it from file.source_url. Set a width parameter to None to avoid generating one of that size

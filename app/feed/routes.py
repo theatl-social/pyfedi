@@ -87,10 +87,6 @@ def feed_new():
         db.session.commit()
 
         flash(_('Your new Feed has been created.'))
-        # cache.delete_memoized(community_membership, current_user, community)
-        # cache.delete_memoized(joined_communities, current_user.id)
-        # cache.delete_memoized(moderating_communities, current_user.id)
-        # return redirect('/c/' + community.name)
         return redirect(url_for('main.index'))
 
     return render_template('feed/feed_new.html', title=_('Create a Feed'), form=form,
@@ -108,24 +104,10 @@ def feed_add_remote():
     new_feed = None
     if form.validate_on_submit():
         address = form.address.data.strip().lower()
-        
-        # make sure the format is right
-        # if not address.startswith('https://'):
-        #     message = Markup(
-        #         'Accepted address format: https://server.name/f/feedname.')
-        #     flash(message, 'error')
-        
-        # # get the server and feedname bits
-        # server, feed = extract_domain_and_actor(address)
-        # new_feed = search_for_feed('~' + feed + server)
-
-        # print('in feed_add_remote, validate step')
 
         if address.startswith('~') and '@' in address:
-            # print(f'address starts with ~ and @ in address')
             try:
                 new_feed = search_for_feed(address)
-                # print(f'new feed after search_for_feed(address): {new_feed}')
             except Exception as e:
                 if 'is blocked.' in str(e):
                     flash(_('Sorry, that instance is blocked, check https://gui.fediseer.com/ for reasons.'), 'warning')
@@ -134,12 +116,9 @@ def feed_add_remote():
             ...
         elif '@' in address:
             new_feed = search_for_feed('~' + address)
-            # print(f'only @ in address, new feed after search_for_feed(address): {new_feed}')
         elif address.startswith('https://'):
             server, feed = extract_domain_and_actor(address)
-            # print(f'https:// startswith for address, server {server}, feed: {feed} after extract_domain_and_actor')
             new_feed = search_for_feed('~' + feed + '@' + server)
-            # print(f'https:// startswith for address, new feed after search_for_feed(address): {new_feed}')
         else:
             message = Markup(
                 'Accepted address formats: ~feedname@server.name or https://server.name/f/feedname.')
@@ -149,9 +128,6 @@ def feed_add_remote():
                 flash(_('Feed not found.'), 'warning')
             else:
                 flash(_('Feed not found. If you are searching for a nsfw feed it is blocked by this instance.'), 'warning')
-        # else:
-        #     if new_community.banned:
-        #         flash(_('That community is banned from %(site)s.', site=g.site.name), 'warning')
 
     return render_template('feed/add_remote.html',
                            title=_('Add remote feed'), form=form, new_feed=new_feed,
@@ -276,7 +252,6 @@ def feed_delete(feed_id: int):
     if instance_feed:
         cache.delete_memoized(menu_instance_feeds)
 
-
     # send the user back to the page they came from or main
     # Get the referrer from the request headers
     referrer = request.referrer
@@ -346,7 +321,6 @@ def feed_copy(feed_id: int):
             db.session.add(fi)
             db.session.commit()
         
-
         # also subscribe the user to any community they are not already subscribed to
         member_of_ids = []
         member_of = CommunityMember.query.filter_by(user_id=current_user.id).all()
@@ -428,8 +402,6 @@ def feed_add_community():
     if Feed.query.get(feed_id).user_id != user_id:
         abort(404)
 
-    # print(f'in feed_add_community')
-
     # if current_feed_id is not 0 then we are moving a community from
     # one feed to another
     if current_feed_id != 0:
@@ -453,7 +425,6 @@ def feed_add_community():
 
     # make the new feeditem and commit it
     feed_item = FeedItem(feed_id=feed_id, community_id=community_id)
-    # print(f'new feed item {feed_item}')
     db.session.add(feed_item)
     db.session.commit()
 
@@ -465,10 +436,8 @@ def feed_add_community():
 
     # announce the change to any potential subscribers
     if feed.public:
-        # print(f'feed is public')
         community = Community.query.get(community_id)
         if current_app.debug:
-            # print(f'running announce_feed_add_remove in debug, feed: {feed}, community: {community}')
             announce_feed_add_remove_to_subscribers("Add", feed, community)
         else:
             announce_feed_add_remove_to_subscribers.delay("Add", feed, community)
@@ -509,8 +478,6 @@ def feed_remove_community():
     current_feed_id = int(request.args.get('current_feed_id'))
     # get the new_feed_id 
     new_feed_id = int(request.args.get('new_feed_id'))
-    # get the user's feeds
-    # user_feeds = Feed.query.filter_by(user_id=user_id).all()
 
     # make sure the user owns this feed
     if Feed.query.get(current_feed_id).user_id != user_id:
@@ -598,7 +565,6 @@ def show_feed(feed):
     sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
     post_layout = request.args.get('layout', 'list' if not low_bandwidth else None)
-
     
     breadcrumbs = []
     existing_url = '/f'
@@ -788,21 +754,18 @@ def do_feed_subscribe(actor, user_id):
     remote = False
     actor = actor.strip()
     user = User.query.get(user_id)
-    # pre_load_message = {}
     if '@' in actor:
         feed = Feed.query.filter_by(ap_id=actor).first()
         remote = True
     else:
         feed = Feed.query.filter_by(name=actor, ap_id=None).first()
     
-    # print(f'in do_feed_subscribe, actor: {actor}, user: {user}, feed: {feed}')
     if feed is not None:
         if feed_membership(user, feed) != SUBSCRIPTION_MEMBER and feed_membership(user, feed) != SUBSCRIPTION_PENDING:
             success = True
 
             # for local feeds, joining is instant
             member = FeedMember(user_id=user.id, feed_id=feed.id)
-            # print(f'feed_member: {member}')
             db.session.add(member)
             feed.subscriptions_count += 1
             db.session.commit()
@@ -810,11 +773,9 @@ def do_feed_subscribe(actor, user_id):
             # also subscribe the user to the feeditem communities
             from app.community.routes import do_subscribe
             feed_items = FeedItem.query.filter_by(feed_id=feed.id).all()
-            # print(f'feed_items: {feed_items}')
             for fi in feed_items:
                 community = Community.query.get(fi.community_id)
                 actor = community.ap_id if community.ap_id else community.name
-                # print(f'feed_item actor in loop: {actor}')
                 do_subscribe(actor, user.id)
  
             # feed is remote
@@ -854,42 +815,20 @@ def do_feed_subscribe(actor, user_id):
                     if 'is not in allowlist' in success:
                         msg_to_user = f'{feed.instance.domain} does not allow us to subscribe to their feeds.'
                         flash(_(msg_to_user), 'error')
-                        # if not admin_preload:
-                        #     flash(_(msg_to_user), 'error')
-                        # else:
-                        #     pre_load_message['status'] = msg_to_user
                     else:
                         msg_to_user = "There was a problem while trying to communicate with remote server. If other people have already subscribed to this feed it won't matter."
                         flash(_(msg_to_user), 'error')
-                        # if not admin_preload:
-                        #     flash(_(msg_to_user), 'error')
-                        # else:
-                        #     pre_load_message['status'] = msg_to_user
 
             if success is True:
                 flash('You subscribed to ' + feed.title)
-                # if not admin_preload:
-                #     flash('You joined ' + community.title)
-                # else:
-                #     pre_load_message['status'] = 'joined'
         else:
             msg_to_user = "Already subscribed, or subscription pending"
             flash(_(msg_to_user))
-            # if admin_preload:
-            #     pre_load_message['status'] = 'already subscribed, or subsciption pending'
 
         cache.delete_memoized(feed_membership, user, feed)
         cache.delete_memoized(joined_communities, user.id)
-        # if admin_preload:
-        #     return pre_load_message
     else:
         abort(404)
-        # if not admin_preload:
-        #     abort(404)
-        # else:
-        #     pre_load_message['community'] = actor
-        #     pre_load_message['status'] = 'community not found'
-        #     return pre_load_message
 
 
 @bp.route('/<actor>/unsubscribe', methods=['GET'])
@@ -956,7 +895,6 @@ def feed_unsubscribe(actor):
 
 @celery.task
 def announce_feed_add_remove_to_subscribers(action, feed, community):
-    # print(f'in announce_feed_add_remove_to_subscribers, action: {action}, feed: {feed}, community: {community} ')
     # build the Announce json
     activity_json = {
         "@context": default_context(),
@@ -994,11 +932,10 @@ def announce_feed_add_remove_to_subscribers(action, feed, community):
     # setup a db session for this task
     session = get_task_session()
     for fm in feed_members:
-        if fm.id == feed.user_id:
-            continue
         fm_user = User.query.get(fm.user_id)
+        if fm_user.id == feed.user_id:
+            continue
         if fm_user.is_local():
-            # print(f'fm_user is local, fm_user: {fm_user}')
             # user is local so lets auto-subscribe them to the community
             from app.community.routes import do_subscribe
             actor = community.ap_id if community.ap_id else community.name
@@ -1025,7 +962,6 @@ def announce_feed_add_remove_to_subscribers(action, feed, community):
 def announce_feed_delete_to_subscribers(user_id, feed: Feed):
     # get the user
     user = User.query.get(user_id)
-    # print(f'in announce_feed_delete, user: {user}')
     # create the delete json
     delete_json = {
         "@context": default_context(),
@@ -1037,11 +973,9 @@ def announce_feed_delete_to_subscribers(user_id, feed: Feed):
             "id": feed.ap_public_url
         }
     }
-    # print(f'in announce_feed_delete, delete_json: {delete_json}')
 
     # find the feed members
     feed_members = FeedMember.query.filter_by(feed_id=feed.id).all()
-    # print(f'in announce_feed_delete, feed_members: {feed_members}')
     
     # for each member
     #  - if its the owner, skip
@@ -1050,13 +984,11 @@ def announce_feed_delete_to_subscribers(user_id, feed: Feed):
     session = get_task_session()
     for fm in feed_members:
         fm_user = User.query.get(fm.user_id)
-        # print(f'in announce_feed_delete, loop fm_user: {fm_user}')
         if fm_user.id == feed.user_id:
             continue
         if fm_user.is_local():
             continue
         # if we get here the feedmember is a remote user
-        # print(f'in announce_feed_delete, loop fm_user is remote: {fm_user}')
         instance: Instance = session.query(Instance).get(fm_user.instance.id)
         if instance.inbox and instance.online() and not instance_banned(instance.domain):
             if post_request(instance.inbox, delete_json, user.private_key, user.ap_profile_id + '#main-key', timeout=10) is True:

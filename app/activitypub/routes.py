@@ -509,7 +509,6 @@ def shared_inbox():
         return '', 200
 
     bounced = False
-    # print(f'in shared_inbox, request: {request}, actor: {actor}')
     try:
         HttpSignature.verify_request(request, actor.public_key, skip_date=True)
     except VerificationError as e:
@@ -657,15 +656,12 @@ def process_inbox_request(request_json, store_ap_json):
             # get the actor
             # do the find or create
             target = find_actor_or_create(request_json['actor'], create_if_not_found=False)
-            # print(f'in process_inbox_request announce/accept/reject, target: {target}')
             if target and isinstance(target, Community):
-                # print('process_inbox, target is a community')
                 community_ap_id = request_json['actor']
                 community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False)
                 feed_ap_id = None
                 user_ap_id = None
             elif isinstance(target, Feed):
-                # print('process_inbox, target is a feed')
                 feed_ap_id = request_json['actor']
                 feed = find_actor_or_create(feed_ap_id, feed_only=True, create_if_not_found=False)
                 community_ap_id = None
@@ -673,23 +669,14 @@ def process_inbox_request(request_json, store_ap_json):
             else:
                 log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Actor was not a community, or a feed')
                 return
-
-            # community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False)
-            # if not community or not isinstance(community, Community):
-                # log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Actor was not a community')
-                # return
-            # user_ap_id = None               # found in 'if request_json['type'] == 'Announce', or it's a local user (for 'Accept'/'Reject')
         else:
             actor = find_actor_or_create(actor_id, create_if_not_found=False)
-            # print(f'in process_inbox_request, actor after find: {actor}')
             if actor and isinstance(actor, User):
                 user = actor
                 user.last_seen = site.last_active = utcnow()
                 db.session.commit()
                 community = None                # found as needed
-                # print('actor is a user, community is none')
             elif actor and isinstance(actor, Community):                  # Process a few activities from NodeBB and a.gup.pe
-                # print('actor is a community')
                 if request_json['type'] == 'Add' or request_json['type'] == 'Remove':
                     log_incoming_ap(id, APLOG_ADD, APLOG_IGNORED, saved_json, 'NodeBB Topic Management')
                     return
@@ -711,13 +698,11 @@ def process_inbox_request(request_json, store_ap_json):
 
         # Announce: take care of inner objects that are just a URL (PeerTube, a.gup.pe), or find the user if the inner object is a dict
         if request_json['type'] == 'Announce':
-            # print('traffic is an announce')
             if isinstance(request_json['object'], str):
                 if request_json['object'].startswith('https://' + current_app.config['SERVER_NAME']):
                     log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json, 'Activity about local content which is already present')
                     return
                 post = resolve_remote_post(request_json['object'], community, id, store_ap_json)
-                # print('object is a post: {post}')
                 if post:
                     log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_SUCCESS, request_json)
                 else:
@@ -726,21 +711,15 @@ def process_inbox_request(request_json, store_ap_json):
 
             # handle Feed Announce/Add or Announce/Remove
             if request_json['object']['type'] == 'Add':
-                # print('traffic is announce/add')
                 if request_json['object']['object']['type'] == 'Group' and request_json['object']['target']['id'].endswith('/following'):
                     announced = True
                     core_activity = request_json['object']
                     user = None
-                    # print('traffic is announce/add for a feed')
-                    # print(f'core_activity is: {core_activity}')
             elif request_json['object']['type'] == 'Remove':
-                # print('traffic is announce/remove')
                 if request_json['object']['object']['type'] == 'Group' and request_json['object']['target']['id'].endswith('/following'):
                     announced = True
                     core_activity = request_json['object']
                     user = None
-                    # print('traffic is announce/remove for a feed')
-                    # print(f'core_activity is: {core_activity}')
             else: 
                 user_ap_id = request_json['object']['actor']
                 user = find_actor_or_create(user_ap_id)
@@ -759,11 +738,9 @@ def process_inbox_request(request_json, store_ap_json):
                 # core_activity is checked for its Type, but the original request_json is sometimes passed to any other functions
                 announced = True
                 core_activity = request_json['object']
-                # print(f'announce core_activity (not feed/add|remove): {core_activity}')
         else:
             announced = False
             core_activity = request_json
-            # print(f'traffic is not an announce, core_activity: {core_activity}')
 
         # Follow: remote user wants to join/follow one of our users, communities, or feeds
         if core_activity['type'] == 'Follow':
@@ -997,14 +974,10 @@ def process_inbox_request(request_json, store_ap_json):
         if core_activity['type'] == 'Delete':
             # check if its a feed being deleted
             if isinstance(core_activity['object'], dict) and core_activity['object']['type'] == 'Feed':
-                # print('in process_inbox_request, feed delete traffic detected')
                 # find the user in the traffic
-                # user = User.query.filter_by(ap_profile_id=core_activity['actor']).first()
                 user = find_actor_or_create(actor_id)
                 # find the feed
                 feed = Feed.query.filter_by(ap_public_url=core_activity['object']['id']).first()
-
-                # print(f'in feed/delete, user: {user}, feed: {feed}')
 
                 # make sure the user sending the delete owns the feed
                 if not user.id == feed.user_id:
@@ -1018,20 +991,16 @@ def process_inbox_request(request_json, store_ap_json):
                     for fi in feed_items:
                         db.session.delete(fi)
                         db.session.commit()
-                    # print(f'feed_items after delete loop: {FeedItem.query.filter_by(feed_id=feed.id).all()}')
                     # find the feedmembers and remove them
                     feed_members = FeedMember.query.filter_by(feed_id=feed.id).all()
-                    # print(f'feed_members BEFORE delete loop: {FeedMember.query.filter_by(feed_id=feed.id).all()}')
                     for fm in feed_members:
                         db.session.delete(fm)
                         db.session.commit()
-                    # print(f'feed_members after delete loop: {FeedMember.query.filter_by(feed_id=feed.id).all()}')
                     # find any feedjoinrequests and remove them
                     feed_join_requests = FeedJoinRequest.query.filter_by(feed_id=feed.id).all()
                     for fjr in feed_join_requests:
                         db.session.delete(fjr)
                         db.session.commit()
-                    # print(f'feed_join_requests after delete loop: {FeedJoinRequest.query.filter_by(feed_id=feed.id).all()}')
                     # finally remove the feed itself
                     db.session.delete(feed)
                     db.session.commit()
@@ -1104,14 +1073,11 @@ def process_inbox_request(request_json, store_ap_json):
                 community = find_community(core_activity)
             # check if the add is for a feed
             if core_activity['object']['type'] == 'Group' and core_activity['target']['id'].endswith('/following'):
-                # print(f'in handling Add traffic')
                 # find the feed based on core_activity.actor
                 feed = find_actor_or_create(core_activity['actor'], feed_only=True)
-                # print(f'feed found is: {feed}')
                 # if we found the feed attempt to find the community based on core_activity.object.id
                 if feed and isinstance(feed, Feed):
                     community_to_add = find_actor_or_create(core_activity['object']['id'], community_only=True)
-                    # print(f'community to add is: {community_to_add}')
                     # if community found or created - add the FeedItem and update Feed info
                     if community_to_add and isinstance(community_to_add, Community):
                         feed_item = FeedItem(feed_id=feed.id, community_id=community_to_add.id)
@@ -1120,13 +1086,11 @@ def process_inbox_request(request_json, store_ap_json):
                         db.session.commit()
                     # also autosubscribe any feedmembers to the new community
                     feed_members = FeedMember.query.filter_by(feed_id=feed.id).all()
-                    # print(f'feed_members: {feed_members}')
                     for fm in feed_members:
                         fm_user = User.query.get(fm.user_id)
                         if fm_user.id == feed.user_id:
                             continue
                         if fm_user.is_local():
-                            # print(f'fm_user is local, fm_user: {fm_user}')
                             # user is local so lets auto-subscribe them to the community
                             from app.community.routes import do_subscribe
                             actor = community_to_add.ap_id if community_to_add.ap_id else community_to_add.name
@@ -1839,6 +1803,8 @@ def process_chat(user, store_ap_json, core_activity):
         return True
 
     return False
+
+
 # ---- Feeds ----
 
 @bp.route('/f/<actor>', methods=['GET'])
@@ -1871,7 +1837,6 @@ def feed_profile(actor):
                 "followers": f"https://{server}/f/{actor}/followers",
                 "following": f"https://{server}/f/{actor}/following",
                 "moderators": f"https://{server}/f/{actor}/moderators",
-                # "featured": f"https://{server}/f/{actor}/featured",
                 "attributedTo": f"https://{server}/f/{actor}/moderators",
                 "url": f"https://{server}/f/{actor}",
                 "publicKey": {
@@ -1994,7 +1959,7 @@ def feed_moderators_route(actor):
         # currently feeds only have the one owner, but lets make this a list in case we want to 
         # expand that in the future
         moderators = [User.query.get(feed.user_id)]
-        community_data = {
+        moderators_data = {
             "@context": default_context(),
             "type": "OrderedCollection",
             "id": f"https://{current_app.config['SERVER_NAME']}/f/{actor}/moderators",
@@ -2003,9 +1968,9 @@ def feed_moderators_route(actor):
         }
 
         for moderator in moderators:
-            community_data['orderedItems'].append(moderator.ap_profile_id)
+            moderators_data['orderedItems'].append(moderator.ap_profile_id)
 
-        return jsonify(community_data)
+        return jsonify(moderators_data)
     
 
 @bp.route('/f/<actor>/followers', methods=['GET'])
