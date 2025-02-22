@@ -1831,7 +1831,8 @@ def update_post_from_activity(post: Post, request_json: dict):
             if is_image_url(new_url):
                 post.type = POST_TYPE_IMAGE
                 image = File(source_url=new_url)
-                if 'name' in request_json['object']['attachment'][0] and request_json['object']['attachment'][0]['name'] is not None:
+                if isinstance(request_json['object']['attachment'], list) and \
+                        'name' in request_json['object']['attachment'][0] and request_json['object']['attachment'][0]['name'] is not None:
                     image.alt_text = request_json['object']['attachment'][0]['name']
             else:
                 if 'image' in request_json['object'] and 'url' in request_json['object']['image']:

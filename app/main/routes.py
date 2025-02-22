@@ -24,7 +24,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     joined_communities, moderating_communities, markdown_to_html, allowlist_html, \
     blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
     blocked_users, menu_topics, blocked_communities, get_request, mastodon_extra_field_link, \
-    permission_required, debug_mode_only
+    permission_required, debug_mode_only, ip_address
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, read_posts
 
@@ -523,12 +523,8 @@ def replay_inbox():
 @debug_mode_only
 def test():
 
-    response = get_request('https://rimu.geek.nz')
-    x = ''
-    if response.status_code == 200:
-        x =response.content
-    response.close()
-    return x
+
+    return ip_address()
 
     json = {
       "@context": "https://www.w3.org/ns/activitystreams",
