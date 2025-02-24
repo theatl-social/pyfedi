@@ -239,7 +239,7 @@ while `RedisCache` **should** be used in production. If using `RedisCache`, set 
     ```
     You can also [use environment variables](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html#environment-variables) if you prefer.
 
-* Test email sending by going to https://yourdomain/test_email. It will try to send an email to the current user's email address.
+* Test email sending by going to https://yourdomain/test_email. (after setting the FLASK_DEBUG environment variable to 1). It will try to send an email to the current user's email address.
 If it does not work check the log file at logs/pyfedi.log for clues.
 
 * BOUNCE_ADDRESS is where email bounces will go to. If BOUNCE_* is configured then all emails in that inbox
@@ -607,6 +607,8 @@ To use SMTP you need to set all the `MAIL_*` environment variables in you `.env`
 #### Testing email
 
 You need to set `MAIL_FROM` in `.env` to some email address.
+
+Also set an environment variable `FLASK_DEBUG` to '1' ( `export FLASK_DEBUG="1"` ).
 
 Log into Piefed then go to https://yourdomain/test_email to trigger a test email. It will use SES or SMTP depending on
 which environment variables you defined in .env. If `MAIL_SERVER` is empty it will try SES. Then if `AWS_REGION` is empty it'll
