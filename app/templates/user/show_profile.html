@@ -283,6 +283,20 @@
                 </div>
             </div>
         {% endif %}
+        {% if user_has_public_feeds %}
+            <div class="card mb-3">
+                <div class="card-header">
+                     <h2>{{ _('Public Feeds') }}</h2>
+                </div>
+                <div class="card-body">
+                        <ul>
+                            {% for feed in user_public_feeds %}
+                                <li><a href="/f/{{ feed.link() }}">{{ feed.title }}</a></li>
+                            {% endfor %}
+                        </ul>
+                </div>
+            </div>
+        {% endif %}
     </aside>
 </div>
 {% endblock %}

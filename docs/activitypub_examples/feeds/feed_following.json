@@ -1,0 +1,13 @@
+{
+  "@context": [
+    "https://www.w3.org/ns/activitystreams",
+    "https://w3id.org/security/v1"
+  ],
+  "id": "https://server.name/f/feedname/following",
+  "items": [
+    "https://server.name/c/communityname",
+    "https://server2.name/c/community-two-name"
+  ],
+  "totalItems": 1,
+  "type": "OrderedCollection"
+}

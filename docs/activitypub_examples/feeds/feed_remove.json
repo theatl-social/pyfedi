@@ -1,0 +1,24 @@
+{
+    "feed add related activities": [
+        {
+            "@context": "https://www.w3.org/ns/activitystreams",
+            "type": "Announce",
+            "actor": "https://server.name/f/feedname",
+            "id": "https://server.name/activities/announce/d3ade180-f641-4d6b-8ae7-ceab824f2b72",
+            "object": {
+                "@context": "https://www.w3.org/ns/activitystreams",
+                "type": "Remove",
+                "actor": "https://server.name/f/feedname",
+                "id": "https://server.name/activities/feedremove/4242",
+                "object": {
+                    "type": "Group",
+                    "id": "https://server.name/c/communityname"
+                },
+                "target": {
+                    "type": "Collection",
+                    "id": "https://server.name/f/feedname/following"
+                }
+            }
+        }
+    ]
+}
