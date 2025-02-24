@@ -422,9 +422,9 @@ def feed_add_community():
         if current_feed.public:
             community = Community.query.get(community_id)
             if current_app.debug:
-                announce_feed_add_remove_to_subscribers("Remove", current_feed, community)
+                announce_feed_add_remove_to_subscribers("Remove", current_feed.id, community.id)
             else:
-                announce_feed_add_remove_to_subscribers.delay("Remove", current_feed, community)
+                announce_feed_add_remove_to_subscribers.delay("Remove", current_feed.id, community.id)
 
     # make the new feeditem and commit it
     feed_item = FeedItem(feed_id=feed_id, community_id=community_id)
@@ -897,7 +897,7 @@ def feed_unsubscribe(actor):
 
 
 @celery.task
-def announce_feed_add_remove_to_subscribers(action, feed_id, community_id):
+def announce_feed_add_remove_to_subscribers(action: str, feed_id: int, community_id: int):
     # find the feed
     feed = Feed.query.get(feed_id)
     # find the community

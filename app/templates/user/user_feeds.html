@@ -8,12 +8,14 @@
 
 
 {% block app_content %}
-<hr>
+
 <h1>{{ _('My Feeds') }}</h1>
 <a class="btn btn-primary" href="{{ url_for('feed.feed_new') }}" style="float: right;">{{ _('New Feed') }}</a>
 {% if user_has_feeds or user_has_feed_subscriptions %}
-    <table class="table table-striped mt-1">
+    <table class="communities_table table table-striped mt-1">
+        <thead>
         <tr>
+            <th> </th>
             <th>Name</th>
             <th>Parent Feed</th>
             <th># Communities</th>
@@ -24,6 +26,7 @@
             {% endif %}
             <th>Actions</th>
         </tr>
+        </thead>
         {% for feed in user_feeds_list -%}
             {% include 'feed/_feed_table_row.html' -%}
         {% endfor -%}
