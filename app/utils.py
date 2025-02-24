@@ -45,7 +45,7 @@ from captcha.image import ImageCaptcha
 
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, ActivityPubLog, IpBan, \
     Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
-    File, ModLog, CommunityBlock
+    File, ModLog, CommunityBlock, Feed, FeedMember
 
 
 # Flask's render_template function, with support for themes added
@@ -530,6 +530,13 @@ def community_membership(user: User, community: Community) -> int:
     return user.subscribed(community.id)
 
 
+@cache.memoize(timeout=10)
+def feed_membership(user: User, feed: Feed) -> int:
+    if feed is None:
+        return False
+    return feed.subscribed(user.id)
+
+
 @cache.memoize(timeout=86400)
 def communities_banned_from(user_id: int) -> List[int]:
     community_bans = CommunityBan.query.filter(CommunityBan.user_id == user_id).all()
@@ -958,6 +965,21 @@ def menu_topics():
     return Topic.query.filter(Topic.parent_id == None).order_by(Topic.name).all()
 
 
+@cache.memoize(timeout=3000)
+def menu_instance_feeds():
+    return Feed.query.filter(Feed.parent_feed_id == None).filter(Feed.is_instance_feed == True).order_by(Feed.name).all()
+
+
+# @cache.memoize(timeout=3000)
+def menu_my_feeds(user_id):
+    return Feed.query.filter(Feed.parent_feed_id == None).filter(Feed.user_id == user_id).order_by(Feed.name).all()
+
+
+# @cache.memoize(timeout=3000)
+def menu_subscribed_feeds(user_id):
+    return Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter_by(user_id=user_id).filter_by(is_owner=False)
+
+
 @cache.memoize(timeout=300)
 def community_moderators(community_id):
     return CommunityMember.query.filter((CommunityMember.community_id == community_id) &
@@ -1000,6 +1022,21 @@ def topic_tree() -> List:
                 parent_comment['children'].append(topics_dict[topic.id])
 
     return [topic for topic in topics_dict.values() if topic['topic'].parent_id is None]
+
+
+# feeds, in a tree
+def feed_tree(user_id) -> List:
+    feeds = Feed.query.filter(Feed.user_id == user_id).order_by(Feed.name)
+
+    feeds_dict = {feed.id: {'feed': feed, 'children': []} for feed in feeds.all()}
+
+    for feed in feeds:
+        if feed.parent_feed_id is not None:
+            parent_comment = feeds_dict.get(feed.parent_feed_id)
+            if parent_comment:
+                parent_comment['children'].append(feeds_dict[feed.id])
+
+    return [feed for feed in feeds_dict.values() if feed['feed'].parent_feed_id is None]
 
 
 def opengraph_parse(url):

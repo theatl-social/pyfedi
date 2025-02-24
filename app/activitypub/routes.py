@@ -12,12 +12,13 @@ from app.activitypub import bp
 from app.activitypub.signature import HttpSignature, post_request, VerificationError, default_context, LDSignature
 from app.community.routes import show_community
 from app.community.util import send_to_remote_instance
+from app.feed.routes import show_feed
 from app.post.routes import continue_discussion, show_post
 from app.user.routes import show_profile
 from app.constants import *
 from app.models import User, Community, CommunityJoinRequest, CommunityMember, CommunityBan, ActivityPubLog, Post, \
     PostReply, Instance, PostVote, PostReplyVote, File, AllowedInstances, BannedInstances, utcnow, Site, Notification, \
-    ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice
+    ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice, Feed, FeedItem, FeedMember, FeedJoinRequest
 from app.activitypub.util import public_key, users_total, active_half_year, active_month, local_posts, local_comments, \
     post_to_activity, find_actor_or_create, find_reply_parent, find_liked_object, \
     lemmy_site_data, is_activitypub_request, delete_post_or_comment, community_members, \
@@ -29,7 +30,7 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
 from app.utils import gibberish, get_setting, render_template, \
     community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
-    community_moderators, html_to_text, add_to_modlog_activitypub, instance_banned, get_redis_connection
+    community_moderators, html_to_text, add_to_modlog_activitypub, instance_banned, get_redis_connection, feed_membership
 from app.shared.tasks import task_selector
 
 
@@ -77,15 +78,20 @@ def webfinger():
             resp.headers.add_header('Access-Control-Allow-Origin', '*')
             return resp
 
+        # look for the User first, then the Community, then the Feed that matches
         seperator = 'u'
         type = 'Person'
         user = User.query.filter(or_(User.user_name == actor.strip(), User.alt_user_name == actor.strip())).filter_by(deleted=False, banned=False, ap_id=None).first()
         if user is None:
             community = Community.query.filter_by(name=actor.strip(), ap_id=None).first()
-            if community is None:
-                return ''
             seperator = 'c'
             type = 'Group'
+            if community is None:
+                feed = Feed.query.filter_by(name=actor.strip(), ap_id=None).first()
+                if feed is None:
+                    return ''
+                seperator = 'f'
+                type = 'Feed'
 
         webfinger_data = {
             "subject": f"acct:{actor}@{current_app.config['SERVER_NAME']}",
@@ -495,7 +501,7 @@ def shared_inbox():
 
     if not actor:
         actor_name = request_json['actor']
-        log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, f'Actor could not be found 1: {actor_name}')
+        log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, f'Actor could not be found 1 - : {actor_name}, actor object: {actor}')
         return '', 200
 
     if actor.is_local():        # should be impossible (can be Announced back, but not sent without access to privkey)
@@ -637,8 +643,8 @@ def process_inbox_request(request_json, store_ap_json):
     with current_app.app_context():
         site = Site.query.get(1)    # can't use g.site because celery doesn't use Flask's g variable
 
-        # For an Announce, Accept, or Reject, we have the community, and need to find the user
-        # For everything else, we have the user, and need to find the community
+        # For an Announce, Accept, or Reject, we have the community/feed, and need to find the user
+        # For everything else, we have the user, and need to find the community/feed
         # Benefits of always using request_json['actor']:
         #   It's the actor who signed the request, and whose signature has been verified
         #   Because of the earlier check, we know that they already exist, and so don't need to check again
@@ -647,11 +653,21 @@ def process_inbox_request(request_json, store_ap_json):
         id = request_json['id']
         actor_id = request_json['actor']
         if request_json['type'] == 'Announce' or request_json['type'] == 'Accept' or request_json['type'] == 'Reject':
-            actor = find_actor_or_create(actor_id, community_only=True, create_if_not_found=False)
-            if actor and isinstance(actor, Community):
-                community = actor
+            # get the actor
+            # do the find or create
+            target = find_actor_or_create(request_json['actor'], create_if_not_found=False)
+            if target and isinstance(target, Community):
+                community_ap_id = request_json['actor']
+                community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False)
+                feed_ap_id = None
+                user_ap_id = None
+            elif isinstance(target, Feed):
+                feed_ap_id = request_json['actor']
+                feed = find_actor_or_create(feed_ap_id, feed_only=True, create_if_not_found=False)
+                community_ap_id = None
+                user_ap_id = None
             else:
-                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Actor was not a community')
+                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Actor was not a community, or a feed')
                 return
         else:
             actor = find_actor_or_create(actor_id, create_if_not_found=False)
@@ -693,28 +709,40 @@ def process_inbox_request(request_json, store_ap_json):
                     log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'Could not resolve post')
                 return
 
-            user_ap_id = request_json['object']['actor']
-            user = find_actor_or_create(user_ap_id)
-            if not user or not isinstance(user, User):
-                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Blocked or unfound user for Announce object actor ' + user_ap_id)
-                return
+            # handle Feed Announce/Add or Announce/Remove
+            if request_json['object']['type'] == 'Add':
+                if request_json['object']['object']['type'] == 'Group' and request_json['object']['target']['id'].endswith('/following'):
+                    announced = True
+                    core_activity = request_json['object']
+                    user = None
+            elif request_json['object']['type'] == 'Remove':
+                if request_json['object']['object']['type'] == 'Group' and request_json['object']['target']['id'].endswith('/following'):
+                    announced = True
+                    core_activity = request_json['object']
+                    user = None
+            else: 
+                user_ap_id = request_json['object']['actor']
+                user = find_actor_or_create(user_ap_id)
+                if not user or not isinstance(user, User):
+                    log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Blocked or unfound user for Announce object actor ' + user_ap_id)
+                    return
 
-            user.last_seen = site.last_active = utcnow()
-            user.instance.last_seen = utcnow()
-            user.instance.dormant = False
-            user.instance.gone_forever = False
-            user.instance.failures = 0
-            db.session.commit()
+                user.last_seen = site.last_active = utcnow()
+                user.instance.last_seen = utcnow()
+                user.instance.dormant = False
+                user.instance.gone_forever = False
+                user.instance.failures = 0
+                db.session.commit()
 
-            # Now that we have the community and the user from an Announce, we can save repeating code by removing it
-            # core_activity is checked for its Type, but the original request_json is sometimes passed to any other functions
-            announced = True
-            core_activity = request_json['object']
+                # Now that we have the community and the user from an Announce, we can save repeating code by removing it
+                # core_activity is checked for its Type, but the original request_json is sometimes passed to any other functions
+                announced = True
+                core_activity = request_json['object']
         else:
             announced = False
             core_activity = request_json
 
-        # Follow: remote user wants to join/follow one of our users or communities
+        # Follow: remote user wants to join/follow one of our users, communities, or feeds
         if core_activity['type'] == 'Follow':
             target_ap_id = core_activity['object']
             follow_id = core_activity['id']
@@ -755,6 +783,35 @@ def process_inbox_request(request_json, store_ap_json):
                         post_request(user.ap_inbox_url, accept, community.private_key, f"{community.public_url()}#main-key")
                         log_incoming_ap(id, APLOG_FOLLOW, APLOG_SUCCESS, saved_json)
                 return
+            elif isinstance(target, Feed):
+                feed = target
+                reject_follow = False
+                # if the feed is not public send a reject
+                # it should not get here as we wont have a subscribe option on non-public feeds,
+                # but just for cya its here.
+                if not feed.public:
+                    reject_follow = True
+                
+                if reject_follow:
+                    # send reject message to deny the follow
+                    reject = {"@context": default_context(), "actor": feed.public_url(), "to": [user.public_url()],
+                              "object": {"actor": user.public_url(), "to": None, "object": feed.public_url(), "type": "Follow", "id": follow_id},
+                              "type": "Reject", "id": f"https://{current_app.config['SERVER_NAME']}/activities/reject/" + gibberish(32)}
+                    post_request(user.ap_inbox_url, reject, feed.private_key, f"{feed.public_url()}#main-key")
+                else:
+                    if feed_membership(user, feed) != SUBSCRIPTION_MEMBER:
+                        member = FeedMember(user_id=user.id, feed_id=feed.id)
+                        db.session.add(member)
+                        feed.subscriptions_count += 1
+                        db.session.commit()
+                        cache.delete_memoized(feed_membership, user, feed)
+                        # send accept message to acknowledge the follow
+                        accept = {"@context": default_context(), "actor": feed.public_url(), "to": [user.public_url()],
+                                  "object": {"actor": user.public_url(), "to": None, "object": feed.public_url(), "type": "Follow", "id": follow_id},
+                                  "type": "Accept", "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)}
+                        post_request(user.ap_inbox_url, accept, feed.private_key, f"{feed.public_url()}#main-key")
+                        log_incoming_ap(id, APLOG_FOLLOW, APLOG_SUCCESS, saved_json)
+                return                
             elif isinstance(target, User):
                 local_user = target
                 remote_user = user
@@ -790,17 +847,31 @@ def process_inbox_request(request_json, store_ap_json):
             if not user:
                 log_incoming_ap(id, APLOG_ACCEPT, APLOG_FAILURE, saved_json, 'Could not find recipient of Accept')
                 return
-            join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
-            if join_request:
-                existing_membership = CommunityMember.query.filter_by(user_id=join_request.user_id, community_id=join_request.community_id).first()
-                if not existing_membership:
-                    member = CommunityMember(user_id=join_request.user_id, community_id=join_request.community_id)
-                    db.session.add(member)
-                    community.subscriptions_count += 1
-                    community.last_active = utcnow()
-                    db.session.commit()
-                    cache.delete_memoized(community_membership, user, community)
-                log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json)
+            # check if the Accept is for a community follow
+            if current_app.config['SERVER_NAME'] + '/c/' in core_activity['object']['object']:
+                join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
+                if join_request:
+                    existing_membership = CommunityMember.query.filter_by(user_id=join_request.user_id, community_id=join_request.community_id).first()
+                    if not existing_membership:
+                        member = CommunityMember(user_id=join_request.user_id, community_id=join_request.community_id)
+                        db.session.add(member)
+                        community.subscriptions_count += 1
+                        community.last_active = utcnow()
+                        db.session.commit()
+                        cache.delete_memoized(community_membership, user, community)
+                    log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json)
+            # check if the Accept is for a feed follow
+            elif current_app.config['SERVER_NAME'] + '/f/' in core_activity['object']['object']:
+                join_request = FeedJoinRequest.query.filter_by(user_id=user.id, feed_id=feed.id).first()
+                if join_request:
+                    existing_membership = FeedMember.query.filter_by(user_id=join_request.user_id, feed_id=join_request.feed_id).first()
+                    if not existing_membership:
+                        member = FeedMember(user_id=join_request.user_id, feed_id=join_request.feed_id)
+                        db.session.add(member)
+                        feed.subscriptions_count += 1
+                        db.session.commit()
+                        cache.delete_memoized(feed_membership, user, feed)
+                    log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json)
             return
 
         # Reject: remote server is rejecting our previous follow request
@@ -811,15 +882,28 @@ def process_inbox_request(request_json, store_ap_json):
                 if not user:
                     log_incoming_ap(id, APLOG_ACCEPT, APLOG_FAILURE, saved_json, 'Could not find recipient of Reject')
                     return
-                join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
-                if join_request:
-                    db.session.delete(join_request)
-                existing_membership = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
-                if existing_membership:
-                    db.session.delete(existing_membership)
-                    cache.delete_memoized(community_membership, user, community)
-                db.session.commit()
-                log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json)
+                # check if the Reject is for a community follow or a feed follow
+                if current_app.config['SERVER_NAME'] + '/c/' in core_activity['object']['object']:
+                    join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
+                    if join_request:
+                        db.session.delete(join_request)
+                    existing_membership = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
+                    if existing_membership:
+                        db.session.delete(existing_membership)
+                        cache.delete_memoized(community_membership, user, community)
+                    db.session.commit()
+                    log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json)
+                # check if the Reject is for a feed follow
+                elif current_app.config['SERVER_NAME'] + '/f/' in core_activity['object']['object']:
+                    join_request = FeedJoinRequest.query.filter_by(user_id=user.id, feed_id=feed.id).first()
+                    if join_request:
+                        db.session.delete(join_request)
+                    existing_membership = FeedMember.query.filter_by(user_id=user.id, feed_id=feed.id).first()
+                    if existing_membership:
+                        db.session.delete(existing_membership)
+                        cache.delete_memoized(feed_membership, user, feed)
+                    db.session.commit()
+                    log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json)
             return
 
         # Create is new content. Update is often an edit, but Updates from Lemmy can also be new content
@@ -888,7 +972,44 @@ def process_inbox_request(request_json, store_ap_json):
             return
 
         if core_activity['type'] == 'Delete':
-            if isinstance(core_activity['object'], str):
+            # check if its a feed being deleted
+            if isinstance(core_activity['object'], dict) and core_activity['object']['type'] == 'Feed':
+                # find the user in the traffic
+                user = find_actor_or_create(actor_id)
+                # find the feed
+                feed = Feed.query.filter_by(ap_public_url=core_activity['object']['id']).first()
+
+                # make sure the user sending the delete owns the feed
+                if not user.id == feed.user_id:
+                    log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, saved_json, 'Delete rejected, request came from non-owner.')
+                    return
+
+                # if found, remove all the feeditems and feedmembers
+                if feed:
+                    # find the feeditems and remove them
+                    feed_items = FeedItem.query.filter_by(feed_id=feed.id).all()
+                    for fi in feed_items:
+                        db.session.delete(fi)
+                        db.session.commit()
+                    # find the feedmembers and remove them
+                    feed_members = FeedMember.query.filter_by(feed_id=feed.id).all()
+                    for fm in feed_members:
+                        db.session.delete(fm)
+                        db.session.commit()
+                    # find any feedjoinrequests and remove them
+                    feed_join_requests = FeedJoinRequest.query.filter_by(feed_id=feed.id).all()
+                    for fjr in feed_join_requests:
+                        db.session.delete(fjr)
+                        db.session.commit()
+                    # finally remove the feed itself
+                    db.session.delete(feed)
+                    db.session.commit()
+                    log_incoming_ap(id, APLOG_DELETE, APLOG_SUCCESS, saved_json, f'Delete: Feed {core_activity['object']['id']} deleted')
+                    return
+                else:
+                    log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, saved_json, f'Delete: cannot find {core_activity['object']['id']}')
+                    return
+            elif isinstance(core_activity['object'], str):
                 ap_id = core_activity['object']  # lemmy
             else:
                 ap_id = core_activity['object']['id']  # kbin
@@ -946,10 +1067,37 @@ def process_inbox_request(request_json, store_ap_json):
             return
 
         if core_activity['type'] == 'Add':       # Add mods, or sticky a post
-            mod = user
+            if user is not None:
+                mod = user
             if not announced:
                 community = find_community(core_activity)
-            if community:
+            # check if the add is for a feed
+            if core_activity['object']['type'] == 'Group' and core_activity['target']['id'].endswith('/following'):
+                # find the feed based on core_activity.actor
+                feed = find_actor_or_create(core_activity['actor'], feed_only=True)
+                # if we found the feed attempt to find the community based on core_activity.object.id
+                if feed and isinstance(feed, Feed):
+                    community_to_add = find_actor_or_create(core_activity['object']['id'], community_only=True)
+                    # if community found or created - add the FeedItem and update Feed info
+                    if community_to_add and isinstance(community_to_add, Community):
+                        feed_item = FeedItem(feed_id=feed.id, community_id=community_to_add.id)
+                        db.session.add(feed_item)
+                        feed.num_communities += 1
+                        db.session.commit()
+                    # also autosubscribe any feedmembers to the new community
+                    feed_members = FeedMember.query.filter_by(feed_id=feed.id).all()
+                    for fm in feed_members:
+                        fm_user = User.query.get(fm.user_id)
+                        if fm_user.id == feed.user_id:
+                            continue
+                        if fm_user.is_local():
+                            # user is local so lets auto-subscribe them to the community
+                            from app.community.routes import do_subscribe
+                            actor = community_to_add.ap_id if community_to_add.ap_id else community_to_add.name
+                            do_subscribe(actor, fm_user.id)
+                else:
+                    log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json, "Cannot find Feed.")
+            elif community:
                 if not community.is_moderator(mod) and not community.is_instance_admin(mod):
                     log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json, 'Does not have permission')
                     return
@@ -985,10 +1133,26 @@ def process_inbox_request(request_json, store_ap_json):
             return
 
         if core_activity['type'] == 'Remove':       # Remove mods, or unsticky a post
-            mod = user
+            if user is not None:
+                mod = user
             if not announced:
                 community = find_community(core_activity)
-            if community:
+            # check if the remove is for a feed
+            if core_activity['object']['type'] == 'Group' and core_activity['target']['id'].endswith('/following'):
+                # find the feed based on core_activity.actor
+                feed = find_actor_or_create(core_activity['actor'], feed_only=True)
+                # if we found the feed attempt to find the community based on core_activity.object.id
+                if feed and isinstance(feed, Feed):
+                    community_to_remove = find_actor_or_create(core_activity['object']['id'], community_only=True)
+                    # if community found or created - remove the FeedItem and update Feed info
+                    if community_to_remove and isinstance(community_to_remove, Community):
+                        feed_item = FeedItem.query.filter_by(feed_id=feed.id, community_id=community_to_remove.id).first()
+                        db.session.delete(feed_item)
+                        feed.num_communities -= 1
+                        db.session.commit()
+                else:
+                    log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json, "Cannot find Feed.")                
+            elif community:
                 if not community.is_moderator(mod) and not community.is_instance_admin(mod):
                     log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json, 'Does not have permission')
                     return
@@ -1108,6 +1272,19 @@ def process_inbox_request(request_json, store_ap_json):
                     cache.delete_memoized(community_membership, user, community)
                     log_incoming_ap(id, APLOG_UNDO_FOLLOW, APLOG_SUCCESS, saved_json)
                     return
+                if isinstance(target, Feed):
+                    feed = target
+                    member = FeedMember.query.filter_by(user_id=user.id, feed_id=feed.id).first()
+                    join_request = FeedJoinRequest.query.filter_by(user_id=user.id, feed_id=feed.id).first()
+                    if member:
+                        db.session.delete(member)
+                        feed.subscriptions_count -= 1
+                    if join_request:
+                        db.session.delete(join_request)
+                    db.session.commit()
+                    cache.delete_memoized(feed_membership, user, feed)
+                    log_incoming_ap(id, APLOG_UNDO_FOLLOW, APLOG_SUCCESS, saved_json)
+                    return                
                 if isinstance(target, User):
                     local_user = target
                     remote_user = user
@@ -1626,3 +1803,194 @@ def process_chat(user, store_ap_json, core_activity):
         return True
 
     return False
+
+
+# ---- Feeds ----
+
+@bp.route('/f/<actor>', methods=['GET'])
+def feed_profile(actor):
+    """ Requests to this endpoint can be for a JSON representation of the feed, or an HTML rendering of it.
+        The two types of requests are differentiated by the header """
+    actor = actor.strip()
+    if '@' in actor:
+        # don't provide activitypub info for remote communities
+        if 'application/ld+json' in request.headers.get('Accept', '') or 'application/activity+json' in request.headers.get('Accept', ''):
+            abort(400)
+        feed: Feed = Feed.query.filter_by(ap_id=actor.lower(), banned=False).first()
+    else:
+        feed: Feed = Feed.query.filter_by(name=actor.lower(), ap_id=None).first()
+    if feed is not None:
+        if is_activitypub_request():
+            # check if feed is public, if not abort
+            # with 403 (forbidden)
+            if not feed.public:
+                abort(403) 
+            server = current_app.config['SERVER_NAME']
+            actor_data = {"@context": default_context(),
+                "type": "Feed",
+                "id": f"https://{server}/f/{actor}",
+                "name": feed.title,
+                "sensitive": True if feed.nsfw or feed.nsfl else False,
+                "preferredUsername": actor,
+                "inbox": f"https://{server}/f/{actor}/inbox",
+                "outbox": f"https://{server}/f/{actor}/outbox",
+                "followers": f"https://{server}/f/{actor}/followers",
+                "following": f"https://{server}/f/{actor}/following",
+                "moderators": f"https://{server}/f/{actor}/moderators",
+                "attributedTo": f"https://{server}/f/{actor}/moderators",
+                "url": f"https://{server}/f/{actor}",
+                "publicKey": {
+                    "id": f"https://{server}/f/{actor}#main-key",
+                    "owner": f"https://{server}/f/{actor}",
+                    "publicKeyPem": feed.public_key
+                },
+                "endpoints": {
+                    "sharedInbox": f"https://{server}/inbox"
+                },
+                "published": ap_datetime(feed.created_at),
+                "updated": ap_datetime(feed.last_edit),
+            }
+            if feed.description_html:
+                actor_data["summary"] = feed.description_html
+                actor_data['source'] = {'content': feed.description, 'mediaType': 'text/markdown'}
+            if feed.icon_id is not None:
+                actor_data["icon"] = {
+                    "type": "Image",
+                    "url": f"https://{current_app.config['SERVER_NAME']}{feed.icon_image()}"
+                }
+            if feed.image_id is not None:
+                actor_data["image"] = {
+                    "type": "Image",
+                    "url": f"https://{current_app.config['SERVER_NAME']}{feed.header_image()}"
+                }
+            resp = jsonify(actor_data)
+            resp.content_type = 'application/activity+json'
+            resp.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/f/{actor}>; rel="alternate"; type="text/html"')
+            return resp
+        else:   # browser request - return html
+            return show_feed(feed)
+    else:
+        abort(404)
+
+
+@bp.route('/f/<actor>/inbox', methods=['POST'])
+def feed_inbox(actor):
+    return shared_inbox()
+
+
+@bp.route('/f/<actor>/outbox', methods=['GET'])
+def feed_outbox(actor):
+    # every AP actor has to have an /outbox
+    # but I dont think it makes sense to have the Add/Remove activities in a list
+    # for a Feed, so for now this will just be the same as the /following collection
+    actor = actor.strip()
+    if '@' in actor:
+        # don't provide activitypub info for remote feeds
+        abort(400)
+    else:
+        feed: Feed = Feed.query.filter_by(name=actor.lower(), ap_id=None).first()
+    
+    # check if feed is public, if not abort
+    # with 403 (forbidden)
+    if not feed.public:
+        abort(403) 
+
+    # get the feed items
+    feed_items = FeedItem.query.join(Feed, FeedItem.feed_id == feed.id).order_by(desc(FeedItem.id)).all()
+    # make the ap data json
+    items = []
+    for fi in feed_items:
+        c = Community.query.get(fi.community_id)
+        items.append(c.ap_public_url)
+    result = {
+        "@context": default_context(),
+        "id": feed.ap_outbox_url,
+        "type": "OrderedCollection",
+        "totalItems": len(items),
+        "items": items
+    }
+    resp = jsonify(result)
+    resp.content_type = 'application/activity+json'
+    return resp
+
+
+@bp.route('/f/<actor>/following', methods=['GET'])
+def feed_following(actor):
+    actor = actor.strip()
+    if '@' in actor:
+        # don't provide activitypub info for remote feeds
+        abort(400)
+    else:
+        feed: Feed = Feed.query.filter_by(name=actor.lower(), ap_id=None).first()
+    
+    # check if feed is public, if not abort
+    # with 403 (forbidden)
+    if not feed.public:
+        abort(403) 
+
+    # get the feed items
+    feed_items = FeedItem.query.join(Feed, FeedItem.feed_id == feed.id).order_by(desc(FeedItem.id)).all()
+    # make the ap data json
+    items = []
+    for fi in feed_items:
+        c = Community.query.get(fi.community_id)
+        items.append(c.ap_public_url)
+    result = {
+        "@context": default_context(),
+        "id": feed.ap_following_url,
+        "type": "OrderedCollection",
+        "totalItems": len(items),
+        "items": items
+    }
+    resp = jsonify(result)
+    resp.content_type = 'application/activity+json'
+    return resp
+    
+
+@bp.route('/f/<actor>/moderators', methods=['GET'])
+def feed_moderators_route(actor):
+    actor = actor.strip()
+    if '@' in actor:
+        # don't provide activitypub info for remote feeds
+        abort(400)
+    else:
+        feed: Feed = Feed.query.filter_by(name=actor.lower(), ap_id=None).first()
+    if feed is not None:
+        # currently feeds only have the one owner, but lets make this a list in case we want to 
+        # expand that in the future
+        moderators = [User.query.get(feed.user_id)]
+        moderators_data = {
+            "@context": default_context(),
+            "type": "OrderedCollection",
+            "id": f"https://{current_app.config['SERVER_NAME']}/f/{actor}/moderators",
+            "totalItems": len(moderators),
+            "orderedItems": []
+        }
+
+        for moderator in moderators:
+            moderators_data['orderedItems'].append(moderator.ap_profile_id)
+
+        return jsonify(moderators_data)
+    
+
+@bp.route('/f/<actor>/followers', methods=['GET'])
+def feed_followers(actor):
+    actor = actor.strip()
+    if '@' in actor:
+        # don't provide activitypub info for remote feeds
+        abort(400)
+    else:
+        feed: Feed = Feed.query.filter_by(name=actor.lower(), ap_id=None).first()
+    if feed is not None:
+        result = {
+            "@context": default_context(),
+            "id": f'https://{current_app.config["SERVER_NAME"]}/f/{actor}/followers',
+            "type": "Collection",
+            "totalItems": FeedMember.query.filter_by(feed_id=feed.id).count(),
+            "items": []
+        }
+        resp = jsonify(result)
+        resp.content_type = 'application/activity+json'
+        return resp
+    else:
+        abort(404)

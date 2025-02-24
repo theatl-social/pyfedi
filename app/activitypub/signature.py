@@ -96,6 +96,7 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str, con
     db.session.add(log)
     db.session.commit()
 
+    
     if uri is None or uri == '':
         log.result = 'failure'
         log.exception_message = 'empty uri'

@@ -46,6 +46,21 @@
                   </select>
               </div>
           {% endif -%}
+          {% if server_has_feeds -%}
+                    <div style="display:inline;">
+                        Feed:
+                        <select name="feed_id"
+                                class="form-control-sm submit_on_change"
+                                aria-label="{{ _('Choose a public feed to filter communities by') }}"
+                                >
+                            <option value="0">All</option>
+                            {% for feed in public_feeds -%}
+                                <option value="{{ feed.id }}" {{ 'selected' if feed.id == feed_id }}>{{ feed.title }}
+                                </option>
+                            {% endfor -%}
+                        </select>
+                    </div>
+          {% endif -%}   
           {% if languages -%}
               <div style="display:inline;">
                   Language:
