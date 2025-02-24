@@ -178,7 +178,6 @@
                             </li>
                             <li class="nav-item"><a class="nav-link" href="/auth/login">{{ _('Log in') }}</a></li>
                             <li class="nav-item"><a class="nav-link" href="/auth/register">{{ _('Register') }}</a></li>
-                            <li class="nav-item"><a class="nav-link" href="/donate">{{ _('Donate') }}</a></li>
                         {% else %}
                             <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %}">
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/topics"  aria-haspopup="true" aria-expanded="false">{{ _('Topics') }}</a>
@@ -225,7 +224,6 @@
                                   {% endif -%}
                                 </ul>
                             </li>
-                            <li class="nav-item"><a class="nav-link" href="/donate">{{ _('Donate') }}</a></li>
                             {% if user_access('change instance settings', current_user.id) %}
                                 <li class="nav-item dropdown{% if active_parent == 'admin' %} active{% endif %}">
                                     <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/admin/" aria-haspopup="true" aria-expanded="false">{{ _('Admin') }}</a>
