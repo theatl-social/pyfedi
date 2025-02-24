@@ -97,6 +97,7 @@ def feed_new():
 
 
 @bp.route('/feed/add_remote', methods=['GET','POST'])
+@login_required
 def feed_add_remote():
     if current_user.banned:
         return show_ban_message()
@@ -182,6 +183,8 @@ def feed_edit(feed_id: int):
             feed_to_edit.nsfl = edit_feed_form.nsfl.data
         feed_to_edit.public = edit_feed_form.public.data
         feed_to_edit.is_instance_feed = edit_feed_form.is_instance_feed.data
+        if current_user.is_admin():
+            cache.delete_memoized(menu_instance_feeds)
         db.session.add(feed_to_edit)
         db.session.commit()
 
@@ -229,9 +232,9 @@ def feed_delete(feed_id: int):
     # have to do it here before the feed members are cleared out
     if feed.public:
         if current_app.debug:
-            announce_feed_delete_to_subscribers(user_id, feed)
+            announce_feed_delete_to_subscribers(user_id, feed.id)
         else:
-            announce_feed_delete_to_subscribers.delay(user_id, feed)
+            announce_feed_delete_to_subscribers.delay(user_id, feed.id)
 
     # strip out any feedmembers before deleting
     feed_members = FeedMember.query.filter_by(feed_id=feed.id)
@@ -438,9 +441,9 @@ def feed_add_community():
     if feed.public:
         community = Community.query.get(community_id)
         if current_app.debug:
-            announce_feed_add_remove_to_subscribers("Add", feed, community)
+            announce_feed_add_remove_to_subscribers("Add", feed.id, community.id)
         else:
-            announce_feed_add_remove_to_subscribers.delay("Add", feed, community)
+            announce_feed_add_remove_to_subscribers.delay("Add", feed.id, community.id)
 
     # subscribe the user to the community if they are not already subscribed
     current_membership = CommunityMember.query.filter_by(user_id=user_id, community_id=community_id).first()
@@ -499,9 +502,9 @@ def feed_remove_community():
         if current_feed.public:
             community = Community.query.get(community_id)
             if current_app.debug:
-                announce_feed_add_remove_to_subscribers("Remove", current_feed, community)
+                announce_feed_add_remove_to_subscribers("Remove", current_feed.id, community.id)
             else:
-                announce_feed_add_remove_to_subscribers.delay("Remove", current_feed, community)
+                announce_feed_add_remove_to_subscribers.delay("Remove", current_feed.id, community.id)
     else:
         abort(404)
 
@@ -894,7 +897,11 @@ def feed_unsubscribe(actor):
 
 
 @celery.task
-def announce_feed_add_remove_to_subscribers(action, feed, community):
+def announce_feed_add_remove_to_subscribers(action, feed_id, community_id):
+    # find the feed
+    feed = Feed.query.get(feed_id)
+    # find the community
+    community = Community.query.get(community_id)
     # build the Announce json
     activity_json = {
         "@context": default_context(),
@@ -959,9 +966,11 @@ def announce_feed_add_remove_to_subscribers(action, feed, community):
 
 
 @celery.task
-def announce_feed_delete_to_subscribers(user_id, feed: Feed):
+def announce_feed_delete_to_subscribers(user_id, feed_id):
     # get the user
     user = User.query.get(user_id)
+    # get the feed
+    feed = Feed.query.get(feed_id)
     # create the delete json
     delete_json = {
         "@context": default_context(),
