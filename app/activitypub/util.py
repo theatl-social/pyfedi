@@ -1125,7 +1125,8 @@ def actor_json_to_model(activity_json, address, server):
                               ap_fetched_at=utcnow(),
                               ap_domain=server.lower(),
                               public_key=activity_json['publicKey']['publicKeyPem'],
-                              instance_id=find_instance_id(server)
+                              instance_id=find_instance_id(server),
+                              public=True
                               )
 
         description_html = ''
