@@ -97,6 +97,7 @@ def feed_new():
 
 
 @bp.route('/feed/add_remote', methods=['GET','POST'])
+@login_required
 def feed_add_remote():
     if current_user.banned:
         return show_ban_message()
