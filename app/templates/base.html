@@ -170,7 +170,6 @@
             <div class="collapse navbar-collapse" id="navbarSupportedContent" role="navigation">
                     <ul class="nav navbar-nav">
                         {% if current_user.is_anonymous -%}
-                            <li class="nav-item"><a class="nav-link" href="/">{{ _('Home') }}</a></li>
                             <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %}">
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/topics" aria-haspopup="true" aria-expanded="false">{{ _('Topics') }}</a>
                                 <ul class="dropdown-menu">
