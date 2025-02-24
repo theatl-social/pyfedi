@@ -771,7 +771,7 @@ def static_manifest():
     
 
 @bp.route('/feeds', methods=['GET','POST'])
-def public_feeds():
+def list_feeds():
     # default to no public feeds
     server_has_feeds = False
 

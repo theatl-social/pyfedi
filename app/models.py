@@ -2449,18 +2449,21 @@ class FeedItem(db.Model):
     feed_id = db.Column(db.Integer, db.ForeignKey('feed.id'), index=True)
     community_id = db.Column(db.Integer, db.ForeignKey('community.id'), index=True)
 
+
 class FeedMember(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     feed_id = db.Column(db.Integer, db.ForeignKey('feed.id'), index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
     is_owner = db.Column(db.Boolean, default=False)
+    is_banned = db.Column(db.Boolean, default=False, index=True)
     notify_new_communities = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=utcnow)
+
 
 class Feed(db.Model):
     query_class = FullTextSearchQuery
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
     title = db.Column(db.String(256))
     name = db.Column(db.String(256), index=True, unique=True)
     machine_name = db.Column(db.String(50), index=True)
@@ -2479,10 +2482,10 @@ class Feed(db.Model):
 
     num_communities = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=utcnow)
-    public = db.Column(db.Boolean, default=False)
+    public = db.Column(db.Boolean, default=False, index=True)
     last_edit = db.Column(db.DateTime, default=utcnow)
     parent_feed_id = db.Column(db.Integer, db.ForeignKey('feed.id'), index=True)
-    is_instance_feed = db.Column(db.Boolean, default=False)
+    is_instance_feed = db.Column(db.Boolean, default=False, index=True)
 
     ap_id = db.Column(db.String(255), index=True)
     ap_profile_id = db.Column(db.String(255), index=True, unique=True)
