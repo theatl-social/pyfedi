@@ -76,7 +76,7 @@
                 <div class="row">
                     <div class="col-6">
                         {% if current_user.id == feed.user_id %}
-                            <a class="w-100 btn btn-primary" href="{{ url_for('feed.feed_edit', feed_id=feed.id) }}" rel="nofollow">{{ _('Edit Feed') }}</a>
+                            <a class="w-100 btn btn-primary" href="{{ url_for('feed.feed_edit', feed_id=feed.id, next='/f/' + feed.name) }}" rel="nofollow">{{ _('Edit Feed') }}</a>
                         {% else %}
                             <a class="w-100 btn btn-primary" href="{{ url_for('feed.feed_copy', feed_id=feed.id) }}" rel="nofollow">{{ _('Copy Feed') }}</a>
                             {% if current_user.is_authenticated and feed.subscribed(current_user.id) == 1 %}

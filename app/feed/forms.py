@@ -39,12 +39,14 @@ class AddCopyFeedForm(FlaskForm):
                 return False
         return True    
 
+
 class EditFeedForm(FlaskForm):
     feed_name = StringField(_l('Name'), validators=[DataRequired()])
     url = StringField(_l('Url'))
     description = TextAreaField(_l('Description'))
     parent_feed_id = SelectField(_l('Parent feed'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
     show_child_posts = BooleanField('Show posts from child feeds')
+    communities = TextAreaField(_l('Communities'), validators=[DataRequired()], render_kw={'rows': 5})
     icon_file = FileField(_l('Icon image'), render_kw={'accept': 'image/*'})
     banner_file = FileField(_l('Banner image'), render_kw={'accept': 'image/*'})
     nsfw = BooleanField('NSFW')

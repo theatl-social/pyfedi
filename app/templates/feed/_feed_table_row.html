@@ -24,7 +24,7 @@
         {% endif %}
         <td>
             {% if current_user.id == feed.user_id %}
-                <a href="/feed/{{ feed.id }}/edit">{{ _('Edit') }}</a> |
+                <a href="/feed/{{ feed.id }}/edit?next=/u/myfeeds">{{ _('Edit') }}</a> |
                 {% if feed.num_communities == 0 %}
                     <a href="/feed/{{ feed.id }}/delete?user_id={{ current_user.id }}" class="confirm_first">{{ _('Delete') }}</a>
                 {% else %}
@@ -37,7 +37,7 @@
     {% elif active_child == 'public_feeds' %}
         {% if current_user.is_authenticated %}
             {% if current_user.id == feed.user_id %}
-                <td><a href="{{ url_for('feed.feed_edit', feed_id=feed.id) }}" rel="nofollow">{{ _('Edit Feed') }}</a></td>
+                <td><a href="{{ url_for('feed.feed_edit', feed_id=feed.id, next='/feeds') }}" rel="nofollow noindex">{{ _('Edit Feed') }}</a></td>
             {% else %}
                 {% if feed.subscribed(current_user.id) == 1 %}
                     <td><a href="/feed/{{ feed.id }}/copy">Copy</a></td>
@@ -51,7 +51,7 @@
     {% elif active_child == 'user_public_feeds' %}
         {% if current_user.is_authenticated %}
             {% if current_user.id == feed.user_id %}
-                <td><a href="{{ url_for('feed.feed_edit', feed_id=feed.id) }}" rel="nofollow">{{ _('Edit Feed') }}</a></td>
+                <td><a href="{{ url_for('feed.feed_edit', feed_id=feed.id, next='/u/myfeeds') }}" rel="nofollow">{{ _('Edit Feed') }}</a></td>
             {% else %}
                 {% if feed.subscribed(current_user.id) == 1 %}
                     <td><a href="/feed/{{ feed.id }}/copy">Copy</a> </td>

@@ -14,16 +14,20 @@ from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_
     POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_FEED, SUBSCRIPTION_MEMBER, SUBSCRIPTION_PENDING
 from app.feed import  bp
 from app.feed.forms import AddCopyFeedForm, EditFeedForm, SearchRemoteFeed
-from app.feed.util import feeds_for_form, search_for_feed, actor_to_feed
+from app.feed.util import feeds_for_form, search_for_feed, actor_to_feed, feed_communities_for_edit, \
+    existing_communities, form_communities_to_ids
 from app.inoculation import inoculation
 from app.models import Feed, FeedMember, FeedItem, Post, Community, read_posts, utcnow, NotificationSubscription, \
     CommunityMember, User, FeedJoinRequest, Instance
-from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markdown_to_html, render_template, user_filters_posts, \
-    blocked_domains, blocked_instances, blocked_communities, blocked_users, communities_banned_from, moderating_communities, \
-    joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, validation_required, feed_membership, get_request, \
-    gibberish, get_task_session, instance_banned, menu_subscribed_feeds
+from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markdown_to_html, render_template, \
+    user_filters_posts, \
+    blocked_domains, blocked_instances, blocked_communities, blocked_users, communities_banned_from, \
+    moderating_communities, \
+    joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, validation_required, feed_membership, \
+    get_request, \
+    gibberish, get_task_session, instance_banned, menu_subscribed_feeds, referrer
 from collections import namedtuple
-from sqlalchemy import desc, or_
+from sqlalchemy import desc, or_, text
 from slugify import slugify
 
 
@@ -188,13 +192,26 @@ def feed_edit(feed_id: int):
         db.session.add(feed_to_edit)
         db.session.commit()
 
-        flash(_('Congrats, your Feed edit has been saved!'))
-        return redirect(url_for('main.index'))
+        # Update FeedItems based on whatever has changed in the form.communities field
+        old_communities = set(existing_communities(feed_to_edit.id))    # the communities that were in the feed before the edit was made
+        new_communities = form_communities_to_ids(edit_feed_form.communities.data)  # the communities that are in the feed now
+        added_communities = new_communities - old_communities
+        removed_communities = old_communities - new_communities
+
+        for added_community in added_communities:
+            _feed_add_community(added_community, 0, feed_to_edit.id, current_user.id)
+
+        for removed_community in removed_communities:
+            _feed_remove_community(removed_community, feed_to_edit.id)
+
+        flash(_('Settings saved.'))
+        return redirect(referrer())
 
     # add the current data to the form
     edit_feed_form.feed_name.data = feed_to_edit.title
     edit_feed_form.url.data = feed_to_edit.name
     edit_feed_form.description.data = feed_to_edit.description
+    edit_feed_form.communities.data = feed_communities_for_edit(feed_to_edit.id)
     edit_feed_form.show_child_posts.data = feed_to_edit.show_posts_in_children
     if g.site.enable_nsfw is False:
         edit_feed_form.nsfw.render_kw = {'disabled': True}
@@ -405,13 +422,29 @@ def feed_add_community():
     if Feed.query.get(feed_id).user_id != user_id:
         abort(404)
 
+    _feed_add_community(community_id, current_feed_id, feed_id, user_id)
+
+    # send the user back to the page they came from or main
+    # Get the referrer from the request headers
+    referrer = request.referrer
+
+    # If the referrer exists and is not the same as the current request URL, redirect to the referrer
+    if referrer and referrer != request.url:
+        return redirect(referrer)
+
+    # If referrer is not available or is the same as the current request URL, redirect to the default URL
+    return redirect(url_for('main.index'))
+
+
+def _feed_add_community(community_id: int, current_feed_id: int, feed_id: int, user_id: int):
     # if current_feed_id is not 0 then we are moving a community from
     # one feed to another
     if current_feed_id != 0:
-        current_feed_item = FeedItem.query.filter_by(feed_id=current_feed_id).filter_by(community_id=community_id).first()
+        current_feed_item = FeedItem.query.filter_by(feed_id=current_feed_id).filter_by(
+            community_id=community_id).first()
         db.session.delete(current_feed_item)
         db.session.commit()
-        
+
         # also update the num_communities for the old feed
         current_feed = Feed.query.get(current_feed_id)
         current_feed.num_communities = current_feed.num_communities - 1
@@ -425,18 +458,15 @@ def feed_add_community():
                 announce_feed_add_remove_to_subscribers("Remove", current_feed.id, community.id)
             else:
                 announce_feed_add_remove_to_subscribers.delay("Remove", current_feed.id, community.id)
-
     # make the new feeditem and commit it
     feed_item = FeedItem(feed_id=feed_id, community_id=community_id)
     db.session.add(feed_item)
     db.session.commit()
-
     # also update the num_communities for the new feed
     feed = Feed.query.get(feed_id)
     feed.num_communities = feed.num_communities + 1
     db.session.add(feed)
     db.session.commit()
-
     # announce the change to any potential subscribers
     if feed.public:
         community = Community.query.get(community_id)
@@ -444,7 +474,6 @@ def feed_add_community():
             announce_feed_add_remove_to_subscribers("Add", feed.id, community.id)
         else:
             announce_feed_add_remove_to_subscribers.delay("Add", feed.id, community.id)
-
     # subscribe the user to the community if they are not already subscribed
     current_membership = CommunityMember.query.filter_by(user_id=user_id, community_id=community_id).first()
     if current_membership is None:
@@ -453,17 +482,6 @@ def feed_add_community():
         community = Community.query.get(community_id)
         actor = community.ap_id if community.ap_id else community.name
         do_subscribe(actor, user_id)
-
-    # send the user back to the page they came from or main
-    # Get the referrer from the request headers
-    referrer = request.referrer
-
-    # If the referrer exists and is not the same as the current request URL, redirect to the referrer
-    if referrer and referrer != request.url:
-        return redirect(referrer)
-
-    # If referrer is not available or is the same as the current request URL, redirect to the default URL
-    return redirect(url_for('main.index'))
 
 
 @bp.route('/feed/remove_community', methods=['GET'])
@@ -489,22 +507,7 @@ def feed_remove_community():
     # if new_feed_id is 0, remove the right FeedItem
     # if its not 0 abort
     if new_feed_id == 0:
-        current_feed_item = FeedItem.query.filter_by(feed_id=current_feed_id).filter_by(community_id=community_id).first()
-        db.session.delete(current_feed_item)
-        db.session.commit()
-        # also update the num_communities for the old feed
-        current_feed = Feed.query.get(current_feed_id)
-        current_feed.num_communities = current_feed.num_communities - 1
-        db.session.add(current_feed)
-        db.session.commit()
-
-        # announce the change to any potential subscribers
-        if current_feed.public:
-            community = Community.query.get(community_id)
-            if current_app.debug:
-                announce_feed_add_remove_to_subscribers("Remove", current_feed.id, community.id)
-            else:
-                announce_feed_add_remove_to_subscribers.delay("Remove", current_feed.id, community.id)
+        _feed_remove_community(community_id, current_feed_id)
     else:
         abort(404)
 
@@ -517,7 +520,25 @@ def feed_remove_community():
         return redirect(referrer)
 
     # If referrer is not available or is the same as the current request URL, redirect to the default URL
-    return redirect(url_for('main.index'))        
+    return redirect(url_for('main.index'))
+
+
+def _feed_remove_community(community_id: int, current_feed_id: int):
+    current_feed_item = FeedItem.query.filter_by(feed_id=current_feed_id).filter_by(community_id=community_id).first()
+    db.session.delete(current_feed_item)
+    db.session.commit()
+    # also update the num_communities for the old feed
+    current_feed = Feed.query.get(current_feed_id)
+    current_feed.num_communities = current_feed.num_communities - 1
+    db.session.add(current_feed)
+    db.session.commit()
+    # announce the change to any potential subscribers
+    if current_feed.public:
+        community = Community.query.get(community_id)
+        if current_app.debug:
+            announce_feed_add_remove_to_subscribers("Remove", current_feed.id, community.id)
+        else:
+            announce_feed_add_remove_to_subscribers.delay("Remove", current_feed.id, community.id)
 
 
 @bp.route('/feed/list', methods=['GET'])

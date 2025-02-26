@@ -21,6 +21,8 @@
                             {% endfor %}
                         </div>
                         {{ render_field(form.description) }}
+                        {{ render_field(form.communities) }}
+                        <small class="field_hint">{{ _('Format example: news@lemmy.world. One per line.') }}</small>
                         {{ render_field(form.parent_feed_id) }}
                         {{ render_field(form.show_child_posts) }}
                         {{ render_field(form.icon_file) }}

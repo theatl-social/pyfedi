@@ -1,13 +1,16 @@
 import httpx
 from typing import List, Tuple
+
+from app import db
 from app.activitypub.util import actor_json_to_model
-from app.models import BannedInstances, Feed
+from app.community.util import search_for_community
+from app.models import BannedInstances, Feed, FeedItem, Community
 from app.utils import feed_tree, get_request
 from flask import current_app
 from flask_babel import _
 from time import sleep
 from random import randint
-from sqlalchemy import func
+from sqlalchemy import func, text
 
 
 def feeds_for_form(current_feed: int, user_id: int) -> List[Tuple[int, str]]:
@@ -76,6 +79,7 @@ def search_for_feed(address: str):
                                 return feed
         return None
 
+
 def actor_to_feed(actor) -> Feed:
     actor = actor.strip()
     if '@' in actor:
@@ -83,3 +87,29 @@ def actor_to_feed(actor) -> Feed:
     else:
         feed = Feed.query.filter(func.lower(Feed.name) == func.lower(actor)).filter_by(ap_id=None).first()
     return feed
+
+
+def feed_communities_for_edit(feed_id: int) -> str:
+    return_value = []
+    for community in Community.query.filter(Community.banned == False).join(FeedItem, FeedItem.community_id == Community.id).filter(FeedItem.feed_id == feed_id).all():
+        ap_id = community.link()
+        if '@' not in ap_id:
+            ap_id = f'{ap_id}@{current_app.config["SERVER_NAME"]}'
+        return_value.append(ap_id)
+    return "\n".join(sorted(return_value))
+
+
+def existing_communities(feed_id: int) -> List:
+    return db.session.execute(text('SELECT community_id FROM feed_item WHERE feed_id = :feed_id'), {'feed_id': feed_id}).scalars()
+
+
+def form_communities_to_ids(form_communities: str) -> set:
+    result = set()
+    parts = form_communities.strip().split('\n')
+    for community_ap_id in parts:
+        if not community_ap_id.startswith('!'):
+            community_ap_id = '!' + community_ap_id
+        community = search_for_community(community_ap_id.strip())
+        if community:
+            result.add(community.id)
+    return result

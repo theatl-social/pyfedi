@@ -1512,6 +1512,18 @@ def instance_software(domain: str):
     return instance.software.lower() if instance else ''
 
 
+# ----------------------------------------------------------------------
+# Return contents of referrer with a fallback
+def referrer(default: str=None) -> str:
+    if request.args.get('next'):
+        return request.args.get('next')
+    if default:
+        return default
+    if request.referrer:
+        return request.referrer
+    return url_for('main.index')
+
+
 def create_captcha(length=4):
     code = ""
     for i in range(length):
