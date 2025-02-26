@@ -90,8 +90,8 @@ def feed_new():
         db.session.add(membership)
         db.session.commit()
 
-        flash(_('Your new Feed has been created.'))
-        return redirect(url_for('main.index'))
+        flash(_('Your new Feed has been created. Add communities in the new communities box, below.'))
+        return redirect(url_for('feed.feed_edit', feed_id=feed.id, next='/u/myfeeds'))
 
     return render_template('feed/feed_new.html', title=_('Create a Feed'), form=form,
                            current_app=current_app, menu_topics=menu_topics(), menu_instance_feeds=menu_instance_feeds(), 
