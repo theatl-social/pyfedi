@@ -533,6 +533,12 @@ class Community(db.Model):
         else:
             return self.ap_id.lower()
 
+    def lemmy_link(self) -> str:
+        if self.ap_id is None:
+            return f"!{self.name}@{current_app.config['SERVER_NAME']}"
+        else:
+            return f"!{self.ap_id.lower()}"
+
     @cache.memoize(timeout=3)
     def moderators(self):
         return CommunityMember.query.filter((CommunityMember.community_id == self.id) &

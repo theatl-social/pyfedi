@@ -27,6 +27,7 @@
                 {% if community.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif -%}
                 {% if community.nsfl -%}<span class="warning_badge nsfl" title="{{ _('Not safe for life') }}">nsfl</span>{% endif -%}
             </h1>
+            <p class="text-muted">{{ community.lemmy_link() }}</p>
         {% elif community.icon_id and not low_bandwidth -%}
             <div class="row mb-3">
                 <nav class="mb-3" aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
@@ -48,6 +49,7 @@
                         {% if community.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif -%}
                         {% if community.nsfl -%}<span class="warning_badge nsfl" title="{{ _('Not safe for life') }}">nsfl</span>{% endif -%}
                     </h1>
+                    <p class="text-muted">{{ community.lemmy_link() }}</p>
                 </div>
             </div>
         {% else -%}
@@ -66,6 +68,7 @@
                 {% if community.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif -%}
                 {% if community.nsfl -%}<span class="warning_badge nsfl" title="{{ _('Not safe for life') }}">nsfl</span>{% endif -%}
             </h1>
+            <p class="text-muted">{{ community.lemmy_link() }}</p>
         {% endif -%}
         {% include "community/_community_nav.html" -%}
         {% if post_layout == 'masonry' or post_layout == 'masonry_wide' -%}
