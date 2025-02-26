@@ -1769,6 +1769,25 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
             language = find_language(next(iter(request_json['object']['contentMap'])))  # Combination of next and iter gets the first key in a dict
             language_id = language.id if language else None
 
+        if 'attachment' in request_json['object']:
+            attachment_list = []
+            if isinstance(request_json['object']['attachment'], dict):
+                attachment_list.append(request_json['object']['attachment'])
+            elif isinstance(request_json['object']['attachment'], list):
+                attachment_list = request_json['object']['attachment']
+            for attachment in attachment_list:
+                url = alt_text = ''
+                if 'href' in attachment:
+                    url = attachment['href']
+                if 'url' in attachment:
+                    url = attachment['url']
+                if 'name' in attachment:
+                    alt_text = attachment['name']
+                if url:
+                    body = body + f"\n\n![{alt_text}]({url})"
+            if attachment_list:
+                body_html = markdown_to_html(body)
+
         # Check for Mentions of local users
         reply_parent = parent_comment if parent_comment else post
         local_users_to_notify = []
@@ -1889,6 +1908,25 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
         language = find_language_or_create(request_json['object']['language']['identifier'], request_json['object']['language']['name'])
         reply.language_id = language.id
     reply.edited_at = utcnow()
+
+    if 'attachment' in request_json['object']:
+        attachment_list = []
+        if isinstance(request_json['object']['attachment'], dict):
+            attachment_list.append(request_json['object']['attachment'])
+        elif isinstance(request_json['object']['attachment'], list):
+            attachment_list = request_json['object']['attachment']
+        for attachment in attachment_list:
+            url = alt_text = ''
+            if 'href' in attachment:
+                url = attachment['href']
+            if 'url' in attachment:
+                url = attachment['url']
+            if 'name' in attachment:
+                alt_text = attachment['name']
+            if url:
+                reply.body = reply.body + f"\n\n![{alt_text}]({url})"
+        if attachment_list:
+            reply.body_html = markdown_to_html(reply.body)
 
     # Check for Mentions of local users (that weren't in the original)
     if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
