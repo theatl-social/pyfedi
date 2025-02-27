@@ -26,6 +26,14 @@
             {% include 'feed/_notification_toggle.html' -%}
           {% endif -%}
         </h1>
+        {% if sub_feeds %}
+          <h5 class="mb-0" id="sub-feeds">{{ _('Sub-feeds') }}</h5>
+          <ul id="subfeed_nav" class="nav" role="listbox" aria-labelledby="sub-feeds">
+            {% for sub_feed in sub_feeds %}
+              <li class="nav-item" role="option"><a class="nav-link" href="/f/{{ sub_feed.machine_name }}">{{ sub_feed.title }}</a></li>
+            {% endfor %}
+          </ul>
+        {% endif %}
       {% elif feed.icon_id and not low_bandwidth -%}
         <div class="row mb-3">
           <nav class="mb-3" aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
@@ -46,6 +54,14 @@
                 {% include 'feed/_notification_toggle.html' -%}
               {% endif -%}
             </h1>
+            {% if sub_feeds %}
+              <h5 class="mb-0" id="sub-feeds">{{ _('Sub-feeds') }}</h5>
+              <ul id="subfeed_nav" class="nav" role="listbox" aria-labelledby="sub-feeds">
+              {% for sub_feed in sub_feeds %}
+                <li class="nav-item" role="option"><a class="nav-link" href="/f/{{ sub_feed.machine_name }}">{{ sub_feed.title }}</a></li>
+              {% endfor %}
+              </ul>
+            {% endif %}
           </div>
         </div>
       {% else -%}
