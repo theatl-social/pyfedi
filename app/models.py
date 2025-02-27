@@ -188,6 +188,16 @@ class Conversation(db.Model):
                 retval.append(member.instance)
         return retval
 
+    def last_ap_id(self):
+        for message in self.messages.order_by(desc(ChatMessage.created_at)).limit(50):
+            if message.ap_id:
+                return message.ap_id
+        most_recent_message = self.messages.order_by(desc(ChatMessage.created_at)).first()
+        if most_recent_message and most_recent_message.ap_id:
+            return f"https://{current_app.config['SERVER_NAME']}/private_message/{most_recent_message.id}"
+        else:
+            return ''
+
     @staticmethod
     def find_existing_conversation(recipient, sender):
         sql = """SELECT 
@@ -228,6 +238,8 @@ class ChatMessage(db.Model):
     read = db.Column(db.Boolean, default=False)
     encrypted = db.Column(db.String(15))
     created_at = db.Column(db.DateTime, default=utcnow)
+
+    ap_id = db.Column(db.String(255), index=True, unique=True)
 
     sender = db.relationship('User', foreign_keys=[sender_id])
 

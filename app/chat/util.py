@@ -16,6 +16,8 @@ def send_message(message: str, conversation_id: int) -> ChatMessage:
     conversation.updated_at = utcnow()
     db.session.add(reply)
     db.session.commit()
+    reply.ap_id = f"https://{current_app.config['SERVER_NAME']}/private_message/{reply.id}"
+    db.session.commit()
     for recipient in conversation.members:
         if recipient.id != current_user.id:
             reply.recipient_id = recipient.id
@@ -38,6 +40,7 @@ def send_message(message: str, conversation_id: int) -> ChatMessage:
                         "attributedTo": current_user.public_url(),
                         "content": reply.body_html,
                         "id": f"https://{current_app.config['SERVER_NAME']}/private_message/{reply.id}",
+                        "inReplyTo": conversation.last_ap_id(),
                         "mediaType": "text/html",
                         "published": utcnow().isoformat() + 'Z',  # Lemmy is inconsistent with the date format they use
                         "to": [

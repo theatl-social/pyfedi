@@ -1784,7 +1784,8 @@ def process_chat(user, store_ap_json, core_activity):
             new_message = ChatMessage(sender_id=sender.id, recipient_id=recipient.id, conversation_id=existing_conversation.id,
                                       body_html=core_activity['object']['content'],
                                       body=html_to_text(core_activity['object']['content']),
-                                      encrypted=encrypted)
+                                      encrypted=encrypted,
+                                      ap_id=core_activity['object']['id'])
             db.session.add(new_message)
             existing_conversation.updated_at = utcnow()
             db.session.commit()
