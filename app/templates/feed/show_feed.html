@@ -8,6 +8,47 @@
 {% block app_content %}
 <div class="row">
     <div class="col-12 col-md-8 position-relative main_pane">
+      {% if feed.header_image() != '' and not low_bandwidth -%}
+        <div class="community_header" style="background-image: url({{ feed.header_image() }});">
+          <nav aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
+            <ol class="breadcrumb">
+              <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
+              <li class="breadcrumb-item"><a href="/feeds">{{ _('Feeds') }}</a></li>
+              {% for breadcrumb in breadcrumbs -%}
+                <li class="breadcrumb-item">{% if breadcrumb.url -%}<a href="{{ breadcrumb.url }}">{% endif -%}{{ breadcrumb.text }}{% if breadcrumb.url -%}</a>{% endif -%}</li>
+              {% endfor -%}
+            </ol>
+          </nav>
+        </div>
+        <img class="community_icon_big bump_up rounded-circle" src="{{ feed.icon_image() }}" alt="Feed icon" />
+        <h1 class="mt-2"  aria-live="assertive">{{ feed.title }}
+          {% if current_user.is_authenticated -%}
+            {% include 'feed/_notification_toggle.html' -%}
+          {% endif -%}
+        </h1>
+      {% elif feed.icon_id and not low_bandwidth -%}
+        <div class="row mb-3">
+          <nav class="mb-3" aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
+            <ol class="breadcrumb">
+              <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
+              <li class="breadcrumb-item"><a href="/feeds">{{ _('Feeds') }}</a></li>
+              {% for breadcrumb in breadcrumbs -%}
+                <li class="breadcrumb-item">{% if breadcrumb.url -%}<a href="{{ breadcrumb.url }}">{% endif -%}{{ breadcrumb.text }}{% if breadcrumb.url -%}</a>{% endif -%}</li>
+              {% endfor -%}
+            </ol>
+          </nav>
+          <div class="col-3 col-md-2">
+            <img class="community_icon_big rounded-circle" src="{{ feed.icon_image() }}" alt="Feed icon" />
+          </div>
+          <div class="col-9 col-md-10">
+            <h1 class="mt-3">{{ feed.title }}
+              {% if current_user.is_authenticated -%}
+                {% include 'feed/_notification_toggle.html' -%}
+              {% endif -%}
+            </h1>
+          </div>
+        </div>
+      {% else -%}
         <nav aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
           <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
@@ -30,6 +71,7 @@
         {% endfor %}
         </ul>
         {% endif %}
+      {% endif -%}
         {% include "community/_community_nav.html" %}
         {% if post_layout == 'masonry' or post_layout == 'masonry_wide' %}
              <div class="masonry" id="masonry">
