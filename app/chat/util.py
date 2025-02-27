@@ -16,11 +16,11 @@ def send_message(message: str, conversation_id: int) -> ChatMessage:
     conversation.updated_at = utcnow()
     db.session.add(reply)
     db.session.commit()
-    reply.ap_id = f"https://{current_app.config['SERVER_NAME']}/private_message/{reply.id}"
-    db.session.commit()
     for recipient in conversation.members:
         if recipient.id != current_user.id:
             reply.recipient_id = recipient.id
+            reply.ap_id = f"https://{current_app.config['SERVER_NAME']}/private_message/{reply.id}"
+            db.session.commit()
             if recipient.is_local():
                 # Notify local recipient
                 notify = Notification(title=shorten_string('New message from ' + current_user.display_name()),
@@ -39,8 +39,8 @@ def send_message(message: str, conversation_id: int) -> ChatMessage:
                     "object": {
                         "attributedTo": current_user.public_url(),
                         "content": reply.body_html,
-                        "id": f"https://{current_app.config['SERVER_NAME']}/private_message/{reply.id}",
-                        "inReplyTo": conversation.last_ap_id(),
+                        "id": reply.ap_id,
+                        "inReplyTo": conversation.last_ap_id(recipient.id),
                         "mediaType": "text/html",
                         "published": utcnow().isoformat() + 'Z',  # Lemmy is inconsistent with the date format they use
                         "to": [
