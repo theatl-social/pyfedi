@@ -5,11 +5,11 @@
                 "https://www.w3.org/ns/activitystreams",
                 "https://w3id.org/security/v1"
             ],
-            "actor": "https://server.name/u/username",
-            "id": "https://server.name/activities/follow/4242",
-            "object": "https://server.name/f/feedname",
+            "actor": "https://example.com/u/username",
+            "id": "https://example.com/activities/follow/4242",
+            "object": "https://example.com/f/feedname",
             "to": [
-                "https://server.name/f/feedname"
+                "https://example.com/f/feedname"
             ],
             "type": "Follow"
         },
@@ -17,19 +17,19 @@
             "@context": [
                 "https://www.w3.org/ns/activitystreams"
             ],
-            "actor": "https://server.name/f/feedname",
-            "id": "https://server.name/activities/accept/d3ade180-f641-4d6b-8ae7-ceab824f2b72",
+            "actor": "https://example.com/f/feedname",
+            "id": "https://example.com/activities/accept/d3ade180-f641-4d6b-8ae7-ceab824f2b72",
             "object": {
-                "actor": "https://server.name/u/username",
-                "id": "https://server.name/activities/follow/4242",
-                "object": "https://server.name/f/feedname",
+                "actor": "https://example.com/u/username",
+                "id": "https://example.com/activities/follow/4242",
+                "object": "https://example.com/f/feedname",
                 "to": [
-                    "https://server.name/f/feedname"
+                    "https://example.com/f/feedname"
                 ],
                 "type": "Follow"
             },
             "to": [
-                "https://server.name/u/username"
+                "https://example.com/u/username"
             ],
             "type": "Accept"
         },
@@ -37,19 +37,19 @@
             "@context": [
                 "https://www.w3.org/ns/activitystreams"
             ],
-            "actor": "https://server.name/f/feedname",
-            "id": "https://server.name/activities/reject/d3ade180-f641-4d6b-8ae7-ceab824f2b72",
+            "actor": "https://example.com/f/feedname",
+            "id": "https://example.com/activities/reject/d3ade180-f641-4d6b-8ae7-ceab824f2b72",
             "object": {
-                "actor": "https://server.name/u/username",
-                "id": "https://server.name/activities/follow/4242",
-                "object": "https://server.name/f/feedname",
+                "actor": "https://example.com/u/username",
+                "id": "https://example.com/activities/follow/4242",
+                "object": "https://example.com/f/feedname",
                 "to": [
-                    "https://server.name/f/feedname"
+                    "https://example.com/f/feedname"
                 ],
                 "type": "Follow"
             },
             "to": [
-                "https://server.name/u/username"
+                "https://example.com/u/username"
             ],
             "type": "Reject"
         },
@@ -57,19 +57,19 @@
             "@context": [
                 "https://www.w3.org/ns/activitystreams"
             ],
-            "actor": "https://server.name/f/feedname",
-            "id": "https://server.name/activities/reject/d3ade180-f641-4d6b-8ae7-ceab824f2b72",
+            "actor": "https://example.com/f/feedname",
+            "id": "https://example.com/activities/reject/d3ade180-f641-4d6b-8ae7-ceab824f2b72",
             "object": {
-                "actor": "https://server.name/u/username",
-                "id": "https://server.name/activities/follow/4242",
-                "object": "https://server.name/f/feedname",
+                "actor": "https://example.com/u/username",
+                "id": "https://example.com/activities/follow/4242",
+                "object": "https://example.com/f/feedname",
                 "to": [
-                    "https://server.name/f/feedname"
+                    "https://example.com/f/feedname"
                 ],
                 "type": "Follow"
             },
             "to": [
-                "https://server.name/u/username"
+                "https://example.com/u/username"
             ],
             "type": "Undo"
         }        

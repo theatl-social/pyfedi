@@ -1,0 +1,10 @@
+{
+    "@context": [
+        "https://www.w3.org/ns/activitystreams",
+        "https://w3id.org/security/v1"
+    ],
+    "id": "https://example.com/f/feedname/followers",
+    "items": [],
+    "totalItems": 2,
+    "type": "Collection"
+}
