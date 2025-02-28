@@ -3,11 +3,11 @@
     "https://www.w3.org/ns/activitystreams",
     "https://w3id.org/security/v1"
   ],
-  "id": "https://server.name/f/feedname/following",
+  "id": "https://example.com/f/feedname/following",
   "items": [
-    "https://server.name/c/communityname",
-    "https://server2.name/c/community-two-name"
+    "https://example.com/c/communityname",
+    "https://example2.com/c/community-two-name"
   ],
-  "totalItems": 1,
+  "totalItems": 2,
   "type": "OrderedCollection"
 }

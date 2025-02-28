@@ -188,15 +188,16 @@ class Conversation(db.Model):
                 retval.append(member.instance)
         return retval
 
-    def last_ap_id(self):
-        for message in self.messages.order_by(desc(ChatMessage.created_at)).limit(50):
+    def last_ap_id(self, sender_id):
+        for message in self.messages.filter(ChatMessage.sender_id == sender_id).order_by(desc(ChatMessage.created_at)).limit(50):
             if message.ap_id:
                 return message.ap_id
-        most_recent_message = self.messages.order_by(desc(ChatMessage.created_at)).first()
-        if most_recent_message and most_recent_message.ap_id:
-            return f"https://{current_app.config['SERVER_NAME']}/private_message/{most_recent_message.id}"
-        else:
-            return ''
+        return ''
+        #most_recent_message = self.messages.order_by(desc(ChatMessage.created_at)).first()
+        #if most_recent_message and most_recent_message.ap_id:
+        #    return f"https://{current_app.config['SERVER_NAME']}/private_message/{most_recent_message.id}"
+        #else:
+        #    return ''
 
     @staticmethod
     def find_existing_conversation(recipient, sender):

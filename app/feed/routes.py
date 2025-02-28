@@ -164,6 +164,7 @@ def feed_edit(feed_id: int):
     if edit_feed_form.validate_on_submit():
         feed_to_edit.title = edit_feed_form.feed_name.data
         feed_to_edit.name = edit_feed_form.url.data
+        feed_to_edit.machine_name = edit_feed_form.url.data
         feed_to_edit.description = piefed_markdown_to_lemmy_markdown(edit_feed_form.description.data)
         feed_to_edit.description_html = markdown_to_html(edit_feed_form.description.data)
         feed_to_edit.show_posts_in_children = edit_feed_form.show_child_posts.data
@@ -601,7 +602,7 @@ def show_feed(feed):
             breadcrumb_feed = Feed.query.filter(Feed.machine_name == url_part.strip().lower()).first()
             if breadcrumb_feed:
                 breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
-                breadcrumb.text = breadcrumb_feed.name
+                breadcrumb.text = breadcrumb_feed.title
                 breadcrumb.url = f"{existing_url}/{breadcrumb_feed.machine_name}" if breadcrumb_feed.machine_name != last_feed_machine_name else ''
                 breadcrumbs.append(breadcrumb)
                 existing_url = breadcrumb.url
@@ -609,7 +610,7 @@ def show_feed(feed):
                 abort(404)
     else:
         breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
-        breadcrumb.text = feed.name
+        breadcrumb.text = feed.title
         breadcrumb.url = f"{existing_url}/{feed.machine_name}"
         breadcrumbs.append(breadcrumb)
 
