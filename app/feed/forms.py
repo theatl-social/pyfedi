@@ -19,8 +19,8 @@ class AddCopyFeedForm(FlaskForm):
     banner_file = FileField(_l('Banner image'), render_kw={'accept': 'image/*'})
     nsfw = BooleanField('NSFW')
     nsfl = BooleanField('NSFL')
-    public = BooleanField('Make Feed Public')
-    is_instance_feed = BooleanField('Make Instance Feed')
+    public = BooleanField('Public', default=True)
+    is_instance_feed = BooleanField('Add to main menu')
     submit = SubmitField(_l('Save'))
 
     def validate(self, extra_validators=None):
@@ -51,8 +51,8 @@ class EditFeedForm(FlaskForm):
     banner_file = FileField(_l('Banner image'), render_kw={'accept': 'image/*'})
     nsfw = BooleanField('NSFW')
     nsfl = BooleanField('NSFL')
-    public = BooleanField('Make Feed Public')
-    is_instance_feed = BooleanField('Make Instance Feed')
+    public = BooleanField('Public')
+    is_instance_feed = BooleanField('Add to main menu')
     submit = SubmitField(_l('Save'))
 
 
