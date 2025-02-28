@@ -214,6 +214,7 @@ def feed_edit(feed_id: int):
     edit_feed_form.description.data = feed_to_edit.description
     edit_feed_form.communities.data = feed_communities_for_edit(feed_to_edit.id)
     edit_feed_form.show_child_posts.data = feed_to_edit.show_posts_in_children
+    edit_feed_form.parent_feed_id.data = feed_to_edit.parent_feed_id
     if g.site.enable_nsfw is False:
         edit_feed_form.nsfw.render_kw = {'disabled': True}
     else:

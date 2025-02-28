@@ -14,7 +14,7 @@ from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_ARTICLE, PO
 from app.models import Site
 from app.utils import getmtime, gibberish, shorten_string, shorten_url, digits, user_access, community_membership, \
     can_create_post, can_upvote, can_downvote, shorten_number, ap_datetime, current_theme, community_link_to_href, \
-    in_sorted_list, role_access, first_paragraph, person_link_to_href
+    in_sorted_list, role_access, first_paragraph, person_link_to_href, feed_membership
 
 app = create_app()
 cli.register(app)
@@ -41,6 +41,7 @@ with app.app_context():
     app.jinja_env.globals['str'] = str
     app.jinja_env.globals['shorten_number'] = shorten_number
     app.jinja_env.globals['community_membership'] = community_membership
+    app.jinja_env.globals['feed_membership'] = feed_membership
     app.jinja_env.globals['json_loads'] = json.loads
     app.jinja_env.globals['user_access'] = user_access
     app.jinja_env.globals['role_access'] = role_access

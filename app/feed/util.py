@@ -18,7 +18,7 @@ def feeds_for_form(current_feed: int, user_id: int) -> List[Tuple[int, str]]:
     feeds = feed_tree(user_id)
     for feed in feeds:
         if feed['feed'].id != current_feed:
-            result.append((feed['feed'].id, feed['feed'].name))
+            result.append((feed['feed'].id, feed['feed'].title))
         if feed['children']:
             result.extend(feeds_for_form_children(feed['children'], current_feed, 1))
     return result
