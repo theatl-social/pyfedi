@@ -714,7 +714,6 @@ def show_feed(feed):
                                POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
                                POST_TYPE_VIDEO=POST_TYPE_VIDEO,
                                SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                               feed_membership=feed_membership
                                )
     else:
         abort(404)
