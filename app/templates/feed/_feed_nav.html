@@ -1,0 +1,57 @@
+{% if feed %}
+    {% if current_user.is_authenticated %}
+        <div class="mobile_create_post d-md-none mt-1">
+            <div class="dropdown">
+                <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    {{ _('Actions') }}
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{{ url_for('feed.feed_create_post', feed_name=feed.machine_name) }}">{{ _('Create post') }}</a></li>
+                    <!-- <li><a class="dropdown-item" href="#search_community">{{ _('Search') }}</a></li> -->
+                    <!-- <li><a class="dropdown-item" href="#about_community">{{ _('About community') }}</a></li> -->
+                    <div class="dropdown-divider"></div>
+                    {% if current_user.is_authenticated and feed_membership(current_user, feed) in [SUBSCRIPTION_MEMBER] and current_user.id != feed.user_id -%}
+                        <li><a class="dropdown-item" href="/feed/{{ feed.link() }}/unsubscribe" rel="nofollow">{{ _('Leave') }}</a></li>
+                        <div class="dropdown-divider"></div>
+                        <li><a class="dropdown-item" href="/feed/{{ feed.id }}/copy" rel="nofollow">{{ _('Copy') }}</a></li>
+                    {% elif current_user.is_authenticated and feed_membership(current_user, feed) == SUBSCRIPTION_PENDING and current_user.id != feed.user_id -%}
+                        <li><a class="dropdown-item" href="/feed/{{ feed.link() }}/unsubscribe" rel="nofollow">{{ _('Pending') }}</a></li>
+                    {% elif current_user.is_authenticated and current_user.id == feed.user_id -%}
+                        <li><a class="dropdown-item" href="{{ url_for('feed.feed_edit', feed_id=feed.id) }}">{{ _('Settings') }}</a></li>
+                    {% else -%}
+                        <li><a class="dropdown-item" href="/feed/{{ feed.link() }}/subscribe" rel="nofollow">{{ _('Subscribe') }}</a></li>
+                        <div class="dropdown-divider"></div>
+                        <li><a class="dropdown-item" href="/feed/{{ feed.id }}/copy" rel="nofollow">{{ _('Copy') }}</a></li>
+                    {% endif -%}
+                </ul>
+            </div>
+        </div>
+    {% endif %}
+{% endif %}
+<div class="btn-group mt-1 mb-2">
+    <a href="?sort=hot&layout={{ post_layout }}" aria-label="{{ _('Sort by hot') }}" class="btn {{ 'btn-primary' if sort == '' or sort == 'hot' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+        {{ _('Hot') }}
+    </a>
+    <a href="?sort=top&layout={{ post_layout }}" aria-label="{{ _('Sort by top') }}" class="btn {{ 'btn-primary' if sort == 'top' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+        {{ _('Top') }}
+    </a>
+    <a href="?sort=new&layout={{ post_layout }}" aria-label="{{ _('Sort by new') }}" class="btn {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+        {{ _('New') }}
+    </a>
+    <a href="?sort=active&layout={{ post_layout }}" aria-label="{{ _('Sort by active') }}" class="btn {{ 'btn-primary' if sort == 'active' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+        {{ _('Active') }}
+    </a>
+</div>
+{% if post_layout != '' and post_layout is not none %}
+<div class="btn-group mt-1 mb-2 layout_switcher">
+    <a href="?layout=list&sort={{ sort }}" class="btn {{ 'btn-primary' if post_layout == '' or post_layout == 'list' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+        {{ _('List') }}
+    </a>
+    <a href="?layout=masonry&sort={{ sort }}" class="btn {{ 'btn-primary' if post_layout == 'masonry' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+        {{ _('Tile') }}
+    </a>
+    <a href="?layout=masonry_wide&sort={{ sort }}" class="btn {{ 'btn-primary' if post_layout == 'masonry_wide' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+        {{ _('Wide tile') }}
+    </a>
+</div>
+{% endif %}
