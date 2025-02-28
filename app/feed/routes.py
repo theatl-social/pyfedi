@@ -583,7 +583,7 @@ def show_feed(feed):
             ...
         else:
             flash(_('Could not find that feed or it is not public. Try one of these instead...'))
-            return redirect(url_for('main.public_feeds'))
+            return redirect(url_for('main.list_feeds'))
 
     page = request.args.get('page', 1, type=int)
     sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)
