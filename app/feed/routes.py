@@ -714,6 +714,7 @@ def show_feed(feed):
                                POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
                                POST_TYPE_VIDEO=POST_TYPE_VIDEO,
                                SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
+                               feed_membership=feed_membership
                                )
     else:
         abort(404)
@@ -743,8 +744,8 @@ def feed_create_post(feed_name):
     communities = Community.query.filter(Community.id.in_(feed_community_ids)).filter_by(banned=False).order_by(Community.title).all()
     sub_feed_community_ids = []
     child_feeds = [feed.id for feed in Feed.query.filter(Feed.parent_feed_id == feed.id).all()]
-    for cf in child_feeds:
-        feed_items = FeedItem.query.join(Feed, FeedItem.feed_id == cf.id).all()
+    for cf_id in child_feeds:
+        feed_items = FeedItem.query.join(Feed, FeedItem.feed_id == cf_id).all()
         for item in feed_items:
             sub_feed_community_ids.append(item.community_id)
 
