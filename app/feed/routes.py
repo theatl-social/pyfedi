@@ -601,7 +601,7 @@ def show_feed(feed):
             breadcrumb_feed = Feed.query.filter(Feed.machine_name == url_part.strip().lower()).first()
             if breadcrumb_feed:
                 breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
-                breadcrumb.text = breadcrumb_feed.name
+                breadcrumb.text = breadcrumb_feed.title
                 breadcrumb.url = f"{existing_url}/{breadcrumb_feed.machine_name}" if breadcrumb_feed.machine_name != last_feed_machine_name else ''
                 breadcrumbs.append(breadcrumb)
                 existing_url = breadcrumb.url
@@ -609,7 +609,7 @@ def show_feed(feed):
                 abort(404)
     else:
         breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
-        breadcrumb.text = feed.name
+        breadcrumb.text = feed.title
         breadcrumb.url = f"{existing_url}/{feed.machine_name}"
         breadcrumbs.append(breadcrumb)
 
