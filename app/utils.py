@@ -1039,6 +1039,20 @@ def feed_tree(user_id) -> List[dict]:
     return [feed for feed in feeds_dict.values() if feed['feed'].parent_feed_id is None]
 
 
+def feed_tree_public() -> List[dict]:
+    feeds = Feed.query.filter(Feed.public == True).order_by(Feed.name)
+
+    feeds_dict = {feed.id: {'feed': feed, 'children': []} for feed in feeds.all()}
+
+    for feed in feeds:
+        if feed.parent_feed_id is not None:
+            parent_comment = feeds_dict.get(feed.parent_feed_id)
+            if parent_comment:
+                parent_comment['children'].append(feeds_dict[feed.id])
+
+    return [feed for feed in feeds_dict.values() if feed['feed'].parent_feed_id is None]
+
+
 def opengraph_parse(url):
     if '?' in url:
         url = url.split('?')
