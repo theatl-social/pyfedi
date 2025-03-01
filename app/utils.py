@@ -1040,7 +1040,7 @@ def feed_tree(user_id) -> List[dict]:
 
 
 def feed_tree_public() -> List[dict]:
-    feeds = Feed.query.filter(Feed.public == True).order_by(Feed.name)
+    feeds = Feed.query.filter(Feed.public == True).order_by(Feed.title)
 
     feeds_dict = {feed.id: {'feed': feed, 'children': []} for feed in feeds.all()}
 

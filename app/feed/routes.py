@@ -92,7 +92,7 @@ def feed_new():
             _feed_add_community(added_community, 0, feed.id, current_user.id)
 
         flash(_('Your new Feed has been created.'))
-        return redirect(url_for('feed.feed_edit', feed_id=feed.id, next='/u/myfeeds'))
+        return redirect(url_for('user.user_myfeeds'))
 
     # Create Feed from a topic
     if request.args.get('topic_id'):
