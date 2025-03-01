@@ -364,7 +364,7 @@ def feed_copy(feed_id: int):
                 from app.community.routes import do_subscribe
                 community = Community.query.get(item.community_id)
                 actor = community.ap_id if community.ap_id else community.name
-                do_subscribe(actor, current_user.id)
+                do_subscribe(actor, current_user.id, joined_via_feed=True)
 
         feed.num_communities = len(old_feed_items)
         db.session.add(feed)
@@ -494,7 +494,7 @@ def _feed_add_community(community_id: int, current_feed_id: int, feed_id: int, u
         from app.community.routes import do_subscribe
         community = Community.query.get(community_id)
         actor = community.ap_id if community.ap_id else community.name
-        do_subscribe(actor, user_id)
+        do_subscribe(actor, user_id, joined_via_feed=True)
 
 
 @bp.route('/feed/remove_community', methods=['GET'])
@@ -813,7 +813,10 @@ def do_feed_subscribe(actor, user_id):
             for fi in feed_items:
                 community = Community.query.get(fi.community_id)
                 actor = community.ap_id if community.ap_id else community.name
-                do_subscribe(actor, user.id)
+                if current_app.debug:
+                    do_subscribe(actor, user.id, joined_via_feed=True)
+                else:
+                    do_subscribe.delay(actor, user.id, joined_via_feed=True)
  
             # feed is remote
             if remote:
@@ -842,7 +845,7 @@ def do_feed_subscribe(actor, user_id):
                         community = find_actor_or_create(community_ap_id, community_only=True)
                         if community and isinstance(community, Community):
                             actor = community.ap_id if community.ap_id else community.name
-                            do_subscribe(actor, user.id)
+                            do_subscribe(actor, user.id, joined_via_feed=True)
                             # also make a feeditem in the local db
                             feed_item = FeedItem(feed_id=feed.id, community_id=community.id)
                             db.session.add(feed_item)
@@ -980,7 +983,7 @@ def announce_feed_add_remove_to_subscribers(action: str, feed_id: int, community
             # user is local so lets auto-subscribe them to the community
             from app.community.routes import do_subscribe
             actor = community.ap_id if community.ap_id else community.name
-            do_subscribe(actor, fm_user.id)
+            do_subscribe(actor, fm_user.id, joined_via_feed=True)
             continue
 
         # if we get here the feedmember is a remote user

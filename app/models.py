@@ -2067,6 +2067,7 @@ class CommunityMember(db.Model):
     is_owner = db.Column(db.Boolean, default=False)
     is_banned = db.Column(db.Boolean, default=False, index=True)
     notify_new_posts = db.Column(db.Boolean, default=False)
+    joined_via_feed = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=utcnow)
 
 

@@ -16,7 +16,8 @@ from sqlalchemy import or_, desc, text
 
 from app import db, constants, cache, celery
 from app.activitypub.signature import RsaKeys, post_request, default_context, post_request_in_background
-from app.activitypub.util import notify_about_post, make_image_sizes, resolve_remote_post, extract_domain_and_actor
+from app.activitypub.util import notify_about_post, make_image_sizes, resolve_remote_post, extract_domain_and_actor, \
+    find_actor_or_create
 from app.chat.util import send_message
 from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, CreateImageForm, CreateLinkForm, \
     ReportCommunityForm, \
@@ -419,13 +420,17 @@ def subscribe(actor):
 # this is separated out from the subscribe route so it can be used by the 
 # admin.admin_federation.preload_form as well
 @celery.task
-def do_subscribe(actor, user_id, admin_preload=False):
+def do_subscribe(actor, user_id, admin_preload=False, joined_via_feed=False):
     remote = False
     actor = actor.strip()
     user = User.query.get(user_id)
     pre_load_message = {}
     if '@' in actor:
-        community = Community.query.filter_by(banned=False, ap_id=actor).first()
+        community = Community.query.filter_by(ap_id=actor).first()
+        if community is None:
+            community = search_for_community(f'!{actor}' if '!' not in actor else actor)
+        if community.banned:
+            community = None
         remote = True
     else:
         community = Community.query.filter_by(name=actor, banned=False, ap_id=None).first()
@@ -447,7 +452,7 @@ def do_subscribe(actor, user_id, admin_preload=False):
                     pre_load_message['community_banned_by_local_instance'] = True
             success = True
             # for local communities, joining is instant
-            member = CommunityMember(user_id=user.id, community_id=community.id)
+            member = CommunityMember(user_id=user.id, community_id=community.id, joined_via_feed=joined_via_feed)
             db.session.add(member)
             community.subscriptions_count += 1
             db.session.commit()
@@ -493,7 +498,7 @@ def do_subscribe(actor, user_id, admin_preload=False):
                     pre_load_message['status'] = 'joined'
         else:
             if admin_preload:
-                pre_load_message['status'] = 'already subscribed, or subsciption pending'
+                pre_load_message['status'] = 'already subscribed, or subscription pending'
 
         cache.delete_memoized(community_membership, user, community)
         cache.delete_memoized(joined_communities, user.id)

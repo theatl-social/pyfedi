@@ -1094,7 +1094,7 @@ def process_inbox_request(request_json, store_ap_json):
                             # user is local so lets auto-subscribe them to the community
                             from app.community.routes import do_subscribe
                             actor = community_to_add.ap_id if community_to_add.ap_id else community_to_add.name
-                            do_subscribe(actor, fm_user.id)
+                            do_subscribe(actor, fm_user.id, joined_via_feed=True)
                 else:
                     log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json, "Cannot find Feed.")
             elif community:
