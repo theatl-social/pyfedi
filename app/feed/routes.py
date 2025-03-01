@@ -18,7 +18,7 @@ from app.feed.util import feeds_for_form, search_for_feed, actor_to_feed, feed_c
     existing_communities, form_communities_to_ids
 from app.inoculation import inoculation
 from app.models import Feed, FeedMember, FeedItem, Post, Community, read_posts, utcnow, NotificationSubscription, \
-    CommunityMember, User, FeedJoinRequest, Instance
+    CommunityMember, User, FeedJoinRequest, Instance, Topic
 from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markdown_to_html, render_template, \
     user_filters_posts, \
     blocked_domains, blocked_instances, blocked_communities, blocked_users, communities_banned_from, \
@@ -30,10 +30,6 @@ from collections import namedtuple
 from sqlalchemy import desc, or_, text
 from slugify import slugify
 
-
-
-
-# ----- functions -----
 
 @bp.route('/feed/new', methods=['GET', 'POST'])
 @login_required
@@ -90,8 +86,23 @@ def feed_new():
         db.session.add(membership)
         db.session.commit()
 
-        flash(_('Your new Feed has been created. Add communities in the new communities box, below.'))
+        new_communities = form_communities_to_ids(form.communities.data)  # the communities that are in the feed now
+
+        for added_community in new_communities:
+            _feed_add_community(added_community, 0, feed.id, current_user.id)
+
+        flash(_('Your new Feed has been created.'))
         return redirect(url_for('feed.feed_edit', feed_id=feed.id, next='/u/myfeeds'))
+
+    # Create Feed from a topic
+    if request.args.get('topic_id'):
+        topic = Topic.query.get(request.args.get('topic_id'))
+        community_apids = []
+        for community in topic.communities:
+            community_apids.append(community.lemmy_link().replace('!', ''))
+        form.feed_name.data = topic.name
+        form.url.data = topic.machine_name
+        form.communities.data = '\n'.join(community_apids)
 
     return render_template('feed/feed_new.html', title=_('Create a Feed'), form=form,
                            current_app=current_app, menu_topics=menu_topics(), menu_instance_feeds=menu_instance_feeds(), 
