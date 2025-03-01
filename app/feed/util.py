@@ -28,7 +28,7 @@ def feeds_for_form_children(feeds, current_feed: int, depth: int) -> List[Tuple[
     result = []
     for feed in feeds:
         if feed['feed'].id != current_feed:
-            result.append((feed['feed'].id, '--' * depth + ' ' + feed['feed'].name))
+            result.append((feed['feed'].id, '--' * depth + ' ' + feed['feed'].title))
         if feed['children']:
             result.extend(feeds_for_form_children(feed['children'], current_feed, depth + 1))
     return result

@@ -30,6 +30,20 @@
         {% endfor %}
         </ul>
         {% endif %}
+
+        <div class="mobile_create_post d-md-none mt-1">
+            <div class="dropdown">
+                <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    {{ _('Actions') }}
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{{ url_for('topic.topic_create_post', topic_name=topic.machine_name) }}" rel="nofollow noindex">{{ _('Create post') }}</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('feed.feed_new', topic_id=topic.id) }}" rel="nofollow noindex">{{ _('Create feed') }}</a></li>
+                    <li><a class="dropdown-item" href="#topic_communities">{{ _('Communities') }}</a></li>
+                </ul>
+            </div>
+        </div>
+
         {% include "community/_community_nav.html" %}
         {% if post_layout == 'masonry' or post_layout == 'masonry_wide' %}
              <div class="masonry" id="masonry">
@@ -84,7 +98,7 @@
             </div>
         </div>
         {% if topic_communities %}
-        <div class="card mt-3">
+        <div id="topic_communities" class="card mt-3">
             <div class="card-header">
                  <h2>{{ _('Topic communities') }}</h2>
             </div>
