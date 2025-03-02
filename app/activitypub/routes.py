@@ -713,12 +713,16 @@ def process_inbox_request(request_json, store_ap_json):
 
             # handle Feed Announce/Add or Announce/Remove
             if request_json['object']['type'] == 'Add':
-                if request_json['object']['object']['type'] == 'Group' and request_json['object']['target']['id'].endswith('/following'):
+                if request_json['object']['object']['type'] == 'Group' \
+                        and isinstance(request_json['object']['target'], dict) \
+                        and request_json['object']['target']['id'].endswith('/following'):
                     announced = True
                     core_activity = request_json['object']
                     user = None
             elif request_json['object']['type'] == 'Remove':
-                if request_json['object']['object']['type'] == 'Group' and request_json['object']['target']['id'].endswith('/following'):
+                if request_json['object']['object']['type'] == 'Group' \
+                        and isinstance(request_json['object']['target'], dict) \
+                        and request_json['object']['target']['id'].endswith('/following'):
                     announced = True
                     core_activity = request_json['object']
                     user = None
