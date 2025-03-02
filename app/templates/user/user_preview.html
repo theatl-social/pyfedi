@@ -2,11 +2,13 @@
     <div class="card-body">
         <div class="row">
             {% if user.avatar_id -%}
-                <div class="col-6 preview_avatar_image">
-                    <img src="{{ user.avatar_image() }}" alt="" loading="lazy" />
-                </div>
-            {% endif -%}
+            <div class="col-6 preview_avatar_image">
+                <img src="{{ user.avatar_image() }}" alt="" loading="lazy" />
+            </div>
             <div class="col-6">
+            {% else -%}
+            <div class="col">
+            {% endif -%}
                 <h4 class="mb-0"><a href="/u/{{ user.link() }}">{{ user.display_name() }}</a></h4>
                 <p>{{ _('Instance') }}: <a href="{{ url_for('instance.instance_overview', instance_domain=user.instance_domain()) }}">{{ user.instance_domain() }}</a><br>
                 {% if user.is_instance_admin() or (user.is_local() and user.is_admin()) %}<span class="red">({{ _('Admin') }})</span><br>{% endif %}
