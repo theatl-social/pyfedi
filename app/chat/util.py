@@ -53,6 +53,14 @@ def send_message(message: str, conversation_id: int) -> ChatMessage:
                     ],
                     "type": "Create"
                 }
+                if recipient.instance.software != "lemmy" and recipient.instance.software != "piefed":
+                    reply_json['object']['tag'] = [
+                      {
+                        "href": recipient.public_url(),
+                        "name": f"@{recipient.ap_id}" if not recipient.is_local() else f"@{recipient.user_name}@{current_app.config['SERVER_NAME']}",
+                        "type": "Mention"
+                      }
+                    ]
                 success = post_request(recipient.ap_inbox_url, reply_json, current_user.private_key,
                                        current_user.public_url() + '#main-key')
                 if success is False or isinstance(success, str):
