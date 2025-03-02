@@ -124,8 +124,10 @@ def webfinger():
 def nodeinfo():
     nodeinfo_data = {"links": [{"rel": "http://nodeinfo.diaspora.software/ns/schema/2.0",
                                 "href": f"https://{current_app.config['SERVER_NAME']}/nodeinfo/2.0"},
-                                {"rel": "https://www.w3.org/ns/activitystreams#Application",
-                                 "href": f"https://{current_app.config['SERVER_NAME']}"}]}
+                               {"rel": "http://nodeinfo.diaspora.software/ns/schema/2.1",
+                                "href": f"https://{current_app.config['SERVER_NAME']}/nodeinfo/2.1"},
+                               {"rel": "https://www.w3.org/ns/activitystreams#Application",
+                                "href": f"https://{current_app.config['SERVER_NAME']}"}]}
     return jsonify(nodeinfo_data)
 
 
