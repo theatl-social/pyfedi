@@ -1,4 +1,4 @@
-<aside id="side_pane" class="col-12 col-md-4 side_pane" role="complementary">
+<aside id="side_pane" class="col-12 {{ 'col-md-2' if post_layout == 'masonry_wide' else 'col-md-4' }} side_pane" role="complementary">
 {% if community %}
     {% block community_actions %}
         <div class="card">
@@ -102,20 +102,6 @@
             </div>
         </div>
         {% endif -%}
-    {% endblock %}
-    {% block feed_settings %}
-        {% if user_has_feeds %}
-        <div class="card mt-3">
-            <div class="card-header">
-                 <h2>{{ _('Feed') }}</h2>
-            </div>
-            <div class="card-body">
-                <a class="form-conrol form-select" data-bs-toggle="dropdown">{{ current_feed_title }}</a>
-                    <ul class="dropdown-menu" hx-get="/feed/list?user_id={{ current_user.id }}&community_id={{ community.id }}&current_feed_id={{ current_feed_id }}" hx-trigger="load" hx-swap="innerHtml">
-                    </ul>
-            </div>
-        </div>
-        {% endif %}
     {% endblock %}
 {% endif %}
 
