@@ -1376,6 +1376,8 @@ def actor_contains_blocked_words(actor):
 
 
 def actor_profile_contains_blocked_words(user: User) -> bool:
+    if user is None:
+        return False
     blocked_words = get_setting('actor_bio_blocked_words')
     if blocked_words and blocked_words.strip() != '':
         for blocked_word in blocked_words.split('\n'):
