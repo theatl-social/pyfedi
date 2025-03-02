@@ -43,5 +43,8 @@ Disallow: /
 User-agent: barkrowler
 Disallow: /
 
+User-agent: Barkrowler
+Disallow: /
+
 User-Agent: ImagesiftBot
 Crawl-delay: 5
