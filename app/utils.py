@@ -355,9 +355,12 @@ def allowlist_html(html: str, a_target='_blank') -> str:
 # ' \\n' will create <br /><br /> instead of just <br />, but hopefully that's acceptable.
 def markdown_to_html(markdown_text, anchors_new_tab=True) -> str:
     if markdown_text:
-        raw_html = markdown2.markdown(markdown_text,
-                    extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True,
-                            'breaks': {'on_newline': True, 'on_backslash': True}, 'tag-friendly': True})
+        try:
+            raw_html = markdown2.markdown(markdown_text,
+                        extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True,
+                                'breaks': {'on_newline': True, 'on_backslash': True}, 'tag-friendly': True})
+        except TypeError:
+            raw_html = ''   # ignore really weird markdown, like https://mander.xyz/u/tty1
         return allowlist_html(raw_html, a_target='_blank' if anchors_new_tab else '')
     else:
         return ''
