@@ -418,7 +418,7 @@ def subscribe(actor):
 
 
 # this is separated out from the subscribe route so it can be used by the 
-# admin.admin_federation.preload_form as well
+# admin.admin_federation.preload_form and feed subscription process as well
 @celery.task
 def do_subscribe(actor, user_id, admin_preload=False, joined_via_feed=False):
     remote = False
@@ -446,7 +446,7 @@ def do_subscribe(actor, user_id, admin_preload=False, joined_via_feed=False):
             banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
             if banned:
                 if not admin_preload:
-                    if current_user.id == user_id:
+                    if current_user and current_user.id == user_id:
                         flash(_('You cannot join this community'))
                 else:
                     pre_load_message['community_banned_by_local_instance'] = True
@@ -478,21 +478,21 @@ def do_subscribe(actor, user_id, admin_preload=False, joined_via_feed=False):
                     if 'is not in allowlist' in success:
                         msg_to_user = f'{community.instance.domain} does not allow us to join their communities.'
                         if not admin_preload:
-                            if current_user.is_authenticated and current_user.id == user_id:
+                            if current_user and current_user.is_authenticated and current_user.id == user_id:
                                 flash(_(msg_to_user), 'error')
                         else:
                             pre_load_message['status'] = msg_to_user
                     else:
                         msg_to_user = "There was a problem while trying to communicate with remote server. If other people have already joined this community it won't matter."
                         if not admin_preload:
-                            if current_user.is_authenticated and current_user.id == user_id:
+                            if current_user and current_user.is_authenticated and current_user.id == user_id:
                                 flash(_(msg_to_user), 'error')
                         else:
                             pre_load_message['status'] = msg_to_user
 
             if success is True:
                 if not admin_preload:
-                    if current_user.is_authenticated and current_user.id == user_id:
+                    if current_user and current_user.is_authenticated and current_user.id == user_id:
                         flash('You joined ' + community.title)
                 else:
                     pre_load_message['status'] = 'joined'
