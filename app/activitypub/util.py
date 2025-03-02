@@ -35,7 +35,7 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     notification_subscribers, communities_banned_from, actor_contains_blocked_words, \
     html_to_text, add_to_modlog_activitypub, joined_communities, \
     moderating_communities, get_task_session, is_video_hosting_site, opengraph_parse, instance_banned, \
-    mastodon_extra_field_link, blocked_users, piefed_markdown_to_lemmy_markdown
+    mastodon_extra_field_link, blocked_users, piefed_markdown_to_lemmy_markdown, actor_profile_contains_blocked_words
 
 from sqlalchemy import or_
 
@@ -287,7 +287,7 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
             return None
         # see if the actor is a remote user we know
         user = User.query.filter(User.ap_profile_id == actor).first()  # finds users formatted like https://kbin.social/u/tables
-        if (user and user.banned) or (user and user.deleted) :
+        if (user and user.banned) or (user and user.deleted) or actor_profile_contains_blocked_words(user):
             return None
         # actor is not a remote user, see if its a remote community or feed
         if user is None:

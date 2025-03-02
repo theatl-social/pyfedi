@@ -1375,6 +1375,16 @@ def actor_contains_blocked_words(actor):
     return False
 
 
+def actor_profile_contains_blocked_words(user: User) -> bool:
+    blocked_words = get_setting('actor_blocked_words')
+    if blocked_words and blocked_words.strip() != '':
+        for blocked_word in blocked_words.split('\n'):
+            blocked_word = blocked_word.lower().strip()
+            if user.about_html and blocked_word in user.about_html:
+                return True
+    return False
+
+
 def add_to_modlog(action: str, community_id: int = None, reason: str = '', link: str = '', link_text: str = ''):
     """ Adds a new entry to the Moderation Log """
     if action not in ModLog.action_map.keys():
