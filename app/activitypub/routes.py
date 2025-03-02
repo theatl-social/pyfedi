@@ -1935,7 +1935,7 @@ def feed_following(actor):
     items = []
     for fi in feed_items:
         c = Community.query.get(fi.community_id)
-        items.append(c.ap_public_url)
+        items.append(c.public_url())
     result = {
         "@context": default_context(),
         "id": feed.ap_following_url,
