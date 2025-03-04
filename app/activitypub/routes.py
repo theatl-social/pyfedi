@@ -855,11 +855,12 @@ def process_inbox_request(request_json, store_ap_json):
             if not user:
                 log_incoming_ap(id, APLOG_ACCEPT, APLOG_FAILURE, saved_json, 'Could not find recipient of Accept')
                 return
-            # check if the Accept is for a community follow
-            if current_app.config['SERVER_NAME'] + '/c/' in core_activity['object']['object']:
-                join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
+            if isinstance(core_activity['object'], str):  #a.gup.pe has something like "https://piefed.social/activities/follow/84532" in here
+                follow_id_parts = core_activity['object'].split('/')
+                join_request = CommunityJoinRequest.query.get(int(follow_id_parts[-1]))
                 if join_request:
-                    existing_membership = CommunityMember.query.filter_by(user_id=join_request.user_id, community_id=join_request.community_id).first()
+                    existing_membership = CommunityMember.query.filter_by(user_id=join_request.user_id,
+                                                                          community_id=join_request.community_id).first()
                     if not existing_membership:
                         member = CommunityMember(user_id=join_request.user_id, community_id=join_request.community_id)
                         db.session.add(member)
@@ -868,18 +869,32 @@ def process_inbox_request(request_json, store_ap_json):
                         db.session.commit()
                         cache.delete_memoized(community_membership, user, community)
                     log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json)
-            # check if the Accept is for a feed follow
-            elif current_app.config['SERVER_NAME'] + '/f/' in core_activity['object']['object']:
-                join_request = FeedJoinRequest.query.filter_by(user_id=user.id, feed_id=feed.id).first()
-                if join_request:
-                    existing_membership = FeedMember.query.filter_by(user_id=join_request.user_id, feed_id=join_request.feed_id).first()
-                    if not existing_membership:
-                        member = FeedMember(user_id=join_request.user_id, feed_id=join_request.feed_id)
-                        db.session.add(member)
-                        feed.subscriptions_count += 1
-                        db.session.commit()
-                        cache.delete_memoized(feed_membership, user, feed)
-                    log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json)
+            else:
+                # check if the Accept is for a community follow
+                if current_app.config['SERVER_NAME'] + '/c/' in core_activity['object']['object']:
+                    join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
+                    if join_request:
+                        existing_membership = CommunityMember.query.filter_by(user_id=join_request.user_id, community_id=join_request.community_id).first()
+                        if not existing_membership:
+                            member = CommunityMember(user_id=join_request.user_id, community_id=join_request.community_id)
+                            db.session.add(member)
+                            community.subscriptions_count += 1
+                            community.last_active = utcnow()
+                            db.session.commit()
+                            cache.delete_memoized(community_membership, user, community)
+                        log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json)
+                # check if the Accept is for a feed follow
+                elif current_app.config['SERVER_NAME'] + '/f/' in core_activity['object']['object']:
+                    join_request = FeedJoinRequest.query.filter_by(user_id=user.id, feed_id=feed.id).first()
+                    if join_request:
+                        existing_membership = FeedMember.query.filter_by(user_id=join_request.user_id, feed_id=join_request.feed_id).first()
+                        if not existing_membership:
+                            member = FeedMember(user_id=join_request.user_id, feed_id=join_request.feed_id)
+                            db.session.add(member)
+                            feed.subscriptions_count += 1
+                            db.session.commit()
+                            cache.delete_memoized(feed_membership, user, feed)
+                        log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json)
             return
 
         # Reject: remote server is rejecting our previous follow request
