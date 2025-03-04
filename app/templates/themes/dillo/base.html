@@ -1,0 +1,309 @@
+{% macro render_username(user, add_domain=True, htmx_redirect_back_to=None) -%}
+<div class="render_username">
+    {% if user.deleted -%}
+        {% if current_user.is_authenticated and current_user.is_admin() -%}
+            <a href="/u/{{ user.link() }}" title="{{ user.ap_id if user.ap_id != none else user.user_name }}" aria-label="{{ _('Author') }}">[deleted]</a>
+        {% else -%}
+            [deleted]
+        {% endif -%}
+    {% else -%}
+        <a href="/u/{{ user.link() }}" aria-label="{{ _('Author') }}" class="author_link" title="" rel="author">
+            {% if user.avatar_id and not low_bandwidth and not collapsed -%}
+                <img src="{{ user.avatar_thumbnail() }}" alt="" loading="lazy" />
+            {% endif -%}
+            {{ user.display_name() }}{% if add_domain and not user.is_local() %}<span class="text-muted">@{{ user.ap_domain }}</span>{% endif %}
+        </a>
+        <div class="d-none user_preview" id="preview_{{ user.id }}"
+            {% if htmx_redirect_back_to -%}
+                hx-get="{{ url_for('user.user_preview', user_id=user.id, return_to=htmx_redirect_back_to) }}"
+            {% else %}
+                hx-get="{{ url_for('user.user_preview', user_id=user.id) }}"
+            {% endif %}
+            hx-trigger="intersect once"
+            hx-target="this"
+            hx-swap="innerHTML"
+        ></div>
+        {% if user.created_recently() -%}
+            <span class="fe fe-new-account" title="New account"> </span>
+        {% endif -%}
+        {% if user.bot -%}
+            <span class="fe fe-bot-account" title="Bot account"> </span>
+        {% endif -%}
+        {% if user.id != current_user.id -%}
+            {% if user.reputation < -10 -%}
+                <span class="fe fe-warning red" title="Very low reputation. Beware."> </span>
+                <span class="fe fe-warning red" title="Very low reputation. Beware!"> </span>
+            {% elif user.reputation < 0 -%}
+                <span class="fe fe-warning orangered" title="Low reputation."> </span>
+            {% endif -%}
+        {% endif -%}
+        {% if current_user.is_authenticated -%}
+            {% set user_note = user.get_note(current_user) %}
+            {% if user_note -%}
+                <span class="user_note" title="{{ _('User note: %(note)s', note=user_note) }}">[{{ user_note | truncate(12, True) }}]</span>
+            {% endif -%}
+        {% endif -%}
+    {% endif -%}
+</div>
+{% endmacro -%}
+{% macro render_communityname(community, add_domain=True) -%}
+    <span class="render_community">
+        <a href="/c/{{ community.link() }}" aria-label="{{ _('Go to community %(name)s', name=community.name) }}">
+            {% if community.icon_id and not low_bandwidth and not collapsed -%}
+                <img src="{{ community.icon_image('tiny') }}" class="community_icon rounded-circle" alt="" loading="lazy" />
+            {% endif -%}
+            {{ community.title }}{% if add_domain and not community.is_local() %}<span class="text-muted">@{{ community.ap_domain }}</span>{% endif %}
+        </a>
+    </span>
+{% endmacro -%}
+{% macro render_feedname(feed, add_domain=True) -%}
+    <span class="render_community">
+        <a href="/f/{{ feed.link() }}" aria-label="{{ _('Go to feed %(name)s', name=feed.name) }}">
+            {% if feed.icon_id and not low_bandwidth and not collapsed -%}
+                <img src="{{ feed.icon_image('tiny') }}" class="community_icon rounded-circle" alt="" loading="lazy" />
+            {% endif -%}
+            {{ feed.title }}{% if add_domain and not feed.is_local() %}<span class="text-muted">@{{ feed.ap_domain }}</span>{% endif %}
+        </a>
+    </span>
+{% endmacro -%}
+<!doctype html>
+<html lang="{{ 'en' if current_user.is_anonymous else current_user.interface_language }}">
+  <head>
+    {% block head -%}
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, user-scalable=yes, initial-scale=1.0, shrink-to-fit=no">
+        <meta http-equiv="Content-Language" content="en" />
+        <meta name="msapplication-TileColor" content="#007BBF">
+        <meta name="theme-color" content="#007BBF">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="HandheldFriendly" content="True">
+        <meta name="MobileOptimized" content="320">
+        <link rel="expect" blocking="render" href="#navbarSupportedContent">
+        {% block styles -%}
+            <link href="{{ url_for('static', filename='styles.css', changed=getmtime('styles.css')) }}" type="text/css" rel="stylesheet" />
+            <link href="{{ url_for('static', filename='themes/high_contrast/styles.css') }}" type="text/css" rel="alternate stylesheet" title="High contrast" />
+            {% if not low_bandwidth -%}
+                <link href="{{ url_for('static', filename='js/markdown/downarea.css') }}" type="text/css" rel="stylesheet" />
+                <link href="{{ url_for('static', filename='js/lightbox/baguetteBox.css') }}" type="text/css" rel="stylesheet" />
+            {% endif -%}
+            {% if theme() and file_exists('app/templates/themes/' + theme() + '/styles.css') -%}
+                <link href="{{ url_for('static', filename='themes/' + theme() + '/styles.css') }}" type="text/css" rel="stylesheet" />
+            {% endif -%}
+        {% endblock -%}
+        <title>{% if title %}{{ title }}{% else %}{{ _('PieFed') }}{% endif %}</title>
+        <link rel="apple-touch-icon" sizes="152x152" href="{{ g.site.logo_152 if g.site.logo_152 else '/static/images/apple-touch-icon.png' }}">
+        <link rel="icon" type="image/png" sizes="32x32" href="{{ g.site.logo_32 if g.site.logo_32 else '/static/images/favicon-32x32.png' }}">
+        <link rel="icon" type="image/png" sizes="16x16" href="{{ g.site.logo_16 if g.site.logo_16 else '/static/images/favicon-16x16.png' }}">
+        <link rel="manifest" href="/static/manifest.json">
+        <link rel="shortcut icon" type="image/png" href="{{ g.site.logo_32 if g.site.logo_32 else '/static/images/favicon-32x32.png' }}">
+        <link href="{{ g.site.logo_16 if g.site.logo_16 else '/static/images/favicon.ico' }}" rel='icon' type='image/x-icon'>
+        <meta name="msapplication-TileColor" content="#da532c">
+        <meta name="msapplication-config" content="/static/browserconfig.xml">
+        <meta name="theme-color" content="#ffffff">
+        {% if canonical -%}
+            <link rel="canonical" href="{{ canonical }}" />
+        {% endif -%}
+        {% if description -%}
+            <meta name="description" content="{{ description }}" />
+        {% endif -%}
+        {% if og_image -%}
+            <meta property="og:image" content="{{ og_image }}" />
+        {% endif -%}
+        {% if rss_feed -%}
+            <link rel="alternate" type="application/rss+xml" title="{{ rss_feed_name }}" href="{{ rss_feed }}" />
+        {% endif -%}
+        {% if noindex -%}
+            <meta name="robots" content="noindex">
+        {% endif -%}
+    {% endblock -%}
+  </head>
+  <body class="{{ ' low_bandwidth' if low_bandwidth }}">
+    <a href="#outer_container" class="skip-link" role="navigation" aria-label="Skip main navigation" tabindex="">Skip to main content</a>
+    <a href="#side_pane" class="skip-link" role="navigation" aria-label="Go to side pane" tabindex="">Go to side pane</a>
+    <!-- Page content -->
+    <table width="100%">
+        <tr>
+            <td colspan="3">
+                <h2><a class="navbar-brand" href="/" aria-label="{{ _('To home page') }}">{% if not low_bandwidth %}<img src="{{ g.site.logo if g.site.logo else '/static/images/piefed_logo_full_t_300x300.svg' }}" alt="Logo" width="50" height="50" />{% endif %}{{ g.site.name }}</a></h2>
+            </td>
+        </tr>
+        <tr><!-- left column - nav -->
+            <td>
+                {% block navbar -%}
+                    <div class="navbar navbar-expand-lg sticky-md-top">
+                        <div class="{{ 'container-lg' if post_layout != 'masonry_wide' else 'container-fluid' }}" role="banner">
+                            {% if current_user.is_authenticated -%}
+                                <a class="nav-link d-lg-none" href="/notifications" aria-label="{{ _('Notifications') }}">
+                                    {% if current_user.unread_notifications -%}
+                                    <span class="fe fe-bell red"></span>Unread notifications: <span class="red">{{ current_user.unread_notifications }}</span>
+                                    {% endif -%}
+                                </a>
+                            {% endif -%}
+
+                            <ul>
+                                {% if current_user.is_anonymous -%}
+                                    <li class="{% if active_parent == 'communities' %} active{% endif %}">
+                                        <a href="/topics">{{ _('Topics') }}</a>
+                                        <ul>
+                                          {% if menu_topics %}
+                                               {% for topic_menu_item in menu_topics -%}
+                                                    <li><a class="{% if topic and topic.id == topic_menu_item.id%} active{% endif %}" href="/topic/{{ topic_menu_item.path() }}">{{ topic_menu_item.name }}</a></li>
+                                               {% endfor -%}
+                                               <li><a class="{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('More topics') }}</a></li>
+                                          {% else %}
+                                            <li><a class="{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('Browse by topic') }}</a></li>
+                                          {% endif %}
+                                          <li><a class="{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a></li>
+                                        </ul>
+                                    </li>
+                                    <li class="{% if active_parent == 'communities' %} active{% endif %}">
+                                        <a class="" data-bs-toggle="dropdown" href="/feeds"  aria-haspopup="true" aria-expanded="false">{{ _('Feeds') }}</a>
+                                        <ul class="">
+                                          {% if menu_instance_feeds -%}
+                                               {% for feed_menu_item in menu_instance_feeds -%}
+                                                    <li><a class="{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a></li>
+                                               {% endfor -%}
+                                               <li><hr class="dropdown-divider"></li>
+                                            <li><a class="{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></li>
+                                          {% else -%}
+                                            <li><a class="{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></li>
+                                          {% endif -%}
+                                        </ul>
+                                    </li>
+                                    <li class="nav-item"><a href="/auth/login">{{ _('Log in') }}</a></li>
+                                    <li class="nav-item"><a href="/auth/register">{{ _('Register') }}</a></li>
+                                {% else %}
+                                    <li class="{% if active_parent == 'communities' %} active{% endif %}">
+                                        <a class="" data-bs-toggle="dropdown" href="/topics"  aria-haspopup="true" aria-expanded="false">{{ _('Topics') }}</a>
+                                        <ul class="">
+                                          {% if menu_topics -%}
+                                               {% for topic_menu_item in menu_topics -%}
+                                                    <li><a class="{% if topic and topic.id == topic_menu_item.id%} active{% endif %}" href="/topic/{{ topic_menu_item.path() }}">{{ topic_menu_item.name }}</a></li>
+                                               {% endfor -%}
+                                               <li><hr class="dropdown-divider"></li>
+                                               <li><a class="{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('More topics') }}</a></li>
+                                          {% else -%}
+                                            <li><a class="{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('Browse by topic') }}</a></li>
+                                          {% endif -%}
+                                          <li><a class="{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a></li>
+                                          {% if moderating_communities %}
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><h6 class="dropdown-header">{{ _('Moderating') }}</h6></li>
+                                            {% for community_menu_item in moderating_communities -%}
+                                                <li class="pl-2"><a class="{% if community and community.id == community_menu_item.id%} active{% endif %}" href="/c/{{ community_menu_item.link() }}">{{ community_menu_item.title }}</a></li>
+                                            {% endfor -%}
+                                          {% endif %}
+                                          {% if joined_communities %}
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><h6 class="dropdown-header">{{ _('Joined communities') }}</h6></li>
+                                            {% for community_menu_item in joined_communities -%}
+                                                <li class="pl-2"><a class="{% if community and community.id == community_menu_item.id%} active{% endif %}" href="/c/{{ community_menu_item.link() }}">{{ community_menu_item.title }}</a></li>
+                                            {% endfor -%}
+                                          {% endif %}
+                                        </ul>
+                                    </li>
+                                    <li class="{% if active_parent == 'communities' %} active{% endif %}">
+                                        <a class="" data-bs-toggle="dropdown" href="/u/myfeeds"  aria-haspopup="true" aria-expanded="false">{{ _('Feeds') }}</a>
+                                        <ul class="">
+                                          {% if menu_instance_feeds -%}
+                                               {% for feed_menu_item in menu_instance_feeds -%}
+                                                    <li><a class="{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a></li>
+                                               {% endfor -%}
+                                               <li><hr class="dropdown-divider"></li>
+                                          {% endif -%}
+                                          {% if menu_my_feeds or menu_subscribed_feeds -%}
+                                               <li><a class="{% if active_child == 'user_feeds' %} active{% endif %}" href="/u/myfeeds">{{ _('My Feeds') }}</a></li>
+                                               {% for feed_menu_item in menu_my_feeds -%}
+                                                    <li><a class="{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a></li>
+                                               {% endfor -%}
+                                               {% for feed_menu_item in menu_subscribed_feeds -%}
+                                                    <li><a class="{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a></li>
+                                               {% endfor -%}
+                                               <li><hr class="dropdown-divider"></li>
+                                               <li><a class="{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></li>
+                                          {% else -%}
+                                            <li><a class="{% if active_child == 'user_feeds' %} active{% endif %}" href="/u/myfeeds">{{ _('My Feeds') }}</a></li>
+                                            <li><a class="{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></li>
+                                          {% endif -%}
+                                        </ul>
+                                    </li>
+                                    <li class="{% if active_parent == 'account' %} active{% endif %}">
+                                        <a class="" data-bs-toggle="dropdown" href="/u/{{ current_user.link() }}" aria-haspopup="true" aria-expanded="false">{{ _('Account') }}</a>
+                                        <ul class="">
+                                          <li><a class="{% if active_child == 'view_profile' %} active{% endif %}" href="/u/{{ current_user.link() }}">{{ _('View profile') }}</a></li>
+                                          <li><a class="{% if active_child == 'edit_profile' %} active{% endif %}" href="/u/{{ current_user.link() }}/profile">{{ _('Edit profile') }}</a></li>
+                                          <li><a class="{% if active_child == 'chats' %} active{% endif %}" href="/chat">{{ _('Chats') }}</a></li>
+                                          <li><a class="{% if active_child == 'bookmarks' %} active{% endif %}" href="/bookmarks">{{ _('Bookmarks') }}</a></li>
+                                          <li><a class="{% if active_child == 'alerts' %} active{% endif %}" href="/alerts">{{ _('Activity Alerts') }}</a></li>
+                                          {% if current_user.is_authenticated -%}
+                                            {% if current_user.hide_read_posts -%}
+                                                <li><a class="{% if active_child == 'read_posts' %} active{% endif %}" href="/read-posts">{{ _('Read Posts') }}</a></li>
+                                            {% endif -%}
+                                            <li><a class="" href="/auth/logout">{{ _('Log out') }}</a></li>
+                                          {% endif -%}
+                                        </ul>
+                                    </li>
+                                    {% if user_access('change instance settings', current_user.id) %}
+                                        <li class="{% if active_parent == 'admin' %} active{% endif %}">
+                                            <a class="" data-bs-toggle="dropdown" href="/admin/" aria-haspopup="true" aria-expanded="false">{{ _('Admin') }}</a>
+                                            <ul class="">
+                                              <li><a class="{{ ' active' if active_child == 'admin_site' }}" href="{{ url_for('admin.admin_site') }}">{{ _('Home') }}</a></li>
+                                              <li><a class="{{ ' active' if active_child == 'admin_content' }}" href="{{ url_for('admin.admin_content', show='spammy', days='3') }}">{{ _('Spam') }}</a></li>
+                                              <li><a class="{{ ' active' if active_child == 'modlog' }}" href="{{ url_for('main.modlog') }}">{{ _('Modlog') }}</a></li>
+                                                {% if debug_mode %}
+                                                    <li><a class="{{ ' active' if active_child == 'dev_tools' }}" href="{{ url_for('dev.tools') }}">{{ _('Dev Tools') }}</a></li>
+                                                {% endif %}
+                                            </ul>
+                                        </li>
+                                    {% endif %}
+                                    <li class="">
+                                        <a href="/notifications" aria-label="{{ _('%(num)d unread notifications', num=current_user.unread_notifications) if current_user.unread_notifications else _('Notifications') }}">
+                                            {{ _('%(num)d unread notifications', num=current_user.unread_notifications) if current_user.unread_notifications else _('Notifications') }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                <li class=" {% if current_user.is_anonymous %}right{% endif %}" aria-label="{{ _('Search') }}"><a id="search" href="/search" tabindex="" title="{{ _('Search') }}">{{ _('Search') }}</a></li>
+                                <li class=""  aria-label="{{ _('Settings') }}"><a href="/user/settings" tabindex="" title="{{ _('Settings') }}">{{ _('Settings') }}</a></li>
+
+                            </ul>
+
+
+                        </div>
+                    </div>
+                    {% endblock %}
+            </td>
+            <!-- main content -->
+            <td>
+                    {% block content %}
+                        <div id="outer_container" class="{{ 'container-lg' if post_layout != 'masonry_wide' else 'container-fluid' }} flex-shrink-0" role="main">
+                            {% with messages = get_flashed_messages(with_categories=True) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                <div class="alert alert-{{ category }}" role="alert">{{ message }}</div>
+                                {% endfor %}
+                            {% endif %}
+                            {% endwith %}
+
+                            {# application content needs to be provided in the app_content block #}
+                            {% block app_content %}{% endblock %}
+                        </div>
+                        <footer class="footer mt-auto" role="contentinfo">
+                            <p role="timer" id="timeSpent" class="text-center mt-4" title="This is how long you have spent using PieFed during this month. We hope this use of your time aligns with your priorities and values."></p>
+                            <p class="text-center"><a href="/donate">{{ _('Donate') }}</a></p>
+                            <p class="text-center"><a href="/about">{{ _('About') }}</a></p>
+                            <p class="text-center"><a href="/keyboard_shortcuts">{{ _('Keyboard shortcuts') }}</a></p>
+                            <p class="text-center"><a href="https://codeberg.org/rimu/pyfedi">PieFed is free and open source</a>.<br />Please <a href="https://codeberg.org/rimu/pyfedi/issues">report bugs</a> or <a href="https://join.piefed.social/get-involved/">get involved</a>.</p>
+                            <p class="text-center"><a href="/privacy">Privacy policy</a></p>
+                        </footer>
+                    {% endblock -%}
+            </td>
+            <!-- right column - sidebar -->
+            <td>
+
+            </td>
+        </tr>
+    </table>
+  </body>
+</html>
