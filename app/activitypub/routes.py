@@ -713,19 +713,21 @@ def process_inbox_request(request_json, store_ap_json):
 
             # handle Feed Announce/Add or Announce/Remove
             if request_json['object']['type'] == 'Add':
-                if request_json['object']['object']['type'] == 'Group' \
-                        and isinstance(request_json['object']['target'], dict) \
-                        and request_json['object']['target']['id'].endswith('/following'):
-                    announced = True
-                    core_activity = request_json['object']
-                    user = None
+                if isinstance(request_json['object']['object'], dict):
+                    if request_json['object']['object']['type'] == 'Group' \
+                            and isinstance(request_json['object']['target'], dict) \
+                            and request_json['object']['target']['id'].endswith('/following'):
+                        announced = True
+                        core_activity = request_json['object']
+                        user = None
             elif request_json['object']['type'] == 'Remove':
-                if request_json['object']['object']['type'] == 'Group' \
-                        and isinstance(request_json['object']['target'], dict) \
-                        and request_json['object']['target']['id'].endswith('/following'):
-                    announced = True
-                    core_activity = request_json['object']
-                    user = None
+                if isinstance(request_json['object']['object'], dict):
+                    if request_json['object']['object']['type'] == 'Group' \
+                            and isinstance(request_json['object']['target'], dict) \
+                            and request_json['object']['target']['id'].endswith('/following'):
+                        announced = True
+                        core_activity = request_json['object']
+                        user = None
             else: 
                 user_ap_id = request_json['object']['actor']
                 user = find_actor_or_create(user_ap_id)
