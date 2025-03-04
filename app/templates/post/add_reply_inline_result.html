@@ -4,7 +4,7 @@
    it does not inherit from base.html where the macro is normally defined.
 #}
 {% macro render_username(user, add_domain=True, htmx_redirect_back_to=None) -%}
-<span class="render_username">
+<div class="render_username">
     {% if user.deleted -%}
         {% if current_user.is_authenticated and current_user.is_admin() -%}
             <a href="/u/{{ user.link() }}" title="{{ user.ap_id if user.ap_id != none else user.user_name }}" aria-label="{{ _('Author') }}">[deleted]</a>
@@ -49,7 +49,7 @@
             {% endif -%}
         {% endif -%}
     {% endif -%}
-</span>
+</div>
 {% endmacro -%}
 {% set collapsed = false -%}
 <div class="replies hidable" role="group" aria-live="polite">

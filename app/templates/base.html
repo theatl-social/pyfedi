@@ -1,5 +1,5 @@
 {% macro render_username(user, add_domain=True, htmx_redirect_back_to=None) -%}
-<span class="render_username">
+<div class="render_username">
     {% if user.deleted -%}
         {% if current_user.is_authenticated and current_user.is_admin() -%}
             <a href="/u/{{ user.link() }}" title="{{ user.ap_id if user.ap_id != none else user.user_name }}" aria-label="{{ _('Author') }}">[deleted]</a>
@@ -44,7 +44,7 @@
             {% endif -%}
         {% endif -%}
     {% endif -%}
-</span>
+</div>
 {% endmacro -%}
 {% macro render_communityname(community, add_domain=True) -%}
     <span class="render_community">
