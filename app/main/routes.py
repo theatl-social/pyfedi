@@ -753,6 +753,7 @@ def instance_actor():
 
 
 # intercept requests for the PWA manifest.json and provide platform specific ones
+@bp.route('/manifest.json', methods=['GET'])
 @bp.route('/static/manifest.json', methods=['GET'])
 def static_manifest():
     # get the user agent from the headers
