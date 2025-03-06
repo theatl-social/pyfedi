@@ -411,7 +411,7 @@ def show_community_rss(actor):
 def subscribe(actor):
     do_subscribe(actor, current_user.id)
     referrer = request.headers.get('Referer', None)
-    if referrer is not None:
+    if referrer is not None and current_app.config['SERVER_NAME'] in referrer:
         return redirect(referrer)
     else:
         return redirect('/c/' + actor)
@@ -567,7 +567,7 @@ def unsubscribe(actor):
 
         # send them back where they came from
         referrer = request.headers.get('Referer', None)
-        if referrer is not None:
+        if referrer is not None and current_app.config['SERVER_NAME'] in referrer:
             return redirect(referrer)
         else:
             return redirect('/c/' + actor)
