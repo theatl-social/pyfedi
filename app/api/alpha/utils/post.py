@@ -71,7 +71,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts'):
     if sort == "Hot":
         posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
     elif sort == "Top":
-        posts = posts.order_by(desc(Post.up_votes - Post.down_votes))
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=1)).order_by(desc(Post.up_votes - Post.down_votes))
     elif sort == "New":
         posts = posts.order_by(desc(Post.posted_at))
     elif sort == "Active":
