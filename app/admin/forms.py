@@ -116,10 +116,11 @@ class EditCommunityForm(FlaskForm):
         if self.url.data.strip() == '':
             self.url.errors.append(_l('Url is required.'))
             return False
-        else:
-            if '-' in self.url.data.strip():
-                self.url.errors.append(_l('- cannot be in Url. Use _ instead?'))
-                return False
+        # commented out as PeerTube and NodeBB can both use dashes in their URLs
+        #else:
+        #    if '-' in self.url.data.strip():
+        #        self.url.errors.append(_l('- cannot be in Url. Use _ instead?'))
+        #        return False
         return True
 
 
