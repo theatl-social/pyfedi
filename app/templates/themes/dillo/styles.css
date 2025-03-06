@@ -1,0 +1,47 @@
+body {
+  background-color: white;
+  font-size: initial;
+  font-family: system-ui, sans-serif;
+}
+
+.list-group {
+  list-style-type: none;
+  padding-left: 0;
+  border: none;
+}
+
+.list-group li ul {
+  padding-left: 25px;
+  border: none;
+}
+
+.list-group h4 {
+  margin-bottom: 0;
+}
+
+.mt-0 {
+  margin-top: 0;
+}
+
+.mb-0 {
+  margin-bottom: 0;
+}
+
+.mb-1 {
+  margin-bottom: 5px;
+}
+
+.card {
+  border-bottom: solid 1px lightgray;
+}
+
+.card .card-header {
+  border: none;
+}
+
+.author_link img {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  vertical-align: bottom;
+}
