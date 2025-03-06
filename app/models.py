@@ -1562,6 +1562,8 @@ class Post(db.Model):
         return self.profile_id()
 
     def blocked_by_content_filter(self, content_filters):
+        if current_user.is_authenticated and self.user_id == current_user.id:
+            return False
         lowercase_title = self.title.lower()
         for name, keywords in content_filters.items() if content_filters else {}:
             for keyword in keywords:
