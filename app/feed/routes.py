@@ -556,7 +556,7 @@ def _feed_remove_community(community_id: int, current_feed_id: int, user_id: int
     cm = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
     # if user.feed_auto_leave, and the user joined the community as a result of
     # adding it to a feed, then un follow the community
-    if user.feed_auto_leave and cm.joined_via_feed:
+    if user.feed_auto_leave and cm.joined_via_feed is not None and cm.joined_via_feed:
         subscription = community_membership(user, community)
         if subscription != SUBSCRIPTION_OWNER:
             proceed = True
