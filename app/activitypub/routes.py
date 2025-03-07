@@ -1222,7 +1222,7 @@ def process_inbox_request(request_json, store_ap_json):
                                     if proceed:
                                         db.session.query(CommunityMember).filter_by(user_id=fm_user.id, community_id=community_to_remove.id).delete()
                                         db.session.query(CommunityJoinRequest).filter_by(user_id=fm_user.id, community_id=community_to_remove.id).delete()
-                                        community.subscriptions_count -= 1
+                                        community_to_remove.subscriptions_count -= 1
                                         db.session.commit()
                                         log_incoming_ap(id, APLOG_REMOVE, APLOG_SUCCESS, saved_json, f'{fm_user.user_name} auto-unfollowed {community_to_remove.ap_public_url} during a feed/remove')
                 else:
