@@ -11,6 +11,7 @@ from flask import redirect, url_for, flash, request, make_response, session, Mar
 from flask_login import current_user, login_required
 from flask_babel import _
 from pillow_heif import register_heif_opener
+from psycopg2 import IntegrityError
 from slugify import slugify
 from sqlalchemy import or_, desc, text
 
@@ -452,10 +453,12 @@ def do_subscribe(actor, user_id, admin_preload=False, joined_via_feed=False):
                     pre_load_message['community_banned_by_local_instance'] = True
             success = True
             # for local communities, joining is instant
-            member = CommunityMember(user_id=user.id, community_id=community.id, joined_via_feed=joined_via_feed)
-            db.session.add(member)
-            community.subscriptions_count += 1
-            db.session.commit()
+            existing_membership = CommunityMember.query.filter_by(user_id=user.id, community_id=community.community_id).first()
+            if not existing_membership:
+                member = CommunityMember(user_id=user.id, community_id=community.id, joined_via_feed=joined_via_feed)
+                db.session.add(member)
+                community.subscriptions_count += 1
+                db.session.commit()
 
             if remote:
                 # send ActivityPub message to remote community, asking to follow. Accept message will be sent to our shared inbox
@@ -596,9 +599,11 @@ def join_then_add(actor):
                 }
                 post_request(community.ap_inbox_url, follow, current_user.private_key,
                                             current_user.public_url() + '#main-key')
-        member = CommunityMember(user_id=current_user.id, community_id=community.id)
-        db.session.add(member)
-        db.session.commit()
+        existing_member = CommunityMember.query.filter_by(user_id=current_user.id, community_id=community.community_id).first()
+        if not existing_member:
+            member = CommunityMember(user_id=current_user.id, community_id=community.id)
+            db.session.add(member)
+            db.session.commit()
         flash('You joined ' + community.title)
     if not community.user_is_banned(current_user):
         return redirect(url_for('community.add_post', actor=community.link(), type='discussion'))

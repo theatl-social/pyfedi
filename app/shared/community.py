@@ -27,9 +27,12 @@ def join_community(community_id: int, src, auth=None, user_id=None):
     sync_retval = task_selector('join_community', send_async, user_id=user_id, community_id=community_id, src=src)
 
     if send_async or sync_retval is True:
-        member = CommunityMember(user_id=user_id, community_id=community_id)
-        db.session.add(member)
-        db.session.commit()
+        existing_member = CommunityMember.query.filter_by(user_id=user_id,
+                                                          community_id=community_id).first()
+        if not existing_member:
+            member = CommunityMember(user_id=user_id, community_id=community_id)
+            db.session.add(member)
+            db.session.commit()
 
     if src == SRC_API:
         return user_id

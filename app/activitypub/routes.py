@@ -3,6 +3,7 @@ from random import randint
 
 from flask import request, current_app, abort, jsonify, json, g, url_for, redirect, make_response
 from flask_login import current_user
+from psycopg2 import IntegrityError
 from sqlalchemy import desc, or_
 import werkzeug.exceptions
 
@@ -777,7 +778,8 @@ def process_inbox_request(request_json, store_ap_json):
                               "type": "Reject", "id": f"https://{current_app.config['SERVER_NAME']}/activities/reject/" + gibberish(32)}
                     post_request(user.ap_inbox_url, reject, community.private_key, f"{community.public_url()}#main-key")
                 else:
-                    if community_membership(user, community) != SUBSCRIPTION_MEMBER:
+                    existing_member = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
+                    if not existing_member:
                         member = CommunityMember(user_id=user.id, community_id=community.id)
                         db.session.add(member)
                         community.subscriptions_count += 1

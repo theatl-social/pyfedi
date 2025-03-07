@@ -972,9 +972,12 @@ def import_settings_task(user_id, filename):
                     # send ActivityPub message to remote community, asking to follow. Accept message will be sent to our shared inbox
                     join_request = CommunityJoinRequest(user_id=user.id, community_id=community.id)
                     db.session.add(join_request)
-                    member = CommunityMember(user_id=user.id, community_id=community.id)
-                    db.session.add(member)
-                    db.session.commit()
+                    existing_member = CommunityMember.query.filter_by(user_id=user.id,
+                                                                      community_id=community.id).first()
+                    if not existing_member:
+                        member = CommunityMember(user_id=user.id, community_id=community.id)
+                        db.session.add(member)
+                        db.session.commit()
                     success = True
                     if not community.instance.gone_forever:
                         follow = {
@@ -991,9 +994,11 @@ def import_settings_task(user_id, filename):
                 else:  # for local communities, joining is instant
                     banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
                     if not banned:
-                        member = CommunityMember(user_id=user.id, community_id=community.id)
-                        db.session.add(member)
-                        db.session.commit()
+                        existing_member = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
+                        if not existing_member:
+                            member = CommunityMember(user_id=user.id, community_id=community.id)
+                            db.session.add(member)
+                            db.session.commit()
                 cache.delete_memoized(community_membership, current_user, community)
 
     for community_ap_id in contents_json['blocked_communities'] if 'blocked_communities' in contents_json else []:
