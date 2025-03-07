@@ -1187,7 +1187,7 @@ def process_inbox_request(request_json, store_ap_json):
                                 continue
                             if fm_user.is_local() and fm_user.feed_auto_leave:
                                 subscription = community_membership(fm_user, community_to_remove)
-                                cm = CommunityMember.query.filter_by(user_id=user.id, community_id=community_to_remove.id).first()
+                                cm = CommunityMember.query.filter_by(user_id=fm_user.id, community_id=community_to_remove.id).first()
                                 if subscription != SUBSCRIPTION_OWNER and cm.joined_via_feed:
                                     proceed = True
                                     # Undo the Follow
