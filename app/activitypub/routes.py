@@ -1185,7 +1185,7 @@ def process_inbox_request(request_json, store_ap_json):
                             fm_user = User.query.get(fm.user_id)
                             if fm_user.id == feed.user_id:
                                 continue
-                            if fm_user.is_local() and fm_user.feed_auto_leave and fm.joined_via_feed is not None and fm.joined_via_feed:
+                            if fm_user.is_local() and fm_user.feed_auto_leave:
                                 subscription = community_membership(fm_user, community_to_remove)
                                 cm = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
                                 if subscription != SUBSCRIPTION_OWNER and cm.joined_via_feed:
