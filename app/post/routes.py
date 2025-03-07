@@ -77,7 +77,7 @@ def show_post(post_id: int):
     if current_user.is_authenticated and current_user.verified and form.validate_on_submit():
 
         try:
-            reply = make_reply(form, post, None, 1)
+            reply = make_reply(form, post, None, SRC_WEB)
         except Exception as ex:
             flash(_('Your reply was not accepted because %(reason)s', reason=str(ex)), 'error')
             return redirect(url_for('activitypub.post_ap', post_id=post_id))
@@ -460,7 +460,7 @@ def add_reply(post_id: int, comment_id: int):
         current_user.ip_address = ip_address()
 
         try:
-            reply = make_reply(form, post, in_reply_to.id, 1)
+            reply = make_reply(form, post, in_reply_to.id, SRC_WEB)
         except Exception as ex:
             flash(_('Your reply was not accepted because %(reason)s', reason=str(ex)), 'error')
             if in_reply_to.depth <= constants.THREAD_CUTOFF_DEPTH:
@@ -630,7 +630,7 @@ def post_edit(post_id: int):
         if form.validate_on_submit():
             try:
                 uploaded_file = request.files['image_file'] if post_type == POST_TYPE_IMAGE else None
-                edit_post(form, post, post_type, 1, uploaded_file=uploaded_file)
+                edit_post(form, post, post_type, SRC_WEB, uploaded_file=uploaded_file)
                 flash(_('Your changes have been saved.'), 'success')
             except Exception as ex:
                 flash(_('Your edit was not accepted because %(reason)s', reason=str(ex)), 'error')
@@ -1206,7 +1206,7 @@ def post_reply_edit(post_id: int, comment_id: int):
     form.language_id.choices = languages_for_form()
     if post_reply.user_id == current_user.id or post.community.is_moderator():
         if form.validate_on_submit():
-            edit_reply(form, post_reply, post, 1)
+            edit_reply(form, post_reply, post, SRC_WEB)
             return redirect(url_for('activitypub.post_ap', post_id=post.id))
         else:
             form.body.data = post_reply.body
