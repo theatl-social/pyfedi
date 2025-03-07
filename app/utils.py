@@ -1546,10 +1546,10 @@ def instance_software(domain: str):
 def referrer(default: str=None) -> str:
     if request.args.get('next'):
         return request.args.get('next')
+    if request.referrer and current_app.config['SERVER_NAME'] in request.referrer:
+        return request.referrer
     if default:
         return default
-    if request.referrer:
-        return request.referrer
     return url_for('main.index')
 
 

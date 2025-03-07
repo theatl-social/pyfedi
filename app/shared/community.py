@@ -3,17 +3,11 @@ from app.constants import *
 from app.models import CommunityBlock, CommunityMember
 from app.shared.tasks import task_selector
 from app.utils import authorise_api_user, blocked_communities
+from app.constants import *
 
 from flask import current_app, flash
 from flask_babel import _
 from flask_login import current_user
-
-
-# would be in app/constants.py
-SRC_WEB = 1
-SRC_PUB = 2
-SRC_API = 3
-SRC_PLD = 4     # admin preload form to seed communities
 
 
 # function can be shared between WEB and API (only API calls it for now)

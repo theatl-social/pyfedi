@@ -1,4 +1,5 @@
 from app.api.alpha import bp
+from app.constants import *
 from app.api.alpha.utils import get_site, post_site_block, \
                                 get_search, \
                                 get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, post_post, \
@@ -398,7 +399,6 @@ def post_alpha_user_login():
     if not enable_api():
         return jsonify({'error': 'alpha api is not enabled'})
     try:
-        SRC_API = 3                                     # would be in app.constants
         data = request.get_json(force=True) or {}
         return jsonify(log_user_in(data, SRC_API))
     except Exception as ex:

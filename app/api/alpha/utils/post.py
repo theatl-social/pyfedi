@@ -1,6 +1,6 @@
 from app.api.alpha.views import post_view, post_report_view
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
-from app.constants import POST_TYPE_ARTICLE, POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO, POST_TYPE_POLL
+from app.constants import *
 from app.models import Post, Community, CommunityMember, utcnow
 from app.shared.post import vote_for_post, bookmark_the_post, remove_the_bookmark_from_post, toggle_post_notification, make_post, edit_post, \
                             delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post
@@ -103,9 +103,6 @@ def get_post(auth, data):
     post_json = post_view(post=id, variant=3, user_id=user_id)
     return post_json
 
-
-# would be in app/constants.py
-SRC_API = 3
 
 def post_post_like(auth, data):
     required(['post_id', 'score'], data)

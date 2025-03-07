@@ -12,11 +12,6 @@ from flask_babel import _
 from flask_login import current_user
 
 
-# would be in app/constants.py
-SRC_WEB = 1
-SRC_PUB = 2
-SRC_API = 3
-
 # function can be shared between WEB and API (only API calls it for now)
 # comment_vote in app/post/routes would just need to do 'return vote_for_reply(reply_id, vote_direction, SRC_WEB)'
 def vote_for_reply(reply_id: int, vote_direction, src, auth=None):

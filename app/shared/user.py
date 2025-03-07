@@ -1,6 +1,7 @@
 from app import db, cache
 from app.constants import ROLE_STAFF, ROLE_ADMIN
 from app.models import UserBlock
+from app.constants import *
 from app.utils import authorise_api_user, blocked_users
 
 from flask import flash
@@ -8,11 +9,6 @@ from flask_babel import _
 from flask_login import current_user
 
 from sqlalchemy import text
-
-# would be in app/constants.py
-SRC_WEB = 1
-SRC_PUB = 2
-SRC_API = 3
 
 # only called from API for now, but can be called from web using [un]block_another_user(user.id, SRC_WEB)
 

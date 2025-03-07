@@ -2,7 +2,8 @@ from app import cache, db
 from app.api.alpha.views import user_view, community_view, instance_view
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
 from app.utils import authorise_api_user, blocked_communities, blocked_instances, blocked_users
-from app.models import CommunityMember, InstanceBlock, Language
+from app.models import InstanceBlock, Language
+from app.constants import *
 from app.shared.site import block_remote_instance, unblock_remote_instance
 
 from flask import current_app, g
@@ -134,8 +135,6 @@ def get_site(auth):
 
     return data
 
-
-SRC_API = 3
 
 def post_site_block(auth, data):
     required(['instance_id', 'block'], data)

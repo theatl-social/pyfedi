@@ -43,6 +43,11 @@ DOWNVOTE_ACCEPT_TRUSTED = 6
 
 MICROBLOG_APPS = ["mastodon", "misskey", "akkoma", "iceshrimp", "pleroma"]
 
+SRC_WEB = 1
+SRC_PUB = 2
+SRC_API = 3
+SRC_PLD = 4     # admin preload form to seed communities
+
 APLOG_IN            = True
 
 APLOG_MONITOR       = (True, 'Debug this')

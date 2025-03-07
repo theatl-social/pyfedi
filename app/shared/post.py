@@ -2,7 +2,7 @@ from app import db, cache
 from app.activitypub.util import make_image_sizes, notify_about_post
 from app.constants import *
 from app.community.util import tags_from_string_old, end_poll_date
-from app.models import File, Language, Notification, NotificationSubscription, Poll, PollChoice, Post, PostBookmark, PostVote, Report, Site, User, utcnow
+from app.models import File, Notification, NotificationSubscription, Poll, PollChoice, Post, PostBookmark, PostVote, Report, Site, User, utcnow
 from app.shared.tasks import task_selector
 from app.utils import render_template, authorise_api_user, shorten_string, gibberish, ensure_directory_exists, \
                       piefed_markdown_to_lemmy_markdown, markdown_to_html, fixup_url, domain_from_url, \
@@ -20,10 +20,6 @@ from sqlalchemy import text
 
 import os
 
-# would be in app/constants.py
-SRC_WEB = 1
-SRC_PUB = 2
-SRC_API = 3
 
 # function can be shared between WEB and API (only API calls it for now)
 # post_vote in app/post/routes would just need to do 'return vote_for_post(post_id, vote_direction, SRC_WEB)'
@@ -565,7 +561,7 @@ def lock_post(post_id, locked, src, auth=None):
     return user.id, post
 
 
-def sticky_post(post_id, featured, src, auth=None):
+def sticky_post(post_id: int, featured: bool, src: int, auth=None):
     if src == SRC_API:
         user = authorise_api_user(auth, return_type='model')
     else:
@@ -574,7 +570,7 @@ def sticky_post(post_id, featured, src, auth=None):
     post = Post.query.filter_by(id=post_id).one()
     community = post.community
 
-    if post.community.is_moderator(user) or post.community.is_instance_admin(user):
+    if post.community.is_moderator(user) or post.community.is_instance_admin(user) or user.is_admin():
         post.sticky = featured
         if featured:
             modlog_type = 'featured_post'

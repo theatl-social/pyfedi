@@ -1,4 +1,5 @@
 from app import cache, celery, db
+from app.constants import *
 from app.activitypub.signature import default_context, post_request
 from app.models import Community, CommunityBan, CommunityJoinRequest, User
 from app.utils import community_membership, gibberish, joined_communities, instance_banned
@@ -6,12 +7,6 @@ from app.utils import community_membership, gibberish, joined_communities, insta
 from flask import current_app, flash
 from flask_babel import _
 
-
-# would be in app/constants.py
-SRC_WEB = 1
-SRC_PUB = 2
-SRC_API = 3
-SRC_PLD = 4
 
 
 """ JSON format

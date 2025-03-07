@@ -2,6 +2,7 @@ from app import db
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
 from app.api.alpha.views import reply_view, reply_report_view
 from app.models import Notification, PostReply, Post
+from app.constants import *
 from app.shared.reply import vote_for_reply, bookmark_the_post_reply, remove_the_bookmark_from_post_reply, toggle_post_reply_notification, make_reply, edit_reply, \
                              delete_reply, restore_reply, report_reply, mod_remove_reply, mod_restore_reply
 from app.utils import authorise_api_user, blocked_users, blocked_instances
@@ -64,9 +65,6 @@ def get_reply_list(auth, data, user_id=None):
 
     return list_json
 
-
-# would be in app/constants.py
-SRC_API = 3
 
 def post_reply_like(auth, data):
     required(['comment_id', 'score'], data)

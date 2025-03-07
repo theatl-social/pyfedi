@@ -3,6 +3,7 @@ from werkzeug.urls import url_parse
 
 from app import db, cache
 from app.auth.util import ip2location
+from app.constants import *
 from app.models import IpBan, User, utcnow
 from app.utils import ip_address, user_ip_banned, user_cookie_banned, banned_ip_addresses, gibberish
 from app.api.alpha.utils.validators import required, string_expected
@@ -11,12 +12,6 @@ from datetime import datetime
 
 from flask import redirect, url_for, flash, request, make_response, session, Markup
 from flask_babel import _
-
-# would be in app/constants.py
-SRC_WEB = 1
-SRC_PUB = 2
-SRC_API = 3
-
 
 # function can be shared between WEB and API (only API calls it for now)
 

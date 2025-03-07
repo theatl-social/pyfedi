@@ -2,6 +2,7 @@ from app.api.alpha.views import community_view
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
 from app.community.util import search_for_community
 from app.utils import authorise_api_user
+from app.constants import *
 from app.models import Community, CommunityMember
 from app.shared.community import join_community, leave_community, block_community, unblock_community
 from app.utils import communities_banned_from, blocked_instances, blocked_communities
@@ -82,9 +83,6 @@ def get_community(auth, data):
                 search_for_community(query)
         raise Exception('error - unknown community. Please wait a sec and try again.')
 
-
-# would be in app/constants.py
-SRC_API = 3
 
 def post_community_follow(auth, data):
     required(['community_id', 'follow'], data)

@@ -88,6 +88,14 @@
   content: "\e937";
 }
 
+.fe-sticky::before {
+  content: "\e9fc";
+}
+
+.fe-unsticky::before {
+  content: "\e9fd";
+}
+
 .fe-home::before {
   content: "\e979";
 }

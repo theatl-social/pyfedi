@@ -6,6 +6,7 @@ from app.api.alpha.utils.reply import get_reply_list
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
 from app.models import Conversation, ChatMessage, Notification, PostReply, User
 from app.shared.user import block_another_user, unblock_another_user
+from app.constants import *
 
 from sqlalchemy import text, desc
 
@@ -72,9 +73,6 @@ def get_user_list(auth, data):
 
     return list_json
 
-
-# would be in app/constants.py
-SRC_API = 3
 
 def post_user_block(auth, data):
     required(['person_id', 'block'], data)
