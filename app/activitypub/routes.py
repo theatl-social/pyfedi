@@ -1118,7 +1118,7 @@ def process_inbox_request(request_json, store_ap_json):
                         fm_user = User.query.get(fm.user_id)
                         if fm_user.id == feed.user_id:
                             continue
-                        if fm_user.is_local():
+                        if fm_user.is_local() and fm_user.feed_auto_follow:
                             # user is local so lets auto-subscribe them to the community
                             from app.community.routes import do_subscribe
                             actor = community_to_add.ap_id if community_to_add.ap_id else community_to_add.name
