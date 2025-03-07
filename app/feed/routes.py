@@ -18,14 +18,14 @@ from app.feed.util import feeds_for_form, search_for_feed, actor_to_feed, feed_c
     existing_communities, form_communities_to_ids
 from app.inoculation import inoculation
 from app.models import Feed, FeedMember, FeedItem, Post, Community, read_posts, utcnow, NotificationSubscription, \
-    CommunityMember, User, FeedJoinRequest, Instance, Topic
+    CommunityMember, User, FeedJoinRequest, Instance, Topic, CommunityJoinRequest
 from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markdown_to_html, render_template, \
     user_filters_posts, \
     blocked_domains, blocked_instances, blocked_communities, blocked_users, communities_banned_from, \
     moderating_communities, \
     joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, validation_required, feed_membership, \
     get_request, \
-    gibberish, get_task_session, instance_banned, menu_subscribed_feeds, referrer
+    gibberish, get_task_session, instance_banned, menu_subscribed_feeds, referrer, community_membership
 from collections import namedtuple
 from sqlalchemy import desc, or_, text
 from slugify import slugify
@@ -214,7 +214,7 @@ def feed_edit(feed_id: int):
             _feed_add_community(added_community, 0, feed_to_edit.id, current_user.id)
 
         for removed_community in removed_communities:
-            _feed_remove_community(removed_community, feed_to_edit.id)
+            _feed_remove_community(removed_community, feed_to_edit.id, current_user.id)
 
         flash(_('Settings saved.'))
         return redirect(referrer())
@@ -360,7 +360,7 @@ def feed_copy(feed_id: int):
         for cm in member_of:
             member_of_ids.append(cm.community_id)
         for item in old_feed_items:
-            if item.community_id not in member_of_ids:
+            if item.community_id not in member_of_ids and current_user.feed_auto_follow:
                 from app.community.routes import do_subscribe
                 community = Community.query.get(item.community_id)
                 actor = community.ap_id if community.ap_id else community.name
@@ -471,15 +471,18 @@ def _feed_add_community(community_id: int, current_feed_id: int, feed_id: int, u
                 announce_feed_add_remove_to_subscribers("Remove", current_feed.id, community.id)
             else:
                 announce_feed_add_remove_to_subscribers.delay("Remove", current_feed.id, community.id)
+
     # make the new feeditem and commit it
     feed_item = FeedItem(feed_id=feed_id, community_id=community_id)
     db.session.add(feed_item)
     db.session.commit()
+
     # also update the num_communities for the new feed
     feed = Feed.query.get(feed_id)
     feed.num_communities = feed.num_communities + 1
     db.session.add(feed)
     db.session.commit()
+
     # announce the change to any potential subscribers
     if feed.public:
         community = Community.query.get(community_id)
@@ -487,9 +490,10 @@ def _feed_add_community(community_id: int, current_feed_id: int, feed_id: int, u
             announce_feed_add_remove_to_subscribers("Add", feed.id, community.id)
         else:
             announce_feed_add_remove_to_subscribers.delay("Add", feed.id, community.id)
+
     # subscribe the user to the community if they are not already subscribed
     current_membership = CommunityMember.query.filter_by(user_id=user_id, community_id=community_id).first()
-    if current_membership is None:
+    if current_membership is None and current_user.feed_auto_follow:
         # import do_subscribe here, otherwise we get import errors from circular import problems
         from app.community.routes import do_subscribe
         community = Community.query.get(community_id)
@@ -520,7 +524,7 @@ def feed_remove_community():
     # if new_feed_id is 0, remove the right FeedItem
     # if its not 0 abort
     if new_feed_id == 0:
-        _feed_remove_community(community_id, current_feed_id)
+        _feed_remove_community(community_id, current_feed_id, user_id)
     else:
         abort(404)
 
@@ -536,18 +540,71 @@ def feed_remove_community():
     return redirect(url_for('main.index'))
 
 
-def _feed_remove_community(community_id: int, current_feed_id: int):
+def _feed_remove_community(community_id: int, current_feed_id: int, user_id: int):
     current_feed_item = FeedItem.query.filter_by(feed_id=current_feed_id).filter_by(community_id=community_id).first()
     db.session.delete(current_feed_item)
     db.session.commit()
+
     # also update the num_communities for the old feed
     current_feed = Feed.query.get(current_feed_id)
     current_feed.num_communities = current_feed.num_communities - 1
     db.session.add(current_feed)
     db.session.commit()
+
+    community = Community.query.get(community_id)
+    user = User.query.get(user_id)
+    cm = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
+    # if user.feed_auto_leave, and the user joined the community as a result of
+    # adding it to a feed, then un follow the community
+    if user.feed_auto_leave and cm.joined_via_feed:
+        subscription = community_membership(user, community)
+        if subscription != SUBSCRIPTION_OWNER:
+            proceed = True
+            # Undo the Follow
+            if not community.is_local():    # this is a remote community, so activitypub is needed
+                success = True
+                if not community.instance.gone_forever:
+                    follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
+                    if community.instance.domain == 'a.gup.pe':
+                        join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
+                        if join_request:
+                            follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+                    undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
+                    follow = {
+                        "actor": user.public_url(),
+                        "to": [community.public_url()],
+                        "object": community.public_url(),
+                        "type": "Follow",
+                        "id": follow_id
+                    }
+                    undo = {
+                        'actor': user.public_url(),
+                        'to': [community.public_url()],
+                        'type': 'Undo',
+                        'id': undo_id,
+                        'object': follow
+                    }
+                    success = post_request(community.ap_inbox_url, undo, user.private_key,
+                                                            user.public_url() + '#main-key', timeout=10)
+                if success is False or isinstance(success, str):
+                    flash('There was a problem while trying to unsubscribe', 'error')
+
+            if proceed:
+                db.session.query(CommunityMember).filter_by(user_id=user.id, community_id=community.id).delete()
+                db.session.query(CommunityJoinRequest).filter_by(user_id=user.id, community_id=community.id).delete()
+                community.subscriptions_count -= 1
+                db.session.commit()
+
+                flash('You have left ' + community.title)
+            cache.delete_memoized(community_membership, user, community)
+            cache.delete_memoized(joined_communities, user.id)
+        else:
+            # todo: community deletion
+            flash('You need to make someone else the owner before unsubscribing.', 'warning')
+
+
     # announce the change to any potential subscribers
     if current_feed.public:
-        community = Community.query.get(community_id)
         if current_app.debug:
             announce_feed_add_remove_to_subscribers("Remove", current_feed.id, community.id)
         else:

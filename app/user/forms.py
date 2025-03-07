@@ -54,6 +54,8 @@ class SettingsForm(FlaskForm):
     hide_read_posts = BooleanField(_l('Do not display posts with which I have already interacted (opened/upvoted/downvoted)'))
     manually_approves_followers = BooleanField(_l('Manually approve followers'))
     vote_privately = BooleanField(_l('Vote privately'))
+    feed_auto_follow = BooleanField(_l('Enable Automatic Follow of Feed Communities.'), default=True)
+    feed_auto_leave = BooleanField(_l('Enable Automatic Leave of Feed Communities.'), default=False)
     sorts = [('hot', _l('Hot')),
              ('top', _l('Top')),
              ('new', _l('New')),

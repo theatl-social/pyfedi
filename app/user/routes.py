@@ -407,6 +407,8 @@ def user_settings():
         current_user.email_unread = form.email_unread.data
         current_user.markdown_editor = form.markdown_editor.data
         current_user.interface_language = form.interface_language.data
+        current_user.feed_auto_follow = form.feed_auto_follow.data
+        current_user.feed_auto_leave = form.feed_auto_leave.data
         session['ui_language'] = form.interface_language.data
         if form.vote_privately.data:
             if current_user.alt_user_name is None or current_user.alt_user_name == '':
@@ -434,6 +436,8 @@ def user_settings():
         form.markdown_editor.data = current_user.markdown_editor
         form.interface_language.data = current_user.interface_language
         form.vote_privately.data = current_user.vote_privately()
+        form.feed_auto_follow.data = current_user.feed_auto_follow
+        form.feed_auto_leave.data = current_user.feed_auto_leave
 
     return render_template('user/edit_settings.html', title=_('Edit profile'), form=form, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
