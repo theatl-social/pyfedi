@@ -700,6 +700,7 @@ def process_inbox_request(request_json, store_ap_json):
                 return
 
         # Announce: take care of inner objects that are just a URL (PeerTube, a.gup.pe), or find the user if the inner object is a dict
+        core_activity = request_json
         if request_json['type'] == 'Announce':
             if isinstance(request_json['object'], str):
                 if request_json['object'].startswith('https://' + current_app.config['SERVER_NAME']):
@@ -749,7 +750,6 @@ def process_inbox_request(request_json, store_ap_json):
                 core_activity = request_json['object']
         else:
             announced = False
-            core_activity = request_json
 
         # Follow: remote user wants to join/follow one of our users, communities, or feeds
         if core_activity['type'] == 'Follow':
