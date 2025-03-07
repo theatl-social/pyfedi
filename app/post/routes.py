@@ -630,7 +630,7 @@ def post_edit(post_id: int):
         if form.validate_on_submit():
             try:
                 uploaded_file = request.files['image_file'] if post_type == POST_TYPE_IMAGE else None
-                edit_post(form, post, post_type, 1, uploaded_file=uploaded_file)
+                edit_post(form, post, post_type, SRC_WEB, uploaded_file=uploaded_file)
                 flash(_('Your changes have been saved.'), 'success')
             except Exception as ex:
                 flash(_('Your edit was not accepted because %(reason)s', reason=str(ex)), 'error')
