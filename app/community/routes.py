@@ -453,7 +453,7 @@ def do_subscribe(actor, user_id, admin_preload=False, joined_via_feed=False):
                     pre_load_message['community_banned_by_local_instance'] = True
             success = True
             # for local communities, joining is instant
-            existing_membership = CommunityMember.query.filter_by(user_id=user.id, community_id=community.community_id).first()
+            existing_membership = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
             if not existing_membership:
                 member = CommunityMember(user_id=user.id, community_id=community.id, joined_via_feed=joined_via_feed)
                 db.session.add(member)
@@ -599,7 +599,7 @@ def join_then_add(actor):
                 }
                 post_request(community.ap_inbox_url, follow, current_user.private_key,
                                             current_user.public_url() + '#main-key')
-        existing_member = CommunityMember.query.filter_by(user_id=current_user.id, community_id=community.community_id).first()
+        existing_member = CommunityMember.query.filter_by(user_id=current_user.id, community_id=community.id).first()
         if not existing_member:
             member = CommunityMember(user_id=current_user.id, community_id=community.id)
             db.session.add(member)
