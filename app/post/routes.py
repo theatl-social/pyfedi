@@ -19,7 +19,7 @@ from app.post.util import post_replies, get_comment_branch, tags_to_string, url_
     generate_archive_link, body_has_no_archive_link
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
     POST_TYPE_IMAGE, \
-    POST_TYPE_ARTICLE, POST_TYPE_VIDEO, NOTIF_REPLY, NOTIF_POST, POST_TYPE_POLL
+    POST_TYPE_ARTICLE, POST_TYPE_VIDEO, NOTIF_REPLY, NOTIF_POST, POST_TYPE_POLL, SRC_WEB
 from app.models import Post, PostReply, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, InstanceBlock, Report, Site, Community, \
     Topic, User, Instance, NotificationSubscription, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
@@ -34,9 +34,9 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, reply_is_stupid, \
     languages_for_form, menu_topics, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown, \
     permission_required, blocked_users, get_request, is_local_image_url, is_video_url, can_upvote, can_downvote, \
-    menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds
+    menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, referrer
 from app.shared.reply import make_reply, edit_reply
-from app.shared.post import edit_post
+from app.shared.post import edit_post, sticky_post
 
 
 def show_post(post_id: int):
@@ -1051,6 +1051,19 @@ def post_mea_culpa(post_id: int):
                            menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
                            menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                            )
+
+
+@bp.route('/post/<int:post_id>/sticky/<mode>', methods=['GET', 'POST'])
+@login_required
+def post_sticky(post_id: int, mode):
+    post = Post.query.get_or_404(post_id)
+    if post.community.is_moderator(current_user) or current_user.is_admin():
+        sticky_post(post.id, mode == 'yes', SRC_WEB)
+    if mode == 'yes':
+        flash(_('%(name)s has been stickied.', name=post.title))
+    else:
+        flash(_('%(name)s has been un-stickied.', name=post.title))
+    return redirect(referrer(url_for('activitypub.post_ap', post_id=post.id)))
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/report', methods=['GET', 'POST'])
