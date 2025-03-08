@@ -57,7 +57,7 @@ def send_message(message: str, conversation_id: int) -> ChatMessage:
                     reply_json['object']['tag'] = [
                       {
                         "href": recipient.public_url(),
-                        "name": f"@{recipient.ap_id}" if not recipient.is_local() else f"@{recipient.user_name}@{current_app.config['SERVER_NAME']}",
+                        "name": recipient.mention_tag(),
                         "type": "Mention"
                       }
                     ]
