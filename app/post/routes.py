@@ -871,7 +871,7 @@ def post_bookmark(post_id: int):
         flash(_('Bookmark added.'))
     else:
         flash(_('This post has already been bookmarked.'))
-    return redirect(url_for('activitypub.post_ap', post_id=post.id))
+    return redirect(referrer(url_for('activitypub.post_ap', post_id=post.id)))
 
 
 @bp.route('/post/<int:post_id>/remove_bookmark', methods=['GET', 'POST'])
@@ -885,7 +885,7 @@ def post_remove_bookmark(post_id: int):
         db.session.delete(existing_bookmark)
         db.session.commit()
         flash(_('Bookmark has been removed.'))
-    return redirect(url_for('activitypub.post_ap', post_id=post.id))
+    return redirect(referrer(url_for('activitypub.post_ap', post_id=post.id)))
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/remove_bookmark', methods=['GET', 'POST'])
