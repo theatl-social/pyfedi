@@ -553,12 +553,17 @@ def lock_post(post_id, locked, src, auth=None):
         add_to_modlog_activitypub(modlog_type, user, community_id=post.community_id,
                                   link_text=shorten_string(post.title), link=f'post/{post.id}', reason='')
 
-    if locked:
-        task_selector('lock_post', user_id=user.id, post_id=post_id)
-    else:
-        task_selector('unlock_post', user_id=user.id, post_id=post_id)
+        if locked:
+            if src == SRC_WEB:
+                flash(_('%(name)s has been locked.', name=post.title))
+            task_selector('lock_post', user_id=user.id, post_id=post_id)
+        else:
+            if src == SRC_WEB:
+                flash(_('%(name)s has been unlocked.', name=post.title))
+            task_selector('unlock_post', user_id=user.id, post_id=post_id)
 
-    return user.id, post
+    if src == SRC_API:
+        return user.id, post
 
 
 def sticky_post(post_id: int, featured: bool, src: int, auth=None):

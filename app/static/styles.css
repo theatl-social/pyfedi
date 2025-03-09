@@ -96,6 +96,14 @@
   content: "\e9fd";
 }
 
+.fe-lock::before {
+  content: "\e987";
+}
+
+.fe-unlock::before {
+  content: "\e9ee";
+}
+
 .fe-home::before {
   content: "\e979";
 }

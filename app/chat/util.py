@@ -68,6 +68,6 @@ def send_message(message: str, conversation_id: int) -> ChatMessage:
                     if success is False or isinstance(success, str):
                         flash(_('Message failed to send to %(name)s.', name=recipient.link()), 'error')
 
-        flash(_('Message sent.'))
-        return reply
+    flash(_('Message sent.'))
+    return reply
 
