@@ -54,7 +54,7 @@ def send_topic_suggestion(communities_for_topic, user, recipients, subject, topi
 @celery.task
 def send_async_email(subject, sender, recipients, text_body, html_body, reply_to):
     if 'ngrok.app' in sender:   # for local development
-        sender = 'PieFed <noreply@piefed.social'
+        sender = 'PieFed <noreply@piefed.social>'
         return_path = 'bounces@piefed.social'
     else:
         return_path = current_app.config['BOUNCE_ADDRESS']

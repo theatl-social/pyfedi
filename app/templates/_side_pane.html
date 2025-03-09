@@ -34,7 +34,9 @@
             <div class="card-body">
                 <p>{{ community.description_html|community_links|safe if community.description_html else '' }}</p>
                 <p>{{ community.rules_html|safe if community.rules_html else '' }}</p>
-                <p>{{ _('Members') if community.is_local() else _('Local members') }}: {{ community.subscriptions_count }}<br>
+                <p>{{ _('Members') if community.is_local() else _('Local members') }}: {{ community.subscriptions_count }}
+                    <a href="/community/{{ community.link() }}/invite" rel="nofollow noindex">{{ _('Invite people to join') }}</a>
+                    <br>
                     {{ _('Posts') }}: {{ community.post_count }}<br>
                     {{ _('Comments') }}: {{ community.post_reply_count }}
                 </p>
@@ -90,6 +92,7 @@
                  <h2>{{ _('Community Settings') }}</h2>
             </div>
             <div class="card-body">
+                <p><a class="btn btn-primary" href="/community/{{ community.link() }}/invite" rel="nofollow noindex">{{ _('Invite people to join') }}</a></p>
                 {% if is_moderator or is_owner or is_admin -%}
                 <p><a href="/community/{{ community.link() }}/moderate" class="btn btn-primary">{{ _('Moderate') }}</a></p>
                 {% endif -%}

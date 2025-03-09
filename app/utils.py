@@ -488,6 +488,17 @@ def domain_from_url(url: str, create=True) -> Domain:
         return None
 
 
+def domain_from_email(email: str) -> str:
+    if email is None or email.strip() == '':
+        return ''
+    else:
+        if '@' in email:
+            parts = email.split('@')
+            return parts[-1]
+        else:
+            return ''
+
+
 def shorten_string(input_str, max_length=50):
     if input_str:
         if len(input_str) <= max_length:

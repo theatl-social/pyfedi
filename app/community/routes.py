@@ -23,7 +23,8 @@ from app.chat.util import send_message
 from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, CreateImageForm, CreateLinkForm, \
     ReportCommunityForm, \
     DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm, \
-    EscalateReportForm, ResolveReportForm, CreateVideoForm, CreatePollForm, EditCommunityWikiPageForm
+    EscalateReportForm, ResolveReportForm, CreateVideoForm, CreatePollForm, EditCommunityWikiPageForm, \
+    InviteCommunityForm
 from app.community.util import search_for_community, actor_to_community, \
     save_icon_file, save_banner_file, send_to_remote_instance, \
     delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users, tags_from_string, \
@@ -38,6 +39,7 @@ from app.models import User, Community, CommunityMember, CommunityJoinRequest, C
     NotificationSubscription, UserFollower, Instance, Language, Poll, PollChoice, ModLog, CommunityWikiPage, \
     CommunityWikiPageRevision, read_posts, Feed, FeedItem
 from app.community import bp
+from app.shared.community import invite_with_chat, invite_with_email
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, gibberish, community_membership, ap_datetime, \
     request_etag_matches, return_304, instance_banned, can_create_post, can_upvote, can_downvote, user_filters_posts, \
@@ -45,7 +47,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     community_moderators, communities_banned_from, show_ban_message, recently_upvoted_posts, recently_downvoted_posts, \
     blocked_users, languages_for_form, menu_topics, add_to_modlog, \
     blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, ensure_directory_exists, \
-    menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds
+    menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, instance_software, domain_from_email, referrer
 from app.shared.post import make_post
 from feedgen.feed import FeedGenerator
 from datetime import timezone, timedelta
@@ -1740,6 +1742,53 @@ def community_moderate_report_ignore(community_id, report_id):
             return redirect(url_for('community.community_moderate', actor=community.link()))
         else:
             abort(404)
+
+
+@bp.route('/<actor>/invite', methods=['GET', 'POST'])
+@login_required
+def community_invite(actor):
+    if current_user.banned:
+        return show_ban_message()
+    form = InviteCommunityForm()
+
+    community = actor_to_community(actor)
+
+    if not current_user.trustworthy():
+        flash(_('Sorry your account it too new to do this.'), 'warning')
+        return redirect(referrer())
+
+    if community is not None:
+        if form.validate_on_submit():
+            chat_invites = 0
+            email_invites = 0
+            total_invites = 0
+            for line in form.to.data.split('\n'):
+                line = line.strip()
+                if line != '':
+                    if line.startswith('http'):
+                        chat_invites += invite_with_chat(community.id, line, SRC_WEB)
+                    elif '@' in line:
+                        if line.startswith('@') or instance_software(domain_from_email(line)):
+                            chat_invites += invite_with_chat(community.id, line, SRC_WEB)
+                        else:
+                            email_invites += invite_with_email(community.id, line, SRC_WEB)
+                        total_invites += 1
+
+            flash(_('Invited %(total_invites)d people using %(chat_invites)d chat messages and %(email_invites)d emails.',
+                    total_invites=total_invites, chat_invites=chat_invites, email_invites=email_invites))
+            return redirect('/c/' + community.link())
+
+        return render_template('community/invite.html', title=_('Invite to community'), form=form, community=community,
+                               moderating_communities=moderating_communities(current_user.get_id()),
+                               joined_communities=joined_communities(current_user.get_id()),
+                               current_app=current_app,
+                               menu_topics=menu_topics(),
+                               site=g.site, menu_instance_feeds=menu_instance_feeds(),
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                               menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                               )
+    else:
+        abort(404)
 
 
 @bp.route('/lookup/<community>/<domain>')

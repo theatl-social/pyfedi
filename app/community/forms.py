@@ -271,3 +271,8 @@ class DeleteCommunityForm(FlaskForm):
 class RetrieveRemotePost(FlaskForm):
     address = StringField(_l('Full URL'), render_kw={'placeholder': 'e.g. https://lemmy.world/post/123', 'autofocus': True}, validators=[DataRequired()])
     submit = SubmitField(_l('Retrieve'))
+
+
+class InviteCommunityForm(FlaskForm):
+    to = TextAreaField(_l('To'), validators=[DataRequired()], render_kw={'placeholder': _l('Email addresses or fediverse handles, one per line'), 'autofocus': True})
+    submit = SubmitField(_l('Invite'))

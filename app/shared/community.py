@@ -1,11 +1,16 @@
 from app import db, cache
+from app.activitypub.signature import post_request_in_background
+from app.chat.util import send_message
 from app.constants import *
-from app.models import CommunityBlock, CommunityMember
+from app.email import send_email
+from app.models import CommunityBlock, CommunityMember, Notification, User, utcnow, Conversation, Community
 from app.shared.tasks import task_selector
-from app.utils import authorise_api_user, blocked_communities
+from app.user.utils import search_for_user
+from app.utils import authorise_api_user, blocked_communities, shorten_string, gibberish, markdown_to_html, \
+    instance_banned
 from app.constants import *
 
-from flask import current_app, flash
+from flask import current_app, flash, render_template
 from flask_babel import _
 from flask_login import current_user
 
@@ -63,7 +68,7 @@ def leave_community(community_id: int, src, auth=None):
         return
 
 
-def block_community(community_id, src, auth=None):
+def block_community(community_id: int, src, auth=None):
     if src == SRC_API:
         user_id = authorise_api_user(auth)
     else:
@@ -81,7 +86,7 @@ def block_community(community_id, src, auth=None):
         return              # let calling function handle confirmation flash message and redirect
 
 
-def unblock_community(community_id, src, auth=None):
+def unblock_community(community_id: int, src, auth=None):
     if src == SRC_API:
         user_id = authorise_api_user(auth)
     else:
@@ -97,3 +102,62 @@ def unblock_community(community_id, src, auth=None):
         return user_id
     else:
         return              # let calling function handle confirmation flash message and redirect
+
+
+def invite_with_chat(community_id: int, handle: str, src, auth=None):
+    if src == SRC_API:
+        user_id = authorise_api_user(auth)
+        user = User.query.get(user_id)
+    else:
+        user = current_user
+
+    recipient = search_for_user(handle)
+    if recipient and not recipient.banned and not instance_banned(recipient.instance.domain):
+        community = Community.query.get(community_id)
+        if community.banned:
+            return 0
+
+        conversation = Conversation(user_id=user.id)
+        conversation.members.append(recipient)
+        conversation.members.append(user)
+        db.session.add(conversation)
+        db.session.commit()
+
+        message = f"Hi there,\n\nI think you might appreciate this community, check it out: https://{current_app.config['SERVER_NAME']}/c/{community.link()}.\n\n"
+        if recipient.is_local():
+            message += f"If you'd like to join it use this link: https://{current_app.config['SERVER_NAME']}/c/{community.link()}/subscribe."
+        else:
+            if recipient.instance.software.lower() == 'piefed':
+                message += f"Join the community by going to https://{recipient.instance.domain}/c/{community.link()}/subscribe or if that doesn't work try pasting {community.lemmy_link()} into this form: https://{recipient.instance.domain}/community/add_remote."
+            elif recipient.instance.software.lower() == 'lemmy' or recipient.instance.software.lower() == 'mbin':
+                message += f"Join the community by clicking 'Join' at https://{recipient.instance.domain}/c/{community.link()} or if that doesn't work try pasting {community.lemmy_link()} into your search function."
+            else:
+                message = render_template('email/invite_to_community.txt', user=user, community=community, host=current_app.config['SERVER_NAME'])
+
+        if current_app.debug:
+            reply = send_message(message, conversation.id)
+        else:
+            send_message.delay(message, conversation.id)
+            reply = 'ok'
+
+        return 1 if reply else 0
+    return 0
+
+
+def invite_with_email(community_id: int, to: str, src, auth=None):
+    if src == SRC_API:
+        user_id = authorise_api_user(auth)
+        user = User.query.get(user_id)
+    else:
+        user = current_user
+
+    community = Community.query.get(community_id)
+    if community.banned:
+        return 0
+
+    message = render_template('email/invite_to_community.txt', user=user, community=community, host=current_app.config['SERVER_NAME'])
+
+    send_email(f"{community.display_name()} on {current_app.config['SERVER_NAME']}",
+               f"{user.display_name()} <noreply@{current_app.config['SERVER_NAME']}>",
+               [to], message, markdown_to_html(message))
+    return 1
