@@ -730,8 +730,8 @@ class User(UserMixin, db.Model):
     language_id = db.Column(db.Integer, db.ForeignKey('language.id'))   # the default choice in the language dropdown when composing posts & comments. NOT UI language
     reply_collapse_threshold = db.Column(db.Integer, default=-10)
     reply_hide_threshold = db.Column(db.Integer, default=-20)
-    feed_auto_follow = db.Column(db.Boolean, default=True) # does the user want to auto-follow feed communities
-    feed_auto_leave = db.Column(db.Boolean, default=False) # does the user want to auto-leave feed communities
+    feed_auto_follow = db.Column(db.Boolean, default=True)  # does the user want to auto-follow feed communities
+    feed_auto_leave = db.Column(db.Boolean, default=True)   # does the user want to auto-leave feed communities
 
     avatar = db.relationship('File', lazy='joined', foreign_keys=[avatar_id], single_parent=True, cascade="all, delete-orphan")
     cover = db.relationship('File', lazy='joined', foreign_keys=[cover_id], single_parent=True, cascade="all, delete-orphan")

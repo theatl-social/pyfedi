@@ -24,7 +24,7 @@ def upgrade():
 
     with op.batch_alter_table('user', schema=None) as batch_op:
         batch_op.execute('UPDATE "user" SET feed_auto_follow = true WHERE instance_id = 1')
-        batch_op.execute('UPDATE "user" SET feed_auto_leave = false WHERE instance_id = 1')
+        batch_op.execute('UPDATE "user" SET feed_auto_leave = true WHERE instance_id = 1')
     # ### end Alembic commands ###
 
 

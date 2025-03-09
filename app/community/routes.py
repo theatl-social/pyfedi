@@ -461,6 +461,7 @@ def do_subscribe(actor, user_id, admin_preload=False, joined_via_feed=False):
                 db.session.add(member)
                 community.subscriptions_count += 1
                 db.session.commit()
+                cache.delete_memoized(community_membership, user, community)
 
             if remote:
                 # send ActivityPub message to remote community, asking to follow. Accept message will be sent to our shared inbox

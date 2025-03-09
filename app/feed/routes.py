@@ -973,6 +973,16 @@ def feed_unsubscribe(actor):
                     feed.subscriptions_count -= 1
                     db.session.commit()
 
+                    # Remove the account from each community in the feed
+                    if current_user.feed_auto_leave:
+                        for feed_item in FeedItem.query.filter_by(feed_id=feed.id).all():
+                            membership = CommunityMember.query.filter_by(user_id=current_user.id, community_id=feed_item.community_id).first()
+                            if membership and membership.joined_via_feed:
+                                db.session.query(CommunityMember).filter_by(user_id=current_user.id, community_id=feed_item.community_id).delete()
+                            db.session.query(CommunityJoinRequest).filter_by(user_id=current_user.id, community_id=feed_item.community_id).delete()
+                            cache.delete_memoized(community_membership, current_user, Community.query.get(feed_item.community_id))
+                        db.session.commit()
+
                     flash('You have left ' + feed.title)
                 cache.delete_memoized(feed_membership, current_user, feed)
                 cache.delete_memoized(joined_communities, current_user.id)
