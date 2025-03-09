@@ -19,8 +19,8 @@ from app.chat import bp
 def chat_home(conversation_id=None):
     form = AddReply()
     if form.validate_on_submit():
-        reply = send_message(form.message.data, conversation_id)
-        return redirect(url_for('chat.chat_home', conversation_id=conversation_id, _anchor=f'message_{reply.id}'))
+        send_message(form.message.data, conversation_id)
+        return redirect(url_for('chat.chat_home', conversation_id=conversation_id, _anchor=f'message'))
     else:
         conversations = Conversation.query.join(conversation_member,
                                                 conversation_member.c.conversation_id == Conversation.id). \
@@ -81,8 +81,8 @@ def new_message(to):
         conversation.members.append(current_user)
         db.session.add(conversation)
         db.session.commit()
-        reply = send_message(form.message.data, conversation.id)
-        return redirect(url_for('chat.chat_home', conversation_id=conversation.id, _anchor=f'message_{reply.id}'))
+        send_message(form.message.data, conversation.id)
+        return redirect(url_for('chat.chat_home', conversation_id=conversation.id, _anchor=f'message'))
     else:
         return render_template('chat/new_message.html', form=form, title=_('New message to "%(recipient_name)s"', recipient_name=recipient.link()),
                                recipient=recipient,
