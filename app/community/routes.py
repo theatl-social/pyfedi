@@ -464,7 +464,7 @@ def do_subscribe(actor, user_id, admin_preload=False, joined_via_feed=False):
 
             if remote:
                 # send ActivityPub message to remote community, asking to follow. Accept message will be sent to our shared inbox
-                join_request = CommunityJoinRequest(user_id=user.id, community_id=community.id)
+                join_request = CommunityJoinRequest(user_id=user.id, community_id=community.id, joined_via_feed=joined_via_feed)
 
                 db.session.add(join_request)
                 db.session.commit()
