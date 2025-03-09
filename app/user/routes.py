@@ -952,77 +952,78 @@ def import_settings(filename):
 
 @celery.task
 def import_settings_task(user_id, filename):
-    user = User.query.get(user_id)
-    contents = file_get_contents(filename)
-    contents_json = json.loads(contents)
+    with current_app.app_context():
+        user = User.query.get(user_id)
+        contents = file_get_contents(filename)
+        contents_json = json.loads(contents)
 
-    # Follow communities
-    for community_ap_id in contents_json['followed_communities'] if 'followed_communities' in contents_json else []:
-        community = find_actor_or_create(community_ap_id, community_only=True)
-        if community:
-            if community.posts.count() == 0:
-                server, name = extract_domain_and_actor(community.ap_profile_id)
-                if current_app.debug:
-                    retrieve_mods_and_backfill(community.id, server, name)
-                else:
-                    retrieve_mods_and_backfill.delay(community.id, server, name)
-            if community_membership(user, community) != SUBSCRIPTION_MEMBER and community_membership(
-                    user, community) != SUBSCRIPTION_PENDING:
-                if not community.is_local():
-                    # send ActivityPub message to remote community, asking to follow. Accept message will be sent to our shared inbox
-                    join_request = CommunityJoinRequest(user_id=user.id, community_id=community.id)
-                    db.session.add(join_request)
-                    existing_member = CommunityMember.query.filter_by(user_id=user.id,
-                                                                      community_id=community.id).first()
-                    if not existing_member:
-                        member = CommunityMember(user_id=user.id, community_id=community.id)
-                        db.session.add(member)
-                        db.session.commit()
-                    success = True
-                    if not community.instance.gone_forever:
-                        follow = {
-                          "actor": current_user.public_url(),
-                          "to": [community.public_url()],
-                          "object": community.public_url(),
-                          "type": "Follow",
-                          "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
-                        }
-                        success = post_request(community.ap_inbox_url, follow, user.private_key,
-                                           user.public_url() + '#main-key')
-                    if success is False or isinstance(success, str):
-                        sleep(5)    # give them a rest
-                else:  # for local communities, joining is instant
-                    banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
-                    if not banned:
-                        existing_member = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
+        # Follow communities
+        for community_ap_id in contents_json['followed_communities'] if 'followed_communities' in contents_json else []:
+            community = find_actor_or_create(community_ap_id, community_only=True)
+            if community:
+                if community.posts.count() == 0:
+                    server, name = extract_domain_and_actor(community.ap_profile_id)
+                    if current_app.debug:
+                        retrieve_mods_and_backfill(community.id, server, name)
+                    else:
+                        retrieve_mods_and_backfill.delay(community.id, server, name)
+                if community_membership(user, community) != SUBSCRIPTION_MEMBER and community_membership(
+                        user, community) != SUBSCRIPTION_PENDING:
+                    if not community.is_local():
+                        # send ActivityPub message to remote community, asking to follow. Accept message will be sent to our shared inbox
+                        join_request = CommunityJoinRequest(user_id=user.id, community_id=community.id)
+                        db.session.add(join_request)
+                        existing_member = CommunityMember.query.filter_by(user_id=user.id,
+                                                                          community_id=community.id).first()
                         if not existing_member:
                             member = CommunityMember(user_id=user.id, community_id=community.id)
                             db.session.add(member)
                             db.session.commit()
-                cache.delete_memoized(community_membership, current_user, community)
+                        success = True
+                        if not community.instance.gone_forever:
+                            follow = {
+                              "actor": user.public_url(),
+                              "to": [community.public_url()],
+                              "object": community.public_url(),
+                              "type": "Follow",
+                              "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+                            }
+                            success = post_request(community.ap_inbox_url, follow, user.private_key,
+                                               user.public_url() + '#main-key')
+                        if success is False or isinstance(success, str):
+                            sleep(5)    # give them a rest
+                    else:  # for local communities, joining is instant
+                        banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
+                        if not banned:
+                            existing_member = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
+                            if not existing_member:
+                                member = CommunityMember(user_id=user.id, community_id=community.id)
+                                db.session.add(member)
+                                db.session.commit()
+                    cache.delete_memoized(community_membership, user, community)
 
-    for community_ap_id in contents_json['blocked_communities'] if 'blocked_communities' in contents_json else []:
-        community = find_actor_or_create(community_ap_id, community_only=True)
-        if community:
-            existing_block = CommunityBlock.query.filter_by(user_id=user.id, community_id=community.id).first()
-            if not existing_block:
-                block = CommunityBlock(user_id=user.id, community_id=community.id)
-                db.session.add(block)
+        for community_ap_id in contents_json['blocked_communities'] if 'blocked_communities' in contents_json else []:
+            community = find_actor_or_create(community_ap_id, community_only=True)
+            if community:
+                existing_block = CommunityBlock.query.filter_by(user_id=user.id, community_id=community.id).first()
+                if not existing_block:
+                    block = CommunityBlock(user_id=user.id, community_id=community.id)
+                    db.session.add(block)
 
-    for user_ap_id in contents_json['blocked_users'] if 'blocked_users' in contents_json else []:
-        blocked_user = find_actor_or_create(user_ap_id)
-        if blocked_user:
-            existing_block = UserBlock.query.filter_by(blocker_id=user.id, blocked_id=blocked_user.id).first()
-            if not existing_block:
-                user_block = UserBlock(blocker_id=user.id, blocked_id=blocked_user.id)
-                db.session.add(user_block)
-                if not blocked_user.is_local():
-                    ...  # todo: federate block
+        for user_ap_id in contents_json['blocked_users'] if 'blocked_users' in contents_json else []:
+            blocked_user = find_actor_or_create(user_ap_id)
+            if blocked_user:
+                existing_block = UserBlock.query.filter_by(blocker_id=user.id, blocked_id=blocked_user.id).first()
+                if not existing_block:
+                    user_block = UserBlock(blocker_id=user.id, blocked_id=blocked_user.id)
+                    db.session.add(user_block)
+                    if not blocked_user.is_local():
+                        ...  # todo: federate block
 
-    for instance_domain in contents_json['blocked_instances']:
-        ...
+        for instance_domain in contents_json['blocked_instances']:
+            ...
 
-    db.session.commit()
+        db.session.commit()
 
 
 @bp.route('/user/settings/filters', methods=['GET', 'POST'])
