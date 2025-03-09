@@ -1753,7 +1753,7 @@ def community_invite(actor):
 
     community = actor_to_community(actor)
 
-    if not current_user.trustworthy():
+    if current_user.created_recently():
         flash(_('Sorry your account it too new to do this.'), 'warning')
         return redirect(referrer())
 
