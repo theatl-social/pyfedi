@@ -136,13 +136,18 @@ def user_view(user: User | int, variant, stub=False, user_id=None):
     if variant == 2:
         counts = {'person_id': user.id, 'post_count': user.post_count, 'comment_count': user.post_reply_count}
         v2 = {'person': user_view(user=user, variant=1), 'counts': counts, 'is_admin': user.is_admin()}
+        user_sub = False
+        if user_id and user_id != user.id:
+            user_sub = db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'), {'type': NOTIF_USER, 'entity_id': user.id, 'user_id': user_id}).scalar()
+        activity_alert = True if user_sub else False
+        v2 = {'person': user_view(user=user, variant=1), 'activity_alert': activity_alert, 'counts': counts, 'is_admin': user.is_admin()}
         return v2
 
     # Variant 3 - models/user/get_person_details.dart - /user?person_id api endpoint
     if variant == 3:
         modlist = cached_modlist_for_user(user)
 
-        v3 = {'person_view': user_view(user=user, variant=2),
+        v3 = {'person_view': user_view(user=user, variant=2, user_id=user_id),
               'moderates': modlist,
               'posts': [],
               'comments': []}
@@ -152,7 +157,7 @@ def user_view(user: User | int, variant, stub=False, user_id=None):
     if variant == 4:
         block = db.session.execute(text('SELECT blocker_id FROM "user_block" WHERE blocker_id = :blocker_id and blocked_id = :blocked_id'), {'blocker_id': user_id, 'blocked_id': user.id}).scalar()
         blocked = True if block else False
-        v4 = {'person_view': user_view(user=user, variant=2),
+        v4 = {'person_view': user_view(user=user, variant=2, user_id=user_id),
               'blocked': blocked}
         return v4
 
@@ -195,10 +200,12 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
         if user_id:
             followed = db.session.execute(text('SELECT user_id FROM "community_member" WHERE community_id = :community_id and user_id = :user_id'), {"community_id": community.id, "user_id": user_id}).scalar()
             blocked = True if community.id in blocked_communities(user_id) else False
+            community_sub = db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'), {'type': NOTIF_COMMUNITY, 'entity_id': community.id, 'user_id': user_id}).scalar()
         else:
-            followed = blocked = False
+            followed = blocked = community_sub = False
         subscribe_type = 'Subscribed' if followed else 'NotSubscribed'
-        v2 = {'community': community_view(community=community, variant=1, stub=stub), 'subscribed': subscribe_type, 'blocked': blocked, 'counts': counts}
+        activity_alert = True if community_sub else False
+        v2 = {'community': community_view(community=community, variant=1, stub=stub), 'subscribed': subscribe_type, 'blocked': blocked, 'activity_alert': activity_alert, 'counts': counts}
         return v2
 
     # Variant 3 - models/community/get_community_response.dart - /community api endpoint

@@ -34,7 +34,7 @@ def get_user(auth, data):
     post_list = get_post_list(auth, data, user_id)
     reply_list = get_reply_list(auth, data, user_id)
 
-    user_json = user_view(user=person_id, variant=3)
+    user_json = user_view(user=person_id, variant=3, user_id=user_id)
     user_json['posts'] = post_list['posts']
     user_json['comments'] = reply_list['comments']
     return user_json
@@ -66,7 +66,7 @@ def get_user_list(auth, data):
 
     user_list = []
     for user in users:
-        user_list.append(user_view(user, variant=2, stub=True))
+        user_list.append(user_view(user, variant=2, stub=True, user_id=user_id))
     list_json = {
         "users": user_list
     }
