@@ -145,7 +145,7 @@ def chat_options(conversation_id):
 @login_required
 def chat_delete(conversation_id):
     conversation = Conversation.query.get_or_404(conversation_id)
-    if current_user.is_admin() or current_user.is_member(current_user):
+    if current_user.is_admin() or conversation.is_member(current_user):
         Report.query.filter(Report.suspect_conversation_id == conversation.id).delete()
         db.session.delete(conversation)
         db.session.commit()
