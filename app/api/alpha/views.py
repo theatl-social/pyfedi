@@ -195,10 +195,12 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
         if user_id:
             followed = db.session.execute(text('SELECT user_id FROM "community_member" WHERE community_id = :community_id and user_id = :user_id'), {"community_id": community.id, "user_id": user_id}).scalar()
             blocked = True if community.id in blocked_communities(user_id) else False
+            community_sub = db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'), {'type': NOTIF_COMMUNITY, 'entity_id': community.id, 'user_id': user_id}).scalar()
         else:
-            followed = blocked = False
+            followed = blocked = community_sub = False
         subscribe_type = 'Subscribed' if followed else 'NotSubscribed'
-        v2 = {'community': community_view(community=community, variant=1, stub=stub), 'subscribed': subscribe_type, 'blocked': blocked, 'counts': counts}
+        activity_alert = True if community_sub else False
+        v2 = {'community': community_view(community=community, variant=1, stub=stub), 'subscribed': subscribe_type, 'blocked': blocked, 'activity_alert': activity_alert, 'counts': counts}
         return v2
 
     # Variant 3 - models/community/get_community_response.dart - /community api endpoint
