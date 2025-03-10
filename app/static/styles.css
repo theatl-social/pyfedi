@@ -1807,6 +1807,7 @@ h1 .warning_badge {
   min-width: 20px;
   min-height: 20px;
   vertical-align: text-top;
+  object-fit: cover;
 }
 
 .list-group-item .community_icon {
