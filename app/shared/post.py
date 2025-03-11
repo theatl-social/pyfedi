@@ -321,6 +321,8 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
                 url = f"https://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
             else:
                 raise Exception('filetype not allowed')
+        else:
+            url = f"https://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
 
     if url and (from_scratch or url_changed):
         domain = domain_from_url(url)
