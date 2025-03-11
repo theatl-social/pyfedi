@@ -1,3 +1,4 @@
+from app import limiter
 from app.api.alpha import bp
 from app.constants import *
 from app.api.alpha.utils import get_site, post_site_block, \
@@ -8,10 +9,12 @@ from app.api.alpha.utils import get_site, post_site_block, \
                                 post_reply_delete, post_reply_report, post_reply_remove, \
                                 get_community_list, get_community, post_community_follow, post_community_block, \
                                 get_user, post_user_block, get_user_unread_count, get_user_replies, post_user_mark_all_as_read, \
-                                get_private_message_list
+                                get_private_message_list, \
+                                post_upload_image
 from app.shared.auth import log_user_in
 
 from flask import current_app, jsonify, request
+from flask_limiter import RateLimitExceeded
 
 def enable_api():
     return True if current_app.debug else False
@@ -447,6 +450,22 @@ def post_alpha_user_mark_all_as_read():
     try:
         auth = request.headers.get('Authorization')
         return jsonify(post_user_mark_all_as_read(auth))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+# Upload
+@bp.route('/api/alpha/upload/image', methods=['POST'])
+def post_alpha_upload_image():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
+    try:
+        with limiter.limit('5/hour'):
+            auth = request.headers.get('Authorization')
+            image_file = request.files['file']
+            return jsonify(post_upload_image(auth, image_file))
+    except RateLimitExceeded as ex:
+        return jsonify({"error": str(ex)}), 429
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 

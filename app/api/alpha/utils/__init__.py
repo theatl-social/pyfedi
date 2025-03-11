@@ -5,5 +5,6 @@ from app.api.alpha.utils.reply import get_reply_list, post_reply_like, put_reply
 from app.api.alpha.utils.community import get_community, get_community_list, post_community_follow, post_community_block
 from app.api.alpha.utils.user import get_user, post_user_block, get_user_unread_count, get_user_replies, post_user_mark_all_as_read
 from app.api.alpha.utils.private_message import get_private_message_list
+from app.api.alpha.utils.upload import post_upload_image
 
 
