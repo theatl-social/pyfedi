@@ -792,6 +792,7 @@ class User(UserMixin, db.Model):
         else:
             return '[deleted]'
 
+    @cache.memoize(timeout=500)
     def avatar_thumbnail(self) -> str:
         if self.avatar_id is not None:
             if self.avatar.thumbnail_path is not None:
@@ -803,6 +804,7 @@ class User(UserMixin, db.Model):
                 return self.avatar_image()
         return ''
 
+    @cache.memoize(timeout=500)
     def avatar_image(self) -> str:
         if self.avatar_id is not None:
             if self.avatar.file_path is not None:
@@ -817,6 +819,7 @@ class User(UserMixin, db.Model):
                     return self.avatar.source_url
         return ''
 
+    @cache.memoize(timeout=500)
     def cover_image(self) -> str:
         if self.cover_id is not None:
             if self.cover.thumbnail_path is not None:
