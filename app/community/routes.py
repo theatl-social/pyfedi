@@ -163,73 +163,71 @@ def add_remote():
                            )
 
 # testing route
-@bp.route('/add_remote2', methods=['GET', 'POST'])
-@login_required
-def add_remote2():
-    if current_user.banned:
-        return show_ban_message()
-    form = SearchRemoteCommunity()
-    new_community = None
-    if form.validate_on_submit():
-        address = form.address.data.strip().lower()
-        if address.startswith('!') and '@' in address:
-            try:
-                new_community = search_for_community(address)
-            except Exception as e:
-                if 'is blocked.' in str(e):
-                    flash(_('Sorry, that instance is blocked, check https://gui.fediseer.com/ for reasons.'), 'warning')
-        elif address.startswith('@') and '@' in address[1:]:
-            # todo: the user is searching for a person instead
-            ...
-        elif '@' in address:
-            new_community = search_for_community('!' + address)
-        elif address.startswith('https://'):
-            server, community = extract_domain_and_actor(address)
-            new_community = search_for_community('!' + community + '@' + server)
-        else:
-            message = Markup(
-                'Accepted address formats: !community@server.name or https://server.name/{c|m}/community. Search on <a href="https://lemmyverse.net/communities">Lemmyverse.net</a> to find some.')
-            flash(message, 'error')
-        if new_community is None:
-            if g.site.enable_nsfw:
-                flash(_('Community not found.'), 'warning')
-            else:
-                flash(_('Community not found. If you are searching for a nsfw community it is blocked by this instance.'), 'warning')
-        else:
-            if new_community.banned:
-                flash(_('That community is banned from %(site)s.', site=g.site.name), 'warning')
+# @bp.route('/add_remote2', methods=['GET', 'POST'])
+# @login_required
+# def add_remote2():
+#     if current_user.banned:
+#         return show_ban_message()
+#     form = SearchRemoteCommunity()
+#     new_community = None
+#     if form.validate_on_submit():
+#         address = form.address.data.strip().lower()
+#         if address.startswith('!') and '@' in address:
+#             try:
+#                 new_community = search_for_community(address)
+#             except Exception as e:
+#                 if 'is blocked.' in str(e):
+#                     flash(_('Sorry, that instance is blocked, check https://gui.fediseer.com/ for reasons.'), 'warning')
+#         elif address.startswith('@') and '@' in address[1:]:
+#             # todo: the user is searching for a person instead
+#             ...
+#         elif '@' in address:
+#             new_community = search_for_community('!' + address)
+#         elif address.startswith('https://'):
+#             server, community = extract_domain_and_actor(address)
+#             new_community = search_for_community('!' + community + '@' + server)
+#         else:
+#             message = Markup(
+#                 'Accepted address formats: !community@server.name or https://server.name/{c|m}/community. Search on <a href="https://lemmyverse.net/communities">Lemmyverse.net</a> to find some.')
+#             flash(message, 'error')
+#         if new_community is None:
+#             if g.site.enable_nsfw:
+#                 flash(_('Community not found.'), 'warning')
+#             else:
+#                 flash(_('Community not found. If you are searching for a nsfw community it is blocked by this instance.'), 'warning')
+#         else:
+#             if new_community.banned:
+#                 flash(_('That community is banned from %(site)s.', site=g.site.name), 'warning')
 
-    return render_template('community/add_remote2.html',
-                           title=_('Add remote community'), form=form, new_community=new_community,
-                           subscribed=community_membership(current_user, new_community) >= SUBSCRIPTION_MEMBER, moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+#     return render_template('community/add_remote2.html',
+#                            title=_('Add remote community'), form=form, new_community=new_community,
+#                            subscribed=community_membership(current_user, new_community) >= SUBSCRIPTION_MEMBER, moderating_communities=moderating_communities(current_user.get_id()),
+#                            joined_communities=joined_communities(current_user.get_id()),
+#                            menu_topics=menu_topics(),
+#                            site=g.site, menu_instance_feeds=menu_instance_feeds(), 
+#                            menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+#                            menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+#                            )
 
-# testing form fill
+
+# endpoint used by htmx in the add_remote.html
 @bp.route('/search-names', methods=['GET'])
 def community_name_search():
-    # this will provide a list of known communities that match a given search term sent by the user
-    # in the add_remote search box
-    print('search-names triggered')
-    communities_list = [
-        "technology@lemmy.world",
-        "world@lemmy.world",
-        "news@lemmy.world",
-        "nostupidquestions@lemmy.world",
-        "politics@lemmy.world",
-        "asklemmy@lemmy.world",
-        "fediverse@lemmy.world",
-        "games@lemmy.world",
-        "selfhosted@lemmy.world",
-        "mildlyinfuriating@lemmy.world",
-        "linuxmemes@lemmy.world",
-        "showerthoughts@lemmy.world",
-        "comicstrips@lemmy.world"
-    ]
+    # if nsfw is enabled load the all_communities json, otherwise load the sfw one
+    # if they dont exist, just make an empty list
+    communities_list = []
+    try:
+        if g.site.enable_nsfw:
+            with open('app/static/all_communities.json','r') as acj:
+                all_communities_json = json.load(acj)
+                communities_list = all_communities_json['all_communities']
+        else:
+            with open('app/static/all_sfw_communities.json','r') as asfwcj:
+                all_sfw_communities_json = json.load(asfwcj)
+                communities_list = all_sfw_communities_json['all_sfw_communities']
+    except:
+        communities_list = []
+
     if request.args.get('address'):
         search_term = request.args.get('address')
         searched_community_names = ''
@@ -241,8 +239,10 @@ def community_name_search():
     else:
         return ''
 
+# returns a string with html in it for the add_remote search function above
 def _make_community_results_datalist_html(community_name):
     return f'<option value="{community_name}"></option>'
+
 
 # @bp.route('/c/<actor>', methods=['GET']) - defined in activitypub/routes.py, which calls this function for user requests. A bit weird.
 def show_community(community: Community):
