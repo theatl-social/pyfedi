@@ -51,6 +51,8 @@ def get_user_list(auth, data):
 
     query = data['q'] if data and 'q' in data else ''
 
+    user_id = authorise_api_user(auth) if auth else None
+
     if type == 'Local':
         users = User.query.filter_by(instance_id=1, deleted=False).order_by(User.id)
     else:
