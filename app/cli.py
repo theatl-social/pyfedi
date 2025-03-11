@@ -584,7 +584,7 @@ def register(app):
                 seven_things_plus = [
                     'shit', 'piss', 'fuck',
                     'cunt', 'cocksucker', 'motherfucker', 'tits',
-                    'memes', 'piracy', '196', 'greentext', 'usauthoritarianism',
+                    'piracy', '196', 'greentext', 'usauthoritarianism',
                     'enoughmuskspam', 'political_weirdos', '4chan'
                     ]
                 if any(badword in c['name'].lower() for badword in seven_things_plus):
