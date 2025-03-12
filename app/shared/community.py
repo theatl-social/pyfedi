@@ -18,6 +18,7 @@ from flask_login import current_user
 
 from slugify import slugify
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import text
 
 
 # function can be shared between WEB and API (only API calls it for now)
@@ -174,10 +175,6 @@ def make_community(input, src, auth=None, uploaded_icon_file=None, uploaded_bann
 
         name = input['name']
         title = input['title']
-        description = input['description']
-        rules = input['rules']
-        icon_url = input['icon_url']
-        banner_url = input['banner_url']
         nsfw = input['nsfw']
         restricted_to_mods = input['restricted_to_mods']
         local_only = input['local_only']
@@ -190,10 +187,6 @@ def make_community(input, src, auth=None, uploaded_icon_file=None, uploaded_bann
 
         name = input.url.data
         title = input.community_name.data
-        description = piefed_markdown_to_lemmy_markdown(input.description.data)
-        rules = input.rules.data
-        icon_url = process_upload(uploaded_icon_file, destination='communities') if uploaded_icon_file else None
-        banner_url = process_upload(uploaded_banner_file, destination='communities') if uploaded_banner_file else None
         nsfw = input.nsfw.data
         restricted_to_mods = input.restricted_to_mods.data
         local_only = input.local_only.data
@@ -212,9 +205,7 @@ def make_community(input, src, auth=None, uploaded_icon_file=None, uploaded_bann
         raise Exception('community with that name already exists')
 
     private_key, public_key = RsaKeys.generate_keypair()
-    community = Community(title=title, name=name, description=description, rules=rules, nsfw=nsfw,
-                          description_html=markdown_to_html(description), rules_html=markdown_to_html(rules),
-                          restricted_to_mods=restricted_to_mods, local_only=local_only,
+    community = Community(title=title, name=name, nsfw=nsfw, restricted_to_mods=restricted_to_mods, local_only=local_only,
                           private_key=private_key, public_key=public_key,
                           ap_profile_id=ap_profile_id,
                           ap_public_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + name,
@@ -228,35 +219,114 @@ def make_community(input, src, auth=None, uploaded_icon_file=None, uploaded_bann
         db.session.rollback()
         raise Exception('Community with that name already exists')
 
-    if icon_url and is_image_url(icon_url):
-        file = File(source_url=icon_url)
-        db.session.add(file)
-        db.session.commit()
-        community.icon_id = file.id
-        make_image_sizes(community.icon_id, 40, 250, 'communities', community.low_quality)
-    if banner_url and is_image_url(banner_url):
-        file = File(source_url=banner_url)
-        db.session.add(file)
-        db.session.commit()
-        community.image_id = file.id
-        make_image_sizes(community.image_id, 878, 1600, 'communities', community.low_quality)
-
     membership = CommunityMember(user_id=user.id, community_id=community.id, is_moderator=True, is_owner=True)
     db.session.add(membership)
     for language_choice in discussion_languages:
-        community.languages.append(Language.query.get(language_choice))
+        language = Language.query.get(language_choice)
+        if language:
+            community.languages.append(language)
     # Always include the undetermined language, so posts with no language will be accepted
     undetermined = Language.query.filter(Language.code == 'und').first()
     if undetermined.id not in discussion_languages:
         community.languages.append(undetermined)
     db.session.commit()
 
-    cache.delete_memoized(community_membership, user, community)
-    cache.delete_memoized(joined_communities, user.id)
-    cache.delete_memoized(moderating_communities, user.id)
+    community = edit_community(input, community, src, auth, uploaded_icon_file, uploaded_banner_file, from_scratch=True)
 
     if src == SRC_API:
         return user.id, community.id
     else:
         return community.name
 
+
+def edit_community(input, community, src, auth=None, uploaded_icon_file=None, uploaded_banner_file=None, from_scratch=False):
+    if src == SRC_API:
+        title = input['title']
+        description = input['description']
+        rules = input['rules']
+        icon_url = input['icon_url']
+        banner_url = input['banner_url']
+        nsfw = input['nsfw']
+        restricted_to_mods = input['restricted_to_mods']
+        local_only = input['local_only']
+        discussion_languages = input['discussion_languages']
+        user = authorise_api_user(auth, return_type='model')
+    else:
+        title = input.community_name.data
+        description = piefed_markdown_to_lemmy_markdown(input.description.data)
+        rules = input.rules.data
+        icon_url = process_upload(uploaded_icon_file, destination='communities') if uploaded_icon_file else None
+        banner_url = process_upload(uploaded_banner_file, destination='communities') if uploaded_banner_file else None
+        nsfw = input.nsfw.data
+        restricted_to_mods = input.restricted_to_mods.data
+        local_only = input.local_only.data
+        discussion_languages = input.languages.data
+        user = current_user
+
+    icon_url_changed = banner_url_changed = False
+
+    if not from_scratch:
+        if community.icon_id and icon_url != community.icon.source_url:
+            if icon_url != community.icon.medium_url():
+                icon_url_changed = True
+                remove_file = File.query.get(community.icon_id)
+                if remove_file:
+                    remove_file.delete_from_disk()
+                community.icon_id = None
+                cache.delete_memoized(Community.icon_image, community)
+        if not community.icon_id:
+            icon_url_changed = True
+        if community.image_id and banner_url != community.image.source_url:
+            if banner_url != community.image.medium_url():
+                banner_url_changed = True
+                remove_file = File.query.get(community.image_id)
+                if remove_file:
+                    remove_file.delete_from_disk()
+                community.image_id = None
+                cache.delete_memoized(Community.header_image, community)
+        if not community.image_id:
+            banner_url_changed = True
+        db.session.execute(text('DELETE FROM "community_language" WHERE community_id = :community_id'), {'community_id': community.id})
+
+    if icon_url and (from_scratch or icon_url_changed) and is_image_url(icon_url):
+        file = File(source_url=icon_url)
+        db.session.add(file)
+        db.session.commit()
+        community.icon_id = file.id
+        make_image_sizes(community.icon_id, 40, 250, 'communities', community.low_quality)
+    if banner_url and (from_scratch or banner_url_changed) and is_image_url(banner_url):
+        file = File(source_url=banner_url)
+        db.session.add(file)
+        db.session.commit()
+        community.image_id = file.id
+        make_image_sizes(community.image_id, 878, 1600, 'communities', community.low_quality)
+
+    community.title = title
+    community.description = description
+    community.rules = rules
+    community.nsfw = nsfw
+    community.description_html = markdown_to_html(description)
+    community.rules_html = markdown_to_html(rules)
+    community.restricted_to_mods = restricted_to_mods
+    community.local_only = local_only
+    db.session.commit()
+
+    if not from_scratch:
+        for language_choice in discussion_languages:
+            language = Language.query.get(language_choice)
+            if language:
+                community.languages.append(language)
+        # Always include the undetermined language, so posts with no language will be accepted
+        undetermined = Language.query.filter(Language.code == 'und').first()
+        if undetermined.id not in discussion_languages:
+            community.languages.append(undetermined)
+        db.session.commit()
+
+    cache.delete_memoized(community_membership, user, community)
+    cache.delete_memoized(joined_communities, user.id)
+    cache.delete_memoized(moderating_communities, user.id)
+
+    if from_scratch:
+        return community
+    else:
+        return user.id

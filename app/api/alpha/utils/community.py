@@ -4,7 +4,7 @@ from app.community.util import search_for_community
 from app.utils import authorise_api_user
 from app.constants import *
 from app.models import Community, CommunityMember
-from app.shared.community import join_community, leave_community, block_community, unblock_community, make_community
+from app.shared.community import join_community, leave_community, block_community, unblock_community, make_community, edit_community
 from app.utils import communities_banned_from, blocked_instances, blocked_communities
 
 from sqlalchemy import desc, or_
@@ -134,4 +134,34 @@ def post_community(auth, data):
 
     user_id, community_id = make_community(input, SRC_API, auth)
     community_json = community_view(community=community_id, variant=4, user_id=user_id)
+    return community_json
+
+
+def put_community(auth, data):
+    required(['community_id'], data)
+    integer_expected(['community_id'], data)
+    string_expected(['title', 'description', 'rules', 'icon_url', 'banner_url'], data)
+    boolean_expected(['nsfw', 'restricted_to_mods', 'local_only'], data)
+    array_of_integers_expected(['discussion_languages'], data)
+
+    community_id = data['community_id']
+    title = data['title']
+    description = data['description'] if 'description' in data else ''
+    rules = data['rules'] if 'rules' in data else ''
+    icon_url = data['icon_url'] if 'icon_url' in data else None
+    banner_url = data['banner_url'] if 'banner_url' in data else None
+    nsfw = data['nsfw'] if 'nsfw' in data else False
+    restricted_to_mods = data['restricted_to_mods'] if 'restricted_to_mods' in data else False
+    local_only = data['local_only'] if 'local_only' in data else False
+    discussion_languages = data['discussion_languages'] if 'discussion_languages' in data else [2]  # FIXME: use site language
+
+    community = Community.query.filter_by(id=community_id).one()
+
+    input = {'community_id': community_id, 'title': title, 'description': description, 'rules': rules,
+             'icon_url': icon_url, 'banner_url': banner_url,
+             'nsfw': nsfw, 'restricted_to_mods': restricted_to_mods, 'local_only': local_only,
+             'discussion_languages': discussion_languages}
+
+    user_id = edit_community(input, community, SRC_API, auth)
+    community_json = community_view(community=community, variant=4, user_id=user_id)
     return community_json

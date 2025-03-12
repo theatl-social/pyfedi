@@ -185,7 +185,7 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
         if community.description and not stub:
             v1['description'] = community.description
         if community.icon_id:
-            v1['icon'] = community.icon.thumbnail_url()
+            v1['icon'] = community.icon.medium_url()
         if community.image_id and not stub:
             v1['banner'] = community.image.medium_url()
 
