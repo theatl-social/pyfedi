@@ -102,7 +102,7 @@ class ResolveReportForm(FlaskForm):
 
 
 class SearchRemoteCommunity(FlaskForm):
-    address = StringField(_l('Community address'), render_kw={'placeholder': 'e.g. !name@server', 'autofocus': True}, validators=[DataRequired()])
+    address = StringField(_l('Community address'), render_kw={'placeholder': 'e.g. !name@server', 'autofocus': True, 'autocomplete': 'off'}, validators=[DataRequired()])
     submit = SubmitField(_l('Search'))
 
 

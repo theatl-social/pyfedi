@@ -16,7 +16,7 @@ import click
 import os
 
 from app.activitypub.signature import RsaKeys
-from app.activitypub.util import find_actor_or_create
+from app.activitypub.util import find_actor_or_create, extract_domain_and_actor
 from app.auth.util import random_token
 from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY
 from app.email import send_email
@@ -548,6 +548,73 @@ def register(app):
             db.session.commit()
 
             print('Done')
+
+    @app.cli.command("populate_community_search")
+    def populate_community_search():
+        with app.app_context():
+            # pull down the community.full.json
+            print('Pulling in the lemmyverse data ...')
+            resp = get_request('https://data.lemmyverse.net/data/community.full.json')
+            community_json = resp.json()
+            resp.close()
+
+            # get the banned urls list
+            print('Getting the banned domains list ...')
+            banned_urls = list(db.session.execute(text('SELECT domain FROM "banned_instances"')).scalars())
+                        
+            # iterate over the entries and get out the url and the nsfw status in a new list
+            print('Generating the communities lists ...')
+            all_communities = []
+            all_sfw_communities = []
+            for c in community_json:
+                # skip if the domain is banned
+                if c['baseurl'] in banned_urls:
+                    continue
+
+                # sort out any that have less than 50 posts
+                elif c['counts']['posts'] < 50:
+                    continue
+
+                # sort out any that do not have greater than 10 active users over the past week
+                elif c['counts']['users_active_week'] < 10:
+                    continue
+
+                # sort out the 'seven things you can't say on tv' names (cursewords), plus some
+                # "low effort" communities
+                seven_things_plus = [
+                    'shit', 'piss', 'fuck',
+                    'cunt', 'cocksucker', 'motherfucker', 'tits',
+                    'piracy', '196', 'greentext', 'usauthoritarianism',
+                    'enoughmuskspam', 'political_weirdos', '4chan'
+                    ]
+                if any(badword in c['name'].lower() for badword in seven_things_plus):
+                    continue
+        
+                # convert the url to server, community
+                server, community = extract_domain_and_actor(c['url'])
+                
+                # if the community is nsfw append to the all_communites only, if sfw, append to both
+                if c['nsfw']:
+                    all_communities.append(f'{community}@{server}')
+                else:
+                    all_communities.append(f'{community}@{server}')
+                    all_sfw_communities.append(f'{community}@{server}')
+            
+            # add those lists to dicts
+            all_communities_json = {}
+            all_sfw_communities_json = {}
+            all_communities_json['all_communities'] = all_communities
+            all_sfw_communities_json['all_sfw_communities'] = all_sfw_communities
+
+            # write those files to disk as json
+            print('Saving the communities lists to app/static/ ...')
+            with open('app/static/all_communities.json','w') as acj:
+                json.dump(all_communities_json, acj)
+
+            with open('app/static/all_sfw_communities.json','w') as asfwcj:
+                json.dump(all_sfw_communities_json, asfwcj)
+
+            print('Done!')
 
 
 def parse_communities(interests_source, segment):

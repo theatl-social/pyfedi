@@ -2819,6 +2819,9 @@ def log_incoming_ap(id, aplog_type, aplog_result, saved_json, message=None):
         db.session.add(activity_log)
         db.session.commit()
 
+        if 'piefed.social' in id:
+            current_app.logger.info(f'piefed.social activity: {id} Type: {aplog_type[1]}, Result: {aplog_result[1]}, {message}')
+
 
 def find_community(request_json):
     # Create/Update from platform that included Community in 'audience', 'cc', or 'to' in outer or inner object

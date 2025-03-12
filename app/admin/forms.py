@@ -36,6 +36,13 @@ class SiteMiscForm(FlaskForm):
     application_question = TextAreaField(_l('Question to ask people applying for an account'))
     auto_decline_referrers = TextAreaField(_l('Block registrations from these referrers (one per line)'))
     default_theme = SelectField(_l('Default theme'), coerce=str, render_kw={'class': 'form-select'})
+    filters = [('subscribed', _l('Subscribed')),
+               ('local', _l('Local')),
+               ('popular', _l('Popular')),
+               ('all', _l('All')),
+               ]
+    default_filter = SelectField(_l('Default home filter'), choices=filters, validators=[DataRequired()], coerce=str,
+                                 render_kw={'class': 'form-select'})
     log_activitypub_json = BooleanField(_l('Log ActivityPub JSON for debugging'))
     public_modlog = BooleanField(_l('Show moderation actions publicly'))
     show_inoculation_block = BooleanField(_l('Show Rational Discourse Toolkit in sidebar'))

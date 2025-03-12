@@ -163,6 +163,41 @@ def add_remote():
                            )
 
 
+# endpoint used by htmx in the add_remote.html
+@bp.route('/search-names', methods=['GET'])
+def community_name_search():
+    # if nsfw is enabled load the all_communities json, otherwise load the sfw one
+    # if they dont exist, just make an empty list
+    communities_list = []
+    try:
+        if g.site.enable_nsfw:
+            with open('app/static/all_communities.json','r') as acj:
+                all_communities_json = json.load(acj)
+                communities_list = all_communities_json['all_communities']
+        else:
+            with open('app/static/all_sfw_communities.json','r') as asfwcj:
+                all_sfw_communities_json = json.load(asfwcj)
+                communities_list = all_sfw_communities_json['all_sfw_communities']
+    except:
+        communities_list = []
+
+    if request.args.get('address'):
+        search_term = request.args.get('address')
+        searched_community_names = ''
+        for c in communities_list:
+            if isinstance(c, str):
+                if search_term in c:
+                    searched_community_names = searched_community_names + _make_community_results_datalist_html(c)
+        return searched_community_names
+    else:
+        return ''
+
+
+# returns a string with html in it for the add_remote search function above
+def _make_community_results_datalist_html(community_name):
+    return f'<option value="{community_name}"></option>'
+
+
 # @bp.route('/c/<actor>', methods=['GET']) - defined in activitypub/routes.py, which calls this function for user requests. A bit weird.
 def show_community(community: Community):
 
