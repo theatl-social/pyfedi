@@ -49,7 +49,7 @@ def home_page(sort, view_filter):
         sort = current_user.default_sort if current_user.is_authenticated else 'hot'
 
     if view_filter is None:
-        view_filter = current_user.default_filter if current_user.is_authenticated else 'popular'
+        view_filter = current_user.default_filter if current_user.is_authenticated else g.site.default_filter
         if view_filter is None:
             view_filter = 'subscribed'
 
