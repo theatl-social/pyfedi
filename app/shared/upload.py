@@ -7,7 +7,7 @@ from flask import current_app
 import os
 
 
-def process_upload(image_file):
+def process_upload(image_file, destination='posts'):
     # should have errored earlier if no upload, but just to be paranoid
     if not image_file or image_file.filename == '':
         raise Exception('file not uploaded')
@@ -19,7 +19,7 @@ def process_upload(image_file):
 
     new_filename = gibberish(15)
     # set up the storage directory
-    directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
+    directory = 'app/static/media/' + destination + '/' + new_filename[0:2] + '/' + new_filename[2:4]
     ensure_directory_exists(directory)
 
     # save the file

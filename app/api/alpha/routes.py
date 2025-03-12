@@ -7,10 +7,10 @@ from app.api.alpha.utils import get_site, post_site_block, \
                                 put_post, post_post_delete, post_post_report, post_post_lock, post_post_feature, post_post_remove, \
                                 get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, put_reply, post_reply_mark_as_read, \
                                 post_reply_delete, post_reply_report, post_reply_remove, \
-                                get_community_list, get_community, post_community_follow, post_community_block, \
+                                get_community_list, get_community, post_community_follow, post_community_block, post_community, \
                                 get_user, post_user_block, get_user_unread_count, get_user_replies, post_user_mark_all_as_read, \
                                 get_private_message_list, \
-                                post_upload_image
+                                post_upload_image, post_upload_community_image, post_upload_user_image
 from app.shared.auth import log_user_in
 
 from flask import current_app, jsonify, request
@@ -101,6 +101,21 @@ def post_alpha_community_block():
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
         return jsonify(post_community_block(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/community', methods=['POST'])
+def post_alpha_community():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
+    try:
+        with limiter.limit('1/day'):
+            auth = request.headers.get('Authorization')
+            data = request.get_json(force=True) or {}
+            return jsonify(post_community(auth, data))
+    except RateLimitExceeded as ex:
+        return jsonify({"error": str(ex)}), 429
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
@@ -464,6 +479,36 @@ def post_alpha_upload_image():
             auth = request.headers.get('Authorization')
             image_file = request.files['file']
             return jsonify(post_upload_image(auth, image_file))
+    except RateLimitExceeded as ex:
+        return jsonify({"error": str(ex)}), 429
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/upload/community_image', methods=['POST'])
+def post_alpha_upload_community_image():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
+    try:
+        with limiter.limit('3/day'):
+            auth = request.headers.get('Authorization')
+            image_file = request.files['file']
+            return jsonify(post_upload_community_image(auth, image_file))
+    except RateLimitExceeded as ex:
+        return jsonify({"error": str(ex)}), 429
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/upload/user_image', methods=['POST'])
+def post_alpha_upload_user_image():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
+    try:
+        with limiter.limit('3/day'):
+            auth = request.headers.get('Authorization')
+            image_file = request.files['file']
+            return jsonify(post_upload_user_image(auth, image_file))
     except RateLimitExceeded as ex:
         return jsonify({"error": str(ex)}), 429
     except Exception as ex:

@@ -1,18 +1,23 @@
 from app import db, cache
-from app.activitypub.signature import post_request_in_background
+from app.activitypub.signature import RsaKeys
+from app.activitypub.util import make_image_sizes
 from app.chat.util import send_message
 from app.constants import *
 from app.email import send_email
-from app.models import CommunityBlock, CommunityMember, Notification, User, utcnow, Conversation, Community
+from app.models import CommunityBlock, CommunityMember, Notification, User, utcnow, Conversation, Community, Language, File
+from app.shared.upload import process_upload
 from app.shared.tasks import task_selector
 from app.user.utils import search_for_user
 from app.utils import authorise_api_user, blocked_communities, shorten_string, gibberish, markdown_to_html, \
-    instance_banned
+    instance_banned, community_membership, joined_communities, moderating_communities, is_image_url
 from app.constants import *
 
 from flask import current_app, flash, render_template
 from flask_babel import _
 from flask_login import current_user
+
+from slugify import slugify
+from sqlalchemy.exc import IntegrityError
 
 
 # function can be shared between WEB and API (only API calls it for now)
@@ -161,3 +166,97 @@ def invite_with_email(community_id: int, to: str, src, auth=None):
                f"{user.display_name()} <noreply@{current_app.config['SERVER_NAME']}>",
                [to], message, markdown_to_html(message))
     return 1
+
+
+def make_community(input, src, auth=None, uploaded_icon_file=None, uploaded_banner_file=None):
+    if src == SRC_API:
+        input['name'] = slugify(input['name'], separator='_').lower()
+
+        name = input['name']
+        title = input['title']
+        description = input['description']
+        rules = input['rules']
+        icon_url = input['icon_url']
+        banner_url = input['banner_url']
+        nsfw = input['nsfw']
+        restricted_to_mods = input['restricted_to_mods']
+        local_only = input['local_only']
+        discussion_languages = input['discussion_languages']
+        user = authorise_api_user(auth, return_type='model')
+    else:
+        if input.url.data.strip().lower().startswith('/c/'):
+            input.url.data = input.url.data[3:]
+        input.url.data = slugify(input.url.data.strip(), separator='_').lower()
+
+        name = input.url.data
+        title = input.community_name.data
+        description = piefed_markdown_to_lemmy_markdown(input.description.data)
+        rules = input.rules.data
+        icon_url = process_upload(uploaded_icon_file, destination='communities') if uploaded_icon_file else None
+        banner_url = process_upload(uploaded_banner_file, destination='communities') if uploaded_banner_file else None
+        nsfw = input.nsfw.data
+        restricted_to_mods = input.restricted_to_mods.data
+        local_only = input.local_only.data
+        discussion_languages = input.languages.data
+        user = current_user
+
+    # test user with this name doesn't already exist
+    ap_profile_id = 'https://' + current_app.config['SERVER_NAME'] + '/u/' + name.lower()
+    existing_user = User.query.filter_by(ap_profile_id=ap_profile_id).first()
+    if existing_user:
+        raise Exception('A User with that name already exists, so it cannot be used for a Community')
+    # test community with this name doesn't already exist (it'll be reinforced by the DB, but check first anyway)
+    ap_profile_id = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + name.lower()
+    existing_community = Community.query.filter_by(ap_profile_id=ap_profile_id).first()
+    if existing_community:
+        raise Exception('community with that name already exists')
+
+    private_key, public_key = RsaKeys.generate_keypair()
+    community = Community(title=title, name=name, description=description, rules=rules, nsfw=nsfw,
+                          description_html=markdown_to_html(description), rules_html=markdown_to_html(rules),
+                          restricted_to_mods=restricted_to_mods, local_only=local_only,
+                          private_key=private_key, public_key=public_key,
+                          ap_profile_id=ap_profile_id,
+                          ap_public_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + name,
+                          ap_followers_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + name + '/followers',
+                          ap_domain=current_app.config['SERVER_NAME'],
+                          subscriptions_count=1, instance_id=1, low_quality='memes' in name)
+    try:
+        db.session.add(community)
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        raise Exception('Community with that name already exists')
+
+    if icon_url and is_image_url(icon_url):
+        file = File(source_url=icon_url)
+        db.session.add(file)
+        db.session.commit()
+        community.icon_id = file.id
+        make_image_sizes(community.icon_id, 40, 250, 'communities', community.low_quality)
+    if banner_url and is_image_url(banner_url):
+        file = File(source_url=banner_url)
+        db.session.add(file)
+        db.session.commit()
+        community.image_id = file.id
+        make_image_sizes(community.image_id, 878, 1600, 'communities', community.low_quality)
+
+    membership = CommunityMember(user_id=user.id, community_id=community.id, is_moderator=True, is_owner=True)
+    db.session.add(membership)
+    for language_choice in discussion_languages:
+        community.languages.append(Language.query.get(language_choice))
+    # Always include the undetermined language, so posts with no language will be accepted
+    undetermined = Language.query.filter(Language.code == 'und').first()
+    if undetermined.id not in discussion_languages:
+        community.languages.append(undetermined)
+    db.session.commit()
+
+    cache.delete_memoized(community_membership, user, community)
+    cache.delete_memoized(joined_communities, user.id)
+    cache.delete_memoized(moderating_communities, user.id)
+
+    if src == SRC_API:
+        return user.id, community.id
+    else:
+        return community.name
+
