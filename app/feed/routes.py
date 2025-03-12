@@ -700,57 +700,91 @@ def show_feed(feed):
             for item in feed_items:
                 feed_community_ids.append(item.community_id)
 
-        posts = Post.query.join(Community, Post.community_id == Community.id).filter(Community.id.in_(feed_community_ids),
-                                                                                     Community.banned == False)
+        post_id_sql = 'SELECT p.id, p.cross_posts FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
+        post_id_where = ['c.id IN :feed_community_ids AND c.banned is false ']
+        params = {'feed_community_ids': feed_community_ids}
+
+        #posts = Post.query.join(Community, Post.community_id == Community.id).filter(Community.id.in_(feed_community_ids),
+        #                                                                             Community.banned == False)
 
         # filter out nsfw and nsfl if desired
         if current_user.is_anonymous:
-            posts = posts.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
+            post_id_where.append('p.from_bot is false AND p.nsfw is false AND p.nsfl is false AND p.deleted is false ')
+            #posts = posts.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
             content_filters = {}
         else:
             if current_user.ignore_bots == 1:
-                posts = posts.filter(Post.from_bot == False)
+                post_id_where.append('p.from_bot is false ')
+                #posts = posts.filter(Post.from_bot == False)
             if current_user.hide_nsfl == 1:
-                posts = posts.filter(Post.nsfl == False)
+                #posts = posts.filter(Post.nsfl == False)
+                post_id_where.append('p.nsfl is false ')
             if current_user.hide_nsfw == 1:
-                posts = posts.filter(Post.nsfw == False)
+                #posts = posts.filter(Post.nsfw == False)
+                post_id_where.append('p.nsfw is false')
             if current_user.hide_read_posts:
-                posts = posts.outerjoin(read_posts, (Post.id == read_posts.c.read_post_id) & (read_posts.c.user_id == current_user.id))
-                posts = posts.filter(read_posts.c.read_post_id.is_(None))  # Filter where there is no corresponding read post for the current user
-            posts = posts.filter(Post.deleted == False)
+                ...
+                # @todo: read posts
+                #posts = posts.outerjoin(read_posts, (Post.id == read_posts.c.read_post_id) & (read_posts.c.user_id == current_user.id))
+                #posts = posts.filter(read_posts.c.read_post_id.is_(None))  # Filter where there is no corresponding read post for the current user
+            #posts = posts.filter(Post.deleted == False)
+            post_id_where.append('p.deleted is false ')
+
             content_filters = user_filters_posts(current_user.id)
 
             # filter blocked domains and instances
             domains_ids = blocked_domains(current_user.id)
             if domains_ids:
-                posts = posts.filter(or_(Post.domain_id.not_in(domains_ids), Post.domain_id == None))
+                #posts = posts.filter(or_(Post.domain_id.not_in(domains_ids), Post.domain_id == None))
+                post_id_where.append('(p.domain_id NOT IN :domain_ids OR p.domain_id is null) ')
+                params['domain_ids'] = domains_ids
             instance_ids = blocked_instances(current_user.id)
             if instance_ids:
-                posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
+                #posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
+                post_id_where.append('(p.instance_id NOT IN :instance_ids OR p.instance_id is null) ')
+                params['instance_ids'] = instance_ids
             community_ids = blocked_communities(current_user.id)
             if community_ids:
-                posts = posts.filter(Post.community_id.not_in(community_ids))
+                #posts = posts.filter(Post.community_id.not_in(community_ids))
+                post_id_where.append('p.community_id NOT IN :community_ids ')
+                params['community_ids'] = community_ids
             # filter blocked users
             blocked_accounts = blocked_users(current_user.id)
             if blocked_accounts:
-                posts = posts.filter(Post.user_id.not_in(blocked_accounts))
+                #posts = posts.filter(Post.user_id.not_in(blocked_accounts))
+                post_id_where.append('p.user_id NOT IN :blocked_accounts ')
+                params['blocked_accounts'] = blocked_accounts
+
 
             banned_from = communities_banned_from(current_user.id)
             if banned_from:
-                posts = posts.filter(Post.community_id.not_in(banned_from))
+                #posts = posts.filter(Post.community_id.not_in(banned_from))
+                post_id_where.append('p.community_id NOT IN :banned_from ')
+                params['banned_from'] = banned_from
 
         # sorting
+        post_id_sort = ''
         if sort == '' or sort == 'hot':
-            posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
+            #posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
+            post_id_sort = 'ORDER BY p.ranking DESC, p.posted_at DESC'
         elif sort == 'top':
-            posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=7)).order_by(desc(Post.up_votes - Post.down_votes))
+            #posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=7)).order_by(desc(Post.up_votes - Post.down_votes))
+            post_id_where.append('p.posted_at > :top_cutoff ')
+            post_id_sort = 'ORDER BY p.up_votes - p.down_votes DESC'
+            params['top_cutoff'] = utcnow() - timedelta(days=7)
         elif sort == 'new':
-            posts = posts.order_by(desc(Post.posted_at))
+            #posts = posts.order_by(desc(Post.posted_at))
+            post_id_sort = 'ORDER BY p.posted_at'
         elif sort == 'active':
-            posts = posts.order_by(desc(Post.last_active))
+            #posts = posts.order_by(desc(Post.last_active))
+            post_id_sort = 'ORDER BY p.last_active'
+
+        final_post_id_sql = f"{post_id_sql}{' AND '.join(post_id_where)}\n{post_id_sort}\nLIMIT 200"
+
+        post_ids = db.session.execute(text(final_post_id_sql), params)
 
         # paging
-        per_page = 100
+        per_page = 20
         if post_layout == 'masonry':
             per_page = 200
         elif post_layout == 'masonry_wide':
