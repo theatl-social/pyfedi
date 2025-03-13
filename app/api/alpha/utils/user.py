@@ -171,5 +171,5 @@ def put_user_subscribe(auth, data):
     subscribe = data['subscribe']           # not actually processed - is just a toggle
 
     user_id = toggle_user_notification(person_id, SRC_API, auth)
-    user_json = user_view(user=person_id, variant=2, user_id=user_id)
+    user_json = user_view(user=person_id, variant=5, user_id=user_id)
     return user_json
