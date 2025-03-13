@@ -4,12 +4,12 @@ from app.activitypub.util import make_image_sizes
 from app.chat.util import send_message
 from app.constants import *
 from app.email import send_email
-from app.models import CommunityBlock, CommunityMember, Notification, User, utcnow, Conversation, Community, Language, File
+from app.models import CommunityBlock, CommunityMember, Notification, NotificationSubscription, User, utcnow, Conversation, Community, Language, File
 from app.shared.upload import process_upload
 from app.shared.tasks import task_selector
 from app.user.utils import search_for_user
 from app.utils import authorise_api_user, blocked_communities, shorten_string, gibberish, markdown_to_html, \
-    instance_banned, community_membership, joined_communities, moderating_communities, is_image_url
+    instance_banned, community_membership, joined_communities, moderating_communities, is_image_url, communities_banned_from
 from app.constants import *
 
 from flask import current_app, flash, render_template
@@ -335,3 +335,32 @@ def edit_community(input, community, src, auth=None, uploaded_icon_file=None, up
         return community
     else:
         return user.id
+
+
+def toggle_community_notification(community_id: int, src, auth=None):
+    # Toggle whether the current user is subscribed to notifications for activity in this community
+    if src == SRC_API:
+        user_id = authorise_api_user(auth)
+    else:
+        user_id = current_user.id
+
+    community = Community.query.filter_by(id=community_id).one()
+
+    existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == community.id,
+                                                                  NotificationSubscription.user_id == user_id,
+                                                                  NotificationSubscription.type == NOTIF_COMMUNITY).first()
+    if existing_notification:
+        db.session.delete(existing_notification)
+        db.session.commit()
+    else:  # no subscription yet, so make one
+        if community.id not in communities_banned_from(user_id):
+            new_notification = NotificationSubscription(name=shorten_string(_('New posts in %(community_name)s', community_name=community.title)),
+                                                        user_id=user_id, entity_id=community.id,
+                                                        type=NOTIF_COMMUNITY)
+            db.session.add(new_notification)
+            db.session.commit()
+
+    if src == SRC_API:
+        return user_id
+    else:
+        return render_template('community/_notification_toggle.html', community=community)

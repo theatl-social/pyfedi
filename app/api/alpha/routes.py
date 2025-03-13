@@ -7,7 +7,7 @@ from app.api.alpha.utils import get_site, post_site_block, \
                                 put_post, post_post_delete, post_post_report, post_post_lock, post_post_feature, post_post_remove, \
                                 get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, put_reply, post_reply_mark_as_read, \
                                 post_reply_delete, post_reply_report, post_reply_remove, \
-                                get_community_list, get_community, post_community_follow, post_community_block, post_community, put_community, \
+                                get_community_list, get_community, post_community_follow, post_community_block, post_community, put_community, put_community_subscribe, \
                                 get_user, post_user_block, get_user_unread_count, get_user_replies, post_user_mark_all_as_read, \
                                 get_private_message_list, \
                                 post_upload_image, post_upload_community_image, post_upload_user_image
@@ -128,6 +128,18 @@ def put_alpha_community():
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
         return jsonify(put_community(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/community/subscribe', methods=['PUT'])
+def put_alpha_community_subscribe():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(put_community_subscribe(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
