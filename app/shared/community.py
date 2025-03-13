@@ -322,6 +322,8 @@ def edit_community(input, community, src, auth=None, uploaded_icon_file=None, up
             community.languages.append(undetermined)
         db.session.commit()
 
+        task_selector('edit_community', user_id=user.id, community_id=community.id)
+
     cache.delete_memoized(community_membership, user, community)
     cache.delete_memoized(joined_communities, user.id)
     cache.delete_memoized(moderating_communities, user.id)
