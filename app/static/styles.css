@@ -1451,7 +1451,7 @@ time {
 .comment .comment_actions .dropdown-item:active {
   line-height: 26px;
 }
-@container (max-width: 267px) {
+@container (max-width: 270px) {
   .comment .comment_actions .post_replies_link a {
     width: 44px;
   }
