@@ -1,10 +1,10 @@
 from app.api.alpha.views import post_view, post_report_view
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
 from app.constants import *
-from app.models import Post, Community, CommunityMember, utcnow
+from app.models import Post, PostVote, Community, CommunityMember, utcnow
 from app.shared.post import vote_for_post, bookmark_the_post, remove_the_bookmark_from_post, toggle_post_notification, make_post, edit_post, \
                             delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post
-from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances
+from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, recently_upvoted_posts
 
 from datetime import timedelta
 from sqlalchemy import desc
@@ -15,6 +15,8 @@ def get_post_list(auth, data, user_id=None, search_type='Posts'):
     sort = data['sort'] if data and 'sort' in data else "Hot"
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 50
+    liked_only = data['liked_only'] if data and 'liked_only' in data else 'false'
+    liked_only = True if liked_only == 'true' else False
 
     query = data['q'] if data and 'q' in data else ''
 
@@ -79,6 +81,10 @@ def get_post_list(auth, data, user_id=None, search_type='Posts'):
             posts = posts.filter(Post.url.ilike(f"%{query}%"))
         else:
             posts = posts.filter(Post.title.ilike(f"%{query}%"))
+
+    if user_id and liked_only:
+        upvoted_post_ids = recently_upvoted_posts(user_id)
+        posts = posts.filter(Post.id.in_(upvoted_post_ids), Post.user_id != user_id)
 
     if sort == "Hot":
         posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
