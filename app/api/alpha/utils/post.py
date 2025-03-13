@@ -52,6 +52,10 @@ def get_post_list(auth, data, user_id=None, search_type='Posts'):
         posts = Post.query.filter(Post.deleted == False, Post.user_id.not_in(blocked_person_ids), Post.community_id.not_in(blocked_community_ids), Post.instance_id.not_in(blocked_instance_ids)).\
             join(CommunityMember, Post.community_id == CommunityMember.community_id).filter_by(is_banned=False, user_id=user_id).\
             join(Community, Community.id == CommunityMember.community_id).filter(Community.instance_id.not_in(blocked_instance_ids))
+    elif type == "ModeratorView" and user_id is not None:
+         posts = Post.query.filter(Post.deleted == False, Post.user_id.not_in(blocked_person_ids), Post.community_id.not_in(blocked_community_ids), Post.instance_id.not_in(blocked_instance_ids)).\
+            join(CommunityMember, Post.community_id == CommunityMember.community_id).filter_by(user_id=user_id, is_moderator=True).\
+            join(Community, Community.id == CommunityMember.community_id).filter(Community.instance_id.not_in(blocked_instance_ids))
     else: # type == "All"
         if community_name:
             name, ap_domain = community_name.split('@')
