@@ -44,6 +44,9 @@ Group JSON format:
 }
 """
 
+
+# this is only for local communities (local users can moderate remote communities, but the Update won't accepted if they edit them)
+
 @celery.task
 def edit_community(send_async, user_id, community_id):
     user = User.query.filter_by(id=user_id).one()
