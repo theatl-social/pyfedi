@@ -49,6 +49,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, ensure_directory_exists, \
     menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, instance_software, domain_from_email, referrer
 from app.shared.post import make_post
+from app.shared.tasks import task_selector
 from feedgen.feed import FeedGenerator
 from datetime import timezone, timedelta
 from copy import copy
@@ -837,6 +838,9 @@ def community_edit(community_id: int):
                         topic.num_communities = topic.communities.count()
                 db.session.commit()
             flash(_('Saved'))
+
+            # just borrow federation code for now (replacing most of this function with a call to edit_community in app.shared.community can be done "later")
+            task_selector('edit_community', user_id=current_user.id, community_id=community.id)
             return redirect(url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not None else community.name))
         else:
             form.title.data = community.title

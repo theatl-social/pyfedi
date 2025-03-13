@@ -1447,12 +1447,6 @@ def authorise_api_user(auth, return_type=None, id_match=None):
             return user.id
 
 
-@cache.memoize(timeout=86400)
-def community_ids_from_instances(instance_ids) -> List[int]:
-    communities = Community.query.join(Instance, Instance.id == Community.instance_id).filter(Instance.id.in_(instance_ids))
-    return [community.id for community in communities]
-
-
 # Set up a new SQLAlchemy session specifically for Celery tasks
 def get_task_session() -> Session:
     # Use the same engine as the main app, but create an independent session

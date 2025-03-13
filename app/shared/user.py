@@ -1,6 +1,6 @@
 from app import db, cache
 from app.constants import ROLE_STAFF, ROLE_ADMIN
-from app.models import UserBlock
+from app.models import UserBlock, NotificationSubscription, User
 from app.constants import *
 from app.utils import authorise_api_user, blocked_users
 
@@ -80,3 +80,31 @@ def unblock_another_user(person_id, src, auth=None):
         return user_id
     else:
         return              # let calling function handle confirmation flash message and redirect
+
+
+def toggle_user_notification(person_id: int, src, auth=None):
+    # Toggle whether the current user is subscribed to notifications for activity from another user
+    if src == SRC_API:
+        user_id = authorise_api_user(auth)
+    else:
+        user_id = current_user.id
+
+    person = User.query.filter_by(id=person_id).one()
+
+    existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == person.id,
+                                                                  NotificationSubscription.user_id == user_id,
+                                                                  NotificationSubscription.type == NOTIF_USER).first()
+    if existing_notification:
+        db.session.delete(existing_notification)
+        db.session.commit()
+    else:   # no subscription yet, so make one
+        if person.id != user_id and not person.has_blocked_user(user_id):
+            new_notification = NotificationSubscription(name=person.display_name(), user_id=user_id,
+                                                        entity_id=person.id, type=NOTIF_USER)
+            db.session.add(new_notification)
+            db.session.commit()
+
+    if src == SRC_API:
+        return user_id
+    else:
+        return render_template('user/_notification_toggle.html', user=user)

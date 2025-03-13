@@ -216,8 +216,6 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         title = input['title']
         body = input['body']
         url = input['url']
-        if url and url.startswith("https://{current_app.config['SERVER_NAME']}/static/media/posts/"):
-            post.type = POST_TYPE_IMAGE
         nsfw = input['nsfw']
         notify_author = input['notify_author']
         language_id = input['language_id']

@@ -161,6 +161,11 @@ def user_view(user: User | int, variant, stub=False, user_id=None):
               'blocked': blocked}
         return v4
 
+    # Variant 5 - PersonResponse (for user activity_alert subscriptions, to be consistent with the response to community activity_alert subscriptions)
+    if variant == 5:
+        v5 = {'person_view': user_view(user=user, variant=2, user_id=user_id)}
+        return v5
+
 
 def community_view(community: Community | int | str, variant, stub=False, user_id=None):
     if isinstance(community, int):
@@ -185,9 +190,9 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
         if community.description and not stub:
             v1['description'] = community.description
         if community.icon_id:
-            v1['icon'] = community.icon.view_url()
+            v1['icon'] = community.icon.medium_url()
         if community.image_id and not stub:
-            v1['banner'] = community.image.view_url()
+            v1['banner'] = community.image.medium_url()
 
         return v1
 
