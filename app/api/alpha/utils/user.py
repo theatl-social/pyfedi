@@ -5,7 +5,7 @@ from app.api.alpha.utils.post import get_post_list
 from app.api.alpha.utils.reply import get_reply_list
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
 from app.models import Conversation, ChatMessage, Notification, PostReply, User
-from app.shared.user import block_another_user, unblock_another_user
+from app.shared.user import block_another_user, unblock_another_user, toggle_user_notification
 from app.constants import *
 
 from sqlalchemy import text, desc
@@ -162,3 +162,14 @@ def post_user_mark_all_as_read(auth):
     return {'replies': []}
 
 
+def put_user_subscribe(auth, data):
+    required(['person_id', 'subscribe'], data)
+    integer_expected(['person_id'], data)
+    boolean_expected(['subscribe'], data)
+
+    person_id = data['person_id']
+    subscribe = data['subscribe']           # not actually processed - is just a toggle
+
+    user_id = toggle_user_notification(person_id, SRC_API, auth)
+    user_json = user_view(user=person_id, variant=2, user_id=user_id)
+    return user_json
