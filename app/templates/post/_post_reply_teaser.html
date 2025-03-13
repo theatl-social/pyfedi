@@ -78,10 +78,10 @@
                            hx-swap="innerHTML focus-scroll:true"
                            rel="nofollow noindex"><span class="fe fe-reply"></span><span class="hide_skinny_mobile">&nbsp;reply</span></a>
                     {% else -%}
-                        <a href="{{ url_for('auth.login', next='/post/' + str(post_reply.post.id)) }}"><span class="fe fe-reply"></span> reply</a>
+                        <a href="{{ url_for('auth.login', next='/post/' + str(post_reply.post.id)) }}"><span class="fe fe-reply"></span>&nbsp;reply</a>
                     {% endif -%}
                 {% else -%}
-                    <span class="fe fe-reply"></span> reply
+                    <span class="fe fe-reply"></span>&nbsp;reply
                 {% endif -%}
             {% endif -%}
         </div>
