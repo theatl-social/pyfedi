@@ -655,7 +655,7 @@ def show_feed(feed):
             flash(_('Could not find that feed or it is not public. Try one of these instead...'))
             return redirect(url_for('main.list_feeds'))
 
-    page = request.args.get('page', 1, type=int)
+    page = request.args.get('page', 0, type=int)
     sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
     post_layout = request.args.get('layout', 'list' if not low_bandwidth else None)
@@ -702,7 +702,7 @@ def show_feed(feed):
 
         post_id_sql = 'SELECT p.id, p.cross_posts FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
         post_id_where = ['c.id IN :feed_community_ids AND c.banned is false ']
-        params = {'feed_community_ids': feed_community_ids}
+        params = {'feed_community_ids': tuple(feed_community_ids)}
 
         #posts = Post.query.join(Community, Post.community_id == Community.id).filter(Community.id.in_(feed_community_ids),
         #                                                                             Community.banned == False)
@@ -737,30 +737,30 @@ def show_feed(feed):
             if domains_ids:
                 #posts = posts.filter(or_(Post.domain_id.not_in(domains_ids), Post.domain_id == None))
                 post_id_where.append('(p.domain_id NOT IN :domain_ids OR p.domain_id is null) ')
-                params['domain_ids'] = domains_ids
+                params['domain_ids'] = tuple(domains_ids)
             instance_ids = blocked_instances(current_user.id)
             if instance_ids:
                 #posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
                 post_id_where.append('(p.instance_id NOT IN :instance_ids OR p.instance_id is null) ')
-                params['instance_ids'] = instance_ids
+                params['instance_ids'] = tuple(instance_ids)
             community_ids = blocked_communities(current_user.id)
             if community_ids:
                 #posts = posts.filter(Post.community_id.not_in(community_ids))
                 post_id_where.append('p.community_id NOT IN :community_ids ')
-                params['community_ids'] = community_ids
+                params['community_ids'] = tuple(community_ids)
             # filter blocked users
             blocked_accounts = blocked_users(current_user.id)
             if blocked_accounts:
                 #posts = posts.filter(Post.user_id.not_in(blocked_accounts))
                 post_id_where.append('p.user_id NOT IN :blocked_accounts ')
-                params['blocked_accounts'] = blocked_accounts
+                params['blocked_accounts'] = tuple(blocked_accounts)
 
 
             banned_from = communities_banned_from(current_user.id)
             if banned_from:
                 #posts = posts.filter(Post.community_id.not_in(banned_from))
                 post_id_where.append('p.community_id NOT IN :banned_from ')
-                params['banned_from'] = banned_from
+                params['banned_from'] = tuple(banned_from)
 
         # sorting
         post_id_sort = ''
@@ -779,9 +779,9 @@ def show_feed(feed):
             #posts = posts.order_by(desc(Post.last_active))
             post_id_sort = 'ORDER BY p.last_active'
 
-        final_post_id_sql = f"{post_id_sql}{' AND '.join(post_id_where)}\n{post_id_sort}\nLIMIT 200"
+        final_post_id_sql = f"{post_id_sql} WHERE {' AND '.join(post_id_where)}\n{post_id_sort}\nLIMIT 200"
 
-        post_ids = db.session.execute(text(final_post_id_sql), params)
+        post_ids = db.session.execute(text(final_post_id_sql), params).all()
 
         # paging
         per_page = 20
@@ -789,7 +789,11 @@ def show_feed(feed):
             per_page = 200
         elif post_layout == 'masonry_wide':
             per_page = 300
-        posts = posts.paginate(page=page, per_page=per_page, error_out=False)
+        if page:
+            ...
+        else:
+            ...
+        #posts = posts.paginate(page=page, per_page=per_page, error_out=False)
 
         feed_communities = Community.query.filter(Community.id.in_(feed_community_ids),Community.banned == False)
 
