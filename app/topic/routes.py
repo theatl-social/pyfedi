@@ -4,33 +4,38 @@ from random import randint
 from typing import List
 
 from feedgen.feed import FeedGenerator
-from flask import request, flash, json, url_for, current_app, redirect, abort, make_response, g
+from flask import request, flash, url_for, current_app, redirect, abort, make_response, g
 from flask_login import login_required, current_user
 from flask_babel import _
-from sqlalchemy import text, desc, or_
+from sqlalchemy import text, desc
 
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
     POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_TOPIC
 from app.inoculation import inoculation
-from app.models import Topic, Community, Post, utcnow, CommunityMember, CommunityJoinRequest, User, \
-    NotificationSubscription, read_posts
+from app.models import Topic, Community, Post, \
+    NotificationSubscription
 from app.topic import bp
 from app.email import send_topic_suggestion
 from app import db, cache
 from app.topic.forms import SuggestTopicsForm
 from app.utils import render_template, user_filters_posts, moderating_communities, joined_communities, \
-    community_membership, blocked_domains, validation_required, mimetype_from_url, blocked_instances, \
-    communities_banned_from, blocked_users, menu_topics, blocked_communities, menu_instance_feeds, \
-    menu_my_feeds, menu_subscribed_feeds
+    validation_required, mimetype_from_url, \
+    menu_topics, menu_instance_feeds, \
+    menu_my_feeds, menu_subscribed_feeds, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models
 
 
 @bp.route('/topic/<path:topic_path>', methods=['GET'])
 def show_topic(topic_path):
-
-    page = request.args.get('page', 1, type=int)
+    page = request.args.get('page', 0, type=int)
     sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)
+    result_id = request.args.get('result_id', gibberish(15)) if current_user.is_authenticated else None
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
     post_layout = request.args.get('layout', 'list' if not low_bandwidth else None)
+    page_length = 20 if low_bandwidth else 100
+    if post_layout == 'masonry':
+        page_length = 200
+    elif post_layout == 'masonry_wide':
+        page_length = 300
 
     # translate topic_name from /topic/fediverse to topic_id
     topic_url_parts = topic_path.split('/')
@@ -56,77 +61,26 @@ def show_topic(topic_path):
             topic_ids = get_all_child_topic_ids(current_topic)
         else:
             topic_ids = [current_topic.id]
-        posts = Post.query.join(Community, Post.community_id == Community.id).filter(Community.topic_id.in_(topic_ids),
-                                                                                     Community.banned == False)
+        community_ids = db.session.execute(text('SELECT id FROM community WHERE banned is false AND topic_id IN :topic_ids'),
+                                           {'topic_ids': tuple(topic_ids)}).scalars()
 
-        # filter out nsfw and nsfl if desired
-        if current_user.is_anonymous:
-            posts = posts.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
-            content_filters = {}
-        else:
-            if current_user.ignore_bots == 1:
-                posts = posts.filter(Post.from_bot == False)
-            if current_user.hide_nsfl == 1:
-                posts = posts.filter(Post.nsfl == False)
-            if current_user.hide_nsfw == 1:
-                posts = posts.filter(Post.nsfw == False)
-            if current_user.hide_read_posts:
-                posts = posts.outerjoin(read_posts, (Post.id == read_posts.c.read_post_id) & (read_posts.c.user_id == current_user.id))
-                posts = posts.filter(read_posts.c.read_post_id.is_(None))  # Filter where there is no corresponding read post for the current user
-            posts = posts.filter(Post.deleted == False)
-            content_filters = user_filters_posts(current_user.id)
-
-            # filter blocked domains and instances
-            domains_ids = blocked_domains(current_user.id)
-            if domains_ids:
-                posts = posts.filter(or_(Post.domain_id.not_in(domains_ids), Post.domain_id == None))
-            instance_ids = blocked_instances(current_user.id)
-            if instance_ids:
-                posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
-            community_ids = blocked_communities(current_user.id)
-            if community_ids:
-                posts = posts.filter(Post.community_id.not_in(community_ids))
-            # filter blocked users
-            blocked_accounts = blocked_users(current_user.id)
-            if blocked_accounts:
-                posts = posts.filter(Post.user_id.not_in(blocked_accounts))
-
-            banned_from = communities_banned_from(current_user.id)
-            if banned_from:
-                posts = posts.filter(Post.community_id.not_in(banned_from))
-
-        # sorting
-        if sort == '' or sort == 'hot':
-            posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
-        elif sort == 'top':
-            posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=7)).order_by(desc(Post.up_votes - Post.down_votes))
-        elif sort == 'new':
-            posts = posts.order_by(desc(Post.posted_at))
-        elif sort == 'active':
-            posts = posts.order_by(desc(Post.last_active))
-
-        # paging
-        per_page = 100
-        if post_layout == 'masonry':
-            per_page = 200
-        elif post_layout == 'masonry_wide':
-            per_page = 300
-        posts = posts.paginate(page=page, per_page=per_page, error_out=False)
+        post_ids = get_deduped_post_ids(result_id, list(community_ids), sort)
+        has_next_page = len(post_ids) > page + 1 * page_length
+        post_ids = paginate_post_ids(post_ids, page, page_length=page_length)
+        posts = post_ids_to_models(post_ids, sort)
 
         topic_communities = Community.query.filter(Community.topic_id == current_topic.id, Community.banned == False).order_by(Community.name)
 
-        next_url = url_for('topic.show_topic',
-                           topic_path=topic_path,
-                           page=posts.next_num, sort=sort, layout=post_layout) if posts.has_next else None
-        prev_url = url_for('topic.show_topic',
-                           topic_path=topic_path,
-                           page=posts.prev_num, sort=sort, layout=post_layout) if posts.has_prev and page != 1 else None
+        next_url = url_for('topic.show_topic', topic_path=topic_path, result_id=result_id,
+                           page=page + 1, sort=sort, layout=post_layout) if has_next_page else None
+        prev_url = url_for('topic.show_topic', topic_path=topic_path, result_id=result_id,
+                           page=page - 1, sort=sort, layout=post_layout) if page > 0 else None
 
         sub_topics = Topic.query.filter_by(parent_id=current_topic.id).order_by(Topic.name).all()
 
         return render_template('topic/show_topic.html', title=_(current_topic.name), posts=posts, topic=current_topic, sort=sort,
                                page=page, post_layout=post_layout, next_url=next_url, prev_url=prev_url,
-                               topic_communities=topic_communities, content_filters=content_filters,
+                               topic_communities=topic_communities, content_filters=user_filters_posts(current_user.id) if current_user.is_authenticated else {},
                                sub_topics=sub_topics, topic_path=topic_path, breadcrumbs=breadcrumbs,
                                rss_feed=f"https://{current_app.config['SERVER_NAME']}/topic/{topic_path}.rss",
                                rss_feed_name=f"{current_topic.name} on {g.site.name}",
@@ -157,10 +111,12 @@ def show_topic_rss(topic_path):
             topic_ids = get_all_child_topic_ids(topic)
         else:
             topic_ids = [topic.id]
-        posts = Post.query.join(Community, Post.community_id == Community.id).filter(Community.topic_id.in_(topic_ids),
-                                                                                     Community.banned == False)
-        posts = posts.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
-        posts = posts.order_by(desc(Post.created_at)).limit(100).all()
+
+        community_ids = db.session.execute(text('SELECT id FROM community WHERE banned is false AND topic_id IN :topic_ids'),
+                                           {'topic_ids': tuple(topic_ids)}).scalars()
+        post_ids = get_deduped_post_ids('', list(community_ids), 'new')
+        post_ids = paginate_post_ids(post_ids, 0, page_length=100)
+        posts = post_ids_to_models(post_ids, 'new')
 
         fg = FeedGenerator()
         fg.id(f"https://{current_app.config['SERVER_NAME']}/topic/{last_topic_machine_name}")

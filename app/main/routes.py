@@ -25,7 +25,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
     blocked_users, menu_topics, blocked_communities, get_request, mastodon_extra_field_link, \
     permission_required, debug_mode_only, ip_address, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, \
-    feed_tree_public
+    feed_tree_public, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, read_posts, Feed, FeedItem
 
@@ -58,71 +58,41 @@ def home_page(sort, view_filter):
     if current_user.is_anonymous and request_etag_matches(current_etag):
         return return_304(current_etag)
 
-    page = request.args.get('page', 1, type=int)
+    page = request.args.get('page', 0, type=int)
+    result_id = request.args.get('result_id', gibberish(15)) if current_user.is_authenticated else None
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+    page_length = 20 if low_bandwidth else 100
+
+    # view filter - subscribed/local/all
+    community_ids = [-1]
+    if view_filter == 'subscribed' and current_user.is_authenticated:
+        community_ids = db.session.execute(text('SELECT id FROM community as c INNER JOIN community_member as cm ON cm.community_id = c.id WHERE cm.is_banned is false AND cm.user_id = :user_id'),
+                                           {'user_id': current_user.id}).scalars()
+    elif view_filter == 'local':
+        community_ids = db.session.execute(text('SELECT id FROM community as c WHERE c.instance_id = 1')).scalars()
+    elif view_filter == 'popular':
+        if current_user.is_anonymous:
+            community_ids = db.session.execute(text('SELECT id FROM community as c WHERE c.show_popular is true AND c.low_quality is false')).scalars()
+        else:
+            community_ids = db.session.execute(text('SELECT id FROM community as c WHERE c.show_popular is true')).scalars()
+    elif view_filter == 'all' or current_user.is_anonymous:
+        community_ids = [-1]    # Special value to indicate 'All'
+
+    post_ids = get_deduped_post_ids(result_id, list(community_ids), sort)
+    has_next_page = len(post_ids) > page + 1 * page_length
+    post_ids = paginate_post_ids(post_ids, page, page_length=page_length)
+    posts = post_ids_to_models(post_ids, sort)
 
     if current_user.is_anonymous:
         flash(_('Create an account to tailor this feed to your interests.'))
-        posts = Post.query.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
         content_filters = {'-1': {'trump', 'elon', 'musk'}}
     else:
-        posts = Post.query.filter(Post.deleted == False)
-
-        if current_user.ignore_bots == 1:
-            posts = posts.filter(Post.from_bot == False)
-        if current_user.hide_nsfl == 1:
-            posts = posts.filter(Post.nsfl == False)
-        if current_user.hide_nsfw == 1:
-            posts = posts.filter(Post.nsfw == False)
-        if current_user.hide_read_posts:
-            posts = posts.outerjoin(read_posts, (Post.id == read_posts.c.read_post_id) & (read_posts.c.user_id == current_user.id))
-            posts = posts.filter(read_posts.c.read_post_id.is_(None))  # Filter where there is no corresponding read post for the current user
-
-        domains_ids = blocked_domains(current_user.id)
-        if domains_ids:
-            posts = posts.filter(or_(Post.domain_id.not_in(domains_ids), Post.domain_id == None))
-        instance_ids = blocked_instances(current_user.id)
-        if instance_ids:
-            posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
-        community_ids = blocked_communities(current_user.id)
-        if community_ids:
-            posts = posts.filter(Post.community_id.not_in(community_ids))
-        # filter blocked users
-        blocked_accounts = blocked_users(current_user.id)
-        if blocked_accounts:
-            posts = posts.filter(Post.user_id.not_in(blocked_accounts))
         content_filters = user_filters_home(current_user.id)
-
-    # view filter - subscribed/local/all
-    if view_filter == 'subscribed' and current_user.is_authenticated:
-        posts = posts.join(CommunityMember, Post.community_id == CommunityMember.community_id).filter(CommunityMember.is_banned == False)
-        posts = posts.filter(CommunityMember.user_id == current_user.id)
-    elif view_filter == 'local':
-        posts = posts.join(Community, Community.id == Post.community_id)
-        posts = posts.filter(Community.instance_id == 1)
-    elif view_filter == 'popular':
-        posts = posts.join(Community, Community.id == Post.community_id)
-        posts = posts.filter(Community.show_popular == True, Post.score > 100)
-        if current_user.is_anonymous:
-            posts = posts.filter(Community.low_quality == False)
-    elif view_filter == 'all' or current_user.is_anonymous:
-        posts = posts.join(Community, Community.id == Post.community_id)
-        posts = posts.filter(Community.show_all == True)
-
-    # Sorting
-    if sort == 'hot':
-        posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
-    elif sort == 'top':
-        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=1)).order_by(desc(Post.up_votes - Post.down_votes))
-    elif sort == 'new':
-        posts = posts.order_by(desc(Post.posted_at))
-    elif sort == 'active':
-        posts = posts.order_by(desc(Post.last_active))
 
     # Pagination
     posts = posts.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50, error_out=False)
-    next_url = url_for('main.index', page=posts.next_num, sort=sort, view_filter=view_filter) if posts.has_next else None
-    prev_url = url_for('main.index', page=posts.prev_num, sort=sort, view_filter=view_filter) if posts.has_prev and page != 1 else None
+    next_url = url_for('main.index', page=page + 1, sort=sort, view_filter=view_filter, result_id=result_id) if has_next_page else None
+    prev_url = url_for('main.index', page=page - 1, sort=sort, view_filter=view_filter, result_id=result_id) if page > 0 else None
 
     # Active Communities
     active_communities = Community.query.filter_by(banned=False)
@@ -159,8 +129,6 @@ def home_page(sort, view_filter):
                            recently_downvoted=recently_downvoted,
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            etag=f"{sort}_{view_filter}_{hash(str(g.site.last_active))}", next_url=next_url, prev_url=prev_url,
-                           #rss_feed=f"https://{current_app.config['SERVER_NAME']}/feed",
-                           #rss_feed_name=f"Posts on " + g.site.name,
                            title=f"{g.site.name} - {g.site.description}",
                            description=shorten_string(markdown_to_text(g.site.sidebar), 150),
                            content_filters=content_filters, sort=sort, view_filter=view_filter,
