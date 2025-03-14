@@ -1,5 +1,4 @@
 # ----- imports -----
-import flask
 from datetime import timedelta
 from random import randint
 from typing import List
@@ -20,12 +19,10 @@ from app.inoculation import inoculation
 from app.models import Feed, FeedMember, FeedItem, Post, Community, read_posts, utcnow, NotificationSubscription, \
     CommunityMember, User, FeedJoinRequest, Instance, Topic, CommunityJoinRequest
 from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markdown_to_html, render_template, \
-    user_filters_posts, \
-    blocked_domains, blocked_instances, blocked_communities, blocked_users, communities_banned_from, \
-    moderating_communities, \
+    user_filters_posts, moderating_communities, \
     joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, validation_required, feed_membership, \
-    get_request, \
-    gibberish, get_task_session, instance_banned, menu_subscribed_feeds, referrer, community_membership
+    gibberish, get_task_session, instance_banned, menu_subscribed_feeds, referrer, community_membership, \
+    paginate_post_ids, get_deduped_post_ids, get_request, post_ids_to_models
 from collections import namedtuple
 from sqlalchemy import desc, or_, text
 from slugify import slugify
@@ -657,8 +654,14 @@ def show_feed(feed):
 
     page = request.args.get('page', 0, type=int)
     sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)
+    result_id = request.args.get('result_id', gibberish(15)) if current_user.is_authenticated else None
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+    page_length = 20 if low_bandwidth else 100
     post_layout = request.args.get('layout', 'list' if not low_bandwidth else None)
+    if post_layout == 'masonry':
+        page_length = 200
+    elif post_layout == 'masonry_wide':
+        page_length = 300
     
     breadcrumbs = []
     existing_url = '/f'
@@ -666,7 +669,6 @@ def show_feed(feed):
     if '/' in feed.path():
         feed_url_parts = feed.path().split('/')
         last_feed_machine_name = feed_url_parts[-1]
-        breadcrumb_feed = None
         for url_part in feed_url_parts:
             breadcrumb_feed = Feed.query.filter(Feed.machine_name == url_part.strip().lower()).first()
             if breadcrumb_feed:
@@ -691,7 +693,7 @@ def show_feed(feed):
             feed_ids = get_all_child_feed_ids(current_feed)
         else:
             feed_ids = [current_feed.id]
-        
+
         # for each feed get the community ids (FeedItem) in the feed
         # used for the posts searching
         feed_community_ids = []
@@ -700,113 +702,23 @@ def show_feed(feed):
             for item in feed_items:
                 feed_community_ids.append(item.community_id)
 
-        post_id_sql = 'SELECT p.id, p.cross_posts FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
-        post_id_where = ['c.id IN :feed_community_ids AND c.banned is false ']
-        params = {'feed_community_ids': tuple(feed_community_ids)}
+        post_ids = get_deduped_post_ids(result_id, feed_community_ids, sort)
+        has_next_page = len(post_ids) > page + 1 * page_length
+        post_ids = paginate_post_ids(post_ids, page, page_length=page_length)
+        posts = post_ids_to_models(post_ids, sort)
 
-        #posts = Post.query.join(Community, Post.community_id == Community.id).filter(Community.id.in_(feed_community_ids),
-        #                                                                             Community.banned == False)
-
-        # filter out nsfw and nsfl if desired
-        if current_user.is_anonymous:
-            post_id_where.append('p.from_bot is false AND p.nsfw is false AND p.nsfl is false AND p.deleted is false ')
-            #posts = posts.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
-            content_filters = {}
-        else:
-            if current_user.ignore_bots == 1:
-                post_id_where.append('p.from_bot is false ')
-                #posts = posts.filter(Post.from_bot == False)
-            if current_user.hide_nsfl == 1:
-                #posts = posts.filter(Post.nsfl == False)
-                post_id_where.append('p.nsfl is false ')
-            if current_user.hide_nsfw == 1:
-                #posts = posts.filter(Post.nsfw == False)
-                post_id_where.append('p.nsfw is false')
-            if current_user.hide_read_posts:
-                ...
-                # @todo: read posts
-                #posts = posts.outerjoin(read_posts, (Post.id == read_posts.c.read_post_id) & (read_posts.c.user_id == current_user.id))
-                #posts = posts.filter(read_posts.c.read_post_id.is_(None))  # Filter where there is no corresponding read post for the current user
-            #posts = posts.filter(Post.deleted == False)
-            post_id_where.append('p.deleted is false ')
-
-            content_filters = user_filters_posts(current_user.id)
-
-            # filter blocked domains and instances
-            domains_ids = blocked_domains(current_user.id)
-            if domains_ids:
-                #posts = posts.filter(or_(Post.domain_id.not_in(domains_ids), Post.domain_id == None))
-                post_id_where.append('(p.domain_id NOT IN :domain_ids OR p.domain_id is null) ')
-                params['domain_ids'] = tuple(domains_ids)
-            instance_ids = blocked_instances(current_user.id)
-            if instance_ids:
-                #posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
-                post_id_where.append('(p.instance_id NOT IN :instance_ids OR p.instance_id is null) ')
-                params['instance_ids'] = tuple(instance_ids)
-            community_ids = blocked_communities(current_user.id)
-            if community_ids:
-                #posts = posts.filter(Post.community_id.not_in(community_ids))
-                post_id_where.append('p.community_id NOT IN :community_ids ')
-                params['community_ids'] = tuple(community_ids)
-            # filter blocked users
-            blocked_accounts = blocked_users(current_user.id)
-            if blocked_accounts:
-                #posts = posts.filter(Post.user_id.not_in(blocked_accounts))
-                post_id_where.append('p.user_id NOT IN :blocked_accounts ')
-                params['blocked_accounts'] = tuple(blocked_accounts)
-
-
-            banned_from = communities_banned_from(current_user.id)
-            if banned_from:
-                #posts = posts.filter(Post.community_id.not_in(banned_from))
-                post_id_where.append('p.community_id NOT IN :banned_from ')
-                params['banned_from'] = tuple(banned_from)
-
-        # sorting
-        post_id_sort = ''
-        if sort == '' or sort == 'hot':
-            #posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
-            post_id_sort = 'ORDER BY p.ranking DESC, p.posted_at DESC'
-        elif sort == 'top':
-            #posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=7)).order_by(desc(Post.up_votes - Post.down_votes))
-            post_id_where.append('p.posted_at > :top_cutoff ')
-            post_id_sort = 'ORDER BY p.up_votes - p.down_votes DESC'
-            params['top_cutoff'] = utcnow() - timedelta(days=7)
-        elif sort == 'new':
-            #posts = posts.order_by(desc(Post.posted_at))
-            post_id_sort = 'ORDER BY p.posted_at'
-        elif sort == 'active':
-            #posts = posts.order_by(desc(Post.last_active))
-            post_id_sort = 'ORDER BY p.last_active'
-
-        final_post_id_sql = f"{post_id_sql} WHERE {' AND '.join(post_id_where)}\n{post_id_sort}\nLIMIT 200"
-
-        post_ids = db.session.execute(text(final_post_id_sql), params).all()
-
-        # paging
-        per_page = 20
-        if post_layout == 'masonry':
-            per_page = 200
-        elif post_layout == 'masonry_wide':
-            per_page = 300
-        if page:
-            ...
-        else:
-            ...
-        #posts = posts.paginate(page=page, per_page=per_page, error_out=False)
-
-        feed_communities = Community.query.filter(Community.id.in_(feed_community_ids),Community.banned == False)
+        feed_communities = Community.query.filter(Community.id.in_(feed_community_ids), Community.banned == False)
 
         next_url = url_for('activitypub.feed_profile', actor=feed.ap_id if feed.ap_id is not None else feed.name,
-                       page=posts.next_num, sort=sort, layout=post_layout) if posts.has_next else None
+                       page=page + 1, sort=sort, layout=post_layout, result_id=result_id) if has_next_page else None
         prev_url = url_for('activitypub.feed_profile', actor=feed.ap_id if feed.ap_id is not None else feed.name,
-                       page=posts.prev_num, sort=sort, layout=post_layout) if posts.has_prev and page != 1 else None
+                       page=page - 1, sort=sort, layout=post_layout, result_id=result_id if page > 1 else None) if page > 0 else None
 
         sub_feeds = Feed.query.filter_by(parent_feed_id=current_feed.id).order_by(Feed.name).all()
 
         return render_template('feed/show_feed.html', title=_(current_feed.name), posts=posts, feed=current_feed, sort=sort,
                                page=page, post_layout=post_layout, next_url=next_url, prev_url=prev_url,
-                               feed_communities=feed_communities, content_filters=content_filters,
+                               feed_communities=feed_communities, content_filters=user_filters_posts(current_user.id) if current_user.is_authenticated else {},
                                sub_feeds=sub_feeds, feed_path=feed.path(), breadcrumbs=breadcrumbs,
                                rss_feed=f"https://{current_app.config['SERVER_NAME']}/f/{feed.path()}.rss",
                                rss_feed_name=f"{current_feed.name} on {g.site.name}",

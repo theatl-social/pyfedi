@@ -30,7 +30,7 @@ from furl import furl
 from flask import current_app, json, redirect, url_for, request, make_response, Response, g, flash, abort
 from flask_babel import _, lazy_gettext as _l
 from flask_login import current_user, logout_user
-from sqlalchemy import text, or_
+from sqlalchemy import text, or_, desc
 from sqlalchemy.orm import Session
 from wtforms.fields  import SelectField, SelectMultipleField, StringField
 from wtforms.widgets import Select, html_params, ListWidget, CheckboxInput, TextInput
@@ -1637,3 +1637,115 @@ def jaccard_similarity(user1_upvoted: set, user2_id: int):
         return (intersection / union) * 100
     else:
         return 0
+
+
+def dedupe_post_ids(post_ids) -> List[int]:
+    result = []
+    if post_ids is None or len(post_ids) == 0:
+        return result
+    seen_before = set()
+    for post_id in post_ids:
+        if post_id[1]:
+            seen_before.update(post_id[1])
+        if post_id[0] not in seen_before:
+            result.append(post_id[0])
+    return result
+
+
+def paginate_post_ids(post_ids, page: int, page_length: int):
+    start = page * page_length
+    end = start + page_length
+    return post_ids[start:end]
+
+
+def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) -> List[int]:
+    if community_ids is None or len(community_ids) == 0:
+        return []
+    redis_client = None
+    if result_id:
+        redis_client = get_redis_connection()
+        if redis_client.exists(result_id):
+            return json.loads(redis_client.get(result_id))
+
+    if community_ids[0] == -1:  # A special value meaning to get posts from all communities
+        post_id_sql = 'SELECT p.id, p.cross_posts FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
+        post_id_where = ['c.banned is false ']
+        params = {}
+    else:
+        post_id_sql = 'SELECT p.id, p.cross_posts FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
+        post_id_where = ['c.id IN :community_ids AND c.banned is false ']
+        params = {'community_ids': tuple(community_ids)}
+    # filter out nsfw and nsfl if desired
+    if current_user.is_anonymous:
+        post_id_where.append('p.from_bot is false AND p.nsfw is false AND p.nsfl is false AND p.deleted is false ')
+    else:
+        if current_user.ignore_bots == 1:
+            post_id_where.append('p.from_bot is false ')
+        if current_user.hide_nsfl == 1:
+            post_id_where.append('p.nsfl is false ')
+        if current_user.hide_nsfw == 1:
+            post_id_where.append('p.nsfw is false')
+        if current_user.hide_read_posts:
+            post_id_where.append('p.id NOT IN (SELECT read_post_id FROM "read_post" WHERE user_id = :user_id) ')
+            params['user_id'] = current_user.id
+
+        post_id_where.append('p.deleted is false ')
+
+        # filter blocked domains and instances
+        domains_ids = blocked_domains(current_user.id)
+        if domains_ids:
+            post_id_where.append('(p.domain_id NOT IN :domain_ids OR p.domain_id is null) ')
+            params['domain_ids'] = tuple(domains_ids)
+        instance_ids = blocked_instances(current_user.id)
+        if instance_ids:
+            post_id_where.append('(p.instance_id NOT IN :instance_ids OR p.instance_id is null) ')
+            params['instance_ids'] = tuple(instance_ids)
+        blocked_community_ids = blocked_communities(current_user.id)
+        if blocked_community_ids:
+            post_id_where.append('p.community_id NOT IN :blocked_community_ids ')
+            params['blocked_community_ids'] = tuple(blocked_community_ids)
+        # filter blocked users
+        blocked_accounts = blocked_users(current_user.id)
+        if blocked_accounts:
+            post_id_where.append('p.user_id NOT IN :blocked_accounts ')
+            params['blocked_accounts'] = tuple(blocked_accounts)
+        # filter communities banned from
+        banned_from = communities_banned_from(current_user.id)
+        if banned_from:
+            post_id_where.append('p.community_id NOT IN :banned_from ')
+            params['banned_from'] = tuple(banned_from)
+    # sorting
+    post_id_sort = ''
+    if sort == '' or sort == 'hot':
+        post_id_sort = 'ORDER BY p.ranking DESC, p.posted_at DESC'
+    elif sort == 'top':
+        post_id_where.append('p.posted_at > :top_cutoff ')
+        post_id_sort = 'ORDER BY p.up_votes - p.down_votes DESC'
+        params['top_cutoff'] = utcnow() - timedelta(days=7)
+    elif sort == 'new':
+        post_id_sort = 'ORDER BY p.posted_at DESC'
+    elif sort == 'active':
+        post_id_sort = 'ORDER BY p.last_active DESC'
+    final_post_id_sql = f"{post_id_sql} WHERE {' AND '.join(post_id_where)}\n{post_id_sort}\nLIMIT 1000"
+    post_ids = db.session.execute(text(final_post_id_sql), params).all()
+    post_ids = dedupe_post_ids(post_ids)
+
+    if current_user.is_authenticated:
+        if redis_client is None:
+            redis_client = get_redis_connection()
+        redis_client.set(result_id, json.dumps(post_ids), ex=86400)    # 86400 is 1 day
+    return post_ids
+
+
+def post_ids_to_models(post_ids: List[int], sort: str):
+    posts = Post.query.filter(Post.id.in_([p for p in post_ids]))
+    # Final sorting
+    if sort == '' or sort == 'hot':
+        posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
+    elif sort == 'top':
+        posts = posts.order_by(desc(Post.up_votes - Post.down_votes))
+    elif sort == 'new':
+        posts = posts.order_by(desc(Post.posted_at))
+    elif sort == 'active':
+        posts = posts.order_by(desc(Post.last_active))
+    return posts

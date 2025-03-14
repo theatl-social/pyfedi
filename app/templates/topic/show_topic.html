@@ -53,7 +53,7 @@
               document.addEventListener("DOMContentLoaded", function() {
                   const masonry = document.getElementById('masonry');
                   const htmlSnippets = [
-                      {% for post in posts.items %}
+                      {% for post in posts %}
                         {% raw %}`{% endraw %}{% include 'post/_post_teaser_masonry.html' %}{% raw %}`{% endraw %},
                       {% endfor %}
                   ];
@@ -62,7 +62,7 @@
             </script>
         {% else %}
             <div class="post_list">
-                {% for post in posts.items %}
+                {% for post in posts %}
                     {% include 'post/_post_teaser.html' %}
                 {% else %}
                     <p>{{ _('No posts in this topic yet.') }}</p>

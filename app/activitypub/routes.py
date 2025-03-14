@@ -532,11 +532,12 @@ def shared_inbox():
             log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Could not verify HTTP signature: ' + str(e))
             return '', 400
 
-    actor.instance.last_seen = utcnow()
-    actor.instance.dormant = False
-    actor.instance.gone_forever = False
-    actor.instance.failures = 0
-    actor.instance.ip_address = ip_address() if not bounced else ''
+    if actor.instance_id:
+        actor.instance.last_seen = utcnow()
+        actor.instance.dormant = False
+        actor.instance.gone_forever = False
+        actor.instance.failures = 0
+        actor.instance.ip_address = ip_address() if not bounced else ''
     db.session.commit()
 
     # When a user is deleted, the only way to be fairly sure they get deleted everywhere is to tell the whole fediverse.
