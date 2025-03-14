@@ -129,7 +129,7 @@
     {% if not post_reply.author.indexable -%}<!--googleon all-->{% endif -%}
 
     {% if children -%}
-        <div class="replies hidable" role="group">
+        <div class="replies hidable depth_{{ post_reply.depth }}" role="group">
             {% if not THREAD_CUTOFF_DEPTH or post_reply.depth <= THREAD_CUTOFF_DEPTH -%}
                     {% for reply in children -%}
                         {% with post_reply=reply['comment'], children=reply['replies'] %}

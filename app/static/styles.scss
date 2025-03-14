@@ -1117,7 +1117,52 @@ time {
   .replies {
     margin-top: 0;
     border-left: solid 1px $light-grey;
-    border-top: solid 1px $light-grey;
+    border-top: solid 1px rgba(221, 221, 221, 0.5);
+    border-bottom: none;
+
+    &.depth_0 {
+      border-left: 2px solid rgba(172, 83, 83, 0.5) !important;
+    }
+
+    &.depth_1 {
+      border-left: 2px solid rgba(172, 157, 83, 0.6) !important;
+    }
+
+    &.depth_2 {
+      border-left: 2px solid rgba(113, 172, 83, 0.6) !important;
+    }
+
+    &.depth_3 {
+      border-left: 2px solid rgba(83, 172, 128, 0.6) !important;
+    }
+
+    &.depth_4 {
+      border-left: 2px solid rgba(83, 142, 172, 0.6) !important;
+    }
+
+    &.depth_5 {
+      border-left: 2px solid rgba(98, 83, 172, 0.5) !important;
+    }
+
+    &.depth_6 {
+      border-left: 2px solid rgba(172, 83, 172, 0.5) !important;
+    }
+
+    &.depth_7 {
+      border-left: 2px solid rgba(172, 83, 83, 0.5) !important;
+    }
+
+    &.depth_8 {
+      border-left: 2px solid rgba(172, 83, 83, 0.65) !important;
+    }
+
+    &.depth_9 {
+      border-left: 2px solid rgba(172, 83, 83, 0.78) !important;
+    }
+
+    &.depth_10 {
+      border-left: 2px solid rgba(172, 83, 83, 0.85) !important;
+    }
   }
 }
 
