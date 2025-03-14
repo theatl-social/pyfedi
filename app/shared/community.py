@@ -364,3 +364,56 @@ def toggle_community_notification(community_id: int, src, auth=None):
         return user_id
     else:
         return render_template('community/_notification_toggle.html', community=community)
+
+
+def delete_community(community_id: int, src, auth=None):
+    if src == SRC_API:
+        user = authorise_api_user(auth, return_type='model')
+    else:
+        user = current_user.id
+
+    community = Community.query.filter_by(id=community_id).one()
+    if not (community.is_owner(user) or community.is_moderator(user) or community.is_instance_admin(user)):
+        raise Exception('incorrect_login')
+    if not community.is_local():
+        raise Exception('Only local communities can be deleted')
+
+    """
+    Soft-deleting communities needs some attention.
+    There isn't a 'deleted' column in the table - I'm just going to use 'banned' for now
+    This will fed out the delete, but incoming activity for community deletion isn't understood
+    Posts and replies in a deleted community shouldn't be soft-deleted, because without knowing why they were deleted, it's not possible to know if they should be restored if the community is restored
+    For 7 days, the API should just return 'error' if the post is part of a deleted community (it doesn't atm)
+    After 7 days, the community can be hard-deleted (and it's dependencies with it). This suggests there needs to be a 'deleted' column and a 'deleted_at' column (and maybe a 'deleted_by' column, so a mod can't restore a community deleted by an admin)
+    """
+
+    community.banned = True
+    db.session.commit()
+    task_selector('delete_community', user_id=user.id, community_id=community.id)
+
+    if src == SRC_API:
+        return user.id
+
+
+def restore_community(community_id: int, src, auth=None):
+    if src == SRC_API:
+        user = authorise_api_user(auth, return_type='model')
+    else:
+        user = current_user
+
+    community = Community.query.filter_by(id=community_id).one()
+    if not (community.is_owner(user) or community.is_moderator(user) or community.is_instance_admin(user)):
+        raise Exception('incorrect_login')
+    if not community.is_local():
+        raise Exception('Only local communities can be restored')
+
+    """
+    same comments as in delete_community
+    """
+
+    community.banned = False
+    db.session.commit()
+    task_selector('restore_community', user_id=user.id, community_id=community.id)
+
+    if src == SRC_API:
+        return user.id

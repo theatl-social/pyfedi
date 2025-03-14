@@ -180,7 +180,7 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
         v1 = {column.name: getattr(community, column.name) for column in community.__table__.columns if column.name in include}
         v1.update({'published': community.created_at.isoformat() + 'Z',
                    'updated': community.created_at.isoformat() + 'Z',
-                   'deleted': False,
+                   'deleted': community.banned,
                    'removed': False,
                    'actor_id': community.public_url(),
                    'local': community.is_local(),

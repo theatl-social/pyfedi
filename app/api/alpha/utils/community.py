@@ -4,7 +4,7 @@ from app.community.util import search_for_community
 from app.utils import authorise_api_user
 from app.constants import *
 from app.models import Community, CommunityMember
-from app.shared.community import join_community, leave_community, block_community, unblock_community, make_community, edit_community, toggle_community_notification
+from app.shared.community import join_community, leave_community, block_community, unblock_community, make_community, edit_community, toggle_community_notification, delete_community, restore_community
 from app.utils import communities_banned_from, blocked_instances, blocked_communities
 
 from sqlalchemy import desc, or_
@@ -176,5 +176,21 @@ def put_community_subscribe(auth, data):
     subscribe = data['subscribe']           # not actually processed - is just a toggle
 
     user_id = toggle_community_notification(community_id, SRC_API, auth)
+    community_json = community_view(community=community_id, variant=4, user_id=user_id)
+    return community_json
+
+
+def post_community_delete(auth, data):
+    required(['community_id', 'deleted'], data)
+    integer_expected(['community_id'], data)
+    boolean_expected(['deleted'], data)
+
+    community_id = data['community_id']
+    deleted = data['deleted']
+
+    if deleted:
+        user_id = delete_community(community_id, SRC_API, auth)
+    else:
+        user_id = restore_community(community_id, SRC_API, auth)
     community_json = community_view(community=community_id, variant=4, user_id=user_id)
     return community_json
