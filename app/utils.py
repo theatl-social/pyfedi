@@ -1680,7 +1680,7 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
         if current_user.hide_nsfw == 1:
             post_id_where.append('p.nsfw is false')
         if current_user.hide_read_posts:
-            post_id_where.append('p.id NOT IN (SELECT read_post_id FROM "read_post" WHERE user_id = :user_id) ')
+            post_id_where.append('p.id NOT IN (SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id) ')
             params['user_id'] = current_user.id
 
         post_id_where.append('p.deleted is false ')
