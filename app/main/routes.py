@@ -90,7 +90,6 @@ def home_page(sort, view_filter):
         content_filters = user_filters_home(current_user.id)
 
     # Pagination
-    posts = posts.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50, error_out=False)
     next_url = url_for('main.index', page=page + 1, sort=sort, view_filter=view_filter, result_id=result_id) if has_next_page else None
     prev_url = url_for('main.index', page=page - 1, sort=sort, view_filter=view_filter, result_id=result_id) if page > 0 else None
 
