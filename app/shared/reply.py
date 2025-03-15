@@ -5,7 +5,7 @@ from app.constants import *
 from app.models import Instance, Notification, NotificationSubscription, Post, PostReply, PostReplyBookmark, Report, Site, User, utcnow
 from app.shared.tasks import task_selector
 from app.utils import gibberish, instance_banned, render_template, authorise_api_user, recently_upvoted_post_replies, recently_downvoted_post_replies, shorten_string, \
-                      piefed_markdown_to_lemmy_markdown, markdown_to_html, ap_datetime, add_to_modlog_activitypub
+                      piefed_markdown_to_lemmy_markdown, markdown_to_html, ap_datetime, add_to_modlog_activitypub, can_create_post_reply
 
 from flask import abort, current_app, flash, redirect, request, url_for
 from flask_babel import _
@@ -184,6 +184,8 @@ def make_reply(input, post, parent_id, src, auth=None):
     else:
         parent_reply = None
 
+    if not can_create_post_reply(user, post.community):
+        raise Exception('You are not permitted to comment in this community')
 
     # WEBFORM would call 'make_reply' in a try block, so any exception from 'new' would bubble-up for it to handle
     reply = PostReply.new(user, post, in_reply_to=parent_reply, body=piefed_markdown_to_lemmy_markdown(content),
