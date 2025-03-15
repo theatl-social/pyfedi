@@ -34,7 +34,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, reply_is_stupid, \
     languages_for_form, menu_topics, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown, \
     permission_required, blocked_users, get_request, is_local_image_url, is_video_url, can_upvote, can_downvote, \
-    menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, referrer
+    menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, referrer, can_create_post_reply
 from app.shared.reply import make_reply, edit_reply
 from app.shared.post import edit_post, sticky_post, lock_post
 
@@ -495,6 +495,8 @@ def add_reply_inline(post_id: int, comment_id: int):
     if current_user.banned or current_user.ban_comments:
         return _('You have been banned.')
     post = Post.query.get_or_404(post_id)
+    if not can_create_post_reply(current_user, post.community):
+        return _('You are not permitted to comment in this community')
 
     if not post.comments_enabled:
         return _('Comments have been disabled.')

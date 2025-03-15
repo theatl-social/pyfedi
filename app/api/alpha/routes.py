@@ -355,9 +355,10 @@ def post_alpha_comment():
     if not enable_api():
         return jsonify({'error': 'alpha api is not enabled'})
     try:
-        auth = request.headers.get('Authorization')
-        data = request.get_json(force=True) or {}
-        return jsonify(post_reply(auth, data))
+        with limiter.limit('1/minute, 10/hour, 50/day'):
+            auth = request.headers.get('Authorization')
+            data = request.get_json(force=True) or {}
+            return jsonify(post_reply(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
