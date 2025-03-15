@@ -1,5 +1,6 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, HiddenField, BooleanField, SelectField, RadioField
+from wtforms import StringField, PasswordField, SubmitField, HiddenField, BooleanField, SelectField, RadioField, \
+    EmailField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length
 from flask_babel import _, lazy_gettext as _l
 from app.models import User, Community
@@ -9,7 +10,7 @@ from app.utils import MultiCheckboxField, CaptchaField
 
 
 class LoginForm(FlaskForm):
-    user_name = StringField(_l('User name'), validators=[DataRequired()], render_kw={'autofocus': True, 'autocomplete': 'username'})
+    user_name = StringField(_l('User name'), validators=[DataRequired()], render_kw={'autofocus': True, 'autocomplete': 'username', 'placeholder': _l('or email')})
     password = PasswordField(_l('Password'), validators=[DataRequired()])
     low_bandwidth_mode = BooleanField(_l('Low bandwidth mode'))
     submit = SubmitField(_l('Log In'))
@@ -18,7 +19,7 @@ class LoginForm(FlaskForm):
 class RegistrationForm(FlaskForm):
     user_name = StringField(_l('User name'), validators=[DataRequired()], render_kw={'autofocus': True, 'autocomplete': 'username'})
     email = HiddenField(_l('Email'))
-    real_email = StringField(_l('Email'), validators=[DataRequired(), Email(), Length(min=5, max=255)], render_kw={'autocomplete': 'email'})
+    real_email = EmailField(_l('Email'), validators=[DataRequired(), Email(), Length(min=5, max=255)], render_kw={'autocomplete': 'email'})
     password = PasswordField(_l('Password'), validators=[DataRequired(), Length(min=8, max=50)], render_kw={'autocomplete': 'new-password'})
     password2 = PasswordField(
         _l('Repeat password'), validators=[DataRequired(),
@@ -71,7 +72,7 @@ class RegistrationForm(FlaskForm):
 
 
 class ResetPasswordRequestForm(FlaskForm):
-    email = StringField(_l('Email'), validators=[DataRequired(), Email()], render_kw={'autofocus': True})
+    email = EmailField(_l('Email'), validators=[DataRequired(), Email()], render_kw={'autofocus': True})
     submit = SubmitField(_l('Request password reset'))
 
 

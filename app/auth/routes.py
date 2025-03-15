@@ -1,6 +1,7 @@
 from datetime import date, datetime
 from random import randint
 from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, g
+from sqlalchemy import func
 from werkzeug.urls import url_parse
 from flask_login import login_user, logout_user, current_user
 from flask_babel import _
@@ -26,7 +27,12 @@ def login():
         return redirect(next_page)
     form = LoginForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(user_name=form.user_name.data, ap_id=None).first()
+        form.user_name.data = form.user_name.data.strip()
+        user = User.query.filter(func.lower(User.user_name) == func.lower(form.user_name.data)).filter_by(ap_id=None).first()
+        if user is None:
+            user = User.query.filter_by(email=form.user_name.data, ap_id=None).first()
+        if user is None:    # ap_profile_id is always lower case so compare it with what_they_typed.lower()
+            user = User.query.filter(User.ap_profile_id.ilike(f"https://{current_app.config['SERVER_NAME']}/u/{form.user_name.data.lower()}")).first()
         if user is None:
             flash(_('No account exists with that user name.'), 'error')
             return redirect(url_for('auth.login'))
@@ -181,11 +187,12 @@ def reset_password_request():
         return redirect(url_for('main.index'))
     form = ResetPasswordRequestForm()
     if form.validate_on_submit():
+        form.email.data = form.email.data.strip()
         if form.email.data.lower().startswith('postmaster@') or form.email.data.lower().startswith('abuse@') or \
                 form.email.data.lower().startswith('noc@'):
             flash(_('Sorry, you cannot use that email address.'), 'error')
         else:
-            user = User.query.filter_by(email=form.email.data).first()
+            user = User.query.filter(func.lower(User.email) == func.lower(form.email.data)).filter_by(ap_id=None).first()
             if user:
                 send_password_reset_email(user)
                 flash(_('Check your email for a link to reset your password.'))
