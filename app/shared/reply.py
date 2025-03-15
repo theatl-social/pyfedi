@@ -129,8 +129,14 @@ def toggle_post_reply_notification(post_reply_id: int, src, auth=None):
         return render_template('post/_reply_notification_toggle.html', comment={'comment': post_reply})
 
 
-# there are undoubtedly better algos for this
-def basic_rate_limit_check(user):
+def extra_rate_limit_check(user):
+    """
+    The plan for this function is to do some extra limiting for an author who passes the rate limit for the route
+    but who's comments are really unpopular and are probably spam
+    """
+    return False
+
+    """ old code for basic_rate_limit_check(), called with 'if not basic_rate_limit_check()'
     weeks_active = int((utcnow() - user.created).days / 7)
     score = user.post_reply_count * weeks_active
 
@@ -145,19 +151,25 @@ def basic_rate_limit_check(user):
 
     rate_limit = (10-score)*60
 
+    # timeout=0 means cache never expires, so avoid that.
+    if rate_limit == 0:
+        cache.delete(f'{user.id} has recently replied')
+        rate_limit = 1
+
     recent_reply = cache.get(f'{user.id} has recently replied')
     if not recent_reply:
         cache.set(f'{user.id} has recently replied', True, timeout=rate_limit)
         return True
     else:
         return False
+    """
 
 
 def make_reply(input, post, parent_id, src, auth=None):
     if src == SRC_API:
         user = authorise_api_user(auth, return_type='model')
-        #if not basic_rate_limit_check(user):
-        #    raise Exception('rate_limited')
+        if extra_rate_limit_check(user):
+            raise Exception('rate_limited')
         content = input['body']
         notify_author = input['notify_author']
         language_id = input['language_id']
