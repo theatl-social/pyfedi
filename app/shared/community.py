@@ -278,6 +278,7 @@ def edit_community(input, community, src, auth=None, uploaded_icon_file=None, up
                 community.icon_id = None
                 cache.delete_memoized(Community.icon_image, community)
         if not community.icon_id:
+            cache.delete_memoized(Community.icon_image, community)
             icon_url_changed = True
         if community.image_id and banner_url != community.image.source_url:
             if banner_url != community.image.medium_url():
@@ -288,6 +289,7 @@ def edit_community(input, community, src, auth=None, uploaded_icon_file=None, up
                 community.image_id = None
                 cache.delete_memoized(Community.header_image, community)
         if not community.image_id:
+            cache.delete_memoized(Community.header_image, community)
             banner_url_changed = True
         db.session.execute(text('DELETE FROM "community_language" WHERE community_id = :community_id'), {'community_id': community.id})
 
