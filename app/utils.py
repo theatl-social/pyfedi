@@ -1378,7 +1378,7 @@ def english_language_id():
     return english.id if english else None
 
 
-def actor_contains_blocked_words(actor):
+def actor_contains_blocked_words(actor: str):
     actor = actor.lower().strip()
     blocked_words = get_setting('actor_blocked_words')
     if blocked_words and blocked_words.strip() != '':

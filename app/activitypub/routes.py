@@ -31,8 +31,9 @@ from app.activitypub.util import public_key, users_total, active_half_year, acti
 from app.utils import gibberish, get_setting, render_template, \
     community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
-    community_moderators, html_to_text, add_to_modlog_activitypub, instance_banned, get_redis_connection, feed_membership, \
-    joined_communities
+    community_moderators, html_to_text, add_to_modlog_activitypub, instance_banned, get_redis_connection, \
+    feed_membership, \
+    joined_communities, blocked_phrases
 from app.shared.tasks import task_selector
 
 
@@ -1847,6 +1848,12 @@ def process_chat(user, store_ap_json, core_activity):
             log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender blocked by recipient')
             return True
         else:
+            blocked_phrases_list = blocked_phrases()
+            if core_activity['object']['content']:
+                for blocked_phrase in blocked_phrases_list:
+                    if blocked_phrase in core_activity['object']['content']:
+                        log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, f'Blocked because phrase {blocked_phrase}')
+                        return True
             # Find existing conversation to add to
             existing_conversation = Conversation.find_existing_conversation(recipient=recipient, sender=sender)
             if not existing_conversation:
