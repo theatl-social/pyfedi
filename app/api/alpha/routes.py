@@ -222,9 +222,10 @@ def post_alpha_post():
     if not enable_api():
         return jsonify({'error': 'alpha api is not enabled'})
     try:
-        auth = request.headers.get('Authorization')
-        data = request.get_json(force=True) or {}
-        return jsonify(post_post(auth, data))
+        with limiter.limit('1/minute, 10/hour, 50/day'):
+            auth = request.headers.get('Authorization')
+            data = request.get_json(force=True) or {}
+            return jsonify(post_post(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 

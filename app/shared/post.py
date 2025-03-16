@@ -136,11 +136,19 @@ def toggle_post_notification(post_id: int, src, auth=None):
         return render_template('post/_post_notification_toggle.html', post=post)
 
 
+def extra_rate_limit_check(user):
+    """
+    The plan for this function is to do some extra limiting for an author who passes the rate limit for the route
+    but who's posts are really unpopular and are probably spam
+    """
+    return False
+
+
 def make_post(input, community, type, src, auth=None, uploaded_file=None):
     if src == SRC_API:
         user = authorise_api_user(auth, return_type='model')
-        #if not basic_rate_limit_check(user):
-        #    raise Exception('rate_limited')
+        if extra_rate_limit_check(user):
+            raise Exception('rate_limited')
         title = input['title']
         url = input['url']
         language_id = input['language_id']

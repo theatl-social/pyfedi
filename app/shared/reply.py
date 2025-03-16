@@ -136,34 +136,6 @@ def extra_rate_limit_check(user):
     """
     return False
 
-    """ old code for basic_rate_limit_check(), called with 'if not basic_rate_limit_check()'
-    weeks_active = int((utcnow() - user.created).days / 7)
-    score = user.post_reply_count * weeks_active
-
-    if score > 100:
-        score = 10
-    else:
-        score = int(score/10)
-
-    # a user with a 10-week old account, who has made 10 replies, will score 10, so their rate limit will be 0
-    # a user with a new account, and/or has made zero replies, will score 0 (so will have to wait 10 minutes between each new comment)
-    # other users will score from 1-9, so their rate limits will be between 9 and 1 minutes.
-
-    rate_limit = (10-score)*60
-
-    # timeout=0 means cache never expires, so avoid that.
-    if rate_limit == 0:
-        cache.delete(f'{user.id} has recently replied')
-        rate_limit = 1
-
-    recent_reply = cache.get(f'{user.id} has recently replied')
-    if not recent_reply:
-        cache.set(f'{user.id} has recently replied', True, timeout=rate_limit)
-        return True
-    else:
-        return False
-    """
-
 
 def make_reply(input, post, parent_id, src, auth=None):
     if src == SRC_API:
