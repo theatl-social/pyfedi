@@ -5,7 +5,7 @@ from app.api.alpha.utils import get_site, post_site_block, \
                                 get_search, \
                                 get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, post_post, \
                                 put_post, post_post_delete, post_post_report, post_post_lock, post_post_feature, post_post_remove, \
-                                get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, put_reply, post_reply_mark_as_read, \
+                                get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, put_reply, post_reply_mark_as_read, get_reply, \
                                 post_reply_delete, post_reply_report, post_reply_remove, \
                                 get_community_list, get_community, post_community_follow, post_community_block, post_community, put_community, put_community_subscribe, post_community_delete, \
                                 get_user, post_user_block, get_user_unread_count, get_user_replies, post_user_mark_all_as_read, put_user_subscribe, \
@@ -424,6 +424,17 @@ def post_alpha_comment_mark_as_read():
         return jsonify({"error": str(ex)}), 400
 
 
+@bp.route('/api/alpha/comment', methods=['GET'])
+def get_alpha_comment():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.args.to_dict() or None
+        return jsonify(get_reply(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
 # Private Message
 @bp.route('/api/alpha/private_message/list', methods=['GET'])
 def get_alpha_private_message_list():
@@ -581,10 +592,10 @@ def alpha_miscellaneous():
     return jsonify({"error": "not_yet_implemented"}), 400
 
 # Community - not yet implemented
-@bp.route('/api/alpha/community', methods=['POST'])                               # (none
-@bp.route('/api/alpha/community', methods=['PUT'])                                #  of
+#@bp.route('/api/alpha/community', methods=['POST'])                               # (none
+#@bp.route('/api/alpha/community', methods=['PUT'])                                #  of
 @bp.route('/api/alpha/community/hide', methods=['PUT'])                           #  these
-@bp.route('/api/alpha/community/delete', methods=['POST'])                        #  are
+#@bp.route('/api/alpha/community/delete', methods=['POST'])                        #  are
 @bp.route('/api/alpha/community/remove', methods=['POST'])                        #  available
 @bp.route('/api/alpha/community/transfer', methods=['POST'])                      #  in
 @bp.route('/api/alpha/community/ban_user', methods=['POST'])                      #  the
@@ -600,7 +611,6 @@ def alpha_post():
     return jsonify({"error": "not_yet_implemented"}), 400
 
 # Reply - not yet implemented
-@bp.route('/api/alpha/comment', methods=['GET'])                                  # Stage 2
 @bp.route('/api/alpha/comment/distinguish', methods=['POST'])                     # Not really used
 @bp.route('/api/alpha/comment/report/resolve', methods=['PUT'])                   # Stage 2
 @bp.route('/api/alpha/comment/report/list', methods=['GET'])                      # Stage 2

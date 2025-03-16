@@ -66,6 +66,18 @@ def get_reply_list(auth, data, user_id=None):
     return list_json
 
 
+def get_reply(auth, data):
+    if not data or 'id' not in data:
+        raise Exception('missing parameters for comment')
+
+    id = int(data['id'])
+
+    user_id = authorise_api_user(auth) if auth else None
+
+    reply_json = reply_view(reply=id, variant=4, user_id=user_id)
+    return reply_json
+
+
 def post_reply_like(auth, data):
     required(['comment_id', 'score'], data)
     integer_expected(['comment_id', 'score'], data)
