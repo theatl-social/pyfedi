@@ -2598,6 +2598,12 @@ class Feed(db.Model):
         else:
             return self.ap_id.lower()
 
+    def lemmy_link(self) -> str:
+        if self.ap_id is None:
+            return f"~{self.name}@{current_app.config['SERVER_NAME']}"
+        else:
+            return f"~{self.ap_id.lower()}"
+
     def path(self):
         return_value = [self.machine_name]
         parent_id = self.parent_feed_id
