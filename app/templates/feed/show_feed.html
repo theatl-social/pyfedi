@@ -26,6 +26,7 @@
             {% include 'feed/_notification_toggle.html' -%}
           {% endif -%}
         </h1>
+        <p class="text-muted">{{ feed.lemmy_link() }}</p>
         {% if sub_feeds %}
           <h5 class="mb-0" id="sub-feeds">{{ _('Sub-feeds') }}</h5>
           <ul id="subfeed_nav" class="nav" role="listbox" aria-labelledby="sub-feeds">
@@ -54,6 +55,7 @@
                 {% include 'feed/_notification_toggle.html' -%}
               {% endif -%}
             </h1>
+            <p class="text-muted">{{ feed.lemmy_link() }}</p>
             {% if sub_feeds %}
               <h5 class="mb-0" id="sub-feeds">{{ _('Sub-feeds') }}</h5>
               <ul id="subfeed_nav" class="nav" role="listbox" aria-labelledby="sub-feeds">
@@ -79,6 +81,7 @@
                 {% include 'feed/_notification_toggle.html' %}
             {% endif %}
         </h1>
+        <p class="text-muted">{{ feed.lemmy_link() }}</p>
         {% if sub_feeds %}
         <h5 class="mb-0" id="sub-feeds">{{ _('Sub-feeds') }}</h5>
         <ul id="subfeed_nav" class="nav" role="listbox" aria-labelledby="sub-feeds">
