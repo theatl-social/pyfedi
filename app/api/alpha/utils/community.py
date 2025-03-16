@@ -147,17 +147,32 @@ def put_community(auth, data):
     array_of_integers_expected(['discussion_languages'], data)
 
     community_id = data['community_id']
-    title = data['title']
-    description = data['description'] if 'description' in data else ''
-    rules = data['rules'] if 'rules' in data else ''
-    icon_url = data['icon_url'] if 'icon_url' in data else None
-    banner_url = data['banner_url'] if 'banner_url' in data else None
-    nsfw = data['nsfw'] if 'nsfw' in data else False
-    restricted_to_mods = data['restricted_to_mods'] if 'restricted_to_mods' in data else False
-    local_only = data['local_only'] if 'local_only' in data else False
-    discussion_languages = data['discussion_languages'] if 'discussion_languages' in data else [2]  # FIXME: use site language
-
     community = Community.query.filter_by(id=community_id).one()
+
+    title = data['title'] if 'title' in data else community.title
+    description = data['description'] if 'description' in data else community.description
+    rules = data['rules'] if 'rules' in data else community.rules
+    if 'icon_url' in data:
+        icon_url = data['icon_url']
+    elif community.icon_id:
+        icon_url = community.icon.medium_url()
+    else:
+        icon_url = None
+    if 'banner_url' in data:
+        banner_url = data['banner_url']
+    elif community.image_id:
+        banner_url = community.image.medium_url()
+    else:
+        banner_url = None
+    nsfw = data['nsfw'] if 'nsfw' in data else community.nsfw
+    restricted_to_mods = data['restricted_to_mods'] if 'restricted_to_mods' in data else community.restricted_to_mods
+    local_only = data['local_only'] if 'local_only' in data else community.local_only
+    if 'discussion_languages' in data:
+        discussion_languages = data['discussion_languages']
+    else:
+        discussion_languages = []
+        for cm in community.languages:
+            discussion_languages.append(cm.id)
 
     input = {'community_id': community_id, 'title': title, 'description': description, 'rules': rules,
              'icon_url': icon_url, 'banner_url': banner_url,

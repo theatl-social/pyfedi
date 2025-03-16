@@ -138,13 +138,14 @@ def put_reply(auth, data):
     integer_expected(['comment_id', 'language_id'], data)
 
     reply_id = data['comment_id']
-    body = data['body'] if 'body' in data else ''
-    language_id = data['language_id'] if 'language_id' in data else 2       # FIXME: use site language
+    reply = PostReply.query.filter_by(id=reply_id).one()
+
+    body = data['body'] if 'body' in data else reply.body
+    language_id = data['language_id'] if 'language_id' in data else reply.language_id
     if language_id < 2:
         language_id = 2                                                     # FIXME: use site language
 
     input = {'body': body, 'notify_author': True, 'language_id': language_id}
-    reply = PostReply.query.filter_by(id=reply_id).one()
     post = Post.query.filter_by(id=reply.post_id).one()
 
     user_id, reply = edit_reply(input, reply, post, SRC_API, auth)

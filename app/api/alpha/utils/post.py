@@ -202,13 +202,15 @@ def put_post(auth, data):
     string_expected(['title', 'body', 'url'], data)
 
     post_id = data['post_id']
-    title = data['title']
-    body = data['body'] if 'body' in data else ''
-    url = data['url'] if 'url' in data else None
-    nsfw = data['nsfw'] if 'nsfw' in data else False
-    language_id = data['language_id'] if 'language_id' in data else 2       # FIXME: use site language
+    post = Post.query.filter_by(id=post_id).one()
+
+    title = data['title'] if 'title' in data else post.title
+    body = data['body'] if 'body' in data else post.body
+    url = data['url'] if 'url' in data else post.url
+    nsfw = data['nsfw'] if 'nsfw' in data else post.nsfw
+    language_id = data['language_id'] if 'language_id' in data else post.language_id
     if language_id < 2:
-        language_id = 2
+        language_id = 2   # FIXME: use site language
 
     # change when Polls are supported
     type = POST_TYPE_ARTICLE
@@ -216,7 +218,6 @@ def put_post(auth, data):
         type = POST_TYPE_LINK
 
     input = {'title': title, 'body': body, 'url': url, 'nsfw': nsfw, 'language_id': language_id, 'notify_author': True}
-    post = Post.query.filter_by(id=post_id).one()
     user_id, post = edit_post(input, post, type, SRC_API, auth=auth)
 
     post_json = post_view(post=post, variant=4, user_id=user_id)
