@@ -46,7 +46,9 @@ def get_community_list(auth, data):
     if query:
         communities = communities.filter(or_(Community.title.ilike(f"%{query}%"), Community.ap_id.ilike(f"%{query}%")))
 
-    if sort == 'Active':    # 'Trending Communities' screen
+    if sort == 'New':
+        communities = communities.order_by(desc(Community.created_at))
+    else:
         communities = communities.order_by(desc(Community.last_active))
 
     communities = communities.paginate(page=page, per_page=limit, error_out=False)
