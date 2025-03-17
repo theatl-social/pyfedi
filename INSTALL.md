@@ -56,7 +56,12 @@ export DOCKER_BUILDKIT=1
 docker-compose up --build
 ```
 
-After a while the gibberish will stop scrolling past. If you see errors let us know at [https://piefed.social/c/piefed_help](https://piefed.social/c/piefed_help).
+After a while the gibberish will stop scrolling past and you will see errors like "initdb: error: could not change permissions of directory /var/lib/postgresql/data". This is normal.
+
+Close down the containers by hitting Ctrl + c. Now execute `ls -l` to see all the files. See the `pgdata` directory and how it's ownership is
+wrong. Use `sudo chown -R your_username:your_username ./pgdata` to correct this, then run `docker-compose up --build` again.
+
+If you see more errors let us know at [https://piefed.social/c/piefed_help](https://piefed.social/c/piefed_help).
 
 * Networking
 
@@ -72,11 +77,11 @@ shows signs of reacting to the request. There will be an error showing up in the
 This must be done once and once only. Doing this will wipe all existing data in your instance so do not do it unless you have a
 brand new instance.
 
-Open a shell inside the PieFed docker container:
+In a new terminal window, run this:
 
 `docker exec -it piefed_app1 sh`
 
-Inside the container, run the initialization command:
+You are now 'inside' the container. Run the initialization command:
 
 ```
 export FLASK_APP=pyfedi.py
