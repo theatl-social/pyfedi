@@ -535,7 +535,7 @@ def do_subscribe(actor, user_id, admin_preload=False, joined_via_feed=False):
             if success is True:
                 if not admin_preload:
                     if current_user and current_user.is_authenticated and current_user.id == user_id:
-                        flash('You joined ' + community.title)
+                        flash(Markup('You joined <a href="/c/' + community.link() + '">' + community.title + '</a>'))
                 else:
                     pre_load_message['status'] = 'joined'
         else:
@@ -600,7 +600,7 @@ def unsubscribe(actor):
                     community.subscriptions_count -= 1
                     db.session.commit()
 
-                    flash('You have left ' + community.title)
+                    flash(Markup('You have left <a href="/c/' + community.link() + '">' + community.title + '</a>'))
                 cache.delete_memoized(community_membership, current_user, community)
                 cache.delete_memoized(joined_communities, current_user.id)
             else:
@@ -643,7 +643,7 @@ def join_then_add(actor):
             member = CommunityMember(user_id=current_user.id, community_id=community.id)
             db.session.add(member)
             db.session.commit()
-        flash('You joined ' + community.title)
+        flash(Markup('You joined <a href="/c/' + community.link() + '">' + community.title + '</a>'))
     if not community.user_is_banned(current_user):
         return redirect(url_for('community.add_post', actor=community.link(), type='discussion'))
     else:
