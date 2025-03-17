@@ -84,7 +84,7 @@ def show_post(post_id: int):
 
         return redirect(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{reply.id}'))
     else:
-        replies = post_replies(post.id, sort)
+        replies = post_replies(community, post.id, sort)
         form.notify_author.data = True
 
     og_image = post.image.source_url if post.image_id else None
