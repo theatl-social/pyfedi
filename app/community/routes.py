@@ -1,24 +1,18 @@
-import base64
-import os
 from collections import namedtuple
-from io import BytesIO
+
 from random import randint
 
 import flask
-from PIL import Image, ImageOps
-from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, g, json, \
-    jsonify
+
+from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, g, json
 from flask_login import current_user, login_required
 from flask_babel import _
-from pillow_heif import register_heif_opener
-from psycopg2 import IntegrityError
 from slugify import slugify
 from sqlalchemy import or_, desc, text
 
-from app import db, constants, cache, celery
-from app.activitypub.signature import RsaKeys, post_request, default_context, post_request_in_background
-from app.activitypub.util import notify_about_post, make_image_sizes, resolve_remote_post, extract_domain_and_actor, \
-    find_actor_or_create
+from app import db, cache, celery
+from app.activitypub.signature import RsaKeys, post_request
+from app.activitypub.util import extract_domain_and_actor
 from app.chat.util import send_message
 from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, CreateImageForm, CreateLinkForm, \
     ReportCommunityForm, \
@@ -26,13 +20,11 @@ from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, Cre
     EscalateReportForm, ResolveReportForm, CreateVideoForm, CreatePollForm, EditCommunityWikiPageForm, \
     InviteCommunityForm
 from app.community.util import search_for_community, actor_to_community, \
-    save_icon_file, save_banner_file, send_to_remote_instance, \
-    delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users, tags_from_string, \
-    allowed_extensions, end_poll_date
+    save_icon_file, save_banner_file, \
+    delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
     REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, NOTIF_POST, POST_TYPE_POLL, MICROBLOG_APPS, SRC_WEB
-from app.feed.util import feeds_for_form
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, \
     File, PostVote, utcnow, Report, Notification, InstanceBlock, ActivityPubLog, Topic, Conversation, PostReply, \
@@ -42,17 +34,16 @@ from app.community import bp
 from app.shared.community import invite_with_chat, invite_with_email
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, gibberish, community_membership, ap_datetime, \
-    request_etag_matches, return_304, instance_banned, can_create_post, can_upvote, can_downvote, user_filters_posts, \
+    request_etag_matches, return_304, can_upvote, can_downvote, user_filters_posts, \
     joined_communities, moderating_communities, blocked_domains, mimetype_from_url, blocked_instances, \
     community_moderators, communities_banned_from, show_ban_message, recently_upvoted_posts, recently_downvoted_posts, \
     blocked_users, languages_for_form, menu_topics, add_to_modlog, \
-    blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, ensure_directory_exists, \
+    blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, \
     menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, instance_software, domain_from_email, referrer
 from app.shared.post import make_post
 from app.shared.tasks import task_selector
 from feedgen.feed import FeedGenerator
 from datetime import timezone, timedelta
-from copy import copy
 
 
 @bp.route('/add_local', methods=['GET', 'POST'])
@@ -535,7 +526,7 @@ def do_subscribe(actor, user_id, admin_preload=False, joined_via_feed=False):
             if success is True:
                 if not admin_preload:
                     if current_user and current_user.is_authenticated and current_user.id == user_id:
-                        flash(Markup('You joined <a href="/c/' + community.link() + '">' + community.title + '</a>'))
+                        flash(Markup(_('You joined %(community_name)s', community_name=f'<a href="/c/{community.link()}">{community.display_name()}</a>')))
                 else:
                     pre_load_message['status'] = 'joined'
         else:
@@ -600,7 +591,8 @@ def unsubscribe(actor):
                     community.subscriptions_count -= 1
                     db.session.commit()
 
-                    flash(Markup('You have left <a href="/c/' + community.link() + '">' + community.title + '</a>'))
+                    flash(Markup(_('You left %(community_name)s',
+                                   community_name=f'<a href="/c/{community.link()}">{community.display_name()}</a>')))
                 cache.delete_memoized(community_membership, current_user, community)
                 cache.delete_memoized(joined_communities, current_user.id)
             else:
@@ -643,7 +635,7 @@ def join_then_add(actor):
             member = CommunityMember(user_id=current_user.id, community_id=community.id)
             db.session.add(member)
             db.session.commit()
-        flash(Markup('You joined <a href="/c/' + community.link() + '">' + community.title + '</a>'))
+        flash(Markup(_('You joined %(community_name)s', community_name=f'<a href="/c/{community.link()}">{community.display_name()}</a>')))
     if not community.user_is_banned(current_user):
         return redirect(url_for('community.add_post', actor=community.link(), type='discussion'))
     else:
