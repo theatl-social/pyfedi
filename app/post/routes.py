@@ -437,7 +437,7 @@ def add_reply(post_id: int, comment_id: int):
     post = Post.query.get_or_404(post_id)
 
     if not post.comments_enabled:
-        flash('Comments have been disabled.', 'warning')
+        flash(_('Comments have been disabled.'), 'warning')
         return redirect(url_for('activitypub.post_ap', post_id=post_id))
 
     in_reply_to = PostReply.query.get_or_404(comment_id)
@@ -814,7 +814,7 @@ def post_restore(post_id: int):
                     success = post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
                                            current_user.public_url() + '#main-key')
                     if success is False or isinstance(success, str):
-                        flash('Failed to send delete to remote server', 'error')
+                        flash(_('Failed to send delete to remote server'), 'error')
 
             else:  # local community - send it to followers on remote instances
                 announce = {
@@ -961,7 +961,7 @@ def post_report(post_id: int):
                 success = post_request(post.community.ap_inbox_url, report_json, current_user.private_key,
                                        current_user.public_url() + '#main-key')
                 if success is False or isinstance(success, str):
-                    flash('Failed to send report to remote server', 'error')
+                    flash(_('Failed to send report to remote server'), 'error')
 
         flash(_('Post has been reported, thank you!'))
         return redirect(post.community.local_url())
@@ -1140,7 +1140,7 @@ def post_reply_report(post_id: int, comment_id: int):
                 success = post_request(post.community.ap_inbox_url, report_json, current_user.private_key,
                                        current_user.public_url() + '#main-key')
                 if success is False or isinstance(success, str):
-                    flash('Failed to send report to remote server', 'error')
+                    flash(_('Failed to send report to remote server'), 'error')
 
         flash(_('Comment has been reported, thank you!'))
         return redirect(url_for('activitypub.post_ap', post_id=post.id))
@@ -1275,7 +1275,7 @@ def post_reply_delete(post_id: int, comment_id: int):
                     success = post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
                                            current_user.public_url() + '#main-key')
                     if success is False or isinstance(success, str):
-                        flash('Failed to send delete to remote server', 'error')
+                        flash(_('Failed to send delete to remote server'), 'error')
             else:  # local community - send it to followers on remote instances
                 announce = {
                     "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
@@ -1352,7 +1352,7 @@ def post_reply_restore(post_id: int, comment_id: int):
                     success = post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
                                            current_user.public_url() + '#main-key')
                     if success is False or isinstance(success, str):
-                        flash('Failed to send delete to remote server', 'error')
+                        flash(_('Failed to send delete to remote server'), 'error')
 
             else:  # local community - send it to followers on remote instances
                 announce = {

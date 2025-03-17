@@ -58,13 +58,13 @@ def leave_community(community_id: int, src, auth=None):
         db.session.commit()
 
         if src == SRC_WEB:
-            flash('You have left the community')
+            flash(_('You have left the community'))
     else:
         # todo: community deletion
         if src == SRC_API:
             raise Exception('need_to_make_someone_else_owner')
         else:
-            flash('You need to make someone else the owner before unsubscribing.', 'warning')
+            flash(_('You need to make someone else the owner before unsubscribing.'), 'warning')
             return
 
     if src == SRC_API:

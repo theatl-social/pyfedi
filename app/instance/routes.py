@@ -205,7 +205,7 @@ def instance_block(instance_id):
         db.session.add(InstanceBlock(user_id=current_user.id, instance_id=instance.id))
         db.session.commit()
         cache.delete_memoized(blocked_instances, current_user.id)
-        flash(f'{instance.domain} has been blocked.')
+        flash(_('%(instance_domain)s has been blocked.', instance_domain=instance.domain))
 
     goto = request.args.get('redirect') if 'redirect' in request.args else url_for('user.user_settings_filters')
     return redirect(goto)
@@ -220,7 +220,7 @@ def instance_unblock(instance_id):
         db.session.delete(existing_block)
         db.session.commit()
         cache.delete_memoized(blocked_instances, current_user.id)
-        flash(f'{instance.domain} has been unblocked.')
+        flash(_('%(instance_domain)s has been unblocked.', instance_domain=instance.domain))
 
     goto = request.args.get('redirect') if 'redirect' in request.args else url_for('user.user_settings_filters')
     return redirect(goto)

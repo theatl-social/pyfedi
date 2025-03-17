@@ -583,7 +583,7 @@ def unsubscribe(actor):
                         success = post_request(community.ap_inbox_url, undo, current_user.private_key,
                                                                current_user.public_url() + '#main-key', timeout=10)
                     if success is False or isinstance(success, str):
-                        flash('There was a problem while trying to unsubscribe', 'error')
+                        flash(_('There was a problem while trying to unsubscribe'), 'error')
 
                 if proceed:
                     db.session.query(CommunityMember).filter_by(user_id=current_user.id, community_id=community.id).delete()
@@ -597,7 +597,7 @@ def unsubscribe(actor):
                 cache.delete_memoized(joined_communities, current_user.id)
             else:
                 # todo: community deletion
-                flash('You need to make someone else the owner before unsubscribing.', 'warning')
+                flash(_('You need to make someone else the owner before unsubscribing.'), 'warning')
 
         # send them back where they came from
         referrer = request.headers.get('Referer', None)
@@ -1858,7 +1858,7 @@ def lookup(community, domain):
                            subscribed=community_membership(current_user, new_community) >= SUBSCRIPTION_MEMBER)
         else:
             # send them back where they came from
-            flash('Searching for remote communities requires login', 'error')
+            flash(_('Searching for remote communities requires login'), 'error')
             referrer = request.headers.get('Referer', None)
             if referrer is not None:
                 return redirect(referrer)

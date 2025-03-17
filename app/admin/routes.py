@@ -123,7 +123,7 @@ def admin_site():
 
         db.session.commit()
         set_setting('announcement', form.announcement.data)
-        flash('Settings saved.')
+        flash(_('Settings saved.'))
     elif request.method == 'GET':
         form.name.data = site.name
         form.description.data = site.description
@@ -172,7 +172,7 @@ def admin_misc():
         db.session.commit()
         cache.delete_memoized(blocked_referrers)
         set_setting('public_modlog', form.public_modlog.data)
-        flash('Settings saved.')
+        flash(_('Settings saved.'))
     elif request.method == 'GET':
         form.enable_downvotes.data = site.enable_downvotes
         form.allow_local_image_posts.data = site.allow_local_image_posts
@@ -1527,7 +1527,7 @@ def newsletter():
     form = SendNewsletterForm()
     if form.validate_on_submit():
         send_newsletter(form)
-        flash('Newsletter sent')
+        flash(_('Newsletter sent'))
         return redirect(url_for('admin.newsletter'))
 
     return render_template("admin/newsletter.html", form=form, title=_('Send newsletter'),

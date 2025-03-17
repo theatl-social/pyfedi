@@ -84,7 +84,7 @@ def send_newsletter(form):
     from app.email import send_email
 
     if recipients.count() == 0:
-        flash('No recipients', 'error')
+        flash(_('No recipients'), 'error')
 
     for recipient in recipients:
         body_text = render_template('email/newsletter.txt',

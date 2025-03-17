@@ -549,10 +549,10 @@ def ban_profile(actor):
             add_to_modlog('ban_user', link_text=user.display_name(), link=user.link())
 
             if user.is_instance_admin():
-                flash('Banned user was a remote instance admin.', 'warning')
+                flash(_('Banned user was a remote instance admin.'), 'warning')
             if user.is_admin() or user.is_staff():
-                flash('Banned user with role permissions.', 'warning')
-            flash(f'{actor} has been banned.')
+                flash(_('Banned user with role permissions.'), 'warning')
+            flash(_('%(actor)s has been banned.', actor=actor))
     else:
         abort(401)
 
@@ -579,7 +579,7 @@ def unban_profile(actor):
 
             add_to_modlog('unban_user', link_text=user.display_name(), link=user.link())
 
-            flash(f'{actor} has been unbanned.')
+            flash(_('%(actor)s has been unbanned.', actor=actor))
     else:
         abort(401)
 
@@ -612,7 +612,7 @@ def block_profile(actor):
             ...
             # federate block
 
-        flash(f'{actor} has been blocked.')
+        flash(_('%(actor)s has been blocked.', actor=actor))
         cache.delete_memoized(blocked_users, current_user.id)
 
     goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
@@ -664,7 +664,7 @@ def unblock_profile(actor):
             ...
             # federate unblock
 
-        flash(f'{actor} has been unblocked.')
+        flash(_('%(actor)s has been unblocked.', actor=actor))
         cache.delete_memoized(blocked_users, current_user.id)
 
     goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
@@ -746,10 +746,10 @@ def delete_profile(actor):
             add_to_modlog('delete_user', link_text=user.display_name(), link=user.link())
 
             if user.is_instance_admin():
-                flash('Deleted user was a remote instance admin.', 'warning')
+                flash(_('Deleted user was a remote instance admin.'), 'warning')
             if user.is_admin() or user.is_staff():
-                flash('Deleted user with role permissions.', 'warning')
-            flash(f'{actor} has been deleted.')
+                flash(_('Deleted user with role permissions.'), 'warning')
+            flash(_('%(actor)s has been deleted.', actor=actor))
     else:
         abort(401)
 
@@ -766,7 +766,7 @@ def user_community_unblock(community_id):
         db.session.delete(existing_block)
         db.session.commit()
         cache.delete_memoized(blocked_communities, current_user.id)
-        flash(f'{community.display_name()} has been unblocked.')
+        flash(_('%(community_name)s has been unblocked.', community_name=community.display_name()))
 
     goto = request.args.get('redirect') if 'redirect' in request.args else url_for('user.user_settings_filters')
     return redirect(goto)
@@ -868,22 +868,22 @@ def ban_purge_profile(actor):
             # todo: empty relevant caches
 
             if user.is_instance_admin():
-                flash('Purged user was a remote instance admin.', 'warning')
+                flash(_('Purged user was a remote instance admin.'), 'warning')
             if user.is_admin() or user.is_staff():
-                flash('Purged user with role permissions.', 'warning')
+                flash(_('Purged user with role permissions.'), 'warning')
 
             # federate deletion
             if user.is_local():
                 user.deleted_by = current_user.id
                 purge_user_then_delete(user.id)
-                flash(f'{actor} has been banned, deleted and all their content deleted. This might take a few minutes.')
+                flash(_('%(actor)s has been banned, deleted and all their content deleted. This might take a few minutes.', actor=actor))
             else:
                 user.deleted = True
                 user.deleted_by = current_user.id
                 user.delete_dependencies()
                 user.purge_content()
                 db.session.commit()
-                flash(f'{actor} has been banned, deleted and all their content deleted.')
+                flash(_('%(actor)s has been banned, deleted and all their content deleted.', actor=actor))
 
             add_to_modlog('delete_user', link_text=user.display_name(), link=user.link())
 
@@ -1479,7 +1479,7 @@ def lookup(person, domain):
             return redirect('/u/' + new_person.ap_id)
         else:
             # send them back where they came from
-            flash('Searching for remote people requires login', 'error')
+            flash(_('Searching for remote people requires login'), 'error')
             referrer = request.headers.get('Referer', None)
             if referrer is not None:
                 return redirect(referrer)

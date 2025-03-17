@@ -225,7 +225,7 @@ def verify_email(token):
         user = User.query.filter_by(verification_token=token).first()
         if user is not None:
             if user.banned:
-                flash('You have been banned.', 'error')
+                flash(_('You have been banned.'), 'error')
                 return redirect(url_for('main.index'))
             if user.verified:   # guard against users double-clicking the link in the email
                 flash(_('Thank you for verifying your email address.'))

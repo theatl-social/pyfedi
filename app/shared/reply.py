@@ -169,7 +169,7 @@ def make_reply(input, post, parent_id, src, auth=None):
     db.session.commit()
     if src == SRC_WEB:
         input.body.data = ''
-        flash('Your comment has been added.')
+        flash(_('Your comment has been added.'))
 
     task_selector('make_reply', reply_id=reply.id, parent_id=parent_id)
 

@@ -584,7 +584,7 @@ def _feed_remove_community(community_id: int, current_feed_id: int, user_id: int
                     success = post_request(community.ap_inbox_url, undo, user.private_key,
                                                             user.public_url() + '#main-key', timeout=10)
                 if success is False or isinstance(success, str):
-                    flash('There was a problem while trying to unsubscribe', 'error')
+                    flash(_('There was a problem while trying to unsubscribe'), 'error')
 
             if proceed:
                 db.session.query(CommunityMember).filter_by(user_id=user.id, community_id=community.id).delete()
@@ -592,12 +592,12 @@ def _feed_remove_community(community_id: int, current_feed_id: int, user_id: int
                 community.subscriptions_count -= 1
                 db.session.commit()
 
-                flash('You have left ' + community.title)
+                flash(_('You left %(community_name)s', community_name=community.title))
             cache.delete_memoized(community_membership, user, community)
             cache.delete_memoized(joined_communities, user.id)
         else:
             # todo: community deletion
-            flash('You need to make someone else the owner before unsubscribing.', 'warning')
+            flash(_('You need to make someone else the owner before unsubscribing.'), 'warning')
 
 
     # announce the change to any potential subscribers
@@ -867,7 +867,7 @@ def do_feed_subscribe(actor, user_id):
                         flash(_(msg_to_user), 'error')
 
             if success is True:
-                flash('You subscribed to ' + feed.title)
+                flash(_('You subscribed to %(feed_title)s', feed_title=feed.title))
         else:
             msg_to_user = "Already subscribed, or subscription pending"
             flash(_(msg_to_user))
@@ -915,7 +915,7 @@ def feed_unsubscribe(actor):
                         success = post_request(feed.ap_inbox_url, undo, current_user.private_key,
                                                                current_user.public_url() + '#main-key', timeout=10)
                     if success is False or isinstance(success, str):
-                        flash('There was a problem while trying to unsubscribe', 'error')
+                        flash(_('There was a problem while trying to unsubscribe'), 'error')
 
                 if proceed:
                     db.session.query(FeedMember).filter_by(user_id=current_user.id, feed_id=feed.id).delete()
@@ -933,12 +933,12 @@ def feed_unsubscribe(actor):
                             cache.delete_memoized(community_membership, current_user, Community.query.get(feed_item.community_id))
                         db.session.commit()
 
-                    flash('You have left ' + feed.title)
+                    flash(_('You have left %(feed_title)s', feed_title=feed.title))
                 cache.delete_memoized(feed_membership, current_user, feed)
                 cache.delete_memoized(joined_communities, current_user.id)
             else:
                 # todo: community deletion
-                flash('You need to make someone else the owner before unsubscribing.', 'warning')
+                flash(_('You need to make someone else the owner before unsubscribing.'), 'warning')
 
         # send them back where they came from
         referrer = request.headers.get('Referer', None)

@@ -144,7 +144,7 @@ def tools():
             unsubscribe_everyone_then_delete(c.id)
         
         # redirect browser to communities list page
-        flash(f'{len(dev_communities)} Dev Communities Deleted')
+        flash(_('%(num_communities)d dev communities deleted', len(dev_communities)))
         return redirect(url_for('main.list_communities'))
 
     # delete dev_ topics
