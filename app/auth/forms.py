@@ -20,7 +20,7 @@ class RegistrationForm(FlaskForm):
     user_name = StringField(_l('User name'), validators=[DataRequired()], render_kw={'autofocus': True, 'autocomplete': 'username'})
     email = HiddenField(_l('Email'))
     real_email = EmailField(_l('Email'), validators=[DataRequired(), Email(), Length(min=5, max=255)], render_kw={'autocomplete': 'email'})
-    password = PasswordField(_l('Password'), validators=[DataRequired(), Length(min=8, max=50)], render_kw={'autocomplete': 'new-password'})
+    password = PasswordField(_l('Password'), validators=[DataRequired(), Length(min=8, max=129)], render_kw={'autocomplete': 'new-password'})
     password2 = PasswordField(
         _l('Repeat password'), validators=[DataRequired(),
                                            EqualTo('password')])
@@ -57,8 +57,8 @@ class RegistrationForm(FlaskForm):
         if password.data == 'password' or password.data == '12345678' or password.data == '1234567890':
             raise ValidationError(_l('This password is too common.'))
 
-        if len(password.data) == 50:
-            raise ValidationError(_l('Maximum password length is 49 characters.'))
+        if len(password.data) == 128:
+            raise ValidationError(_l('Maximum password length is 128 characters.'))
 
         first_char = password.data[0]    # the first character in the string
 
