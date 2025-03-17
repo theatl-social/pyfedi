@@ -57,6 +57,9 @@ class RegistrationForm(FlaskForm):
         if password.data == 'password' or password.data == '12345678' or password.data == '1234567890':
             raise ValidationError(_l('This password is too common.'))
 
+        if len(password.data) == 50:
+            raise ValidationError(_l('Maximum password length is 49 characters.'))
+
         first_char = password.data[0]    # the first character in the string
 
         all_the_same = True
