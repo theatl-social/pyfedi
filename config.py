@@ -58,3 +58,6 @@ class Config(object):
 
     DB_POOL_SIZE = os.environ.get('DB_POOL_SIZE') or 10
     DB_MAX_OVERFLOW = os.environ.get('DB_MAX_OVERFLOW') or 30
+
+    LOG_ACTIVITYPUB_TO_DB = os.environ.get('LOG_ACTIVITYPUB_TO_DB') or False
+    LOG_ACTIVITYPUB_TO_FILE = os.environ.get('LOG_ACTIVITYPUB_TO_FILE') or False

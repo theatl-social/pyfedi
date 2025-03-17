@@ -2811,15 +2811,16 @@ def log_incoming_ap(id, aplog_type, aplog_result, saved_json, message=None):
     aplog_in = APLOG_IN
 
     if aplog_in and aplog_type[0] and aplog_result[0]:
-        activity_log = ActivityPubLog(direction='in', activity_id=id, activity_type=aplog_type[1], result=aplog_result[1])
-        if message:
-            activity_log.exception_message = message
-        if saved_json:
-            activity_log.activity_json = json.dumps(saved_json)
-        db.session.add(activity_log)
-        db.session.commit()
+        if current_app.config['LOG_ACTIVITYPUB_TO_DB']:
+            activity_log = ActivityPubLog(direction='in', activity_id=id, activity_type=aplog_type[1], result=aplog_result[1])
+            if message:
+                activity_log.exception_message = message
+            if saved_json:
+                activity_log.activity_json = json.dumps(saved_json)
+            db.session.add(activity_log)
+            db.session.commit()
 
-        if 'piefed.social' in id:
+        if current_app.config['LOG_ACTIVITYPUB_TO_FILE']:
             current_app.logger.info(f'piefed.social activity: {id} Type: {aplog_type[1]}, Result: {aplog_result[1]}, {message}')
 
 

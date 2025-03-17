@@ -846,6 +846,9 @@ def import_bans_task(filename):
 @login_required
 @permission_required('change instance settings')
 def admin_activities():
+    if current_app.config['LOG_ACTIVITYPUB_TO_DB'] is False:
+        flash(_('LOG_ACTIVITYPUB_TO_DB is off so no activities are being logged to the database.'), 'warning')
+        
     db.session.query(ActivityPubLog).filter(
         ActivityPubLog.created_at < utcnow() - timedelta(days=3)).delete()
     db.session.commit()
