@@ -515,8 +515,8 @@ def report_post(post_id, input, src, auth=None):
     for mod in post.community.moderators():
         moderator = User.query.get(mod.user_id)
         if moderator and moderator.is_local():
-            notification = Notification(user_id=mod.user_id, title=_('A comment has been reported'),
-                                        url=f"https://{current_app.config['SERVER_NAME']}/comment/{post.id}",
+            notification = Notification(user_id=mod.user_id, title=_('A post has been reported'),
+                                        url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
                                         author_id=user_id)
             db.session.add(notification)
             already_notified.add(mod.user_id)
