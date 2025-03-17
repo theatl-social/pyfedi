@@ -69,6 +69,10 @@ You need to somehow to allow client connections from outside to access port 8030
 of this article. You could use a nginx reverse proxy, a cloudflare zero trust tunnel, tailscale, whatever. Just make sure it has SSL on
 it as PieFed assumes you're making requests that start with https://your-domain.
 
+For trial/dev/experiments, a free account from ngrok.com is quick and easy. Install their CLI app and then in a new terminal window
+run `ngrok http --domain=whatever.ngrok.app 8030` to set up a tunnel. Ensure your .env.docker has SERVER_NAME set to 'whatever.ngrok.app'. Beware the
+free account changes the url regularly so you will need to update SERVER_NAME when that happens.
+
 Once you have the networking set up, go to https://your-domain in your browser and see if the docker output in your terminal
 shows signs of reacting to the request. There will be an error showing up in the console because we haven't done the next step yet.
 
