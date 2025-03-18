@@ -195,6 +195,7 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
     effect = user.instance.vote_weight
     post.score = post.up_votes * effect
     post.ranking = post.post_ranking(post.score, post.posted_at)
+    post.ranking_scaled = int(post.ranking * community.scale_by())
     cache.delete_memoized(recently_upvoted_posts, user.id)
 
     community.post_count += 1

@@ -646,6 +646,19 @@ class Community(db.Model):
     def loop_videos(self) -> bool:
         return 'gifs' in self.name
 
+    def _total_subscribers(self) -> int:
+        return db.session.execute(
+            text('SELECT SUM(subscriptions_count) as s FROM "community" WHERE banned is false')).scalar()
+
+    def _largest_community_subscribers(self) -> int:
+        return db.session.execute(
+            text('SELECT MAX(subscriptions_count) as s FROM "community" WHERE banned is false')).scalar()
+
+    @cache.memoize(timeout=360)
+    def scale_by(self) -> float:
+        raw_influence = self._total_subscribers() / self.subscriptions_count
+        return raw_influence / self._largest_community_subscribers()
+
     def delete_dependencies(self):
         for post in self.posts:
             post.delete_dependencies()
@@ -1168,6 +1181,7 @@ class Post(db.Model):
     up_votes = db.Column(db.Integer, default=0)
     down_votes = db.Column(db.Integer, default=0)
     ranking = db.Column(db.Integer, default=0, index=True)                          # used for 'hot' ranking
+    ranking_scaled = db.Column(db.Integer, default=0, index=True)                   # used for 'scaled' ranking
     edited_at = db.Column(db.DateTime)
     reports = db.Column(db.Integer, default=0)                          # how many times this post has been reported. Set to -1 to ignore reports
     language_id = db.Column(db.Integer, db.ForeignKey('language.id'), index=True)
@@ -1390,6 +1404,7 @@ class Post(db.Model):
 
             db.session.add(post)
             post.ranking = post.post_ranking(post.score, post.posted_at)
+            post.ranking_scaled = int(post.ranking * community.scale_by())
             community.post_count += 1
             community.last_active = utcnow()
             user.post_count += 1
@@ -1452,6 +1467,7 @@ class Post(db.Model):
                 post.up_votes += 1
                 post.score += 1
                 post.ranking = post.post_ranking(post.score, post.posted_at)
+                post.ranking_scaled = int(post.ranking * community.scale_by())
             db.session.commit()
 
         return post
@@ -1709,6 +1725,7 @@ class Post(db.Model):
         db.session.commit()
         if not user.banned:
             self.ranking = self.post_ranking(self.score, self.created_at)
+            self.ranking_scaled = self.ranking * self.community.scale_by()
             user.recalculate_attitude()
             db.session.commit()
         return undo
