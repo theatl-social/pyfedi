@@ -657,7 +657,7 @@ class Community(db.Model):
     @cache.memoize(timeout=360)
     def scale_by(self) -> float:
         if self.subscriptions_count <= 1:
-            return 2.0
+            return 7.0
         try:
             raw_influence = self._total_subscribers() / self.subscriptions_count
             return raw_influence / self._largest_community_subscribers()
