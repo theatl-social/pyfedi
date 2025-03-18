@@ -48,3 +48,6 @@ Disallow: /
 
 User-Agent: ImagesiftBot
 Crawl-delay: 5
+
+User-Agent: VelenPublicWebCrawler
+Disallow: /
