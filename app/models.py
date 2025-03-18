@@ -660,16 +660,7 @@ class Community(db.Model):
             return 2.0
         try:
             raw_influence = self._total_subscribers() / self.subscriptions_count
-            log_influence = math.log(raw_influence + 1)  # Adding 1 to avoid log(0)
-
-            # Get the max and min influence values for normalization
-            max_log_influence = math.log(self._total_subscribers() + 1)
-            min_log_influence = math.log(self._largest_community_subscribers() + 1)
-
-            # Normalize to range [1.0, 2.0]
-            normalized_influence = 1.0 + (log_influence - min_log_influence) / (max_log_influence - min_log_influence)
-
-            return max(1.0, min(2.0, normalized_influence))  # Ensure it's in range
+            return raw_influence / self._largest_community_subscribers()
         except ZeroDivisionError:
             return 1.0
 
