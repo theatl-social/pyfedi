@@ -79,7 +79,7 @@ shows signs of reacting to the request. There will be an error showing up in the
 * Database initialization
 
 This must be done once and once only. Doing this will wipe all existing data in your instance so do not do it unless you have a
-brand new instance.
+brand new instance. Once you do this you cannot change the SERVER_NAME setting so ensure this is set how you want it to be.
 
 In a new terminal window, run this:
 
