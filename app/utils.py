@@ -1713,7 +1713,7 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
     if sort == '' or sort == 'hot':
         post_id_sort = 'ORDER BY p.ranking DESC, p.posted_at DESC'
     elif sort == 'scaled':
-        post_id_sort = 'ORDER BY p.ranking_scaled DESC, p.posted_at DESC'
+        post_id_sort = 'ORDER BY p.ranking_scaled DESC, p.ranking DESC, p.posted_at DESC'
         post_id_where.append('p.ranking_scaled is not null ')
     elif sort == 'top':
         post_id_where.append('p.posted_at > :top_cutoff ')
@@ -1740,7 +1740,7 @@ def post_ids_to_models(post_ids: List[int], sort: str):
     if sort == '' or sort == 'hot':
         posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
     elif sort == 'scaled':
-        posts = posts.order_by(desc(Post.ranking_scaled)).order_by(desc(Post.posted_at))
+        posts = posts.order_by(desc(Post.ranking_scaled)).order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
     elif sort == 'top':
         posts = posts.order_by(desc(Post.up_votes - Post.down_votes))
     elif sort == 'new':

@@ -651,27 +651,21 @@ class Community(db.Model):
             text('SELECT MAX(subscriptions_count) as s FROM "community" WHERE banned is false')).scalar()
 
     @cache.memoize(timeout=360)
-    def scale_by(self) -> float:
+    def scale_by(self) -> int:
         if self.subscriptions_count <= 1:
-            return 2.0
+            return 3
         largest_community = self._largest_community_subscribers()
         if largest_community is None or largest_community == 0:
-            return 1.0
+            return 0
         influence = self.subscriptions_count / largest_community
         if influence < 0.05:
-            return 2.0
-        elif influence < 0.15:
-            return 1.8
-        elif influence < 0.25:
-            return 1.6
-        elif influence < 0.45:
-            return 1.4
-        elif influence < 0.60:
-            return 1.2
+            return 3
+        elif influence < 0.40:
+            return 2
         elif influence < 0.75:
-            return 1.1
+            return 1
         else:
-            return 1.0
+            return 0
 
     def delete_dependencies(self):
         for post in self.posts:
@@ -1418,7 +1412,7 @@ class Post(db.Model):
 
             db.session.add(post)
             post.ranking = post.post_ranking(post.score, post.posted_at)
-            post.ranking_scaled = int(post.ranking * community.scale_by())
+            post.ranking_scaled = int(post.ranking + community.scale_by())
             community.post_count += 1
             community.last_active = utcnow()
             user.post_count += 1
@@ -1481,7 +1475,7 @@ class Post(db.Model):
                 post.up_votes += 1
                 post.score += 1
                 post.ranking = post.post_ranking(post.score, post.posted_at)
-                post.ranking_scaled = int(post.ranking * community.scale_by())
+                post.ranking_scaled = int(post.ranking + community.scale_by())
             db.session.commit()
 
         return post
@@ -1739,7 +1733,7 @@ class Post(db.Model):
         db.session.commit()
         if not user.banned:
             self.ranking = self.post_ranking(self.score, self.created_at)
-            self.ranking_scaled = self.ranking * self.community.scale_by()
+            self.ranking_scaled = int(self.ranking + self.community.scale_by())
             user.recalculate_attitude()
             db.session.commit()
         return undo

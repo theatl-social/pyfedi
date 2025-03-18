@@ -2077,7 +2077,7 @@ def update_post_from_activity(post: Post, request_json: dict):
         post.down_votes = downvotes
         post.score = upvotes - downvotes
         post.ranking = post.post_ranking(post.score, post.posted_at)
-        post.ranking_scaled = int(post.ranking * post.community.scale_by())
+        post.ranking_scaled = int(post.ranking + post.community.scale_by())
         # return now for PeerTube, otherwise rest of this function breaks the post
         db.session.commit()
         return
