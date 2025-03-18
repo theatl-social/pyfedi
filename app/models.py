@@ -646,10 +646,6 @@ class Community(db.Model):
     def loop_videos(self) -> bool:
         return 'gifs' in self.name
 
-    def _total_subscribers(self) -> int:
-        return db.session.execute(
-            text('SELECT SUM(subscriptions_count) as s FROM "community" WHERE banned is false')).scalar()
-
     def _largest_community_subscribers(self) -> int:
         return db.session.execute(
             text('SELECT MAX(subscriptions_count) as s FROM "community" WHERE banned is false')).scalar()
@@ -657,11 +653,24 @@ class Community(db.Model):
     @cache.memoize(timeout=360)
     def scale_by(self) -> float:
         if self.subscriptions_count <= 1:
-            return 7.0
-        try:
-            raw_influence = self._total_subscribers() / self.subscriptions_count
-            return raw_influence / self._largest_community_subscribers()
-        except ZeroDivisionError:
+            return 2.0
+        largest_community = self._largest_community_subscribers()
+        if largest_community is None or largest_community == 0:
+            return 1.0
+        influence = self.subscriptions_count / largest_community
+        if influence < 0.05:
+            return 2.0
+        elif influence < 0.15:
+            return 1.8
+        elif influence < 0.25:
+            return 1.6
+        elif influence < 0.45:
+            return 1.4
+        elif influence < 0.60:
+            return 1.2
+        elif influence < 0.75:
+            return 1.1
+        else:
             return 1.0
 
     def delete_dependencies(self):
