@@ -4,6 +4,7 @@
         <option value="/home/top/{{ view_filter }}" aria-label="{{ _('Most upvotes in the last 24h') }}" {{ 'selected'  if sort == 'top' }}>{{ _('Top') }}</option>
         <option value="/home/new/{{ view_filter }}" aria-label="{{ _('Latest posts') }}" {{ 'selected'  if sort == 'new' }}>{{ _('New') }}</option>
         <option value="/home/active/{{ view_filter }}" aria-label="{{ _('Recently commented on') }}" {{ 'selected'  if sort == 'active' }}>{{ _('Active') }}</option>
+        <option value="/home/scaled/{{ view_filter }}" aria-label="{{ _('Trending in niche communities') }}" {{ 'selected'  if sort == 'scaled' }}>{{ _('Scaled') }}</option>
     </select>
 </div>
 <div class="d-none d-md-block btn-group mt-1 mb-2" aria-label="{{ _('Sorting methods: ') }}">
@@ -15,5 +16,7 @@
         {{ _('New') }}
     </a><a href="/home/active/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'active' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Recently commented on') }}">
         {{ _('Active') }}
+    </a><a href="/home/scaled/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'scaled' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Trending in niche communities') }}">
+        {{ _('Scaled') }}
     </a>
 </div>
