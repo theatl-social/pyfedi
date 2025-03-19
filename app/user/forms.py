@@ -60,6 +60,7 @@ class SettingsForm(FlaskForm):
              ('top', _l('Top')),
              ('new', _l('New')),
              ('active', _l('Active')),
+             ('scaled', _l('Scaled')),
              ]
     default_sort = SelectField(_l('Default post sort'), choices=sorts, validators=[DataRequired()], coerce=str,
                                render_kw={'class': 'form-select'})
