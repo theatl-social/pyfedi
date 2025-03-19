@@ -12,8 +12,14 @@
         {% if announcement -%}
             <div id="home_announcement">{{ announcement|safe }}</div>
         {% endif -%}
-        {% include "_home_nav.html" %}
-        {% include "_view_filter_nav.html" %}
+        <div class="row">
+            <div class="col-6">
+                {% include "_home_nav.html" %}
+            </div>
+            <div class="col-6">
+                {% include "_view_filter_nav.html" %}
+            </div>
+        </div>
         <div class="post_list h-feed">
             {% for post in posts %}
                 {% include 'post/_post_teaser.html' %}

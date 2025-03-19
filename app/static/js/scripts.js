@@ -35,6 +35,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupLightboxPostBody();
     setupPostTeaserHandler();
     setupPostTypeSwitcher();
+    setupSelectNavigation();
 });
 
 function setupPostTeaserHandler() {
@@ -66,6 +67,16 @@ function setupPostTypeSwitcher() {
         body.value = getCookie('post_description');
         tags.value = getCookie('post_tags');
     }
+}
+
+function setupSelectNavigation() {
+    document.querySelectorAll("select.navigate_on_change").forEach(select => {
+        select.addEventListener("change", function () {
+            if (this.value) {
+                window.location.href = this.value;
+            }
+        });
+    });
 }
 
 function setupYouTubeLazyLoad() {

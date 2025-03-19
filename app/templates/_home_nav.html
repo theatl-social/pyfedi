@@ -1,14 +1,19 @@
-<div class="btn-group mt-1 mb-2" aria-label="{{ _('Sorting methods: ') }}">
+<div class="d-md-none">
+    <select class="form-control form-select navigate_on_change" name="sort_by">
+        <option value="/home/hot/{{ view_filter }}" aria-label="{{ _('Trending now') }}" {{ 'selected'  if sort == 'hot' }}>{{ _('Hot') }}</option>
+        <option value="/home/top/{{ view_filter }}" aria-label="{{ _('Most upvotes in the last 24h') }}" {{ 'selected'  if sort == 'top' }}>{{ _('Top') }}</option>
+        <option value="/home/new/{{ view_filter }}" aria-label="{{ _('Latest posts') }}" {{ 'selected'  if sort == 'new' }}>{{ _('New') }}</option>
+        <option value="/home/active/{{ view_filter }}" aria-label="{{ _('Recently commented on') }}" {{ 'selected'  if sort == 'active' }}>{{ _('Active') }}</option>
+    </select>
+</div>
+<div class="d-none d-md-block btn-group mt-1 mb-2" aria-label="{{ _('Sorting methods: ') }}">
     <a href="/home/hot/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'hot' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Trending now') }}">
         {{ _('Hot') }}
-    </a>
-    <a href="/home/top/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'top' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Most upvotes in the last 24h') }}">
+    </a><a href="/home/top/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'top' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Most upvotes in the last 24h') }}">
         {{ _('Top') }}
-    </a>
-    <a href="/home/new/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Latest posts') }}">
+    </a><a href="/home/new/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Latest posts') }}">
         {{ _('New') }}
-    </a>
-    <a href="/home/active/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'active' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Recently commented on') }}">
+    </a><a href="/home/active/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'active' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Recently commented on') }}">
         {{ _('Active') }}
     </a>
 </div>
