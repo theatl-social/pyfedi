@@ -413,8 +413,17 @@ def continue_discussion(post_id, comment_id):
         mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
     replies = get_comment_branch(post.id, comment.id, 'top')
 
+    # Voting history
+    if current_user.is_authenticated:
+        recently_upvoted_replies = recently_upvoted_post_replies(current_user.id)
+        recently_downvoted_replies = recently_downvoted_post_replies(current_user.id)
+    else:
+        recently_upvoted_replies = []
+        recently_downvoted_replies = []
+
     response = render_template('post/continue_discussion.html', title=_('Discussing %(title)s', title=post.title), post=post, mods=mod_list,
                            is_moderator=is_moderator, comment=comment, replies=replies, markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
+                           recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
