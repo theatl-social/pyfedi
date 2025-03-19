@@ -21,7 +21,8 @@ from app.topic.forms import SuggestTopicsForm
 from app.utils import render_template, user_filters_posts, moderating_communities, joined_communities, \
     validation_required, mimetype_from_url, \
     menu_topics, menu_instance_feeds, \
-    menu_my_feeds, menu_subscribed_feeds, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models
+    menu_my_feeds, menu_subscribed_feeds, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, \
+    recently_upvoted_posts, recently_downvoted_posts
 
 
 @bp.route('/topic/<path:topic_path>', methods=['GET'])
@@ -78,6 +79,14 @@ def show_topic(topic_path):
 
         sub_topics = Topic.query.filter_by(parent_id=current_topic.id).order_by(Topic.name).all()
 
+        # Voting history
+        if current_user.is_authenticated:
+            recently_upvoted = recently_upvoted_posts(current_user.id)
+            recently_downvoted = recently_downvoted_posts(current_user.id)
+        else:
+            recently_upvoted = []
+            recently_downvoted = []
+
         return render_template('topic/show_topic.html', title=_(current_topic.name), posts=posts, topic=current_topic, sort=sort,
                                page=page, post_layout=post_layout, next_url=next_url, prev_url=prev_url,
                                topic_communities=topic_communities, content_filters=user_filters_posts(current_user.id) if current_user.is_authenticated else {},
@@ -86,7 +95,7 @@ def show_topic(topic_path):
                                rss_feed_name=f"{current_topic.name} on {g.site.name}",
                                show_post_community=True, moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
-                               menu_topics=menu_topics(),
+                               menu_topics=menu_topics(), recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                                POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
                                POST_TYPE_VIDEO=POST_TYPE_VIDEO,

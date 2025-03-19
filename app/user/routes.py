@@ -4,7 +4,7 @@ from random import randint
 from io import BytesIO
 
 from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, json, g, send_file
-from flask_login import login_user, logout_user, current_user, login_required
+from flask_login import logout_user, current_user, login_required
 from flask_babel import _, lazy_gettext as _l
 
 from app import db, cache, celery
@@ -22,10 +22,10 @@ from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, \
     FilterForm, KeywordFilterEditForm, RemoteFollowForm, ImportExportForm, UserNoteForm
 from app.user.utils import purge_user_then_delete, unsubscribe_from_community, search_for_user
-from app.utils import get_setting, render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
-    is_image_url, ensure_directory_exists, gibberish, file_get_contents, community_membership, user_filters_home, \
+from app.utils import render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
+    gibberish, file_get_contents, community_membership, user_filters_home, \
     user_filters_posts, user_filters_replies, moderating_communities, joined_communities, theme_list, blocked_instances, \
-    allowlist_html, recently_upvoted_posts, recently_downvoted_posts, blocked_users, menu_topics, add_to_modlog, \
+    blocked_users, menu_topics, add_to_modlog, \
     blocked_communities, piefed_markdown_to_lemmy_markdown, menu_instance_feeds, menu_my_feeds
 from sqlalchemy import desc, or_, text, asc
 import os

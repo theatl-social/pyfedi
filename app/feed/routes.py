@@ -22,7 +22,8 @@ from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markd
     user_filters_posts, moderating_communities, \
     joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, validation_required, feed_membership, \
     gibberish, get_task_session, instance_banned, menu_subscribed_feeds, referrer, community_membership, \
-    paginate_post_ids, get_deduped_post_ids, get_request, post_ids_to_models
+    paginate_post_ids, get_deduped_post_ids, get_request, post_ids_to_models, recently_upvoted_posts, \
+    recently_downvoted_posts
 from collections import namedtuple
 from sqlalchemy import desc, or_, text
 from slugify import slugify
@@ -716,6 +717,14 @@ def show_feed(feed):
 
         sub_feeds = Feed.query.filter_by(parent_feed_id=current_feed.id).order_by(Feed.name).all()
 
+        # Voting history
+        if current_user.is_authenticated:
+            recently_upvoted = recently_upvoted_posts(current_user.id)
+            recently_downvoted = recently_downvoted_posts(current_user.id)
+        else:
+            recently_upvoted = []
+            recently_downvoted = []
+
         return render_template('feed/show_feed.html', title=_(current_feed.name), posts=posts, feed=current_feed, sort=sort,
                                page=page, post_layout=post_layout, next_url=next_url, prev_url=prev_url,
                                feed_communities=feed_communities, content_filters=user_filters_posts(current_user.id) if current_user.is_authenticated else {},
@@ -723,6 +732,7 @@ def show_feed(feed):
                                rss_feed=f"https://{current_app.config['SERVER_NAME']}/f/{feed.path()}.rss",
                                rss_feed_name=f"{current_feed.name} on {g.site.name}",
                                show_post_community=True, moderating_communities=moderating_communities(current_user.get_id()),
+                               recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
                                joined_communities=joined_communities(current_user.get_id()),
                                menu_topics=menu_topics(),
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,

@@ -10,7 +10,7 @@ from app.models import Post, Domain, Community, DomainBlock, read_posts
 from app.domain import bp
 from app.utils import render_template, permission_required, joined_communities, moderating_communities, \
     user_filters_posts, blocked_domains, blocked_instances, menu_topics, menu_instance_feeds, menu_my_feeds, \
-    menu_subscribed_feeds
+    menu_subscribed_feeds, recently_upvoted_posts, recently_downvoted_posts
 from sqlalchemy import desc, or_
 
 
@@ -49,11 +49,20 @@ def show_domain(domain_id):
         posts = posts.paginate(page=page, per_page=100, error_out=False)
         next_url = url_for('domain.show_domain', domain_id=domain_id, page=posts.next_num) if posts.has_next else None
         prev_url = url_for('domain.show_domain', domain_id=domain_id, page=posts.prev_num) if posts.has_prev and page != 1 else None
+
+        # Voting history
+        if current_user.is_authenticated:
+            recently_upvoted = recently_upvoted_posts(current_user.id)
+            recently_downvoted = recently_downvoted_posts(current_user.id)
+        else:
+            recently_upvoted = []
+            recently_downvoted = []
+
         return render_template('domain/domain.html', domain=domain, title=domain.name, posts=posts,
                                POST_TYPE_IMAGE=constants.POST_TYPE_IMAGE, POST_TYPE_LINK=constants.POST_TYPE_LINK,
                                POST_TYPE_VIDEO=constants.POST_TYPE_VIDEO,
                                next_url=next_url, prev_url=prev_url,
-                               content_filters=content_filters,
+                               content_filters=content_filters, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
                                menu_topics=menu_topics(), site=g.site,
