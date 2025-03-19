@@ -646,7 +646,6 @@ class Community(db.Model):
     def loop_videos(self) -> bool:
         return 'gifs' in self.name
 
-    @cache.memoize(timeout=360)
     def scale_by(self) -> int:
         if self.subscriptions_count <= 1:
             return 3
@@ -2712,7 +2711,6 @@ class FeedJoinRequest(db.Model):
     feed_id = db.Column(db.Integer, db.ForeignKey('feed.id'), index=True)
 
 
-@cache.cached(timeout=3600)
 def _large_community_subscribers() -> float:
     # average number of subscribers in the top 15% communities
     sql = '''   SELECT AVG(subscriptions_count) AS avg_top_25
