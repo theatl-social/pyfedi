@@ -646,23 +646,21 @@ class Community(db.Model):
     def loop_videos(self) -> bool:
         return 'gifs' in self.name
 
-    def _largest_community_subscribers(self) -> int:
-        return db.session.execute(
-            text('SELECT MAX(subscriptions_count) as s FROM "community" WHERE banned is false')).scalar()
-
     @cache.memoize(timeout=360)
     def scale_by(self) -> int:
         if self.subscriptions_count <= 1:
             return 3
-        largest_community = self._largest_community_subscribers()
+        largest_community = _large_community_subscribers()
         if largest_community is None or largest_community == 0:
             return 0
-        influence = self.subscriptions_count / largest_community
+        influence = self.subscriptions_count / int(largest_community)
         if influence < 0.05:
+            return 4
+        if influence < 0.25:
             return 3
-        elif influence < 0.40:
+        elif influence < 0.60:
             return 2
-        elif influence < 0.75:
+        elif influence < 1.0:
             return 1
         else:
             return 0
@@ -2712,3 +2710,17 @@ class FeedJoinRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     feed_id = db.Column(db.Integer, db.ForeignKey('feed.id'), index=True)
+
+
+@cache.cached(timeout=3600)
+def _large_community_subscribers() -> float:
+    # average number of subscribers in the top 15% communities
+    sql = '''   SELECT AVG(subscriptions_count) AS avg_top_25
+                FROM (
+                    SELECT subscriptions_count,
+                           PERCENT_RANK() OVER (ORDER BY subscriptions_count DESC) AS percentile
+                    FROM "community"
+                    WHERE banned IS false and subscriptions_count > 0
+                ) AS ranked
+                WHERE percentile <= 0.15;'''
+    return db.session.execute(text(sql)).scalar()
