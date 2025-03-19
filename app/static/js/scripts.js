@@ -187,60 +187,66 @@ function setupLightboxGallery() {
 
 
 function setupLightboxTeaser() {
-    function popStateListener(event) {
-        baguetteBox.hide();
-    }
-    baguetteBox.run('.post_teaser', {
-        fullScreen: false,
-        noScrollbars: true,
-        async: true,
-        preload: 3,
-        ignoreClass: 'preview_image',
-        afterShow: function() {
-            window.history.pushState('#lightbox', document.title, document.location+'#lightbox');
-            window.addEventListener('popstate', popStateListener);
+    if(typeof baguetteBox !== 'undefined') {
+        function popStateListener(event) {
+            baguetteBox.hide();
+        }
+        baguetteBox.run('.post_teaser', {
+            fullScreen: false,
+            noScrollbars: true,
+            async: true,
+            preload: 3,
+            ignoreClass: 'preview_image',
+            afterShow: function() {
+                window.history.pushState('#lightbox', document.title, document.location+'#lightbox');
+                window.addEventListener('popstate', popStateListener);
 
-            function baguetteBoxClickImg(event) {
-              if (this.style.width != "100vw" && this.offsetWidth < window.innerWidth) {
-                this.style.width = "100vw";
-                this.style.maxHeight = "none";
-              } else {
-                this.style.width = "";
-                this.style.maxHeight = "";
-                this.removeEventListener('click', baguetteBoxClickImg);
-                baguetteBox.hide();
-              }
-            };
-            for (const el of document.querySelectorAll('div#baguetteBox-overlay img')) {
-              el.addEventListener('click', baguetteBoxClickImg);
-            }
-        },
-        afterHide: function() {
-            if (window.history.state === '#lightbox') {
-              window.history.back();
-              window.removeEventListener('popstate', popStateListener);
-            }
-        },
-    });
+                function baguetteBoxClickImg(event) {
+                  if (this.style.width != "100vw" && this.offsetWidth < window.innerWidth) {
+                    this.style.width = "100vw";
+                    this.style.maxHeight = "none";
+                  } else {
+                    this.style.width = "";
+                    this.style.maxHeight = "";
+                    this.removeEventListener('click', baguetteBoxClickImg);
+                    baguetteBox.hide();
+                  }
+                };
+                for (const el of document.querySelectorAll('div#baguetteBox-overlay img')) {
+                  el.addEventListener('click', baguetteBoxClickImg);
+                }
+            },
+            afterHide: function() {
+                if (window.history.state === '#lightbox') {
+                  window.history.back();
+                  window.removeEventListener('popstate', popStateListener);
+                }
+            },
+        });
+    }
+
 }
 
 function setupLightboxPostBody() {
-    const images = document.querySelectorAll('.post_body img');
-    images.forEach(function(img) {
-        const parent = img.parentNode;
-        const link = document.createElement('a');
-        link.href = img.src;
-        link.setAttribute('data-caption', img.alt);
-        parent.replaceChild(link, img);
-        link.appendChild(img);
-    });
+    if(typeof baguetteBox !== 'undefined') {
+        const images = document.querySelectorAll('.post_body img');
+        images.forEach(function(img) {
+            const parent = img.parentNode;
+            const link = document.createElement('a');
+            link.href = img.src;
+            link.setAttribute('data-caption', img.alt);
+            parent.replaceChild(link, img);
+            link.appendChild(img);
+        });
 
-    baguetteBox.run('.post_body', {
-        fullScreen: false,
-        titleTag: true,
-        async: true,
-        preload: 3
-    });
+        baguetteBox.run('.post_body', {
+            fullScreen: false,
+            titleTag: true,
+            async: true,
+            preload: 3
+        });
+    }
+
 }
 
 // fires after all resources have loaded, including stylesheets and js files
