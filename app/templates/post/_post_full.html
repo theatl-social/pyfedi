@@ -186,6 +186,11 @@
             </div>
         </div>
         {% endif -%}
+        {% if current_user.is_authenticated and post.type == POST_TYPE_LINK -%}
+            <div class="post_cross_post_link">
+                <a rel="nofollow" aria-label="{{ _('Cross-post') }}" href="{{ url_for('post.post_cross_post', post_id=post.id) }}"><span class="fe fe-cross-post"></span></a>
+            </div>
+        {% endif -%}
         <div class="notify_toggle pull-right">
             {% if current_user.is_authenticated and current_user.verified -%}
                 {% include 'post/_post_notification_toggle.html' -%}
