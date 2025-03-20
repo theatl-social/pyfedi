@@ -31,6 +31,7 @@ from app.models import User, Community, CommunityMember, CommunityJoinRequest, C
     NotificationSubscription, UserFollower, Instance, Language, Poll, PollChoice, ModLog, CommunityWikiPage, \
     CommunityWikiPageRevision, read_posts, Feed, FeedItem
 from app.community import bp
+from app.post.util import tags_to_string
 from app.shared.community import invite_with_chat, invite_with_email
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, gibberish, community_membership, ap_datetime, \
@@ -720,6 +721,7 @@ def add_post(actor, type):
             form.nsfl.data = source_post.nsfl
             form.language_id.data = source_post.language_id
             form.link_url.data = source_post.url
+            form.tags.data = tags_to_string(source_post)
 
     # empty post to pass since add_post.html extends edit_post.html 
     # and that one checks for a post.image_id for editing image posts

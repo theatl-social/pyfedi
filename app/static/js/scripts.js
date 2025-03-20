@@ -63,9 +63,15 @@ function setupPostTypeSwitcher() {
     var body = document.getElementById('body');
     var tags = document.getElementById('tags');
     if(typeSwitcher && title && body && tags) {
-        title.value = getCookie('post_title');
-        body.value = getCookie('post_description');
-        tags.value = getCookie('post_tags');
+        var cookie_title = getCookie('post_title');
+        var cookie_description = getCookie('post_description');
+        var cookie_tags = getCookie('post_tags');
+        if(cookie_title)
+            title.value = cookie_title;
+        if(cookie_description)
+            body.value = cookie_description;
+        if(cookie_tags)
+            tags.value = cookie_tags;
     }
 }
 

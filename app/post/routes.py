@@ -1572,7 +1572,11 @@ def post_cross_post(post_id: int):
     form.which_community.choices = which_community
     if form.validate_on_submit():
         community = Community.query.get_or_404(form.which_community.data)
-        return redirect(url_for('community.add_post', actor=community.link(), type='link', source=str(post.id)))
+        response = make_response(redirect(url_for('community.add_post', actor=community.link(), type='link', source=str(post.id))))
+        response.delete_cookie('post_title')
+        response.delete_cookie('post_description')
+        response.delete_cookie('post_tags')
+        return response
     else:
         breadcrumbs = []
         breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
