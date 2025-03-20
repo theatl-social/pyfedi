@@ -2713,12 +2713,17 @@ class FeedJoinRequest(db.Model):
 
 def _large_community_subscribers() -> float:
     # average number of subscribers in the top 15% communities
-    sql = '''   SELECT AVG(subscriptions_count) AS avg_top_25
-                FROM (
-                    SELECT subscriptions_count,
-                           PERCENT_RANK() OVER (ORDER BY subscriptions_count DESC) AS percentile
-                    FROM "community"
-                    WHERE banned IS false and subscriptions_count > 0
-                ) AS ranked
-                WHERE percentile <= 0.15;'''
-    return db.session.execute(text(sql)).scalar()
+
+    result = cache.get('large_community_subscribers')
+    if result is None:
+        sql = '''   SELECT AVG(subscriptions_count) AS avg_top_25
+                    FROM (
+                        SELECT subscriptions_count,
+                               PERCENT_RANK() OVER (ORDER BY subscriptions_count DESC) AS percentile
+                        FROM "community"
+                        WHERE banned IS false and subscriptions_count > 0
+                    ) AS ranked
+                    WHERE percentile <= 0.15;'''
+        result = db.session.execute(text(sql)).scalar()
+        cache.set('large_community_subscribers', result, timeout=3600)
+    return result
