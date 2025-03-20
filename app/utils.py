@@ -553,30 +553,40 @@ def feed_membership(user: User, feed: Feed) -> int:
 
 @cache.memoize(timeout=86400)
 def communities_banned_from(user_id: int) -> List[int]:
+    if user_id == 0:
+        return []
     community_bans = CommunityBan.query.filter(CommunityBan.user_id == user_id).all()
     return [cb.community_id for cb in community_bans]
 
 
 @cache.memoize(timeout=86400)
 def blocked_domains(user_id) -> List[int]:
+    if user_id == 0:
+        return []
     blocks = DomainBlock.query.filter_by(user_id=user_id)
     return [block.domain_id for block in blocks]
 
 
 @cache.memoize(timeout=86400)
 def blocked_communities(user_id) -> List[int]:
+    if user_id == 0:
+        return []
     blocks = CommunityBlock.query.filter_by(user_id=user_id)
     return [block.community_id for block in blocks]
 
 
 @cache.memoize(timeout=86400)
 def blocked_instances(user_id) -> List[int]:
+    if user_id == 0:
+        return []
     blocks = InstanceBlock.query.filter_by(user_id=user_id)
     return [block.instance_id for block in blocks]
 
 
 @cache.memoize(timeout=86400)
 def blocked_users(user_id) -> List[int]:
+    if user_id == 0:
+        return []
     blocks = UserBlock.query.filter_by(blocker_id=user_id)
     return [block.blocked_id for block in blocks]
 

@@ -34,7 +34,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, reply_is_stupid, \
     languages_for_form, menu_topics, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown, \
     permission_required, blocked_users, get_request, is_local_image_url, is_video_url, can_upvote, can_downvote, \
-    menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, referrer, can_create_post_reply
+    menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, referrer, can_create_post_reply, communities_banned_from
 from app.shared.reply import make_reply, edit_reply
 from app.shared.post import edit_post, sticky_post, lock_post
 
@@ -89,7 +89,10 @@ def show_post(post_id: int):
         if post.cross_posts:
             for cross_posted_post in Post.query.filter(Post.id.in_(post.cross_posts)):
                 cross_posted_replies = post_replies(cross_posted_post.community, cross_posted_post.id, sort)
-                if len(cross_posted_replies):
+                if len(cross_posted_replies) and \
+                        post.community_id not in communities_banned_from(current_user.get_id()) and \
+                        post.community_id not in blocked_communities(current_user.get_id()) and \
+                        post.community.instance_id not in blocked_instances(current_user.get_id()):
                     more_replies[cross_posted_post.community].extend(cross_posted_replies)
         form.notify_author.data = True
 
