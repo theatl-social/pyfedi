@@ -1,4 +1,4 @@
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 from datetime import datetime, timedelta
 from random import randint
 
@@ -85,6 +85,12 @@ def show_post(post_id: int):
         return redirect(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{reply.id}'))
     else:
         replies = post_replies(community, post.id, sort)
+        more_replies = defaultdict(list)
+        if post.cross_posts:
+            for cross_posted_post in Post.query.filter(Post.id.in_(post.cross_posts)):
+                cross_posted_replies = post_replies(cross_posted_post.community, cross_posted_post.id, sort)
+                if len(cross_posted_replies):
+                    more_replies[cross_posted_post.community].extend(cross_posted_replies)
         form.notify_author.data = True
 
     og_image = post.image.source_url if post.image_id else None
@@ -179,7 +185,8 @@ def show_post(post_id: int):
                            community=post.community,
                            breadcrumbs=breadcrumbs, related_communities=related_communities, mods=mod_list,
                            poll_form=poll_form, poll_results=poll_results, poll_data=poll_data, poll_choices=poll_choices, poll_total_votes=poll_total_votes,
-                           canonical=post.ap_id, form=form, replies=replies, THREAD_CUTOFF_DEPTH=constants.THREAD_CUTOFF_DEPTH,
+                           canonical=post.ap_id, form=form, replies=replies, more_replies=more_replies,
+                           THREAD_CUTOFF_DEPTH=constants.THREAD_CUTOFF_DEPTH,
                            description=description, og_image=og_image,
                            autoplay=request.args.get('autoplay', False), archive_link=archive_link,
                            noindex=not post.author.indexable, preconnect=post.url if post.url else None,
