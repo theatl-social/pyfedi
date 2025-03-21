@@ -1388,6 +1388,13 @@ def english_language_id():
     return english.id if english else None
 
 
+def read_language_choices() -> List[tuple]:
+    result = []
+    for language in Language.query.order_by(Language.name).all():
+        result.append((language.id, language.name))
+    return result
+
+
 def actor_contains_blocked_words(actor: str):
     actor = actor.lower().strip()
     blocked_words = get_setting('actor_blocked_words')
@@ -1692,6 +1699,11 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
         if current_user.hide_read_posts:
             post_id_where.append('p.id NOT IN (SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id) ')
             params['user_id'] = current_user.id
+
+        # Language filter
+        if current_user.read_language_ids and len(current_user.read_language_ids) > 0:
+            post_id_where.append('(p.language_id IN :read_language_ids OR p.language_id is null) ')
+            params['read_language_ids'] = tuple(current_user.read_language_ids)
 
         post_id_where.append('p.deleted is false ')
 

@@ -23,6 +23,8 @@ def post_replies(community: Community, post_id: int, sort_by: str, show_first: i
             comments = comments.filter(PostReply.user_id.not_in(blocked_accounts))
         if current_user.reply_hide_threshold and not (current_user.is_admin() or community.is_owner() or community.is_moderator()):
             comments = comments.filter(PostReply.score > current_user.reply_hide_threshold)
+        if current_user.read_language_ids and len(current_user.read_language_ids) > 0:
+            comments = comments.filter(or_(PostReply.language_id.in_(tuple(current_user.read_language_ids)), PostReply.language_id == None))
     else:
         comments.filter(PostReply.score > -20)
 

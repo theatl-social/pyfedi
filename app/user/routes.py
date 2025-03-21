@@ -26,7 +26,8 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     gibberish, file_get_contents, community_membership, user_filters_home, \
     user_filters_posts, user_filters_replies, moderating_communities, joined_communities, theme_list, blocked_instances, \
     blocked_users, menu_topics, add_to_modlog, \
-    blocked_communities, piefed_markdown_to_lemmy_markdown, menu_instance_feeds, menu_my_feeds
+    blocked_communities, piefed_markdown_to_lemmy_markdown, menu_instance_feeds, menu_my_feeds, languages_for_form, \
+    read_language_choices
 from sqlalchemy import desc, or_, text, asc
 import os
 import json as python_json
@@ -401,6 +402,7 @@ def user_settings():
         ('ja', _l('Japanese')),
         ('es', _l('Spanish')),
     ]
+    form.read_languages.choices = read_language_choices()
     if form.validate_on_submit():
         propagate_indexable = form.indexable.data != current_user.indexable
         current_user.newsletter = form.newsletter.data
@@ -415,6 +417,7 @@ def user_settings():
         current_user.interface_language = form.interface_language.data
         current_user.feed_auto_follow = form.feed_auto_follow.data
         current_user.feed_auto_leave = form.feed_auto_leave.data
+        current_user.read_language_ids = form.read_languages.data
         session['ui_language'] = form.interface_language.data
         if form.vote_privately.data:
             if current_user.alt_user_name is None or current_user.alt_user_name == '':
@@ -444,6 +447,7 @@ def user_settings():
         form.vote_privately.data = current_user.vote_privately()
         form.feed_auto_follow.data = current_user.feed_auto_follow
         form.feed_auto_leave.data = current_user.feed_auto_leave
+        form.read_languages.data = current_user.read_language_ids
 
     return render_template('user/edit_settings.html', title=_('Edit profile'), form=form, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
