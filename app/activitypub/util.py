@@ -1773,6 +1773,9 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
         elif 'contentMap' in request_json['object'] and isinstance(request_json['object']['contentMap'], dict):
             language = find_language(next(iter(request_json['object']['contentMap'])))  # Combination of next and iter gets the first key in a dict
             language_id = language.id if language else None
+        else:
+            from app.utils import english_language_id
+            language_id = english_language_id()
 
         if 'attachment' in request_json['object']:
             attachment_list = []

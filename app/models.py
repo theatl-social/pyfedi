@@ -1395,6 +1395,9 @@ class Post(db.Model):
             elif 'contentMap' in request_json['object'] and isinstance(request_json['object']['contentMap'], dict):
                 language = find_language(next(iter(request_json['object']['contentMap'])))
                 post.language_id = language.id if language else None
+            else:
+                from app.utils import english_language_id
+                post.language_id = english_language_id()
             if 'licence' in request_json['object'] and isinstance(request_json['object']['licence'], dict):
                 licence = find_licence_or_create(request_json['object']['licence']['name'])
                 post.licence = licence
