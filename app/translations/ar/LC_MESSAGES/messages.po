@@ -8,8 +8,8 @@ msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-03-20 15:42+1300\n"
-"PO-Revision-Date: 2025-03-21 03:54+0000\n"
-"Last-Translator: Weblate Admin <rimu@rimu.geek.nz>\n"
+"PO-Revision-Date: 2025-03-22 05:47+0000\n"
+"Last-Translator: fxomt <services.thaw171@slmail.me>\n"
 "Language-Team: Arabic <http://translate.piefed.social/projects/piefed/"
 "main-web-app/ar/>\n"
 "Language: ar\n"
@@ -45,17 +45,16 @@ msgid "[PieFed] Reset Your Password"
 msgstr "[Piefed] إعادة تعيين كلمة المرور"
 
 #: app/email.py:26
-#, fuzzy
 msgid "[PieFed] Please verify your email address"
-msgstr "يرجى التحقق من عنوان بريدك الإلكتروني"
+msgstr "[PieFed] الرجاء التحقق من عنوان بريدك الإلكتروني"
 
 #: app/email.py:34
 msgid "Your application has been approved - welcome to PieFed"
-msgstr ""
+msgstr "تم قبول طلبك - مرحبًا بك في PieFed"
 
 #: app/email.py:34
 msgid "Welcome to PieFed"
-msgstr ""
+msgstr "مرحبًا بك في PieFed"
 
 #: app/models.py:2405
 msgid "Added moderator"
