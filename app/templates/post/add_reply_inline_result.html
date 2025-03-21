@@ -24,7 +24,7 @@
             {% else %}
                 hx-get="{{ url_for('user.user_preview', user_id=user.id) }}"
             {% endif %}
-            hx-trigger="intersect once"
+            hx-trigger="intersect once delay:1s"
             hx-target="this"
             hx-swap="innerHTML"
         ></div>
