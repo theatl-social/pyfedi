@@ -81,7 +81,7 @@
         </div>
 
         <div class="row comment_body hidable{% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) %} reported{% endif %}">
-            <div class="col-12">
+            <div class="col-12 pr-0">
                 {{ post_reply.body_html | community_links | person_links | safe }}
             </div>
         </div>
