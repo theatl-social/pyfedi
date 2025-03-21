@@ -1,17 +1,18 @@
-
 msgid ""
 msgstr ""
-"Project-Id-Version:  piefed\n"
+"Project-Id-Version: piefed\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-03-17 20:26+1300\n"
-"PO-Revision-Date: 2024-11-11 03:28+0000\n"
-"Last-Translator: \n"
+"PO-Revision-Date: 2025-03-21 03:54+0000\n"
+"Last-Translator: Weblate Admin <rimu@rimu.geek.nz>\n"
+"Language-Team: Japanese <http://translate.piefed.social/projects/piefed/"
+"main-web-app/ja/>\n"
 "Language: ja\n"
-"Language-Team: Japanese\n"
-"Plural-Forms: nplurals=1; plural=0;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Weblate 5.10.4\n"
 "Generated-By: Babel 2.12.1\n"
 
 #: app/__init__.py:42
@@ -5100,7 +5101,7 @@ msgstr "非表示"
 
 #: app/templates/user/filters.html:53
 msgid "Semi-transparent"
-msgstr ""
+msgstr "半透明"
 
 #: app/templates/user/filters.html:63
 msgid "No filters defined yet."
@@ -5123,10 +5124,12 @@ msgid "No blocked instances"
 msgstr "ブロックしたインスタンスはありません"
 
 #: app/templates/user/newsletter_unsubscribed.html:10
+#, fuzzy
 msgid ""
 "You have unsubscribed from the email newsletter. We might email you for "
 "other reasons, though."
-msgstr ""
+msgstr "メールニュースレターの購読を解除しました。ただし、他の理由でメールをお送りす"
+"ることがあるかもしれません。"
 
 #: app/templates/user/notifications.html:25
 msgid "Mark all as read"
@@ -5196,9 +5199,9 @@ msgid "View original profile"
 msgstr "プロフィールの表示"
 
 #: app/templates/user/show_profile.html:94
-#, fuzzy, python-format
+#, python-format
 msgid "Block %(user_name)s"
-msgstr "@%(author_name)s をブロック"
+msgstr "%(user_name)s をブロック"
 
 #: app/templates/user/show_profile.html:104
 #: app/templates/user/user_preview.html:59 app/user/routes.py:1439
@@ -5219,8 +5222,10 @@ msgstr "該当なし"
 
 #: app/templates/user/show_profile.html:115
 #: app/templates/user/user_preview.html:24
+#, fuzzy
 msgid "Ratio of upvotes cast to downvotes cast. Higher is more positive."
-msgstr ""
+msgstr "投票されたアップボートとダウンボートの比率。数値が高いほど、よりポジティブで"
+"す。"
 
 #: app/templates/user/show_profile.html:120
 #: app/templates/user/user_preview.html:29
@@ -5234,8 +5239,9 @@ msgid "Referer"
 msgstr "無期限"
 
 #: app/templates/user/show_profile.html:121
+#, fuzzy
 msgid "Which website linked to PieFed when the user initially registered."
-msgstr ""
+msgstr "ユーザーが最初に登録した際にPieFedにリンクされたウェブサイトはどれですか。"
 
 #: app/templates/user/show_profile.html:122
 msgid "IP address of last interaction."
@@ -5329,8 +5335,9 @@ msgid "All authors"
 msgstr "作成者"
 
 #: app/templates/user/alerts/_filter.html:5
+#, fuzzy
 msgid "Only Mine"
-msgstr ""
+msgstr "ただ私のもの"
 
 #: app/templates/user/alerts/_filter.html:6
 #, fuzzy
@@ -5367,10 +5374,12 @@ msgid "Visit Topic"
 msgstr "トピックを編集"
 
 #: app/templates/user/alerts/_topics.html:15
+#, fuzzy
 msgid ""
 "You have not subscribed to any topics. Use the bell icon on each topic to"
 " do so."
-msgstr ""
+msgstr "あなたはまだどのトピックにも登録していません。各トピックのベルアイコンを使用"
+"して登録してください。"
 
 #: app/templates/user/alerts/_type.html:1
 #, fuzzy
@@ -5387,15 +5396,17 @@ msgid "Visit User"
 msgstr "ユーザーの編集"
 
 #: app/templates/user/alerts/_users.html:15
+#, fuzzy
 msgid ""
 "You have not subscribed to an alert for new content from any users. Use "
 "the bell icon on each person to do so."
-msgstr ""
+msgstr "あなたは、どのユーザーからの新しいコンテンツに対するアラートを購読していませ"
+"ん。各ユーザーのベルアイコンを使用して購読してください。"
 
 #: app/topic/forms.py:8
 #, fuzzy
 msgid "New topic name"
-msgstr "%(topic_name)s を編集"
+msgstr "新しいトピック名"
 
 #: app/topic/forms.py:9
 msgid "New topic name here..."
@@ -5407,8 +5418,9 @@ msgid "Suggested communities"
 msgstr "参加しているコミュニティ"
 
 #: app/topic/forms.py:11
+#, fuzzy
 msgid "Comma seperated list of community suggestions"
-msgstr ""
+msgstr "コミュニティの提案のカンマ区切りリスト"
 
 #: app/topic/forms.py:12
 #, fuzzy
@@ -5435,8 +5447,9 @@ msgid "Set new password"
 msgstr "新しいパスワードを設定"
 
 #: app/user/forms.py:17
+#, fuzzy
 msgid "Extra field 1 - label"
-msgstr ""
+msgstr "追加フィールド1 - ラベル"
 
 #: app/user/forms.py:17 app/user/forms.py:19 app/user/forms.py:21
 #: app/user/forms.py:23
@@ -5445,32 +5458,39 @@ msgid "Label"
 msgstr "ローカル"
 
 #: app/user/forms.py:18
+#, fuzzy
 msgid "Extra field 1 - text"
-msgstr ""
+msgstr "追加フィールド1 - テキスト"
 
 #: app/user/forms.py:19
+#, fuzzy
 msgid "Extra field 2 - label"
-msgstr ""
+msgstr "追加フィールド2 - ラベル"
 
 #: app/user/forms.py:20
+#, fuzzy
 msgid "Extra field 2 - text"
-msgstr ""
+msgstr "追加フィールド2 - テキスト"
 
 #: app/user/forms.py:21
+#, fuzzy
 msgid "Extra field 3 - label"
-msgstr ""
+msgstr "追加フィールド3 - ラベル"
 
 #: app/user/forms.py:22
+#, fuzzy
 msgid "Extra field 3 - text"
-msgstr ""
+msgstr "追加フィールド3 - テキスト"
 
 #: app/user/forms.py:23
+#, fuzzy
 msgid "Extra field 4 - label"
-msgstr ""
+msgstr "追加フィールド4 - ラベル"
 
 #: app/user/forms.py:24
+#, fuzzy
 msgid "Extra field 4 - text"
-msgstr ""
+msgstr "追加フィールド4 - テキスト"
 
 #: app/user/forms.py:30
 msgid "Save profile"
@@ -5493,12 +5513,14 @@ msgid "Receive email about missed notifications"
 msgstr "不在時にメールで通知を受け取る"
 
 #: app/user/forms.py:49 app/user/forms.py:128
+#, fuzzy
 msgid "Reply collapse threshold"
-msgstr ""
+msgstr "返信の折りたたみ閾値"
 
 #: app/user/forms.py:50 app/user/forms.py:129
+#, fuzzy
 msgid "Reply hide threshold"
-msgstr ""
+msgstr "返信の非表示閾値"
 
 #: app/user/forms.py:51
 msgid "Use markdown editor GUI when writing"
@@ -5516,7 +5538,8 @@ msgstr "自分の投稿の検索を許可する"
 msgid ""
 "Do not display posts with which I have already interacted "
 "(opened/upvoted/downvoted)"
-msgstr ""
+msgstr "すでに対話した（開いた/アップボートした/ダウンボートした）投稿は表示しないで"
+"ください"
 
 #: app/user/forms.py:55
 msgid "Manually approve followers"
@@ -5524,15 +5547,15 @@ msgstr "フォロワーを手動で承認する"
 
 #: app/user/forms.py:56
 msgid "Vote privately"
-msgstr ""
+msgstr "プライバシーを守って投票してください"
 
 #: app/user/forms.py:57
 msgid "Enable Automatic Follow of Feed Communities."
-msgstr ""
+msgstr "フィードコミュニティの自動フォローを有効にします。"
 
 #: app/user/forms.py:58
 msgid "Enable Automatic Leave of Feed Communities."
-msgstr ""
+msgstr "フィードコミュニティの自動退会を有効にします。"
 
 #: app/user/forms.py:64
 #, fuzzy
@@ -5561,7 +5584,7 @@ msgstr "悪意のある報告"
 
 #: app/user/forms.py:120
 msgid "Blur thumbnail"
-msgstr ""
+msgstr "サムネイルをぼかす"
 
 #: app/user/forms.py:121
 #, fuzzy
@@ -5647,7 +5670,8 @@ msgstr "%(user_name)s の投稿"
 msgid ""
 "You have changed your email address so we need to verify it. Please check"
 " your email inbox for a verification link."
-msgstr ""
+msgstr "メールアドレスが変更されたため、確認が必要です。確認リンクが含まれたメールを"
+"受信トレイでご確認ください。"
 
 #: app/user/routes.py:225
 #, fuzzy
@@ -5656,7 +5680,7 @@ msgstr "アバター画像"
 
 #: app/user/routes.py:395
 msgid "Auto-detect"
-msgstr ""
+msgstr "自動検出"
 
 #: app/user/routes.py:396
 msgid "Catalan"
@@ -5681,11 +5705,11 @@ msgstr "German"
 
 #: app/user/routes.py:401
 msgid "Japanese"
-msgstr ""
+msgstr "日本語"
 
 #: app/user/routes.py:402
 msgid "Spanish"
-msgstr ""
+msgstr "スペイン語"
 
 #: app/user/routes.py:470
 #, fuzzy
@@ -5711,18 +5735,18 @@ msgid "Banned user with role permissions."
 msgstr ""
 
 #: app/user/routes.py:555
-#, fuzzy, python-format
+#, python-format
 msgid "%(actor)s has been banned."
-msgstr "%(name)sはBANされました。"
+msgstr "%(actor)sはBANされました。"
 
 #: app/user/routes.py:575
 msgid "You cannot unban yourself."
 msgstr "自分でBANを解除することはできません。"
 
 #: app/user/routes.py:582
-#, fuzzy, python-format
+#, python-format
 msgid "%(actor)s has been unbanned."
-msgstr "%(name)sのBANが解除されました。"
+msgstr "%(actor)sのBANが解除されました。"
 
 #: app/user/routes.py:615
 #, fuzzy, python-format
@@ -5806,7 +5830,8 @@ msgstr ""
 msgid ""
 "%(actor)s has been banned, deleted and all their content deleted. This "
 "might take a few minutes."
-msgstr ""
+msgstr "%(actor)sは禁止され、削除され、すべてのコンテンツが削除されました。これには数"
+"分かかる場合があります。"
 
 #: app/user/routes.py:886
 #, fuzzy, python-format
@@ -6034,4 +6059,3 @@ msgstr ""
 
 #~ msgid "Options for comment on \"%(post_title)s\""
 #~ msgstr ""
-
