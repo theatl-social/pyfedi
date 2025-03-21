@@ -19,7 +19,7 @@ def get_reply_list(auth, data, user_id=None):
     parent_id = data['parent_id'] if data and 'parent_id' in data else None
     person_id = data['person_id'] if data and 'person_id' in data else None
 
-    if data and not post_id and not person_id:
+    if data and not (post_id or parent_id):
         raise Exception('missing parameters for reply')
 
     # user_id: the logged in user
@@ -33,6 +33,9 @@ def get_reply_list(auth, data, user_id=None):
         page = 1
     elif post_id:
         replies = PostReply.query.filter(PostReply.post_id == post_id, PostReply.depth <= max_depth)
+    elif parent_id:
+        replies = PostReply.query.filter(PostReply.parent_id == parent_id, PostReply.depth <= max_depth)
+        page = 1
     elif person_id:
         replies = PostReply.query.filter_by(user_id=person_id)
 
