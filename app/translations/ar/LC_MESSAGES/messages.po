@@ -9,7 +9,7 @@ msgstr ""
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-03-20 15:42+1300\n"
 "PO-Revision-Date: 2025-03-21 03:54+0000\n"
-"Last-Translator: fxomt <services.thaw171@slmail.me>\n"
+"Last-Translator: Weblate Admin <rimu@rimu.geek.nz>\n"
 "Language-Team: Arabic <http://translate.piefed.social/projects/piefed/"
 "main-web-app/ar/>\n"
 "Language: ar\n"
@@ -36,17 +36,18 @@ msgstr "ردود لمنشوري %(post_title)s"
 
 #: app/cli.py:543 app/models.py:1844 app/post/routes.py:1454
 #: app/shared/reply.py:120
-#, python-format
+#, fuzzy, python-format
 msgid "Replies to my comment on %(post_title)s"
-msgstr ""
+msgstr "ردود على تعليقي حول %(post_title)s"
 
 #: app/email.py:16
 msgid "[PieFed] Reset Your Password"
 msgstr "[Piefed] إعادة تعيين كلمة المرور"
 
 #: app/email.py:26
+#, fuzzy
 msgid "[PieFed] Please verify your email address"
-msgstr ""
+msgstr "يرجى التحقق من عنوان بريدك الإلكتروني"
 
 #: app/email.py:34
 msgid "Your application has been approved - welcome to PieFed"
