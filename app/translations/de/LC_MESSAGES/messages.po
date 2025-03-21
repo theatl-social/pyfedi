@@ -1,17 +1,18 @@
-
 msgid ""
 msgstr ""
-"Project-Id-Version:  piefed\n"
+"Project-Id-Version: piefed\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-03-17 20:26+1300\n"
-"PO-Revision-Date: 2024-04-04 20:09+0000\n"
-"Last-Translator: \n"
+"PO-Revision-Date: 2025-03-21 03:54+0000\n"
+"Last-Translator: Weblate Admin <rimu@rimu.geek.nz>\n"
+"Language-Team: German <http://translate.piefed.social/projects/piefed/"
+"main-web-app/de/>\n"
 "Language: de\n"
-"Language-Team: German\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 5.10.4\n"
 "Generated-By: Babel 2.12.1\n"
 
 #: app/__init__.py:42
@@ -23,13 +24,13 @@ msgid "[PieFed] You have unread notifications"
 msgstr "[PieFed] Du hast ungelesene Benachrichtigungen"
 
 #: app/cli.py:534 app/post/routes.py:1416 app/shared/post.py:128
-#, fuzzy, python-format
+#, python-format
 msgid "Replies to my post %(post_title)s"
 msgstr "Melde \"%(post_title)s\""
 
 #: app/cli.py:543 app/models.py:1822 app/post/routes.py:1438
 #: app/shared/reply.py:120
-#, fuzzy, python-format
+#, python-format
 msgid "Replies to my comment on %(post_title)s"
 msgstr "Optionen für Kommentar zu \"%(post_title)s\""
 
@@ -50,7 +51,6 @@ msgid "Welcome to PieFed"
 msgstr "Willkommen bei PieFed"
 
 #: app/models.py:2383
-#, fuzzy
 msgid "Added moderator"
 msgstr "Moderator hinzufügen"
 
@@ -65,7 +65,6 @@ msgid "Featured post"
 msgstr "Beitrag erstellen"
 
 #: app/models.py:2386
-#, fuzzy
 msgid "Unfeatured post"
 msgstr "Beitrag erstellen"
 
@@ -2008,19 +2007,19 @@ msgid "People from %(instance)s"
 msgstr ""
 
 #: app/instance/routes.py:188 app/templates/instance/posts.html:19
-#, fuzzy, python-format
+#, python-format
 msgid "Posts from %(instance)s"
-msgstr "Beitrag in %(name)s"
+msgstr "Beitrag in %(instance)s"
 
 #: app/instance/routes.py:208
-#, fuzzy, python-format
+#, python-format
 msgid "%(instance_domain)s has been blocked."
-msgstr "%(name)s wurde blockiert."
+msgstr "%(instance_domain)s wurde blockiert."
 
 #: app/instance/routes.py:223
-#, fuzzy, python-format
+#, python-format
 msgid "%(instance_domain)s has been unblocked."
-msgstr "%(name)s wurde blockiert."
+msgstr "%(instance_domain)s wurde blockiert."
 
 #: app/main/routes.py:87
 msgid "Create an account to tailor this feed to your interests."
@@ -3933,7 +3932,7 @@ msgstr "Entfernen"
 #: app/templates/community/community_moderate.html:27
 #, python-format
 msgid "See and handle all reports made about %(community)s"
-msgstr ""
+msgstr "Alle Berichte über %(community)s einsehen und bearbeiten"
 
 #: app/templates/community/community_moderate.html:37
 #, fuzzy
@@ -3987,7 +3986,7 @@ msgstr ""
 #: app/templates/community/community_moderate_subscribers.html:27
 #, python-format
 msgid "See who is subscribed to %(community)s"
-msgstr ""
+msgstr "Sieh nach, wer bei %(community)s abonniert ist"
 
 #: app/templates/community/community_moderate_subscribers.html:56
 msgid "Kick"
@@ -4005,7 +4004,7 @@ msgstr "Keine blockierten Personen"
 #: app/templates/community/community_moderate_subscribers.html:81
 #, python-format
 msgid "See and manage who is banned from %(community)s"
-msgstr ""
+msgstr "Sehen und verwalten Sie, wer von %(community)s ausgeschlossen ist"
 
 #: app/templates/community/community_moderate_subscribers.html:115
 #: app/templates/domain/domain.html:64
@@ -4057,9 +4056,9 @@ msgid "There are no wiki pages in this community."
 msgstr "Noch keine Beiträge in dieser Community."
 
 #: app/templates/community/community_wiki_revisions.html:22
-#, fuzzy, python-format
+#, python-format
 msgid "Revisions of %(title)s"
-msgstr "Optionen für \"%(post_title)s\""
+msgstr "Optionen für \"%(title)s\""
 
 #: app/templates/community/community_wiki_revisions.html:48
 #, fuzzy
@@ -4275,9 +4274,9 @@ msgstr "Abgemeldet"
 
 #: app/templates/feed/_feed_table_row.html:5
 #: app/templates/feed/public_feeds.html:26
-#, fuzzy, python-format
+#, python-format
 msgid "Unsubscribe %(name)s"
-msgstr "Abgemeldet"
+msgstr "Abgemeldet %(name)s"
 
 #: app/templates/feed/_feed_table_row.html:5
 #: app/templates/feed/public_feeds.html:26
@@ -4424,9 +4423,9 @@ msgstr "Keine blockierten Instanzen"
 
 #: app/templates/instance/overview.html:33
 #: app/templates/user/show_profile.html:100
-#, fuzzy, python-format
+#, python-format
 msgid "Block everyone from %(instance_name)s"
-msgstr "Blockiere Chats und Beiträge von der Instanz: %(name)s"
+msgstr "Blockiere Chats und Beiträge von der Instanz:  %(instance_name)s"
 
 #: app/templates/instance/people.html:50 app/templates/user/people.html:32
 msgid "No people to show"
@@ -4620,9 +4619,9 @@ msgid "Show newest first"
 msgstr "Zeige neueste zuerst"
 
 #: app/templates/post/post_cross_post.html:12
-#, fuzzy, python-format
+#, python-format
 msgid "Cross-post %(post_name)s"
-msgstr "Optionen für \"%(post_title)s\""
+msgstr "Optionen für \"%(post_name)s\""
 
 #: app/templates/post/post_edit.html:39
 msgid "Describe the image, to help visually impaired people."
@@ -4777,9 +4776,9 @@ msgid "Block author @%(author_name)s"
 msgstr "Blockiere Autor @%(author_name)s"
 
 #: app/templates/post/post_reply_options.html:33
-#, fuzzy, python-format
+#, python-format
 msgid "Ban @%(author_name)s from %(community_name)s"
-msgstr "Banne \"%(user_name)s\" von %(community_name)s"
+msgstr "Banne \"%(author_name)s\" von %(community_name)s"
 
 #: app/templates/post/post_reply_report.html:13
 #, python-format
@@ -5363,9 +5362,9 @@ msgid "View original profile"
 msgstr "Profil anzeigen"
 
 #: app/templates/user/show_profile.html:94
-#, fuzzy, python-format
+#, python-format
 msgid "Block %(user_name)s"
-msgstr "Blockiere @%(author_name)s"
+msgstr "Blockiere %(user_name)s"
 
 #: app/templates/user/show_profile.html:104
 #: app/templates/user/user_preview.html:59 app/user/routes.py:1439
@@ -5887,23 +5886,23 @@ msgid "Banned user with role permissions."
 msgstr ""
 
 #: app/user/routes.py:555
-#, fuzzy, python-format
+#, python-format
 msgid "%(actor)s has been banned."
-msgstr "%(name)s wurde gesperrt."
+msgstr "%(actor)s wurde gesperrt."
 
 #: app/user/routes.py:575
 msgid "You cannot unban yourself."
 msgstr "Du kannst dich nicht selbst entbannen."
 
 #: app/user/routes.py:582
-#, fuzzy, python-format
+#, python-format
 msgid "%(actor)s has been unbanned."
-msgstr "%(name)s wurde gesperrt."
+msgstr "%(actor)s wurde gesperrt."
 
 #: app/user/routes.py:615
-#, fuzzy, python-format
+#, python-format
 msgid "%(actor)s has been blocked."
-msgstr "%(name)s wurde blockiert."
+msgstr "%(actor)s wurde blockiert."
 
 #: app/user/routes.py:633
 #, fuzzy
@@ -5911,9 +5910,9 @@ msgid "You cannot block your instance."
 msgstr "Du kannst dich nicht selbst blockieren."
 
 #: app/user/routes.py:667
-#, fuzzy, python-format
+#, python-format
 msgid "%(actor)s has been unblocked."
-msgstr "%(name)s wurde blockiert."
+msgstr "%(actor)s wurde blockiert."
 
 #: app/user/routes.py:684
 msgid ""
@@ -5953,9 +5952,9 @@ msgid "%(actor)s has been deleted."
 msgstr "Dieser Benutzer wurde gelöscht."
 
 #: app/user/routes.py:769
-#, fuzzy, python-format
+#, python-format
 msgid "%(community_name)s has been unblocked."
-msgstr "%(name)s wurde blockiert."
+msgstr "%(community_name)s wurde blockiert."
 
 #: app/user/routes.py:803
 msgid "Account deletion in progress. Give it a few minutes."
@@ -5985,9 +5984,9 @@ msgid ""
 msgstr ""
 
 #: app/user/routes.py:886
-#, fuzzy, python-format
+#, python-format
 msgid "%(actor)s has been banned, deleted and all their content deleted."
-msgstr "%(name)s wurde für alle Benutzer gesperrt und alle Inhalte gelöscht."
+msgstr "%(actor)s wurde für alle Benutzer gesperrt und alle Inhalte gelöscht."
 
 #: app/user/routes.py:952
 msgid "All notifications marked as read."
@@ -6219,4 +6218,3 @@ msgstr ""
 
 #~ msgid "Options for comment on \"%(post_title)s\""
 #~ msgstr "Optionen für Kommentar zu \"%(post_title)s\""
-
