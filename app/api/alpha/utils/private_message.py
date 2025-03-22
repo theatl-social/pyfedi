@@ -17,6 +17,7 @@ def get_private_message_list(auth, data):
         private_messages = ChatMessage.query.filter_by(recipient_id=user_id, read=False).order_by(desc(ChatMessage.created_at))
     else:
         private_messages = ChatMessage.query.filter_by(recipient_id=user_id).order_by(desc(ChatMessage.created_at))
+    private_messages = private_messages.paginate(page=page, per_page=limit, error_out=False)
 
     pm_list = []
     for private_message in private_messages:
