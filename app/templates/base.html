@@ -108,9 +108,13 @@
         {% endif -%}
         {% if description -%}
             <meta name="description" content="{{ description }}" />
+        {% else -%}
+            <meta name="description" content="{{ html_to_text(g.site.sidebar) }}" />
         {% endif -%}
         {% if og_image -%}
             <meta property="og:image" content="{{ og_image }}" />
+        {% else -%}
+            <meta property="og:image" content="{{ g.site.logo if g.site.logo else '/static/images/piefed_logo_full_t_300x300.svg' }}" />
         {% endif -%}
         {% if rss_feed -%}
             <link rel="alternate" type="application/rss+xml" title="{{ rss_feed_name }}" href="{{ rss_feed }}" />
