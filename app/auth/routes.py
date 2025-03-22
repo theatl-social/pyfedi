@@ -14,7 +14,7 @@ from app.auth.util import random_token, normalize_utf, ip2location, no_admins_lo
 from app.email import send_verification_email, send_password_reset_email
 from app.models import User, utcnow, IpBan, UserRegistration, Notification, Site
 from app.utils import render_template, ip_address, user_ip_banned, user_cookie_banned, banned_ip_addresses, \
-    finalize_user_setup, blocked_referrers, gibberish
+    finalize_user_setup, blocked_referrers, gibberish, get_setting
 
 
 @bp.route('/login', methods=['GET', 'POST'])
@@ -139,12 +139,16 @@ def register():
                 user.set_password(form.password.data)
                 ip_address_info = ip2location(user.ip_address)
                 user.ip_address_country = ip_address_info['country'] if ip_address_info else ''
+                if get_setting('email_verification', True):
+                    user.verified = False
+                else:
+                    user.verified = True
                 db.session.add(user)
                 db.session.commit()
                 send_verification_email(user)
                 if current_app.debug:
                     current_app.logger.info('Verify account:' + url_for('auth.verify_email', token=user.verification_token, _external=True))
-                if g.site.registration_mode == 'RequireApplication':
+                if g.site.registration_mode == 'RequireApplication' and g.site.application_question:
                     application = UserRegistration(user_id=user.id, answer=form.question.data)
                     db.session.add(application)
                     for admin in Site.admins():
@@ -156,7 +160,12 @@ def register():
                     db.session.commit()
                     return redirect(url_for('auth.please_wait'))
                 else:
-                    return redirect(url_for('auth.check_email'))
+                    if user.verified:
+                        finalize_user_setup(user)
+                        login_user(user, remember=True)
+                        return redirect(url_for('auth.trump_musk'))
+                    else:
+                        return redirect(url_for('auth.check_email'))
 
         resp = make_response(redirect(url_for('auth.trump_musk')))
         if user_ip_banned():

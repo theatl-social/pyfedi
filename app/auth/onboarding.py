@@ -10,56 +10,63 @@ from app.constants import SUBSCRIPTION_NONMEMBER
 from app.models import User, Topic, Community, \
     CommunityJoinRequest, CommunityMember, Filter
 from app.utils import render_template, moderating_communities, joined_communities, menu_topics, \
-    community_membership
+    community_membership, get_setting
 
 
 @bp.route('/trump_musk', methods=['GET', 'POST'])
 @login_required
 def trump_musk():
-    form = ChooseTrumpMuskForm()
-    if form.validate_on_submit():
-        if form.trump_musk_level.data >= 0:
-            content_filter = Filter(title='Trump & Musk', filter_home=True,
-                                    filter_posts=True,
-                                    filter_replies=False, hide_type=form.trump_musk_level.data,
-                                    keywords='trump\nmusk',
-                                    expire_after=None, user_id=current_user.id)
-            db.session.add(content_filter)
-            db.session.commit()
-        return redirect(url_for('auth.choose_topics'))
-    else:
-        existing_filters = Filter.query.filter(Filter.user_id == current_user.id).first()
-        if existing_filters is not None:
+    if get_setting('filter_selection', True):
+        form = ChooseTrumpMuskForm()
+        if form.validate_on_submit():
+            if form.trump_musk_level.data >= 0:
+                content_filter = Filter(title='Trump & Musk', filter_home=True,
+                                        filter_posts=True,
+                                        filter_replies=False, hide_type=form.trump_musk_level.data,
+                                        keywords='trump\nmusk',
+                                        expire_after=None, user_id=current_user.id)
+                db.session.add(content_filter)
+                db.session.commit()
             return redirect(url_for('auth.choose_topics'))
+        else:
+            existing_filters = Filter.query.filter(Filter.user_id == current_user.id).first()
+            if existing_filters is not None:
+                return redirect(url_for('auth.choose_topics'))
 
-        return render_template('auth/trump_musk.html', form=form,
-                               moderating_communities=moderating_communities(current_user.get_id()),
-                               joined_communities=joined_communities(current_user.get_id()),
-                               menu_topics=menu_topics(), site=g.site,
-                               )
+            return render_template('auth/trump_musk.html', form=form,
+                                   moderating_communities=moderating_communities(current_user.get_id()),
+                                   joined_communities=joined_communities(current_user.get_id()),
+                                   menu_topics=menu_topics(), site=g.site,
+                                   )
+    else:
+        return redirect(url_for('auth.choose_topics'))
 
 
 @bp.route('/choose_topics', methods=['GET', 'POST'])
 @login_required
 def choose_topics():
-    form = ChooseTopicsForm()
-    form.chosen_topics.choices = topics_for_form()
-    if form.validate_on_submit():
-        if form.chosen_topics.data:
-            for topic_id in form.chosen_topics.data:
-                join_topic(topic_id)
-            flash(_('You have joined some communities relating to those interests. Find them on the Topics menu or browse the home page.'))
-            cache.delete_memoized(joined_communities, current_user.id)
-            return redirect(url_for('main.index'))
+    if get_setting('choose_topics', True):
+        form = ChooseTopicsForm()
+        form.chosen_topics.choices = topics_for_form()
+        if form.validate_on_submit():
+            if form.chosen_topics.data:
+                for topic_id in form.chosen_topics.data:
+                    join_topic(topic_id)
+                flash(_('You have joined some communities relating to those interests. Find them on the Topics menu or browse the home page.'))
+                cache.delete_memoized(joined_communities, current_user.id)
+                return redirect(url_for('main.index'))
+            else:
+                flash(_('You did not choose any topics. Would you like to choose individual communities instead?'))
+                return redirect(url_for('main.list_communities'))
         else:
-            flash(_('You did not choose any topics. Would you like to choose individual communities instead?'))
-            return redirect(url_for('main.list_communities'))
+            return render_template('auth/choose_topics.html', form=form,
+                                   moderating_communities=moderating_communities(current_user.get_id()),
+                                   joined_communities=joined_communities(current_user.get_id()),
+                                   menu_topics=menu_topics(), site=g.site,
+                                   )
     else:
-        return render_template('auth/choose_topics.html', form=form,
-                               moderating_communities=moderating_communities(current_user.get_id()),
-                               joined_communities=joined_communities(current_user.get_id()),
-                               menu_topics=menu_topics(), site=g.site,
-                               )
+        flash(_('Please join some communities you\'re interested in and then go to the home page by clicking on the logo above.'))
+        return redirect(url_for('main.list_communities'))
 
 
 def join_topic(topic_id):

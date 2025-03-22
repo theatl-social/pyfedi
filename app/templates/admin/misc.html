@@ -3,7 +3,7 @@
 {% else %}
     {% extends "base.html" %}
 {% endif %}
-{% from 'bootstrap/form.html' import render_form %}
+{% from 'bootstrap/form.html' import render_field %}
 {% set active_child = 'admin_misc' %}
 
 {% block app_content %}
@@ -12,7 +12,33 @@
 <div class="row">
     <div class="col">
         <h1>{{ _('Misc settings') }}</h1>
-        {{ render_form(form) }}
+        <form method="post">
+            {{ form.csrf_token() }}
+            <h3>{{ _('Content settings') }}</h3>
+            {{ render_field(form.default_theme) }}
+            {{ render_field(form.default_filter) }}
+            {{ render_field(form.enable_downvotes) }}
+            {{ render_field(form.allow_local_image_posts) }}
+            {{ render_field(form.remote_image_cache_days) }}
+            {{ render_field(form.enable_nsfw) }}
+            {{ render_field(form.enable_nsfl) }}
+            {{ render_field(form.community_creation_admin_only) }}
+            {{ render_field(form.reports_email_admins) }}
+            <hr>
+            <h3>{{ _('Registration') }}</h3>
+            {{ render_field(form.registration_mode) }}
+            {{ render_field(form.application_question) }}
+            {{ render_field(form.email_verification) }}
+            {{ render_field(form.choose_topics) }}
+            {{ render_field(form.filter_selection) }}
+            {{ render_field(form.auto_decline_referrers) }}
+            <hr>
+            {{ render_field(form.log_activitypub_json) }}
+            {{ render_field(form.public_modlog) }}
+            {{ render_field(form.show_inoculation_block) }}
+
+            {{ render_field(form.submit) }}
+        </form>
     </div>
 </div>
 <hr />

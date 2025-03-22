@@ -31,9 +31,12 @@ class SiteMiscForm(FlaskForm):
     enable_nsfl = BooleanField(_l('Allow NSFL communities and posts'))
     community_creation_admin_only = BooleanField(_l('Only admins can create new local communities'))
     reports_email_admins = BooleanField(_l('Notify admins about reports, not just moderators'))
+    email_verification = BooleanField(_l('Require new accounts to verify their email address'))
     types = [('Open', _l('Open')), ('RequireApplication', _l('Require application')), ('Closed', _l('Closed'))]
     registration_mode = SelectField(_l('Registration mode'), choices=types, default=1, coerce=str, render_kw={'class': 'form-select'})
     application_question = TextAreaField(_l('Question to ask people applying for an account'))
+    choose_topics = BooleanField(_l('Provide a list of topics to subscribe to'))
+    filter_selection = BooleanField(_l('Trump Musk filter setup'))
     auto_decline_referrers = TextAreaField(_l('Block registrations from these referrers (one per line)'))
     default_theme = SelectField(_l('Default theme'), coerce=str, render_kw={'class': 'form-select'})
     filters = [('subscribed', _l('Subscribed')),
@@ -46,6 +49,7 @@ class SiteMiscForm(FlaskForm):
     log_activitypub_json = BooleanField(_l('Log ActivityPub JSON for debugging'))
     public_modlog = BooleanField(_l('Show moderation actions publicly'))
     show_inoculation_block = BooleanField(_l('Show Rational Discourse Toolkit in sidebar'))
+
     submit = SubmitField(_l('Save'))
 
 

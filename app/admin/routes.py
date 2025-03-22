@@ -172,6 +172,9 @@ def admin_misc():
         db.session.commit()
         cache.delete_memoized(blocked_referrers)
         set_setting('public_modlog', form.public_modlog.data)
+        set_setting('email_verification', form.email_verification.data)
+        set_setting('choose_topics', form.choose_topics.data)
+        set_setting('filter_selection', form.filter_selection.data)
         flash(_('Settings saved.'))
     elif request.method == 'GET':
         form.enable_downvotes.data = site.enable_downvotes
@@ -189,6 +192,9 @@ def admin_misc():
         form.default_theme.data = site.default_theme if site.default_theme is not None else ''
         form.default_filter.data = site.default_filter if site.default_filter else 'popular'
         form.public_modlog.data = get_setting('public_modlog', False)
+        form.email_verification.data = get_setting('email_verification', True)
+        form.choose_topics.data = get_setting('choose_topics', True)
+        form.filter_selection.data = get_setting('filter_selection', True)
     return render_template('admin/misc.html', title=_('Misc settings'), form=form,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
