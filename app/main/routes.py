@@ -185,7 +185,7 @@ def list_communities():
     # default to no public feeds
     server_has_feeds = False
     # find all the feeds marked as public
-    public_feeds = Feed.query.filter_by(public=True).all()
+    public_feeds = Feed.query.filter_by(public=True).order_by(Feed.title).all()
     if len(public_feeds) > 0:
         server_has_feeds = True
         
@@ -262,7 +262,7 @@ def list_local_communities():
     # default to no public feeds
     server_has_feeds = False
     # find all the feeds marked as public
-    public_feeds = Feed.query.filter_by(public=True).all()
+    public_feeds = Feed.query.filter_by(public=True).order_by(Feed.title).all()
     if len(public_feeds) > 0:
         server_has_feeds = True
 
@@ -350,7 +350,7 @@ def list_subscribed_communities():
     # default to no public feeds
     server_has_feeds = False
     # find all the feeds marked as public
-    public_feeds = Feed.query.filter_by(public=True).all()
+    public_feeds = Feed.query.filter_by(public=True).order_by(Feed.title).all()
     if len(public_feeds) > 0:
         server_has_feeds = True
 
@@ -428,7 +428,7 @@ def list_not_subscribed_communities():
     # default to no public feeds
     server_has_feeds = False
     # find all the feeds marked as public
-    public_feeds = Feed.query.filter_by(public=True).all()
+    public_feeds = Feed.query.filter_by(public=True).order_by(Feed.title).all()
     if len(public_feeds) > 0:
         server_has_feeds = True
 
