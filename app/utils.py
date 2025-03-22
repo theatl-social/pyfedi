@@ -360,7 +360,14 @@ def markdown_to_html(markdown_text, anchors_new_tab=True) -> str:
                         extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True,
                                 'breaks': {'on_newline': True, 'on_backslash': True}, 'tag-friendly': True})
         except TypeError:
-            raw_html = ''   # ignore really weird markdown, like https://mander.xyz/u/tty1
+            # weird markdown, like https://mander.xyz/u/tty1 and https://feddit.uk/comment/16076443,
+            # causes "markdown2.Markdown._color_with_pygments() argument after ** must be a mapping, not bool" error, so try again without fenced-code-blocks extra
+            try:
+                raw_html = markdown2.markdown(markdown_text,
+                            extras={'middle-word-em': False, 'tables': True, 'strike': True,
+                                    'breaks': {'on_newline': True, 'on_backslash': True}, 'tag-friendly': True})
+            except TypeError:
+                raw_html = ''
         return allowlist_html(raw_html, a_target='_blank' if anchors_new_tab else '')
     else:
         return ''
