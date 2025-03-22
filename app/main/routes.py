@@ -728,7 +728,11 @@ def static_manifest():
     # if we dont have a matching os folder, return the default manifest
     try:
         res = uaparse(request.user_agent.string)
-        manifest_file = os.path.join('app/static/pwa_manifests/', res.os.family.lower(), 'manifest.json')
+        # often ios useragents dont say ios in them anywhere, but the family is Mac OS X mostly
+        if res.os.family.lower() == 'mac os x':
+            manifest_file = os.path.join('app/static/pwa_manifests/ios/manifest.json')
+        else:
+            manifest_file = os.path.join('app/static/pwa_manifests/', res.os.family.lower(), 'manifest.json')
         with open(manifest_file, 'r') as f:
             manifest = json.load(f)
         return jsonify(manifest)
