@@ -4,7 +4,7 @@ The following are our goals for 2025. We brainstormed ideas then [ranked them by
 
 ✅ [Inline commenting](https://piefed.social/post/411646)
 
-[Cross-posting](https://piefed.social/post/411644)
+✅ [Cross-posting](https://piefed.social/post/411644)
 
 [Mobile app](https://piefed.social/post/411560)
 
