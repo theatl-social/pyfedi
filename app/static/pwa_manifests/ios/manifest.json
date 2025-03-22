@@ -17,7 +17,7 @@
     ],
     "theme_color": "#c6e2ffff",
     "background_color": "#c6e2ffff",
-    "display": "minimal-ui",
+    "display": "standalone",
     "start_url": "/",
     "scope": "/",
     "piefed_manifest_version": "ios" 
