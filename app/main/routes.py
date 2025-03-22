@@ -1,6 +1,5 @@
 import os.path
 import json
-from datetime import timedelta
 from random import randint
 
 import flask
@@ -20,12 +19,12 @@ from flask_login import current_user, login_required
 from flask_babel import _, get_locale
 from sqlalchemy import desc, text
 from app.utils import render_template, get_setting, request_etag_matches, return_304, blocked_domains, \
-    ap_datetime, shorten_string, markdown_to_text, user_filters_home, \
+    ap_datetime, shorten_string, user_filters_home, \
     joined_communities, moderating_communities, markdown_to_html, allowlist_html, \
     blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
-    blocked_users, menu_topics, blocked_communities, get_request, mastodon_extra_field_link, \
+    menu_topics, blocked_communities, \
     permission_required, debug_mode_only, ip_address, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, \
-    feed_tree_public, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models
+    feed_tree_public, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, html_to_text
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, read_posts, Feed, FeedItem
 
@@ -129,7 +128,7 @@ def home_page(sort, view_filter):
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            etag=f"{sort}_{view_filter}_{hash(str(g.site.last_active))}", next_url=next_url, prev_url=prev_url,
                            title=f"{g.site.name} - {g.site.description}",
-                           description=shorten_string(markdown_to_text(g.site.sidebar), 150),
+                           description=shorten_string(html_to_text(g.site.sidebar), 150),
                            content_filters=content_filters, sort=sort, view_filter=view_filter,
                            announcement=allowlist_html(get_setting('announcement', '')),
                            moderating_communities=moderating_communities(current_user.get_id()),
