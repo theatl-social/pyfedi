@@ -91,24 +91,20 @@ def post_user_block(auth, data):
 
 def get_user_unread_count(auth):
     user = authorise_api_user(auth, return_type='model')
-    if user.unread_notifications == 0:
-        unread_notifications = unread_messages = 0
-    else:
-        # Mentions are just included in replies
-
-        unread_notifications = db.session.execute(text("SELECT COUNT(id) as c FROM notification WHERE user_id = :user_id AND read = false"), {'user_id': user.id}).scalar()
+    unread_replies = unread_messages = 0
+    unread_notifications = user.unread_notifications
+    if unread_notifications > 0:
+        unread_replies = db.session.execute(text("SELECT COUNT(id) as c FROM notification WHERE user_id = :user_id AND read = false AND url LIKE '%comment%'"), {'user_id': user.id}).scalar()
         unread_messages = db.session.execute(text("SELECT COUNT(id) as c FROM chat_message WHERE recipient_id = :user_id AND read = false"), {'user_id': user.id}).scalar()
 
-        # Old ChatMessages will be out-of-sync with Notifications.
-        if unread_notifications == 0:
-            unread_messages = 0
-        if unread_messages > unread_notifications:
-            unread_notifications = unread_messages
+    # "other" is things like reports and activity alerts that this endpoint isn't really intended to support
+    # replies and mentions are merged together in 'replies' as that's what get_user_replies() currently expects
 
     unread_count = {
-        "replies": unread_notifications - unread_messages,
+        "replies": unread_replies,
         "mentions": 0,
-        "private_messages": unread_messages
+        "private_messages": unread_messages,
+        "other": unread_notifications - unread_replies - unread_messages
     }
 
     return unread_count
