@@ -2200,6 +2200,12 @@ form h5 {
     background-color: black;
   }
 }
+[data-bs-theme=dark] .alert-message {
+  background-color: rgb(1.3442622951, 66.5409836066, 162.6557377049);
+  border-color: rgb(1.3442622951, 66.5409836066, 162.6557377049);
+  color: white;
+}
+
 [data-bs-theme=dark] .dropdown-header {
   color: white;
 }

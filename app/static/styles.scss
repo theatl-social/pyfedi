@@ -1831,6 +1831,12 @@ form {
 /* high contrast */
 @import "scss/high_contrast";
 
+[data-bs-theme="dark"] .alert-message {
+  background-color: darken(rgb(13, 110, 253), 20%);
+  border-color: darken(rgb(13, 110, 253), 20%);
+  color: lighten($grey, 30%);
+}
+
 [data-bs-theme="dark"] .dropdown-header {
   color: white;
 }
