@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: piefed\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-03-17 20:26+1300\n"
-"PO-Revision-Date: 2025-03-22 05:47+0000\n"
+"PO-Revision-Date: 2025-03-23 08:27+0000\n"
 "Last-Translator: snoopy <snoopy@zaclys.net>\n"
 "Language-Team: French <http://translate.piefed.social/projects/piefed/"
 "main-web-app/fr/>\n"
@@ -40,7 +40,7 @@ msgstr "[PieFed] Réinitialisez votre mot de passe"
 
 #: app/email.py:26
 msgid "[PieFed] Please verify your email address"
-msgstr "[PieFed] Veuillez confirmer votre adresse e-mail"
+msgstr "[PieFed] Veuillez confirmer votre adresse de courriel"
 
 #: app/email.py:34
 msgid "Your application has been approved - welcome to PieFed"
@@ -66,7 +66,7 @@ msgstr "Publication en vedette"
 #: app/models.py:2386
 #, fuzzy
 msgid "Unfeatured post"
-msgstr "Créer une publication"
+msgstr "Publication en retrait"
 
 #: app/models.py:2387
 msgid "Deleted post"
@@ -172,7 +172,7 @@ msgstr "Mentions légales"
 
 #: app/admin/forms.py:22
 msgid "General instance contact email address"
-msgstr "Adresse e-mail de contact de l'instance"
+msgstr "Adresse courriel de contact de l'instance"
 
 #: app/admin/forms.py:23 app/admin/forms.py:49 app/admin/forms.py:61
 #: app/admin/forms.py:118 app/admin/forms.py:139 app/admin/forms.py:148
@@ -189,7 +189,7 @@ msgstr "Activer les basvotes"
 
 #: app/admin/forms.py:28
 msgid "Allow local image posts"
-msgstr "Autoriser les publications d'images locaux"
+msgstr "Autoriser les publications d'images locales"
 
 #: app/admin/forms.py:29
 msgid "Days to cache images from remote instances for"
@@ -321,7 +321,7 @@ msgid ""
 "Discard all posts and comments by users with these words in their name "
 "(one per line)"
 msgstr ""
-"Rejeter tous les publications et commentaires des utilisateur·rices avec ces "
+"Rejeter tous les publications et commentaires des utilisateur·ices avec ces "
 "mots dans leur nom (un par ligne)"
 
 #: app/admin/forms.py:60
@@ -590,11 +590,11 @@ msgstr "Fiable"
 #: app/admin/forms.py:152 app/auth/forms.py:13 app/auth/forms.py:20
 #: app/community/forms.py:89
 msgid "User name"
-msgstr "Nom d’utilisateur·rice"
+msgstr "Nom d’utilisateur·ice"
 
 #: app/admin/forms.py:154 app/user/forms.py:13
 msgid "Email address"
-msgstr "Courriel"
+msgstr "Adresse de courriel"
 
 #: app/admin/forms.py:155 app/auth/forms.py:14 app/auth/forms.py:23
 #: app/auth/forms.py:80
@@ -627,7 +627,7 @@ msgstr "Ce profil est un robot"
 
 #: app/admin/forms.py:163 app/admin/forms.py:225
 msgid "Email address is verified"
-msgstr "Courriel vérifié"
+msgstr "Adresse de courriel vérifiée"
 
 #: app/admin/forms.py:164 app/admin/forms.py:226
 #: app/templates/admin/users.html:49 app/templates/admin/users.html:82
@@ -636,7 +636,7 @@ msgstr "Banni"
 
 #: app/admin/forms.py:165 app/user/forms.py:44
 msgid "Subscribe to email newsletter"
-msgstr "S'abonner à la newsletter"
+msgstr "S'abonner à l'infolettre"
 
 #: app/admin/forms.py:166 app/admin/forms.py:229 app/user/forms.py:118
 msgid "Show"
@@ -671,7 +671,7 @@ msgstr "Afficher les publications NSFL"
 
 #: app/admin/forms.py:177 app/admin/forms.py:237
 msgid "User"
-msgstr "Utilisateur·rice"
+msgstr "Utilisateur·ice"
 
 #: app/admin/forms.py:178 app/admin/forms.py:238
 #: app/templates/admin/permissions.html:21
@@ -700,23 +700,23 @@ msgstr "Un compte avec ce courriel existe déjà."
 
 #: app/admin/forms.py:191 app/auth/forms.py:42
 msgid "User names cannot contain @."
-msgstr "Les noms d'utilisateur·rice ne peuvent pas contenir de @."
+msgstr "Les noms d'utilisateur·ice ne peuvent pas contenir de @."
 
 #: app/admin/forms.py:195 app/auth/forms.py:46
 msgid "This username was used in the past and cannot be reused."
 msgstr ""
-"Ce nom d'utilisateur·rice a été utilisé dans le passé et ne peut pas être"
-" réutilisé."
+"Ce nom d'utilisateur·ice a été utilisé dans le passé et ne peut pas être "
+"réutilisé."
 
 #: app/admin/forms.py:197 app/auth/forms.py:48
 msgid "An account with this user name already exists."
-msgstr "Un compte existe déjà avec ce nom d'utilisateur·rice."
+msgstr "Un compte existe déjà avec ce nom d'utilisateur·ice."
 
 #: app/admin/forms.py:200 app/auth/forms.py:51
 msgid "A community with this name exists so it cannot be used for a user."
 msgstr ""
-"Une communauté avec ce nom existe donc elle ne peut pas être utilisée "
-"comme nom d'utilisateur·rice."
+"Une communauté avec ce nom existe donc elle ne peut pas être utilisée comme "
+"nom d'utilisateur·ice."
 
 #: app/admin/forms.py:207 app/admin/forms.py:220 app/auth/forms.py:58
 #: app/auth/forms.py:71
@@ -761,7 +761,7 @@ msgstr "Mode de test"
 
 #: app/admin/forms.py:252 app/admin/routes.py:1533
 msgid "Send newsletter"
-msgstr "Envoyer la newsletter"
+msgstr "Envoyer l'infolettre"
 
 #: app/admin/routes.py:126 app/admin/routes.py:175 app/feed/routes.py:216
 msgid "Settings saved."
@@ -942,25 +942,24 @@ msgid ""
 "This is a remote user - most settings here will be regularly overwritten "
 "with data from the original server."
 msgstr ""
-"Ceci est un·e utilisateur·rice distant·e - la plupart des paramètres "
-"locaux seront régulièrement remplacés par des données du serveur "
-"d'origine."
+"Ceci est un·e utilisateur·ice distant·e - la plupart des paramètres locaux "
+"seront régulièrement remplacés par des données du serveur d'origine."
 
 #: app/admin/routes.py:1394
 msgid "Edit user"
-msgstr "Modifier l’utilisateur·rice"
+msgstr "Modifier l’utilisateur·ice"
 
 #: app/admin/routes.py:1456
 msgid "User added"
-msgstr "Utilisateur·rice ajouté"
+msgstr "Utilisateur·ice ajouté·e"
 
 #: app/admin/routes.py:1459
 msgid "Add user"
-msgstr "Ajouter un·e utilisateur·rice"
+msgstr "Ajouter un·e utilisateur·ice"
 
 #: app/admin/routes.py:1489
 msgid "User deleted"
-msgstr "Utilisateur·rice supprimé"
+msgstr "Utilisateur·ice supprimé·e"
 
 #: app/admin/routes.py:1512 app/templates/admin/reports.html:14
 #: app/templates/admin/users.html:55 app/templates/admin/users.html:85
@@ -971,7 +970,7 @@ msgstr "Signalements"
 
 #: app/admin/routes.py:1530
 msgid "Newsletter sent"
-msgstr "Newsletter envoyée"
+msgstr "Infolettre envoyée"
 
 #: app/admin/routes.py:1557
 msgid "Settings saved"
@@ -1026,7 +1025,7 @@ msgstr "S'inscrire"
 
 #: app/auth/forms.py:40
 msgid "User names cannot contain spaces."
-msgstr "Les noms d'utilisateur·rice ne peuvent pas contenir d'espaces."
+msgstr "Les noms d'utilisateur·ice ne peuvent pas contenir d'espaces."
 
 #: app/auth/forms.py:76
 msgid "Request password reset"
@@ -1078,7 +1077,7 @@ msgstr ""
 
 #: app/auth/routes.py:37 app/auth/routes.py:40 app/shared/auth.py:35
 msgid "No account exists with that user name."
-msgstr "Aucun compte avec ce nom d'utilisateur·rice n'existe."
+msgstr "Aucun compte avec ce nom d'utilisateur·ice n'existe."
 
 #: app/auth/routes.py:44 app/shared/auth.py:41
 msgid ""
@@ -1099,18 +1098,18 @@ msgstr "Connexion"
 
 #: app/auth/routes.py:115
 msgid "Sorry, you cannot use that email address"
-msgstr "Désolé, vous ne pouvez pas utiliser cette adresse e-mail"
+msgstr "Désolé, vous ne pouvez pas utiliser cette adresse de courriel"
 
 #: app/auth/routes.py:117
 msgid "Sorry, you cannot use that user name"
-msgstr "Désolé, vous ne pouvez pas utiliser ce nom d'utilisateur·rice"
+msgstr "Désolé, vous ne pouvez pas utiliser ce nom d'utilisateur·ice"
 
 #: app/auth/routes.py:134
 #, python-format
 msgid "Your username contained special letters so it was changed to %(name)s."
 msgstr ""
-"Votre nom d'utilisateur·rice contient des caractères spéciaux, donc il a "
-"été changé en %(name)s."
+"Votre nom d'utilisateur·ice contient des caractères spéciaux, donc il a été "
+"changé en %(name)s."
 
 #: app/auth/routes.py:175
 msgid "Account under review"
@@ -1122,17 +1121,17 @@ msgstr "Vérifiez votre boîte mail"
 
 #: app/auth/routes.py:193
 msgid "Sorry, you cannot use that email address."
-msgstr "Désolé, vous ne pouvez pas utiliser cette adresse e-mail."
+msgstr "Désolé, vous ne pouvez pas utiliser cette adresse de courriel."
 
 #: app/auth/routes.py:198
 msgid "Check your email for a link to reset your password."
 msgstr ""
-"Vérifiez votre e-mail. Nous vous avons envoyé un lien pour réinitialiser "
+"Vérifiez votre courriel. Nous vous avons envoyé un lien pour réinitialiser "
 "votre mot de passe."
 
 #: app/auth/routes.py:201
 msgid "No account with that email address exists"
-msgstr "Aucun compte avec cette adresse e-mail n'existe"
+msgstr "Aucun compte avec cette adresse de courriel n'existe"
 
 #: app/auth/routes.py:203
 msgid "Reset Password"
@@ -1145,15 +1144,15 @@ msgid ""
 "%(name)s."
 msgstr ""
 "Votre mot de passe a été réinitialisé. Veuillez l'utiliser pour vous "
-"connecter avec le nom d'utilisateur·rice %(name)s."
+"connecter avec le nom d'utilisateur·ice %(name)s."
 
 #: app/auth/routes.py:231 app/auth/routes.py:238
 msgid "Thank you for verifying your email address."
-msgstr "Merci d'avoir vérifié votre adresse e-mail."
+msgstr "Merci d'avoir vérifié votre adresse de courriel."
 
 #: app/auth/routes.py:240
 msgid "Email address validation failed."
-msgstr "La validation de l'adresse e-mail a échoué."
+msgstr "La validation de l'adresse de courriel a échoué."
 
 #: app/chat/forms.py:13
 msgid "Message"
@@ -1313,7 +1312,7 @@ msgstr "Corps"
 
 #: app/community/forms.py:79
 msgid "Mods and admins"
-msgstr "modérateur·rices et administrateur·ices"
+msgstr "modérateur·ices et administrateur·ices"
 
 #: app/community/forms.py:80
 msgid "Trusted accounts"
@@ -1415,9 +1414,8 @@ msgid "NSFW"
 msgstr "NSFW"
 
 #: app/community/forms.py:124
-#, fuzzy
 msgid "Gore/gross"
-msgstr "Gore/dégueu"
+msgstr "Sanglant/dégueu"
 
 #: app/community/forms.py:125 app/post/forms.py:12
 #: app/templates/post/_post_notification_toggle.html:5
@@ -1523,7 +1521,7 @@ msgstr "Ne respecte pas les règles de l'instance"
 
 #: app/community/forms.py:246
 msgid "Abandoned by moderators"
-msgstr "Abandonné par les modérateur·rices"
+msgstr "Abandonné par les modérateur·ices"
 
 #: app/community/forms.py:247
 msgid "Cult"
@@ -1696,26 +1694,26 @@ msgstr "Image de bannière supprimée !"
 #: app/templates/community/community_mod_list.html:22
 #, python-format
 msgid "Moderators for %(community)s"
-msgstr "Modérateur·rices de %(community)s"
+msgstr "Modérateur·ices de %(community)s"
 
 #: app/community/routes.py:970
 msgid "Moderator added"
-msgstr "Modérateur·ices ajouté"
+msgstr "Modérateur·ice ajouté·e"
 
 #: app/community/routes.py:974
 #, python-format
 msgid "You are now a moderator of %(name)s"
-msgstr "Vous êtes désormais modérateur·rice de %(name)s"
+msgstr "Vous êtes désormais modérateur·ice de %(name)s"
 
 #: app/community/routes.py:1017
 #: app/templates/community/community_find_moderator.html:13
 #, python-format
 msgid "Add moderator to %(community)s"
-msgstr "Ajouter un·e modérateur·rice à %(community)s"
+msgstr "Ajouter un·e modérateur·ice à %(community)s"
 
 #: app/community/routes.py:1043
 msgid "Moderator removed"
-msgstr "Modérateur·rice supprimé"
+msgstr "Modérateur·ice supprimé·e"
 
 #: app/community/routes.py:1068 app/post/routes.py:1031 app/post/routes.py:1204
 #: app/user/routes.py:640
@@ -1862,13 +1860,13 @@ msgstr "%(name)s débloqué·e."
 #, python-format
 msgid "%(name)s banned for all users and all content deleted."
 msgstr ""
-"%(name)s banni·e pour tou·tes les utilisateur·rices et tous les contenus "
+"%(name)s banni·e pour tou·tes les utilisateur·ices et tous les contenus "
 "supprimés."
 
 #: app/domain/routes.py:163 app/tag/routes.py:193
 #, python-format
 msgid "%(name)s un-banned for all users."
-msgstr "%(name)s débanni·e pour tou·tes les utilisateur·rices."
+msgstr "%(name)s débanni·e pour tou·tes les utilisateur·ices."
 
 #: app/feed/forms.py:16 app/feed/forms.py:48
 msgid "Parent feed"
@@ -2128,7 +2126,7 @@ msgid ""
 "Moderators have already assessed reports regarding this post, no further "
 "reports are necessary."
 msgstr ""
-"Les modérateur·rices ont déjà évalué les signalements concernant cette "
+"Les modérateur·ices ont déjà évalué les signalements concernant cette "
 "publication, aucun autre signalement n'est nécessaire."
 
 #: app/post/routes.py:918 app/shared/post.py:506
@@ -2177,7 +2175,7 @@ msgid ""
 "Moderators have already assessed reports regarding this comment, no "
 "further reports are necessary."
 msgstr ""
-"Les modérateur·rices ont déjà évalué les signalements concernant ce "
+"Les modérateur·ices ont déjà évalué les signalements concernant ce "
 "commentaire, aucun autre signalement n'est nécessaire."
 
 #: app/post/routes.py:1094 app/shared/reply.py:283
@@ -2469,7 +2467,6 @@ msgstr "Communautés connexes"
 #: app/templates/themes/dillo/_side_pane.html:120
 #: app/templates/themes/dillo/index.html:32
 #: app/templates/topic/show_topic.html:113
-#, fuzzy
 msgid "More communities"
 msgstr "Explorer les communautés"
 
@@ -2543,7 +2540,6 @@ msgid "Contact"
 msgstr "Contact"
 
 #: app/templates/about.html:23
-#, fuzzy
 msgid "About Us"
 msgstr "À propos de nous"
 
@@ -2599,7 +2595,6 @@ msgstr "Notifications"
 #: app/templates/base.html:180 app/templates/base.html:213
 #: app/templates/themes/dillo/base.html:142
 #: app/templates/themes/dillo/base.html:167
-#, fuzzy
 msgid "More topics"
 msgstr "Parcourir les rubriques"
 
@@ -2676,7 +2671,6 @@ msgid "Bookmarks"
 msgstr "Favoris"
 
 #: app/templates/base.html:266 app/templates/themes/dillo/base.html:221
-#, fuzzy
 msgid "Activity Alerts"
 msgstr "Alertes d'activités"
 
@@ -2936,7 +2930,6 @@ msgid "Reason:"
 msgstr "Raison :"
 
 #: app/templates/modlog.html:44
-#, fuzzy
 msgid "There are no moderation actions to show."
 msgstr "Il n'y a aucune action de modération à afficher."
 
@@ -2976,7 +2969,7 @@ msgstr "Fédération"
 #: app/templates/admin/_nav.html:15 app/templates/admin/_tabbed_nav.html:16
 #: app/templates/admin/newsletter.html:11
 msgid "Newsletter"
-msgstr "Newsletter"
+msgstr "Infolettre"
 
 #: app/templates/admin/_nav.html:16 app/templates/admin/_tabbed_nav.html:17
 #: app/templates/admin/permissions.html:15
@@ -3261,7 +3254,6 @@ msgid "When an Activity was received from them"
 msgstr "Lorsqu'une activité a été reçue de leur part"
 
 #: app/templates/admin/instances.html:63 app/templates/admin/users.html:73
-#, fuzzy
 msgid "Seen"
 msgstr "Vu"
 
@@ -3342,7 +3334,6 @@ msgid "Add local user"
 msgstr "Ajouter un·e utilisateur·ice local"
 
 #: app/templates/admin/users.html:42
-#, fuzzy
 msgid "Display name."
 msgstr "Nom d'affichage."
 
@@ -3839,7 +3830,6 @@ msgid "Type"
 msgstr "Taper"
 
 #: app/templates/community/community_moderate.html:41
-#, fuzzy
 msgid "Created"
 msgstr "Créé"
 
@@ -3907,7 +3897,7 @@ msgid "No banned people yet"
 msgstr "Pas encore de personnes bannies"
 
 #: app/templates/community/community_modlog.html:22
-#, fuzzy, python-format
+#, python-format
 msgid "Moderation actions in %(community)s"
 msgstr "Actions de modération sur %(community)s"
 
@@ -4063,7 +4053,6 @@ msgid "Sorry, access is denied"
 msgstr "Désolé, l'accès est refusé"
 
 #: app/templates/errors/401.html:15
-#, fuzzy
 msgid "You cannot access this area."
 msgstr "Vous n'avez pas accès à cette zone."
 
@@ -4589,7 +4578,7 @@ msgid "Block community %(community_name)s"
 msgstr "Bloquer la communauté %(community_name)s"
 
 #: app/templates/post/post_options.html:55
-#, fuzzy, python-format
+#, python-format
 msgid "Ban post author @%(author_name)s from %(community_name)s"
 msgstr ""
 "Bannir l'auteur·e de la publication @%(author_name)s de %(community_name)s"
@@ -4612,7 +4601,6 @@ msgstr "Voir l'original sur %(domain)s"
 
 #: app/templates/post/post_options.html:75
 #: app/templates/post/post_reply_options.html:42
-#, fuzzy
 msgid "View Voting Activity"
 msgstr "Voir les votes"
 
@@ -4646,7 +4634,7 @@ msgid "Report \"%(post_title)s\""
 msgstr "Signaler \"%(post_title)s\""
 
 #: app/templates/post/post_voting_activity.html:10
-#, fuzzy, python-format
+#, python-format
 msgid "Voting Activity for \"%(post_title)s\""
 msgstr "Activité de vote pour \"%(post_title)s\""
 
@@ -4700,9 +4688,8 @@ msgid "optional"
 msgstr "facultatif"
 
 #: app/templates/search/start.html:44
-#, fuzzy
 msgid "Instance Software"
-msgstr "Type d'instance"
+msgstr "Logiciel de l'instance"
 
 #: app/templates/search/start.html:54
 msgid "Sort by"
@@ -4725,7 +4712,6 @@ msgid "star wars"
 msgstr "star wars"
 
 #: app/templates/search/start.html:67
-#, fuzzy
 msgid ""
 "There is an implied \"and\" here. Results will have both words somewhere "
 "in them."
@@ -5138,7 +5124,7 @@ msgid ""
 "You have unsubscribed from the email newsletter. We might email you for "
 "other reasons, though."
 msgstr ""
-"Vous vous êtes désabonné de la newsletter par courriel. Nous pourrions "
+"Vous vous êtes désabonné de l'infolettre par courriel. Nous pourrions "
 "toutefois vous envoyer un courriel pour d'autres raisons."
 
 #: app/templates/user/notifications.html:25
@@ -5339,12 +5325,10 @@ msgid "Only Mine"
 msgstr "Seulement à moi"
 
 #: app/templates/user/alerts/_filter.html:6
-#, fuzzy
 msgid "Mine"
-msgstr "à moi"
+msgstr "À moi"
 
 #: app/templates/user/alerts/_filter.html:8
-#, fuzzy
 msgid "Only Others"
 msgstr "Seulement les autres"
 
@@ -5365,7 +5349,6 @@ msgstr ""
 "chaque publication pour le faire."
 
 #: app/templates/user/alerts/_topics.html:2
-#, fuzzy
 msgid "You will be notified of new posts in communities covered by these topics"
 msgstr ""
 "Vous serez informé des nouvelles publications dans les communautés couvertes "
@@ -5714,6 +5697,7 @@ msgid "You cannot ban yourself."
 msgstr "Vous ne pouvez pas vous bannir vous-même."
 
 #: app/user/routes.py:552
+#, fuzzy
 msgid "Banned user was a remote instance admin."
 msgstr ""
 "L'utilisateur·ice banni·e était un·e administrateur·ice d'instance à "
