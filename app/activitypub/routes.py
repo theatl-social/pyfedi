@@ -647,8 +647,6 @@ def replay_inbox_request(request_json):
 @celery.task
 def process_inbox_request(request_json, store_ap_json):
     with current_app.app_context():
-        site = Site.query.get(1)    # can't use g.site because celery doesn't use Flask's g variable
-
         # For an Announce, Accept, or Reject, we have the community/feed, and need to find the user
         # For everything else, we have the user, and need to find the community/feed
         # Benefits of always using request_json['actor']:
@@ -670,7 +668,7 @@ def process_inbox_request(request_json, store_ap_json):
             actor = find_actor_or_create(actor_id, create_if_not_found=False)
             if actor and isinstance(actor, User):
                 user = actor
-                user.last_seen = site.last_active = utcnow()
+                user.last_seen = utcnow()
                 db.session.commit()
             elif actor and isinstance(actor, Community):                  # Process a few activities from NodeBB and a.gup.pe
                 if request_json['type'] == 'Add' or request_json['type'] == 'Remove':
@@ -709,7 +707,7 @@ def process_inbox_request(request_json, store_ap_json):
                 user_ap_id = request_json['object']['actor']
                 user = find_actor_or_create(user_ap_id)
                 if user and isinstance(user, User):
-                    user.last_seen = site.last_active = utcnow()
+                    user.last_seen = utcnow()
                     user.instance.last_seen = utcnow()
                     user.instance.dormant = False
                     user.instance.gone_forever = False
@@ -1020,9 +1018,6 @@ def process_inbox_request(request_json, store_ap_json):
             return
 
         if core_activity['type'] == 'Dislike':  # Downvote
-            if site.enable_downvotes is False:
-                log_incoming_ap(id, APLOG_DISLIKE, APLOG_IGNORED, saved_json, 'Dislike ignored because of allow_dislike setting')
-                return
             process_downvote(user, store_ap_json, request_json, announced)
             return
 

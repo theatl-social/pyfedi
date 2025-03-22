@@ -1417,6 +1417,7 @@ class Post(db.Model):
             community.post_count += 1
             community.last_active = utcnow()
             user.post_count += 1
+            db.session.execute(text('UPDATE "site" SET last_active = NOW()'))
             try:
                 db.session.commit()
             except IntegrityError:
@@ -1873,6 +1874,7 @@ class PostReply(db.Model):
             post.community.post_reply_count += 1
             post.community.last_active = post.last_active = utcnow()
         user.post_reply_count += 1
+        db.session.execute(text('UPDATE "site" SET last_active = NOW()'))
         db.session.commit()
 
         return reply
