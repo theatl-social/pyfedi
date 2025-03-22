@@ -12,7 +12,7 @@ The following are our goals for 2025. We brainstormed ideas then [ranked them by
 
 [User @mentions support](https://piefed.social/post/411582)
 
-[User-created topics, “multi-reddits”, favorite communities](https://piefed.social/post/411558)
+✅ [User-created topics, “multi-reddits”, favorite communities](https://piefed.social/post/411558)
 
 [Technical debt & documentation](https://piefed.social/post/411592) & [code repository](https://piefed.social/post/411573)
 
