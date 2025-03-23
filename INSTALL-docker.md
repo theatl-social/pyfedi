@@ -44,10 +44,10 @@ export DOCKER_BUILDKIT=1
 sudo docker compose up --build
 ```
 - Wait until text in terminal stops scrolling
--> Test external access from browser (On port 8030). Watch for movement in terminal window. Browser will show "Internal Server Error" message. Proceed to initialize database to address this error message.
+- Test external access from browser (On port 8030). Watch for movement in terminal window. Browser will show "Internal Server Error" message. Proceed to initialize database to address this error message.
 
 #### INITIALIZE DATABASE
--> Open a new terminal window
+- Open a new terminal window
 ```bash
 sudo docker exec -it piefed_app1 sh
 ```
@@ -55,15 +55,15 @@ sudo docker exec -it piefed_app1 sh
 export FLASK_APP=pyfedi.py
 flask init-db
 ```
--> Enter username, email (optional), and password.
--> Test external access from browser again. PieFed should now load. Login as admin with the same username and password.
+- Enter username, email (optional), and password.
+- Test external access from browser again. PieFed should now load. Login as admin with the same username and password.
 ```bash
 exit
 ```
--> Close this terminal window
+- Close this terminal window
 
 #### SHUT DOWN PIEFED & START AGAIN IN BACKGROUND
--> Return to main terminal window and press `CTRL+C` to shut down PieFed
+- Return to main terminal window and press `CTRL+C` to shut down PieFed
 ```bash
 sudo docker compose up -d
 ```
@@ -86,7 +86,7 @@ cd pyfedi/
 sudo git pull
 sudo docker compose up --build
 ```
--> `CTRL+C` to shut down PieFed
+- `CTRL+C` to shut down PieFed
 ```bash
 sudo docker compose up -d
 ```
