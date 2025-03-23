@@ -1844,7 +1844,7 @@ class PostReply(db.Model):
             return PostReply.query.filter_by(ap_id=request_json['object']['id']).one()
 
         if in_reply_to and in_reply_to.path:
-            reply.path = in_reply_to.path
+            reply.path = in_reply_to.path[:]
             reply.path.append(reply.id)
         else:
             reply.path = [0, reply.id]
