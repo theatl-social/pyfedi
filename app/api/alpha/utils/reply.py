@@ -7,12 +7,12 @@ from app.shared.reply import vote_for_reply, bookmark_the_post_reply, remove_the
                              delete_reply, restore_reply, report_reply, mod_remove_reply, mod_restore_reply
 from app.utils import authorise_api_user, blocked_users, blocked_instances
 
-from sqlalchemy import desc, or_
+from sqlalchemy import desc, or_, text
 
 
 def get_reply_list(auth, data, user_id=None):
     sort = data['sort'].lower() if data and 'sort' in data else "new"
-    max_depth = data['max_depth'] if data and 'max_depth' in data else 8
+    max_depth = data['max_depth'] if data and 'max_depth' in data else None
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 10
     post_id = data['post_id'] if data and 'post_id' in data else None
@@ -29,15 +29,22 @@ def get_reply_list(auth, data, user_id=None):
         user_id = authorise_api_user(auth)
 
     if parent_id and post_id:
-        replies = PostReply.query.filter(PostReply.parent_id == parent_id, PostReply.post_id == post_id)
-        page = 1
+        replies = PostReply.query.filter(PostReply.root_id == parent_id, PostReply.post_id == post_id)
+        if replies.count() == 0:
+            reply_ids = db.session.execute(text('select id from post_reply where :id = ANY(path)'), {"id": parent_id}).scalars()
+            replies = PostReply.query.filter(PostReply.id.in_(reply_ids), PostReply.post_id == post_id)
     elif post_id:
-        replies = PostReply.query.filter(PostReply.post_id == post_id, PostReply.depth <= max_depth)
+        replies = PostReply.query.filter(PostReply.post_id == post_id)
     elif parent_id:
-        replies = PostReply.query.filter(or_(PostReply.parent_id == parent_id, PostReply.id == parent_id), PostReply.depth <= max_depth)
-        page = 1
+        replies = PostReply.query.filter(PostReply.root_id == parent_id)
+        if replies.count() == 0:
+            reply_ids = db.session.execute(text('select id from post_reply where :id = ANY(path)'), {"id": parent_id}).scalars()
+            replies = PostReply.query.filter(PostReply.id.in_(reply_ids))
     elif person_id:
         replies = PostReply.query.filter_by(user_id=person_id)
+
+    if max_depth:
+        replies = replies.filter(PostReply.depth <= max_depth)
 
     if user_id and user_id != person_id:
         blocked_person_ids = blocked_users(user_id)

@@ -1271,7 +1271,7 @@ def post_reply_delete(post_id: int, comment_id: int):
             post.reply_count -= 1
         post_reply.author.post_reply_count -= 1
         if post_reply.path:
-            db.session.execute(text('update post_reply set child_count = child_count - 1 where id in (:parents)'),
+            db.session.execute(text('update post_reply set child_count = child_count - 1 where id in :parents'),
                                {'parents': tuple(post_reply.path[:-1])})
         db.session.commit()
         flash(_('Comment deleted.'))
@@ -1341,7 +1341,7 @@ def post_reply_restore(post_id: int, comment_id: int):
             post.reply_count += 1
         post_reply.author.post_reply_count += 1
         if post_reply.path:
-            db.session.execute(text('update post_reply set child_count = child_count + 1 where id in (:parents)'),
+            db.session.execute(text('update post_reply set child_count = child_count + 1 where id in :parents'),
                                {'parents': tuple(post_reply.path[:-1])})
         db.session.commit()
         flash(_('Comment restored.'))

@@ -1534,6 +1534,9 @@ def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json, reas
             community.post_reply_count -= 1
             if not to_delete.author.bot:
                 to_delete.post.reply_count -= 1
+            if to_delete.path:
+                db.session.execute(text('update post_reply set child_count = child_count - 1 where id in :parents'),
+                                   {'parents': tuple(to_delete.path[:-1])})
             db.session.commit()
             if to_delete.author.id != deletor.id:
                 add_to_modlog_activitypub('delete_post_reply', deletor, community_id=community.id,
@@ -1572,6 +1575,9 @@ def restore_post_or_comment(restorer, to_restore, store_ap_json, request_json, r
             if not to_restore.author.bot:
                 to_restore.post.reply_count += 1
             to_restore.author.post_reply_count += 1
+            if to_restore.path:
+                db.session.execute(text('update post_reply set child_count = child_count + 1 where id in :parents'),
+                                   {'parents': tuple(to_restore.path[:-1])})
             db.session.commit()
             if to_restore.author.id != restorer.id:
                 add_to_modlog_activitypub('restore_post_reply', restorer, community_id=community.id,
@@ -1591,6 +1597,9 @@ def site_ban_remove_data(blocker_id, blocked):
         if not blocked.bot:
             reply.post.reply_count -= 1
         reply.community.post_reply_count -= 1
+        if reply.path:
+            db.session.execute(text('update post_reply set child_count = child_count - 1 where id in :parents'),
+                                   {'parents': tuple(reply.path[:-1])})
     blocked.reply_count = 0
     db.session.commit()
 
@@ -1629,6 +1638,9 @@ def community_ban_remove_data(blocker_id, community_id, blocked):
             reply.post.reply_count -= 1
         reply.community.post_reply_count -= 1
         blocked.post_reply_count -= 1
+        if reply.path:
+            db.session.execute(text('update post_reply set child_count = child_count - 1 where id in :parents'),
+                                   {'parents': tuple(reply.path[:-1])})
     db.session.commit()
 
     posts = Post.query.filter_by(user_id=blocked.id, deleted=False, community_id=community_id)

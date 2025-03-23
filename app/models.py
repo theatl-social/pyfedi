@@ -1844,8 +1844,10 @@ class PostReply(db.Model):
             return PostReply.query.filter_by(ap_id=request_json['object']['id']).one()
 
         if in_reply_to and in_reply_to.path:
-            reply.path = in_reply_to.path
+            reply.path = in_reply_to.path[:]
             reply.path.append(reply.id)
+            db.session.execute(text('update post_reply set child_count = child_count + 1 where id in :parents'),
+                               {'parents': tuple(in_reply_to.path)})
         else:
             reply.path = [0, reply.id]
         reply.root_id = reply.path[1]
@@ -1883,8 +1885,6 @@ class PostReply(db.Model):
             post.community.post_reply_count += 1
             post.community.last_active = post.last_active = utcnow()
         user.post_reply_count += 1
-        db.session.execute(text('update post_reply set child_count = child_count + 1 where id in :parents'),
-                           {'parents': tuple(reply.path)})
         db.session.execute(text('UPDATE "site" SET last_active = NOW()'))
         db.session.commit()
 
