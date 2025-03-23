@@ -37,3 +37,11 @@ pybabel compile -d app/translations
 
 sass is used to compile .scss files into .css files. https://sass-lang.com/dart-sass/. Get the latest version of the
 command line app from https://github.com/sass/dart-sass/releases/ as old versions produce slightly different output.
+
+
+
+If you get CSRF errors when submitting forms, go into .env and set:
+SESSION_COOKIE_SECURE='False'
+SESSION_COOKIE_HTTPONLY='False'
+
+Do not use those values in production.

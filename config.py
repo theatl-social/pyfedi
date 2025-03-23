@@ -43,8 +43,8 @@ class Config(object):
 
     AWS_REGION = os.environ.get('AWS_REGION') or None
 
-    SESSION_COOKIE_SECURE = True
-    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', '1') in ('1', 'true', 'True')
+    SESSION_COOKIE_HTTPONLY = os.environ.get('SESSION_COOKIE_HTTPONLY', '1') in ('1', 'true', 'True')
     SESSION_COOKIE_SAMESITE = 'Lax'
 
     CLOUDFLARE_API_TOKEN = os.environ.get('CLOUDFLARE_API_TOKEN') or ''
