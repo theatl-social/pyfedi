@@ -693,7 +693,7 @@ def debug_mode_only(func):
         if current_app.debug:
             return func(*args, **kwargs)
         else:
-            return abort(403, description="Not available in production mode")
+            return abort(403, description="Not available in production mode. Set the FLASK_DEBUG environment variable to 1.")
 
     return decorated_function
 
