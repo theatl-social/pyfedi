@@ -5,7 +5,7 @@ from random import randint
 from flask import redirect, url_for, flash, current_app, abort, request, g, make_response
 from flask_login import logout_user, current_user, login_required
 from flask_babel import _
-from sqlalchemy import or_, desc
+from sqlalchemy import or_, desc, text
 from wtforms import SelectField, RadioField
 
 from app import db, constants, cache, celery
@@ -1270,6 +1270,9 @@ def post_reply_delete(post_id: int, comment_id: int):
         if not post_reply.author.bot:
             post.reply_count -= 1
         post_reply.author.post_reply_count -= 1
+        if post_reply.path:
+            db.session.execute(text('update post_reply set child_count = child_count - 1 where id in (:parents)'),
+                               {'parents': tuple(post_reply.path[:-1])})
         db.session.commit()
         flash(_('Comment deleted.'))
         # federate delete
@@ -1337,6 +1340,9 @@ def post_reply_restore(post_id: int, comment_id: int):
         if not post_reply.author.bot:
             post.reply_count += 1
         post_reply.author.post_reply_count += 1
+        if post_reply.path:
+            db.session.execute(text('update post_reply set child_count = child_count + 1 where id in (:parents)'),
+                               {'parents': tuple(post_reply.path[:-1])})
         db.session.commit()
         flash(_('Comment restored.'))
 

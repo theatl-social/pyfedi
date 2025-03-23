@@ -1,3 +1,5 @@
+from sqlalchemy import text
+
 from app import cache, db
 from app.activitypub.signature import default_context, post_request_in_background, post_request
 from app.community.util import send_to_remote_instance
@@ -225,6 +227,9 @@ def delete_reply(reply_id, src, auth):
     if not reply.author.bot:
         reply.post.reply_count -= 1
     reply.author.post_reply_count -= 1
+    if reply.path:
+        db.session.execute(text('update post_reply set child_count = child_count - 1 where id in (:parents)'),
+                           {'parents': tuple(reply.path[:-1])})
     db.session.commit()
     if src == SRC_WEB:
         flash(_('Comment deleted.'))
@@ -250,6 +255,9 @@ def restore_reply(reply_id, src, auth):
     if not reply.author.bot:
         reply.post.reply_count += 1
     reply.author.post_reply_count += 1
+    if reply.path:
+        db.session.execute(text('update post_reply set child_count = child_count + 1 where id in (:parents)'),
+                           {'parents': tuple(reply.path[:-1])})
     db.session.commit()
     if src == SRC_WEB:
         flash(_('Comment restored.'))
@@ -336,6 +344,9 @@ def mod_remove_reply(reply_id, reason, src, auth):
     if not reply.author.bot:
         reply.post.reply_count -= 1
     reply.author.post_reply_count -= 1
+    if reply.path:
+        db.session.execute(text('update post_reply set child_count = child_count - 1 where id in (:parents)'),
+                           {'parents': tuple(reply.path[:-1])})
     db.session.commit()
     if src == SRC_WEB:
         flash(_('Comment deleted.'))
@@ -367,6 +378,9 @@ def mod_restore_reply(reply_id, reason, src, auth):
     if not reply.author.bot:
         reply.post.reply_count += 1
     reply.author.post_reply_count += 1
+    if reply.path:
+        db.session.execute(text('update post_reply set child_count = child_count + 1 where id in (:parents)'),
+                           {'parents': tuple(reply.path[:-1])})
     db.session.commit()
     if src == SRC_WEB:
         flash(_('Comment restored.'))

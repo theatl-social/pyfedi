@@ -619,7 +619,59 @@ def register(app):
     @app.cli.command("populate_post_reply_for_api")
     def populate_post_reply_for_api():
         with app.app_context():
-            ...
+            sql = '''WITH RECURSIVE reply_path AS (
+                        -- Base case: each reply starts with its own ID
+                        SELECT
+                            id,
+                            parent_id,
+                            ARRAY[0, id] AS path
+                        FROM post_reply
+                        WHERE parent_id IS NULL  -- Top-level replies
+                    
+                        UNION ALL
+                    
+                        -- Recursive case: build the path from parent replies
+                        SELECT
+                            pr.id,
+                            pr.parent_id,
+                            rp.path || pr.id  -- Append current reply ID to the parent's path
+                        FROM post_reply pr
+                        JOIN reply_path rp ON pr.parent_id = rp.id
+                    )
+                    UPDATE post_reply
+                    SET path = reply_path.path
+                    FROM reply_path
+                    WHERE post_reply.id = reply_path.id;
+                    '''
+            db.session.execute(text(sql))
+            db.session.commit()
+
+            db.session.execute(text('update post_reply set child_count = 0'))
+
+            sql = '''WITH unnested_paths AS (
+                        SELECT
+                            UNNEST(path[2:array_length(path, 1) - 1]) AS parent_id  -- Exclude the last element (self)
+                        FROM post_reply
+                        WHERE array_length(path, 1) > 2  -- Ensure the path contains at least one parent
+                    ),
+                    child_counts AS (
+                        SELECT
+                            parent_id,
+                            COUNT(*) AS child_count
+                        FROM unnested_paths
+                        GROUP BY parent_id
+                    )
+                    UPDATE post_reply
+                    SET child_count = COALESCE(child_counts.child_count, 0)
+                    FROM child_counts
+                    WHERE post_reply.id = child_counts.parent_id;'''
+            db.session.execute(text(sql))
+            db.session.commit()
+
+            sql = 'UPDATE post_reply SET root_id = path[1] WHERE path IS NOT NULL;'
+            db.session.execute(text(sql))
+            db.session.commit()
+
             print('Done!')
 
 
