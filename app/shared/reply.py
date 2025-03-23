@@ -228,7 +228,7 @@ def delete_reply(reply_id, src, auth):
         reply.post.reply_count -= 1
     reply.author.post_reply_count -= 1
     if reply.path:
-        db.session.execute(text('update post_reply set child_count = child_count - 1 where id in (:parents)'),
+        db.session.execute(text('update post_reply set child_count = child_count - 1 where id in :parents'),
                            {'parents': tuple(reply.path[:-1])})
     db.session.commit()
     if src == SRC_WEB:
@@ -256,7 +256,7 @@ def restore_reply(reply_id, src, auth):
         reply.post.reply_count += 1
     reply.author.post_reply_count += 1
     if reply.path:
-        db.session.execute(text('update post_reply set child_count = child_count + 1 where id in (:parents)'),
+        db.session.execute(text('update post_reply set child_count = child_count + 1 where id in :parents'),
                            {'parents': tuple(reply.path[:-1])})
     db.session.commit()
     if src == SRC_WEB:
