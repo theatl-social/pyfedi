@@ -8,7 +8,7 @@ from flask_babel import _
 from sqlalchemy import or_, desc, text
 from wtforms import SelectField, RadioField
 
-from app import db, constants, cache, celery
+from app import db, constants, cache, limiter
 from app.activitypub.signature import HttpSignature, post_request, default_context, post_request_in_background
 from app.activitypub.util import notify_about_post_reply, update_post_from_activity
 from app.community.util import send_to_remote_instance
@@ -40,177 +40,178 @@ from app.shared.post import edit_post, sticky_post, lock_post
 
 
 def show_post(post_id: int):
-    post = Post.query.get_or_404(post_id)
-    community: Community = post.community
+    with limiter.limit('30/minute'):
+        post = Post.query.get_or_404(post_id)
+        community: Community = post.community
 
-    if community.banned or post.deleted:
-        if current_user.is_anonymous or not (current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff())):
-            abort(404)
+        if community.banned or post.deleted:
+            if current_user.is_anonymous or not (current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff())):
+                abort(404)
+            else:
+                if post.deleted_by == post.user_id:
+                    flash(_('This post has been deleted by the author and is only visible to staff and admins.'), 'warning')
+                else:
+                    flash(_('This post has been deleted and is only visible to staff and admins.'), 'warning')
+
+        sort = request.args.get('sort', 'hot')
+
+        # If nothing has changed since their last visit, return HTTP 304
+        current_etag = f"{post.id}{sort}_{hash(post.last_active)}"
+        if current_user.is_anonymous and request_etag_matches(current_etag):
+            return return_304(current_etag)
+
+        if post.mea_culpa:
+            flash(_('%(name)s has indicated they made a mistake in this post.', name=post.author.user_name), 'warning')
+
+        mods = community_moderators(community.id)
+        is_moderator = community.is_moderator()
+
+        if community.private_mods:
+            mod_list = []
         else:
-            if post.deleted_by == post.user_id:
-                flash(_('This post has been deleted by the author and is only visible to staff and admins.'), 'warning')
-            else:
-                flash(_('This post has been deleted and is only visible to staff and admins.'), 'warning')
+            mod_user_ids = [mod.user_id for mod in mods]
+            mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
 
-    sort = request.args.get('sort', 'hot')
+        # handle top-level comments/replies
+        form = NewReplyForm()
+        form.language_id.choices = languages_for_form()
+        if current_user.is_authenticated and current_user.verified and form.validate_on_submit():
 
-    # If nothing has changed since their last visit, return HTTP 304
-    current_etag = f"{post.id}{sort}_{hash(post.last_active)}"
-    if current_user.is_anonymous and request_etag_matches(current_etag):
-        return return_304(current_etag)
+            try:
+                reply = make_reply(form, post, None, SRC_WEB)
+            except Exception as ex:
+                flash(_('Your reply was not accepted because %(reason)s', reason=str(ex)), 'error')
+                return redirect(url_for('activitypub.post_ap', post_id=post_id))
 
-    if post.mea_culpa:
-        flash(_('%(name)s has indicated they made a mistake in this post.', name=post.author.user_name), 'warning')
+            return redirect(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{reply.id}'))
+        else:
+            replies = post_replies(community, post.id, sort)
+            more_replies = defaultdict(list)
+            if post.cross_posts:
+                for cross_posted_post in Post.query.filter(Post.id.in_(post.cross_posts)):
+                    cross_posted_replies = post_replies(cross_posted_post.community, cross_posted_post.id, sort)
+                    if len(cross_posted_replies) and \
+                            post.community_id not in communities_banned_from(current_user.get_id()) and \
+                            post.community_id not in blocked_communities(current_user.get_id()) and \
+                            post.community.instance_id not in blocked_instances(current_user.get_id()):
+                        more_replies[cross_posted_post.community].extend(cross_posted_replies)
+            form.notify_author.data = True
 
-    mods = community_moderators(community.id)
-    is_moderator = community.is_moderator()
+        og_image = post.image.source_url if post.image_id else None
+        description = shorten_string(markdown_to_text(post.body), 150) if post.body else None
 
-    if community.private_mods:
-        mod_list = []
-    else:
-        mod_user_ids = [mod.user_id for mod in mods]
-        mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
-
-    # handle top-level comments/replies
-    form = NewReplyForm()
-    form.language_id.choices = languages_for_form()
-    if current_user.is_authenticated and current_user.verified and form.validate_on_submit():
-
-        try:
-            reply = make_reply(form, post, None, SRC_WEB)
-        except Exception as ex:
-            flash(_('Your reply was not accepted because %(reason)s', reason=str(ex)), 'error')
-            return redirect(url_for('activitypub.post_ap', post_id=post_id))
-
-        return redirect(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{reply.id}'))
-    else:
-        replies = post_replies(community, post.id, sort)
-        more_replies = defaultdict(list)
-        if post.cross_posts:
-            for cross_posted_post in Post.query.filter(Post.id.in_(post.cross_posts)):
-                cross_posted_replies = post_replies(cross_posted_post.community, cross_posted_post.id, sort)
-                if len(cross_posted_replies) and \
-                        post.community_id not in communities_banned_from(current_user.get_id()) and \
-                        post.community_id not in blocked_communities(current_user.get_id()) and \
-                        post.community.instance_id not in blocked_instances(current_user.get_id()):
-                    more_replies[cross_posted_post.community].extend(cross_posted_replies)
-        form.notify_author.data = True
-
-    og_image = post.image.source_url if post.image_id else None
-    description = shorten_string(markdown_to_text(post.body), 150) if post.body else None
-
-    # Breadcrumbs
-    breadcrumbs = []
-    breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
-    breadcrumb.text = _('Home')
-    breadcrumb.url = '/'
-    breadcrumbs.append(breadcrumb)
-
-    if community.topic_id:
-        related_communities = Community.query.filter_by(topic_id=community.topic_id).\
-            filter(Community.id != community.id, Community.banned == False).order_by(Community.name)
-        topics = []
-        previous_topic = Topic.query.get(community.topic_id)
-        topics.append(previous_topic)
-        while previous_topic.parent_id:
-            topic = Topic.query.get(previous_topic.parent_id)
-            topics.append(topic)
-            previous_topic = topic
-        topics = list(reversed(topics))
-
+        # Breadcrumbs
+        breadcrumbs = []
         breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
-        breadcrumb.text = _('Topics')
-        breadcrumb.url = '/topics'
+        breadcrumb.text = _('Home')
+        breadcrumb.url = '/'
         breadcrumbs.append(breadcrumb)
 
-        existing_url = '/topic'
-        for topic in topics:
+        if community.topic_id:
+            related_communities = Community.query.filter_by(topic_id=community.topic_id).\
+                filter(Community.id != community.id, Community.banned == False).order_by(Community.name)
+            topics = []
+            previous_topic = Topic.query.get(community.topic_id)
+            topics.append(previous_topic)
+            while previous_topic.parent_id:
+                topic = Topic.query.get(previous_topic.parent_id)
+                topics.append(topic)
+                previous_topic = topic
+            topics = list(reversed(topics))
+
             breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
-            breadcrumb.text = topic.name
-            breadcrumb.url = f"{existing_url}/{topic.machine_name}"
+            breadcrumb.text = _('Topics')
+            breadcrumb.url = '/topics'
             breadcrumbs.append(breadcrumb)
-            existing_url = breadcrumb.url
-    else:
-        related_communities = []
-        breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
-        breadcrumb.text = _('Communities')
-        breadcrumb.url = '/communities'
-        breadcrumbs.append(breadcrumb)
 
-    # Voting history
-    if current_user.is_authenticated:
-        recently_upvoted = recently_upvoted_posts(current_user.id)
-        recently_downvoted = recently_downvoted_posts(current_user.id)
-        recently_upvoted_replies = recently_upvoted_post_replies(current_user.id)
-        recently_downvoted_replies = recently_downvoted_post_replies(current_user.id)
-        reply_collapse_threshold = current_user.reply_collapse_threshold if current_user.reply_collapse_threshold else -1000
-    else:
-        recently_upvoted = []
-        recently_downvoted = []
-        recently_upvoted_replies = []
-        recently_downvoted_replies = []
-        reply_collapse_threshold = -10
+            existing_url = '/topic'
+            for topic in topics:
+                breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+                breadcrumb.text = topic.name
+                breadcrumb.url = f"{existing_url}/{topic.machine_name}"
+                breadcrumbs.append(breadcrumb)
+                existing_url = breadcrumb.url
+        else:
+            related_communities = []
+            breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+            breadcrumb.text = _('Communities')
+            breadcrumb.url = '/communities'
+            breadcrumbs.append(breadcrumb)
 
-    # Polls
-    poll_form = False
-    poll_results = False
-    poll_choices = []
-    poll_data = None
-    poll_total_votes = 0
-    if post.type == POST_TYPE_POLL:
-        poll_data = Poll.query.get(post.id)
-        if poll_data:
-            poll_choices = PollChoice.query.filter_by(post_id=post.id).order_by(PollChoice.sort_order).all()
-            poll_total_votes = poll_data.total_votes()
-            # Show poll results to everyone after the poll finishes, to the poll creator and to those who have voted
-            if (current_user.is_authenticated and (poll_data.has_voted(current_user.id))) \
-                    or poll_data.end_poll < datetime.utcnow():
-                poll_results = True
-            else:
-                poll_form = True
+        # Voting history
+        if current_user.is_authenticated:
+            recently_upvoted = recently_upvoted_posts(current_user.id)
+            recently_downvoted = recently_downvoted_posts(current_user.id)
+            recently_upvoted_replies = recently_upvoted_post_replies(current_user.id)
+            recently_downvoted_replies = recently_downvoted_post_replies(current_user.id)
+            reply_collapse_threshold = current_user.reply_collapse_threshold if current_user.reply_collapse_threshold else -1000
+        else:
+            recently_upvoted = []
+            recently_downvoted = []
+            recently_upvoted_replies = []
+            recently_downvoted_replies = []
+            reply_collapse_threshold = -10
 
-    # Archive.ph link
-    archive_link = None
-    if post.type == POST_TYPE_LINK and body_has_no_archive_link(post.body_html) and url_needs_archive(post.url):
-        archive_link = generate_archive_link(post.url)
+        # Polls
+        poll_form = False
+        poll_results = False
+        poll_choices = []
+        poll_data = None
+        poll_total_votes = 0
+        if post.type == POST_TYPE_POLL:
+            poll_data = Poll.query.get(post.id)
+            if poll_data:
+                poll_choices = PollChoice.query.filter_by(post_id=post.id).order_by(PollChoice.sort_order).all()
+                poll_total_votes = poll_data.total_votes()
+                # Show poll results to everyone after the poll finishes, to the poll creator and to those who have voted
+                if (current_user.is_authenticated and (poll_data.has_voted(current_user.id))) \
+                        or poll_data.end_poll < datetime.utcnow():
+                    poll_results = True
+                else:
+                    poll_form = True
 
-    # for logged in users who have the 'hide read posts' function enabled
-    # mark this post as read
-    if current_user.is_authenticated:
-        user = current_user
-        if current_user.hide_read_posts:
-            current_user.mark_post_as_read(post)
-            db.session.commit()
-    else:
-        user = None
+        # Archive.ph link
+        archive_link = None
+        if post.type == POST_TYPE_LINK and body_has_no_archive_link(post.body_html) and url_needs_archive(post.url):
+            archive_link = generate_archive_link(post.url)
 
-    response = render_template('post/post.html', title=post.title, post=post, is_moderator=is_moderator, is_owner=community.is_owner(),
-                           community=post.community,
-                           breadcrumbs=breadcrumbs, related_communities=related_communities, mods=mod_list,
-                           poll_form=poll_form, poll_results=poll_results, poll_data=poll_data, poll_choices=poll_choices, poll_total_votes=poll_total_votes,
-                           canonical=post.ap_id, form=form, replies=replies, more_replies=more_replies,
-                           THREAD_CUTOFF_DEPTH=constants.THREAD_CUTOFF_DEPTH,
-                           description=description, og_image=og_image,
-                           autoplay=request.args.get('autoplay', False), archive_link=archive_link,
-                           noindex=not post.author.indexable, preconnect=post.url if post.url else None,
-                           recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
-                           recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies,
-                           reply_collapse_threshold=reply_collapse_threshold,
-                           etag=f"{post.id}{sort}_{hash(post.last_active)}", markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
-                           can_upvote_here=can_upvote(user, community),
-                           can_downvote_here=can_downvote(user, community, g.site),
-                           low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site,
-                           inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
-    response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
-    response.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/post/{post.id}>; rel="alternate"; type="application/activity+json"')
-    return response
+        # for logged in users who have the 'hide read posts' function enabled
+        # mark this post as read
+        if current_user.is_authenticated:
+            user = current_user
+            if current_user.hide_read_posts:
+                current_user.mark_post_as_read(post)
+                db.session.commit()
+        else:
+            user = None
+
+        response = render_template('post/post.html', title=post.title, post=post, is_moderator=is_moderator, is_owner=community.is_owner(),
+                               community=post.community,
+                               breadcrumbs=breadcrumbs, related_communities=related_communities, mods=mod_list,
+                               poll_form=poll_form, poll_results=poll_results, poll_data=poll_data, poll_choices=poll_choices, poll_total_votes=poll_total_votes,
+                               canonical=post.ap_id, form=form, replies=replies, more_replies=more_replies,
+                               THREAD_CUTOFF_DEPTH=constants.THREAD_CUTOFF_DEPTH,
+                               description=description, og_image=og_image,
+                               autoplay=request.args.get('autoplay', False), archive_link=archive_link,
+                               noindex=not post.author.indexable, preconnect=post.url if post.url else None,
+                               recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
+                               recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies,
+                               reply_collapse_threshold=reply_collapse_threshold,
+                               etag=f"{post.id}{sort}_{hash(post.last_active)}", markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
+                               can_upvote_here=can_upvote(user, community),
+                               can_downvote_here=can_downvote(user, community, g.site),
+                               low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
+                               moderating_communities=moderating_communities(current_user.get_id()),
+                               joined_communities=joined_communities(current_user.get_id()),
+                               menu_topics=menu_topics(), site=g.site,
+                               inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                               menu_instance_feeds=menu_instance_feeds(),
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                               menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                               )
+        response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
+        response.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/post/{post.id}>; rel="alternate"; type="application/activity+json"')
+        return response
 
 
 @bp.route('/post/<int:post_id>/<vote_direction>', methods=['GET', 'POST'])
