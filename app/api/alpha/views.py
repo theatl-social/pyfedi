@@ -237,14 +237,13 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
         return v5
 
 
-# would be better to incrementally add to a post_reply.path field
-@cache.memoize(timeout=86400)
+# emergency function - shouldn't be called in normal circumstances
 def calculate_path(reply):
-    path = "0." + str(reply.id)
+    path = [0, reply.id]
     if reply.depth == 1:
-        path = "0." + str(reply.parent_id) + "." + str(reply.id)
+        path = [0, reply.parent_id, reply.id]
     elif reply.depth > 1:
-        path = "0"
+        path = [0]
         parent_id = reply.parent_id
         depth = reply.depth - 1
         path_ids = [reply.id, reply.parent_id]
@@ -254,8 +253,9 @@ def calculate_path(reply):
             parent_id = pid
             depth -= 1
         for pid in path_ids[::-1]:
-            path += "." + str(pid)
-    return path
+            path.append(pid)
+    reply.path = path
+    db.session.commit()
 
 
 # would be better to incrementally add to a post_reply.child_count field (walk along .path, and ++ each one)
@@ -280,7 +280,9 @@ def reply_view(reply: PostReply | int, variant, user_id=None, my_vote=0, read=Fa
                    'distinguished': False,
                    'removed': False})
 
-        v1['path'] = calculate_path(reply)
+        if not reply.path:
+            calculate_path(reply)
+        v1['path'] = '.'.join(str(id) for id in reply.path)
         if reply.edited_at:
             v1['edited_at'] = reply.edited_at.isoformat() + 'Z'
         if reply.deleted == True:
