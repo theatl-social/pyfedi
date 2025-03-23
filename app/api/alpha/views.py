@@ -258,10 +258,11 @@ def calculate_path(reply):
     db.session.commit()
 
 
-# would be better to incrementally add to a post_reply.child_count field (walk along .path, and ++ each one)
-@cache.memoize(timeout=86400)
-def calculate_if_has_children(reply):    # result used as True / False
-    return db.session.execute(text('SELECT COUNT(id) AS c FROM "post_reply" WHERE parent_id = :id'), {'id': reply.id}).scalar()
+# emergency function - shouldn't be called in normal circumstances
+def calculate_child_count(reply):
+    child_count = db.session.execute(text('select count(id) as c from post_reply where :id = ANY(path) and id != :id and deleted = false'), {"id": reply.id}).scalar()
+    reply.child_count = child_count
+    db.session.commit()
 
 
 def reply_view(reply: PostReply | int, variant, user_id=None, my_vote=0, read=False):
@@ -295,8 +296,10 @@ def reply_view(reply: PostReply | int, variant, user_id=None, my_vote=0, read=Fa
     # Variant 2 - views/comment_view.dart - /comment/list api endpoint
     if variant == 2:
         # counts - models/comment/comment_aggregates.dart
+        if not reply.child_count:
+            calculate_child_count(reply)
         counts = {'comment_id': reply.id, 'score': reply.score, 'upvotes': reply.up_votes, 'downvotes': reply.down_votes,
-                  'published': reply.posted_at.isoformat() + 'Z', 'child_count': 1 if calculate_if_has_children(reply) else 0}
+                  'published': reply.posted_at.isoformat() + 'Z', 'child_count': reply.child_count}
 
         bookmarked = db.session.execute(text('SELECT user_id FROM "post_reply_bookmark" WHERE post_reply_id = :post_reply_id and user_id = :user_id'), {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
         reply_sub = db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'), {'type': NOTIF_REPLY, 'entity_id': reply.id, 'user_id': user_id}).scalar()
