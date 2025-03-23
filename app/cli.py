@@ -616,6 +616,12 @@ def register(app):
 
             print('Done!')
 
+    @app.cli.command("populate_post_reply_for_api")
+    def populate_post_reply_for_api():
+        with app.app_context():
+            ...
+            print('Done!')
+
 
 def parse_communities(interests_source, segment):
     lines = interests_source.split("\n")
