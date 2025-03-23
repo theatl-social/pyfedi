@@ -2090,18 +2090,18 @@ form h5 {
 .render_username .author_link {
   display: inline-block;
 }
+.render_username .author_link + .user_preview {
+  position: absolute;
+  top: 17px;
+  left: 0;
+  background-color: white;
+  z-index: 20;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-9999px);
+  transition: opacity 0.3s ease-in, visibility 0s linear 1s;
+}
 @media (min-width: 1280px) {
-  .render_username .author_link + .user_preview {
-    position: absolute;
-    top: 17px;
-    left: 0;
-    background-color: white;
-    z-index: 20;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-9999px);
-    transition: opacity 0.3s ease-in, visibility 0s linear 1s;
-  }
   .render_username .author_link:hover + .user_preview,
   .render_username .user_preview:hover {
     visibility: visible;

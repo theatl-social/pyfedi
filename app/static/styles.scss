@@ -1790,8 +1790,7 @@ form {
     display: inline-block;
   }
 
-  @include breakpoint(laptop) {
-    .author_link + .user_preview {
+  .author_link + .user_preview {
       position: absolute;
       top: 17px;
       left: 0;
@@ -1801,8 +1800,9 @@ form {
       visibility: hidden;
       transform: translateY(-9999px); // Move off-screen when hidden
       transition: opacity 0.3s ease-in, visibility 0s linear 1s;
-    }
+  }
 
+  @include breakpoint(laptop) {
     .author_link:hover + .user_preview,
     .user_preview:hover {
       visibility: visible;
