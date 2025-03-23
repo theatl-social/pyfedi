@@ -92,6 +92,8 @@ def get_post_list(auth, data, user_id=None, search_type='Posts'):
         posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=1)).order_by(desc(Post.up_votes - Post.down_votes))
     elif sort == "New":
         posts = posts.order_by(desc(Post.posted_at))
+    elif sort == "Scaled":
+        posts = posts.order_by(desc(Post.ranking_scaled)).order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
     elif sort == "Active":
         posts = posts.order_by(desc(Post.last_active))
 
