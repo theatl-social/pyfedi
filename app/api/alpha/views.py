@@ -237,7 +237,6 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
         return v5
 
 
-# would be better to incrementally add to a post_reply.path field
 @cache.memoize(timeout=86400)
 def calculate_path(reply):
     path = "0." + str(reply.id)
@@ -258,13 +257,12 @@ def calculate_path(reply):
     return path
 
 
-# would be better to incrementally add to a post_reply.child_count field (walk along .path, and ++ each one)
 @cache.memoize(timeout=86400)
 def calculate_if_has_children(reply):    # result used as True / False
     return db.session.execute(text('SELECT COUNT(id) AS c FROM "post_reply" WHERE parent_id = :id'), {'id': reply.id}).scalar()
 
 
-def reply_view(reply: PostReply | int, variant, user_id=None, my_vote=0, read=False):
+def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, read=False):
     if isinstance(reply, int):
         reply = PostReply.query.filter_by(id=reply).one()
 
@@ -280,7 +278,7 @@ def reply_view(reply: PostReply | int, variant, user_id=None, my_vote=0, read=Fa
                    'distinguished': False,
                    'removed': False})
 
-        v1['path'] = calculate_path(reply)
+        v1['path'] = '.'.join(map(str, reply.path)) if reply.path else calculate_path(reply)
         if reply.edited_at:
             v1['edited_at'] = reply.edited_at.isoformat() + 'Z'
         if reply.deleted == True:
@@ -294,7 +292,7 @@ def reply_view(reply: PostReply | int, variant, user_id=None, my_vote=0, read=Fa
     if variant == 2:
         # counts - models/comment/comment_aggregates.dart
         counts = {'comment_id': reply.id, 'score': reply.score, 'upvotes': reply.up_votes, 'downvotes': reply.down_votes,
-                  'published': reply.posted_at.isoformat() + 'Z', 'child_count': 1 if calculate_if_has_children(reply) else 0}
+                  'published': reply.posted_at.isoformat() + 'Z', 'child_count': reply.child_count if reply.child_count is not None else 0}
 
         bookmarked = db.session.execute(text('SELECT user_id FROM "post_reply_bookmark" WHERE post_reply_id = :post_reply_id and user_id = :user_id'), {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
         reply_sub = db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'), {'type': NOTIF_REPLY, 'entity_id': reply.id, 'user_id': user_id}).scalar()

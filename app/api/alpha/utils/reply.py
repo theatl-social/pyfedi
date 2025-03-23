@@ -34,7 +34,7 @@ def get_reply_list(auth, data, user_id=None):
     elif post_id:
         replies = PostReply.query.filter(PostReply.post_id == post_id, PostReply.depth <= max_depth)
     elif parent_id:
-        replies = PostReply.query.filter(PostReply.parent_id == parent_id, PostReply.depth <= max_depth)
+        replies = PostReply.query.filter(or_(PostReply.parent_id == parent_id, PostReply.id == parent_id), PostReply.depth <= max_depth)
         page = 1
     elif person_id:
         replies = PostReply.query.filter_by(user_id=person_id)
@@ -58,10 +58,8 @@ def get_reply_list(auth, data, user_id=None):
 
     replylist = []
     for reply in replies:
-        try:
-            replylist.append(reply_view(reply=reply, variant=2, user_id=user_id))
-        except:
-            continue
+        replylist.append(reply_view(reply=reply, variant=2, user_id=user_id))
+
     list_json = {
         "comments": replylist
     }
