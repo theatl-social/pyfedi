@@ -12,7 +12,7 @@ from sqlalchemy import desc
 
 def get_post_list(auth, data, user_id=None, search_type='Posts'):
     type = data['type_'] if data and 'type_' in data else "All"
-    sort = data['sort'] if data and 'sort' in data else "Hot"
+    sort = data['sort'].lower() if data and 'sort' in data else "hot"
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 50
     liked_only = data['liked_only'] if data and 'liked_only' in data else 'false'
@@ -86,15 +86,15 @@ def get_post_list(auth, data, user_id=None, search_type='Posts'):
         upvoted_post_ids = recently_upvoted_posts(user_id)
         posts = posts.filter(Post.id.in_(upvoted_post_ids), Post.user_id != user_id)
 
-    if sort == "Hot":
+    if sort == "hot":
         posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
-    elif sort == "Top":
+    elif sort == "top":
         posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=1)).order_by(desc(Post.up_votes - Post.down_votes))
-    elif sort == "New":
+    elif sort == "new":
         posts = posts.order_by(desc(Post.posted_at))
-    elif sort == "Scaled":
+    elif sort == "scaled":
         posts = posts.order_by(desc(Post.ranking_scaled)).order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
-    elif sort == "Active":
+    elif sort == "active":
         posts = posts.order_by(desc(Post.last_active))
 
     posts = posts.paginate(page=page, per_page=limit, error_out=False)

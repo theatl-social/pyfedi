@@ -11,7 +11,7 @@ from sqlalchemy import desc, or_
 
 
 def get_reply_list(auth, data, user_id=None):
-    sort = data['sort'] if data and 'sort' in data else "New"
+    sort = data['sort'].lower() if data and 'sort' in data else "new"
     max_depth = data['max_depth'] if data and 'max_depth' in data else 8
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 10
@@ -47,11 +47,11 @@ def get_reply_list(auth, data, user_id=None):
         if blocked_instance_ids:
             replies = replies.filter(PostReply.instance_id.not_in(blocked_instance_ids))
 
-    if sort == "Hot":
+    if sort == "hot":
         replies = replies.order_by(desc(PostReply.ranking)).order_by(desc(PostReply.posted_at))
-    elif sort == "Top":
+    elif sort == "top":
         replies = replies.order_by(desc(PostReply.up_votes - PostReply.down_votes))
-    elif sort == "New":
+    elif sort == "new":
         replies = replies.order_by(desc(PostReply.posted_at))
 
     replies = replies.paginate(page=page, per_page=limit, error_out=False)
