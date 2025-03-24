@@ -2096,28 +2096,22 @@ form h5 {
   left: 0;
   background-color: white;
   z-index: 20;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-9999px);
-  transition: opacity 0.3s ease-in, visibility 0s linear 1s;
+  width: 320px;
 }
-@media (min-width: 1280px) {
-  .render_username .author_link:hover + .user_preview,
-  .render_username .user_preview:hover {
-    visibility: visible;
-    opacity: 1;
-    transform: translateY(0);
-    transition-delay: 1s, 0s;
-  }
-  .render_username .user_preview .card {
-    width: 300px;
-  }
-  .render_username .user_preview .card .preview_avatar_image {
-    max-width: 50%;
-  }
-  .render_username .user_preview .card .preview_avatar_image img {
-    max-width: 100%;
-  }
+.render_username .author_link + .user_preview:hover {
+  display: block !important;
+}
+.render_username .user_preview .card {
+  width: 300px;
+}
+.render_username .user_preview .card p {
+  font-size: 13px;
+}
+.render_username .user_preview .card .preview_avatar_image {
+  max-width: 50%;
+}
+.render_username .user_preview .card .preview_avatar_image img {
+  max-width: 100%;
 }
 
 #preview:has(p, a, h1, h2, h3, ul, ol) {

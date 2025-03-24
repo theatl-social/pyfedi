@@ -1791,38 +1791,34 @@ form {
   }
 
   .author_link + .user_preview {
-      position: absolute;
-      top: 17px;
-      left: 0;
-      background-color: white;
-      z-index: 20;
-      opacity: 0;
-      visibility: hidden;
-      transform: translateY(-9999px); // Move off-screen when hidden
-      transition: opacity 0.3s ease-in, visibility 0s linear 1s;
+    position: absolute;
+    top: 17px;
+    left: 0;
+    background-color: white;
+    z-index: 20;
+    width: 320px;
+
+    &:hover {
+      display: block!important;
+    }
   }
 
-  @include breakpoint(laptop) {
-    .author_link:hover + .user_preview,
-    .user_preview:hover {
-      visibility: visible;
-      opacity: 1;
-      transform: translateY(0); // Reset position when visible
-      transition-delay: 1s, 0s; // Delay opacity first, then remove visibility delay
+  .user_preview .card {
+    width: 300px;
+
+    p {
+      font-size: 13px;
     }
 
-    .user_preview .card {
-      width: 300px;
+    .preview_avatar_image {
+      max-width: 50%;
 
-      .preview_avatar_image {
-        max-width: 50%;
-
-        img {
-          max-width: 100%;
-        }
+      img {
+        max-width: 100%;
       }
     }
   }
+
 
 }
 

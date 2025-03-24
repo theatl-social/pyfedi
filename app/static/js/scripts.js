@@ -36,8 +36,30 @@ document.addEventListener("DOMContentLoaded", function () {
     setupPostTeaserHandler();
     setupPostTypeSwitcher();
     setupSelectNavigation();
+    setupUserPopup();
 });
 
+
+function setupUserPopup() {
+    document.querySelectorAll('.render_username .author_link').forEach(anchor => {
+        let timeoutId;
+
+        anchor.addEventListener('mouseover', function() {
+            timeoutId = setTimeout(function () {
+                anchor.nextElementSibling.classList.remove('d-none');
+            }, 1000);
+        });
+
+        anchor.addEventListener('mouseout', function() {
+            clearTimeout(timeoutId);
+
+            let userPreview = anchor.closest('.render_username').querySelector('.user_preview');
+            if (userPreview) {
+                userPreview.classList.add('d-none');
+            }
+        });
+    });
+}
 function setupPostTeaserHandler() {
     document.querySelectorAll('.post_teaser_clickable').forEach(div => {
         div.onclick = function() {
