@@ -52,7 +52,7 @@ def choose_topics():
             if form.chosen_topics.data:
                 for topic_id in form.chosen_topics.data:
                     join_topic(topic_id)
-                flash(_('You have joined some communities relating to those interests. Find them on the Topics menu or browse the home page.'))
+                flash(_('You have joined some communities relating to those interests. Find more on the Topics menu or browse the home page.'))
                 cache.delete_memoized(joined_communities, current_user.id)
                 return redirect(url_for('main.index'))
             else:

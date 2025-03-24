@@ -243,11 +243,11 @@ def verify_email(token):
             db.session.commit()
             if not user.waiting_for_approval() and user.private_key is None:    # only finalize user set up if this is a brand new user. People can also end up doing this process when they change their email address in which case we DO NOT want to reset their keys, etc!
                 finalize_user_setup(user)
-            else:
-                flash(_('Thank you for verifying your email address.'))
+            flash(_('Thank you for verifying your email address.'))
         else:
             flash(_('Email address validation failed.'), 'error')
             return redirect(url_for('main.index'))
+
         if user.waiting_for_approval():
             return redirect(url_for('auth.please_wait'))
         else:
