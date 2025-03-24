@@ -523,6 +523,22 @@ def shorten_url(input: str, max_length=20):
         ''
 
 
+def remove_images(html) -> str:
+    # Parse the HTML content
+    soup = BeautifulSoup(html, 'html.parser')
+
+    # Remove all <img> tags
+    for img in soup.find_all('img'):
+        img.decompose()
+
+    # Remove all <video> tags
+    for video in soup.find_all('video'):
+        video.decompose()
+
+    # Return the modified HTML
+    return str(soup)
+
+
 # the number of digits in a number. e.g. 1000 would be 4
 def digits(input: int) -> int:
     return len(shorten_number(input))
