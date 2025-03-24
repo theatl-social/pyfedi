@@ -30,7 +30,7 @@ sudo nano compose.yaml
 ```
 
 #### CREATE REQUIRED FOLDERS WITH REQUIRED PERMISSIONS
-- Replace <USERNAME> with account username
+- Replace `<USERNAME>` with account username
 ```bash
 sudo mkdir pgdata
 sudo chown -R <USERNAME>:<USERNAME> ./pgdata
@@ -73,7 +73,7 @@ sudo docker compose up -d
 sudo nano /etc/cron.d/piefed
 ```
 - Copy & Paste the text below
-- Replace <USERNAME> with account username
+- Replace `<USERNAME>` with account username
 ```
 5 2 * * * <USERNAME> docker exec piefed_app1 bash -c "cd /app && ./daily.sh"
 5 4 * * 1 <USERNAME> docker exec piefed_app1 bash -c "cd /app && ./remove_orphan_files.sh"
