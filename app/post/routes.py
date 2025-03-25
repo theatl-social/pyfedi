@@ -88,13 +88,16 @@ def show_post(post_id: int):
             replies = post_replies(community, post.id, sort)
             more_replies = defaultdict(list)
             if post.cross_posts:
+                cbf = communities_banned_from(current_user.get_id())
+                bc = blocked_communities(current_user.get_id())
+                bi = blocked_instances(current_user.get_id())
                 for cross_posted_post in Post.query.filter(Post.id.in_(post.cross_posts)):
-                    cross_posted_replies = post_replies(cross_posted_post.community, cross_posted_post.id, sort)
-                    if len(cross_posted_replies) and \
-                            post.community_id not in communities_banned_from(current_user.get_id()) and \
-                            post.community_id not in blocked_communities(current_user.get_id()) and \
-                            post.community.instance_id not in blocked_instances(current_user.get_id()):
-                        more_replies[cross_posted_post.community].extend(cross_posted_replies)
+                    if cross_posted_post.community_id not in cbf \
+                            and cross_posted_post.community_id not in bc \
+                            and cross_posted_post.community.instance_id not in bi:
+                        cross_posted_replies = post_replies(cross_posted_post.community, cross_posted_post.id, sort)
+                        if len(cross_posted_replies):
+                            more_replies[cross_posted_post.community].extend(cross_posted_replies)
             form.notify_author.data = True
 
         og_image = post.image.source_url if post.image_id else None

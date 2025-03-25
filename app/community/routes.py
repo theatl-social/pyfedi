@@ -29,7 +29,7 @@ from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, \
     File, PostVote, utcnow, Report, Notification, InstanceBlock, ActivityPubLog, Topic, Conversation, PostReply, \
     NotificationSubscription, UserFollower, Instance, Language, Poll, PollChoice, ModLog, CommunityWikiPage, \
-    CommunityWikiPageRevision, read_posts, Feed, FeedItem
+    CommunityWikiPageRevision, read_posts, Feed, FeedItem, CommunityBlock
 from app.community import bp
 from app.post.util import tags_to_string
 from app.shared.community import invite_with_chat, invite_with_email
@@ -1057,6 +1057,19 @@ def community_remove_moderator(community_id: int, user_id: int):
         return redirect(url_for('community.community_mod_list', community_id=community.id))
     else:
         abort(401)
+
+
+@bp.route('/community/<int:community_id>/block', methods=['GET', 'POST'])
+@login_required
+def community_block(community_id: int):
+    community = Community.query.get_or_404(community_id)
+    existing = CommunityBlock.query.filter_by(user_id=current_user.id, community_id=community_id).first()
+    if not existing:
+        db.session.add(CommunityBlock(user_id=current_user.id, community_id=community_id))
+        db.session.commit()
+        cache.delete_memoized(blocked_communities, current_user.id)
+    flash(_('Posts in %(name)s will be hidden.', name=community.display_name()))
+    return redirect(referrer())
 
 
 @bp.route('/community/<int:community_id>/block_instance', methods=['GET', 'POST'])
