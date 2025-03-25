@@ -226,6 +226,8 @@ def post_alpha_post():
             auth = request.headers.get('Authorization')
             data = request.get_json(force=True) or {}
             return jsonify(post_post(auth, data))
+    except RateLimitExceeded as ex:
+        return jsonify({"error": str(ex)}), 429
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
@@ -360,6 +362,8 @@ def post_alpha_comment():
             auth = request.headers.get('Authorization')
             data = request.get_json(force=True) or {}
             return jsonify(post_reply(auth, data))
+    except RateLimitExceeded as ex:
+        return jsonify({"error": str(ex)}), 429
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
