@@ -1341,6 +1341,8 @@ class Post(db.Model):
                 post.type = constants.POST_TYPE_VIDEO
             else:
                 post.type = constants.POST_TYPE_LINK
+            if 'blogspot.com' in post.url:
+                return None
             domain = domain_from_url(post.url)
             # notify about links to banned websites.
             already_notified = set()  # often admins and mods are the same people - avoid notifying them twice

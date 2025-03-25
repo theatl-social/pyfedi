@@ -139,6 +139,9 @@ class CreateLinkForm(CreatePostForm):
                                       'hx-target': '#urlUsed'})
 
     def validate(self, extra_validators=None) -> bool:
+        if 'blogspot.com' in self.link_url.data:
+            self.link_url.errors.append(_l("Links to %(domain)s are not allowed.", domain='blogspot.com'))
+            return False
         domain = domain_from_url(self.link_url.data, create=False)
         if domain and domain.banned:
             self.link_url.errors.append(_l("Links to %(domain)s are not allowed.", domain=domain.name))
