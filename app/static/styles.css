@@ -1543,6 +1543,10 @@ time {
   display: inline-block;
 }
 
+.white-space-normal {
+  white-space: normal;
+}
+
 .hide-labels label {
   display: none;
 }
