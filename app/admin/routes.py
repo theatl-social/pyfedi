@@ -1489,7 +1489,12 @@ def admin_user_delete(user_id):
     db.session.commit()
 
     if user.is_local():
-        unsubscribe_from_everything_then_delete(user.id)
+        if user.private_key is not None:    # They have a private key once the registration is fully completed
+            unsubscribe_from_everything_then_delete(user.id)
+        else:                               # Non-finalized users can just be deleted as they will not have been federated anywhere.
+            user.deleted = True
+            user.delete_dependencies()
+            db.session.commit()
     else:
         user.deleted = True
         user.delete_dependencies()
