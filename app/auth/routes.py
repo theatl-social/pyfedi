@@ -121,11 +121,20 @@ def register():
                     resp = make_response(redirect(url_for('auth.please_wait')))
                     resp.set_cookie('sesion', '17489047567495', expires=datetime(year=2099, month=12, day=30))
                     return resp
+
                 for referrer in blocked_referrers():
                     if referrer in session.get('Referer', ''):
                         resp = make_response(redirect(url_for('auth.please_wait')))
                         resp.set_cookie('sesion', '17489047567495', expires=datetime(year=2099, month=12, day=30))
                         return resp
+
+                # Country-based registration blocking
+                ip_address_info = ip2location(ip_address())
+                if ip_address_info and ip_address_info['country']:
+                    for country_code in get_setting('auto_decline_countries', '').split('\n'):
+                        if country_code and country_code.strip().upper() == ip_address_info['country'].upper():
+                            return redirect(url_for('auth.please_wait'))
+
                 verification_token = random_token(16)
                 form.user_name.data = form.user_name.data.strip()
                 before_normalize = form.user_name.data
@@ -137,7 +146,6 @@ def register():
                             banned=user_ip_banned() or user_cookie_banned(), email_unread_sent=False,
                             referrer=session.get('Referer', ''), alt_user_name=gibberish(randint(8, 20)))
                 user.set_password(form.password.data)
-                ip_address_info = ip2location(user.ip_address)
                 user.ip_address_country = ip_address_info['country'] if ip_address_info else ''
                 if get_setting('email_verification', True):
                     user.verified = False

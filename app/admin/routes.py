@@ -32,7 +32,7 @@ from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
     topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents, \
-    download_defeds, instance_banned, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds
+    download_defeds, instance_banned, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, referrer
 from app.admin import bp
 
 
@@ -162,6 +162,7 @@ def admin_misc():
         site.registration_mode = form.registration_mode.data
         site.application_question = form.application_question.data
         site.auto_decline_referrers = form.auto_decline_referrers.data
+        set_setting('auto_decline_countries', form.auto_decline_countries.data.strip())
         site.log_activitypub_json = form.log_activitypub_json.data
         site.show_inoculation_block = form.show_inoculation_block.data
         site.updated = utcnow()
@@ -187,6 +188,7 @@ def admin_misc():
         form.registration_mode.data = site.registration_mode
         form.application_question.data = site.application_question
         form.auto_decline_referrers.data = site.auto_decline_referrers
+        form.auto_decline_countries.data = get_setting('auto_decline_countries', '')
         form.log_activitypub_json.data = site.log_activitypub_json
         form.show_inoculation_block.data = site.show_inoculation_block
         form.default_theme.data = site.default_theme if site.default_theme is not None else ''
@@ -1496,7 +1498,7 @@ def admin_user_delete(user_id):
         add_to_modlog('delete_user', link_text=user.display_name(), link=user.link())
 
     flash(_('User deleted'))
-    return redirect(url_for('admin.admin_users'))
+    return redirect(referrer())
 
 
 @bp.route('/reports', methods=['GET'])
