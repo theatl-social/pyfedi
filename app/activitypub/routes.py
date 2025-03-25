@@ -837,17 +837,22 @@ def process_inbox_request(request_json, store_ap_json):
             if community:
                 join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
                 if join_request:
-                    existing_membership = CommunityMember.query.filter_by(user_id=join_request.user_id, community_id=join_request.community_id).first()
-                    if not existing_membership:
-                        # check if the join request was a result of a feed join
-                        joined_via_feed = join_request.joined_via_feed
-                        member = CommunityMember(user_id=join_request.user_id, community_id=join_request.community_id, joined_via_feed=joined_via_feed)
-                        db.session.add(member)
-                        community.subscriptions_count += 1
-                        community.last_active = utcnow()
-                        db.session.commit()
-                        cache.delete_memoized(community_membership, user, community)
-                    log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json)
+                    try:
+                        existing_membership = CommunityMember.query.filter_by(user_id=join_request.user_id, community_id=join_request.community_id).first()
+                        if not existing_membership:
+                            # check if the join request was a result of a feed join
+                            joined_via_feed = join_request.joined_via_feed
+                            member = CommunityMember(user_id=join_request.user_id, community_id=join_request.community_id, joined_via_feed=joined_via_feed)
+                            db.session.add(member)
+                            community.subscriptions_count += 1
+                            community.last_active = utcnow()
+                            db.session.commit()
+                            cache.delete_memoized(community_membership, user, community)
+                        log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json)
+                    except IntegrityError:
+                        db.session.rollback()
+                        # Membership already exists, just log success and continue
+                        log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json, "Membership already exists")
             elif feed:
                 join_request = FeedJoinRequest.query.filter_by(user_id=user.id, feed_id=feed.id).first()
                 if join_request:
