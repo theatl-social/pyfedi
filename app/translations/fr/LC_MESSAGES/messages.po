@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: piefed\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-03-17 20:26+1300\n"
-"PO-Revision-Date: 2025-03-24 19:47+0000\n"
+"PO-Revision-Date: 2025-03-25 21:18+0000\n"
 "Last-Translator: snoopy <snoopy@zaclys.net>\n"
 "Language-Team: French <http://translate.piefed.social/projects/piefed/"
 "main-web-app/fr/>\n"
@@ -3265,7 +3265,6 @@ msgid "How many times we failed to send (reset to 0 after every successful send)
 msgstr "Nombre d'échec d'envoie (remis à 0 après chaque envoie réussis)"
 
 #: app/templates/admin/instances.html:75 app/templates/admin/instances.html:100
-#, fuzzy
 msgid "Failed"
 msgstr "Échec"
 
@@ -3285,9 +3284,8 @@ msgid "Yes"
 msgstr "Oui"
 
 #: app/templates/admin/instances.html:98 app/templates/admin/users.html:88
-#, fuzzy
 msgid "Last Seen"
-msgstr "Dernière fois vu"
+msgstr "Vu pour la dernière fois"
 
 #: app/templates/admin/site.html:19
 msgid ""
@@ -3599,7 +3597,6 @@ msgstr "À propos de la communauté"
 
 #: app/templates/community/_community_nav.html:37
 #: app/templates/feed/_feed_nav.html:35
-#, fuzzy
 msgid "Sort by top"
 msgstr "Trier par Meilleur"
 
@@ -4542,7 +4539,6 @@ msgstr "Supprimer le favori"
 
 #: app/templates/post/post_options.html:38
 #: app/templates/post/post_reply_options.html:26
-#, fuzzy
 msgid "Bookmark"
 msgstr "Favori"
 
@@ -4836,7 +4832,6 @@ msgid "Newest posts"
 msgstr "Dernières publications"
 
 #: app/templates/user/_read_posts_nav.html:3
-#, fuzzy
 msgid "Newest"
 msgstr "Nouveau"
 
@@ -4845,7 +4840,6 @@ msgid "Oldest posts"
 msgstr "Anciennes publications"
 
 #: app/templates/user/_read_posts_nav.html:6
-#, fuzzy
 msgid "Oldest"
 msgstr "Ancien"
 
@@ -5484,7 +5478,6 @@ msgid "Reply collapse threshold"
 msgstr "Seuil de réduction de la réponse"
 
 #: app/user/forms.py:50 app/user/forms.py:129
-#, fuzzy
 msgid "Reply hide threshold"
 msgstr "Seuil de masquage de la réponse"
 
