@@ -124,7 +124,7 @@ class CreatePostForm(FlaskForm):
     nsfl = BooleanField(_l('Gore/gross'))
     notify_author = BooleanField(_l('Notify about replies'))
     language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
-    submit = SubmitField(_l('Save'))
+    submit = SubmitField(_l('Publish'))
 
 
 class CreateDiscussionForm(CreatePostForm):
