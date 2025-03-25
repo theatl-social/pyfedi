@@ -24,7 +24,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0):
                         'language_id': post.language_id if post.language_id else 0,
                         'removed': post.deleted,
                         'locked': not post.comments_enabled})
-        if post.body and not stub:
+        if post.body:
             v1['body'] = post.body
         if post.edited_at:
             v1['edited_at'] = post.edited_at.isoformat() + 'Z'
