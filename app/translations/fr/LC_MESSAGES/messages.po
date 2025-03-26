@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: piefed\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-03-17 20:26+1300\n"
-"PO-Revision-Date: 2025-03-25 21:18+0000\n"
+"PO-Revision-Date: 2025-03-26 00:10+0000\n"
 "Last-Translator: snoopy <snoopy@zaclys.net>\n"
 "Language-Team: French <http://translate.piefed.social/projects/piefed/"
 "main-web-app/fr/>\n"
@@ -179,7 +179,7 @@ msgstr "Adresse courriel de contact de l'instance"
 #: app/feed/forms.py:57 app/templates/admin/permissions.html:36
 #: app/user/forms.py:144
 msgid "Save"
-msgstr "Enregistrer"
+msgstr "Publier"
 
 #: app/admin/forms.py:27
 msgid "Enable downvotes"
