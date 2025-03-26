@@ -1,18 +1,18 @@
-
 msgid ""
 msgstr ""
-"Project-Id-Version:  piefed\n"
+"Project-Id-Version: piefed\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-03-26 10:17+1300\n"
+"POT-Creation-Date: 2025-03-17 20:26+1300\n"
 "PO-Revision-Date: 2025-03-21 03:54+0000\n"
 "Last-Translator: Weblate Admin <rimu@rimu.geek.nz>\n"
+"Language-Team: German <http://translate.piefed.social/projects/piefed/"
+"main-web-app/de/>\n"
 "Language: de\n"
-"Language-Team: German <http://translate.piefed.social/projects/piefed"
-"/main-web-app/de/>\n"
-"Plural-Forms: nplurals=2; plural=n != 1;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 5.10.4\n"
 "Generated-By: Babel 2.12.1\n"
 
 #: app/__init__.py:42
@@ -23,13 +23,10 @@ msgstr "Bitte melden dich an, um auf diese Seite zuzugreifen."
 msgid "[PieFed] You have unread notifications"
 msgstr "[PieFed] Du hast ungelesene Benachrichtigungen"
 
-#: app/cli.py:534 app/post/routes.py:1445 app/shared/post.py:128
 #, python-format
 msgid "Replies to my post %(post_title)s"
 msgstr "Melde \"%(post_title)s\""
 
-#: app/cli.py:543 app/models.py:1862 app/post/routes.py:1467
-#: app/shared/reply.py:122
 #, python-format
 msgid "Replies to my comment on %(post_title)s"
 msgstr "Optionen für Kommentar zu \"%(post_title)s\""
@@ -50,7 +47,6 @@ msgstr "Deine Bewerbung wurde genehmigt - Willkommen bei PieFed"
 msgid "Welcome to PieFed"
 msgstr "Willkommen bei PieFed"
 
-#: app/models.py:2424
 msgid "Added moderator"
 msgstr "Moderator hinzufügen"
 
@@ -64,11 +60,10 @@ msgstr "Moderator hinzufügen"
 msgid "Featured post"
 msgstr "Beitrag erstellen"
 
-#: app/models.py:2427
 msgid "Unfeatured post"
 msgstr "Beitrag erstellen"
 
-#: app/models.py:2428
+
 #, fuzzy
 msgid "Deleted post"
 msgstr "Beitrag erstellen"
@@ -4698,6 +4693,7 @@ msgstr "Kommentare mit den meisten Upvotes"
 msgid "Show newest first"
 msgstr "Zeige neueste zuerst"
 
+<<<<<<< HEAD
 #: app/templates/post/post.html:86
 #, fuzzy
 msgid "Comments from other communities"
@@ -4718,7 +4714,6 @@ msgstr "Kommentaroptionen"
 msgid "Block community %(community_name)s"
 msgstr "%(community_name)s bearbeiten"
 
-#: app/templates/post/post_cross_post.html:12
 #, python-format
 msgid "Cross-post %(post_name)s"
 msgstr "Optionen für \"%(post_name)s\""
@@ -5983,7 +5978,6 @@ msgstr ""
 msgid "Banned user with role permissions."
 msgstr ""
 
-#: app/user/routes.py:559
 #, python-format
 msgid "%(actor)s has been banned."
 msgstr "%(actor)s wurde gesperrt."
@@ -5992,22 +5986,18 @@ msgstr "%(actor)s wurde gesperrt."
 msgid "You cannot unban yourself."
 msgstr "Du kannst dich nicht selbst entbannen."
 
-#: app/user/routes.py:586
 #, python-format
 msgid "%(actor)s has been unbanned."
 msgstr "%(actor)s wurde gesperrt."
 
-#: app/user/routes.py:619
 #, python-format
 msgid "%(actor)s has been blocked."
 msgstr "%(actor)s wurde blockiert."
 
-#: app/user/routes.py:637
 #, fuzzy
 msgid "You cannot block your instance."
 msgstr "Du kannst dich nicht selbst blockieren."
 
-#: app/user/routes.py:671
 #, python-format
 msgid "%(actor)s has been unblocked."
 msgstr "%(actor)s wurde blockiert."
@@ -6049,7 +6039,6 @@ msgstr ""
 msgid "%(actor)s has been deleted."
 msgstr "Dieser Benutzer wurde gelöscht."
 
-#: app/user/routes.py:773
 #, python-format
 msgid "%(community_name)s has been unblocked."
 msgstr "%(community_name)s wurde blockiert."
@@ -6081,7 +6070,6 @@ msgid ""
 "might take a few minutes."
 msgstr ""
 
-#: app/user/routes.py:890
 #, python-format
 msgid "%(actor)s has been banned, deleted and all their content deleted."
 msgstr "%(actor)s wurde für alle Benutzer gesperrt und alle Inhalte gelöscht."
@@ -6144,157 +6132,6 @@ msgstr ""
 
 #~ msgid "Allow search engines to index this profile"
 #~ msgstr "Suchmaschinen erlauben, dieses Profil zu indizieren"
-
-#~ msgid "Title is required."
-#~ msgstr "Titel ist erforderlich."
-
-#~ msgid "URL is required."
-#~ msgstr "URL ist erforderlich."
-
-#~ msgid "File is required."
-#~ msgstr "Datei ist erforderlich."
-
-#~ msgid "Poll not implemented yet."
-#~ msgstr "Umfrage noch nicht implementiert."
-
-#~ msgid "Crush"
-#~ msgstr "Zerkleinern"
-
-#~ msgid ""
-#~ "This post is hosted on lemmy.ml "
-#~ "which will ban you for saying "
-#~ "anything negative about China, Russia or"
-#~ " Putin. Tread carefully."
-#~ msgstr ""
-#~ "Dieser Beitrag wird auf lemmy.ml "
-#~ "gehostet, wo du möglicherweise gesperrt "
-#~ "wirst, falls du etwas Negatives über "
-#~ "China, Russland oder Putin sagst. "
-#~ "Vorsicht ist geboten."
-
-#~ msgid "Unsubscribe"
-#~ msgstr "Kündigen"
-
-#~ msgid "Subscribe"
-#~ msgstr "Abonnieren"
-
-#~ msgid ""
-#~ "There was a problem while trying "
-#~ "to communicate with remote server. If"
-#~ " other people have already joined "
-#~ "this community it won't matter."
-#~ msgstr ""
-#~ "Es gab ein Problem beim Versuch, "
-#~ "mit einem entfernten Server zu "
-#~ "kommunizieren. Wenn andere Personen dieser "
-#~ "Community bereits beigetreten sind, spielt "
-#~ "es keine Rolle."
-
-#~ msgid "Add poll to community"
-#~ msgstr "Beitrag zur Community hinzufügen"
-
-#~ msgid "We have upvoted the post for you."
-#~ msgstr "Gemeldet. Prüfen Sie den Beitrag auf Probleme."
-
-#~ msgid ""
-#~ "You have already upvoted the post, "
-#~ "you do not need to say \"this\""
-#~ " also."
-#~ msgstr ""
-
-#~ msgid "Communities - no topic"
-#~ msgstr "Communities auf diesem Server"
-
-#~ msgid "About community"
-#~ msgstr "Über diese Community"
-
-#~ msgid "Go to community"
-#~ msgstr "Gehe zur Community"
-
-#~ msgid "Settings & Moderation"
-#~ msgstr "Moderation"
-
-#~ msgid "View context"
-#~ msgstr "Kontext anzeigen"
-
-#~ msgid "By default, sort posts by"
-#~ msgstr "Sortiere standardmäßig Beiträge nach"
-
-#~ msgid "Discard all posts and comments with these phrases (one per line)"
-#~ msgstr ""
-
-#~ msgid "Problematic users"
-#~ msgstr "Problematische Benutzer"
-
-#~ msgid "Your post to %(name)s has been made."
-#~ msgstr "Dein Beitrag bei %(name)s wurde erstellt."
-
-#~ msgid "This type of comment is not accepted, sorry."
-#~ msgstr "Diese Art von Kommentar wird nicht akzeptiert, sorry."
-
-#~ msgid "We have upvoted the comment for you."
-#~ msgstr "Gemeldet. Überprüfen Sie den Kommentar auf Probleme."
-
-#~ msgid ""
-#~ "You have already upvoted the comment,"
-#~ " you do not need to say "
-#~ "\"this\" also."
-#~ msgstr ""
-
-#~ msgid "You have been mentioned in a comment"
-#~ msgstr "Du wurdest gebannt."
-
-#~ msgid "Edit profile & settings"
-#~ msgstr "Profil & Einstellungen bearbeiten"
-
-#~ msgid "Monitoring - users"
-#~ msgstr ""
-
-#~ msgid "Monitoring - content"
-#~ msgstr "Inhalt beibehalten"
-
-#~ msgid "Monitoring - spammy content"
-#~ msgstr ""
-
-#~ msgid "Light mode"
-#~ msgstr "Tagmodus"
-
-#~ msgid "Create local"
-#~ msgstr "Lokal erstellen"
-
-#~ msgid "Sort by reply count"
-#~ msgstr "Nach Antwortanzahl sortieren"
-
-#~ msgid "Watch"
-#~ msgstr "Beobachten"
-
-#~ msgid "Posts show on home page."
-#~ msgstr "Beiträge auf der Startseite anzeigen"
-
-#~ msgid "Deleted posts"
-#~ msgstr "Konto löschen"
-
-#~ msgid "No deleted posts."
-#~ msgstr "Beitrag gelöscht."
-
-#~ msgid "No deleted comments."
-#~ msgstr "Community löschen"
-
-#~ msgid "Most downvoted posts in the last 3 days"
-#~ msgstr "Die meisten negativen Bewertungen in den letzten 3 Tagen"
-
-#~ msgid "Options for conversation with \"%(member_names)s\""
-#~ msgstr "Optionen für die Unterhaltung mit \"%(member_names)s\""
-
-#~ msgid "When: "
-#~ msgstr "Wann: "
-
-#~ msgid "Cross-posts for \"%(post_title)s\""
-#~ msgstr "Optionen für \"%(post_title)s\""
-
-#~ msgid ""
-#~ "Posts to the same url have also"
-#~ " been created in the following "
 #~ "communities:"
 #~ msgstr ""
 
@@ -6316,4 +6153,3 @@ msgstr ""
 
 #~ msgid "Options for comment on \"%(post_title)s\""
 #~ msgstr "Optionen für Kommentar zu \"%(post_title)s\""
-
