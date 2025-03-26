@@ -88,10 +88,6 @@ div.navbar {
     --bs-card-border-color: #A27B5C;
 }
 /* POSTS */
-.post_body a, .comment_body a {
-    text-decoration: underline;
-    text-decoration-color: red;
-}
 .post_list .post_teaser {
     border-bottom: solid 1px black;
 }
