@@ -4774,6 +4774,7 @@ msgid ""
 "We will tell other websites (fediverse instances) that your account is "
 "gone. But it's up to them to decide what to do with any copies they have "
 "of your stuff. Some websites work differently than ours."
+msgstr ""
 
 #: app/templates/user/delete_account.html:23
 msgid ""
