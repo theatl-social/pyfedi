@@ -34,15 +34,10 @@ msgstr "[PieFed] لديك إشعارات غير مقروءة"
 msgid "Replies to my post %(post_title)s"
 msgstr "ردود لمنشوري %(post_title)s"
 
-<<<<<<< HEAD
-#: app/cli.py:543 app/models.py:1862 app/post/routes.py:1467
-#: app/shared/reply.py:122
-#, python-format
-=======
 #: app/cli.py:543 app/models.py:1844 app/post/routes.py:1454
 #: app/shared/reply.py:120
 #, fuzzy, python-format
->>>>>>> weblate/main
+
 msgid "Replies to my comment on %(post_title)s"
 msgstr "ردود على تعليقي حول %(post_title)s"
 

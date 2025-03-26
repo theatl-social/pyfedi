@@ -4693,7 +4693,6 @@ msgstr "Kommentare mit den meisten Upvotes"
 msgid "Show newest first"
 msgstr "Zeige neueste zuerst"
 
-<<<<<<< HEAD
 #: app/templates/post/post.html:86
 #, fuzzy
 msgid "Comments from other communities"
