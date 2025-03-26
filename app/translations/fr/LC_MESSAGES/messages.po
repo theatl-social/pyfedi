@@ -362,9 +362,6 @@ msgid "Communities must have at least this many active users in the past week."
 msgstr ""
 "Les communautés doivent avoir au moins ce nombre d'utilisateurices "
 "actives au cours de la semaine passée."
-=======
-"Rejeter toutes les publications et commentaires des utilisateur·ices avec "
-"ces phrases dans leur bio (une par ligne)"
 
 #: app/admin/forms.py:65 app/admin/forms.py:70
 msgid "Number of Communities to add"
