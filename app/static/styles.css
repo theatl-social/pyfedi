@@ -1219,6 +1219,9 @@ time {
   margin-right: 15px;
   opacity: 0.1;
 }
+.comments > .comment .comment_body p {
+  padding-right: 9px;
+}
 .comments > .comment:first-child {
   border-top: none;
   padding-top: 0;
