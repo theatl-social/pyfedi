@@ -1033,7 +1033,7 @@ class User(UserMixin, db.Model):
         if main_user_name:
             result = self.ap_public_url if self.ap_public_url else f"https://{current_app.config['SERVER_NAME']}/u/{self.user_name}"
         else:
-            result = f"https://{current_app.config['SERVER_NAME']}/u/{self.alt_user_name}"
+            result = f"https://{current_app.config['SERVER_NAME']}/u/{self.alt_user_name}" if self.alt_user_name else self.public_url(True)
         return result
 
     def created_recently(self):

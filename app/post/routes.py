@@ -225,14 +225,28 @@ def post_vote(post_id: int, vote_direction):
     undo = post.vote(current_user, vote_direction)
 
     if not post.community.local_only:
+        # Create two versions of action_json - one for public votes and one for private votes
         if undo:
-            action_json = {
-                'actor': current_user.public_url(not(post.community.instance.votes_are_public() and current_user.vote_privately())),
+            action_json_public = {
+                'actor': current_user.public_url(True),  # Public URL
                 'type': 'Undo',
                 'id': f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}",
                 'audience': post.community.public_url(),
                 'object': {
-                    'actor': current_user.public_url(not(post.community.instance.votes_are_public() and current_user.vote_privately())),
+                    'actor': current_user.public_url(True),  # Public URL
+                    'object': post.public_url(),
+                    'type': undo,
+                    'id': f"https://{current_app.config['SERVER_NAME']}/activities/{undo.lower()}/{gibberish(15)}",
+                    'audience': post.community.public_url()
+                }
+            }
+            action_json_private = {
+                'actor': current_user.public_url(False),  # Private URL
+                'type': 'Undo',
+                'id': f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}",
+                'audience': post.community.public_url(),
+                'object': {
+                    'actor': current_user.public_url(False),  # Private URL
                     'object': post.public_url(),
                     'type': undo,
                     'id': f"https://{current_app.config['SERVER_NAME']}/activities/{undo.lower()}/{gibberish(15)}",
@@ -241,15 +255,24 @@ def post_vote(post_id: int, vote_direction):
             }
         else:
             action_type = 'Like' if vote_direction == 'upvote' else 'Dislike'
-            action_json = {
-                'actor': current_user.public_url(not(post.community.instance.votes_are_public() and current_user.vote_privately())),
+            action_json_public = {
+                'actor': current_user.public_url(True),  # Public URL
                 'object': post.profile_id(),
                 'type': action_type,
                 'id': f"https://{current_app.config['SERVER_NAME']}/activities/{action_type.lower()}/{gibberish(15)}",
                 'audience': post.community.public_url()
             }
+            action_json_private = {
+                'actor': current_user.public_url(False),  # Private URL
+                'object': post.profile_id(),
+                'type': action_type,
+                'id': f"https://{current_app.config['SERVER_NAME']}/activities/{action_type.lower()}/{gibberish(15)}",
+                'audience': post.community.public_url()
+            }
+        
         if post.community.is_local():
-            announce = {
+            # Create two versions of the announce - one for public votes and one for private votes
+            announce_public = {
                     "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
                     "type": 'Announce',
                     "to": [
@@ -260,18 +283,46 @@ def post_vote(post_id: int, vote_direction):
                         post.community.ap_followers_url
                     ],
                     '@context': default_context(),
-                    'object': action_json
+                    'object': action_json_public
             }
+            announce_private = {
+                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+                    "type": 'Announce',
+                    "to": [
+                        "https://www.w3.org/ns/activitystreams#Public"
+                    ],
+                    "actor": post.community.public_url(),
+                    "cc": [
+                        post.community.ap_followers_url
+                    ],
+                    '@context': default_context(),
+                    'object': action_json_private
+            }
+            
             for instance in post.community.following_instances():
                 if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
-                    send_to_remote_instance(instance.id, post.community.id, announce)
-        else:
+                    # Send the appropriate announce based on whether votes should be private for this instance
+                    if instance.votes_are_public() and current_user.vote_privately():
+                        send_to_remote_instance(instance.id, post.community.id, announce_private)
+                    else:
+                        send_to_remote_instance(instance.id, post.community.id, announce_public)
+        else:   # Send to remote community
             inbox = post.community.ap_inbox_url
             if (post.community.ap_domain and post.author.ap_inbox_url and                    # sanity check these fields aren't null
                 post.community.ap_domain == 'a.gup.pe' and vote_direction == 'upvote'):      # send upvotes to post author's instance instead of a.gup.pe (who reject them)
                 inbox = post.author.ap_inbox_url
-            post_request_in_background(inbox, action_json, current_user.private_key,
-                                       current_user.public_url(not(post.community.instance.votes_are_public() and current_user.vote_privately())) + '#main-key')
+                
+            # Use the correct action_json and public_url based on whether votes should be private
+            if post.community.instance.votes_are_public() and current_user.vote_privately():
+                # Private voting
+                action_json = action_json_private
+                user_url = current_user.public_url(False) + '#main-key'
+            else:
+                # Public voting
+                action_json = action_json_public
+                user_url = current_user.public_url(True) + '#main-key'
+                
+            post_request_in_background(inbox, action_json, current_user.private_key, user_url)
 
     recently_upvoted = []
     recently_downvoted = []
@@ -301,49 +352,102 @@ def comment_vote(comment_id, vote_direction):
     undo = comment.vote(current_user, vote_direction)
 
     if not comment.community.local_only:
+        # Create both public and private actor URLs
+        public_actor = current_user.public_url(True)  # Public vote
+        private_actor = current_user.public_url(False)  # Private vote
+        vote_id_suffix = gibberish(15)
+        undo_id_suffix = gibberish(15)
+        announce_id_suffix = gibberish(15)
+
         if undo:
-            action_json = {
-                'actor': current_user.public_url(not(comment.community.instance.votes_are_public() and current_user.vote_privately())),
+            # Vote objects for Like/Dislike being undone (inner object in Undo)
+            vote_id = f"https://{current_app.config['SERVER_NAME']}/activities/{undo.lower()}/{vote_id_suffix}"
+            
+            # Public version (for non-private votes)
+            action_json_public = {
+                'actor': public_actor,
                 'type': 'Undo',
-                'id': f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}",
+                'id': f"https://{current_app.config['SERVER_NAME']}/activities/undo/{undo_id_suffix}",
                 'audience': comment.community.public_url(),
                 'object': {
-                    'actor': current_user.public_url(not(comment.community.instance.votes_are_public() and current_user.vote_privately())),
+                    'actor': public_actor,
                     'object': comment.public_url(),
                     'type': undo,
-                    'id': f"https://{current_app.config['SERVER_NAME']}/activities/{undo.lower()}/{gibberish(15)}",
+                    'id': vote_id,
+                    'audience': comment.community.public_url()
+                }
+            }
+            
+            # Private version (for private votes)
+            action_json_private = {
+                'actor': private_actor,
+                'type': 'Undo',
+                'id': f"https://{current_app.config['SERVER_NAME']}/activities/undo/{undo_id_suffix}",
+                'audience': comment.community.public_url(),
+                'object': {
+                    'actor': private_actor,
+                    'object': comment.public_url(),
+                    'type': undo,
+                    'id': vote_id,
                     'audience': comment.community.public_url()
                 }
             }
         else:
             action_type = 'Like' if vote_direction == 'upvote' else 'Dislike'
-            action_json = {
-                'actor': current_user.public_url(not(comment.community.instance.votes_are_public() and current_user.vote_privately())),
+            
+            # Public version
+            action_json_public = {
+                'actor': public_actor,
                 'object': comment.public_url(),
                 'type': action_type,
-                'id': f"https://{current_app.config['SERVER_NAME']}/activities/{action_type.lower()}/{gibberish(15)}",
+                'id': f"https://{current_app.config['SERVER_NAME']}/activities/{action_type.lower()}/{vote_id_suffix}",
                 'audience': comment.community.public_url()
             }
+            
+            # Private version
+            action_json_private = {
+                'actor': private_actor,
+                'object': comment.public_url(),
+                'type': action_type,
+                'id': f"https://{current_app.config['SERVER_NAME']}/activities/{action_type.lower()}/{vote_id_suffix}",
+                'audience': comment.community.public_url()
+            }
+            
         if comment.community.is_local():
-            announce = {
-                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+            # For local communities, we need to handle each instance with its own privacy settings
+            for instance in comment.community.following_instances():
+                if not (instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain)):
+                    continue
+                
+                # Determine privacy level for this instance
+                use_private = instance.votes_are_public() and current_user.vote_privately()
+                
+                # Use the appropriate action JSON based on privacy
+                action = action_json_private if use_private else action_json_public
+                
+                # Create a unique announcement for this instance
+                announce = {
+                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{announce_id_suffix}_{instance.id}",
                     "type": 'Announce',
-                    "to": [
-                        "https://www.w3.org/ns/activitystreams#Public"
-                    ],
+                    "to": ["https://www.w3.org/ns/activitystreams#Public"],
                     "actor": comment.community.ap_profile_id,
                     "cc": [
                         comment.community.ap_followers_url
                     ],
                     '@context': default_context(),
-                    'object': action_json
-            }
-            for instance in comment.community.following_instances():
-                if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
-                    send_to_remote_instance(instance.id, comment.community.id, announce)
+                    'object': action
+                }
+                
+                # Send to this instance
+                send_to_remote_instance(instance.id, comment.community.id, announce)
         else:
-            post_request_in_background(comment.community.ap_inbox_url, action_json, current_user.private_key,
-                                       current_user.public_url(not(comment.community.instance.votes_are_public() and current_user.vote_privately())) + '#main-key')
+            # For remote communities, select the appropriate action JSON based on that community's instance
+            use_private = comment.community.instance.votes_are_public() and current_user.vote_privately()
+            action_json = action_json_private if use_private else action_json_public
+            key_id = (private_actor if use_private else public_actor) + '#main-key'
+            
+            # Send to the remote community
+            post_request_in_background(comment.community.ap_inbox_url, action_json, current_user.private_key, key_id)
 
     recently_upvoted = []
     recently_downvoted = []
