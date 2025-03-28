@@ -733,7 +733,6 @@ def post_delete_post(community: Community, post: Post, user_id: int, federate_al
     post.author.post_count -= 1
     community.post_count -= 1
     if hasattr(g, 'site'):  # g.site is invalid when running from cli
-        g.site.last_active = community.last_active = utcnow()
         flash(_('Post deleted.'))
     db.session.commit()
 
