@@ -3,7 +3,7 @@ from typing import List, Tuple
 
 from app import db
 from app.activitypub.util import actor_json_to_model
-from app.community.util import search_for_community
+from app.community.util import search_for_community, retrieve_mods_and_backfill
 from app.models import BannedInstances, Feed, FeedItem, Community
 from app.utils import feed_tree, get_request
 from flask import current_app
@@ -76,6 +76,7 @@ def search_for_feed(address: str):
                         if feed_json['type'] == 'Feed':
                             feed = actor_json_to_model(feed_json, name, server)
                             if feed:
+                                initialise_new_communities(feed)
                                 return feed
         return None
 
@@ -113,3 +114,20 @@ def form_communities_to_ids(form_communities: str) -> set:
         if community:
             result.add(community.id)
     return result
+
+
+def initialise_new_communities(feed):
+    if feed.num_communities == 0:
+        return
+
+    for feed_item in feed.member_communities:
+        community = Community.query.get(feed_item.community_id)
+        if community and community.post_count == 0:
+            if current_app.debug:
+                retrieve_mods_and_backfill(community.id, community.ap_domain, community.name)
+                break             # just get 2 posts from 1 new community when in debug
+            else:
+                retrieve_mods_and_backfill.delay(community.id, community.ap_domain, community.name)
+
+
+
