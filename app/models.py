@@ -918,6 +918,12 @@ class User(UserMixin, db.Model):
         else:
             return self.ap_id
 
+    def lemmy_link(self) -> str:
+        if self.ap_id is None:
+            return f"{self.user_name}@{current_app.config['SERVER_NAME']}"
+        else:
+            return self.ap_id.lower()
+
     def followers_url(self):
         if self.ap_followers_url:
             return self.ap_followers_url
