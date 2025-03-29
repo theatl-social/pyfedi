@@ -8,7 +8,7 @@ from flask_login import logout_user, current_user, login_required
 from flask_babel import _, lazy_gettext as _l
 
 from app import db, cache, celery
-from app.activitypub.signature import post_request, default_context
+from app.activitypub.signature import post_request, default_context, post_request_in_background
 from app.activitypub.util import find_actor_or_create, extract_domain_and_actor
 from app.auth.util import random_token
 from app.community.util import save_icon_file, save_banner_file, retrieve_mods_and_backfill
@@ -841,7 +841,7 @@ def send_deletion_requests(user_id):
         }
         for instance in instances:
             if instance.inbox and instance.online() and instance.id != 1: # instance id 1 is always the current instance
-                post_request(instance.inbox, payload, user.private_key, f"{user.public_url()}#main-key")
+                post_request_in_background(instance.inbox, payload, user.private_key, f"{user.public_url()}#main-key")
 
         sleep(5)
 

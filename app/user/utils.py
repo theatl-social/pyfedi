@@ -5,7 +5,7 @@ from time import sleep
 from flask import current_app, json
 
 from app import celery, db
-from app.activitypub.signature import post_request, default_context, signed_get_request
+from app.activitypub.signature import post_request, default_context, signed_get_request, post_request_in_background
 from app.activitypub.util import actor_json_to_model
 from app.community.util import send_to_remote_instance
 from app.models import User, CommunityMember, Community, Instance, Site, utcnow, ActivityPubLog, BannedInstances
@@ -84,8 +84,8 @@ def purge_user_then_delete_task(user_id):
                     "type": "Delete"
                 }
                 for instance in instances:
-                    if instance.inbox and instance.id != 1:
-                        post_request(instance.inbox, payload, user.private_key, user.public_url() + '#main-key')
+                    if instance.inbox and instance.online() and instance.id != 1:
+                        post_request_in_background(instance.inbox, payload, user.private_key, user.public_url() + '#main-key')
 
             sleep(100)                                  # wait a while for any related activitypub traffic to die down.
             user.deleted = True
@@ -113,7 +113,7 @@ def unsubscribe_from_community(community, user):
         'id': undo_id,
         'object': follow
     }
-    post_request(community.ap_inbox_url, undo, user.private_key, user.public_url() + '#main-key')
+    post_request_in_background(community.ap_inbox_url, undo, user.private_key, user.public_url() + '#main-key')
 
 
 def search_for_user(address: str):
