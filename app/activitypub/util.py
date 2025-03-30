@@ -330,7 +330,6 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                     try:
                         actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
                     except httpx.HTTPError as e:
-                        raise e
                         return None
                 if actor_data.status_code == 200:
                     try:
@@ -372,8 +371,11 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                                                  params={'resource': f"acct:{address}@{server}"})
                 except httpx.HTTPError:
                     time.sleep(randint(3, 10))
-                    webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
-                                                 params={'resource': f"acct:{address}@{server}"})
+                    try:
+                        webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
+                                                     params={'resource': f"acct:{address}@{server}"})
+                    except:
+                        return None
                 if webfinger_data.status_code == 200:
                     webfinger_json = webfinger_data.json()
                     webfinger_data.close()
@@ -385,7 +387,10 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                                 actor_data = get_request(links['href'], headers={'Accept': type})
                             except httpx.HTTPError:
                                 time.sleep(randint(3, 10))
-                                actor_data = get_request(links['href'], headers={'Accept': type})
+                                try:
+                                    actor_data = get_request(links['href'], headers={'Accept': type})
+                                except:
+                                    return None
                             # to see the structure of the json contained in actor_data, do a GET to https://lemmy.world/c/technology with header Accept: application/activity+json
                             if actor_data.status_code == 200:
                                 actor_json = actor_data.json()
