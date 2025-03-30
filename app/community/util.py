@@ -100,8 +100,20 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
             if mods_data and mods_data['type'] == 'OrderedCollection' and 'orderedItems' in mods_data:
                 for actor in mods_data['orderedItems']:
                     sleep(0.5)
-                    try:
-                        mod = find_actor_or_create(actor)
+                    mod = find_actor_or_create(actor)
+                    if mod:
+                        existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=mod.id).first()
+                        if existing_membership:
+                            existing_membership.is_moderator = True
+                        else:
+                            new_membership = CommunityMember(community_id=community.id, user_id=mod.id, is_moderator=True)
+                            db.session.add(new_membership)
+        elif community_json and 'attributedTo' in community_json:
+            mods = community_json['attributedTo']
+            if isinstance(mods, list):
+                for m in mods:
+                    if 'type' in m and m['type'] == 'Person' and 'id' in m:
+                        mod = find_actor_or_create(m['id'])
                         if mod:
                             existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=mod.id).first()
                             if existing_membership:
@@ -109,24 +121,6 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                             else:
                                 new_membership = CommunityMember(community_id=community.id, user_id=mod.id, is_moderator=True)
                                 db.session.add(new_membership)
-                    except:
-                        continue
-        elif community_json and 'attributedTo' in community_json:
-            mods = community_json['attributedTo']
-            if isinstance(mods, list):
-                for m in mods:
-                    if 'type' in m and m['type'] == 'Person' and 'id' in m:
-                        try:
-                            mod = find_actor_or_create(m['id'])
-                            if mod:
-                                existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=mod.id).first()
-                                if existing_membership:
-                                    existing_membership.is_moderator = True
-                                else:
-                                    new_membership = CommunityMember(community_id=community.id, user_id=mod.id, is_moderator=True)
-                                    db.session.add(new_membership)
-                        except:
-                            continue
         if is_peertube:
             community.restricted_to_mods = True
         db.session.commit()
@@ -167,11 +161,8 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                     if is_peertube:
                         user = mod
                     elif 'attributedTo' in activity and isinstance(activity['attributedTo'], str):
-                        try:
-                            user = find_actor_or_create(activity['attributedTo'])
-                            if not user:
-                                continue
-                        except:
+                        user = find_actor_or_create(activity['attributedTo'])
+                        if not user:
                             continue
                     else:
                         continue
