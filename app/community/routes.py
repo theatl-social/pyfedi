@@ -670,8 +670,6 @@ def add_post(actor, type):
     else:
         abort(404)
 
-    if g.site.enable_nsfl is False:
-        form.nsfl.render_kw = {'disabled': True}
     if community.nsfw:
         form.nsfw.data = True
         form.nsfw.render_kw = {'disabled': True}
@@ -783,6 +781,8 @@ def community_edit(community_id: int):
         form = EditCommunityForm()
         form.topic.choices = topics_for_form(0)
         form.languages.choices = languages_for_form()
+        if g.site.enable_nsfw is False:
+            form.nsfw.render_kw = {'disabled': True}
         if form.validate_on_submit():
             community.title = form.title.data
             community.description = piefed_markdown_to_lemmy_markdown(form.description.data)

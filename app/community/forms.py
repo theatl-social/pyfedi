@@ -126,6 +126,20 @@ class CreatePostForm(FlaskForm):
     language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Publish'))
 
+    def validate_nsfw(self, field):
+        if g.site.enable_nsfw is False:
+            if field.data:
+                self.nsfw.errors.append(_l('NSFW posts are not allowed.'))
+                return False
+        return True
+
+    def validate_nsfl(self, field):
+        if g.site.enable_nsfl is False:
+            if field.data:
+                self.nsfl.errors.append(_l('NSFL posts are not allowed.'))
+                return False
+        return True
+
 
 class CreateDiscussionForm(CreatePostForm):
     pass
@@ -138,11 +152,11 @@ class CreateLinkForm(CreatePostForm):
                                       'hx-params': '*',
                                       'hx-target': '#urlUsed'})
 
-    def validate(self, extra_validators=None) -> bool:
-        if 'blogspot.com' in self.link_url.data:
+    def validate_link_url(self, field):
+        if 'blogspot.com' in field.data:
             self.link_url.errors.append(_l("Links to %(domain)s are not allowed.", domain='blogspot.com'))
             return False
-        domain = domain_from_url(self.link_url.data, create=False)
+        domain = domain_from_url(field.data, create=False)
         if domain and domain.banned:
             self.link_url.errors.append(_l("Links to %(domain)s are not allowed.", domain=domain.name))
             return False

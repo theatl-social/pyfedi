@@ -323,6 +323,7 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
     else:   # User does not exist in the DB, it's going to need to be created from it's remote home instance
         if create_if_not_found:
             if actor.startswith('https://'):
+                server, address = extract_domain_and_actor(actor)
                 try:
                     actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
                 except httpx.HTTPError:
