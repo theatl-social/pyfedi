@@ -260,7 +260,7 @@ def tags_from_string_old(tags: str) -> List[Tag]:
         if tag[0] == '#':
             tag = tag[1:]
         tag_to_append = find_hashtag_or_create(tag)
-        if tag_to_append:
+        if tag_to_append and tag_to_append not in return_value:
             return_value.append(tag_to_append)
     return return_value
 
