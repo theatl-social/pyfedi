@@ -1,5 +1,5 @@
 from app import celery, db
-from app.activitypub.signature import default_context, post_request
+from app.activitypub.signature import default_context, post_request_in_background
 from app.constants import POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, POST_TYPE_VIDEO, POST_TYPE_POLL, MICROBLOG_APPS
 from app.models import CommunityBan, Instance, Notification, Poll, PollChoice, Post, User, UserFollower, utcnow
 from app.user.utils import search_for_user
@@ -235,15 +235,15 @@ def send_post(post_id, edit=False):
                 if instance.inbox and instance.online() and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
                     if instance.software in MICROBLOG_APPS:
                         if activity == 'create':
-                            post_request(instance.inbox, microblog_announce, community.private_key, community.public_url() + '#main-key')
+                            post_request_in_background(instance.inbox, microblog_announce, community.private_key, community.public_url() + '#main-key')
                         else:
-                            post_request(instance.inbox, create, user.private_key, user.public_url() + '#main-key')
+                            post_request_in_background(instance.inbox, create, user.private_key, user.public_url() + '#main-key')
                     else:
-                        post_request(instance.inbox, group_announce, community.private_key, community.public_url() + '#main-key')
+                        post_request_in_background(instance.inbox, group_announce, community.private_key, community.public_url() + '#main-key')
                     if post.type < POST_TYPE_POLL:
                           domains_sent_to.append(instance.domain)
         else:
-            post_request(community.ap_inbox_url, create, user.private_key, user.public_url() + '#main-key')
+            post_request_in_background(community.ap_inbox_url, create, user.private_key, user.public_url() + '#main-key')
             domains_sent_to.append(community.instance.domain)
 
     # amend copy of the Create, for anyone Mentioned in post body or who is following the user, to a format more likely to be understood
@@ -265,7 +265,7 @@ def send_post(post_id, edit=False):
     if not community.local_only:
         for recipient in recipients:
             if recipient.instance.domain not in domains_sent_to:
-                post_request(recipient.instance.inbox, create, user.private_key, user.public_url() + '#main-key')
+                post_request_in_background(recipient.instance.inbox, create, user.private_key, user.public_url() + '#main-key')
                 domains_sent_to.append(recipient.instance.domain)
 
     if not followers:
@@ -280,5 +280,5 @@ def send_post(post_id, edit=False):
     instances = instances.filter(UserFollower.local_user_id == post.user_id).filter(Instance.gone_forever == False)
     for instance in instances:
         if instance.domain not in domains_sent_to:
-            post_request(instance.inbox, create, user.private_key, user.public_url() + '#main-key')
+            post_request_in_background(instance.inbox, create, user.private_key, user.public_url() + '#main-key')
 

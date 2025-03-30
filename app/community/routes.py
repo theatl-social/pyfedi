@@ -11,7 +11,7 @@ from slugify import slugify
 from sqlalchemy import or_, desc, text
 
 from app import db, cache, celery
-from app.activitypub.signature import RsaKeys, post_request
+from app.activitypub.signature import RsaKeys, post_request, post_request_in_background
 from app.activitypub.util import extract_domain_and_actor
 from app.chat.util import send_message
 from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, CreateImageForm, CreateLinkForm, \
@@ -481,7 +481,6 @@ def do_subscribe(actor, user_id, admin_preload=False, joined_via_feed=False):
                         flash(_('You cannot join this community'))
                 else:
                     pre_load_message['community_banned_by_local_instance'] = True
-            success = True
             # for local communities, joining is instant
             existing_membership = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
             if not existing_membership:
@@ -505,31 +504,13 @@ def do_subscribe(actor, user_id, admin_preload=False, joined_via_feed=False):
                       "type": "Follow",
                       "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
                     }
-                    success = post_request(community.ap_inbox_url, follow, user.private_key,
-                                                           user.public_url() + '#main-key', timeout=10)
+                    post_request_in_background(community.ap_inbox_url, follow, user.private_key, user.public_url() + '#main-key', timeout=10)
 
-                if success is False or isinstance(success, str):
-                    if 'is not in allowlist' in success:
-                        msg_to_user = f'{community.instance.domain} does not allow us to join their communities.'
-                        if not admin_preload:
-                            if current_user and current_user.is_authenticated and current_user.id == user_id:
-                                flash(_(msg_to_user), 'error')
-                        else:
-                            pre_load_message['status'] = msg_to_user
-                    else:
-                        msg_to_user = "There was a problem while trying to communicate with remote server. If other people have already joined this community it won't matter."
-                        if not admin_preload:
-                            if current_user and current_user.is_authenticated and current_user.id == user_id:
-                                flash(_(msg_to_user), 'error')
-                        else:
-                            pre_load_message['status'] = msg_to_user
-
-            if success is True:
-                if not admin_preload:
-                    if current_user and current_user.is_authenticated and current_user.id == user_id:
-                        flash(Markup(_('You joined %(community_name)s', community_name=f'<a href="/c/{community.link()}">{community.display_name()}</a>')))
-                else:
-                    pre_load_message['status'] = 'joined'
+            if not admin_preload:
+                if current_user and current_user.is_authenticated and current_user.id == user_id:
+                    flash(Markup(_('You joined %(community_name)s', community_name=f'<a href="/c/{community.link()}">{community.display_name()}</a>')))
+            else:
+                pre_load_message['status'] = 'joined'
         else:
             if admin_preload:
                 pre_load_message['status'] = 'already subscribed, or subscription pending'
@@ -559,7 +540,6 @@ def unsubscribe(actor):
                 proceed = True
                 # Undo the Follow
                 if '@' in actor:    # this is a remote community, so activitypub is needed
-                    success = True
                     if not community.instance.gone_forever:
                         follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
                         if community.instance.domain == 'a.gup.pe':
@@ -581,19 +561,16 @@ def unsubscribe(actor):
                           'id': undo_id,
                           'object': follow
                         }
-                        success = post_request(community.ap_inbox_url, undo, current_user.private_key,
-                                                               current_user.public_url() + '#main-key', timeout=10)
-                    if success is False or isinstance(success, str):
-                        flash(_('There was a problem while trying to unsubscribe'), 'error')
+                        post_request_in_background(community.ap_inbox_url, undo, current_user.private_key,
+                                                   current_user.public_url() + '#main-key', timeout=10)
 
-                if proceed:
-                    db.session.query(CommunityMember).filter_by(user_id=current_user.id, community_id=community.id).delete()
-                    db.session.query(CommunityJoinRequest).filter_by(user_id=current_user.id, community_id=community.id).delete()
-                    community.subscriptions_count -= 1
-                    db.session.commit()
+                db.session.query(CommunityMember).filter_by(user_id=current_user.id, community_id=community.id).delete()
+                db.session.query(CommunityJoinRequest).filter_by(user_id=current_user.id, community_id=community.id).delete()
+                community.subscriptions_count -= 1
+                db.session.commit()
 
-                    flash(Markup(_('You left %(community_name)s',
-                                   community_name=f'<a href="/c/{community.link()}">{community.display_name()}</a>')))
+                flash(Markup(_('You left %(community_name)s',
+                               community_name=f'<a href="/c/{community.link()}">{community.display_name()}</a>')))
                 cache.delete_memoized(community_membership, current_user, community)
                 cache.delete_memoized(joined_communities, current_user.id)
             else:
@@ -689,12 +666,12 @@ def add_post(actor, type):
 
     if form.validate_on_submit():
         community = Community.query.get_or_404(form.communities.data)
-        try:
-            uploaded_file = request.files['image_file'] if type == 'image' else None
-            post = make_post(form, community, post_type, SRC_WEB, uploaded_file=uploaded_file)
-        except Exception as ex:
-            flash(_('Your post was not accepted because %(reason)s', reason=str(ex)), 'error')
-            abort(401)
+        #try:
+        uploaded_file = request.files['image_file'] if type == 'image' else None
+        post = make_post(form, community, post_type, SRC_WEB, uploaded_file=uploaded_file)
+        #except Exception as ex:
+        #    flash(_('Your post was not accepted because %(reason)s', reason=str(ex)), 'error')
+        #    abort(401)
 
         resp = make_response(redirect(f"/post/{post.id}"))
         # remove cookies used to maintain state when switching post type
