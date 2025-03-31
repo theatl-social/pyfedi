@@ -1327,6 +1327,7 @@ def post_reply_block_instance(post_id: int, comment_id: int):
     if not existing:
         db.session.add(InstanceBlock(user_id=current_user.id, instance_id=post_reply.instance_id))
         db.session.commit()
+        cache.delete_memoized(blocked_instances, current_user.id)
     flash(_('Content from %(name)s will be hidden.', name=post_reply.instance.domain))
     return redirect(url_for('activitypub.post_ap', post_id=post.id))
 
