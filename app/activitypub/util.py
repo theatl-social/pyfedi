@@ -256,9 +256,8 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
     actor_url = actor.strip()
     actor = actor.strip().lower()
     user = None
-    server = ''
-    # actor parameter must be formatted as https://server/u/actor or https://server/c/actor
-    
+    # actor parameter must be formatted as https://server/u/actor or https://server/c/actor. actor@server is supported too.
+
     # Initially, check if the community exists in the local DB already
     if current_app.config['SERVER_NAME'] + '/c/' in actor:
         return Community.query.filter(Community.ap_profile_id == actor).first()  # finds communities formatted like https://localhost/c/*
@@ -367,6 +366,8 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
                         return None
             else:
                 # retrieve user details via webfinger, etc
+                address, server = normalise_actor_string(actor)
+
                 try:
                     webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
                                                  params={'resource': f"acct:{address}@{server}"})
@@ -908,6 +909,9 @@ def actor_json_to_model(activity_json, address, server):
     if 'type' not in activity_json:  # some Akkoma instances return an empty actor?! e.g. https://donotsta.re/users/april
         return None
     if activity_json['type'] == 'Person' or activity_json['type'] == 'Service':
+        user = User.query.filter(User.ap_profile_id == activity_json['id'].lower()).first()
+        if user:
+            return user
         try:
             user = User(user_name=activity_json['preferredUsername'].strip(),
                         title=activity_json['name'].strip() if 'name' in activity_json and activity_json['name'] else None,
@@ -983,6 +987,9 @@ def actor_json_to_model(activity_json, address, server):
             make_image_sizes(user.cover_id, 878, None, 'users')
         return user
     elif activity_json['type'] == 'Group':
+        community = Community.query.filter(Community.ap_profile_id == activity_json['id'].lower()).first()
+        if community:
+            return community
         if 'attributedTo' in activity_json and isinstance(activity_json['attributedTo'], str):  # lemmy and mbin
             mods_url = activity_json['attributedTo']
         elif 'moderators' in activity_json:  # kbin
@@ -1082,6 +1089,9 @@ def actor_json_to_model(activity_json, address, server):
             make_image_sizes(community.image_id, 700, 1600, 'communities')
         return community
     elif activity_json['type'] == 'Feed':
+        feed = Feed.query.filter(Feed.ap_profile_id == activity_json['id'].lower()).first()
+        if feed:
+            return feed
         if 'attributedTo' in activity_json and isinstance(activity_json['attributedTo'], str):  # lemmy, mbin, and our feeds
             owners_url = activity_json['attributedTo']
         elif 'moderators' in activity_json:  # kbin, and our feeds
@@ -2903,3 +2913,14 @@ def find_community(request_json):
                         return potential_community
 
     return None
+
+
+def normalise_actor_string(actor: str) -> Tuple[str, str]:
+    # Turns something like whatever@server.tld into tuple(whatever, server.tld)
+    actor = actor.strip()
+    if actor[0] == '@' or actor[0] == '!' or actor[0] == '~':
+        actor = actor[1:]
+
+    if '@' in actor:
+        parts = actor.split('@')
+        return parts[0].lower(), parts[1].lower()
