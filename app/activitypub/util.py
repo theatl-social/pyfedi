@@ -251,159 +251,28 @@ def instance_allowed(host: str) -> bool:
 
 
 def find_actor_or_create(actor: str, create_if_not_found=True, community_only=False, feed_only=False) -> Union[User, Community, Feed, None]:
-    if isinstance(actor, dict):     # Discourse does this
+    """Find an actor by URL or webfinger, optionally creating it if not found.
+    """
+    from app.activitypub.actor import find_actor_by_url
+    if isinstance(actor, dict):
         actor = actor['id']
+
     actor_url = actor.strip()
-    actor = actor.strip().lower()
-    user = None
-    # actor parameter must be formatted as https://server/u/actor or https://server/c/actor. actor@server is supported too.
 
-    # Initially, check if the community exists in the local DB already
-    if current_app.config['SERVER_NAME'] + '/c/' in actor:
-        return Community.query.filter(Community.ap_profile_id == actor).first()  # finds communities formatted like https://localhost/c/*
+    # Find the actor
+    actor_obj = find_actor_by_url(actor_url, community_only, feed_only)
 
-    # for Feeds check if feed exists
-    if current_app.config['SERVER_NAME'] + '/f/' in actor:
-        return Feed.query.filter(Feed.ap_profile_id == actor).first()  # finds feeds formatted like https://localhost/f/*
-
-    # for Users check if user exists 
-    if current_app.config['SERVER_NAME'] + '/u/' in actor:
-        alt_user_name = actor_url.rsplit('/', 1)[-1]
-        user = User.query.filter(or_(User.ap_profile_id == actor, User.alt_user_name == alt_user_name)).filter_by(ap_id=None, banned=False).first()  # finds local users
-        if user is None:
-            return None
-
-    # if none of the above trigger then this is a remote actor    
-    elif actor.startswith('https://'):
-        server, address = extract_domain_and_actor(actor)
-        if get_setting('use_allowlist', False):
-            if not instance_allowed(server):
-                return None
-        else:
-            if instance_banned(server):
-                return None
-        if actor_contains_blocked_words(actor):
-            return None
-        # see if the actor is a remote user we know
-        user = User.query.filter(User.ap_profile_id == actor).first()  # finds users formatted like https://kbin.social/u/tables
-        if (user and user.banned) or (user and user.deleted) or actor_profile_contains_blocked_words(user):
-            return None
-        # actor is not a remote user, see if its a remote community or feed
-        if user is None:
-            user = Community.query.filter(Community.ap_profile_id == actor).first()
-            if user and user.banned:
-                # Try to find a non-banned copy of the community. Sometimes duplicates happen and one copy is banned.
-                user = Community.query.filter(Community.ap_profile_id == actor).filter(Community.banned == False).first()
-                if user is None:    # no un-banned version of this community exists, only the banned one. So it was banned for being bad, not for being a duplicate.
-                    return None
-            elif user is None:
-                user = Feed.query.filter(Feed.ap_profile_id == actor).first()
-
-    if user is not None:
-        if not user.is_local() and (user.ap_fetched_at is None or user.ap_fetched_at < utcnow() - timedelta(days=7)):
-            # To reduce load on remote servers, refreshing the user profile happens after a delay of 1 to 10 seconds. Meanwhile, subsequent calls to
-            # find_actor_or_create() which happen to be for the same actor might queue up refreshes of the same user. To avoid this, set a flag to
-            # indicate that user is currently being refreshed.
-            refresh_in_progress = cache.get(f'refreshing_{user.id}')
-            if not refresh_in_progress:
-                cache.set(f'refreshing_{user.id}', True, timeout=300)
-                if isinstance(user, User):
-                    refresh_user_profile(user.id)
-                elif isinstance(user, Community):
-                    refresh_community_profile(user.id)
-                elif isinstance(user, Feed):
-                    refresh_feed_profile(user.id)
-                    # refresh_instance_profile(user.instance_id) # disable in favour of cron job - see app.cli.daily_maintenance()
-        if community_only and not isinstance(user, Community):
-            return None
-        elif feed_only and not isinstance(user, Feed):
-            return None
-        return user
-    else:   # User does not exist in the DB, it's going to need to be created from it's remote home instance
-        if create_if_not_found:
-            if actor.startswith('https://'):
-                server, address = extract_domain_and_actor(actor)
-                try:
-                    actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
-                except httpx.HTTPError:
-                    time.sleep(randint(3, 10))
-                    try:
-                        actor_data = get_request(actor_url, headers={'Accept': 'application/activity+json'})
-                    except httpx.HTTPError as e:
-                        return None
-                if actor_data.status_code == 200:
-                    try:
-                        actor_json = actor_data.json()
-                    except Exception:
-                        actor_data.close()
-                        return None
-                    actor_data.close()
-                    actor_model = actor_json_to_model(actor_json, address, server)
-                    if community_only and not isinstance(actor_model, Community):
-                        return None
-                    if feed_only and not isinstance(actor_model, Feed):
-                        return None
-                    return actor_model
-                elif actor_data.status_code == 401:
-                    try:
-                        site = Site.query.get(1)
-                        actor_data = signed_get_request(actor_url, site.private_key,
-                                        f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
-                        if actor_data.status_code == 200:
-                            try:
-                                actor_json = actor_data.json()
-                            except Exception:
-                                actor_data.close()
-                                return None
-                            actor_data.close()
-                            actor_model = actor_json_to_model(actor_json, address, server)
-                            if community_only and not isinstance(actor_model, Community):
-                                return None
-                            if feed_only and not isinstance(actor_model, Feed):
-                                return None
-                            return actor_model
-                    except Exception:
-                        return None
-            else:
-                # retrieve user details via webfinger, etc
-                address, server = normalise_actor_string(actor)
-
-                try:
-                    webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
-                                                 params={'resource': f"acct:{address}@{server}"})
-                except httpx.HTTPError:
-                    time.sleep(randint(3, 10))
-                    try:
-                        webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
-                                                     params={'resource': f"acct:{address}@{server}"})
-                    except:
-                        return None
-                if webfinger_data.status_code == 200:
-                    webfinger_json = webfinger_data.json()
-                    webfinger_data.close()
-                    for links in webfinger_json['links']:
-                        if 'rel' in links and links['rel'] == 'self':  # this contains the URL of the activitypub profile
-                            type = links['type'] if 'type' in links else 'application/activity+json'
-                            # retrieve the activitypub profile
-                            try:
-                                actor_data = get_request(links['href'], headers={'Accept': type})
-                            except httpx.HTTPError:
-                                time.sleep(randint(3, 10))
-                                try:
-                                    actor_data = get_request(links['href'], headers={'Accept': type})
-                                except:
-                                    return None
-                            # to see the structure of the json contained in actor_data, do a GET to https://lemmy.world/c/technology with header Accept: application/activity+json
-                            if actor_data.status_code == 200:
-                                actor_json = actor_data.json()
-                                actor_data.close()
-                                actor_model = actor_json_to_model(actor_json, address, server)
-                                if community_only and not isinstance(actor_model, Community):
-                                    return None
-                                if feed_only and not isinstance(actor_model, Feed):
-                                    return None
-                                return actor_model
-    return None
+    if actor_obj:
+        # Schedule a refresh if needed
+        from app.activitypub.actor import schedule_actor_refresh
+        schedule_actor_refresh(actor_obj)
+        return actor_obj
+    elif create_if_not_found:
+        # Create the actor from remote data
+        from app.activitypub.actor import create_actor_from_remote
+        return create_actor_from_remote(actor_url, community_only, feed_only)
+    else:
+        return None
 
 
 def find_language(code: str) -> Language | None:

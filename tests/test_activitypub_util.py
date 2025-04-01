@@ -23,11 +23,12 @@ def app():
 def test_find_actor_or_create(app):
     with app.app_context():
         server_name = app.config['SERVER_NAME']
+        user_name = 'rimu'  # Note to others: change this to your login before running this test
         
         # Test with a local URL
-        local_user = find_actor_or_create(f"https://{server_name}/u/rimu", create_if_not_found=False)
+        local_user = find_actor_or_create(f"https://{server_name}/u/{user_name}", create_if_not_found=False)
         # Assert that the result matches expectations
-        assert local_user is not None or hasattr(local_user, 'id')
+        assert local_user is not None and hasattr(local_user, 'id')
         
         # Test with a remote URL that doesn't exist
         remote_user = find_actor_or_create("https://notreal.example.com/u/fake", create_if_not_found=False)
@@ -52,7 +53,7 @@ def test_find_actor_or_create(app):
         assert feed_with_filter is None
 
         # Test whatever@server.tld style actor
-        local_user = find_actor_or_create(f"rimu@{server_name}", create_if_not_found=True)
+        local_user = find_actor_or_create(f"{user_name}@{server_name}", create_if_not_found=True)
         # Assert that the result matches expectations
-        assert local_user is not None or hasattr(local_user, 'id')
+        assert local_user is not None and hasattr(local_user, 'id')
 
