@@ -36,3 +36,4 @@ python-slugify==8.0.4
 furl==2.1.3
 ua-parser[regex]
 captcha
+pytest
