@@ -815,6 +815,15 @@ div.navbar {
   left: 122px;
 }
 
+.sort_methods, .view_filter {
+  text-wrap: none;
+  text-wrap-mode: nowrap;
+}
+.sort_methods .btn, .view_filter .btn {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
 @media (min-width: 768px) {
   .view_filter {
     float: right;

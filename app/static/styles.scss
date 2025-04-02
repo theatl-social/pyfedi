@@ -358,6 +358,15 @@ div.navbar {
   }
 }
 
+.sort_methods, .view_filter {
+  text-wrap: none;
+  text-wrap-mode: nowrap;
+  .btn {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+}
+
 .view_filter {
   @include breakpoint(phablet) {
     float: right;
