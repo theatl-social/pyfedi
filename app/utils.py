@@ -1766,10 +1766,23 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
     elif sort == 'scaled':
         post_id_sort = 'ORDER BY p.ranking_scaled DESC, p.ranking DESC, p.posted_at DESC'
         post_id_where.append('p.ranking_scaled is not null ')
-    elif sort == 'top':
+    elif sort.startswith('top'):
         post_id_where.append('p.posted_at > :top_cutoff ')
         post_id_sort = 'ORDER BY p.up_votes - p.down_votes DESC'
-        params['top_cutoff'] = utcnow() - timedelta(days=7)
+        if sort == 'top_1h':
+            params['top_cutoff'] = utcnow() - timedelta(hours=1)
+        elif sort == 'top_6h':
+            params['top_cutoff'] = utcnow() - timedelta(hours=6)
+        elif sort == 'top_12h':
+            params['top_cutoff'] = utcnow() - timedelta(hours=12)
+        elif sort == 'top':
+            params['top_cutoff'] = utcnow() - timedelta(hours=24)
+        elif sort == 'top_1w':
+            params['top_cutoff'] = utcnow() - timedelta(days=7)
+        elif sort == 'top_1m':
+            params['top_cutoff'] = utcnow() - timedelta(days=28)
+        else:
+            params['top_cutoff'] = utcnow() - timedelta(days=1)
     elif sort == 'new':
         post_id_sort = 'ORDER BY p.posted_at DESC'
     elif sort == 'active':
@@ -1792,7 +1805,7 @@ def post_ids_to_models(post_ids: List[int], sort: str):
         posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
     elif sort == 'scaled':
         posts = posts.order_by(desc(Post.ranking_scaled)).order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
-    elif sort == 'top':
+    elif sort.startswith('top'):
         posts = posts.order_by(desc(Post.up_votes - Post.down_votes))
     elif sort == 'new':
         posts = posts.order_by(desc(Post.posted_at))
