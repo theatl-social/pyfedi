@@ -1002,10 +1002,8 @@ def import_settings_task(user_id, filename):
                               "type": "Follow",
                               "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
                             }
-                            success = post_request(community.ap_inbox_url, follow, user.private_key,
-                                               user.public_url() + '#main-key')
-                        if success is False or isinstance(success, str):
-                            sleep(5)    # give them a rest
+                            post_request_in_background(community.ap_inbox_url, follow, user.private_key,
+                                                       user.public_url() + '#main-key')
                     else:  # for local communities, joining is instant
                         banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
                         if not banned:

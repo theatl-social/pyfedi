@@ -606,7 +606,7 @@ def join_then_add(actor):
                   "type": "Follow",
                   "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
                 }
-                post_request(community.ap_inbox_url, follow, current_user.private_key,
+                post_request_in_background(community.ap_inbox_url, follow, current_user.private_key,
                                             current_user.public_url() + '#main-key')
         existing_member = CommunityMember.query.filter_by(user_id=current_user.id, community_id=community.id).first()
         if not existing_member:

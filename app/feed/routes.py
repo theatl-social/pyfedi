@@ -6,7 +6,7 @@ from flask import g, current_app, request, redirect, url_for, flash, abort, Mark
 from flask_login import current_user, login_required
 from flask_babel import _
 from app import db, cache, celery
-from app.activitypub.signature import RsaKeys, post_request, default_context
+from app.activitypub.signature import RsaKeys, post_request, default_context, post_request_in_background
 from app.activitypub.util import find_actor_or_create, extract_domain_and_actor
 from app.community.util import save_icon_file, save_banner_file
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
@@ -582,10 +582,8 @@ def _feed_remove_community(community_id: int, current_feed_id: int, user_id: int
                         'id': undo_id,
                         'object': follow
                     }
-                    success = post_request(community.ap_inbox_url, undo, user.private_key,
-                                                            user.public_url() + '#main-key', timeout=10)
-                if success is False or isinstance(success, str):
-                    flash(_('There was a problem while trying to unsubscribe'), 'error')
+                    post_request_in_background(community.ap_inbox_url, undo, user.private_key,
+                                               user.public_url() + '#main-key', timeout=10)
 
             if proceed:
                 db.session.query(CommunityMember).filter_by(user_id=user.id, community_id=community.id).delete()
@@ -849,8 +847,7 @@ def do_feed_subscribe(actor, user_id):
                       "type": "Follow",
                       "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
                     }
-                    success = post_request(feed.ap_inbox_url, follow, user.private_key,
-                                                           user.public_url() + '#main-key', timeout=10)
+                    post_request_in_background(feed.ap_inbox_url, follow, user.private_key, user.public_url() + '#main-key', timeout=10)
                     
                     # reach out and get the feeditems from the remote /following collection
                     res = get_request(feed.ap_following_url)
@@ -867,14 +864,6 @@ def do_feed_subscribe(actor, user_id):
                             feed_item = FeedItem(feed_id=feed.id, community_id=community.id)
                             db.session.add(feed_item)
                             db.session.commit()
-
-                if success is False or isinstance(success, str):
-                    if 'is not in allowlist' in success:
-                        msg_to_user = f'{feed.instance.domain} does not allow us to subscribe to their feeds.'
-                        flash(_(msg_to_user), 'error')
-                    else:
-                        msg_to_user = "There was a problem while trying to communicate with remote server. If other people have already subscribed to this feed it won't matter."
-                        flash(_(msg_to_user), 'error')
 
             if success is True:
                 flash(_('You subscribed to %(feed_title)s', feed_title=feed.title))
@@ -922,10 +911,8 @@ def feed_unsubscribe(actor):
                           'id': undo_id,
                           'object': follow
                         }
-                        success = post_request(feed.ap_inbox_url, undo, current_user.private_key,
-                                                               current_user.public_url() + '#main-key', timeout=10)
-                    if success is False or isinstance(success, str):
-                        flash(_('There was a problem while trying to unsubscribe'), 'error')
+                        post_request_in_background(feed.ap_inbox_url, undo, current_user.private_key,
+                                                   current_user.public_url() + '#main-key', timeout=10)
 
                 if proceed:
                     db.session.query(FeedMember).filter_by(user_id=current_user.id, feed_id=feed.id).delete()
@@ -1016,16 +1003,7 @@ def announce_feed_add_remove_to_subscribers(action: str, feed_id: int, community
         # if we get here the feedmember is a remote user
         instance: Instance = session.query(Instance).get(fm_user.instance.id)
         if instance.inbox and instance.online() and not instance_banned(instance.domain):
-            if post_request(instance.inbox, activity_json, feed.private_key, feed.ap_profile_id + '#main-key', timeout=10) is True:
-                instance.last_successful_send = utcnow()
-                instance.failures = 0
-            else:
-                instance.failures += 1
-                instance.most_recent_attempt = utcnow()
-                instance.start_trying_again = utcnow() + timedelta(seconds=instance.failures ** 4)
-                if instance.failures > 10:
-                    instance.dormant = True
-            session.commit()
+            post_request_in_background(instance.inbox, activity_json, feed.private_key, feed.ap_profile_id + '#main-key', timeout=10)
     session.close()
 
 
@@ -1056,7 +1034,7 @@ def announce_feed_delete_to_subscribers(user_id, feed_id):
     #  - if its a remote user
     session = get_task_session()
     for fm in feed_members:
-        fm_user = User.query.get(fm.user_id)
+        fm_user = session.query(User).get(fm.user_id)
         if fm_user.id == feed.user_id:
             continue
         if fm_user.is_local():
@@ -1064,14 +1042,5 @@ def announce_feed_delete_to_subscribers(user_id, feed_id):
         # if we get here the feedmember is a remote user
         instance: Instance = session.query(Instance).get(fm_user.instance.id)
         if instance.inbox and instance.online() and not instance_banned(instance.domain):
-            if post_request(instance.inbox, delete_json, user.private_key, user.ap_profile_id + '#main-key', timeout=10) is True:
-                instance.last_successful_send = utcnow()
-                instance.failures = 0
-            else:
-                instance.failures += 1
-                instance.most_recent_attempt = utcnow()
-                instance.start_trying_again = utcnow() + timedelta(seconds=instance.failures ** 4)
-                if instance.failures > 10:
-                    instance.dormant = True
-            session.commit()
-    session.close()    
+            post_request_in_background(instance.inbox, delete_json, user.private_key, user.ap_profile_id + '#main-key', timeout=10)
+    session.close()

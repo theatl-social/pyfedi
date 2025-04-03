@@ -1,5 +1,5 @@
 from app import celery
-from app.activitypub.signature import default_context, post_request
+from app.activitypub.signature import default_context, post_request, post_request_in_background
 from app.models import CommunityBan, Post, PostReply, User
 from app.utils import gibberish, instance_banned
 
@@ -59,6 +59,6 @@ def report_object(user_id, object, summary):
       'summary': summary
     }
 
-    post_request(community.ap_inbox_url, flag, user.private_key, user.public_url() + '#main-key')
+    post_request_in_background(community.ap_inbox_url, flag, user.private_key, user.public_url() + '#main-key')
 
 

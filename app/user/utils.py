@@ -43,7 +43,7 @@ def purge_user_then_delete_task(user_id):
                     }
 
                     if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
-                        post_request(post.community.ap_inbox_url, delete_json, user.private_key, user.public_url() + '#main-key')
+                        post_request_in_background(post.community.ap_inbox_url, delete_json, user.private_key, user.public_url() + '#main-key')
 
                     else:  # local community - send it to followers on remote instances, using Announce
                         announce = {

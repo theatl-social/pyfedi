@@ -499,11 +499,7 @@ def poll_vote(post_id):
                   'to': post.author.public_url(),
                   'type': 'Create'
                 }
-                try:
-                    post_request(post.author.ap_inbox_url, pollvote_json, current_user.private_key,
-                                                          current_user.public_url() + '#main-key')
-                except Exception:
-                    pass
+                post_request_in_background(post.author.ap_inbox_url, pollvote_json, current_user.private_key, current_user.public_url() + '#main-key')
 
     return redirect(url_for('activitypub.post_ap', post_id=post_id))
 
@@ -860,7 +856,7 @@ def post_delete_post(community: Community, post: Post, user_id: int, federate_al
     if not community.local_only:    # local_only communities do not federate
         # if this is a remote community and we are a mod of that community
         if not post.community.is_local() and user.is_local() and (post.user_id == user.id or community.is_moderator(user) or community.is_owner(user)):
-            post_request(post.community.ap_inbox_url, delete_json, user.private_key, user.public_url() + '#main-key')
+            post_request_in_background(post.community.ap_inbox_url, delete_json, user.private_key, user.public_url() + '#main-key')
         elif post.community.is_local():  # if this is a local community - Announce it to followers on remote instances
             announce = {
                 "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
@@ -937,10 +933,8 @@ def post_restore(post_id: int):
 
             if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
                 if not was_mod_deletion or (was_mod_deletion and post.community.is_moderator(current_user)):
-                    success = post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
-                                           current_user.public_url() + '#main-key')
-                    if success is False or isinstance(success, str):
-                        flash(_('Failed to send delete to remote server'), 'error')
+                    post_request_in_background(post.community.ap_inbox_url, delete_json, current_user.private_key,
+                                               current_user.public_url() + '#main-key')
 
             else:  # local community - send it to followers on remote instances
                 announce = {
@@ -1084,10 +1078,8 @@ def post_report(post_id: int):
             }
             instance = Instance.query.get(post.community.instance_id)
             if post.community.ap_inbox_url and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
-                success = post_request(post.community.ap_inbox_url, report_json, current_user.private_key,
-                                       current_user.public_url() + '#main-key')
-                if success is False or isinstance(success, str):
-                    flash(_('Failed to send report to remote server'), 'error')
+                post_request_in_background(post.community.ap_inbox_url, report_json, current_user.private_key,
+                                           current_user.public_url() + '#main-key')
 
         flash(_('Post has been reported, thank you!'))
         return redirect(post.community.local_url())
@@ -1263,10 +1255,7 @@ def post_reply_report(post_id: int, comment_id: int):
             instance = Instance.query.get(post.community.instance_id)
             if post.community.ap_inbox_url and not current_user.has_blocked_instance(
                     instance.id) and not instance_banned(instance.domain):
-                success = post_request(post.community.ap_inbox_url, report_json, current_user.private_key,
-                                       current_user.public_url() + '#main-key')
-                if success is False or isinstance(success, str):
-                    flash(_('Failed to send report to remote server'), 'error')
+                post_request_in_background(post.community.ap_inbox_url, report_json, current_user.private_key, current_user.public_url() + '#main-key')
 
         flash(_('Comment has been reported, thank you!'))
         return redirect(url_for('activitypub.post_ap', post_id=post.id))
@@ -1401,10 +1390,8 @@ def post_reply_delete(post_id: int, comment_id: int):
 
             if not post.community.is_local():
                 if post_reply.user_id == current_user.id or post.community.is_moderator(current_user):
-                    success = post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
-                                           current_user.public_url() + '#main-key')
-                    if success is False or isinstance(success, str):
-                        flash(_('Failed to send delete to remote server'), 'error')
+                    post_request_in_background(post.community.ap_inbox_url, delete_json, current_user.private_key,
+                                               current_user.public_url() + '#main-key')
             else:  # local community - send it to followers on remote instances
                 announce = {
                     "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
@@ -1481,10 +1468,9 @@ def post_reply_restore(post_id: int, comment_id: int):
 
             if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
                 if not was_mod_deletion or (was_mod_deletion and post.community.is_moderator(current_user)):
-                    success = post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
-                                           current_user.public_url() + '#main-key')
-                    if success is False or isinstance(success, str):
-                        flash(_('Failed to send delete to remote server'), 'error')
+                    post_request_in_background(post.community.ap_inbox_url, delete_json, current_user.private_key,
+                                               current_user.public_url() + '#main-key')
+
 
             else:  # local community - send it to followers on remote instances
                 announce = {
