@@ -35,8 +35,31 @@ document.addEventListener("DOMContentLoaded", function () {
     setupLightboxPostBody();
     setupPostTeaserHandler();
     setupPostTypeSwitcher();
+    setupSelectNavigation();
+    setupUserPopup();
 });
 
+
+function setupUserPopup() {
+    document.querySelectorAll('.render_username .author_link').forEach(anchor => {
+        let timeoutId;
+
+        anchor.addEventListener('mouseover', function() {
+            timeoutId = setTimeout(function () {
+                anchor.nextElementSibling.classList.remove('d-none');
+            }, 1000);
+        });
+
+        anchor.addEventListener('mouseout', function() {
+            clearTimeout(timeoutId);
+
+            let userPreview = anchor.closest('.render_username').querySelector('.user_preview');
+            if (userPreview) {
+                userPreview.classList.add('d-none');
+            }
+        });
+    });
+}
 function setupPostTeaserHandler() {
     document.querySelectorAll('.post_teaser_clickable').forEach(div => {
         div.onclick = function() {
@@ -62,10 +85,26 @@ function setupPostTypeSwitcher() {
     var body = document.getElementById('body');
     var tags = document.getElementById('tags');
     if(typeSwitcher && title && body && tags) {
-        title.value = getCookie('post_title');
-        body.value = getCookie('post_description');
-        tags.value = getCookie('post_tags');
+        var cookie_title = getCookie('post_title');
+        var cookie_description = getCookie('post_description');
+        var cookie_tags = getCookie('post_tags');
+        if(cookie_title)
+            title.value = cookie_title;
+        if(cookie_description)
+            body.value = cookie_description;
+        if(cookie_tags)
+            tags.value = cookie_tags;
     }
+}
+
+function setupSelectNavigation() {
+    document.querySelectorAll("select.navigate_on_change").forEach(select => {
+        select.addEventListener("change", function () {
+            if (this.value) {
+                window.location.href = this.value;
+            }
+        });
+    });
 }
 
 function setupYouTubeLazyLoad() {
@@ -176,60 +215,66 @@ function setupLightboxGallery() {
 
 
 function setupLightboxTeaser() {
-    function popStateListener(event) {
-        baguetteBox.hide();
-    }
-    baguetteBox.run('.post_teaser', {
-        fullScreen: false,
-        noScrollbars: true,
-        async: true,
-        preload: 3,
-        ignoreClass: 'preview_image',
-        afterShow: function() {
-            window.history.pushState('#lightbox', document.title, document.location+'#lightbox');
-            window.addEventListener('popstate', popStateListener);
+    if(typeof baguetteBox !== 'undefined') {
+        function popStateListener(event) {
+            baguetteBox.hide();
+        }
+        baguetteBox.run('.post_teaser', {
+            fullScreen: false,
+            noScrollbars: true,
+            async: true,
+            preload: 3,
+            ignoreClass: 'preview_image',
+            afterShow: function() {
+                window.history.pushState('#lightbox', document.title, document.location+'#lightbox');
+                window.addEventListener('popstate', popStateListener);
 
-            function baguetteBoxClickImg(event) {
-              if (this.style.width != "100vw" && this.offsetWidth < window.innerWidth) {
-                this.style.width = "100vw";
-                this.style.maxHeight = "none";
-              } else {
-                this.style.width = "";
-                this.style.maxHeight = "";
-                this.removeEventListener('click', baguetteBoxClickImg);
-                baguetteBox.hide();
-              }
-            };
-            for (const el of document.querySelectorAll('div#baguetteBox-overlay img')) {
-              el.addEventListener('click', baguetteBoxClickImg);
-            }
-        },
-        afterHide: function() {
-            if (window.history.state === '#lightbox') {
-              window.history.back();
-              window.removeEventListener('popstate', popStateListener);
-            }
-        },
-    });
+                function baguetteBoxClickImg(event) {
+                  if (this.style.width != "100vw" && this.offsetWidth < window.innerWidth) {
+                    this.style.width = "100vw";
+                    this.style.maxHeight = "none";
+                  } else {
+                    this.style.width = "";
+                    this.style.maxHeight = "";
+                    this.removeEventListener('click', baguetteBoxClickImg);
+                    baguetteBox.hide();
+                  }
+                };
+                for (const el of document.querySelectorAll('div#baguetteBox-overlay img')) {
+                  el.addEventListener('click', baguetteBoxClickImg);
+                }
+            },
+            afterHide: function() {
+                if (window.history.state === '#lightbox') {
+                  window.history.back();
+                  window.removeEventListener('popstate', popStateListener);
+                }
+            },
+        });
+    }
+
 }
 
 function setupLightboxPostBody() {
-    const images = document.querySelectorAll('.post_body img');
-    images.forEach(function(img) {
-        const parent = img.parentNode;
-        const link = document.createElement('a');
-        link.href = img.src;
-        link.setAttribute('data-caption', img.alt);
-        parent.replaceChild(link, img);
-        link.appendChild(img);
-    });
+    if(typeof baguetteBox !== 'undefined') {
+        const images = document.querySelectorAll('.post_body img');
+        images.forEach(function(img) {
+            const parent = img.parentNode;
+            const link = document.createElement('a');
+            link.href = img.src;
+            link.setAttribute('data-caption', img.alt);
+            parent.replaceChild(link, img);
+            link.appendChild(img);
+        });
 
-    baguetteBox.run('.post_body', {
-        fullScreen: false,
-        titleTag: true,
-        async: true,
-        preload: 3
-    });
+        baguetteBox.run('.post_body', {
+            fullScreen: false,
+            titleTag: true,
+            async: true,
+            preload: 3
+        });
+    }
+
 }
 
 // fires after all resources have loaded, including stylesheets and js files

@@ -4,6 +4,9 @@
   no_collapse: Don't collapse for admin and moderator views
   show_deleted: Show deleted content (for admin views)
   children: replies to this reply
+
+  NB: there is a clone of this file, add_reply_inline_result.html which is used for rendering the result of the ajax call
+      to create a new comment - that file needs to be kept in sync with this one.
 #}
 {% if current_user.is_authenticated -%}
     {% set collapsed = ((post_reply.score <= current_user.reply_collapse_threshold) or post_reply.deleted)
@@ -28,22 +31,22 @@
     <div class="row">
         <div class="col-auto comment_author">
             <span class="visually-hidden">by</span>
-            {{ render_username(post_reply.author) }}
+            {{ render_username(post_reply.author, htmx_redirect_back_to=request.path + '#comment_' + str(post_reply.id)) }}
             {% if post_reply.author.id == post_reply.post.author.id -%}
                 <span title="Submitter of original post" aria-label="{{ _('Post creator') }}" class="small"> [OP]</span>
             {% endif -%}
-        </div>
-        <div class="col-auto text-muted small pt-05">
-            <time datetime="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post_reply.posted_at).humanize(locale=locale) }}</time>{% if post_reply.edited_at -%}, edited <time datetime="{{ arrow.get(post_reply.posted_at) }}" title="{{ arrow.get(post_reply.posted_at) }}">{{ arrow.get(post_reply.edited_at).humanize(locale=locale) }}</time>{% endif -%}
-        </div>
-        <div class="col-auto">
+            <span class="comment_time"><a href="/post/{{ post_reply.post_id }}#comment_{{ post_reply.id }}">
+                {% if post_reply.edited_at -%}
+                    edited <time datetime="{{ arrow.get(post_reply.posted_at) }}" title="{{ arrow.get(post_reply.posted_at) }}">{{ arrow.get(post_reply.edited_at).humanize(locale=locale) }}</time>
+                {% else -%}
+                    <time datetime="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post_reply.posted_at).humanize(locale=locale) }}</time>
+                {% endif -%}
+            </a></span>
             {% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) -%}
-                <span class="red fe fe-report" title="{{ _('Reported. Check comment for issues.') }}"></span>
+                    <span class="red fe fe-report" title="{{ _('Reported. Check comment for issues.') }}"></span>
             {% endif -%}
-        </div>
-        <div class="col-auto">
             {% if post_reply.deleted -%}
-                <span class="red fe fe-delete" title="{{ _('Comment deleted') }}"></span>
+                    <span class="red fe fe-delete" title="{{ _('Comment deleted') }}"></span>
             {% endif -%}
         </div>
         <div class="col-auto">
@@ -52,12 +55,12 @@
     </div>
 
     <div class="row comment_body hidable{% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) %} reported{% endif %}">
-        <div class="col-12">
+        <div class="col-12 pr-0" lang="{{ post_reply.language_code() }}">
             {% if post_reply.deleted and not show_deleted -%}
                 {% if post_reply.deleted_by is none or post_reply.deleted_by != post_reply.user_id -%}
-                    <p>Deleted by moderator</p>
+                    <p>{{ _('Deleted by moderator') }}</p>
                 {% else -%}
-                    <p>Deleted by author</p>
+                    <p>{{ _('Deleted by author') }}</p>
                 {% endif -%}
             {% else -%}
                 {{ post_reply.body_html | community_links | person_links | safe }}
@@ -68,9 +71,17 @@
         <div class="post_replies_link">
             {% if post_reply.post.comments_enabled -%}
                 {% if not post_reply.post.deleted and not post_reply.deleted -%}
-                    <a href="{{ url_for('post.add_reply', post_id=post_reply.post.id, comment_id=post_reply.id) }}" rel="nofollow noindex"><span class="fe fe-reply"></span> reply</a>
+                    {% if current_user.is_authenticated -%}
+                        <a href="{{ url_for('post.add_reply', post_id=post_reply.post.id, comment_id=post_reply.id) }}"
+                           hx-get="{{ url_for('post.add_reply_inline', post_id=post_reply.post.id, comment_id=post_reply.id) }}"
+                           hx-target="#reply_to_{{ post_reply.id }}"
+                           hx-swap="innerHTML focus-scroll:true"
+                           rel="nofollow noindex"><span class="fe fe-reply"></span><span class="hide_skinny_mobile">&nbsp;reply</span></a>
+                    {% else -%}
+                        <a href="{{ url_for('auth.login', next='/post/' + str(post_reply.post.id)) }}"><span class="fe fe-reply"></span>&nbsp;reply</a>
+                    {% endif -%}
                 {% else -%}
-                    <span class="fe fe-reply"></span> reply
+                    <span class="fe fe-reply"></span>&nbsp;reply
                 {% endif -%}
             {% endif -%}
         </div>
@@ -114,10 +125,11 @@
             {% endif -%}
         </div>
     </div>
+    <div id="reply_to_{{ post_reply.id }}" class="hidable"></div>
     {% if not post_reply.author.indexable -%}<!--googleon all-->{% endif -%}
 
     {% if children -%}
-        <div class="replies hidable" role="group">
+        <div class="replies hidable depth_{{ post_reply.depth }}" role="group">
             {% if not THREAD_CUTOFF_DEPTH or post_reply.depth <= THREAD_CUTOFF_DEPTH -%}
                     {% for reply in children -%}
                         {% with post_reply=reply['comment'], children=reply['replies'] %}

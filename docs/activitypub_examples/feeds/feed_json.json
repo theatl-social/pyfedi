@@ -1,0 +1,28 @@
+{
+  "@context": [
+    "https://www.w3.org/ns/activitystreams",
+    "https://w3id.org/security/v1"
+  ],
+  "attributedTo": "https://example.com/f/feedname/moderators",
+  "endpoints": {
+    "sharedInbox": "https://example.com/inbox"
+  },
+  "followers": "https://example.com/f/feedname/followers",
+  "following": "https://example.com/f/feedname/following",
+  "id": "https://example.com/f/feedname",
+  "inbox": "https://example.com/f/feedname/inbox",
+  "moderators": "https://example.com/f/feedname/moderators",
+  "name": "Programming",
+  "outbox": "https://example.com/f/feedname/outbox",
+  "preferredUsername": "feedname",
+  "publicKey": {
+    "id": "https://example.com/f/feedname#main-key",
+    "owner": "https://example.com/f/feedname",
+    "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApAfmfLNpi1u9eh8rHqsc\nS6yoJqEqISZt0AySyWeS8gJajeeXu7lMXlGqv3i+e1o6SbH5Q08MR8N8llsXZ3q6\n+8RAlpJIcAau9ZPGB2rcTDYTphjp/tXim2YTvT27EiKf3yDITT6oKqxE3FUtwJJq\n/YsDM1OB8ySz01SQxncWH8Juf09NN/nOLEtXl6CwUlQUjKBFwcDf9XX0ZcWKG304\niMuz062Tac83C3lq2zu50dC4PAx1RDh8g6rGK1GPCKATtNfAxjVE+iUmiBGd+9Pg\nFAEBBwRTolBE0QdWaMlddBiuqCDiO3ecUEembjl8DVlRuLJSGS2o7qieqCWCkjFN\n4QIDAQAB\n-----END PUBLIC KEY-----\n"
+  },
+  "published": "2025-02-06T14:32:23.033548+00:00",
+  "sensitive": false,
+  "type": "Feed",
+  "updated": "2025-02-06T14:32:23.033554+00:00",
+  "url": "https://example.com/f/feedname"
+}

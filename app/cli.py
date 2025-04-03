@@ -16,7 +16,7 @@ import click
 import os
 
 from app.activitypub.signature import RsaKeys
-from app.activitypub.util import find_actor_or_create
+from app.activitypub.util import find_actor_or_create, extract_domain_and_actor
 from app.auth.util import random_token
 from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY
 from app.email import send_email
@@ -68,7 +68,7 @@ def register(app):
         print(public_key)
 
     @app.cli.command("admin-keys")
-    def keys():
+    def admin_keys():
         private_key, public_key = RsaKeys.generate_keypair()
         u: User = User.query.get(1)
         u.private_key = private_key
@@ -174,6 +174,7 @@ def register(app):
     def daily_maintenance():
         with app.app_context():
             # Remove old content from communities
+            print(f'Start removing old content from communities {datetime.now()}')
             communities = Community.query.filter(Community.content_retention > 0).all()
             for community in communities:
                 cut_off = utcnow() - timedelta(days=community.content_retention)
@@ -182,14 +183,21 @@ def register(app):
                     post_delete_post(community, post, post.user_id, federate_all_communities=False)
                     community.post_count -= 1
 
+
             # Ensure accurate count of posts associated with each hashtag
-            for tag in Tag.query.all():
-                post_count = db.session.execute(text('SELECT COUNT(post_id) as c FROM "post_tag" WHERE tag_id = :tag_id'),
-                                                { 'tag_id': tag.id}).scalar()
-                tag.post_count = post_count
-                db.session.commit()
+            print(f'Ensure accurate count of posts associated with each hashtag {datetime.now()}')
+            db.session.execute(text('''
+                UPDATE tag 
+                SET post_count = (
+                    SELECT COUNT(post_tag.post_id)
+                    FROM post_tag 
+                    WHERE post_tag.tag_id = tag.id
+                )
+            '''))
+            db.session.commit()
 
             # Delete soft-deleted content after 7 days
+            print(f'Delete soft-deleted content {datetime.now()}')
             for post_reply in PostReply.query.filter(PostReply.deleted == True,
                                                      PostReply.posted_at < utcnow() - timedelta(days=7)).all():
                 post_reply.delete_dependencies()
@@ -204,8 +212,10 @@ def register(app):
             db.session.commit()
 
             # Ensure accurate community stats
-            for community in Community.query.filter(Community.banned == False).all():
-                community.subscriptions_count = CommunityMember.query.filter(CommunityMember.community_id == community.id).count()
+            print(f'Ensure accurate community stats {datetime.now()}')
+            for community in Community.query.filter(Community.banned == False, Community.last_active > utcnow() - timedelta(days=3)).all():
+                community.subscriptions_count = db.session.execute(text('SELECT COUNT(user_id) as c FROM community_member WHERE community_id = :community_id AND is_banned = false'),
+                                                          {'community_id': community.id}).scalar()
                 community.post_count = db.session.execute(text('SELECT COUNT(id) as c FROM post WHERE deleted is false and community_id = :community_id'),
                                                           {'community_id': community.id}).scalar()
                 community.post_reply_count = db.session.execute(text('SELECT COUNT(id) as c FROM post_reply WHERE deleted is false and community_id = :community_id'),
@@ -213,25 +223,84 @@ def register(app):
                 db.session.commit()
 
             # Delete voting data after 6 months
+            print(f'Delete old voting data {datetime.now()}')
             db.session.execute(text('DELETE FROM "post_vote" WHERE created_at < :cutoff'), {'cutoff': utcnow() - timedelta(days=28 * 6)})
             db.session.execute(text('DELETE FROM "post_reply_vote" WHERE created_at < :cutoff'), {'cutoff': utcnow() - timedelta(days=28 * 6)})
             db.session.commit()
 
             # Un-ban after ban expires
+            print(f'Un-ban after ban expires {datetime.now()}')
             db.session.execute(text('UPDATE "user" SET banned = false WHERE banned is true AND banned_until < :cutoff AND banned_until is not null'),
                                {'cutoff': utcnow()})
             db.session.commit()
 
             # update and sync defederation subscriptions
+            print(f'update and sync defederation subscriptions {datetime.now()}')
             db.session.execute(text('DELETE FROM banned_instances WHERE subscription_id is not null'))
             for defederation_sub in DefederationSubscription.query.all():
                 download_defeds(defederation_sub.id, defederation_sub.domain)
 
             # Check for dormant or dead instances
+            print(f'Check for dormant or dead instances {datetime.now()}')
+            HEADERS = {'Accept': 'application/activity+json'}
             try:
-                # Check for dormant or dead instances
-                instances = Instance.query.filter(Instance.gone_forever == False, Instance.id != 1).all()
-                HEADERS = {'User-Agent': 'PieFed/1.0', 'Accept': 'application/activity+json'}
+                # Check for instances that have been dormant for 5+ days and mark them as gone_forever
+                five_days_ago = utcnow() - timedelta(days=5)
+                dormant_instances = Instance.query.filter(Instance.dormant == True, Instance.start_trying_again < five_days_ago).all()
+                
+                for instance in dormant_instances:
+                    instance.gone_forever = True
+                db.session.commit()
+                
+                # Re-check dormant instances that are not gone_forever
+                dormant_to_recheck = Instance.query.filter(Instance.dormant == True, Instance.gone_forever == False, Instance.id != 1).all()
+                
+                for instance in dormant_to_recheck:
+                    if instance_banned(instance.domain) or instance.domain == 'flipboard.com':
+                        continue
+                    
+                    try:
+                        # Try the nodeinfo endpoint first
+                        if instance.nodeinfo_href:
+                            node = get_request_instance(instance.nodeinfo_href, headers=HEADERS, instance=instance)
+                            if node.status_code == 200:
+                                try:
+                                    node_json = node.json()
+                                    if 'software' in node_json:
+                                        instance.software = node_json['software']['name'].lower()[:50]
+                                        instance.version = node_json['software']['version'][:50]
+                                        instance.failures = 0
+                                        instance.dormant = False
+                                        current_app.logger.info(f"Dormant instance {instance.domain} is back online")
+                                finally:
+                                    node.close()
+                        else:
+                            # If no nodeinfo_href, try to discover it
+                            nodeinfo = get_request_instance(f"https://{instance.domain}/.well-known/nodeinfo",
+                                                          headers=HEADERS, instance=instance)
+                            if nodeinfo.status_code == 200:
+                                try:
+                                    nodeinfo_json = nodeinfo.json()
+                                    for links in nodeinfo_json['links']:
+                                        if isinstance(links, dict) and 'rel' in links and links['rel'] in [
+                                            'http://nodeinfo.diaspora.software/ns/schema/2.0',
+                                            'https://nodeinfo.diaspora.software/ns/schema/2.0',
+                                            'http://nodeinfo.diaspora.software/ns/schema/2.1']:
+                                            instance.nodeinfo_href = links['href']
+                                            instance.failures = 0
+                                            instance.dormant = False
+                                            current_app.logger.info(f"Dormant instance {instance.domain} is back online")
+                                            break
+                                finally:
+                                    nodeinfo.close()
+                    except Exception as e:
+                        db.session.rollback()
+                        current_app.logger.error(f"Error rechecking dormant instance {instance.domain}: {e}")
+                
+                db.session.commit()
+
+                # Check healthy instances to see if still healthy
+                instances = Instance.query.filter(Instance.gone_forever == False, Instance.dormant == False, Instance.id != 1).all()
 
                 for instance in instances:
                     if instance_banned(instance.domain) or instance.domain == 'flipboard.com':
@@ -256,14 +325,15 @@ def register(app):
                                         instance.nodeinfo_href = links['href']
                                         instance.failures = 0
                                         instance.dormant = False
+                                        instance.gone_forever = False
                                         break
                                     else:
                                         instance.failures += 1
                             elif nodeinfo.status_code >= 400:
                                 current_app.logger.info(f"{instance.domain} has no well-known/nodeinfo response")
-                        except Exception as e:
+                                instance.failures += 1
+                        except Exception:
                             db.session.rollback()
-                            current_app.logger.error(f"Error processing instance {instance.domain}: {e}")
                             instance.failures += 1
                         finally:
                             nodeinfo.close()
@@ -279,13 +349,24 @@ def register(app):
                                     instance.version = node_json['software']['version'][:50]
                                     instance.failures = 0
                                     instance.dormant = False
+                                    instance.gone_forever = False
                             elif node.status_code >= 400:
                                 instance.nodeinfo_href = None
-                        except Exception as e:
+                                instance.failures += 1
+                                instance.most_recent_attempt = utcnow()
+                                if instance.failures > 5:
+                                    instance.dormant = True
+                                    instance.start_trying_again = utcnow() + timedelta(days=5)
+                        except Exception:
                             db.session.rollback()
-                            current_app.logger.error(f"Error processing nodeinfo for {instance.domain}: {e}")
+                            instance.failures += 1
+                            instance.most_recent_attempt = utcnow()
+                            if instance.failures > 5:
+                                instance.dormant = True
+                                instance.start_trying_again = utcnow() + timedelta(days=5)
                         finally:
                             node.close()
+
                         db.session.commit()
 
                     # Handle admin roles
@@ -311,9 +392,9 @@ def register(app):
                                            InstanceRole.user_id == instance_admin.user.id,
                                            InstanceRole.instance_id == instance.id,
                                            InstanceRole.role == 'admin').delete()
-                        except Exception as e:
+                        except Exception:
                             db.session.rollback()
-                            current_app.logger.error(f"Error updating admins for {instance.domain}: {e}")
+                            instance.failures += 1
                         finally:
                             if response:
                                 response.close()
@@ -331,6 +412,7 @@ def register(app):
                                 #            InstanceRole.instance_id == instance.id,
                                 #            InstanceRole.role == 'admin').delete()
                                 #        db.session.commit()
+            print(f'Done {datetime.now()}')
 
     @app.cli.command("spaceusage")
     def spaceusage():
@@ -531,6 +613,131 @@ def register(app):
             db.session.commit()
 
             print('Done')
+
+    @app.cli.command("populate_community_search")
+    def populate_community_search():
+        with app.app_context():
+            # pull down the community.full.json
+            print('Pulling in the lemmyverse data ...')
+            resp = get_request('https://data.lemmyverse.net/data/community.full.json')
+            community_json = resp.json()
+            resp.close()
+
+            # get the banned urls list
+            print('Getting the banned domains list ...')
+            banned_urls = list(db.session.execute(text('SELECT domain FROM "banned_instances"')).scalars())
+                        
+            # iterate over the entries and get out the url and the nsfw status in a new list
+            print('Generating the communities lists ...')
+            all_communities = []
+            all_sfw_communities = []
+            for c in community_json:
+                # skip if the domain is banned
+                if c['baseurl'] in banned_urls:
+                    continue
+
+                # sort out any that have less than 50 posts
+                elif c['counts']['posts'] < 50:
+                    continue
+
+                # sort out any that do not have greater than 10 active users over the past week
+                elif c['counts']['users_active_week'] < 10:
+                    continue
+
+                # sort out the 'seven things you can't say on tv' names (cursewords), plus some
+                # "low effort" communities
+                seven_things_plus = [
+                    'shit', 'piss', 'fuck',
+                    'cunt', 'cocksucker', 'motherfucker', 'tits',
+                    'piracy', '196', 'greentext', 'usauthoritarianism',
+                    'enoughmuskspam', 'political_weirdos', '4chan'
+                    ]
+                if any(badword in c['name'].lower() for badword in seven_things_plus):
+                    continue
+        
+                # convert the url to server, community
+                server, community = extract_domain_and_actor(c['url'])
+                
+                # if the community is nsfw append to the all_communites only, if sfw, append to both
+                if c['nsfw']:
+                    all_communities.append(f'{community}@{server}')
+                else:
+                    all_communities.append(f'{community}@{server}')
+                    all_sfw_communities.append(f'{community}@{server}')
+            
+            # add those lists to dicts
+            all_communities_json = {}
+            all_sfw_communities_json = {}
+            all_communities_json['all_communities'] = all_communities
+            all_sfw_communities_json['all_sfw_communities'] = all_sfw_communities
+
+            # write those files to disk as json
+            print('Saving the communities lists to app/static/ ...')
+            with open('app/static/all_communities.json','w') as acj:
+                json.dump(all_communities_json, acj)
+
+            with open('app/static/all_sfw_communities.json','w') as asfwcj:
+                json.dump(all_sfw_communities_json, asfwcj)
+
+            print('Done!')
+
+    @app.cli.command("populate_post_reply_for_api")
+    def populate_post_reply_for_api():
+        with app.app_context():
+            sql = '''WITH RECURSIVE reply_path AS (
+                        -- Base case: each reply starts with its own ID
+                        SELECT
+                            id,
+                            parent_id,
+                            ARRAY[0, id] AS path
+                        FROM post_reply
+                        WHERE parent_id IS NULL  -- Top-level replies
+                    
+                        UNION ALL
+                    
+                        -- Recursive case: build the path from parent replies
+                        SELECT
+                            pr.id,
+                            pr.parent_id,
+                            rp.path || pr.id  -- Append current reply ID to the parent's path
+                        FROM post_reply pr
+                        JOIN reply_path rp ON pr.parent_id = rp.id
+                    )
+                    UPDATE post_reply
+                    SET path = reply_path.path
+                    FROM reply_path
+                    WHERE post_reply.id = reply_path.id;
+                    '''
+            db.session.execute(text(sql))
+            db.session.commit()
+
+            db.session.execute(text('update post_reply set child_count = 0'))
+
+            sql = '''WITH unnested_paths AS (
+                        SELECT
+                            UNNEST(path[2:array_length(path, 1) - 1]) AS parent_id  -- Exclude the last element (self)
+                        FROM post_reply
+                        WHERE array_length(path, 1) > 2  -- Ensure the path contains at least one parent
+                    ),
+                    child_counts AS (
+                        SELECT
+                            parent_id,
+                            COUNT(*) AS child_count
+                        FROM unnested_paths
+                        GROUP BY parent_id
+                    )
+                    UPDATE post_reply
+                    SET child_count = COALESCE(child_counts.child_count, 0)
+                    FROM child_counts
+                    WHERE post_reply.id = child_counts.parent_id;'''
+            db.session.execute(text(sql))
+            db.session.commit()
+
+            sql = 'UPDATE post_reply SET root_id = path[1] WHERE path IS NOT NULL;'
+            db.session.execute(text(sql))
+            db.session.commit()
+
+            print('Done!')
 
 
 def parse_communities(interests_source, segment):

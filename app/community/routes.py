@@ -1,51 +1,50 @@
-import base64
-import os
 from collections import namedtuple
-from io import BytesIO
+
 from random import randint
 
 import flask
-from PIL import Image, ImageOps
-from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, g, json, \
-    jsonify
+
+from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, g, json
 from flask_login import current_user, login_required
 from flask_babel import _
-from pillow_heif import register_heif_opener
 from slugify import slugify
 from sqlalchemy import or_, desc, text
 
-from app import db, constants, cache, celery
-from app.activitypub.signature import RsaKeys, post_request, default_context, post_request_in_background
-from app.activitypub.util import notify_about_post, make_image_sizes, resolve_remote_post, extract_domain_and_actor
+from app import db, cache, celery
+from app.activitypub.signature import RsaKeys, post_request, send_post_request
+from app.activitypub.util import extract_domain_and_actor
 from app.chat.util import send_message
 from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, CreateImageForm, CreateLinkForm, \
     ReportCommunityForm, \
     DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm, \
-    EscalateReportForm, ResolveReportForm, CreateVideoForm, CreatePollForm, RetrieveRemotePost, \
-    EditCommunityWikiPageForm
+    EscalateReportForm, ResolveReportForm, CreateVideoForm, CreatePollForm, EditCommunityWikiPageForm, \
+    InviteCommunityForm
 from app.community.util import search_for_community, actor_to_community, \
-    save_post, save_icon_file, save_banner_file, send_to_remote_instance, \
-    delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users, tags_from_string, \
-    allowed_extensions, end_poll_date
+    save_icon_file, save_banner_file, \
+    delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
-    REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, NOTIF_POST, POST_TYPE_POLL, MICROBLOG_APPS
+    REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, NOTIF_POST, POST_TYPE_POLL, MICROBLOG_APPS, SRC_WEB
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, \
     File, PostVote, utcnow, Report, Notification, InstanceBlock, ActivityPubLog, Topic, Conversation, PostReply, \
     NotificationSubscription, UserFollower, Instance, Language, Poll, PollChoice, ModLog, CommunityWikiPage, \
-    CommunityWikiPageRevision, read_posts
+    CommunityWikiPageRevision, read_posts, Feed, FeedItem, CommunityBlock
 from app.community import bp
+from app.post.util import tags_to_string
+from app.shared.community import invite_with_chat, invite_with_email
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, gibberish, community_membership, ap_datetime, \
-    request_etag_matches, return_304, instance_banned, can_create_post, can_upvote, can_downvote, user_filters_posts, \
+    request_etag_matches, return_304, can_upvote, can_downvote, user_filters_posts, \
     joined_communities, moderating_communities, blocked_domains, mimetype_from_url, blocked_instances, \
     community_moderators, communities_banned_from, show_ban_message, recently_upvoted_posts, recently_downvoted_posts, \
     blocked_users, languages_for_form, menu_topics, add_to_modlog, \
-    blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, ensure_directory_exists
+    blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, \
+    menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, instance_software, domain_from_email, referrer
+from app.shared.post import make_post
+from app.shared.tasks import task_selector
 from feedgen.feed import FeedGenerator
 from datetime import timezone, timedelta
-from copy import copy
 
 
 @bp.route('/add_local', methods=['GET', 'POST'])
@@ -104,7 +103,10 @@ def add_local():
                            joined_communities=joined_communities(current_user.get_id()),
                            current_app=current_app,
                            menu_topics=menu_topics(),
-                           site=g.site)
+                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                           )
 
 
 @bp.route('/add_remote', methods=['GET', 'POST'])
@@ -148,25 +150,45 @@ def add_remote():
                            subscribed=community_membership(current_user, new_community) >= SUBSCRIPTION_MEMBER, moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(),
-                           site=g.site)
+                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                           )
 
 
-@bp.route('/retrieve_remote_post/<int:community_id>', methods=['GET', 'POST'])
-@login_required
-def retrieve_remote_post(community_id: int):
-    if current_user.banned:
-        return show_ban_message()
-    form = RetrieveRemotePost()
-    new_post = None
-    community = Community.query.get_or_404(community_id)
-    if form.validate_on_submit():
-        address = form.address.data.strip()
-        new_post = resolve_remote_post(address, community_id)
-        if new_post is None:
-            flash(_('Post not found.'), 'warning')
+# endpoint used by htmx in the add_remote.html
+@bp.route('/search-names', methods=['GET'])
+def community_name_search():
+    # if nsfw is enabled load the all_communities json, otherwise load the sfw one
+    # if they dont exist, just make an empty list
+    communities_list = []
+    try:
+        if g.site.enable_nsfw:
+            with open('app/static/all_communities.json','r') as acj:
+                all_communities_json = json.load(acj)
+                communities_list = all_communities_json['all_communities']
+        else:
+            with open('app/static/all_sfw_communities.json','r') as asfwcj:
+                all_sfw_communities_json = json.load(asfwcj)
+                communities_list = all_sfw_communities_json['all_sfw_communities']
+    except:
+        communities_list = []
 
-    return render_template('community/retrieve_remote_post.html',
-                           title=_('Retrieve Remote Post'), form=form, new_post=new_post, community=community)
+    if request.args.get('address'):
+        search_term = request.args.get('address')
+        searched_community_names = ''
+        for c in communities_list:
+            if isinstance(c, str):
+                if search_term in c:
+                    searched_community_names = searched_community_names + _make_community_results_datalist_html(c)
+        return searched_community_names
+    else:
+        return ''
+
+
+# returns a string with html in it for the add_remote search function above
+def _make_community_results_datalist_html(community_name):
+    return f'<option value="{community_name}"></option>'
 
 
 # @bp.route('/c/<actor>', methods=['GET']) - defined in activitypub/routes.py, which calls this function for user requests. A bit weird.
@@ -174,6 +196,19 @@ def show_community(community: Community):
 
     if community.banned:
         abort(404)
+
+    # If current user is logged in check if they have any feeds
+    # if they have feeds, find the first feed that contains
+    # this community
+    user_has_feeds = False
+    current_feed_id = 0
+    current_feed_title = "None"
+    if current_user.is_authenticated and len(Feed.query.filter_by(user_id=current_user.id).all()) > 0:
+        user_has_feeds = True
+        current_feed = Feed.query.filter(Feed.user_id == current_user.id).join(FeedItem, FeedItem.feed_id == Feed.id).filter(FeedItem.community_id == community.id).first()
+        if current_feed is not None:
+            current_feed_id = current_feed.id
+            current_feed_title = current_feed.title
 
     page = request.args.get('page', 1, type=int)
     sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)
@@ -338,7 +373,12 @@ def show_community(community: Community):
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site, sort=sort,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                           post_layout=post_layout, current_app=current_app)
+                           post_layout=post_layout, current_app=current_app,
+                           user_has_feeds=user_has_feeds, current_feed_id=current_feed_id,
+                           current_feed_title=current_feed_title, menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                           )
 
 
 # RSS feed of the community
@@ -402,22 +442,26 @@ def show_community_rss(actor):
 def subscribe(actor):
     do_subscribe(actor, current_user.id)
     referrer = request.headers.get('Referer', None)
-    if referrer is not None:
+    if referrer is not None and current_app.config['SERVER_NAME'] in referrer:
         return redirect(referrer)
     else:
         return redirect('/c/' + actor)
 
 
 # this is separated out from the subscribe route so it can be used by the 
-# admin.admin_federation.preload_form as well
+# admin.admin_federation.preload_form and feed subscription process as well
 @celery.task
-def do_subscribe(actor, user_id, admin_preload=False):
+def do_subscribe(actor, user_id, admin_preload=False, joined_via_feed=False):
     remote = False
     actor = actor.strip()
     user = User.query.get(user_id)
     pre_load_message = {}
     if '@' in actor:
-        community = Community.query.filter_by(banned=False, ap_id=actor).first()
+        community = Community.query.filter_by(ap_id=actor).first()
+        if community is None:
+            community = search_for_community(f'!{actor}' if '!' not in actor else actor)
+        if community.banned:
+            community = None
         remote = True
     else:
         community = Community.query.filter_by(name=actor, banned=False, ap_id=None).first()
@@ -433,18 +477,23 @@ def do_subscribe(actor, user_id, admin_preload=False):
             banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
             if banned:
                 if not admin_preload:
-                    flash(_('You cannot join this community'))
+                    if current_user and current_user.id == user_id:
+                        flash(_('You cannot join this community'))
                 else:
                     pre_load_message['community_banned_by_local_instance'] = True
-            success = True
             # for local communities, joining is instant
-            member = CommunityMember(user_id=user.id, community_id=community.id)
-            db.session.add(member)
-            community.subscriptions_count += 1
-            db.session.commit()
+            existing_membership = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
+            if not existing_membership:
+                member = CommunityMember(user_id=user.id, community_id=community.id, joined_via_feed=joined_via_feed)
+                db.session.add(member)
+                community.subscriptions_count += 1
+                db.session.commit()
+                cache.delete_memoized(community_membership, user, community)
+
             if remote:
                 # send ActivityPub message to remote community, asking to follow. Accept message will be sent to our shared inbox
-                join_request = CommunityJoinRequest(user_id=user.id, community_id=community.id)
+                join_request = CommunityJoinRequest(user_id=user.id, community_id=community.id, joined_via_feed=joined_via_feed)
+
                 db.session.add(join_request)
                 db.session.commit()
                 if community.instance.online():
@@ -455,30 +504,16 @@ def do_subscribe(actor, user_id, admin_preload=False):
                       "type": "Follow",
                       "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
                     }
-                    success = post_request(community.ap_inbox_url, follow, user.private_key,
-                                                           user.public_url() + '#main-key', timeout=10)
-                if success is False or isinstance(success, str):
-                    if 'is not in allowlist' in success:
-                        msg_to_user = f'{community.instance.domain} does not allow us to join their communities.'
-                        if not admin_preload:
-                            flash(_(msg_to_user), 'error')
-                        else:
-                            pre_load_message['status'] = msg_to_user
-                    else:
-                        msg_to_user = "There was a problem while trying to communicate with remote server. If other people have already joined this community it won't matter."
-                        if not admin_preload:
-                            flash(_(msg_to_user), 'error')
-                        else:
-                            pre_load_message['status'] = msg_to_user
+                    send_post_request(community.ap_inbox_url, follow, user.private_key, user.public_url() + '#main-key', timeout=10)
 
-            if success is True:
-                if not admin_preload:
-                    flash('You joined ' + community.title)
-                else:
-                    pre_load_message['status'] = 'joined'
+            if not admin_preload:
+                if current_user and current_user.is_authenticated and current_user.id == user_id:
+                    flash(Markup(_('You joined %(community_name)s', community_name=f'<a href="/c/{community.link()}">{community.display_name()}</a>')))
+            else:
+                pre_load_message['status'] = 'joined'
         else:
             if admin_preload:
-                pre_load_message['status'] = 'already subscribed, or subsciption pending'
+                pre_load_message['status'] = 'already subscribed, or subscription pending'
 
         cache.delete_memoized(community_membership, user, community)
         cache.delete_memoized(joined_communities, user.id)
@@ -505,7 +540,6 @@ def unsubscribe(actor):
                 proceed = True
                 # Undo the Follow
                 if '@' in actor:    # this is a remote community, so activitypub is needed
-                    success = True
                     if not community.instance.gone_forever:
                         follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
                         if community.instance.domain == 'a.gup.pe':
@@ -527,27 +561,25 @@ def unsubscribe(actor):
                           'id': undo_id,
                           'object': follow
                         }
-                        success = post_request(community.ap_inbox_url, undo, current_user.private_key,
-                                                               current_user.public_url() + '#main-key', timeout=10)
-                    if success is False or isinstance(success, str):
-                        flash('There was a problem while trying to unsubscribe', 'error')
+                        send_post_request(community.ap_inbox_url, undo, current_user.private_key,
+                                          current_user.public_url() + '#main-key', timeout=10)
 
-                if proceed:
-                    db.session.query(CommunityMember).filter_by(user_id=current_user.id, community_id=community.id).delete()
-                    db.session.query(CommunityJoinRequest).filter_by(user_id=current_user.id, community_id=community.id).delete()
-                    community.subscriptions_count -= 1
-                    db.session.commit()
+                db.session.query(CommunityMember).filter_by(user_id=current_user.id, community_id=community.id).delete()
+                db.session.query(CommunityJoinRequest).filter_by(user_id=current_user.id, community_id=community.id).delete()
+                community.subscriptions_count -= 1
+                db.session.commit()
 
-                    flash('You have left ' + community.title)
+                flash(Markup(_('You left %(community_name)s',
+                               community_name=f'<a href="/c/{community.link()}">{community.display_name()}</a>')))
                 cache.delete_memoized(community_membership, current_user, community)
                 cache.delete_memoized(joined_communities, current_user.id)
             else:
                 # todo: community deletion
-                flash('You need to make someone else the owner before unsubscribing.', 'warning')
+                flash(_('You need to make someone else the owner before unsubscribing.'), 'warning')
 
         # send them back where they came from
         referrer = request.headers.get('Referer', None)
-        if referrer is not None:
+        if referrer is not None and current_app.config['SERVER_NAME'] in referrer:
             return redirect(referrer)
         else:
             return redirect('/c/' + actor)
@@ -574,12 +606,14 @@ def join_then_add(actor):
                   "type": "Follow",
                   "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
                 }
-                post_request(community.ap_inbox_url, follow, current_user.private_key,
-                                            current_user.public_url() + '#main-key')
-        member = CommunityMember(user_id=current_user.id, community_id=community.id)
-        db.session.add(member)
-        db.session.commit()
-        flash('You joined ' + community.title)
+                send_post_request(community.ap_inbox_url, follow, current_user.private_key,
+                                  current_user.public_url() + '#main-key')
+        existing_member = CommunityMember.query.filter_by(user_id=current_user.id, community_id=community.id).first()
+        if not existing_member:
+            member = CommunityMember(user_id=current_user.id, community_id=community.id)
+            db.session.add(member)
+            db.session.commit()
+        flash(Markup(_('You joined %(community_name)s', community_name=f'<a href="/c/{community.link()}">{community.display_name()}</a>')))
     if not community.user_is_banned(current_user):
         return redirect(url_for('community.add_post', actor=community.link(), type='discussion'))
     else:
@@ -613,8 +647,6 @@ def add_post(actor, type):
     else:
         abort(404)
 
-    if g.site.enable_nsfl is False:
-        form.nsfl.render_kw = {'disabled': True}
     if community.nsfw:
         form.nsfw.data = True
         form.nsfw.render_kw = {'disabled': True}
@@ -630,109 +662,14 @@ def add_post(actor, type):
 
     form.language_id.choices = languages_for_form()
 
-    if not can_create_post(current_user, community):
-        abort(401)
-
     if form.validate_on_submit():
         community = Community.query.get_or_404(form.communities.data)
-        if not can_create_post(current_user, community):
-            abort(401)
-
-        language = Language.query.get(form.language_id.data)
-
-        request_json = {
-            'id': None,
-            'object': {
-                'name': form.title.data,
-                'type': 'Page',
-                'sticky': form.sticky.data,
-                'nsfw': form.nsfw.data,
-                'nsfl': form.nsfl.data,
-                'id': gibberish(),   # this will  be updated once we have the post.id
-                'mediaType': 'text/markdown',
-                'content': form.body.data,
-                'tag': tags_from_string(form.tags.data),
-                'language': {'identifier': language.code, 'name': language.name}
-            }
-        }
-        if type == 'link':
-            request_json['object']['attachment'] = [{'type': 'Link', 'href': form.link_url.data}]
-        elif type == 'image':
-            uploaded_file = request.files['image_file']
-            if uploaded_file and uploaded_file.filename != '':
-                # check if this is an allowed type of file
-                file_ext = os.path.splitext(uploaded_file.filename)[1]
-                if file_ext.lower() not in allowed_extensions:
-                    abort(400, description="Invalid image type.")
-
-                new_filename = gibberish(15)
-                # set up the storage directory
-                directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
-                ensure_directory_exists(directory)
-
-                final_place = os.path.join(directory, new_filename + file_ext)
-                uploaded_file.seek(0)
-                uploaded_file.save(final_place)
-
-                if file_ext.lower() == '.heic':
-                    register_heif_opener()
-                if file_ext.lower() == '.avif':
-                    import pillow_avif
-
-                Image.MAX_IMAGE_PIXELS = 89478485
-
-                # resize if necessary
-                if not final_place.endswith('.svg'):
-                    img = Image.open(final_place)
-                    if '.' + img.format.lower() in allowed_extensions:
-                        img = ImageOps.exif_transpose(img)
-
-                        # limit full sized version to 2000px
-                        img.thumbnail((2000, 2000))
-                        img.save(final_place)
-
-                request_json['object']['attachment'] = [{
-                    'type': 'Image', 
-                    'url': f'https://{current_app.config["SERVER_NAME"]}/{final_place.replace("app/", "")}',
-                    'name': form.image_alt_text.data,
-                    'file_path': final_place
-                }]
-        
-        elif type == 'video':
-            request_json['object']['attachment'] = [{'type': 'Document', 'url': form.video_url.data}]
-        elif type == 'poll':
-            request_json['object']['type'] = 'Question'
-            choices = [form.choice_1, form.choice_2, form.choice_3, form.choice_4, form.choice_5,
-                       form.choice_6, form.choice_7, form.choice_8, form.choice_9, form.choice_10]
-            key = 'oneOf' if form.mode.data == 'single' else 'anyOf'
-            request_json['object'][key] = []
-            for choice in choices:
-                choice_data = choice.data.strip()
-                if choice_data:
-                    request_json['object'][key].append({'name': choice_data})
-            request_json['object']['endTime'] = end_poll_date(form.finish_in.data)
-
-        # todo: add try..except
-        post = Post.new(current_user, community, request_json)
-
-        if form.notify_author.data:
-            new_notification = NotificationSubscription(name=post.title, user_id=current_user.id, entity_id=post.id, type=NOTIF_POST)
-            db.session.add(new_notification)
-        current_user.language_id = form.language_id.data
-        g.site.last_active = utcnow()
-        post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
-        db.session.commit()
-
-        if post.type == POST_TYPE_POLL:
-            poll = Poll.query.filter_by(post_id=post.id).first()
-            if not poll.local_only:
-                federate_post_to_user_followers(post)
-            if not community.local_only and not poll.local_only:
-                federate_post(community, post)
-        else:
-            federate_post_to_user_followers(post)
-            if not community.local_only:
-                federate_post(community, post)
+        #try:
+        uploaded_file = request.files['image_file'] if type == 'image' else None
+        post = make_post(form, community, post_type, SRC_WEB, uploaded_file=uploaded_file)
+        #except Exception as ex:
+        #    flash(_('Your post was not accepted because %(reason)s', reason=str(ex)), 'error')
+        #    abort(401)
 
         resp = make_response(redirect(f"/post/{post.id}"))
         # remove cookies used to maintain state when switching post type
@@ -759,8 +696,8 @@ def add_post(actor, type):
             form.nsfl.data = source_post.nsfl
             form.language_id.data = source_post.language_id
             form.link_url.data = source_post.url
+            form.tags.data = tags_to_string(source_post)
 
-    
     # empty post to pass since add_post.html extends edit_post.html 
     # and that one checks for a post.image_id for editing image posts
     post = None
@@ -771,199 +708,11 @@ def add_post(actor, type):
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.id),
                            menu_topics=menu_topics(), site=g.site,
-                           inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
-    )
-
-
-def federate_post(community, post):
-    page = {
-        'type': 'Page',
-        'id': post.ap_id,
-        'attributedTo': current_user.public_url(),
-        'to': [
-            community.public_url(),
-            'https://www.w3.org/ns/activitystreams#Public'
-        ],
-        'name': post.title,
-        'cc': [],
-        'content': post.body_html if post.body_html else '',
-        'mediaType': 'text/html',
-        'source': {'content': post.body if post.body else '', 'mediaType': 'text/markdown'},
-        'attachment': [],
-        'commentsEnabled': post.comments_enabled,
-        'sensitive': post.nsfw,
-        'nsfl': post.nsfl,
-        'stickied': post.sticky,
-        'published': ap_datetime(utcnow()),
-        'audience': community.public_url(),
-        'language': {
-            'identifier': post.language_code(),
-            'name': post.language_name()
-        },
-        'tag': post.tags_for_activitypub()
-    }
-    create = {
-        "id": f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}",
-        "actor": current_user.public_url(),
-        "to": [
-            "https://www.w3.org/ns/activitystreams#Public"
-        ],
-        "cc": [
-            community.public_url()
-        ],
-        "type": "Create",
-        "audience": community.public_url(),
-        "object": page,
-        '@context': default_context()
-    }
-    if post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO:
-        page['attachment'] = [{'href': post.url, 'type': 'Link'}]
-    elif post.image_id:
-        image_url = ''
-        if post.image.source_url:
-            image_url = post.image.source_url
-        elif post.image.file_path:
-            image_url = post.image.file_path.replace('app/static/',
-                                                     f"https://{current_app.config['SERVER_NAME']}/static/")
-        elif post.image.thumbnail_path:
-            image_url = post.image.thumbnail_path.replace('app/static/',
-                                                          f"https://{current_app.config['SERVER_NAME']}/static/")
-        # NB image is a dict while attachment is a list of dicts (usually just one dict in the list)
-        page['image'] = {'type': 'Image', 'url': image_url}
-        if post.type == POST_TYPE_IMAGE:
-            page['attachment'] = [{'type': 'Image',
-                                   'url': post.image.source_url,  # source_url is always a https link, no need for .replace() as done above
-                                   'name': post.image.alt_text}]
-
-    if post.type == POST_TYPE_POLL:
-        poll = Poll.query.filter_by(post_id=post.id).first()
-        page['type'] = 'Question'
-        page['endTime'] = ap_datetime(poll.end_poll)
-        page['votersCount'] = 0
-        choices = []
-        for choice in PollChoice.query.filter_by(post_id=post.id).all():
-            choices.append({
-                "type": "Note",
-                "name": choice.choice_text,
-                "replies": {
-                  "type": "Collection",
-                  "totalItems": 0
-                }
-            })
-        page['oneOf' if poll.mode == 'single' else 'anyOf'] = choices
-    if not community.is_local():  # this is a remote community - send the post to the instance that hosts it
-        post_request_in_background(community.ap_inbox_url, create, current_user.private_key,
-                               current_user.public_url() + '#main-key', timeout=10)
-        flash(_('Your post to %(name)s has been made.', name=community.title))
-    else:  # local community - send (announce) post out to followers
-        announce = {
-            "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
-            "type": 'Announce',
-            "to": [
-                "https://www.w3.org/ns/activitystreams#Public"
-            ],
-            "actor": community.public_url(),
-            "cc": [
-                community.ap_followers_url
-            ],
-            '@context': default_context(),
-            'object': create
-        }
-        microblog_announce = copy(announce)
-        microblog_announce['object'] = post.ap_id
-
-        sent_to = 0
-        for instance in community.following_instances():
-            if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(
-                    instance.domain):
-                if instance.software in MICROBLOG_APPS:
-                    send_to_remote_instance(instance.id, community.id, microblog_announce)
-                else:
-                    send_to_remote_instance(instance.id, community.id, announce)
-                sent_to += 1
-        if sent_to:
-            flash(_('Your post to %(name)s has been made.', name=community.title))
-        else:
-            flash(_('Your post to %(name)s has been made.', name=community.title))
-
-
-def federate_post_to_user_followers(post):
-    followers = UserFollower.query.filter_by(local_user_id=post.user_id)
-    if not followers:
-        return
-
-    note = {
-        'type': 'Note',
-        'id': post.ap_id,
-        'inReplyTo': None,
-        'attributedTo': current_user.public_url(),
-        'to': [
-            'https://www.w3.org/ns/activitystreams#Public'
-        ],
-        'cc': [
-            current_user.followers_url()
-        ],
-        'content': '',
-        'mediaType': 'text/html',
-        'attachment': [],
-        'commentsEnabled': post.comments_enabled,
-        'sensitive': post.nsfw,
-        'nsfl': post.nsfl,
-        'stickied': post.sticky,
-        'published': ap_datetime(utcnow()),
-        'language': {
-            'identifier': post.language_code(),
-            'name': post.language_name()
-        },
-        'tag': post.tags_for_activitypub()
-    }
-    create = {
-        "id": f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}",
-        "actor": current_user.public_url(),
-        "to": [
-            "https://www.w3.org/ns/activitystreams#Public"
-        ],
-        "cc": [
-            current_user.followers_url()
-        ],
-        "type": "Create",
-        "object": note,
-        '@context': default_context()
-    }
-    if post.type == POST_TYPE_ARTICLE:
-        note['content'] = '<p>' + post.title + '</p>'
-    elif post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO:
-        note['content'] = '<p><a href=' + post.url + '>' + post.title + '</a></p>'
-    elif post.type == POST_TYPE_IMAGE:
-        note['content'] = '<p>' + post.title + '</p>'
-        if post.image_id and post.image.source_url:
-            note['attachment'] = [{'type': 'Image', 'url': post.image.source_url, 'name': post.image.alt_text}]
-
-    if post.body_html:
-        note['content'] = note['content'] + '<p>' + post.body_html + '</p>'
-
-    if post.type == POST_TYPE_POLL:
-        poll = Poll.query.filter_by(post_id=post.id).first()
-        note['type'] = 'Question'
-        note['endTime'] = ap_datetime(poll.end_poll)
-        note['votersCount'] = 0
-        choices = []
-        for choice in PollChoice.query.filter_by(post_id=post.id).all():
-            choices.append({
-                "type": "Note",
-                "name": choice.choice_text,
-                "replies": {
-                  "type": "Collection",
-                  "totalItems": 0
-                }
-            })
-        note['oneOf' if poll.mode == 'single' else 'anyOf'] = choices
-
-    instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower, UserFollower.remote_user_id == User.id)
-    instances = instances.filter(UserFollower.local_user_id == post.user_id).filter(Instance.gone_forever == False)
-    for instance in instances:
-        if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
-            post_request_in_background(instance.inbox, create, current_user.private_key, current_user.public_url() + '#main-key')
+                           inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                           )
 
 
 @bp.route('/community/<int:community_id>/report', methods=['GET', 'POST'])
@@ -1009,6 +758,8 @@ def community_edit(community_id: int):
         form = EditCommunityForm()
         form.topic.choices = topics_for_form(0)
         form.languages.choices = languages_for_form()
+        if g.site.enable_nsfw is False:
+            form.nsfw.render_kw = {'disabled': True}
         if form.validate_on_submit():
             community.title = form.title.data
             community.description = piefed_markdown_to_lemmy_markdown(form.description.data)
@@ -1058,6 +809,9 @@ def community_edit(community_id: int):
                         topic.num_communities = topic.communities.count()
                 db.session.commit()
             flash(_('Saved'))
+
+            # just borrow federation code for now (replacing most of this function with a call to edit_community in app.shared.community can be done "later")
+            task_selector('edit_community', user_id=current_user.id, community_id=community.id)
             return redirect(url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not None else community.name))
         else:
             form.title.data = community.title
@@ -1075,7 +829,11 @@ def community_edit(community_id: int):
                                current_app=current_app, current="edit_settings",
                                community=community, moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
-                               menu_topics=menu_topics(), site=g.site)
+                               menu_topics=menu_topics(), site=g.site,
+                               menu_instance_feeds=menu_instance_feeds(), 
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                               menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                               )
     else:
         abort(401)
 
@@ -1140,7 +898,11 @@ def community_delete(community_id: int):
         return render_template('community/community_delete.html', title=_('Delete community'), form=form,
                                community=community, moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
-                               menu_topics=menu_topics(), site=g.site)
+                               menu_topics=menu_topics(), site=g.site,
+                               menu_instance_feeds=menu_instance_feeds(), 
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                               menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                               )
     else:
         abort(401)
 
@@ -1160,7 +922,9 @@ def community_mod_list(community_id: int):
                         moderators=moderators, community=community, current="moderators",
                         moderating_communities=moderating_communities(current_user.get_id()),
                         joined_communities=joined_communities(current_user.get_id()),
-                        menu_topics=menu_topics(), site=g.site
+                        menu_topics=menu_topics(), site=g.site, menu_instance_feeds=menu_instance_feeds(), 
+                        menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                        menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                         )
     else:
         abort(401)
@@ -1233,7 +997,10 @@ def community_find_moderator(community_id: int):
                                community=community, form=form, potential_moderators=potential_moderators,
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
-                               menu_topics=menu_topics(), site=g.site
+                               menu_topics=menu_topics(), site=g.site,
+                               menu_instance_feeds=menu_instance_feeds(), 
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                               menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                                )
     else:
         abort(401)
@@ -1267,6 +1034,19 @@ def community_remove_moderator(community_id: int, user_id: int):
         return redirect(url_for('community.community_mod_list', community_id=community.id))
     else:
         abort(401)
+
+
+@bp.route('/community/<int:community_id>/block', methods=['GET', 'POST'])
+@login_required
+def community_block(community_id: int):
+    community = Community.query.get_or_404(community_id)
+    existing = CommunityBlock.query.filter_by(user_id=current_user.id, community_id=community_id).first()
+    if not existing:
+        db.session.add(CommunityBlock(user_id=current_user.id, community_id=community_id))
+        db.session.commit()
+        cache.delete_memoized(blocked_communities, current_user.id)
+    flash(_('Posts in %(name)s will be hidden.', name=community.display_name()))
+    return redirect(referrer())
 
 
 @bp.route('/community/<int:community_id>/block_instance', methods=['GET', 'POST'])
@@ -1325,11 +1105,11 @@ def community_ban_user(community_id: int, user_id: int):
 
         # Notify banned person
         if user.is_local():
-            cache.delete_memoized(communities_banned_from, user.id)
+
             cache.delete_memoized(joined_communities, user.id)
             cache.delete_memoized(moderating_communities, user.id)
             notify = Notification(title=shorten_string('You have been banned from ' + community.title),
-                                  url=f'/notifications', user_id=user.id,
+                                  url='/notifications', user_id=user.id,
                                   author_id=1)
             db.session.add(notify)
             user.unread_notifications += 1
@@ -1337,6 +1117,7 @@ def community_ban_user(community_id: int, user_id: int):
         else:
             ...
             # todo: send chatmessage to remote user and federate it
+        cache.delete_memoized(communities_banned_from, user.id)
 
         # Remove their notification subscription,  if any
         db.session.query(NotificationSubscription).filter(NotificationSubscription.entity_id == community.id,
@@ -1352,7 +1133,10 @@ def community_ban_user(community_id: int, user_id: int):
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
                                menu_topics=menu_topics(), site=g.site,
-                               inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                               inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                               menu_instance_feeds=menu_instance_feeds(), 
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                               menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                                )
 
 
@@ -1377,11 +1161,10 @@ def community_unban_user(community_id: int, user_id: int):
 
     # notify banned person
     if user.is_local():
-        cache.delete_memoized(communities_banned_from, user.id)
         cache.delete_memoized(joined_communities, user.id)
         cache.delete_memoized(moderating_communities, user.id)
         notify = Notification(title=shorten_string('You have been un-banned from ' + community.title),
-                              url=f'/notifications', user_id=user.id,
+                              url='/notifications', user_id=user.id,
                               author_id=1)
         db.session.add(notify)
         user.unread_notifications += 1
@@ -1389,6 +1172,8 @@ def community_unban_user(community_id: int, user_id: int):
     else:
         ...
         # todo: send chatmessage to remote user and federate it
+
+    cache.delete_memoized(communities_banned_from, user.id)
 
     add_to_modlog('unban_user', community_id=community.id, link_text=user.display_name(), link=user.link())
 
@@ -1440,7 +1225,6 @@ def community_moderate(actor):
         if community.is_moderator() or current_user.is_admin():
 
             page = request.args.get('page', 1, type=int)
-            search = request.args.get('search', '')
             local_remote = request.args.get('local_remote', '')
 
             reports = Report.query.filter_by(status=0, in_community_id=community.id)
@@ -1459,7 +1243,10 @@ def community_moderate(actor):
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                                   menu_instance_feeds=menu_instance_feeds(), 
+                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                                   menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                                    )
         else:
             abort(401)
@@ -1494,7 +1281,10 @@ def community_moderate_subscribers(actor):
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                                   menu_instance_feeds=menu_instance_feeds(), 
+                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                                   menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                                    )
         else:
             abort(401)
@@ -1511,7 +1301,7 @@ def community_kick_user(community_id: int, user_id: int):
     if community is not None:
         if current_user.is_admin():
 
-            db.session.query(CommunityMember).filter_by(user_id=user_id, community_id=community.id).delete()
+            db.session.query(CommunityMember).filter_by(user_id=user.id, community_id=community.id).delete()
             db.session.commit()
 
         else:
@@ -1536,7 +1326,10 @@ def community_wiki_list(actor):
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                                   menu_instance_feeds=menu_instance_feeds(), 
+                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                                   menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                                    )
         else:
             abort(401)
@@ -1574,7 +1367,10 @@ def community_wiki_add(actor):
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                                   menu_instance_feeds=menu_instance_feeds(), 
+                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                                   menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                                    )
         else:
             abort(401)
@@ -1633,7 +1429,10 @@ def community_wiki_view(actor, slug):
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
                                    inoculation=inoculation[
-                                       randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                       randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                                   menu_instance_feeds=menu_instance_feeds(), 
+                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                                   menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                                    )
 
 
@@ -1690,7 +1489,10 @@ def community_wiki_view_revision(actor, slug, revision_id):
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
                                    inoculation=inoculation[
-                                       randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                       randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                                   menu_instance_feeds=menu_instance_feeds(), 
+                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                                   menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                                    )
 
 
@@ -1761,7 +1563,10 @@ def community_wiki_edit(actor, page_id):
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                                   menu_instance_feeds=menu_instance_feeds(), 
+                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                                   menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                                    )
         else:
             abort(401)
@@ -1790,7 +1595,10 @@ def community_wiki_revisions(actor, page_id):
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                                   menu_instance_feeds=menu_instance_feeds(), 
+                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                                   menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                                    )
         else:
             abort(401)
@@ -1841,7 +1649,10 @@ def community_modlog(actor):
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                                   menu_instance_feeds=menu_instance_feeds(), 
+                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                                   menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                                    )
 
         else:
@@ -1957,12 +1768,62 @@ def community_moderate_report_ignore(community_id, report_id):
             abort(404)
 
 
+@bp.route('/<actor>/invite', methods=['GET', 'POST'])
+@login_required
+def community_invite(actor):
+    if current_user.banned:
+        return show_ban_message()
+    form = InviteCommunityForm()
+
+    community = actor_to_community(actor)
+
+    if current_user.created_recently():
+        flash(_('Sorry your account it too new to do this.'), 'warning')
+        return redirect(referrer())
+
+    if community is not None:
+        if form.validate_on_submit():
+            chat_invites = 0
+            email_invites = 0
+            total_invites = 0
+            for line in form.to.data.split('\n'):
+                line = line.strip()
+                if line != '':
+                    if line.startswith('http'):
+                        chat_invites += invite_with_chat(community.id, line, SRC_WEB)
+                    elif '@' in line:
+                        if line.startswith('@') or instance_software(domain_from_email(line)):
+                            chat_invites += invite_with_chat(community.id, line, SRC_WEB)
+                        else:
+                            email_invites += invite_with_email(community.id, line, SRC_WEB)
+                        total_invites += 1
+
+            flash(_('Invited %(total_invites)d people using %(chat_invites)d chat messages and %(email_invites)d emails.',
+                    total_invites=total_invites, chat_invites=chat_invites, email_invites=email_invites))
+            return redirect('/c/' + community.link())
+
+        return render_template('community/invite.html', title=_('Invite to community'), form=form, community=community,
+                               moderating_communities=moderating_communities(current_user.get_id()),
+                               joined_communities=joined_communities(current_user.get_id()),
+                               current_app=current_app,
+                               menu_topics=menu_topics(),
+                               site=g.site, menu_instance_feeds=menu_instance_feeds(),
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                               menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                               )
+    else:
+        abort(404)
+
+
 @bp.route('/lookup/<community>/<domain>')
 def lookup(community, domain):
     if domain == current_app.config['SERVER_NAME']:
         return redirect('/c/' + community)
 
-    exists = Community.query.filter_by(name=community, ap_domain=domain).first()
+    community = community.lower()
+    domain = domain.lower()
+
+    exists = Community.query.filter_by(ap_id=f'{community}@{domain}').first()
     if exists:
         return redirect('/c/' + community + '@' + domain)
     else:
@@ -1989,7 +1850,7 @@ def lookup(community, domain):
                            subscribed=community_membership(current_user, new_community) >= SUBSCRIPTION_MEMBER)
         else:
             # send them back where they came from
-            flash('Searching for remote communities requires login', 'error')
+            flash(_('Searching for remote communities requires login'), 'error')
             referrer = request.headers.get('Referer', None)
             if referrer is not None:
                 return redirect(referrer)

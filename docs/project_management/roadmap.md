@@ -1,43 +1,31 @@
 # PieFed Roadmap
 
-The following are the goals for a 1.0 release, good enough for production use. Items with a ✅  are complete.
+The following are our goals for 2025. We brainstormed ideas then [ranked them by voting](https://piefed.social/c/piefed_2025?sort=top).
 
-### Basic functionality
+✅ [Inline commenting](https://piefed.social/post/411646)
 
-- ✅ log in, register, reset password
-- ✅ browse and join communities
-- ✅ post in local community
-- ✅ comment on posts in local community
-- ✅ vote
-- ✅ sort posts by hotness algo
-- ✅ markdown
-- ✅ logging and debugging support
+✅ [Cross-posting](https://piefed.social/post/411644)
 
+[Mobile app](https://piefed.social/post/411560)
 
-### Activitypub-enabled
+[Improve reputation icons](https://piefed.social/post/411563)
 
-- ✅ follow remote community
-- ✅ post content in remote community
-- ✅ edit & delete content
-- ✅ vote
+[User @mentions support](https://piefed.social/post/411582)
 
-### Search
+✅ [User-created topics, “multi-reddits”, favorite communities](https://piefed.social/post/411558)
 
-- ✅ content & users
-- ✅ hashtags
-- ✅ privacy controls
+[Technical debt & documentation](https://piefed.social/post/411592) & [code repository](https://piefed.social/post/411573)
 
-### Moderation
+[Scheduled posts](https://piefed.social/post/411583)
 
-- ✅ community moderation
-- ✅ blocking - users, communities, domains, instances. bi-directional.
-- import/export of block lists
+[Built-in instance chooser during onboarding](https://piefed.social/post/411579)
 
-### Onboarding
+[Default sort for comments](https://piefed.social/post/411572)
 
-- ✅ choose topics to auto-subscribe new accounts
+[Loops integration](https://piefed.social/post/411561)
 
-### Performance and scaling
+[Follow mastodon accounts](https://piefed.social/post/411559)
+ - [Content warnings](https://piefed.social/post/411566)
 
-- ✅ background task runner
-- send queue for federation
+[OAuth - “log in with mastodon” or Passkeys](https://piefed.social/post/411577)
+

@@ -54,12 +54,12 @@ def send_topic_suggestion(communities_for_topic, user, recipients, subject, topi
 @celery.task
 def send_async_email(subject, sender, recipients, text_body, html_body, reply_to):
     if 'ngrok.app' in sender:   # for local development
-        sender = 'PieFed <noreply@piefed.social'
+        sender = 'PieFed <noreply@piefed.social>'
         return_path = 'bounces@piefed.social'
     else:
         return_path = current_app.config['BOUNCE_ADDRESS']
     # NB email will not be sent if you have not verified your domain name as an 'Identity' inside AWS SES
-    if type(recipients) == str:
+    if isinstance(recipients, str):
         recipients = [recipients]
     with current_app.app_context():
         if current_app.config['MAIL_SERVER']:
@@ -77,7 +77,7 @@ def send_async_email(subject, sender, recipients, text_body, html_body, reply_to
                 amazon_client = boto3.client('ses', region_name=current_app.config['AWS_REGION'])
                 # Provide the contents of the email.
                 if reply_to is None:
-                    response = amazon_client.send_email(
+                    amazon_client.send_email(
                         Destination={'ToAddresses': recipients},
                         Message={
                             'Body': {
@@ -95,7 +95,7 @@ def send_async_email(subject, sender, recipients, text_body, html_body, reply_to
                         Source=sender,
                         ReturnPath=return_path)
                 else:
-                    response = amazon_client.send_email(
+                    amazon_client.send_email(
                         Destination={'ToAddresses': recipients},
                         Message={
                             'Body': {

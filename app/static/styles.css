@@ -32,8 +32,36 @@
   padding-left: 20px !important;
 }
 
+.pl-0 {
+  padding-left: 0 !important;
+}
+
+.pr-0 {
+  padding-right: 0 !important;
+}
+
+@media (min-width: 768px) {
+  .pl-md-0 {
+    padding-left: 0 !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .pr-md-0 {
+    padding-right: 0 !important;
+  }
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.mr-auto {
+  margin-right: auto;
+}
+
 /* for more info about the feather font used for icons see https://at-ui.github.io/feather-font/ */
-/* use https://fontdrop.info/ to get the unicode values of the featuer.ttf file */
+/* use https://fontdrop.info/ to get the unicode values of the feather.ttf file */
 @font-face {
   font-family: "Feather";
   src: url("/static/fonts/feather/feather.ttf?cb") format("truetype"), url("/static/fonts/feather/feather.woff?cb") format("woff"), url("/static/fonts/feather/feather.svg?cb#Feather") format("svg");
@@ -78,6 +106,22 @@
 
 .fe-circle::before {
   content: "\e937";
+}
+
+.fe-sticky::before {
+  content: "\e9fc";
+}
+
+.fe-unsticky::before {
+  content: "\e9fd";
+}
+
+.fe-lock::before {
+  content: "\e987";
+}
+
+.fe-unlock::before {
+  content: "\e9ee";
 }
 
 .fe-home::before {
@@ -460,10 +504,6 @@ fieldset legend {
   }
 }
 
-html, body {
-  overscroll-behavior-x: none;
-}
-
 body {
   font-size: 0.95rem;
 }
@@ -544,6 +584,11 @@ div.navbar {
   min-height: 60px;
   background-color: var(--bs-body-bg);
 }
+@media (min-width: 1400px) {
+  div.navbar .container-lg {
+    padding-right: 20px;
+  }
+}
 
 .navbar-brand {
   line-height: 46px;
@@ -556,6 +601,25 @@ div.navbar {
   outline-style: none;
 }
 
+@media (min-width: 992px) {
+  ul.navbar-nav {
+    width: 100%;
+    display: flex;
+    align-items: center;
+  }
+  ul.navbar-nav > .right {
+    margin-left: auto;
+  }
+  ul.navbar-nav * > * {
+    margin-left: 10px;
+  }
+  ul.navbar-nav .dropdown-menu li {
+    margin-left: 0;
+  }
+  ul.navbar-nav .dropdown-menu li a {
+    margin-left: 0;
+  }
+}
 .navbar-toggler {
   border: none;
   height: 48px;
@@ -612,7 +676,7 @@ div.navbar {
 }
 
 .card {
-  max-width: 350px;
+  max-width: 380px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -749,6 +813,15 @@ div.navbar {
   position: absolute;
   bottom: -14px;
   left: 122px;
+}
+
+.sort_methods, .view_filter {
+  text-wrap: none;
+  text-wrap-mode: nowrap;
+}
+.sort_methods .btn, .view_filter .btn {
+  padding-left: 10px;
+  padding-right: 10px;
 }
 
 @media (min-width: 768px) {
@@ -1138,13 +1211,25 @@ time {
 
 .comments > .comment {
   margin-left: 0;
-  border-top: solid 1px #bbb;
+  border-top: solid 1px #ddd;
   margin-right: 8px;
+}
+.comments > .comment .comment_time {
+  font-size: 87%;
+  --bs-text-opacity: 1;
+  color: var(--bs-secondary-color) !important;
+}
+.comments > .comment .comment_time a {
+  --bs-text-opacity: 1;
+  color: var(--bs-secondary-color) !important;
 }
 .comments > .comment .comment_body hr {
   margin-left: 15px;
   margin-right: 15px;
   opacity: 0.1;
+}
+.comments > .comment .comment_body p {
+  padding-right: 9px;
 }
 .comments > .comment:first-child {
   border-top: none;
@@ -1313,9 +1398,10 @@ time {
 
 .comment {
   clear: both;
-  margin-left: 15px;
-  padding-left: 0px;
+  margin-left: 8px;
+  padding-left: 0;
   padding-top: 8px;
+  padding-right: 8px;
 }
 .comment .limit_height {
   position: relative;
@@ -1368,7 +1454,7 @@ time {
   margin-top: -18px;
   display: flex;
   min-height: 44px;
-  /* justify-content: space-between; */
+  container-type: inline-size;
   justify-content: left;
 }
 @media (min-width: 992px) {
@@ -1384,8 +1470,26 @@ time {
   height: 44px;
   line-height: 44px;
 }
+.comment .comment_actions div.comment_actions_link div > a {
+  width: 44px;
+  height: 44px;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 40px;
+}
 .comment .comment_actions .notify_toggle {
   font-size: 87%;
+}
+.comment .comment_actions .notify_toggle a {
+  width: 44px;
+  height: 44px;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 40px;
+}
+.comment .comment_actions .dropdown-menu.show {
+  z-index: 1001;
+  background-color: var(--bs-body-bg);
 }
 .comment .comment_actions .dropdown-item {
   white-space: unset;
@@ -1394,17 +1498,72 @@ time {
 .comment .comment_actions .dropdown-item:active {
   line-height: 26px;
 }
+@container (max-width: 270px) {
+  .comment .comment_actions .post_replies_link a {
+    width: 44px;
+  }
+  .comment .comment_actions .hide_skinny_mobile {
+    display: none;
+  }
+}
 .comment .replies {
   margin-top: 0;
-  border-left: solid 1px #ddd;
-  border-top: solid 1px #ddd;
+}
+.comment .replies.depth_0 {
+  border-left: 2px solid rgba(172, 83, 83, 0.5) !important;
+}
+.comment .replies.depth_1 {
+  border-left: 2px solid rgba(172, 157, 83, 0.6) !important;
+}
+.comment .replies.depth_2 {
+  border-left: 2px solid rgba(113, 172, 83, 0.6) !important;
+}
+.comment .replies.depth_3 {
+  border-left: 2px solid rgba(83, 172, 128, 0.6) !important;
+}
+.comment .replies.depth_4 {
+  border-left: 2px solid rgba(83, 142, 172, 0.6) !important;
+}
+.comment .replies.depth_5 {
+  border-left: 2px solid rgba(98, 83, 172, 0.5) !important;
+}
+.comment .replies.depth_6 {
+  border-left: 2px solid rgba(172, 83, 172, 0.5) !important;
+}
+.comment .replies.depth_7 {
+  border-left: 2px solid rgba(172, 83, 83, 0.5) !important;
+}
+.comment .replies.depth_8 {
+  border-left: 2px solid rgba(172, 83, 83, 0.65) !important;
+}
+.comment .replies.depth_9 {
+  border-left: 2px solid rgba(172, 83, 83, 0.78) !important;
+}
+.comment .replies.depth_10 {
+  border-left: 2px solid rgba(172, 83, 83, 0.85) !important;
+}
+
+#more_replies .community_actions_link {
+  float: right;
+}
+#more_replies .community_actions_link div > a {
+  width: 44px;
+  height: 44px;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 40px;
+  display: inline-block;
+}
+
+.white-space-normal {
+  white-space: normal;
 }
 
 .hide-labels label {
   display: none;
 }
 
-#add_local_community_form #url {
+#add_local_community_form #url, #new_feed_form #url {
   width: 297px;
   display: inline-block;
   padding-left: 3px;
@@ -1484,9 +1643,11 @@ fieldset legend {
   height: auto;
 }
 .post_body blockquote, .comment_body blockquote {
-  border-left: 2px solid var(--bs-secondary);
   padding: 0.1em 5px;
   font-style: italic;
+  font-family: "Open Sans", "Segoe UI", Tahoma, Arial, sans-serif;
+  margin: 0 3%;
+  font-size: 95%;
 }
 .post_body table.table, .comment_body table.table {
   display: block;
@@ -1742,6 +1903,7 @@ h1 .warning_badge {
   min-width: 20px;
   min-height: 20px;
   vertical-align: text-top;
+  object-fit: cover;
 }
 
 .list-group-item .community_icon {
@@ -1971,24 +2133,28 @@ form h5 {
 .render_username .author_link {
   display: inline-block;
 }
-@media (min-width: 1280px) {
-  .render_username .author_link:hover + .user_preview, .render_username .user_preview:hover {
-    display: inline-block !important;
-    position: absolute;
-    top: 17px;
-    left: 0;
-    background-color: white;
-    z-index: 20;
-  }
-  .render_username .user_preview .card {
-    width: 300px;
-  }
-  .render_username .user_preview .card .preview_avatar_image {
-    max-width: 50%;
-  }
-  .render_username .user_preview .card .preview_avatar_image img {
-    max-width: 100%;
-  }
+.render_username .author_link + .user_preview {
+  position: absolute;
+  top: 17px;
+  left: 0;
+  background-color: white;
+  z-index: 20;
+  width: 320px;
+}
+.render_username .author_link + .user_preview:hover {
+  display: block !important;
+}
+.render_username .user_preview .card {
+  width: 300px;
+}
+.render_username .user_preview .card p {
+  font-size: 13px;
+}
+.render_username .user_preview .card .preview_avatar_image {
+  max-width: 50%;
+}
+.render_username .user_preview .card .preview_avatar_image img {
+  max-width: 100%;
 }
 
 #preview:has(p, a, h1, h2, h3, ul, ol) {
@@ -1996,6 +2162,10 @@ form h5 {
   border-radius: 5px;
   padding: 5px 10px;
   margin-bottom: 15px;
+}
+
+#typeTab a:not(.btn):active {
+  border-width: 1px;
 }
 
 /* high contrast */
@@ -2077,6 +2247,12 @@ form h5 {
     background-color: black;
   }
 }
+[data-bs-theme=dark] .alert-message {
+  background-color: rgb(1.3442622951, 66.5409836066, 162.6557377049);
+  border-color: rgb(1.3442622951, 66.5409836066, 162.6557377049);
+  color: white;
+}
+
 [data-bs-theme=dark] .dropdown-header {
   color: white;
 }

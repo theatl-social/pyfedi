@@ -3,6 +3,8 @@ services:
   db:
     shm_size: 128mb
     image: postgres
+    restart: unless-stopped
+    user: "1000:1000"
     env_file:
      - ./.env.docker
     volumes:
@@ -12,6 +14,7 @@ services:
 
   redis:
     image: redis
+    restart: unless-stopped
     env_file:
      - ./.env.docker
     networks:
@@ -22,6 +25,7 @@ services:
       context: .
       target: builder
     container_name: piefed_celery1
+    restart: unless-stopped
     depends_on:
       - db
       - redis
@@ -38,6 +42,7 @@ services:
       context: .
       target: builder
     container_name: piefed_app1
+    restart: unless-stopped
     depends_on:
       - db
       - redis
@@ -53,7 +58,7 @@ services:
 
   adminer:
     image: adminer
-    restart: always
+    restart: unless-stopped
     ports:
       - 8888:8080
     depends_on:

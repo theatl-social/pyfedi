@@ -19,10 +19,7 @@ class Config(object):
     MAIL_FROM = os.environ.get('MAIL_FROM') or 'noreply@' + os.environ.get('SERVER_NAME')
     MAIL_ERRORS = os.environ.get('MAIL_ERRORS') is not None
     ADMINS = os.environ.get('ADMINS')
-    RECAPTCHA_PUBLIC_KEY = os.environ.get("RECAPTCHA_PUBLIC_KEY") or None
-    RECAPTCHA_PRIVATE_KEY = os.environ.get("RECAPTCHA_PRIVATE_KEY") or None
-    MODE = os.environ.get('MODE') or 'development'
-    LANGUAGES = ['ca', 'de', 'en', 'fr', 'ja']
+    LANGUAGES = ['ca', 'de', 'en', 'es', 'fr', 'ja', 'zh']
     FULL_AP_CONTEXT = bool(int(os.environ.get('FULL_AP_CONTEXT', 0)))
     CACHE_TYPE = os.environ.get('CACHE_TYPE') or 'FileSystemCache'
     CACHE_REDIS_URL = os.environ.get('CACHE_REDIS_URL') or 'redis://localhost:6379/1'
@@ -46,8 +43,8 @@ class Config(object):
 
     AWS_REGION = os.environ.get('AWS_REGION') or None
 
-    SESSION_COOKIE_SECURE = True
-    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', '1') in ('1', 'true', 'True')
+    SESSION_COOKIE_HTTPONLY = os.environ.get('SESSION_COOKIE_HTTPONLY', '1') in ('1', 'true', 'True')
     SESSION_COOKIE_SAMESITE = 'Lax'
 
     CLOUDFLARE_API_TOKEN = os.environ.get('CLOUDFLARE_API_TOKEN') or ''
@@ -58,3 +55,9 @@ class Config(object):
     SPICY_UNDER_60 = float(os.environ.get('SPICY_UNDER_60', 1.0))
 
     IPINFO_TOKEN = os.environ.get('IPINFO_TOKEN') or ''
+
+    DB_POOL_SIZE = os.environ.get('DB_POOL_SIZE') or 10
+    DB_MAX_OVERFLOW = os.environ.get('DB_MAX_OVERFLOW') or 30
+
+    LOG_ACTIVITYPUB_TO_DB = os.environ.get('LOG_ACTIVITYPUB_TO_DB') or False
+    LOG_ACTIVITYPUB_TO_FILE = os.environ.get('LOG_ACTIVITYPUB_TO_FILE') or False

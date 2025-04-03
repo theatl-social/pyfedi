@@ -1,22 +1,24 @@
 from datetime import date, datetime
 from random import randint
 from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, g
+from sqlalchemy import func
 from werkzeug.urls import url_parse
 from flask_login import login_user, logout_user, current_user
 from flask_babel import _
 from wtforms import Label
 
-from app import db, cache
+from app import db, cache, limiter
 from app.auth import bp
 from app.auth.forms import LoginForm, RegistrationForm, ResetPasswordRequestForm, ResetPasswordForm
 from app.auth.util import random_token, normalize_utf, ip2location, no_admins_logged_in_recently
 from app.email import send_verification_email, send_password_reset_email
 from app.models import User, utcnow, IpBan, UserRegistration, Notification, Site
 from app.utils import render_template, ip_address, user_ip_banned, user_cookie_banned, banned_ip_addresses, \
-    finalize_user_setup, blocked_referrers, gibberish
+    finalize_user_setup, blocked_referrers, gibberish, get_setting
 
 
 @bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit("100 per day;20 per 5 minutes", methods=['POST'])
 def login():
     if current_user.is_authenticated:
         next_page = request.args.get('next')
@@ -25,7 +27,12 @@ def login():
         return redirect(next_page)
     form = LoginForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(user_name=form.user_name.data, ap_id=None).first()
+        form.user_name.data = form.user_name.data.strip()
+        user = User.query.filter(func.lower(User.user_name) == func.lower(form.user_name.data)).filter_by(ap_id=None).first()
+        if user is None:
+            user = User.query.filter_by(email=form.user_name.data, ap_id=None).first()
+        if user is None:    # ap_profile_id is always lower case so compare it with what_they_typed.lower()
+            user = User.query.filter(User.ap_profile_id.ilike(f"https://{current_app.config['SERVER_NAME']}/u/{form.user_name.data.lower()}")).first()
         if user is None:
             flash(_('No account exists with that user name.'), 'error')
             return redirect(url_for('auth.login'))
@@ -63,10 +70,11 @@ def login():
         ip_address_info = ip2location(current_user.ip_address)
         current_user.ip_address_country = ip_address_info['country'] if ip_address_info else current_user.ip_address_country
         db.session.commit()
+        [limiter.limiter.clear(limit.limit, *limit.request_args) for limit in  limiter.current_limits]
         next_page = request.args.get('next')
         if not next_page or url_parse(next_page).netloc != '':
             if len(current_user.communities()) == 0:
-                next_page = url_for('topic.choose_topics')
+                next_page = url_for('auth.trump_musk')
             else:
                 next_page = url_for('main.index')
         response = make_response(redirect(next_page))
@@ -87,6 +95,7 @@ def logout():
 
 
 @bp.route('/register', methods=['GET', 'POST'])
+@limiter.limit("100 per day;20 per 5 minutes", methods=['POST'])
 def register():
     disallowed_usernames = ['admin']
     if current_user.is_authenticated:
@@ -97,9 +106,6 @@ def register():
         g.site.registration_mode = 'Closed'
 
     form = RegistrationForm()
-    # Recaptcha is optional
-    if not current_app.config['RECAPTCHA_PUBLIC_KEY'] or not current_app.config['RECAPTCHA_PRIVATE_KEY']:
-        del form.recaptcha
     if g.site.registration_mode != 'RequireApplication':
         form.question.validators = ()
     if form.validate_on_submit():
@@ -115,11 +121,20 @@ def register():
                     resp = make_response(redirect(url_for('auth.please_wait')))
                     resp.set_cookie('sesion', '17489047567495', expires=datetime(year=2099, month=12, day=30))
                     return resp
+
                 for referrer in blocked_referrers():
                     if referrer in session.get('Referer', ''):
                         resp = make_response(redirect(url_for('auth.please_wait')))
                         resp.set_cookie('sesion', '17489047567495', expires=datetime(year=2099, month=12, day=30))
                         return resp
+
+                # Country-based registration blocking
+                ip_address_info = ip2location(ip_address())
+                if ip_address_info and ip_address_info['country']:
+                    for country_code in get_setting('auto_decline_countries', '').split('\n'):
+                        if country_code and country_code.strip().upper() == ip_address_info['country'].upper():
+                            return redirect(url_for('auth.please_wait'))
+
                 verification_token = random_token(16)
                 form.user_name.data = form.user_name.data.strip()
                 before_normalize = form.user_name.data
@@ -131,14 +146,17 @@ def register():
                             banned=user_ip_banned() or user_cookie_banned(), email_unread_sent=False,
                             referrer=session.get('Referer', ''), alt_user_name=gibberish(randint(8, 20)))
                 user.set_password(form.password.data)
-                ip_address_info = ip2location(user.ip_address)
                 user.ip_address_country = ip_address_info['country'] if ip_address_info else ''
+                if get_setting('email_verification', True):
+                    user.verified = False
+                else:
+                    user.verified = True
                 db.session.add(user)
                 db.session.commit()
                 send_verification_email(user)
-                if current_app.config['MODE'] == 'development':
+                if current_app.debug:
                     current_app.logger.info('Verify account:' + url_for('auth.verify_email', token=user.verification_token, _external=True))
-                if g.site.registration_mode == 'RequireApplication':
+                if g.site.registration_mode == 'RequireApplication' and g.site.application_question:
                     application = UserRegistration(user_id=user.id, answer=form.question.data)
                     db.session.add(application)
                     for admin in Site.admins():
@@ -150,9 +168,14 @@ def register():
                     db.session.commit()
                     return redirect(url_for('auth.please_wait'))
                 else:
-                    return redirect(url_for('auth.check_email'))
+                    if user.verified:
+                        finalize_user_setup(user)
+                        login_user(user, remember=True)
+                        return redirect(url_for('auth.trump_musk'))
+                    else:
+                        return redirect(url_for('auth.check_email'))
 
-        resp = make_response(redirect(url_for('topic.choose_topics')))
+        resp = make_response(redirect(url_for('auth.trump_musk')))
         if user_ip_banned():
             resp.set_cookie('sesion', '17489047567495', expires=datetime(year=2099, month=12, day=30))
         return resp
@@ -175,16 +198,18 @@ def check_email():
 
 
 @bp.route('/reset_password_request', methods=['GET', 'POST'])
+@limiter.limit("20 per day;10 per 5 minutes", methods=['POST'])
 def reset_password_request():
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
     form = ResetPasswordRequestForm()
     if form.validate_on_submit():
+        form.email.data = form.email.data.strip()
         if form.email.data.lower().startswith('postmaster@') or form.email.data.lower().startswith('abuse@') or \
                 form.email.data.lower().startswith('noc@'):
             flash(_('Sorry, you cannot use that email address.'), 'error')
         else:
-            user = User.query.filter_by(email=form.email.data).first()
+            user = User.query.filter(func.lower(User.email) == func.lower(form.email.data)).filter_by(ap_id=None).first()
             if user:
                 send_password_reset_email(user)
                 flash(_('Check your email for a link to reset your password.'))
@@ -217,7 +242,7 @@ def verify_email(token):
         user = User.query.filter_by(verification_token=token).first()
         if user is not None:
             if user.banned:
-                flash('You have been banned.', 'error')
+                flash(_('You have been banned.'), 'error')
                 return redirect(url_for('main.index'))
             if user.verified:   # guard against users double-clicking the link in the email
                 flash(_('Thank you for verifying your email address.'))
@@ -226,17 +251,17 @@ def verify_email(token):
             db.session.commit()
             if not user.waiting_for_approval() and user.private_key is None:    # only finalize user set up if this is a brand new user. People can also end up doing this process when they change their email address in which case we DO NOT want to reset their keys, etc!
                 finalize_user_setup(user)
-            else:
-                flash(_('Thank you for verifying your email address.'))
+            flash(_('Thank you for verifying your email address.'))
         else:
             flash(_('Email address validation failed.'), 'error')
             return redirect(url_for('main.index'))
+
         if user.waiting_for_approval():
             return redirect(url_for('auth.please_wait'))
         else:
             login_user(user, remember=True)
             if len(user.communities()) == 0:
-                return redirect(url_for('topic.choose_topics'))
+                return redirect(url_for('auth.trump_musk'))
             else:
                 return redirect(url_for('main.index'))
 

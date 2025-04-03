@@ -1,19 +1,20 @@
 # This file is part of pyfedi, which is licensed under the GNU General Public License (GPL) version 3.0.
 # You should have received a copy of the GPL along with this program. If not, see <http://www.gnu.org/licenses/>.
 from datetime import datetime
+import os
 
 from flask_babel import get_locale
 from flask_login import current_user
 
 from app import create_app, db, cli
-import os, arrow
+import arrow
 from flask import session, g, json, request, current_app
 from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_ARTICLE, POST_TYPE_VIDEO, POST_TYPE_POLL, \
     SUBSCRIPTION_MODERATOR, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_PENDING
 from app.models import Site
 from app.utils import getmtime, gibberish, shorten_string, shorten_url, digits, user_access, community_membership, \
     can_create_post, can_upvote, can_downvote, shorten_number, ap_datetime, current_theme, community_link_to_href, \
-    in_sorted_list, role_access, first_paragraph, person_link_to_href
+    in_sorted_list, role_access, first_paragraph, person_link_to_href, feed_membership, html_to_text, remove_images
 
 app = create_app()
 cli.register(app)
@@ -21,8 +22,6 @@ cli.register(app)
 
 @app.context_processor
 def app_context_processor():
-    def getmtime(filename):
-        return os.path.getmtime('app/static/' + filename)
     return dict(getmtime=getmtime, instance_domain=current_app.config['SERVER_NAME'], debug_mode=current_app.debug,
                 arrow=arrow, locale=g.locale if hasattr(g, 'locale') else None,
                 POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
@@ -42,6 +41,7 @@ with app.app_context():
     app.jinja_env.globals['str'] = str
     app.jinja_env.globals['shorten_number'] = shorten_number
     app.jinja_env.globals['community_membership'] = community_membership
+    app.jinja_env.globals['feed_membership'] = feed_membership
     app.jinja_env.globals['json_loads'] = json.loads
     app.jinja_env.globals['user_access'] = user_access
     app.jinja_env.globals['role_access'] = role_access
@@ -53,10 +53,12 @@ with app.app_context():
     app.jinja_env.globals['theme'] = current_theme
     app.jinja_env.globals['file_exists'] = os.path.exists
     app.jinja_env.globals['first_paragraph'] = first_paragraph
+    app.jinja_env.globals['html_to_text'] = html_to_text
     app.jinja_env.filters['community_links'] = community_link_to_href
     app.jinja_env.filters['person_links'] = person_link_to_href
     app.jinja_env.filters['shorten'] = shorten_string
     app.jinja_env.filters['shorten_url'] = shorten_url
+    app.jinja_env.filters['remove_images'] = remove_images
 
 
 @app.before_request

@@ -12,6 +12,9 @@ from flask_bootstrap import Bootstrap5
 from flask_mail import Mail
 from flask_babel import Babel, lazy_gettext as _l
 from flask_caching import Cache
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from werkzeug.middleware.proxy_fix import ProxyFix
 from celery import Celery
 from sqlalchemy_searchable import make_searchable
 import httpx
@@ -32,7 +35,7 @@ def get_locale():
         return 'en'
 
 
-db = SQLAlchemy(session_options={"autoflush": False})  # engine_options={'pool_size': 5, 'max_overflow': 10} # session_options={"autoflush": False}
+db = SQLAlchemy(session_options={"autoflush": False}, engine_options={'pool_size': Config.DB_POOL_SIZE, 'max_overflow': Config.DB_MAX_OVERFLOW, 'pool_recycle': 3600})
 migrate = Migrate()
 login = LoginManager()
 login.login_view = 'auth.login'
@@ -41,6 +44,7 @@ mail = Mail()
 bootstrap = Bootstrap5()
 babel = Babel(locale_selector=get_locale)
 cache = Cache()
+limiter = Limiter(get_remote_address, storage_uri='redis+'+Config.CACHE_REDIS_URL if Config.CACHE_REDIS_URL.startswith("unix://") else Config.CACHE_REDIS_URL)
 celery = Celery(__name__, broker=Config.CELERY_BROKER_URL)
 httpx_client = httpx.Client(http2=True)
 
@@ -56,6 +60,8 @@ def create_app(config_class=Config):
             enable_tracing=False,
         )
 
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
+
     db.init_app(app)
     migrate.init_app(app, db, render_as_batch=True)
     login.init_app(app)
@@ -64,6 +70,7 @@ def create_app(config_class=Config):
     make_searchable(db.metadata)
     babel.init_app(app, locale_selector=get_locale)
     cache.init_app(app)
+    limiter.init_app(app)
     celery.conf.update(app.config)
 
     from app.main import bp as main_bp
@@ -92,6 +99,9 @@ def create_app(config_class=Config):
 
     from app.domain import bp as domain_bp
     app.register_blueprint(domain_bp)
+
+    from app.feed import bp as feed_bp
+    app.register_blueprint(feed_bp)
 
     from app.instance import bp as instance_bp
     app.register_blueprint(instance_bp)

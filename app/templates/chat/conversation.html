@@ -30,7 +30,7 @@
 {% block app_content %}
 <div class="row">
     <div class="row">
-        <div class="col main_pane">
+        <main class="col main_pane">
             <nav aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
               <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
@@ -67,7 +67,7 @@
                                 <div id="message_{{ message.id }}" class="card message {{ 'from_other_party' if message.sender_id != current_user.id else 'from_me' }}">
                                     <div class="message_body">
                                         <span class="message_created_at text-muted small">{{ arrow.get(message.created_at).humanize(locale=locale) }}</span>
-                                        <span class="message_sender"><a href="/u/{{ message.sender.link() }}">{{ message.sender.display_name() }}</a></span>: {{ message.body_html|safe }}
+                                        <span class="message_sender"><a href="/u/{{ message.sender.link() }}">{{ message.sender.display_name() }}</a></span>: {{ message.body_html|remove_images|safe }}
                                     </div>
                                 </div>
                             {% endfor %}
@@ -93,7 +93,7 @@
                     {% endif %}
                 </div>
             </div>
-        </div>
+        </main>
     </div>
 </div>
 {% endblock %}

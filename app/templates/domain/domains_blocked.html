@@ -7,7 +7,7 @@
 
 {% block app_content %}
 <div class="row">
-    <div class="col-12 col-md-8 position-relative main_pane">
+    <main class="col-12 col-md-8 position-relative main_pane">
         {% if search == '' %}
             <h1>{{ _('Blocked domains') }}</h1>
         {% else %}
@@ -65,7 +65,7 @@
             </a>
         {% endif %}
         </nav>
-    </div>
+    </main>
 </div>
 {% endblock %}
 

@@ -24,96 +24,8 @@
 Docker can be used to create an isolated environment that is separate from the host server and starts from a consistent
 configuration. While it is quicker and easier, it's not to everyone's taste.
 
-* Clone PieFed into a new directory
+[DOCKER INSTRUCTIONS ARE HERE](https://codeberg.org/rimu/pyfedi/src/branch/main/INSTALL-docker.md)
 
-```bash
-git clone https://codeberg.org/rimu/pyfedi.git
-```
-
-* Copy suggested docker config
-
-```bash
-cd pyfedi
-cp env.docker.sample .env.docker
-```
-
-* Edit docker environment file
-
-Open .env.docker in your text editor, set SECRET_KEY to something random and set SERVER_NAME to your domain name,
-WITHOUT the https:// at the front. The database login details doesn't really need to be changed because postgres will be
-locked away inside it's own docker network that only PieFed can access but if you want to change POSTGRES_PASSWORD go ahead
-just be sure to update DATABASE_URL accordingly.
-
-Check out compose.yaml and see if it is to your liking. Note the port (8030) and volume definitions - they might need to be
-tweaked.
-
-* First startup
-
-This will take a few minutes.
-
-```bash
-export DOCKER_BUILDKIT=1
-docker-compose up --build
-```
-
-After a while the gibberish will stop scrolling past. If you see errors let us know at [https://piefed.social/c/piefed_help](https://piefed.social/c/piefed_help).
-
-* Networking
-
-You need to somehow to allow client connections from outside to access port 8030 on your server. The details of this is outside the scope
-of this article. You could use a nginx reverse proxy, a cloudflare zero trust tunnel, tailscale, whatever. Just make sure it has SSL on
-it as PieFed assumes you're making requests that start with https://your-domain.
-
-Once you have the networking set up, go to https://your-domain in your browser and see if the docker output in your terminal
-shows signs of reacting to the request. There will be an error showing up in the console because we haven't done the next step yet.
-
-* Database initialization
-
-This must be done once and once only. Doing this will wipe all existing data in your instance so do not do it unless you have a
-brand new instance.
-
-Open a shell inside the PieFed docker container:
-
-`docker exec -it piefed_app1 sh`
-
-Inside the container, run the initialization command:
-
-```
-export FLASK_APP=pyfedi.py
-flask init-db
-```
-
-Among other things this process will get you set up with a username and password. Don't use 'admin' as the user name, script kiddies love that one.
-
-* The moment of truth
-
-Go to https://your-domain in your web browser and PieFed should appear. Log in with the username and password from the previous step.
-
-At this point docker is pretty much Ok so you don't need to see the terminal output as readily. Hit Ctrl + C to close down docker and then run
-
-```bash
-docker-compose up -d
-```
-
-to have PieFed run in the background.
-
-* But wait there's more
-
-Until you set the right environment variables, PieFed won't be able to send email. Check out env.sample for some hints.
-When you have a new value to set, add it to .env.docker and then restart docker with:
-
-```
-docker-compose down && docker-compose up -d
-```
-
-There are also regular cron jobs that need to be run. Set up cron on the host to run those scripts inside the container - see the Cron
-section of this document for details.
-
-You probably want a Captcha on the registration form - more environment variables.
-
-CDN, CloudFlare. More environment variables.
-
-All this is explained in the bare metal guide, below.
 
 ### Hard way: bare metal
 
@@ -178,6 +90,9 @@ sudo apt install git
 sudo apt install tesseract-ocr
 ```
 
+Developers might want to use `ruff` as a pre-commit linter. Install it with `pip install ruff` then use `ruff check` to analyze code.
+We have supplied a ruff.toml config file in the root of the project.
+
 <div id="setup-pyfedi"></div>
 
 ## Setup PyFedi
@@ -221,7 +136,6 @@ pip install -r requirements.txt
 
 * `SERVER_NAME` should be the domain of the site/instance. Use `127.0.0.1:5000` during development unless using ngrok. Just use the bare
 domain name, without https:// on the front or a slash on the end.
-* `RECAPTCHA_PUBLIC_KEY` and `RECAPTCHA_PRIVATE_KEY` can be generated at https://www.google.com/recaptcha/admin/create (this is optional - omit to allow registration without RECAPCHA).
 * `CACHE_TYPE` can be `FileSystemCache` or `RedisCache`. `FileSystemCache` is fine during development (set `CACHE_DIR` to `/tmp/piefed` or `/dev/shm/piefed`)
 while `RedisCache` **should** be used in production. If using `RedisCache`, set `CACHE_REDIS_URL` to `redis://localhost:6379/1`. Visit https://yourdomain/testredis to check if your redis url is working.
 
@@ -239,7 +153,7 @@ while `RedisCache` **should** be used in production. If using `RedisCache`, set 
     ```
     You can also [use environment variables](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html#environment-variables) if you prefer.
 
-* Test email sending by going to https://yourdomain/test_email. It will try to send an email to the current user's email address.
+* Test email sending by going to https://yourdomain/test_email. (after setting the FLASK_DEBUG environment variable to 1). It will try to send an email to the current user's email address.
 If it does not work check the log file at logs/pyfedi.log for clues.
 
 * BOUNCE_ADDRESS is where email bounces will go to. If BOUNCE_* is configured then all emails in that inbox
@@ -248,7 +162,7 @@ for bounces, not a inbox you also use for other purposes.
 
 ### Development mode
 
-Setting `FLASK_DEBUG=1` in the `.env` file will enable the `<your-site>/dev/tools` page.
+Setting `FLASK_DEBUG=1` in the `.env` file will enable the `<your-site>/dev/tools` page. It will expose some various testing routes as well.
 
 That page can be accessed from the `Admin` navigation drop down, or nav bar as `Dev Tools`. That page has buttons that can create/delete communities and topics. The communities and topics will all begin with "dev_".
 
@@ -608,6 +522,8 @@ To use SMTP you need to set all the `MAIL_*` environment variables in you `.env`
 
 You need to set `MAIL_FROM` in `.env` to some email address.
 
+Also set an environment variable `FLASK_DEBUG` to '1' ( `export FLASK_DEBUG="1"` ).
+
 Log into Piefed then go to https://yourdomain/test_email to trigger a test email. It will use SES or SMTP depending on
 which environment variables you defined in .env. If `MAIL_SERVER` is empty it will try SES. Then if `AWS_REGION` is empty it'll
 silently do nothing.
@@ -721,3 +637,6 @@ upgrade a package:
 pip install --upgrade <package_name>
 ```
 
+## Developers
+
+See dev_notes.txt and https://join.piefed.social/docs/developers/

@@ -7,7 +7,7 @@
 
 {% block app_content %}
 <div class="row">
-    <div class="col-12 col-md-8 position-relative main_pane">
+    <main class="col-12 col-md-8 position-relative main_pane">
         <h1>{{ _('Search results for') }} <form method="get" class="redo_search"><input type="search" name="q" value="{{ q }}" class="form-control">
         <input type="hidden" name="community" value="{{ community_id }}">
         <input type="hidden" name="language" value="{{ language_id }}">
@@ -32,7 +32,7 @@
                     </a>
                 {% endif %}
         </nav>
-    </div>
+    </main>
 
     <aside id="side_pane" class="col-12 col-md-4 side_pane" role="complementary">
         <!-- <div class="card">

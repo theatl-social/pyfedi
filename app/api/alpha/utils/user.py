@@ -1,9 +1,14 @@
-from app.api.alpha.views import user_view
+from app import db
+from app.api.alpha.views import user_view, reply_view
 from app.utils import authorise_api_user
 from app.api.alpha.utils.post import get_post_list
 from app.api.alpha.utils.reply import get_reply_list
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
-from app.shared.user import block_another_user, unblock_another_user
+from app.models import Conversation, ChatMessage, Notification, PostReply, User
+from app.shared.user import block_another_user, unblock_another_user, toggle_user_notification
+from app.constants import *
+
+from sqlalchemy import text, desc
 
 
 def get_user(auth, data):
@@ -29,14 +34,47 @@ def get_user(auth, data):
     post_list = get_post_list(auth, data, user_id)
     reply_list = get_reply_list(auth, data, user_id)
 
-    user_json = user_view(user=person_id, variant=3)
+    user_json = user_view(user=person_id, variant=3, user_id=user_id)
     user_json['posts'] = post_list['posts']
     user_json['comments'] = reply_list['comments']
     return user_json
 
 
-# would be in app/constants.py
-SRC_API = 3
+def get_user_list(auth, data):
+    # only support 'api/alpha/search?q&type_=Users&sort=Top&listing_type=Local&page=1&limit=15' for now
+    # (enough for instance view)
+
+    type = data['type_'] if data and 'type_' in data else "All"
+    sort = data['sort'] if data and 'sort' in data else "New"
+    page = int(data['page']) if data and 'page' in data else 1
+    limit = int(data['limit']) if data and 'limit' in data else 10
+
+    query = data['q'] if data and 'q' in data else ''
+
+    user_id = authorise_api_user(auth) if auth else None
+
+    if type == 'Local':
+        users = User.query.filter_by(instance_id=1, deleted=False).order_by(User.id)
+    else:
+        users = User.query.filter(User.instance_id != 1, User.deleted == False).order_by(desc(User.id))
+
+    if query:
+        if '@' in query:
+            users = users.filter(User.ap_id.ilike(f"%{query}%"))
+        else:
+            users = users.filter(User.user_name.ilike(f"%{query}%"))
+
+    users = users.paginate(page=page, per_page=limit, error_out=False)
+
+    user_list = []
+    for user in users:
+        user_list.append(user_view(user, variant=2, stub=True, user_id=user_id))
+    list_json = {
+        "users": user_list
+    }
+
+    return list_json
+
 
 def post_user_block(auth, data):
     required(['person_id', 'block'], data)
@@ -48,4 +86,86 @@ def post_user_block(auth, data):
 
     user_id = block_another_user(person_id, SRC_API, auth) if block else unblock_another_user(person_id, SRC_API, auth)
     user_json = user_view(user=person_id, variant=4, user_id=user_id)
+    return user_json
+
+
+def get_user_unread_count(auth):
+    user = authorise_api_user(auth, return_type='model')
+    unread_replies = unread_messages = 0
+    unread_notifications = user.unread_notifications
+    if unread_notifications > 0:
+        unread_replies = db.session.execute(text("SELECT COUNT(id) as c FROM notification WHERE user_id = :user_id AND read = false AND url LIKE '%comment%'"), {'user_id': user.id}).scalar()
+        unread_messages = db.session.execute(text("SELECT COUNT(id) as c FROM chat_message WHERE recipient_id = :user_id AND read = false"), {'user_id': user.id}).scalar()
+
+    # "other" is things like reports and activity alerts that this endpoint isn't really intended to support
+    # replies and mentions are merged together in 'replies' as that's what get_user_replies() currently expects
+
+    unread_count = {
+        "replies": unread_replies,
+        "mentions": 0,
+        "private_messages": unread_messages,
+        "other": unread_notifications - unread_replies - unread_messages
+    }
+
+    return unread_count
+
+
+def get_user_replies(auth, data):
+    page = int(data['page']) if data and 'page' in data else 1
+    limit = int(data['limit']) if data and 'limit' in data else 10
+
+    user_id = authorise_api_user(auth)
+
+    unread_urls = db.session.execute(text("select url from notification where user_id = :user_id and read = false and url ilike '%comment%'"), {'user_id': user_id}).scalars()
+    unread_ids = []
+    for url in unread_urls:
+        if '#comment_' in url:                                  # reply format
+            unread_ids.append(url.rpartition('_')[-1])
+        elif '/comment/' in url:                                # mention format
+            unread_ids.append(url.rpartition('/')[-1])
+
+    replies = PostReply.query.filter(PostReply.id.in_(unread_ids)).order_by(desc(PostReply.posted_at)).paginate(page=page, per_page=limit, error_out=False)
+
+    reply_list = []
+    for reply in replies:
+        reply_list.append(reply_view(reply=reply, variant=5, user_id=user_id))
+    list_json = {
+        "replies": reply_list
+    }
+
+    return list_json
+
+
+def post_user_mark_all_as_read(auth):
+    user = authorise_api_user(auth, return_type='model')
+
+    notifications = Notification.query.filter_by(user_id=user.id, read=False)
+    for notification in notifications:
+        notification.read = True
+
+    user.unread_notifications = 0
+
+    conversations = Conversation.query.filter_by(read=False).join(ChatMessage, ChatMessage.conversation_id == Conversation.id).filter_by(recipient_id=user.id)
+    for conversation in conversations:
+        conversation.read = True
+
+    chat_messages = ChatMessage.query.filter_by(recipient_id=user.id)
+    for chat_message in chat_messages:
+        chat_message.read = True
+
+    db.session.commit()
+
+    return {'replies': []}
+
+
+def put_user_subscribe(auth, data):
+    required(['person_id', 'subscribe'], data)
+    integer_expected(['person_id'], data)
+    boolean_expected(['subscribe'], data)
+
+    person_id = data['person_id']
+    subscribe = data['subscribe']           # not actually processed - is just a toggle
+
+    user_id = toggle_user_notification(person_id, SRC_API, auth)
+    user_json = user_view(user=person_id, variant=5, user_id=user_id)
     return user_json

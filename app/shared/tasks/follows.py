@@ -1,17 +1,12 @@
 from app import cache, celery, db
-from app.activitypub.signature import default_context, post_request
+from app.constants import *
+from app.activitypub.signature import default_context, post_request, send_post_request
 from app.models import Community, CommunityBan, CommunityJoinRequest, User
 from app.utils import community_membership, gibberish, joined_communities, instance_banned
 
-from flask import current_app, flash
+from flask import current_app, flash, Markup
 from flask_babel import _
 
-
-# would be in app/constants.py
-SRC_WEB = 1
-SRC_PUB = 2
-SRC_API = 3
-SRC_PLD = 4
 
 
 """ JSON format
@@ -71,7 +66,6 @@ def join_community(send_async, user_id, community_id, src):
                 raise Exception('community_on_banned_or_blocked_instance')
         return
 
-    success = True
     if not community.is_local() and community.instance.online():
         join_request = CommunityJoinRequest(user_id=user_id, community_id=community_id)
         db.session.add(join_request)
@@ -86,40 +80,22 @@ def join_community(send_async, user_id, community_id, src):
           '@context': default_context(),
           'to': [community.public_url()],
         }
-        success = post_request(community.ap_inbox_url, follow, user.private_key,
-                               user.public_url() + '#main-key', timeout=10)
-        if success is False or isinstance(success, str):
-            if not send_async:
-                db.session.query(CommunityJoinRequest).filter_by(user_id=user_id, community_id=community_id).delete()
-                db.session.commit()
-
-                if 'is not in allowlist' in success:
-                    msg_to_user = f'{community.instance.domain} does not allow us to join their communities.'
-                else:
-                    msg_to_user = "There was a problem while trying to communicate with remote server. Please try again later."
-
-                if src == SRC_WEB:
-                    flash(_(msg_to_user), 'error')
-                    return
-                elif src == SRC_PLD:
-                    pre_load_message['status'] = msg_to_user
-                    return pre_load_message
-                elif src == SRC_API:
-                    raise Exception(msg_to_user)
+        send_post_request(community.ap_inbox_url, follow, user.private_key,
+                          user.public_url() + '#main-key', timeout=10)
 
     # for communities on local or offline instances, joining is instant
-    if success is True:
-        cache.delete_memoized(community_membership, user, community)
-        cache.delete_memoized(joined_communities, user.id)
+    cache.delete_memoized(community_membership, user, community)
+    cache.delete_memoized(joined_communities, user.id)
 
-        if src == SRC_WEB:
-            flash('You joined ' + community.title)
-            return
-        elif src == SRC_PLD:
-            pre_load_message['status'] = 'joined'
-            return pre_load_message
+    if src == SRC_WEB:
+        flash(Markup(_('You joined %(community_name)s',
+                       community_name=f'<a href="/c/{community.link()}">{community.display_name()}</a>')))
+        return
+    elif src == SRC_PLD:
+        pre_load_message['status'] = 'joined'
+        return pre_load_message
 
-    return success
+    return True
 
 
 @celery.task
@@ -160,6 +136,6 @@ def leave_community(send_async, user_id, community_id):
       'to': [community.public_url()]
     }
 
-    post_request(community.ap_inbox_url, undo, user.private_key, user.public_url() + '#main-key', timeout=10)
+    send_post_request(community.ap_inbox_url, undo, user.private_key, user.public_url() + '#main-key', timeout=10)
 
 

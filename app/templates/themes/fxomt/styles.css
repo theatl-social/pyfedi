@@ -1,0 +1,242 @@
+/*
+TODO:
+ - [ ] Add better upvote buttons
+ - [ ] Add customization options to the colorscheme
+ - [ ] Piefed Domination
+*/
+/* COLORS */
+[data-bs-theme="dark"] {
+    color-scheme: dark;
+    --bs-body-color: #adb5bd;
+    --bs-body-color-rgb: 173, 181, 189;
+    --bs-body-bg: #111111;
+    --bs-body-bg-rgb: 33, 37, 41;
+    --bs-emphasis-color: #fff;
+    --bs-emphasis-color-rgb: 255, 255, 255;
+    --bs-secondary-color: rgba(173, 181, 189, 0.75);
+    --bs-secondary-color-rgb: 173, 181, 189;
+    --bs-secondary-bg: #040404;
+    --bs-secondary-bg-rgb: 52, 58, 64;
+    --bs-tertiary-color: rgba(173, 181, 189, 0.5);
+    --bs-tertiary-color-rgb: 173, 181, 189;
+    --bs-tertiary-bg: #2b3035;
+    --bs-tertiary-bg-rgb: 43, 48, 53;
+    --bs-primary-text-emphasis: #6ea8fe;
+    --bs-secondary-text-emphasis: #a7acb1;
+    --bs-success-text-emphasis: #75b798;
+    --bs-info-text-emphasis: #6edff6;
+    --bs-warning-text-emphasis: #ffda6a;
+    --bs-danger-text-emphasis: #ea868f;
+    --bs-light-text-emphasis: #f8f9fa;
+    --bs-dark-text-emphasis: #dee2e6;
+    --bs-primary-bg-subtle: #031633;
+    --bs-secondary-bg-subtle: #161719;
+    --bs-success-bg-subtle: #051b11;
+    --bs-info-bg-subtle: #032830;
+    --bs-warning-bg-subtle: #332701;
+    --bs-danger-bg-subtle: #2c0b0e;
+    --bs-light-bg-subtle: #343a40;
+    --bs-dark-bg-subtle: #1a1d20;
+    --bs-primary-border-subtle: #084298;
+    --bs-secondary-border-subtle: #41464b;
+    --bs-success-border-subtle: #0f5132;
+    --bs-info-border-subtle: #087990;
+    --bs-warning-border-subtle: #997404;
+    --bs-danger-border-subtle: #842029;
+    --bs-light-border-subtle: #495057;
+    --bs-dark-border-subtle: #343a40;
+    --bs-heading-color: inherit;
+    --bs-link-color: #6ea8fe;
+    --bs-link-hover-color: #8bb9fe;
+    --bs-link-color-rgb: 110, 168, 254;
+    --bs-link-hover-color-rgb: 139, 185, 254;
+    --bs-code-color: #e685b5;
+    --bs-border-color: #495057;
+    --bs-border-color-translucent: rgba(255, 255, 255, 0.15);
+    --bs-form-valid-color: #75b798;
+    --bs-form-valid-border-color: #75b798;
+    --bs-form-invalid-color: #ea868f;
+    --bs-form-invalid-border-color: #ea868f;
+}
+
+.btn-primary {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: #0d6efd;
+    --bs-btn-border-color: #0d6efd;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #0b5ed7;
+    --bs-btn-hover-border-color: #0a58ca;
+    --bs-btn-focus-shadow-rgb: 49, 132, 253;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: #0a58ca;
+    --bs-btn-active-border-color: #0a53be;
+    --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+    --bs-btn-disabled-color: #fff;
+    --bs-btn-disabled-bg: #0d6efd;
+    --bs-btn-disabled-border-color: #0d6efd;
+}
+/* END COLORS */
+/* PREPARATIONS */
+body {
+    background-color: var(--bs-secondary-bg) !important;
+}
+
+.main_pane,
+.card {
+    background-color: var(--bs-body-bg);
+    border-color: var(--bs-body-bg) !important;
+    border-radius: 13px;
+}
+
+div.navbar {
+    border-bottom: unset !important;
+    background-color: var(--bs-secondary-bg) !important;
+    min-height: 60px;
+}
+
+#outer_container {
+    margin-top: unset;
+    padding-top: unset;
+}
+
+.navbar-brand {
+    line-height: unset;
+}
+
+.navbar-brand img {
+    width: 40px;
+    height: 40px;
+}
+/* END PREPARATIONS */
+/* POSTS */
+.fe-image {
+    display: none;
+}
+
+#more_replies > h4 {
+    background-color: var(--bs-info-bg-subtle);
+    border-radius: 5px;
+    color: #a1a1a1;
+    padding: 3px;
+}
+
+.post_teaser_image_preview,
+.post_image img,
+.masonry_thumb img,
+.url_thumbnail img {
+    border-radius: 10px;
+}
+
+
+.post_teaser_clickable {
+    color: var(--bs-secondary-color);
+    font-style: italic;
+}
+
+.post_teaser:has(.fe-sticky-right) .post_teaser_title_a {
+    color: var(--bs-link-color);
+}
+
+.fe-sticky-right,
+.fe-sticky-left {
+    display: none;
+}
+
+.mb-2 {
+    font-style: italic;
+    color: var(--bs-secondary-color);
+}
+/* END POSTS */
+/* FIELDS */
+.downarea-toolbar,
+.form-control,
+.downarea-bottom {
+    background-color: var(--bs-dark-bg-subtle) !important;
+    border-color: var(--bs-border-color);
+}
+
+.downarea-toolbar-tool {
+    background-color: var(--bs-dark-bg-subtle) !important;
+}
+
+.downarea-textarea textarea {
+    border-radius: 0px !important;
+}
+/* END FIELDS */
+.post_teaser_title_a {
+    color: var(--bs-heading-color);
+}
+
+/* USER PREVIEWS */
+.preview_avatar_image img {
+    border-radius: 10px;
+}
+
+.user_preview {
+    background-color: transparent !important;
+}
+
+.user_preview > .card {
+    border-color: var(--bs-border-color) !important;
+}
+/* END USER PREVIEWS */
+/* COMMUNITIIES */
+.community_header {
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0));
+}
+/* COMMUNITIIES */
+/* MESSAGES */
+.from_me,
+.from_me a {
+    background-color: #218AFF !important;
+    color: black !important;
+    border: 0px;
+}
+
+.from_other_party,
+.from_other_party a {
+    background-color: #3DDC84;
+    color: black;
+    border: 0px;
+}
+
+.message_created_at {
+    color: black !important;
+}
+/* END MESSAGES */
+/* TAGS */
+.user_note {
+    background-color: var(--bs-info-border-subtle);
+    color: black;
+    vertical-align: inherit;
+    border-radius: 3px;
+}
+
+.comment_author .small {
+    background-color: #3DDC84;
+    color: black;
+    vertical-align: inherit;
+    border-radius: 3px;
+    font-size: 0.95rem;
+}
+
+.red {
+    background-color: darkred;
+    color: lightgray;
+    vertical-align: inherit;
+    border-radius: 3px;
+    font-size: 0.95rem;
+}
+/* END TAGS */
+/* CFS */
+.coolfieldset {
+    border: 1px solid var(--bs-border-color);
+}
+
+.coolfieldset legend {
+    color: var(--bs-heading-color);
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+}
+/* END CFS */

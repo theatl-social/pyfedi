@@ -12,7 +12,7 @@ from app.models import Post, Community, Tag, post_tag
 from app.tag import bp
 from app.utils import render_template, permission_required, joined_communities, moderating_communities, \
     user_filters_posts, blocked_instances, blocked_users, blocked_domains, menu_topics, mimetype_from_url, \
-    blocked_communities
+    blocked_communities, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds
 from sqlalchemy import desc, or_
 
 
@@ -65,7 +65,10 @@ def show_tag(tag):
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
                                menu_topics=menu_topics(),
-                               inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                               inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                               menu_instance_feeds=menu_instance_feeds(), 
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                               menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                                )
     else:
         abort(404)

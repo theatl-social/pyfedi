@@ -1,0 +1,12 @@
+{
+  "@context": [
+    "https://www.w3.org/ns/activitystreams",
+    "https://w3id.org/security/v1"
+  ],
+  "id": "https://example.com/f/feedname/moderators",
+  "orderedItems": [
+    "https://example.com/u/username"
+  ],
+  "totalItems": 1,
+  "type": "OrderedCollection"
+}

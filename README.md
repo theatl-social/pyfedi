@@ -1,6 +1,6 @@
 # PieFed
 
-A lemmy/kbin clone written in Python with Flask.
+A Lemmy/Mbin alternative written in Python with Flask.
 
  - Clean, simple code that is easy to understand and contribute to. No fancy design patterns or algorithms.
  - Easy setup, easy to manage - few dependencies and extra software required.
@@ -9,7 +9,8 @@ A lemmy/kbin clone written in Python with Flask.
 
 ## Project goals
 
-To build a federated discussion and link aggregation platform, similar to Reddit, Lemmy, Mbin.
+To build a federated discussion and link aggregation platform, similar to Reddit, Lemmy, Mbin interoperable with as
+much of the fediverse as possible.
 
 ## For developers
 

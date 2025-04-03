@@ -12,7 +12,7 @@ from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_MEMBERS, DOWNVOTE
     DOWNVOTE_ACCEPT_TRUSTED
 from app.models import Community, utcnow
 from app.utils import domain_from_url, MultiCheckboxField
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, UnidentifiedImageError
 from io import BytesIO
 import pytesseract
 
@@ -102,7 +102,7 @@ class ResolveReportForm(FlaskForm):
 
 
 class SearchRemoteCommunity(FlaskForm):
-    address = StringField(_l('Community address'), render_kw={'placeholder': 'e.g. !name@server', 'autofocus': True}, validators=[DataRequired()])
+    address = StringField(_l('Community address'), render_kw={'placeholder': 'e.g. !name@server', 'autofocus': True, 'autocomplete': 'off'}, validators=[DataRequired()])
     submit = SubmitField(_l('Search'))
 
 
@@ -117,14 +117,28 @@ class BanUserCommunityForm(FlaskForm):
 class CreatePostForm(FlaskForm):
     communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
     title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])
-    body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5})
+    body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=50000)], render_kw={'rows': 5})
     tags = StringField(_l('Tags'), validators=[Optional(), Length(min=3, max=5000)])
     sticky = BooleanField(_l('Sticky'))
     nsfw = BooleanField(_l('NSFW'))
     nsfl = BooleanField(_l('Gore/gross'))
     notify_author = BooleanField(_l('Notify about replies'))
     language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
-    submit = SubmitField(_l('Save'))
+    submit = SubmitField(_l('Publish'))
+
+    def validate_nsfw(self, field):
+        if g.site.enable_nsfw is False:
+            if field.data:
+                self.nsfw.errors.append(_l('NSFW posts are not allowed.'))
+                return False
+        return True
+
+    def validate_nsfl(self, field):
+        if g.site.enable_nsfl is False:
+            if field.data:
+                self.nsfl.errors.append(_l('NSFL posts are not allowed.'))
+                return False
+        return True
 
 
 class CreateDiscussionForm(CreatePostForm):
@@ -138,8 +152,11 @@ class CreateLinkForm(CreatePostForm):
                                       'hx-params': '*',
                                       'hx-target': '#urlUsed'})
 
-    def validate(self, extra_validators=None) -> bool:
-        domain = domain_from_url(self.link_url.data, create=False)
+    def validate_link_url(self, field):
+        if 'blogspot.com' in field.data:
+            self.link_url.errors.append(_l("Links to %(domain)s are not allowed.", domain='blogspot.com'))
+            return False
+        domain = domain_from_url(field.data, create=False)
         if domain and domain.banned:
             self.link_url.errors.append(_l("Links to %(domain)s are not allowed.", domain=domain.name))
             return False
@@ -171,12 +188,14 @@ class CreateImageForm(CreatePostForm):
                 if '.avif' in uploaded_file.filename:
                     import pillow_avif
                 image_text = pytesseract.image_to_string(Image.open(BytesIO(uploaded_file.read())).convert('L'))
-            except FileNotFoundError as e:
+            except FileNotFoundError:
+                image_text = ''
+            except UnidentifiedImageError:
                 image_text = ''
             if 'Anonymous' in image_text and (
                     'No.' in image_text or ' N0' in image_text):  # chan posts usually contain the text 'Anonymous' and ' No.12345'
                 self.image_file.errors.append(
-                    f"This image is an invalid file type.")  # deliberately misleading error message
+                    "This image is an invalid file type.")  # deliberately misleading error message
                 current_user.reputation -= 1
                 db.session.commit()
                 return False
@@ -269,3 +288,8 @@ class DeleteCommunityForm(FlaskForm):
 class RetrieveRemotePost(FlaskForm):
     address = StringField(_l('Full URL'), render_kw={'placeholder': 'e.g. https://lemmy.world/post/123', 'autofocus': True}, validators=[DataRequired()])
     submit = SubmitField(_l('Retrieve'))
+
+
+class InviteCommunityForm(FlaskForm):
+    to = TextAreaField(_l('To'), validators=[DataRequired()], render_kw={'placeholder': _l('Email addresses or fediverse handles, one per line'), 'autofocus': True})
+    submit = SubmitField(_l('Invite'))

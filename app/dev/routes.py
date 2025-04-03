@@ -11,7 +11,7 @@ from app.dev.forms import AddTestCommunities, AddTestTopics, DeleteTestCommuniti
 from app.inoculation import inoculation
 from app.models import Site, User, Community, CommunityMember, Language, Topic, utcnow
 from app.utils import render_template, community_membership, moderating_communities, joined_communities, menu_topics, \
-    markdown_to_html, permission_required
+    markdown_to_html, permission_required, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds
 
 
 # a page for handy dev tools
@@ -144,7 +144,7 @@ def tools():
             unsubscribe_everyone_then_delete(c.id)
         
         # redirect browser to communities list page
-        flash(f'{len(dev_communities)} Dev Communities Deleted')
+        flash(_('%(num_communities)d dev communities deleted', len(dev_communities)))
         return redirect(url_for('main.list_communities'))
 
     # delete dev_ topics
@@ -189,5 +189,8 @@ def tools():
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
                                menu_topics=menu_topics(), site=g.site,
-                               inoculation=inoculation[random.randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                               inoculation=inoculation[random.randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                               menu_instance_feeds=menu_instance_feeds(), 
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                               menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                                )

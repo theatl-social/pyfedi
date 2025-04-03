@@ -3,33 +3,39 @@ from random import randint
 
 from flask import request, current_app, abort, jsonify, json, g, url_for, redirect, make_response
 from flask_login import current_user
+from psycopg2 import IntegrityError
 from sqlalchemy import desc, or_
 import werkzeug.exceptions
 
 from app import db, constants, cache, celery
 from app.activitypub import bp
 
-from app.activitypub.signature import HttpSignature, post_request, VerificationError, default_context, LDSignature
+from app.activitypub.signature import HttpSignature, VerificationError, default_context, LDSignature, \
+    send_post_request
 from app.community.routes import show_community
 from app.community.util import send_to_remote_instance
+from app.feed.routes import show_feed
 from app.post.routes import continue_discussion, show_post
 from app.user.routes import show_profile
 from app.constants import *
 from app.models import User, Community, CommunityJoinRequest, CommunityMember, CommunityBan, ActivityPubLog, Post, \
     PostReply, Instance, PostVote, PostReplyVote, File, AllowedInstances, BannedInstances, utcnow, Site, Notification, \
-    ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice
+    ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice, Feed, FeedItem, FeedMember, FeedJoinRequest
 from app.activitypub.util import public_key, users_total, active_half_year, active_month, local_posts, local_comments, \
     post_to_activity, find_actor_or_create, find_reply_parent, find_liked_object, \
     lemmy_site_data, is_activitypub_request, delete_post_or_comment, community_members, \
     user_removed_from_remote_server, create_post, create_post_reply, update_post_reply_from_activity, \
-    update_post_from_activity, undo_vote, undo_downvote, post_to_page, get_redis_connection, find_reported_object, \
-    process_report, ensure_domains_match, can_edit, can_delete, resolve_remote_post, \
-    inform_followers_of_post_update, comment_model_to_json, restore_post_or_comment, ban_user, unban_user, \
+    update_post_from_activity, undo_vote, post_to_page, find_reported_object, \
+    process_report, ensure_domains_match, can_edit, can_delete, resolve_remote_post, refresh_community_profile, \
+    comment_model_to_json, restore_post_or_comment, ban_user, unban_user, \
     log_incoming_ap, find_community, site_ban_remove_data, community_ban_remove_data, verify_object_from_source
 from app.utils import gibberish, get_setting, render_template, \
     community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
-    community_moderators, html_to_text, add_to_modlog_activitypub, instance_banned
+    community_moderators, html_to_text, add_to_modlog_activitypub, instance_banned, get_redis_connection, \
+    feed_membership, \
+    joined_communities, blocked_phrases
+from app.shared.tasks import task_selector
 
 
 @bp.route('/testredis')
@@ -76,15 +82,20 @@ def webfinger():
             resp.headers.add_header('Access-Control-Allow-Origin', '*')
             return resp
 
+        # look for the User first, then the Community, then the Feed that matches
         seperator = 'u'
         type = 'Person'
         user = User.query.filter(or_(User.user_name == actor.strip(), User.alt_user_name == actor.strip())).filter_by(deleted=False, banned=False, ap_id=None).first()
         if user is None:
             community = Community.query.filter_by(name=actor.strip(), ap_id=None).first()
-            if community is None:
-                return ''
             seperator = 'c'
             type = 'Group'
+            if community is None:
+                feed = Feed.query.filter_by(name=actor.strip(), ap_id=None).first()
+                if feed is None:
+                    return ''
+                seperator = 'f'
+                type = 'Feed'
 
         webfinger_data = {
             "subject": f"acct:{actor}@{current_app.config['SERVER_NAME']}",
@@ -117,8 +128,10 @@ def webfinger():
 def nodeinfo():
     nodeinfo_data = {"links": [{"rel": "http://nodeinfo.diaspora.software/ns/schema/2.0",
                                 "href": f"https://{current_app.config['SERVER_NAME']}/nodeinfo/2.0"},
-                                {"rel": "https://www.w3.org/ns/activitystreams#Application",
-                                 "href": f"https://{current_app.config['SERVER_NAME']}"}]}
+                               {"rel": "http://nodeinfo.diaspora.software/ns/schema/2.1",
+                                "href": f"https://{current_app.config['SERVER_NAME']}/nodeinfo/2.1"},
+                               {"rel": "https://www.w3.org/ns/activitystreams#Application",
+                                "href": f"https://{current_app.config['SERVER_NAME']}"}]}
     return jsonify(nodeinfo_data)
 
 
@@ -154,6 +167,41 @@ def nodeinfo2():
                     "localComments": local_comments()
                 },
                 "openRegistrations": g.site.registration_mode != 'Closed'
+            }
+    return jsonify(nodeinfo_data)
+
+
+@bp.route('/nodeinfo/2.1')
+@bp.route('/nodeinfo/2.1.json')
+@cache.cached(timeout=600)
+def nodeinfo21():
+
+    nodeinfo_data = {
+                "version": "2.1",
+                "software": {
+                    "name": "PieFed",
+                    "version": "0.1",
+                    "repository": "https://codeberg.org/rimu/pyfedi",
+                    "homepage": "https://join.piefed.social"
+                },
+                "protocols": [
+                    "activitypub"
+                ],
+                "usage": {
+                    "users": {
+                        "total": users_total(),
+                        "activeHalfyear": active_half_year(),
+                        "activeMonth": active_month()
+                    },
+                    "localPosts": local_posts(),
+                    "localComments": local_comments()
+                },
+                "openRegistrations": g.site.registration_mode != 'Closed',
+                "services": {
+                    "inbound": [],
+                    "outbound": []
+                },
+                "metadata": {}
             }
     return jsonify(nodeinfo_data)
 
@@ -202,7 +250,7 @@ def lemmy_site():
 @bp.route('/api/v3/federated_instances')
 @cache.cached(timeout=600)
 def lemmy_federated_instances():
-    instances = Instance.query.filter(Instance.id != 1).all()
+    instances = Instance.query.filter(Instance.id != 1, Instance.gone_forever == False).all()
     linked = []
     allowed = []
     blocked = []
@@ -415,16 +463,19 @@ def shared_inbox():
         return '', 200
 
     id = request_json['id']
+    missing_actor_in_announce_object = False     # nodebb
     if request_json['type'] == 'Announce' and isinstance(request_json['object'], dict):
         object = request_json['object']
-        if not 'id' in object or not 'type' in object or not 'actor' in object or not 'object' in object:
+        if not 'actor' in object:
+            missing_actor_in_announce_object = True
+        if not 'id' in object or not 'type' in object or not 'object' in object:
             if 'type' in object and (object['type'] == 'Page' or object['type'] == 'Note'):
                 log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_IGNORED, saved_json, 'Intended for Mastodon')
             else:
                 log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Missing minimum expected fields in JSON Announce object')
             return '', 200
 
-        if isinstance(object['actor'], str) and object['actor'].startswith('https://' + current_app.config['SERVER_NAME']):
+        if not missing_actor_in_announce_object and isinstance(object['actor'], str) and object['actor'].startswith('https://' + current_app.config['SERVER_NAME']):
             log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json, 'Activity about local content which is already present')
             return '', 200
 
@@ -456,7 +507,7 @@ def shared_inbox():
 
     if not actor:
         actor_name = request_json['actor']
-        log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, f'Actor could not be found 1: {actor_name}')
+        log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, f'Actor could not be found 1 - : {actor_name}, actor object: {actor}')
         return '', 200
 
     if actor.is_local():        # should be impossible (can be Announced back, but not sent without access to privkey)
@@ -483,11 +534,12 @@ def shared_inbox():
             log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Could not verify HTTP signature: ' + str(e))
             return '', 400
 
-    actor.instance.last_seen = utcnow()
-    actor.instance.dormant = False
-    actor.instance.gone_forever = False
-    actor.instance.failures = 0
-    actor.instance.ip_address = ip_address() if not bounced else ''
+    if actor.instance_id:
+        actor.instance.last_seen = utcnow()
+        actor.instance.dormant = False
+        actor.instance.gone_forever = False
+        actor.instance.failures = 0
+        actor.instance.ip_address = ip_address() if not bounced else ''
     db.session.commit()
 
     # When a user is deleted, the only way to be fairly sure they get deleted everywhere is to tell the whole fediverse.
@@ -498,6 +550,12 @@ def shared_inbox():
         else:
             process_delete_request.delay(request_json, store_ap_json)
         return ''
+
+    if missing_actor_in_announce_object:
+        if ((request_json['object']['type'] == 'Create' or request_json['object']['type'] == 'Update') and
+            'attributedTo' in request_json['object']['object'] and isinstance(request_json['object']['object']['attributedTo'], str)):
+            log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_MONITOR, request_json, 'nodebb: Actor is missing in the Create')
+            request_json['object']['actor'] = request_json['object']['object']['attributedTo']
 
     if current_app.debug:
         process_inbox_request(request_json, store_ap_json)
@@ -528,17 +586,21 @@ def replay_inbox_request(request_json):
         return
 
     id = request_json['id']
+    missing_actor_in_announce_object = False     # nodebb
     if request_json['type'] == 'Announce' and isinstance(request_json['object'], dict):
         object = request_json['object']
-        if not 'id' in object or not 'type' in object or not 'actor' in object or not 'object' in object:
+        if not 'actor' in object:
+            missing_actor_in_announce_object = True
+            log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_MONITOR, request_json, 'REPLAY: Actor is missing in Announce object')
+        if not 'id' in object or not 'type' in object or not 'object' in object:
             if 'type' in object and (object['type'] == 'Page' or object['type'] == 'Note'):
                 log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_IGNORED, request_json, 'REPLAY: Intended for Mastodon')
             else:
                 log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'REPLAY: Missing minimum expected fields in JSON Announce object')
             return
 
-        if isinstance(object['actor'], str) and object['actor'].startswith('https://' + current_app.config['SERVER_NAME']):
-            log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json, 'Activity about local content which is already present')
+        if not missing_actor_in_announce_object and isinstance(object['actor'], str) and object['actor'].startswith('https://' + current_app.config['SERVER_NAME']):
+            log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, request_json, 'REPLAY: Activity about local content which is already present')
             return
 
     # Ignore unutilised PeerTube activity
@@ -573,6 +635,11 @@ def replay_inbox_request(request_json):
         process_delete_request(request_json, True)
         return
 
+    if missing_actor_in_announce_object:
+        if ((request_json['object']['type'] == 'Create' or request_json['object']['type'] == 'Update') and
+            'attributedTo' in request_json['object']['object'] and isinstance(request_json['object']['object']['attributedTo'], str)):
+            request_json['object']['actor'] = request_json['object']['object']['attributedTo']
+
     process_inbox_request(request_json, True)
 
     return
@@ -581,32 +648,48 @@ def replay_inbox_request(request_json):
 @celery.task
 def process_inbox_request(request_json, store_ap_json):
     with current_app.app_context():
-        site = Site.query.get(1)    # can't use g.site because celery doesn't use Flask's g variable
-
-        # For an Announce, Accept, or Reject, we have the community, and need to find the user
-        # For everything else, we have the user, and need to find the community
+        # For an Announce, Accept, or Reject, we have the community/feed, and need to find the user
+        # For everything else, we have the user, and need to find the community/feed
         # Benefits of always using request_json['actor']:
         #   It's the actor who signed the request, and whose signature has been verified
         #   Because of the earlier check, we know that they already exist, and so don't need to check again
         #   Using actors from inner objects has a vulnerability to spoofing attacks (e.g. if 'attributedTo' doesn't match the 'Create' actor)
         saved_json = request_json if store_ap_json else None
         id = request_json['id']
+        actor_id = request_json['actor']
+        feed = community = None
         if request_json['type'] == 'Announce' or request_json['type'] == 'Accept' or request_json['type'] == 'Reject':
-            community_ap_id = request_json['actor']
-            community = find_actor_or_create(community_ap_id, community_only=True, create_if_not_found=False)
-            if not community or not isinstance(community, Community):
-                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Actor was not a community')
+            community = find_actor_or_create(actor_id, community_only=True, create_if_not_found=False)
+            if not community:
+                feed = find_actor_or_create(actor_id, feed_only=True, create_if_not_found=False)
+            if not community and not feed:
+                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Actor was not a feed or a community')
                 return
-            user_ap_id = None               # found in 'if request_json['type'] == 'Announce', or it's a local user (for 'Accept'/'Reject')
         else:
-            user_ap_id = request_json['actor']
-            user = find_actor_or_create(user_ap_id, create_if_not_found=False)
-            if not user or not isinstance(user, User):
-                log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Actor was not a user')
+            actor = find_actor_or_create(actor_id, create_if_not_found=False)
+            if actor and isinstance(actor, User):
+                user = actor
+                user.last_seen = utcnow()
+                db.session.commit()
+            elif actor and isinstance(actor, Community):                  # Process a few activities from NodeBB and a.gup.pe
+                if request_json['type'] == 'Add' or request_json['type'] == 'Remove':
+                    log_incoming_ap(id, APLOG_ADD, APLOG_IGNORED, saved_json, 'NodeBB Topic Management')
+                    return
+                elif request_json['type'] == 'Update' and 'type' in request_json['object']:
+                    if request_json['object']['type'] == 'Group':
+                        community = actor            # process it same as Update/Group from Lemmy
+                    elif request_json['object']['type'] == 'OrderedCollection':
+                        log_incoming_ap(id, APLOG_ADD, APLOG_IGNORED, saved_json, 'Follower count update from a.gup.pe')
+                        return
+                    else:
+                        log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Unexpected Update activity from Group')
+                        return
+                else:
+                    log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Unexpected activity from Group')
+                    return
+            else:
+                log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Actor was not a user or a community')
                 return
-            user.last_seen = site.last_active = utcnow()
-            db.session.commit()
-            community = None                # found as needed
 
         # Announce: take care of inner objects that are just a URL (PeerTube, a.gup.pe), or find the user if the inner object is a dict
         if request_json['type'] == 'Announce':
@@ -614,25 +697,28 @@ def process_inbox_request(request_json, store_ap_json):
                 if request_json['object'].startswith('https://' + current_app.config['SERVER_NAME']):
                     log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json, 'Activity about local content which is already present')
                     return
-                post = resolve_remote_post(request_json['object'], community.id, announce_actor=community.ap_profile_id, store_ap_json=store_ap_json)
+                post = resolve_remote_post(request_json['object'], community, id, store_ap_json)
                 if post:
                     log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_SUCCESS, request_json)
                 else:
                     log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'Could not resolve post')
                 return
 
-            user_ap_id = request_json['object']['actor']
-            user = find_actor_or_create(user_ap_id)
-            if not user or not isinstance(user, User):
-                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Blocked or unfound user for Announce object actor ' + user_ap_id)
-                return
-
-            user.last_seen = site.last_active = utcnow()
-            user.instance.last_seen = utcnow()
-            user.instance.dormant = False
-            user.instance.gone_forever = False
-            user.instance.failures = 0
-            db.session.commit()
+            if not feed:
+                user_ap_id = request_json['object']['actor']
+                user = find_actor_or_create(user_ap_id)
+                if user and isinstance(user, User):
+                    user.last_seen = utcnow()
+                    user.instance.last_seen = utcnow()
+                    user.instance.dormant = False
+                    user.instance.gone_forever = False
+                    user.instance.failures = 0
+                    db.session.commit()
+                else:
+                    log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Blocked or unfound user for Announce object actor ' + user_ap_id)
+                    return
+            else:
+                user = None
 
             # Now that we have the community and the user from an Announce, we can save repeating code by removing it
             # core_activity is checked for its Type, but the original request_json is sometimes passed to any other functions
@@ -642,7 +728,7 @@ def process_inbox_request(request_json, store_ap_json):
             announced = False
             core_activity = request_json
 
-        # Follow: remote user wants to join/follow one of our users or communities
+        # Follow: remote user wants to join/follow one of our users, communities, or feeds
         if core_activity['type'] == 'Follow':
             target_ap_id = core_activity['object']
             follow_id = core_activity['id']
@@ -667,18 +753,50 @@ def process_inbox_request(request_json, store_ap_json):
                     reject = {"@context": default_context(), "actor": community.public_url(), "to": [user.public_url()],
                               "object": {"actor": user.public_url(), "to": None, "object": community.public_url(), "type": "Follow", "id": follow_id},
                               "type": "Reject", "id": f"https://{current_app.config['SERVER_NAME']}/activities/reject/" + gibberish(32)}
-                    post_request(user.ap_inbox_url, reject, community.private_key, f"{community.public_url()}#main-key")
+                    send_post_request(user.ap_inbox_url, reject, community.private_key, f"{community.public_url()}#main-key")
                 else:
-                    if community_membership(user, community) != SUBSCRIPTION_MEMBER:
+                    existing_member = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
+                    if not existing_member:
                         member = CommunityMember(user_id=user.id, community_id=community.id)
                         db.session.add(member)
+                        community.subscriptions_count += 1
+                        community.last_active = utcnow()
                         db.session.commit()
                         cache.delete_memoized(community_membership, user, community)
                         # send accept message to acknowledge the follow
                         accept = {"@context": default_context(), "actor": community.public_url(), "to": [user.public_url()],
                                   "object": {"actor": user.public_url(), "to": None, "object": community.public_url(), "type": "Follow", "id": follow_id},
                                   "type": "Accept", "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)}
-                        post_request(user.ap_inbox_url, accept, community.private_key, f"{community.public_url()}#main-key")
+                        send_post_request(user.ap_inbox_url, accept, community.private_key, f"{community.public_url()}#main-key")
+                        log_incoming_ap(id, APLOG_FOLLOW, APLOG_SUCCESS, saved_json)
+                return
+            elif isinstance(target, Feed):
+                feed = target
+                reject_follow = False
+                # if the feed is not public send a reject
+                # it should not get here as we wont have a subscribe option on non-public feeds,
+                # but just for cya its here.
+                if not feed.public:
+                    reject_follow = True
+
+                if reject_follow:
+                    # send reject message to deny the follow
+                    reject = {"@context": default_context(), "actor": feed.public_url(), "to": [user.public_url()],
+                              "object": {"actor": user.public_url(), "to": None, "object": feed.public_url(), "type": "Follow", "id": follow_id},
+                              "type": "Reject", "id": f"https://{current_app.config['SERVER_NAME']}/activities/reject/" + gibberish(32)}
+                    send_post_request(user.ap_inbox_url, reject, feed.private_key, f"{feed.public_url()}#main-key")
+                else:
+                    if feed_membership(user, feed) != SUBSCRIPTION_MEMBER:
+                        member = FeedMember(user_id=user.id, feed_id=feed.id)
+                        db.session.add(member)
+                        feed.subscriptions_count += 1
+                        db.session.commit()
+                        cache.delete_memoized(feed_membership, user, feed)
+                        # send accept message to acknowledge the follow
+                        accept = {"@context": default_context(), "actor": feed.public_url(), "to": [user.public_url()],
+                                  "object": {"actor": user.public_url(), "to": None, "object": feed.public_url(), "type": "Follow", "id": follow_id},
+                                  "type": "Accept", "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)}
+                        send_post_request(user.ap_inbox_url, accept, feed.private_key, f"{feed.public_url()}#main-key")
                         log_incoming_ap(id, APLOG_FOLLOW, APLOG_SUCCESS, saved_json)
                 return
             elif isinstance(target, User):
@@ -698,7 +816,7 @@ def process_inbox_request(request_json, store_ap_json):
                     accept = {"@context": default_context(), "actor": local_user.public_url(), "to": [remote_user.public_url()],
                               "object": {"actor": remote_user.public_url(), "to": None, "object": local_user.public_url(), "type": "Follow", "id": follow_id},
                               "type": "Accept", "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)}
-                    post_request(remote_user.ap_inbox_url, accept, local_user.private_key, f"{local_user.public_url()}#main-key")
+                    send_post_request(remote_user.ap_inbox_url, accept, local_user.private_key, f"{local_user.public_url()}#main-key")
                     log_incoming_ap(id, APLOG_FOLLOW, APLOG_SUCCESS, saved_json)
             return
 
@@ -716,16 +834,37 @@ def process_inbox_request(request_json, store_ap_json):
             if not user:
                 log_incoming_ap(id, APLOG_ACCEPT, APLOG_FAILURE, saved_json, 'Could not find recipient of Accept')
                 return
-            join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
-            if join_request:
-                existing_membership = CommunityMember.query.filter_by(user_id=join_request.user_id, community_id=join_request.community_id).first()
-                if not existing_membership:
-                    member = CommunityMember(user_id=join_request.user_id, community_id=join_request.community_id)
-                    db.session.add(member)
-                    community.subscriptions_count += 1
-                    db.session.commit()
-                    cache.delete_memoized(community_membership, user, community)
-                log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json)
+
+            if community:
+                join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
+                if join_request:
+                    try:
+                        existing_membership = CommunityMember.query.filter_by(user_id=join_request.user_id, community_id=join_request.community_id).first()
+                        if not existing_membership:
+                            # check if the join request was a result of a feed join
+                            joined_via_feed = join_request.joined_via_feed
+                            member = CommunityMember(user_id=join_request.user_id, community_id=join_request.community_id, joined_via_feed=joined_via_feed)
+                            db.session.add(member)
+                            community.subscriptions_count += 1
+                            community.last_active = utcnow()
+                            db.session.commit()
+                            cache.delete_memoized(community_membership, user, community)
+                        log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json)
+                    except IntegrityError:
+                        db.session.rollback()
+                        # Membership already exists, just log success and continue
+                        log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json, "Membership already exists")
+            elif feed:
+                join_request = FeedJoinRequest.query.filter_by(user_id=user.id, feed_id=feed.id).first()
+                if join_request:
+                    existing_membership = FeedMember.query.filter_by(user_id=join_request.user_id, feed_id=join_request.feed_id).first()
+                    if not existing_membership:
+                        member = FeedMember(user_id=join_request.user_id, feed_id=join_request.feed_id)
+                        db.session.add(member)
+                        feed.subscriptions_count += 1
+                        db.session.commit()
+                        cache.delete_memoized(feed_membership, user, feed)
+                    log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json)
             return
 
         # Reject: remote server is rejecting our previous follow request
@@ -736,70 +875,45 @@ def process_inbox_request(request_json, store_ap_json):
                 if not user:
                     log_incoming_ap(id, APLOG_ACCEPT, APLOG_FAILURE, saved_json, 'Could not find recipient of Reject')
                     return
-                join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
-                if join_request:
-                    db.session.delete(join_request)
-                existing_membership = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
-                if existing_membership:
-                    db.session.delete(existing_membership)
-                    cache.delete_memoized(community_membership, user, community)
-                db.session.commit()
-                log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json)
+
+                if community:
+                    join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
+                    if join_request:
+                        db.session.delete(join_request)
+                    existing_membership = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
+                    if existing_membership:
+                        db.session.delete(existing_membership)
+                        cache.delete_memoized(community_membership, user, community)
+                    db.session.commit()
+                    log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json)
+                elif feed:
+                    join_request = FeedJoinRequest.query.filter_by(user_id=user.id, feed_id=feed.id).first()
+                    if join_request:
+                        db.session.delete(join_request)
+                    existing_membership = FeedMember.query.filter_by(user_id=user.id, feed_id=feed.id).first()
+                    if existing_membership:
+                        db.session.delete(existing_membership)
+                        cache.delete_memoized(feed_membership, user, feed)
+                    db.session.commit()
+                    log_incoming_ap(id, APLOG_ACCEPT, APLOG_SUCCESS, saved_json)
             return
 
         # Create is new content. Update is often an edit, but Updates from Lemmy can also be new content
         if core_activity['type'] == 'Create' or core_activity['type'] == 'Update':
             if isinstance(core_activity['object'], str):
                 core_activity = verify_object_from_source(core_activity)             # change core_activity['object'] from str to dict, then process normally
-                if not request_json:
+                if not core_activity:
                     log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Could not verify unsigned request from source')
                     return
 
             if core_activity['object']['type'] == 'ChatMessage':
-                sender = user
-                recipient_ap_id = core_activity['object']['to'][0]
-                recipient = find_actor_or_create(recipient_ap_id, create_if_not_found=False)
-                if recipient and recipient.is_local():
-                    if sender.created_recently() or sender.reputation <= -10:
-                        log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender not eligible to send')
-                        return
-                    elif recipient.has_blocked_user(sender.id) or recipient.has_blocked_instance(sender.instance_id):
-                        log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender blocked by recipient')
-                        return
-                    else:
-                        # Find existing conversation to add to
-                        existing_conversation = Conversation.find_existing_conversation(recipient=recipient, sender=sender)
-                        if not existing_conversation:
-                            existing_conversation = Conversation(user_id=sender.id)
-                            existing_conversation.members.append(recipient)
-                            existing_conversation.members.append(sender)
-                            db.session.add(existing_conversation)
-                            db.session.commit()
-                        # Save ChatMessage to DB
-                        encrypted = core_activity['object']['encrypted'] if 'encrypted' in core_activity['object'] else None
-                        new_message = ChatMessage(sender_id=sender.id, recipient_id=recipient.id, conversation_id=existing_conversation.id,
-                                                  body_html=core_activity['object']['content'],
-                                                  body=html_to_text(core_activity['object']['content']),
-                                                  encrypted=encrypted)
-                        db.session.add(new_message)
-                        existing_conversation.updated_at = utcnow()
-                        db.session.commit()
-
-                        # Notify recipient
-                        notify = Notification(title=shorten_string('New message from ' + sender.display_name()),
-                                              url=f'/chat/{existing_conversation.id}#message_{new_message}', user_id=recipient.id,
-                                              author_id=sender.id)
-                        db.session.add(notify)
-                        recipient.unread_notifications += 1
-                        existing_conversation.read = False
-                        db.session.commit()
-                        log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_SUCCESS, saved_json)
+                process_chat(user, store_ap_json, core_activity)
                 return
-            # inner object of Create is not a ChatMessage
             else:
                 if (core_activity['object']['type'] == 'Note' and 'name' in core_activity['object'] and                           # Poll Votes
-                    'inReplyTo' in core_activity['object'] and 'attributedTo' in core_activity['object']):
-                    post_being_replied_to = Post.query.filter_by(ap_id=core_activity['object']['inReplyTo']).first()
+                    'inReplyTo' in core_activity['object'] and 'attributedTo' in core_activity['object'] and
+                    not 'published' in core_activity['object']):
+                    post_being_replied_to = Post.get_by_ap_id(core_activity['object']['inReplyTo'])
                     if post_being_replied_to:
                         poll_data = Poll.query.get(post_being_replied_to.id)
                         choice = PollChoice.query.filter_by(post_id=post_being_replied_to.id, choice_text=core_activity['object']['name']).first()
@@ -807,13 +921,15 @@ def process_inbox_request(request_json, store_ap_json):
                             poll_data.vote_for_choice(choice.id, user.id)
                             db.session.commit()
                             log_incoming_ap(id, APLOG_CREATE, APLOG_SUCCESS, saved_json)
-                        if post_being_replied_to.author.is_local():
-                            inform_followers_of_post_update(post_being_replied_to.id, user.instance_id)
+                            if post_being_replied_to.author.is_local():
+                                task_selector('edit_post', post_id=post_being_replied_to.id)
                     return
-                if not announced:
+                if not announced and not community:
                     community = find_community(request_json)
                     if not community:
-                        log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Blocked or unfound community')
+                        was_chat_message = process_chat(user, store_ap_json, core_activity)
+                        if not was_chat_message:
+                            log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Blocked or unfound community')
                         return
                     if not ensure_domains_match(core_activity['object']):
                         log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Domains do not match')
@@ -828,7 +944,7 @@ def process_inbox_request(request_json, store_ap_json):
                     process_new_content(user, community, store_ap_json, request_json, announced)
                     return
                 elif object_type == 'Video':  # PeerTube: editing a video (mostly used to update post score)
-                    post = Post.query.filter_by(ap_id=core_activity['object']['id']).first()
+                    post = Post.get_by_ap_id(core_activity['object']['id'])
                     if post:
                         if user.id == post.user_id:
                             update_post_from_activity(post, request_json)
@@ -840,17 +956,52 @@ def process_inbox_request(request_json, store_ap_json):
                     else:
                         log_incoming_ap(id, APLOG_UPDATE, APLOG_FAILURE, saved_json, 'PeerTube post not found')
                         return
-                elif announced and core_activity['type'] == 'Update' and core_activity['object']['type'] == 'Group':
-                    # force refresh next time community is heard from
-                    community.ap_fetched_at = None
-                    db.session.commit()
+                elif object_type == 'Group' and core_activity['type'] == 'Update':      # update community/category info
+                    refresh_community_profile(community.id, core_activity['object'])
                     log_incoming_ap(id, APLOG_UPDATE, APLOG_SUCCESS, saved_json)
                 else:
                     log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Unacceptable type (create): ' + object_type)
             return
 
         if core_activity['type'] == 'Delete':
-            if isinstance(core_activity['object'], str):
+            # check if its a feed being deleted
+            if isinstance(core_activity['object'], dict) and core_activity['object']['type'] == 'Feed':
+                # find the user in the traffic
+                user = find_actor_or_create(actor_id)
+                # find the feed
+                feed = Feed.query.filter_by(ap_public_url=core_activity['object']['id']).first()
+
+                # make sure the user sending the delete owns the feed
+                if not user.id == feed.user_id:
+                    log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, saved_json, 'Delete rejected, request came from non-owner.')
+                    return
+
+                # if found, remove all the feeditems and feedmembers
+                if feed:
+                    # find the feeditems and remove them
+                    feed_items = FeedItem.query.filter_by(feed_id=feed.id).all()
+                    for fi in feed_items:
+                        db.session.delete(fi)
+                        db.session.commit()
+                    # find the feedmembers and remove them
+                    feed_members = FeedMember.query.filter_by(feed_id=feed.id).all()
+                    for fm in feed_members:
+                        db.session.delete(fm)
+                        db.session.commit()
+                    # find any feedjoinrequests and remove them
+                    feed_join_requests = FeedJoinRequest.query.filter_by(feed_id=feed.id).all()
+                    for fjr in feed_join_requests:
+                        db.session.delete(fjr)
+                        db.session.commit()
+                    # finally remove the feed itself
+                    db.session.delete(feed)
+                    db.session.commit()
+                    log_incoming_ap(id, APLOG_DELETE, APLOG_SUCCESS, saved_json, f"Delete: Feed {core_activity['object']['id']} deleted")
+                    return
+                else:
+                    log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, saved_json, f"Delete: cannot find {core_activity['object']['id']}")
+                    return
+            elif isinstance(core_activity['object'], str):
                 ap_id = core_activity['object']  # lemmy
             else:
                 ap_id = core_activity['object']['id']  # kbin
@@ -873,9 +1024,6 @@ def process_inbox_request(request_json, store_ap_json):
             return
 
         if core_activity['type'] == 'Dislike':  # Downvote
-            if site.enable_downvotes is False:
-                log_incoming_ap(id, APLOG_DISLIKE, APLOG_IGNORED, saved_json, 'Dislike ignored because of allow_dislike setting')
-                return
             process_downvote(user, store_ap_json, request_json, announced)
             return
 
@@ -891,8 +1039,7 @@ def process_inbox_request(request_json, store_ap_json):
 
         if core_activity['type'] == 'Lock':     # Post lock
             mod = user
-            post_id = core_activity['object']
-            post = Post.query.filter_by(ap_id=post_id).first()
+            post = Post.get_by_ap_id(core_activity['object'])
             reason = core_activity['summary'] if 'summary' in core_activity else ''
             if post:
                 if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
@@ -908,11 +1055,31 @@ def process_inbox_request(request_json, store_ap_json):
                 log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, saved_json, 'Lock: post not found')
             return
 
-        if core_activity['type'] == 'Add':       # Add mods, or sticky a post
-            mod = user
-            if not announced:
+        if core_activity['type'] == 'Add':       # Add mods, sticky a post, or add a community to a feed
+            if user is not None:
+                mod = user
+            if not announced and not feed:
                 community = find_community(core_activity)
-            if community:
+            if feed and 'id' in core_activity['object']:
+                community_to_add = find_actor_or_create(core_activity['object']['id'], community_only=True)
+                # if community found or created - add the FeedItem and update Feed info
+                if community_to_add and isinstance(community_to_add, Community):
+                    feed_item = FeedItem(feed_id=feed.id, community_id=community_to_add.id)
+                    db.session.add(feed_item)
+                    feed.num_communities += 1
+                    db.session.commit()
+                # also autosubscribe any feedmembers to the new community
+                feed_members = FeedMember.query.filter_by(feed_id=feed.id).all()
+                for fm in feed_members:
+                    fm_user = User.query.get(fm.user_id)
+                    if fm_user.id == feed.user_id:
+                        continue
+                    if fm_user.is_local() and fm_user.feed_auto_follow:
+                        # user is local so lets auto-subscribe them to the community
+                        from app.community.routes import do_subscribe
+                        actor = community_to_add.ap_id if community_to_add.ap_id else community_to_add.name
+                        do_subscribe(actor, fm_user.id, joined_via_feed=True)
+            elif community:
                 if not community.is_moderator(mod) and not community.is_instance_admin(mod):
                     log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json, 'Does not have permission')
                     return
@@ -920,7 +1087,7 @@ def process_inbox_request(request_json, store_ap_json):
                 featured_url = community.ap_featured_url
                 moderators_url = community.ap_moderators_url
                 if target == featured_url:
-                    post = Post.query.filter_by(ap_id=core_activity['object']).first()
+                    post = Post.get_by_ap_id(core_activity['object'])
                     if post:
                         post.sticky = True
                         db.session.commit()
@@ -937,6 +1104,7 @@ def process_inbox_request(request_json, store_ap_json):
                         else:
                             new_membership = CommunityMember(community_id=community.id, user_id=new_mod.id, is_moderator=True)
                             db.session.add(new_membership)
+                        add_to_modlog_activitypub('add_mod', mod, community_id=community.id)
                         db.session.commit()
                         log_incoming_ap(id, APLOG_ADD, APLOG_SUCCESS, saved_json)
                     else:
@@ -944,14 +1112,54 @@ def process_inbox_request(request_json, store_ap_json):
                     return
                 log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json, 'Unknown target for Add')
             else:
-                log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json, 'Add: cannot find community')
+                log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json, 'Add: cannot find community or feed')
             return
 
-        if core_activity['type'] == 'Remove':       # Remove mods, or unsticky a post
-            mod = user
-            if not announced:
+        if core_activity['type'] == 'Remove':       # Remove mods, unsticky a post, or remove a community from a feed
+            if user is not None:
+                mod = user
+            if not announced and not feed:
                 community = find_community(core_activity)
-            if community:
+            if feed and 'id' in core_activity['object']:
+                community_to_remove = find_actor_or_create(core_activity['object']['id'], community_only=True)
+                # if community found or created - remove the FeedItem and update Feed info
+                if community_to_remove and isinstance(community_to_remove, Community):
+                    feed_item = FeedItem.query.filter_by(feed_id=feed.id, community_id=community_to_remove.id).first()
+                    db.session.delete(feed_item)
+                    feed.num_communities -= 1
+                    db.session.commit()
+                    # also auto-unsubscribe any feedmembers from the community
+                    # who have feed_auto_leave enabled
+                    feed_members = FeedMember.query.filter_by(feed_id=feed.id).all()
+                    for fm in feed_members:
+                        fm_user = User.query.get(fm.user_id)
+                        if fm_user.id == feed.user_id:
+                            continue
+                        if fm_user.is_local() and fm_user.feed_auto_leave:
+                            subscription = community_membership(fm_user, community_to_remove)
+                            cm = CommunityMember.query.filter_by(user_id=fm_user.id, community_id=community_to_remove.id).first()
+                            if subscription != SUBSCRIPTION_OWNER and cm.joined_via_feed:
+                                proceed = True
+                                # Undo the Follow
+                                if not community_to_remove.is_local():    # this is a remote community, so activitypub is needed
+                                    if not community_to_remove.instance.gone_forever:
+                                        follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
+                                        if community_to_remove.instance.domain == 'a.gup.pe':
+                                            join_request = CommunityJoinRequest.query.filter_by(user_id=fm_user.id, community_id=community_to_remove.id).first()
+                                            if join_request:
+                                                follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+                                        undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
+                                        follow = {'actor': fm_user.public_url(), 'to': [community_to_remove.public_url()], 'object': community_to_remove.public_url(), 'type': 'Follow', 'id': follow_id}
+                                        undo = {'actor': fm_user.public_url(), 'to': [community_to_remove.public_url()], 'type': 'Undo', 'id': undo_id, 'object': follow}
+                                        send_post_request(community_to_remove.ap_inbox_url, undo, fm_user.private_key, fm_user.public_url() + '#main-key', timeout=10)
+
+                                if proceed:
+                                    db.session.query(CommunityMember).filter_by(user_id=fm_user.id, community_id=community_to_remove.id).delete()
+                                    db.session.query(CommunityJoinRequest).filter_by(user_id=fm_user.id, community_id=community_to_remove.id).delete()
+                                    community_to_remove.subscriptions_count -= 1
+                                    db.session.commit()
+                                    log_incoming_ap(id, APLOG_REMOVE, APLOG_SUCCESS, saved_json, f'{fm_user.user_name} auto-unfollowed {community_to_remove.ap_public_url} during a feed/remove')
+            elif community:
                 if not community.is_moderator(mod) and not community.is_instance_admin(mod):
                     log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json, 'Does not have permission')
                     return
@@ -959,7 +1167,7 @@ def process_inbox_request(request_json, store_ap_json):
                 featured_url = community.ap_featured_url
                 moderators_url = community.ap_moderators_url
                 if target == featured_url:
-                    post = Post.query.filter_by(ap_id=core_activity['object']).first()
+                    post = Post.get_by_ap_id(core_activity['object'])
                     if post:
                         post.sticky = False
                         db.session.commit()
@@ -975,12 +1183,13 @@ def process_inbox_request(request_json, store_ap_json):
                             existing_membership.is_moderator = False
                             db.session.commit()
                             log_incoming_ap(id, APLOG_REMOVE, APLOG_SUCCESS, saved_json)
+                        add_to_modlog_activitypub('remove_mod', mod, community_id=community.id)
                     else:
                         log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json, 'Cannot find: ' + core_activity['object'])
                     return
                 log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json, 'Unknown target for Remove')
             else:
-                log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json, 'Remove: cannot find community')
+                log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json, 'Remove: cannot find community or feed')
             return
 
         if core_activity['type'] == 'Block':     # User Ban
@@ -1064,12 +1273,26 @@ def process_inbox_request(request_json, store_ap_json):
                     if member:
                         db.session.delete(member)
                         community.subscriptions_count -= 1
+                        community.last_active = utcnow()
                     if join_request:
                         db.session.delete(join_request)
                     db.session.commit()
                     cache.delete_memoized(community_membership, user, community)
                     log_incoming_ap(id, APLOG_UNDO_FOLLOW, APLOG_SUCCESS, saved_json)
                     return
+                if isinstance(target, Feed):
+                    feed = target
+                    member = FeedMember.query.filter_by(user_id=user.id, feed_id=feed.id).first()
+                    join_request = FeedJoinRequest.query.filter_by(user_id=user.id, feed_id=feed.id).first()
+                    if member:
+                        db.session.delete(member)
+                        feed.subscriptions_count -= 1
+                    if join_request:
+                        db.session.delete(join_request)
+                    db.session.commit()
+                    cache.delete_memoized(feed_membership, user, feed)
+                    log_incoming_ap(id, APLOG_UNDO_FOLLOW, APLOG_SUCCESS, saved_json)
+                    return                
                 if isinstance(target, User):
                     local_user = target
                     remote_user = user
@@ -1117,8 +1340,7 @@ def process_inbox_request(request_json, store_ap_json):
 
             if core_activity['object']['type'] == 'Lock':                                                                      # Undo of post lock
                 mod = user
-                post_id = core_activity['object']['object']
-                post = Post.query.filter_by(ap_id=post_id).first()
+                post = Post.get_by_ap_id(core_activity['object']['object'])
                 reason = core_activity['summary'] if 'summary' in core_activity else ''
                 if post:
                     if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
@@ -1427,11 +1649,14 @@ def process_new_content(user, community, store_ap_json, request_json, announced)
     else:
         in_reply_to = request_json['object']['object']['inReplyTo'] if 'inReplyTo' in request_json['object']['object'] else None
         ap_id = request_json['object']['object']['id']
-        announce_id = request_json['id']
+        announce_id = shorten_string(request_json['id'], 100)
         activity_json = request_json['object']
 
+    # announce / create IDs that are too long will crash the app. Not referred to again, so it shouldn't matter if they're truncated
+    activity_json['id'] = shorten_string(activity_json['id'], 100)
+
     if not in_reply_to: # Creating a new post
-        post = Post.query.filter_by(ap_id=ap_id).first()
+        post = Post.get_by_ap_id(ap_id)
         if post:
             if activity_json['type'] == 'Create':
                 log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Create processed after Update')
@@ -1454,7 +1679,7 @@ def process_new_content(user, community, store_ap_json, request_json, announced)
                         if not announced:
                             announce_activity_to_followers(community, user, request_json)
                         return
-                except TypeError as e:
+                except TypeError:
                     current_app.logger.error('TypeError: ' + str(request_json))
                     log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'TypeError. See log file.')
                     return
@@ -1462,7 +1687,7 @@ def process_new_content(user, community, store_ap_json, request_json, announced)
                 log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'User cannot create post in Community')
                 return
     else:   # Creating a reply / comment
-        reply = PostReply.query.filter_by(ap_id=ap_id).first()
+        reply = PostReply.get_by_ap_id(ap_id)
         if reply:
             if activity_json['type'] == 'Create':
                 log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Create processed after Update')
@@ -1485,7 +1710,7 @@ def process_new_content(user, community, store_ap_json, request_json, announced)
                         if not announced:
                             announce_activity_to_followers(community, user, request_json)
                     return
-                except TypeError as e:
+                except TypeError:
                     current_app.logger.error('TypeError: ' + str(request_json))
                     log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'TypeError. See log file.')
                     return
@@ -1532,3 +1757,255 @@ def process_downvote(user, store_ap_json, request_json, announced):
                 announce_activity_to_followers(liked.community, user, request_json)
     else:
         log_incoming_ap(id, APLOG_DISLIKE, APLOG_IGNORED, saved_json, 'Cannot downvote this')
+
+
+# Private Messages, for both Create / ChatMessage (PieFed / Lemmy), and Create / Note (Mastodon, NodeBB)
+# returns True if Create / Note was a PM (irrespective of whether the chat was successful)
+def process_chat(user, store_ap_json, core_activity):
+    saved_json = core_activity if store_ap_json else None
+    id = core_activity['id']
+    sender = user
+    if not ('to' in core_activity['object'] and
+        isinstance(core_activity['object']['to'], list) and
+        len(core_activity['object']['to']) > 0):
+        return False
+    recipient_ap_id = core_activity['object']['to'][0]
+    recipient = find_actor_or_create(recipient_ap_id, create_if_not_found=False)
+    if recipient and recipient.is_local():
+        if sender.created_recently() or sender.reputation <= -10:
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender not eligible to send')
+            return True
+        elif recipient.has_blocked_user(sender.id) or recipient.has_blocked_instance(sender.instance_id):
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender blocked by recipient')
+            return True
+        else:
+            blocked_phrases_list = blocked_phrases()
+            if core_activity['object']['content']:
+                for blocked_phrase in blocked_phrases_list:
+                    if blocked_phrase in core_activity['object']['content']:
+                        log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, f'Blocked because phrase {blocked_phrase}')
+                        return True
+            # Find existing conversation to add to
+            existing_conversation = Conversation.find_existing_conversation(recipient=recipient, sender=sender)
+            if not existing_conversation:
+                existing_conversation = Conversation(user_id=sender.id)
+                existing_conversation.members.append(recipient)
+                existing_conversation.members.append(sender)
+                db.session.add(existing_conversation)
+                db.session.commit()
+            # Save ChatMessage to DB
+            encrypted = core_activity['object']['encrypted'] if 'encrypted' in core_activity['object'] else None
+            new_message = ChatMessage(sender_id=sender.id, recipient_id=recipient.id, conversation_id=existing_conversation.id,
+                                      body_html=core_activity['object']['content'],
+                                      body=html_to_text(core_activity['object']['content']),
+                                      encrypted=encrypted,
+                                      ap_id=core_activity['object']['id'])
+            db.session.add(new_message)
+            existing_conversation.updated_at = utcnow()
+            db.session.commit()
+
+            # Notify recipient
+            notify = Notification(title=shorten_string('New message from ' + sender.display_name()),
+                                  url=f'/chat/{existing_conversation.id}#message_{new_message.id}', user_id=recipient.id,
+                                  author_id=sender.id)
+            db.session.add(notify)
+            recipient.unread_notifications += 1
+            existing_conversation.read = False
+            db.session.commit()
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_SUCCESS, saved_json)
+
+
+        return True
+
+    return False
+
+
+# ---- Feeds ----
+
+@bp.route('/f/<actor>', methods=['GET'])
+def feed_profile(actor):
+    """ Requests to this endpoint can be for a JSON representation of the feed, or an HTML rendering of it.
+        The two types of requests are differentiated by the header """
+    actor = actor.strip()
+    if '@' in actor:
+        # don't provide activitypub info for remote communities
+        if 'application/ld+json' in request.headers.get('Accept', '') or 'application/activity+json' in request.headers.get('Accept', ''):
+            abort(400)
+        feed: Feed = Feed.query.filter_by(ap_id=actor.lower(), banned=False).first()
+    else:
+        feed: Feed = Feed.query.filter_by(name=actor.lower(), ap_id=None).first()
+    if feed is not None:
+        if is_activitypub_request():
+            # check if feed is public, if not abort
+            # with 403 (forbidden)
+            if not feed.public:
+                abort(403) 
+            server = current_app.config['SERVER_NAME']
+            actor_data = {"@context": default_context(),
+                "type": "Feed",
+                "id": f"https://{server}/f/{actor}",
+                "name": feed.title,
+                "sensitive": True if feed.nsfw or feed.nsfl else False,
+                "preferredUsername": actor,
+                "inbox": f"https://{server}/f/{actor}/inbox",
+                "outbox": f"https://{server}/f/{actor}/outbox",
+                "followers": f"https://{server}/f/{actor}/followers",
+                "following": f"https://{server}/f/{actor}/following",
+                "moderators": f"https://{server}/f/{actor}/moderators",
+                "attributedTo": f"https://{server}/f/{actor}/moderators",
+                "url": f"https://{server}/f/{actor}",
+                "publicKey": {
+                    "id": f"https://{server}/f/{actor}#main-key",
+                    "owner": f"https://{server}/f/{actor}",
+                    "publicKeyPem": feed.public_key
+                },
+                "endpoints": {
+                    "sharedInbox": f"https://{server}/inbox"
+                },
+                "published": ap_datetime(feed.created_at),
+                "updated": ap_datetime(feed.last_edit),
+            }
+            if feed.description_html:
+                actor_data["summary"] = feed.description_html
+                actor_data['source'] = {'content': feed.description, 'mediaType': 'text/markdown'}
+            if feed.icon_id is not None:
+                actor_data["icon"] = {
+                    "type": "Image",
+                    "url": f"https://{current_app.config['SERVER_NAME']}{feed.icon_image()}"
+                }
+            if feed.image_id is not None:
+                actor_data["image"] = {
+                    "type": "Image",
+                    "url": f"https://{current_app.config['SERVER_NAME']}{feed.header_image()}"
+                }
+            resp = jsonify(actor_data)
+            resp.content_type = 'application/activity+json'
+            resp.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/f/{actor}>; rel="alternate"; type="text/html"')
+            return resp
+        else:   # browser request - return html
+            return show_feed(feed)
+    else:
+        abort(404)
+
+
+@bp.route('/f/<actor>/inbox', methods=['POST'])
+def feed_inbox(actor):
+    return shared_inbox()
+
+
+@bp.route('/f/<actor>/outbox', methods=['GET'])
+def feed_outbox(actor):
+    # every AP actor has to have an /outbox
+    # but I dont think it makes sense to have the Add/Remove activities in a list
+    # for a Feed, so for now this will just be the same as the /following collection
+    actor = actor.strip()
+    if '@' in actor:
+        # don't provide activitypub info for remote feeds
+        abort(400)
+    else:
+        feed: Feed = Feed.query.filter_by(name=actor.lower(), ap_id=None).first()
+    
+    # check if feed is public, if not abort
+    # with 403 (forbidden)
+    if not feed.public:
+        abort(403) 
+
+    # get the feed items
+    feed_items = FeedItem.query.join(Feed, FeedItem.feed_id == feed.id).order_by(desc(FeedItem.id)).all()
+    # make the ap data json
+    items = []
+    for fi in feed_items:
+        c = Community.query.get(fi.community_id)
+        items.append(c.ap_public_url)
+    result = {
+        "@context": default_context(),
+        "id": feed.ap_outbox_url,
+        "type": "OrderedCollection",
+        "totalItems": len(items),
+        "items": items
+    }
+    resp = jsonify(result)
+    resp.content_type = 'application/activity+json'
+    return resp
+
+
+@bp.route('/f/<actor>/following', methods=['GET'])
+def feed_following(actor):
+    actor = actor.strip()
+    if '@' in actor:
+        # don't provide activitypub info for remote feeds
+        abort(400)
+    else:
+        feed: Feed = Feed.query.filter_by(name=actor.lower(), ap_id=None).first()
+    
+    # check if feed is public, if not abort
+    # with 403 (forbidden)
+    if not feed.public:
+        abort(403) 
+
+    # get the feed items
+    feed_items = FeedItem.query.join(Feed, FeedItem.feed_id == feed.id).order_by(desc(FeedItem.id)).all()
+    # make the ap data json
+    items = []
+    for fi in feed_items:
+        c = Community.query.get(fi.community_id)
+        items.append(c.public_url())
+    result = {
+        "@context": default_context(),
+        "id": feed.ap_following_url,
+        "type": "OrderedCollection",
+        "totalItems": len(items),
+        "items": items
+    }
+    resp = jsonify(result)
+    resp.content_type = 'application/activity+json'
+    return resp
+    
+
+@bp.route('/f/<actor>/moderators', methods=['GET'])
+def feed_moderators_route(actor):
+    actor = actor.strip()
+    if '@' in actor:
+        # don't provide activitypub info for remote feeds
+        abort(400)
+    else:
+        feed: Feed = Feed.query.filter_by(name=actor.lower(), ap_id=None).first()
+    if feed is not None:
+        # currently feeds only have the one owner, but lets make this a list in case we want to 
+        # expand that in the future
+        moderators = [User.query.get(feed.user_id)]
+        moderators_data = {
+            "@context": default_context(),
+            "type": "OrderedCollection",
+            "id": f"https://{current_app.config['SERVER_NAME']}/f/{actor}/moderators",
+            "totalItems": len(moderators),
+            "orderedItems": []
+        }
+
+        for moderator in moderators:
+            moderators_data['orderedItems'].append(moderator.ap_profile_id)
+
+        return jsonify(moderators_data)
+    
+
+@bp.route('/f/<actor>/followers', methods=['GET'])
+def feed_followers(actor):
+    actor = actor.strip()
+    if '@' in actor:
+        # don't provide activitypub info for remote feeds
+        abort(400)
+    else:
+        feed: Feed = Feed.query.filter_by(name=actor.lower(), ap_id=None).first()
+    if feed is not None:
+        result = {
+            "@context": default_context(),
+            "id": f'https://{current_app.config["SERVER_NAME"]}/f/{actor}/followers',
+            "type": "Collection",
+            "totalItems": FeedMember.query.filter_by(feed_id=feed.id).count(),
+            "items": []
+        }
+        resp = jsonify(result)
+        resp.content_type = 'application/activity+json'
+        return resp
+    else:
+        abort(404)

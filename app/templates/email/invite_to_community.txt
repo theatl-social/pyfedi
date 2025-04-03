@@ -1,0 +1,10 @@
+Hi there,
+
+{{ user.display_name() }} thought you might enjoy the community '{{ community.display_name() }}' on https://{{ host }}.
+
+Join the community by:
+
+1. Create an account at https://{{ host }}/auth/register and complete the onboarding process.
+2. Go to https://{{ host }}/c/{{ community.link() }}/subscribe.
+
+Enjoy!

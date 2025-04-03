@@ -1,7 +1,7 @@
 from flask_login import current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, PasswordField, BooleanField, EmailField, TextAreaField, FileField, \
-    RadioField, DateField, SelectField, IntegerField
+    RadioField, DateField, SelectField, IntegerField, SelectMultipleField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Optional
 from flask_babel import _, lazy_gettext as _l
 
@@ -41,6 +41,8 @@ class ProfileForm(FlaskForm):
 class SettingsForm(FlaskForm):
     interface_language = SelectField(_l('Interface language'), coerce=str, validators=[Optional()],
                                      render_kw={'class': 'form-select'})
+    read_languages = SelectMultipleField(_l('Content language'), coerce=int, validators=[Optional()],
+                                         render_kw={'class': 'form-select'})
     newsletter = BooleanField(_l('Subscribe to email newsletter'))
     email_unread = BooleanField(_l('Receive email about missed notifications'))
     ignore_bots = BooleanField(_l('Hide posts by bots'))
@@ -54,10 +56,13 @@ class SettingsForm(FlaskForm):
     hide_read_posts = BooleanField(_l('Do not display posts with which I have already interacted (opened/upvoted/downvoted)'))
     manually_approves_followers = BooleanField(_l('Manually approve followers'))
     vote_privately = BooleanField(_l('Vote privately'))
+    feed_auto_follow = BooleanField(_l('Enable Automatic Follow of Feed Communities.'), default=True)
+    feed_auto_leave = BooleanField(_l('Enable Automatic Leave of Feed Communities.'), default=False)
     sorts = [('hot', _l('Hot')),
              ('top', _l('Top')),
              ('new', _l('New')),
              ('active', _l('Active')),
+             ('scaled', _l('Scaled')),
              ]
     default_sort = SelectField(_l('Default post sort'), choices=sorts, validators=[DataRequired()], coerce=str,
                                render_kw={'class': 'form-select'})

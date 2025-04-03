@@ -11,12 +11,17 @@ from app.errors import bp
 
 
 @bp.app_errorhandler(500)
-def internal_error(error):
+def internal_error_500(error):
     db.session.rollback()
     return render_template('errors/500.html'), 500
 
 
 @bp.app_errorhandler(401)
-def internal_error(error):
+def internal_error_401(error):
     db.session.rollback()
     return render_template('errors/401.html'), 401
+
+
+@bp.app_errorhandler(429)
+def rate_limited_429(error):
+    return render_template('errors/429.html', error=error), 429

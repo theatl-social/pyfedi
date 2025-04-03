@@ -1,15 +1,11 @@
 from app import cache, db
 from app.models import InstanceBlock
 from app.utils import authorise_api_user, blocked_instances
+from app.constants import *
 
 from flask import flash
 from flask_babel import _
 from flask_login import current_user
-
-# would be in app/constants.py
-SRC_WEB = 1
-SRC_PUB = 2
-SRC_API = 3
 
 
 def block_remote_instance(instance_id, src, auth=None):

@@ -1,21 +1,18 @@
+from sqlalchemy import text
+
 from app import cache, db
-from app.activitypub.signature import default_context, post_request_in_background, post_request
+from app.activitypub.signature import default_context, send_post_request, post_request
 from app.community.util import send_to_remote_instance
 from app.constants import *
 from app.models import Instance, Notification, NotificationSubscription, Post, PostReply, PostReplyBookmark, Report, Site, User, utcnow
 from app.shared.tasks import task_selector
 from app.utils import gibberish, instance_banned, render_template, authorise_api_user, recently_upvoted_post_replies, recently_downvoted_post_replies, shorten_string, \
-                      piefed_markdown_to_lemmy_markdown, markdown_to_html, ap_datetime
+                      piefed_markdown_to_lemmy_markdown, markdown_to_html, ap_datetime, add_to_modlog_activitypub, can_create_post_reply
 
 from flask import abort, current_app, flash, redirect, request, url_for
 from flask_babel import _
 from flask_login import current_user
 
-
-# would be in app/constants.py
-SRC_WEB = 1
-SRC_PUB = 2
-SRC_API = 3
 
 # function can be shared between WEB and API (only API calls it for now)
 # comment_vote in app/post/routes would just need to do 'return vote_for_reply(reply_id, vote_direction, SRC_WEB)'
@@ -134,35 +131,19 @@ def toggle_post_reply_notification(post_reply_id: int, src, auth=None):
         return render_template('post/_reply_notification_toggle.html', comment={'comment': post_reply})
 
 
-# there are undoubtedly better algos for this
-def basic_rate_limit_check(user):
-    weeks_active = int((utcnow() - user.created).days / 7)
-    score = user.post_reply_count * weeks_active
-
-    if score > 100:
-        score = 10
-    else:
-        score = int(score/10)
-
-    # a user with a 10-week old account, who has made 10 replies, will score 10, so their rate limit will be 0
-    # a user with a new account, and/or has made zero replies, will score 0 (so will have to wait 10 minutes between each new comment)
-    # other users will score from 1-9, so their rate limits will be between 9 and 1 minutes.
-
-    rate_limit = (10-score)*60
-
-    recent_reply = cache.get(f'{user.id} has recently replied')
-    if not recent_reply:
-        cache.set(f'{user.id} has recently replied', True, timeout=rate_limit)
-        return True
-    else:
-        return False
+def extra_rate_limit_check(user):
+    """
+    The plan for this function is to do some extra limiting for an author who passes the rate limit for the route
+    but who's comments are really unpopular and are probably spam
+    """
+    return False
 
 
 def make_reply(input, post, parent_id, src, auth=None):
     if src == SRC_API:
         user = authorise_api_user(auth, return_type='model')
-        #if not basic_rate_limit_check(user):
-        #    raise Exception('rate_limited')
+        if extra_rate_limit_check(user):
+            raise Exception('rate_limited')
         content = input['body']
         notify_author = input['notify_author']
         language_id = input['language_id']
@@ -177,6 +158,8 @@ def make_reply(input, post, parent_id, src, auth=None):
     else:
         parent_reply = None
 
+    if not can_create_post_reply(user, post.community):
+        raise Exception('You are not permitted to comment in this community')
 
     # WEBFORM would call 'make_reply' in a try block, so any exception from 'new' would bubble-up for it to handle
     reply = PostReply.new(user, post, in_reply_to=parent_reply, body=piefed_markdown_to_lemmy_markdown(content),
@@ -188,9 +171,9 @@ def make_reply(input, post, parent_id, src, auth=None):
     db.session.commit()
     if src == SRC_WEB:
         input.body.data = ''
-        flash('Your comment has been added.')
+        flash(_('Your comment has been added.'))
 
-    task_selector('make_reply', user_id=user.id, reply_id=reply.id, parent_id=parent_id)
+    task_selector('make_reply', reply_id=reply.id, parent_id=parent_id)
 
     if src == SRC_API:
         return user.id, reply
@@ -222,7 +205,7 @@ def edit_reply(input, reply, post, src, auth=None):
     if src == SRC_WEB:
         flash(_('Your changes have been saved.'), 'success')
 
-    task_selector('edit_reply', user_id=user.id, reply_id=reply.id, parent_id=reply.parent_id)
+    task_selector('edit_reply', reply_id=reply.id, parent_id=reply.parent_id)
 
     if src == SRC_API:
         return user.id, reply
@@ -233,18 +216,20 @@ def edit_reply(input, reply, post, src, auth=None):
 # just for deletes by owner (mod deletes are classed as 'remove')
 def delete_reply(reply_id, src, auth):
     if src == SRC_API:
-        reply = PostReply.query.filter_by(id=reply_id, deleted=False).one()
-        user_id = authorise_api_user(auth, id_match=reply.user_id)
+        user_id = authorise_api_user(auth)
     else:
-        reply = PostReply.query.get_or_404(reply_id)
         user_id = current_user.id
 
+    reply = PostReply.query.filter_by(id=reply_id, user_id=user_id, deleted=False).one()
     reply.deleted = True
     reply.deleted_by = user_id
 
     if not reply.author.bot:
         reply.post.reply_count -= 1
     reply.author.post_reply_count -= 1
+    if reply.path:
+        db.session.execute(text('update post_reply set child_count = child_count - 1 where id in :parents'),
+                           {'parents': tuple(reply.path[:-1])})
     db.session.commit()
     if src == SRC_WEB:
         flash(_('Comment deleted.'))
@@ -259,20 +244,20 @@ def delete_reply(reply_id, src, auth):
 
 def restore_reply(reply_id, src, auth):
     if src == SRC_API:
-        reply = PostReply.query.filter_by(id=reply_id, deleted=True).one()
-        user_id = authorise_api_user(auth, id_match=reply.user_id)
-        if reply.user_id != reply.deleted_by:
-            raise Exception('incorrect_login')
+        user_id = authorise_api_user(auth)
     else:
-        reply = PostReply.query.get_or_404(reply_id)
         user_id = current_user.id
 
+    reply = PostReply.query.filter_by(id=reply_id, user_id=user_id, deleted=True).one()
     reply.deleted = False
     reply.deleted_by = None
 
     if not reply.author.bot:
         reply.post.reply_count += 1
     reply.author.post_reply_count += 1
+    if reply.path:
+        db.session.execute(text('update post_reply set child_count = child_count + 1 where id in :parents'),
+                           {'parents': tuple(reply.path[:-1])})
     db.session.commit()
     if src == SRC_WEB:
         flash(_('Comment restored.'))
@@ -339,5 +324,74 @@ def report_reply(reply_id, input, src, auth=None):
 
     if src == SRC_API:
         return user_id, report
+    else:
+        return
+
+
+# mod deletes
+def mod_remove_reply(reply_id, reason, src, auth):
+    if src == SRC_API:
+        user = authorise_api_user(auth, return_type='model')
+    else:
+        user = current_user
+
+    reply = PostReply.query.filter_by(id=reply_id, deleted=False).one()
+    if not reply.community.is_moderator(user) and not reply.community.is_instance_admin(user):
+        raise Exception('Does not have permission')
+
+    reply.deleted = True
+    reply.deleted_by = user.id
+    if not reply.author.bot:
+        reply.post.reply_count -= 1
+    reply.author.post_reply_count -= 1
+    if reply.path:
+        db.session.execute(text('update post_reply set child_count = child_count - 1 where id in (:parents)'),
+                           {'parents': tuple(reply.path[:-1])})
+    db.session.commit()
+    if src == SRC_WEB:
+        flash(_('Comment deleted.'))
+
+    add_to_modlog_activitypub('delete_post_reply', user, community_id=reply.community_id,
+                              link_text=shorten_string(f'comment on {shorten_string(reply.post.title)}'),
+                              link=f'post/{reply.post_id}#comment_{reply.id}', reason=reason)
+
+    task_selector('delete_reply', user_id=user.id, reply_id=reply.id, reason=reason)
+
+    if src == SRC_API:
+        return user.id, reply
+    else:
+        return
+
+
+def mod_restore_reply(reply_id, reason, src, auth):
+    if src == SRC_API:
+        user = authorise_api_user(auth, return_type='model')
+    else:
+        user = current_user
+
+    reply = PostReply.query.filter_by(id=reply_id, deleted=True).one()
+    if not reply.community.is_moderator(user) and not reply.community.is_instance_admin(user):
+        raise Exception('Does not have permission')
+
+    reply.deleted = False
+    reply.deleted_by = None
+    if not reply.author.bot:
+        reply.post.reply_count += 1
+    reply.author.post_reply_count += 1
+    if reply.path:
+        db.session.execute(text('update post_reply set child_count = child_count + 1 where id in (:parents)'),
+                           {'parents': tuple(reply.path[:-1])})
+    db.session.commit()
+    if src == SRC_WEB:
+        flash(_('Comment restored.'))
+
+    add_to_modlog_activitypub('restore_post_reply', user, community_id=reply.community_id,
+                              link_text=shorten_string(f'comment on {shorten_string(reply.post.title)}'),
+                              link=f'post/{reply.post_id}#comment_{reply.id}', reason=reason)
+
+    task_selector('restore_reply', user_id=user.id, reply_id=reply.id, reason=reason)
+
+    if src == SRC_API:
+        return user.id, reply
     else:
         return

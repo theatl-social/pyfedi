@@ -4,12 +4,12 @@ from random import randint
 from io import BytesIO
 
 from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, json, g, send_file
-from flask_login import login_user, logout_user, current_user, login_required
+from flask_login import logout_user, current_user, login_required
 from flask_babel import _, lazy_gettext as _l
 
 from app import db, cache, celery
-from app.activitypub.signature import post_request, default_context
-from app.activitypub.util import find_actor_or_create
+from app.activitypub.signature import post_request, default_context, send_post_request
+from app.activitypub.util import find_actor_or_create, extract_domain_and_actor
 from app.auth.util import random_token
 from app.community.util import save_icon_file, save_banner_file, retrieve_mods_and_backfill
 from app.constants import *
@@ -17,16 +17,17 @@ from app.email import send_verification_email
 from app.models import Post, Community, CommunityMember, User, PostReply, PostVote, Notification, utcnow, File, Site, \
     Instance, Report, UserBlock, CommunityBan, CommunityJoinRequest, CommunityBlock, Filter, Domain, DomainBlock, \
     InstanceBlock, NotificationSubscription, PostBookmark, PostReplyBookmark, read_posts, Topic, UserNote, \
-    UserExtraField
+    UserExtraField, Feed, FeedMember
 from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, \
     FilterForm, KeywordFilterEditForm, RemoteFollowForm, ImportExportForm, UserNoteForm
 from app.user.utils import purge_user_then_delete, unsubscribe_from_community, search_for_user
-from app.utils import get_setting, render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
-    is_image_url, ensure_directory_exists, gibberish, file_get_contents, community_membership, user_filters_home, \
+from app.utils import render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
+    gibberish, file_get_contents, community_membership, user_filters_home, \
     user_filters_posts, user_filters_replies, moderating_communities, joined_communities, theme_list, blocked_instances, \
-    allowlist_html, recently_upvoted_posts, recently_downvoted_posts, blocked_users, menu_topics, add_to_modlog, \
-    blocked_communities, piefed_markdown_to_lemmy_markdown
+    blocked_users, menu_topics, add_to_modlog, \
+    blocked_communities, piefed_markdown_to_lemmy_markdown, menu_instance_feeds, menu_my_feeds, languages_for_form, \
+    read_language_choices
 from sqlalchemy import desc, or_, text, asc
 import os
 import json as python_json
@@ -80,6 +81,13 @@ def show_profile(user):
     user.recalculate_post_stats()
     db.session.commit()
 
+    # find all user feeds marked as public
+    user_has_public_feeds = False
+    user_public_feeds = Feed.query.filter_by(public=True).filter_by(user_id=user.id).all()
+
+    if len(user_public_feeds) > 0:
+        user_has_public_feeds = True
+
     # pagination urls
     post_next_url = url_for('activitypub.user_profile', actor=user.ap_id if user.ap_id is not None else user.user_name,
                        post_page=posts.next_num) if posts.has_next else None
@@ -99,7 +107,11 @@ def show_profile(user):
                            noindex=not user.indexable, show_post_community=True, hide_vote_buttons=True,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site
+                           menu_topics=menu_topics(), site=g.site,
+                           user_has_public_feeds=user_has_public_feeds,
+                           user_public_feeds=user_public_feeds,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -153,6 +165,8 @@ def edit_profile(actor):
             file = save_icon_file(profile_file, 'users')
             if file:
                 current_user.avatar = file
+                cache.delete_memoized(User.avatar_image, current_user)
+                cache.delete_memoized(User.avatar_thumbnail, current_user)
         banner_file = request.files['banner_file']
         if banner_file and banner_file.filename != '':
             # remove old cover
@@ -166,6 +180,7 @@ def edit_profile(actor):
             file = save_banner_file(banner_file, 'users')
             if file:
                 current_user.cover = file
+                cache.delete_memoized(User.cover_image, current_user)
 
         db.session.commit()
 
@@ -189,7 +204,9 @@ def edit_profile(actor):
                            markdown_editor=current_user.markdown_editor,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site
+                           menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -204,6 +221,8 @@ def remove_avatar():
             current_user.avatar_id = None
             db.session.delete(file)
             db.session.commit()
+            cache.delete_memoized(User.avatar_image, current_user)
+            cache.delete_memoized(User.avatar_thumbnail, current_user)
     return _('Avatar removed!')
 
 
@@ -218,6 +237,7 @@ def remove_cover():
             current_user.cover_id = None
             db.session.delete(file)
             db.session.commit()
+            cache.delete_memoized(User.cover_image, current_user)
     return '<div> ' + _('Banner removed!') + '</div>'
 
 
@@ -375,11 +395,14 @@ def user_settings():
     form.interface_language.choices = [
         ('', _l('Auto-detect')),
         ('ca', _l('Catalan')),
+        ('zh', _l('Chinese')),
         ('en', _l('English')),
         ('fr', _l('French')),
         ('de', _l('German')),
         ('ja', _l('Japanese')),
+        ('es', _l('Spanish')),
     ]
+    form.read_languages.choices = read_language_choices()
     if form.validate_on_submit():
         propagate_indexable = form.indexable.data != current_user.indexable
         current_user.newsletter = form.newsletter.data
@@ -392,6 +415,9 @@ def user_settings():
         current_user.email_unread = form.email_unread.data
         current_user.markdown_editor = form.markdown_editor.data
         current_user.interface_language = form.interface_language.data
+        current_user.feed_auto_follow = form.feed_auto_follow.data
+        current_user.feed_auto_leave = form.feed_auto_leave.data
+        current_user.read_language_ids = form.read_languages.data
         session['ui_language'] = form.interface_language.data
         if form.vote_privately.data:
             if current_user.alt_user_name is None or current_user.alt_user_name == '':
@@ -419,11 +445,16 @@ def user_settings():
         form.markdown_editor.data = current_user.markdown_editor
         form.interface_language.data = current_user.interface_language
         form.vote_privately.data = current_user.vote_privately()
+        form.feed_auto_follow.data = current_user.feed_auto_follow
+        form.feed_auto_leave.data = current_user.feed_auto_leave
+        form.read_languages.data = current_user.read_language_ids
 
     return render_template('user/edit_settings.html', title=_('Edit profile'), form=form, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site
+                           menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -456,7 +487,7 @@ def user_settings_import_export():
                 abort(400)
             new_filename = gibberish(15) + '.json'
 
-            directory = f'app/static/media/'
+            directory = 'app/static/media/'
 
             # save the file
             final_place = os.path.join(directory, new_filename + file_ext)
@@ -475,7 +506,9 @@ def user_settings_import_export():
     return render_template('user/import_export.html', title=_('Import & Export'), form=form, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site
+                           menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -520,10 +553,10 @@ def ban_profile(actor):
             add_to_modlog('ban_user', link_text=user.display_name(), link=user.link())
 
             if user.is_instance_admin():
-                flash('Banned user was a remote instance admin.', 'warning')
+                flash(_('Banned user was a remote instance admin.'), 'warning')
             if user.is_admin() or user.is_staff():
-                flash('Banned user with role permissions.', 'warning')
-            flash(f'{actor} has been banned.')
+                flash(_('Banned user with role permissions.'), 'warning')
+            flash(_('%(actor)s has been banned.', actor=actor))
     else:
         abort(401)
 
@@ -550,7 +583,7 @@ def unban_profile(actor):
 
             add_to_modlog('unban_user', link_text=user.display_name(), link=user.link())
 
-            flash(f'{actor} has been unbanned.')
+            flash(_('%(actor)s has been unbanned.', actor=actor))
     else:
         abort(401)
 
@@ -583,7 +616,7 @@ def block_profile(actor):
             ...
             # federate block
 
-        flash(f'{actor} has been blocked.')
+        flash(_('%(actor)s has been blocked.', actor=actor))
         cache.delete_memoized(blocked_users, current_user.id)
 
     goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
@@ -635,7 +668,7 @@ def unblock_profile(actor):
             ...
             # federate unblock
 
-        flash(f'{actor} has been unblocked.')
+        flash(_('%(actor)s has been unblocked.', actor=actor))
         cache.delete_memoized(blocked_users, current_user.id)
 
     goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
@@ -689,7 +722,9 @@ def report_profile(actor):
     return render_template('user/user_report.html', title=_('Report user'), form=form, user=user,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics = menu_topics(), site=g.site
+                           menu_topics = menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -715,10 +750,10 @@ def delete_profile(actor):
             add_to_modlog('delete_user', link_text=user.display_name(), link=user.link())
 
             if user.is_instance_admin():
-                flash('Deleted user was a remote instance admin.', 'warning')
+                flash(_('Deleted user was a remote instance admin.'), 'warning')
             if user.is_admin() or user.is_staff():
-                flash('Deleted user with role permissions.', 'warning')
-            flash(f'{actor} has been deleted.')
+                flash(_('Deleted user with role permissions.'), 'warning')
+            flash(_('%(actor)s has been deleted.', actor=actor))
     else:
         abort(401)
 
@@ -735,7 +770,7 @@ def user_community_unblock(community_id):
         db.session.delete(existing_block)
         db.session.commit()
         cache.delete_memoized(blocked_communities, current_user.id)
-        flash(f'{community.display_name()} has been unblocked.')
+        flash(_('%(community_name)s has been unblocked.', community_name=community.display_name()))
 
     goto = request.args.get('redirect') if 'redirect' in request.args else url_for('user.user_settings_filters')
     return redirect(goto)
@@ -777,7 +812,9 @@ def delete_account():
     return render_template('user/delete_account.html', title=_('Delete my account'), form=form, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site
+                           menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -804,7 +841,7 @@ def send_deletion_requests(user_id):
         }
         for instance in instances:
             if instance.inbox and instance.online() and instance.id != 1: # instance id 1 is always the current instance
-                post_request(instance.inbox, payload, user.private_key, f"{user.public_url()}#main-key")
+                send_post_request(instance.inbox, payload, user.private_key, f"{user.public_url()}#main-key")
 
         sleep(5)
 
@@ -835,22 +872,22 @@ def ban_purge_profile(actor):
             # todo: empty relevant caches
 
             if user.is_instance_admin():
-                flash('Purged user was a remote instance admin.', 'warning')
+                flash(_('Purged user was a remote instance admin.'), 'warning')
             if user.is_admin() or user.is_staff():
-                flash('Purged user with role permissions.', 'warning')
+                flash(_('Purged user with role permissions.'), 'warning')
 
             # federate deletion
             if user.is_local():
                 user.deleted_by = current_user.id
                 purge_user_then_delete(user.id)
-                flash(f'{actor} has been banned, deleted and all their content deleted. This might take a few minutes.')
+                flash(_('%(actor)s has been banned, deleted and all their content deleted. This might take a few minutes.', actor=actor))
             else:
                 user.deleted = True
                 user.deleted_by = current_user.id
                 user.delete_dependencies()
                 user.purge_content()
                 db.session.commit()
-                flash(f'{actor} has been banned, deleted and all their content deleted.')
+                flash(_('%(actor)s has been banned, deleted and all their content deleted.', actor=actor))
 
             add_to_modlog('delete_user', link_text=user.display_name(), link=user.link())
 
@@ -878,7 +915,9 @@ def notifications():
     return render_template('user/notifications.html', title=_('Notifications'), notifications=notification_list, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site
+                           menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -927,71 +966,76 @@ def import_settings(filename):
 
 @celery.task
 def import_settings_task(user_id, filename):
-    user = User.query.get(user_id)
-    contents = file_get_contents(filename)
-    contents_json = json.loads(contents)
+    with current_app.app_context():
+        user = User.query.get(user_id)
+        contents = file_get_contents(filename)
+        contents_json = json.loads(contents)
 
-    # Follow communities
-    for community_ap_id in contents_json['followed_communities'] if 'followed_communities' in contents_json else []:
-        community = find_actor_or_create(community_ap_id, community_only=True)
-        if community:
-            if community.posts.count() == 0:
-                if current_app.debug:
-                    retrieve_mods_and_backfill(community.id)
-                else:
-                    retrieve_mods_and_backfill.delay(community.id)
-            if community_membership(user, community) != SUBSCRIPTION_MEMBER and community_membership(
-                    user, community) != SUBSCRIPTION_PENDING:
-                if not community.is_local():
-                    # send ActivityPub message to remote community, asking to follow. Accept message will be sent to our shared inbox
-                    join_request = CommunityJoinRequest(user_id=user.id, community_id=community.id)
-                    db.session.add(join_request)
-                    member = CommunityMember(user_id=user.id, community_id=community.id)
-                    db.session.add(member)
-                    db.session.commit()
-                    success = True
-                    if not community.instance.gone_forever:
-                        follow = {
-                          "actor": current_user.public_url(),
-                          "to": [community.public_url()],
-                          "object": community.public_url(),
-                          "type": "Follow",
-                          "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
-                        }
-                        success = post_request(community.ap_inbox_url, follow, user.private_key,
-                                           user.public_url() + '#main-key')
-                    if success is False or isinstance(success, str):
-                        sleep(5)    # give them a rest
-                else:  # for local communities, joining is instant
-                    banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
-                    if not banned:
-                        member = CommunityMember(user_id=user.id, community_id=community.id)
-                        db.session.add(member)
-                        db.session.commit()
-                cache.delete_memoized(community_membership, current_user, community)
+        # Follow communities
+        for community_ap_id in contents_json['followed_communities'] if 'followed_communities' in contents_json else []:
+            community = find_actor_or_create(community_ap_id, community_only=True)
+            if community:
+                if community.posts.count() == 0:
+                    server, name = extract_domain_and_actor(community.ap_profile_id)
+                    if current_app.debug:
+                        retrieve_mods_and_backfill(community.id, server, name)
+                    else:
+                        retrieve_mods_and_backfill.delay(community.id, server, name)
+                if community_membership(user, community) != SUBSCRIPTION_MEMBER and community_membership(
+                        user, community) != SUBSCRIPTION_PENDING:
+                    if not community.is_local():
+                        # send ActivityPub message to remote community, asking to follow. Accept message will be sent to our shared inbox
+                        join_request = CommunityJoinRequest(user_id=user.id, community_id=community.id)
+                        db.session.add(join_request)
+                        existing_member = CommunityMember.query.filter_by(user_id=user.id,
+                                                                          community_id=community.id).first()
+                        if not existing_member:
+                            member = CommunityMember(user_id=user.id, community_id=community.id)
+                            db.session.add(member)
+                            db.session.commit()
+                        success = True
+                        if not community.instance.gone_forever:
+                            follow = {
+                              "actor": user.public_url(),
+                              "to": [community.public_url()],
+                              "object": community.public_url(),
+                              "type": "Follow",
+                              "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+                            }
+                            send_post_request(community.ap_inbox_url, follow, user.private_key,
+                                              user.public_url() + '#main-key')
+                    else:  # for local communities, joining is instant
+                        banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
+                        if not banned:
+                            existing_member = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
+                            if not existing_member:
+                                member = CommunityMember(user_id=user.id, community_id=community.id)
+                                db.session.add(member)
+                                db.session.commit()
+                    cache.delete_memoized(community_membership, user, community)
 
-    for community_ap_id in contents_json['blocked_communities'] if 'blocked_communities' in contents_json else []:
-        community = find_actor_or_create(community_ap_id, community_only=True)
-        if community:
-            existing_block = CommunityBlock.query.filter_by(user_id=user.id, community_id=community.id).first()
-            if not existing_block:
-                block = CommunityBlock(user_id=user.id, community_id=community.id)
-                db.session.add(block)
+        for community_ap_id in contents_json['blocked_communities'] if 'blocked_communities' in contents_json else []:
+            community = find_actor_or_create(community_ap_id, community_only=True)
+            if community:
+                existing_block = CommunityBlock.query.filter_by(user_id=user.id, community_id=community.id).first()
+                if not existing_block:
+                    block = CommunityBlock(user_id=user.id, community_id=community.id)
+                    db.session.add(block)
 
-    for user_ap_id in contents_json['blocked_users'] if 'blocked_users' in contents_json else []:
-        blocked_user = find_actor_or_create(user_ap_id)
-        if blocked_user:
-            existing_block = UserBlock.query.filter_by(blocker_id=user.id, blocked_id=blocked_user.id).first()
-            if not existing_block:
-                user_block = UserBlock(blocker_id=user.id, blocked_id=blocked_user.id)
-                db.session.add(user_block)
-                if not blocked_user.is_local():
-                    ...  # todo: federate block
+        for user_ap_id in contents_json['blocked_users'] if 'blocked_users' in contents_json else []:
+            blocked_user = find_actor_or_create(user_ap_id)
+            if blocked_user:
+                existing_block = UserBlock.query.filter_by(blocker_id=user.id, blocked_id=blocked_user.id).first()
+                if not existing_block:
+                    user_block = UserBlock(blocker_id=user.id, blocked_id=blocked_user.id)
+                    db.session.add(user_block)
+                    if not blocked_user.is_local():
+                        ...  # todo: federate block
 
-    for instance_domain in contents_json['blocked_instances']:
-        ...
+        for instance_domain in contents_json['blocked_instances']:
+            ...
 
-    db.session.commit()
+        db.session.commit()
 
 
 @bp.route('/user/settings/filters', methods=['GET', 'POST'])
@@ -1028,7 +1072,9 @@ def user_settings_filters():
                            blocked_domains=blocked_domains, blocked_instances=blocked_instances,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site
+                           menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -1053,7 +1099,9 @@ def user_settings_filters_add():
     return render_template('user/edit_filters.html', title=_('Add filter'), form=form, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site
+                           menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -1094,7 +1142,9 @@ def user_settings_filters_edit(filter_id):
     return render_template('user/edit_filters.html', title=_('Edit filter'), form=form, content_filter=content_filter, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site
+                           menu_topics=menu_topics(), site=g.site,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -1150,7 +1200,10 @@ def user_bookmarks():
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
-                           next_url=next_url, prev_url=prev_url)
+                           next_url=next_url, prev_url=prev_url,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           )
 
 
 @bp.route('/bookmarks/comments')
@@ -1172,7 +1225,10 @@ def user_bookmarks_comments():
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
-                           next_url=next_url, prev_url=prev_url)
+                           next_url=next_url, prev_url=prev_url,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           )
 
 
 @bp.route('/alerts')
@@ -1252,7 +1308,10 @@ def user_alerts(type='posts', filter='all'):
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
-                           next_url=next_url, prev_url=prev_url)
+                           next_url=next_url, prev_url=prev_url,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           )
 
 
 @bp.route('/u/<actor>/fediverse_redirect', methods=['GET', 'POST'])
@@ -1330,7 +1389,10 @@ def user_read_posts(sort=None):
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site,
-                           next_url=next_url, prev_url=prev_url)
+                           next_url=next_url, prev_url=prev_url,
+                           menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           )
 
 
 @bp.route('/read-posts/delete')
@@ -1346,6 +1408,9 @@ def user_read_posts_delete():
 @login_required
 def edit_user_note(actor):
     actor = actor.strip()
+    return_to = request.args.get('return_to', '').strip()
+    if return_to.startswith('http'):
+        abort(401)
     if '@' in actor:
         user: User = User.query.filter_by(ap_id=actor, deleted=False).first()
     else:
@@ -1365,22 +1430,26 @@ def edit_user_note(actor):
         cache.delete_memoized(User.get_note, user, current_user)
 
         flash(_('Your changes have been saved.'), 'success')
-        goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
-        return redirect(goto)
+        if return_to:
+            return redirect(return_to)
+        else:
+            return redirect(f'/u/{actor}')
 
     elif request.method == 'GET':
         form.note.data = user.get_note(current_user)
 
-    return render_template('user/edit_note.html', title=_('Edit note'), form=form, user=user,
-                           menu_topics=menu_topics(), site=g.site)
+    return render_template('user/edit_note.html', title=_('Edit note'), form=form, user=user, return_to=return_to,
+                           menu_topics=menu_topics(), site=g.site, menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None)
 
 
 @bp.route('/user/<int:user_id>/preview')
 def user_preview(user_id):
     user = User.query.get_or_404(user_id)
+    return_to = request.args.get('return_to')
     if (user.deleted or user.banned) and current_user.is_anonymous:
         abort(404)
-    return render_template('user/user_preview.html', user=user)
+    return render_template('user/user_preview.html', user=user, return_to=return_to)
 
 
 @bp.route('/user/lookup/<person>/<domain>')
@@ -1412,9 +1481,61 @@ def lookup(person, domain):
             return redirect('/u/' + new_person.ap_id)
         else:
             # send them back where they came from
-            flash('Searching for remote people requires login', 'error')
+            flash(_('Searching for remote people requires login'), 'error')
             referrer = request.headers.get('Referer', None)
             if referrer is not None:
                 return redirect(referrer)
             else:
                 return redirect('/')
+
+
+# ----- user feed related routes
+
+@bp.route('/u/myfeeds', methods=['GET','POST'])
+@login_required
+def user_myfeeds():
+    # this will show a user's personal feeds
+    user_has_feeds = False
+    if current_user.is_authenticated and len(Feed.query.filter_by(user_id=current_user.id).all()) > 0:
+        user_has_feeds = True
+    current_user_feeds = Feed.query.filter_by(user_id=current_user.id)
+
+    # this is for feeds the user is subscribed to
+    user_has_feed_subscriptions = False
+    if current_user.is_authenticated and len(Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter_by(user_id=current_user.id).all()) > 0:
+        user_has_feed_subscriptions = True
+    subbed_feeds = Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter_by(user_id=current_user.id).filter_by(is_owner=False)
+    
+    return render_template('user/user_feeds.html', user_has_feeds=user_has_feeds, user_feeds_list=current_user_feeds,
+                           user_has_feed_subscriptions=user_has_feed_subscriptions,
+                           subbed_feeds=subbed_feeds,
+                           menu_topics=menu_topics(), menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           )
+
+
+@bp.route('/u/<actor>/feeds', methods=['GET','POST'])
+def user_feeds(actor):
+    # this will show a specific user's public feeds
+    user_has_public_feeds = False
+
+    # find the actor, local or remote
+    actor = actor.strip()
+    user = User.query.filter_by(user_name=actor, deleted=False).first()
+    if user is None:
+        user = User.query.filter_by(ap_id=actor, deleted=False).first()
+        if user is None:
+            abort(404)
+    
+    # find all user feeds marked as public
+    user_public_feeds = Feed.query.filter_by(public=True).filter_by(user_id=user.id).all()
+
+    if len(user_public_feeds) > 0:
+        user_has_public_feeds = True
+
+    return render_template('user/user_public_feeds.html', user_has_public_feeds=user_has_public_feeds, 
+                           creator_name=user.user_name, user_feeds_list=user_public_feeds,
+                           menu_topics=menu_topics(), menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           )
+

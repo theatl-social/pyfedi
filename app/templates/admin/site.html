@@ -6,8 +6,11 @@
 {% from 'bootstrap/form.html' import render_field %}
 {% set active_child = 'admin_site' %}
 
+
 {% block app_content %}
 
+{% include 'admin/_tabbed_nav.html' %}
+<br>
 <div class="row">
     <div class="col">
         <h1>{{ _('Site profile') }}</h1>

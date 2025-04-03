@@ -6,9 +6,10 @@ from sqlalchemy import desc, or_, and_, text
 from app import db, celery
 from app.chat.forms import AddReply, ReportConversationForm
 from app.chat.util import send_message
-from app.models import Site, User, Report, ChatMessage, Notification, InstanceBlock, Conversation, conversation_member
+from app.models import Site, User, Report, ChatMessage, Notification, InstanceBlock, Conversation, conversation_member, CommunityBan, ModLog
 from app.user.forms import ReportUserForm
-from app.utils import render_template, moderating_communities, joined_communities, menu_topics
+from app.utils import render_template, moderating_communities, joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, \
+    menu_subscribed_feeds
 from app.chat import bp
 
 
@@ -18,8 +19,8 @@ from app.chat import bp
 def chat_home(conversation_id=None):
     form = AddReply()
     if form.validate_on_submit():
-        reply = send_message(form.message.data, conversation_id)
-        return redirect(url_for('chat.chat_home', conversation_id=conversation_id, _anchor=f'message_{reply.id}'))
+        send_message(form.message.data, conversation_id)
+        return redirect(url_for('chat.chat_home', conversation_id=conversation_id, _anchor=f'message'))
     else:
         conversations = Conversation.query.join(conversation_member,
                                                 conversation_member.c.conversation_id == Conversation.id). \
@@ -36,10 +37,13 @@ def chat_home(conversation_id=None):
                 abort(400)
             if conversations:
                 messages = conversation.messages.order_by(ChatMessage.created_at).all()
+                for message in messages:
+                    if message.recipient_id == current_user.id:
+                        message.read = True
             else:
                 messages = []
 
-            sql = f"UPDATE notification SET read = true WHERE url = '/chat/{conversation_id}' AND user_id = {current_user.id}"
+            sql = f"UPDATE notification SET read = true WHERE url LIKE '/chat/{conversation_id}%' AND user_id = {current_user.id}"
             db.session.execute(text(sql))
             db.session.commit()
             current_user.unread_notifications = Notification.query.filter_by(user_id=current_user.id, read=False).count()
@@ -52,7 +56,10 @@ def chat_home(conversation_id=None):
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(),
-                                   site=g.site)
+                                   site=g.site, menu_instance_feeds=menu_instance_feeds(), 
+                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                                   menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                                   )
 
 
 @bp.route('/chat/<int:to>/new', methods=['GET', 'POST'])
@@ -74,15 +81,18 @@ def new_message(to):
         conversation.members.append(current_user)
         db.session.add(conversation)
         db.session.commit()
-        reply = send_message(form.message.data, conversation.id)
-        return redirect(url_for('chat.chat_home', conversation_id=conversation.id, _anchor=f'message_{reply.id}'))
+        send_message(form.message.data, conversation.id)
+        return redirect(url_for('chat.chat_home', conversation_id=conversation.id, _anchor=f'message'))
     else:
         return render_template('chat/new_message.html', form=form, title=_('New message to "%(recipient_name)s"', recipient_name=recipient.link()),
                                recipient=recipient,
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
                                menu_topics=menu_topics(),
-                               site=g.site)
+                               site=g.site, menu_instance_feeds=menu_instance_feeds(), 
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                               menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                               )
 
 
 @bp.route('/chat/denied', methods=['GET'])
@@ -103,6 +113,19 @@ def empty():
     return render_template('chat/empty.html')
 
 
+@bp.route('/chat/ban_from_mod/<int:user_id>/<int:community_id>', methods=['GET'])
+@login_required
+def ban_from_mod(user_id, community_id):
+    active_ban = CommunityBan.query.filter_by(user_id=user_id, community_id=community_id).order_by(desc(CommunityBan.created_at)).first()
+    user_link = 'u/' + current_user.user_name
+    past_bans = ModLog.query.filter(ModLog.community_id == community_id, ModLog.link == user_link, or_(ModLog.action == 'ban_user', ModLog.action == 'unban_user')).order_by(desc(ModLog.created_at))
+    if active_ban:
+        past_bans = past_bans.offset(1)
+    #if active_ban and len(past_bans) > 1:
+    #past_bans = past_bans
+    return render_template('chat/ban_from_mod.html', active_ban=active_ban, past_bans=past_bans)
+
+
 @bp.route('/chat/<int:conversation_id>/options', methods=['GET', 'POST'])
 @login_required
 def chat_options(conversation_id):
@@ -112,7 +135,9 @@ def chat_options(conversation_id):
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(),
-                           site=g.site
+                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                            )
 
 
@@ -120,7 +145,7 @@ def chat_options(conversation_id):
 @login_required
 def chat_delete(conversation_id):
     conversation = Conversation.query.get_or_404(conversation_id)
-    if current_user.is_admin() or current_user.is_member(current_user):
+    if current_user.is_admin() or conversation.is_member(current_user):
         Report.query.filter(Report.suspect_conversation_id == conversation.id).delete()
         db.session.delete(conversation)
         db.session.commit()
@@ -143,7 +168,7 @@ def block_instance(instance_id):
 @login_required
 def chat_report(conversation_id):
     conversation = Conversation.query.get_or_404(conversation_id)
-    if current_user.is_admin() or current_user.is_member(current_user):
+    if current_user.is_admin() or conversation.is_member(current_user):
         form = ReportConversationForm()
 
         if form.validate_on_submit():
@@ -174,5 +199,7 @@ def chat_report(conversation_id):
                                moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
                                menu_topics=menu_topics(),
-                               site=g.site
+                               site=g.site, menu_instance_feeds=menu_instance_feeds(), 
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                               menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                                )

@@ -24,7 +24,7 @@ import math
 
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER, \
     SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER, NOTIF_COMMUNITY, NOTIF_TOPIC, NOTIF_POST, NOTIF_REPLY, \
-    ROLE_ADMIN, ROLE_STAFF
+    ROLE_ADMIN, ROLE_STAFF, NOTIF_FEED
 
 
 # datetime.utcnow() is depreciated in Python 3.12 so it will need to be swapped out eventually
@@ -188,6 +188,17 @@ class Conversation(db.Model):
                 retval.append(member.instance)
         return retval
 
+    def last_ap_id(self, sender_id):
+        for message in self.messages.filter(ChatMessage.sender_id == sender_id).order_by(desc(ChatMessage.created_at)).limit(50):
+            if message.ap_id:
+                return message.ap_id
+        return ''
+        #most_recent_message = self.messages.order_by(desc(ChatMessage.created_at)).first()
+        #if most_recent_message and most_recent_message.ap_id:
+        #    return f"https://{current_app.config['SERVER_NAME']}/private_message/{most_recent_message.id}"
+        #else:
+        #    return ''
+
     @staticmethod
     def find_existing_conversation(recipient, sender):
         sql = """SELECT 
@@ -228,6 +239,8 @@ class ChatMessage(db.Model):
     read = db.Column(db.Boolean, default=False)
     encrypted = db.Column(db.String(15))
     created_at = db.Column(db.DateTime, default=utcnow)
+
+    ap_id = db.Column(db.String(255), index=True, unique=True)
 
     sender = db.relationship('User', foreign_keys=[sender_id])
 
@@ -309,20 +322,20 @@ class File(db.Model):
         if self.file_path and os.path.isfile(self.file_path):
             try:
                 os.unlink(self.file_path)
-            except FileNotFoundError as e:
+            except FileNotFoundError:
                 ...
             purge_from_cache.append(self.file_path.replace('app/', f"https://{current_app.config['SERVER_NAME']}/"))
         if self.thumbnail_path and os.path.isfile(self.thumbnail_path):
             try:
                 os.unlink(self.thumbnail_path)
-            except FileNotFoundError as e:
+            except FileNotFoundError:
                 ...
             purge_from_cache.append(self.thumbnail_path.replace('app/', f"https://{current_app.config['SERVER_NAME']}/"))
         if self.source_url and self.source_url.startswith('http') and current_app.config['SERVER_NAME'] in self.source_url:
             # self.source_url is always a url rather than a file path, which makes deleting the file a bit fiddly
             try:
                 os.unlink(self.source_url.replace(f"https://{current_app.config['SERVER_NAME']}/", 'app/'))
-            except FileNotFoundError as e:
+            except FileNotFoundError:
                 ...
             purge_from_cache.append(self.source_url) # otoh it makes purging the cdn cache super easy.
 
@@ -373,7 +386,7 @@ def flush_cdn_cache_task(to_purge: Union[str, List[str]]):
             }
 
     if body:
-        response = httpx_client.request(
+        httpx_client.request(
             'POST',
             f'https://api.cloudflare.com/client/v4/zones/{zone_id}/purge_cache',
             headers=headers,
@@ -533,6 +546,12 @@ class Community(db.Model):
         else:
             return self.ap_id.lower()
 
+    def lemmy_link(self) -> str:
+        if self.ap_id is None:
+            return f"!{self.name}@{current_app.config['SERVER_NAME']}"
+        else:
+            return f"!{self.ap_id.lower()}"
+
     @cache.memoize(timeout=3)
     def moderators(self):
         return CommunityMember.query.filter((CommunityMember.community_id == self.id) &
@@ -627,6 +646,24 @@ class Community(db.Model):
     def loop_videos(self) -> bool:
         return 'gifs' in self.name
 
+    def scale_by(self) -> int:
+        if self.subscriptions_count <= 1:
+            return 3
+        largest_community = _large_community_subscribers()
+        if largest_community is None or largest_community == 0:
+            return 0
+        influence = self.subscriptions_count / int(largest_community)
+        if influence < 0.05:
+            return 4
+        if influence < 0.25:
+            return 3
+        elif influence < 0.60:
+            return 2
+        elif influence < 1.0:
+            return 1
+        else:
+            return 0
+
     def delete_dependencies(self):
         for post in self.posts:
             post.delete_dependencies()
@@ -708,9 +745,12 @@ class User(UserMixin, db.Model):
     referrer = db.Column(db.String(256))
     markdown_editor = db.Column(db.Boolean, default=False)
     interface_language = db.Column(db.String(10))           # a locale that the translation system understands e.g. 'en' or 'en-us'. If empty, use browser default
-    language_id = db.Column(db.Integer, db.ForeignKey('language.id'))   # the default choice in the language dropdown when composing posts & comments
+    language_id = db.Column(db.Integer, db.ForeignKey('language.id'))   # the default choice in the language dropdown when composing posts & comments. NOT UI language
+    read_language_ids = db.Column(MutableList.as_mutable(ARRAY(db.Integer)))
     reply_collapse_threshold = db.Column(db.Integer, default=-10)
     reply_hide_threshold = db.Column(db.Integer, default=-20)
+    feed_auto_follow = db.Column(db.Boolean, default=True)  # does the user want to auto-follow feed communities
+    feed_auto_leave = db.Column(db.Boolean, default=True)   # does the user want to auto-leave feed communities
 
     avatar = db.relationship('File', lazy='joined', foreign_keys=[avatar_id], single_parent=True, cascade="all, delete-orphan")
     cover = db.relationship('File', lazy='joined', foreign_keys=[cover_id], single_parent=True, cascade="all, delete-orphan")
@@ -771,6 +811,7 @@ class User(UserMixin, db.Model):
         else:
             return '[deleted]'
 
+    @cache.memoize(timeout=500)
     def avatar_thumbnail(self) -> str:
         if self.avatar_id is not None:
             if self.avatar.thumbnail_path is not None:
@@ -782,6 +823,7 @@ class User(UserMixin, db.Model):
                 return self.avatar_image()
         return ''
 
+    @cache.memoize(timeout=500)
     def avatar_image(self) -> str:
         if self.avatar_id is not None:
             if self.avatar.file_path is not None:
@@ -796,6 +838,7 @@ class User(UserMixin, db.Model):
                     return self.avatar.source_url
         return ''
 
+    @cache.memoize(timeout=500)
     def cover_image(self) -> str:
         if self.cover_id is not None:
             if self.cover.thumbnail_path is not None:
@@ -875,6 +918,12 @@ class User(UserMixin, db.Model):
         else:
             return self.ap_id
 
+    def lemmy_link(self) -> str:
+        if self.ap_id is None:
+            return f"{self.user_name}@{current_app.config['SERVER_NAME']}"
+        else:
+            return self.ap_id.lower()
+
     def followers_url(self):
         if self.ap_followers_url:
             return self.ap_followers_url
@@ -940,6 +989,16 @@ class User(UserMixin, db.Model):
         else:
             self.attitude = None
 
+    def get_num_upvotes(self):
+        post_votes = db.session.execute(text('SELECT COUNT(*) FROM "post_vote" WHERE user_id = :user_id AND effect > 0'), {'user_id': self.id}).scalar()
+        post_reply_votes = db.session.execute(text('SELECT COUNT(*) FROM "post_reply_vote" WHERE user_id = :user_id AND effect > 0'), {'user_id': self.id}).scalar()
+        return post_votes + post_reply_votes
+
+    def get_num_downvotes(self):
+        post_votes = db.session.execute(text('SELECT COUNT(*) FROM "post_vote" WHERE user_id = :user_id AND effect < 0'), {'user_id': self.id}).scalar()
+        post_reply_votes = db.session.execute(text('SELECT COUNT(*) FROM "post_reply_vote" WHERE user_id = :user_id AND effect < 0'), {'user_id': self.id}).scalar()
+        return post_votes + post_reply_votes
+
     def recalculate_post_stats(self, posts=True, replies=True):
         if posts:
             self.post_count = db.session.execute(text('SELECT COUNT(id) as c FROM "post" WHERE user_id = :user_id AND deleted = false'),
@@ -980,7 +1039,7 @@ class User(UserMixin, db.Model):
         if main_user_name:
             result = self.ap_public_url if self.ap_public_url else f"https://{current_app.config['SERVER_NAME']}/u/{self.user_name}"
         else:
-            result = f"https://{current_app.config['SERVER_NAME']}/u/{self.alt_user_name}"
+            result = f"https://{current_app.config['SERVER_NAME']}/u/{self.alt_user_name}" if self.alt_user_name else self.public_url(True)
         return result
 
     def created_recently(self):
@@ -1087,7 +1146,7 @@ class User(UserMixin, db.Model):
         if user_note:
             return user_note.body
         else:
-            return None
+            return ''
 
 
 class ActivityLog(db.Model):
@@ -1134,15 +1193,17 @@ class Post(db.Model):
     up_votes = db.Column(db.Integer, default=0)
     down_votes = db.Column(db.Integer, default=0)
     ranking = db.Column(db.Integer, default=0, index=True)                          # used for 'hot' ranking
+    ranking_scaled = db.Column(db.Integer, default=0, index=True)                   # used for 'scaled' ranking
     edited_at = db.Column(db.DateTime)
     reports = db.Column(db.Integer, default=0)                          # how many times this post has been reported. Set to -1 to ignore reports
     language_id = db.Column(db.Integer, db.ForeignKey('language.id'), index=True)
     cross_posts = db.Column(MutableList.as_mutable(ARRAY(db.Integer)))
-    tags = db.relationship('Tag', lazy='dynamic', secondary=post_tag, backref=db.backref('posts', lazy='dynamic'))
+    tags = db.relationship('Tag', lazy='joined', secondary=post_tag, backref=db.backref('posts', lazy='dynamic'))
 
     ap_id = db.Column(db.String(255), index=True, unique=True)
     ap_create_id = db.Column(db.String(100))
     ap_announce_id = db.Column(db.String(100))
+    ap_updated = db.Column(db.DateTime)         # When the remote instance edited the Post. Useful when local instance has been offline and a flurry of potentially out of order updates are coming in.
 
     search_vector = db.Column(TSVectorType('title', 'body'))
 
@@ -1151,7 +1212,7 @@ class Post(db.Model):
     author = db.relationship('User', lazy='joined', overlaps='posts', foreign_keys=[user_id])
     community = db.relationship('Community', lazy='joined', overlaps='posts', foreign_keys=[community_id])
     replies = db.relationship('PostReply', lazy='dynamic', backref='post')
-    language = db.relationship('Language', foreign_keys=[language_id])
+    language = db.relationship('Language', foreign_keys=[language_id], lazy='joined')
     licence = db.relationship('Licence', foreign_keys=[licence_id])
 
     # db relationship tracked by the "read_posts" table
@@ -1164,15 +1225,15 @@ class Post(db.Model):
 
     @classmethod
     def get_by_ap_id(cls, ap_id):
-        return cls.query.filter_by(ap_id=ap_id.lower()).first()
+        return cls.query.filter_by(ap_id=ap_id).first()
 
     @classmethod
     def new(cls, user: User, community: Community, request_json: dict, announce_id=None):
         from app.activitypub.util import instance_weight, find_language_or_create, find_language, find_hashtag_or_create, \
             find_licence_or_create, make_image_sizes, notify_about_post
         from app.utils import allowlist_html, markdown_to_html, html_to_text, microblog_content_to_title, blocked_phrases, \
-            is_image_url, is_video_url, domain_from_url, opengraph_parse, shorten_string, remove_tracking_from_link, \
-            is_video_hosting_site, communities_banned_from, recently_upvoted_posts
+            is_image_url, is_video_url, domain_from_url, opengraph_parse, shorten_string, fixup_url, \
+            is_video_hosting_site, communities_banned_from, recently_upvoted_posts, blocked_users
 
         microblog = False
         if 'name' not in request_json['object']:  # Microblog posts
@@ -1190,7 +1251,7 @@ class Post(db.Model):
                     sticky=request_json['object']['stickied'] if 'stickied' in request_json['object'] else False,
                     nsfw=request_json['object']['sensitive'] if 'sensitive' in request_json['object'] else False,
                     nsfl=request_json['object']['nsfl'] if 'nsfl' in request_json['object'] else nsfl_in_title,
-                    ap_id=request_json['object']['id'].lower(),
+                    ap_id=request_json['object']['id'],
                     ap_create_id=request_json['id'],
                     ap_announce_id=announce_id,
                     up_votes=1,
@@ -1206,14 +1267,13 @@ class Post(db.Model):
         if community.nsfl:
             post.nsfl = True
         if 'content' in request_json['object'] and request_json['object']['content'] is not None:
-            if 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/html':
+            # prefer Markdown in 'source' in provided
+            if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and request_json['object']['source']['mediaType'] == 'text/markdown':
+                post.body = request_json['object']['source']['content']
+                post.body_html = markdown_to_html(post.body)
+            elif 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/html':
                 post.body_html = allowlist_html(request_json['object']['content'])
-                if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
-                        request_json['object']['source']['mediaType'] == 'text/markdown':
-                    post.body = request_json['object']['source']['content']
-                    post.body_html = markdown_to_html(post.body)  # prefer Markdown if provided, overwrite version obtained from HTML
-                else:
-                    post.body = html_to_text(post.body_html)
+                post.body = html_to_text(post.body_html)
             elif 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/markdown':
                 post.body = request_json['object']['content']
                 post.body_html = markdown_to_html(post.body)
@@ -1250,22 +1310,31 @@ class Post(db.Model):
             'type' in request_json['object']['attachment'][0]):
             alt_text = None
             if request_json['object']['attachment'][0]['type'] == 'Link':
-                post.url = request_json['object']['attachment'][0]['href']  # Lemmy < 0.19.4
+                if 'href' in request_json['object']['attachment'][0]:
+                    post.url = request_json['object']['attachment'][0]['href']    # Lemmy < 0.19.4
+                elif 'url' in request_json['object']['attachment'][0]:
+                    post.url = request_json['object']['attachment'][0]['url']     # NodeBB
             if request_json['object']['attachment'][0]['type'] == 'Document':
-                post.url = request_json['object']['attachment'][0]['url']  # Mastodon
+                post.url = request_json['object']['attachment'][0]['url']         # Mastodon
                 if 'name' in request_json['object']['attachment'][0]:
                     alt_text = request_json['object']['attachment'][0]['name']
             if request_json['object']['attachment'][0]['type'] == 'Image':
                 attachment = request_json['object']['attachment'][0]
-                post.url = attachment['url']  # PixelFed, PieFed, Lemmy >= 0.19.4
+                post.url = attachment['url']                                      # PixelFed, PieFed, Lemmy >= 0.19.4
                 alt_text = attachment.get("name")
                 file_path = attachment.get("file_path")
+            if request_json['object']['attachment'][0]['type'] == 'Audio':        # WordPress podcast
+                post.url = request_json['object']['attachment'][0]['url']
+                if 'name' in request_json['object']['attachment'][0]:
+                    post.title = request_json['object']['attachment'][0]['name']
 
         if 'attachment' in request_json['object'] and isinstance(request_json['object']['attachment'], dict):  # a.gup.pe (Mastodon)
             alt_text = None
             post.url = request_json['object']['attachment']['url']
 
         if post.url:
+            thumbnail_url, embed_url = fixup_url(post.url)
+            post.url = embed_url
             if is_image_url(post.url):
                 post.type = constants.POST_TYPE_IMAGE
                 image = File(source_url=post.url)
@@ -1275,11 +1344,12 @@ class Post(db.Model):
                     image.file_path = file_path
                 db.session.add(image)
                 post.image = image
-            elif is_video_url(post.url):  # youtube is detected later
+            elif is_video_url(post.url) or is_video_hosting_site(post.url):
                 post.type = constants.POST_TYPE_VIDEO
-                # custom thumbnails will be added below in the "if 'image' in request_json['object'] and post.image is None:" section
             else:
                 post.type = constants.POST_TYPE_LINK
+            if 'blogspot.com' in post.url:
+                return None
             domain = domain_from_url(post.url)
             # notify about links to banned websites.
             already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
@@ -1303,6 +1373,20 @@ class Post(db.Model):
                 domain.post_count += 1
                 post.domain = domain
 
+            if 'image' in request_json['object'] and post.image is None:
+                image = File(source_url=request_json['object']['image']['url'])
+                db.session.add(image)
+                post.image = image
+            if post.image is None: # This is a link post but the source instance has not provided a thumbnail image
+                # Let's see if we can do better than the source instance did!
+                opengraph = opengraph_parse(thumbnail_url)
+                if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
+                    filename = opengraph.get('og:image') or opengraph.get('og:image:url')
+                    if not filename.startswith('/'):
+                        file = File(source_url=filename, alt_text=shorten_string(opengraph.get('og:title'), 295))
+                        post.image = file
+                        db.session.add(file)
+
         if post is not None:
             if request_json['object']['type'] == 'Video':
                 post.type = constants.POST_TYPE_VIDEO
@@ -1320,6 +1404,9 @@ class Post(db.Model):
             elif 'contentMap' in request_json['object'] and isinstance(request_json['object']['contentMap'], dict):
                 language = find_language(next(iter(request_json['object']['contentMap'])))
                 post.language_id = language.id if language else None
+            else:
+                from app.utils import english_language_id
+                post.language_id = english_language_id()
             if 'licence' in request_json['object'] and isinstance(request_json['object']['licence'], dict):
                 licence = find_licence_or_create(request_json['object']['licence']['name'])
                 post.licence = licence
@@ -1330,41 +1417,39 @@ class Post(db.Model):
                             hashtag = find_hashtag_or_create(json_tag['name'])
                             if hashtag:
                                 post.tags.append(hashtag)
-            if 'image' in request_json['object'] and post.image is None:
-                image = File(source_url=request_json['object']['image']['url'])
-                db.session.add(image)
-                post.image = image
-            if post.image is None and post.type == constants.POST_TYPE_LINK:  # This is a link post but the source instance has not provided a thumbnail image
-                # Let's see if we can do better than the source instance did!
-                tn_url = post.url
-                if tn_url[:32] == 'https://www.youtube.com/watch?v=':
-                    tn_url = 'https://youtu.be/' + tn_url[
-                                                   32:43]  # better chance of thumbnail from youtu.be than youtube.com
-                opengraph = opengraph_parse(tn_url)
-                if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
-                    filename = opengraph.get('og:image') or opengraph.get('og:image:url')
-                    if not filename.startswith('/'):
-                        file = File(source_url=filename, alt_text=shorten_string(opengraph.get('og:title'), 295))
-                        post.image = file
-                        db.session.add(file)
-
             if 'searchableBy' in request_json['object'] and request_json['object']['searchableBy'] != 'https://www.w3.org/ns/activitystreams#Public':
                 post.indexable = False
 
-            if post.url:
-                post.url = remove_tracking_from_link(post.url)  # moved here as changes youtu.be to youtube.com
-                if is_video_hosting_site(post.url):
-                    post.type = constants.POST_TYPE_VIDEO
             db.session.add(post)
             post.ranking = post.post_ranking(post.score, post.posted_at)
+            post.ranking_scaled = int(post.ranking + community.scale_by())
             community.post_count += 1
             community.last_active = utcnow()
             user.post_count += 1
+            db.session.execute(text('UPDATE "site" SET last_active = NOW()'))
             try:
                 db.session.commit()
             except IntegrityError:
                 db.session.rollback()
-                return Post.query.filter_by(ap_id=request_json['object']['id'].lower()).one()
+                return Post.query.filter_by(ap_id=request_json['object']['id']).one()
+
+            # Mentions also need a post_id
+            if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
+                for json_tag in request_json['object']['tag']:
+                    if 'type' in json_tag and json_tag['type'] == 'Mention':
+                        profile_id = json_tag['href'] if 'href' in json_tag else None
+                        if profile_id and isinstance(profile_id, str) and profile_id.startswith('https://' + current_app.config['SERVER_NAME']):
+                            profile_id = profile_id.lower()
+                            recipient = User.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
+                            if recipient:
+                                blocked_senders = blocked_users(recipient.id)
+                                if post.user_id not in blocked_senders:
+                                    notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in post {post.id}"),
+                                                                url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
+                                                                author_id=post.user_id)
+                                    recipient.unread_notifications += 1
+                                    db.session.add(notification)
+                                    db.session.commit()
 
             # Polls need to be processed quite late because they need a post_id to refer to
             if request_json['object']['type'] == 'Question':
@@ -1401,19 +1486,12 @@ class Post(db.Model):
                 post.up_votes += 1
                 post.score += 1
                 post.ranking = post.post_ranking(post.score, post.posted_at)
+                post.ranking_scaled = int(post.ranking + community.scale_by())
             db.session.commit()
 
         return post
 
-    # All the following post/comment ranking math is explained at https://medium.com/hacking-and-gonzo/how-reddit-ranking-algorithms-work-ef111e33d0d9
-    epoch = datetime(1970, 1, 1)
-
-    @classmethod
-    def epoch_seconds(self, date):
-        td = date - self.epoch
-        return td.days * 86400 + td.seconds + (float(td.microseconds) / 1000000)
-
-    def calculate_cross_posts(self, delete_only=False, url_changed=False, backfilled=False):
+    def calculate_cross_posts(self, delete_only=False, url_changed=False):
         if not self.url and not delete_only:
             return
 
@@ -1421,11 +1499,11 @@ class Post(db.Model):
             old_cross_posts = Post.query.filter(Post.id.in_(self.cross_posts)).all()
             self.cross_posts.clear()
             for ocp in old_cross_posts:
-                if ocp.cross_posts is not None:
+                if ocp.cross_posts and self.id in ocp.cross_posts:
                     ocp.cross_posts.remove(self.id)
 
-        if delete_only:
             db.session.commit()
+        if delete_only:
             return
 
         if self.url.count('/') < 3 or (self.url.count('/') == 3 and self.url.endswith('/')):
@@ -1436,22 +1514,19 @@ class Post(db.Model):
             # daily posts to this community (e.g. to https://travle.earth/usa or https://www.nytimes.com/games/wordle/index.html) shouldn't be treated as cross-posts
             return
 
-        if not backfilled:
-            new_cross_posts = Post.query.filter(Post.id != self.id, Post.url == self.url, Post.deleted == False,
-                                            Post.posted_at > self.posted_at - timedelta(days=6))
-        else:
-            new_cross_posts = Post.query.filter(Post.id != self.id, Post.url == self.url, Post.deleted == False,
-                                            Post.posted_at > self.posted_at - timedelta(days=3),
-                                            Post.posted_at < self.posted_at + timedelta(days=3))
-        for op in new_cross_posts:
-            if op.cross_posts is None:
-                op.cross_posts = [self.id]
-            else:
-                op.cross_posts.append(self.id)
-            if self.cross_posts is None:
-                self.cross_posts = [op.id]
-            else:
-                self.cross_posts.append(op.id)
+        limit = 9
+        new_cross_posts = Post.query.filter(Post.id != self.id, Post.url == self.url, Post.deleted == False).order_by(desc(Post.id)).limit(limit)
+
+        # other posts: update their cross_posts field with this post.id if they have less than the limit
+        for ncp in new_cross_posts:
+            if ncp.cross_posts is None:
+                ncp.cross_posts = [self.id]
+            elif len(ncp.cross_posts) < limit:
+                ncp.cross_posts.append(self.id)
+
+        # this post: set the cross_posts field to the limited list of ids from the most recent other posts
+        if new_cross_posts.count() > 0:
+            self.cross_posts = [ncp.id for ncp in new_cross_posts]
         db.session.commit()
 
     def delete_dependencies(self):
@@ -1527,6 +1602,8 @@ class Post(db.Model):
         return self.profile_id()
 
     def blocked_by_content_filter(self, content_filters):
+        if current_user.is_authenticated and self.user_id == current_user.id:
+            return False
         lowercase_title = self.title.lower()
         for name, keywords in content_filters.items() if content_filters else {}:
             for keyword in keywords:
@@ -1538,7 +1615,7 @@ class Post(db.Model):
         # some locales do not have a definition for 'weeks' so are unable to display some dates in some languages. Fall back to english for those languages.
         try:
             return arrow.get(self.last_active if sort == 'active' else self.posted_at).humanize(locale=locale)
-        except ValueError as v:
+        except ValueError:
             return arrow.get(self.last_active if sort == 'active' else self.posted_at).humanize(locale='en')
 
     def notify_new_replies(self, user_id: int) -> bool:
@@ -1574,19 +1651,19 @@ class Post(db.Model):
     # All the following post/comment ranking math is explained at https://medium.com/hacking-and-gonzo/how-reddit-ranking-algorithms-work-ef111e33d0d9
     epoch = datetime(1970, 1, 1)
 
-    def epoch_seconds(self, date):
-        td = date - self.epoch
+    def epoch_seconds(self, post_date):
+        td = post_date - self.epoch
         return td.days * 86400 + td.seconds + (float(td.microseconds) / 1000000)
 
     # All the following post/comment ranking math is explained at https://medium.com/hacking-and-gonzo/how-reddit-ranking-algorithms-work-ef111e33d0d9
-    def post_ranking(self, score, date: datetime):
-        if date is None:
-            date = datetime.utcnow()
+    def post_ranking(self, score, post_date: datetime):
+        if post_date is None:
+            post_date = datetime.utcnow()
         if score is None:
             score = 1
         order = math.log(max(abs(score), 1), 10)
         sign = 1 if score > 0 else -1 if score < 0 else 0
-        seconds = self.epoch_seconds(date) - 1685766018
+        seconds = self.epoch_seconds(post_date) - 1685766018
         return round(sign * order + seconds / 45000, 7)
 
     def vote(self, user: User, vote_direction: str):
@@ -1604,22 +1681,26 @@ class Post(db.Model):
             if existing_vote.effect > 0:  # previous vote was up
                 if vote_direction == 'upvote':  # new vote is also up, so remove it
                     db.session.delete(existing_vote)
+                    db.session.commit()
                     self.up_votes -= 1
                     self.score -= existing_vote.effect              # score - (+1) = score-1
                     undo = 'Like'
                 else:  # new vote is down while previous vote was up, so reverse their previous vote
                     existing_vote.effect = -1
+                    db.session.commit()
                     self.up_votes -= 1
                     self.down_votes += 1
                     self.score += existing_vote.effect * 2          # score + (-2) = score-2
             else:  # previous vote was down
                 if vote_direction == 'downvote':  # new vote is also down, so remove it
                     db.session.delete(existing_vote)
+                    db.session.commit()
                     self.down_votes -= 1
                     self.score -= existing_vote.effect              # score - (-1) = score+1
                     undo = 'Dislike'
                 else:  # new vote is up while previous vote was down, so reverse their previous vote
                     existing_vote.effect = 1
+                    db.session.commit()
                     self.up_votes += 1
                     self.down_votes -= 1
                     self.score += existing_vote.effect * 2          # score + (+2) = score+2
@@ -1663,6 +1744,7 @@ class Post(db.Model):
         db.session.commit()
         if not user.banned:
             self.ranking = self.post_ranking(self.score, self.created_at)
+            self.ranking_scaled = int(self.ranking + self.community.scale_by())
             user.recalculate_attitude()
             db.session.commit()
         return undo
@@ -1677,8 +1759,10 @@ class PostReply(db.Model):
     domain_id = db.Column(db.Integer, db.ForeignKey('domain.id'), index=True)
     image_id = db.Column(db.Integer, db.ForeignKey('file.id'), index=True)
     parent_id = db.Column(db.Integer, index=True)
-    root_id = db.Column(db.Integer)
+    root_id = db.Column(db.Integer, index=True)
     depth = db.Column(db.Integer, default=0)
+    path = db.Column(MutableList.as_mutable(ARRAY(db.Integer)), index=True)
+    child_count = db.Column(db.Integer, default=0)
     instance_id = db.Column(db.Integer, db.ForeignKey('instance.id'), index=True)
     body = db.Column(db.Text)
     body_html = db.Column(db.Text)
@@ -1703,12 +1787,13 @@ class PostReply(db.Model):
     ap_id = db.Column(db.String(255), index=True, unique=True)
     ap_create_id = db.Column(db.String(100))
     ap_announce_id = db.Column(db.String(100))
+    ap_updated = db.Column(db.DateTime)         # When the remote instance edited the PostReply. Useful when local instance has been offline and a flurry of potentially out of order updates are coming in.
 
     search_vector = db.Column(TSVectorType('body'))
 
     author = db.relationship('User', lazy='joined', foreign_keys=[user_id], single_parent=True, overlaps="post_replies")
     community = db.relationship('Community', lazy='joined', overlaps='replies', foreign_keys=[community_id])
-    language = db.relationship('Language', foreign_keys=[language_id])
+    language = db.relationship('Language', foreign_keys=[language_id], lazy='joined')
 
     @classmethod
     def new(cls, user: User, post: Post, in_reply_to, body, body_html, notify_author, language_id, request_json: dict = None, announce_id=None):
@@ -1736,7 +1821,7 @@ class PostReply(db.Model):
                           from_bot=user.bot, nsfw=post.nsfw, nsfl=post.nsfl,
                           notify_author=notify_author, instance_id=user.instance_id,
                           language_id=language_id,
-                          ap_id=request_json['object']['id'].lower() if request_json else None,
+                          ap_id=request_json['object']['id'] if request_json else None,
                           ap_create_id=request_json['id'] if request_json else None,
                           ap_announce_id=announce_id)
         if reply.body:
@@ -1766,7 +1851,16 @@ class PostReply(db.Model):
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
-            return PostReply.query.filter_by(ap_id=request_json['object']['id'].lower()).one()
+            return PostReply.query.filter_by(ap_id=request_json['object']['id']).one()
+
+        if in_reply_to and in_reply_to.path:
+            reply.path = in_reply_to.path[:]
+            reply.path.append(reply.id)
+            db.session.execute(text('update post_reply set child_count = child_count + 1 where id in :parents'),
+                               {'parents': tuple(in_reply_to.path)})
+        else:
+            reply.path = [0, reply.id]
+        reply.root_id = reply.path[1]
 
         # Notify subscribers
         notify_about_post_reply(in_reply_to, reply)
@@ -1801,6 +1895,7 @@ class PostReply(db.Model):
             post.community.post_reply_count += 1
             post.community.last_active = post.last_active = utcnow()
         user.post_reply_count += 1
+        db.session.execute(text('UPDATE "site" SET last_active = NOW()'))
         db.session.commit()
 
         return reply
@@ -1822,7 +1917,7 @@ class PostReply(db.Model):
 
     @classmethod
     def get_by_ap_id(cls, ap_id):
-        return cls.query.filter_by(ap_id=ap_id.lower()).first()
+        return cls.query.filter_by(ap_id=ap_id).first()
 
     def profile_id(self):
         if self.ap_id:
@@ -1836,7 +1931,7 @@ class PostReply(db.Model):
     def posted_at_localized(self, locale):
         try:
             return arrow.get(self.posted_at).humanize(locale=locale)
-        except ValueError as v:
+        except ValueError:
             return arrow.get(self.posted_at).humanize(locale='en')
 
     # the ap_id of the parent object, whether it's another PostReply or a Post
@@ -1939,22 +2034,26 @@ class PostReply(db.Model):
             if existing_vote.effect > 0:  # previous vote was up
                 if vote_direction == 'upvote':  # new vote is also up, so remove it
                     db.session.delete(existing_vote)
+                    db.session.commit()
                     self.up_votes -= 1
                     self.score -= 1
                     undo = 'Like'
                 else:  # new vote is down while previous vote was up, so reverse their previous vote
                     existing_vote.effect = -1
+                    db.session.commit()
                     self.up_votes -= 1
                     self.down_votes += 1
                     self.score -= 2
             else:  # previous vote was down
                 if vote_direction == 'downvote':  # new vote is also down, so remove it
                     db.session.delete(existing_vote)
+                    db.session.commit()
                     self.down_votes -= 1
                     self.score += 1
                     undo = 'Dislike'
                 else:  # new vote is up while previous vote was down, so reverse their previous vote
                     existing_vote.effect = 1
+                    db.session.commit()
                     self.up_votes += 1
                     self.down_votes -= 1
                     self.score += 2
@@ -2024,6 +2123,7 @@ class CommunityMember(db.Model):
     is_owner = db.Column(db.Boolean, default=False)
     is_banned = db.Column(db.Boolean, default=False, index=True)
     notify_new_posts = db.Column(db.Boolean, default=False)
+    joined_via_feed = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=utcnow)
 
 
@@ -2099,7 +2199,7 @@ class UserNote(db.Model):
 class UserExtraField(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
-    label = db.Column(db.String(50))
+    label = db.Column(db.String(1024))
     text = db.Column(db.String(1024))
 
 
@@ -2125,6 +2225,7 @@ class CommunityJoinRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     community_id = db.Column(db.Integer, db.ForeignKey('community.id'), index=True)
+    joined_via_feed = db.Column(db.Boolean, default=False)
 
 
 class UserFollowRequest(db.Model):
@@ -2288,7 +2389,7 @@ class PollChoice(db.Model):
     num_votes = db.Column(db.Integer, default=0)
 
     def percentage(self, poll_total_votes):
-        return math.ceil(self.num_votes / poll_total_votes * 100)
+        return math.floor(self.num_votes / poll_total_votes * 100)
 
 
 class PollChoiceVote(db.Model):
@@ -2387,6 +2488,7 @@ class Site(db.Model):
     last_active = db.Column(db.DateTime, default=utcnow)
     log_activitypub_json = db.Column(db.Boolean, default=False)
     default_theme = db.Column(db.String(20), default='')
+    default_filter = db.Column(db.String(20), default='')
     contact_email = db.Column(db.String(255), default='')
     about = db.Column(db.Text, default='')
     logo = db.Column(db.String(40), default='')
@@ -2416,3 +2518,239 @@ class Site(db.Model):
 @login.user_loader
 def load_user(id):
     return User.query.get(int(id))
+
+
+# --- Feeds Models ---
+
+class FeedItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    feed_id = db.Column(db.Integer, db.ForeignKey('feed.id'), index=True)
+    community_id = db.Column(db.Integer, db.ForeignKey('community.id'), index=True)
+
+
+class FeedMember(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    feed_id = db.Column(db.Integer, db.ForeignKey('feed.id'), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    is_owner = db.Column(db.Boolean, default=False)
+    is_banned = db.Column(db.Boolean, default=False, index=True)
+    notify_new_communities = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=utcnow)
+
+
+class Feed(db.Model):
+    query_class = FullTextSearchQuery
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    title = db.Column(db.String(256))
+    name = db.Column(db.String(256), index=True, unique=True)
+    machine_name = db.Column(db.String(50), index=True)
+    description = db.Column(db.Text)        # markdown
+    description_html = db.Column(db.Text)   # html equivalent of above markdown
+    nsfw = db.Column(db.Boolean, default=False)
+    nsfl = db.Column(db.Boolean, default=False)
+    public_key = db.Column(db.Text)
+    private_key = db.Column(db.Text)
+    subscriptions_count = db.Column(db.Integer, default=0)
+    instance_id = db.Column(db.Integer, db.ForeignKey('instance.id'), index=True)
+    instance = db.relationship('Instance', lazy='joined', foreign_keys=[instance_id])
+
+    icon_id = db.Column(db.Integer, db.ForeignKey('file.id'))
+    image_id = db.Column(db.Integer, db.ForeignKey('file.id'))
+
+    num_communities = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=utcnow)
+    public = db.Column(db.Boolean, default=False, index=True)
+    last_edit = db.Column(db.DateTime, default=utcnow)
+    parent_feed_id = db.Column(db.Integer, db.ForeignKey('feed.id'), index=True)
+    is_instance_feed = db.Column(db.Boolean, default=False, index=True)
+
+    ap_id = db.Column(db.String(255), index=True)
+    ap_profile_id = db.Column(db.String(255), index=True, unique=True)
+    ap_public_url = db.Column(db.String(255))
+    ap_followers_url = db.Column(db.String(255))
+    ap_following_url = db.Column(db.String(255))
+    ap_domain = db.Column(db.String(255))
+    ap_preferred_username = db.Column(db.String(255))
+    ap_discoverable = db.Column(db.Boolean, default=False)
+    ap_fetched_at = db.Column(db.DateTime)
+    ap_deleted_at = db.Column(db.DateTime)
+    ap_inbox_url = db.Column(db.String(255))
+    ap_outbox_url = db.Column(db.String(255))
+    ap_moderators_url = db.Column(db.String(255))
+
+    banned = db.Column(db.Boolean, default=False)
+    searchable = db.Column(db.Boolean, default=True)
+
+    show_posts_in_children = db.Column(db.Boolean, default=False)
+    member_communities = db.relationship('FeedItem', lazy='dynamic', cascade="all, delete-orphan")
+
+    search_vector = db.Column(TSVectorType('name', 'description'))
+
+    icon = db.relationship('File', foreign_keys=[icon_id], single_parent=True, backref='feed', cascade="all, delete-orphan")
+    image = db.relationship('File', foreign_keys=[image_id], single_parent=True, cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return '<Feed {}_{}>'.format(self.name, self.id)
+
+    @cache.memoize(timeout=500)
+    def icon_image(self, size='default') -> str:
+        if self.icon_id is not None:
+            if size == 'default':
+                if self.icon.file_path is not None:
+                    if self.icon.file_path.startswith('app/'):
+                        return self.icon.file_path.replace('app/', '/')
+                    else:
+                        return self.icon.file_path
+                if self.icon.source_url is not None:
+                    if self.icon.source_url.startswith('app/'):
+                        return self.icon.source_url.replace('app/', '/')
+                    else:
+                        return self.icon.source_url
+            elif size == 'tiny':
+                if self.icon.thumbnail_path is not None:
+                    if self.icon.thumbnail_path.startswith('app/'):
+                        return self.icon.thumbnail_path.replace('app/', '/')
+                    else:
+                        return self.icon.thumbnail_path
+                if self.icon.source_url is not None:
+                    if self.icon.source_url.startswith('app/'):
+                        return self.icon.source_url.replace('app/', '/')
+                    else:
+                        return self.icon.source_url
+        return '/static/images/1px.gif'
+
+    @cache.memoize(timeout=500)
+    def header_image(self) -> str:
+        if self.image_id is not None:
+            if self.image.file_path is not None:
+                if self.image.file_path.startswith('app/'):
+                    return self.image.file_path.replace('app/', '/')
+                else:
+                    return self.image.file_path
+            if self.image.source_url is not None:
+                if self.image.source_url.startswith('app/'):
+                    return self.image.source_url.replace('app/', '/')
+                else:
+                    return self.image.source_url
+        return ''
+
+    def display_name(self) -> str:
+        if self.ap_id is None:
+            return self.title
+        else:
+            return f"{self.title}@{self.ap_domain}"
+
+    def link(self) -> str:
+        if self.ap_id is None:
+            return self.name
+        else:
+            return self.ap_id.lower()
+
+    def lemmy_link(self) -> str:
+        if self.ap_id is None:
+            return f"~{self.name}@{current_app.config['SERVER_NAME']}"
+        else:
+            return f"~{self.ap_id.lower()}"
+
+    def path(self):
+        return_value = [self.machine_name]
+        parent_id = self.parent_feed_id
+        while parent_id is not None:
+            parent_feed = Feed.query.get(parent_id)
+            if parent_feed is None:
+                break
+            return_value.append(parent_feed.machine_name)
+            parent_id = parent_feed.parent_feed_id
+        return_value = list(reversed(return_value))
+        return '/'.join(return_value)
+
+    def creator(self):
+        owner = User.query.get(self.user_id)
+        return owner.ap_id if owner.ap_id else owner.user_name
+
+    def parent_feed_name(self):
+        parent_feed = Feed.query.get(self.parent_feed_id)
+        return parent_feed.title if parent_feed else ""
+
+    def subscribed(self, user_id: int) -> int:
+        if user_id is None:
+            return False
+        subscription:FeedMember = FeedMember.query.filter_by(user_id=user_id, feed_id=self.id).first()
+        if subscription:
+            return SUBSCRIPTION_MEMBER
+        else:
+            join_request = FeedJoinRequest.query.filter_by(user_id=user_id, feed_id=self.id).first()
+            if join_request:
+                return SUBSCRIPTION_PENDING
+            else:
+                return SUBSCRIPTION_NONMEMBER
+            
+    def profile_id(self):
+        retval = self.ap_profile_id if self.ap_profile_id else f"https://{current_app.config['SERVER_NAME']}/f/{self.name}"
+        return retval.lower()
+
+    def public_url(self):
+        result = self.ap_public_url if self.ap_public_url else f"https://{current_app.config['SERVER_NAME']}/f/{self.name}"
+        return result
+
+    def is_local(self):
+        return self.ap_id is None or self.profile_id().startswith('https://' + current_app.config['SERVER_NAME'])
+
+    def local_url(self):
+        if self.is_local():
+            return self.ap_profile_id
+        else:
+            return f"https://{current_app.config['SERVER_NAME']}/f/{self.ap_id}"
+
+    def notify_new_posts(self, user_id: int) -> bool:
+        existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == self.id,
+                                                                      NotificationSubscription.user_id == user_id,
+                                                                      NotificationSubscription.type == NOTIF_FEED).first()
+        return existing_notification is not None
+
+    # ids of all the users who want to be notified when there is an edit in this feed's communities
+    def notification_subscribers(self):
+        return list(db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE entity_id = :feed_id AND type = :type '),
+                                  {'feed_id': self.id, 'type': NOTIF_FEED}).scalars())
+
+    # instances that have users which are members of this community. (excluding the current instance)
+    def following_instances(self, include_dormant=False) -> List[Instance]:
+        instances = Instance.query.join(User, User.instance_id == Instance.id).join(FeedMember, FeedMember.user_id == User.id)
+        instances = instances.filter(FeedMember.community_id == self.id, FeedMember.is_banned == False)
+        if not include_dormant:
+            instances = instances.filter(Instance.dormant == False)
+        instances = instances.filter(Instance.id != 1, Instance.gone_forever == False)
+        return instances.all()
+
+    def has_followers_from_domain(self, domain: str) -> bool:
+        instances = Instance.query.join(User, User.instance_id == Instance.id).join(FeedMember, FeedMember.user_id == User.id)
+        instances = instances.filter(FeedMember.community_id == self.id, FeedMember.is_banned == False)
+        for instance in instances:
+            if instance.domain == domain:
+                return True
+        return False
+
+
+class FeedJoinRequest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    feed_id = db.Column(db.Integer, db.ForeignKey('feed.id'), index=True)
+
+
+def _large_community_subscribers() -> float:
+    # average number of subscribers in the top 15% communities
+
+    result = cache.get('large_community_subscribers')
+    if result is None:
+        sql = '''   SELECT AVG(subscriptions_count) AS avg_top_25
+                    FROM (
+                        SELECT subscriptions_count,
+                               PERCENT_RANK() OVER (ORDER BY subscriptions_count DESC) AS percentile
+                        FROM "community"
+                        WHERE banned IS false and subscriptions_count > 0
+                    ) AS ranked
+                    WHERE percentile <= 0.15;'''
+        result = db.session.execute(text(sql)).scalar()
+        cache.set('large_community_subscribers', result, timeout=3600)
+    return result

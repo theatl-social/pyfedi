@@ -4,62 +4,76 @@ from flask import redirect, url_for, flash, request, make_response, session, Mar
 from flask_login import login_user, logout_user, current_user, login_required
 from flask_babel import _
 
-from app import db, constants, cache
+from app import db, constants, cache, limiter
 from app.inoculation import inoculation
 from app.models import Post, Domain, Community, DomainBlock, read_posts
 from app.domain import bp
 from app.utils import render_template, permission_required, joined_communities, moderating_communities, \
-    user_filters_posts, blocked_domains, blocked_instances, menu_topics
+    user_filters_posts, blocked_domains, blocked_instances, menu_topics, menu_instance_feeds, menu_my_feeds, \
+    menu_subscribed_feeds, recently_upvoted_posts, recently_downvoted_posts
 from sqlalchemy import desc, or_
 
 
 @bp.route('/d/<domain_id>', methods=['GET'])
 def show_domain(domain_id):
-    page = request.args.get('page', 1, type=int)
+    with limiter.limit('60/minute'):
+        page = request.args.get('page', 1, type=int)
 
-    if '.' in domain_id:
-        domain = Domain.query.filter_by(name=domain_id, banned=False).first()
-    else:
-        domain = Domain.query.get_or_404(domain_id)
-        if domain.banned:
-            domain = None
-    if domain:
-        if current_user.is_anonymous or current_user.ignore_bots == 1:
-            posts = Post.query.join(Community, Community.id == Post.community_id).\
-                filter(Post.from_bot == False, Post.domain_id == domain.id, Community.banned == False, Post.deleted == False).\
-                order_by(desc(Post.posted_at))
+        if '.' in domain_id:
+            domain = Domain.query.filter_by(name=domain_id, banned=False).first()
         else:
-            posts = Post.query.join(Community).filter(Post.domain_id == domain.id, Community.banned == False, Post.deleted == False).order_by(desc(Post.posted_at))
+            domain = Domain.query.get_or_404(domain_id)
+            if domain.banned:
+                domain = None
+        if domain:
+            if current_user.is_anonymous or current_user.ignore_bots == 1:
+                posts = Post.query.join(Community, Community.id == Post.community_id).\
+                    filter(Post.from_bot == False, Post.domain_id == domain.id, Community.banned == False, Post.deleted == False).\
+                    order_by(desc(Post.posted_at))
+            else:
+                posts = Post.query.join(Community).filter(Post.domain_id == domain.id, Community.banned == False, Post.deleted == False).order_by(desc(Post.posted_at))
 
-        if current_user.is_authenticated:
-            instance_ids = blocked_instances(current_user.id)
-            if instance_ids:
-                posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
-            content_filters = user_filters_posts(current_user.id)
+            if current_user.is_authenticated:
+                instance_ids = blocked_instances(current_user.id)
+                if instance_ids:
+                    posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
+                content_filters = user_filters_posts(current_user.id)
+            else:
+                content_filters = {}
+
+            # don't show posts a user has already interacted with
+            if current_user.is_authenticated and current_user.hide_read_posts:
+                posts = posts.outerjoin(read_posts, (Post.id == read_posts.c.read_post_id) & (read_posts.c.user_id == current_user.id))
+                posts = posts.filter(read_posts.c.read_post_id.is_(None))  # Filter where there is no corresponding read post for the current user
+
+            # pagination
+            posts = posts.paginate(page=page, per_page=100, error_out=False)
+            next_url = url_for('domain.show_domain', domain_id=domain_id, page=posts.next_num) if posts.has_next else None
+            prev_url = url_for('domain.show_domain', domain_id=domain_id, page=posts.prev_num) if posts.has_prev and page != 1 else None
+
+            # Voting history
+            if current_user.is_authenticated:
+                recently_upvoted = recently_upvoted_posts(current_user.id)
+                recently_downvoted = recently_downvoted_posts(current_user.id)
+            else:
+                recently_upvoted = []
+                recently_downvoted = []
+
+            return render_template('domain/domain.html', domain=domain, title=domain.name, posts=posts,
+                                   POST_TYPE_IMAGE=constants.POST_TYPE_IMAGE, POST_TYPE_LINK=constants.POST_TYPE_LINK,
+                                   POST_TYPE_VIDEO=constants.POST_TYPE_VIDEO,
+                                   next_url=next_url, prev_url=prev_url,
+                                   content_filters=content_filters, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
+                                   moderating_communities=moderating_communities(current_user.get_id()),
+                                   joined_communities=joined_communities(current_user.get_id()),
+                                   menu_topics=menu_topics(), site=g.site,
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                                   menu_instance_feeds=menu_instance_feeds(),
+                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                                   menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                                   )
         else:
-            content_filters = {}
-        
-        # don't show posts a user has already interacted with
-        if current_user.is_authenticated and current_user.hide_read_posts:
-            posts = posts.outerjoin(read_posts, (Post.id == read_posts.c.read_post_id) & (read_posts.c.user_id == current_user.id))
-            posts = posts.filter(read_posts.c.read_post_id.is_(None))  # Filter where there is no corresponding read post for the current user
-        
-        # pagination
-        posts = posts.paginate(page=page, per_page=100, error_out=False)
-        next_url = url_for('domain.show_domain', domain_id=domain_id, page=posts.next_num) if posts.has_next else None
-        prev_url = url_for('domain.show_domain', domain_id=domain_id, page=posts.prev_num) if posts.has_prev and page != 1 else None
-        return render_template('domain/domain.html', domain=domain, title=domain.name, posts=posts,
-                               POST_TYPE_IMAGE=constants.POST_TYPE_IMAGE, POST_TYPE_LINK=constants.POST_TYPE_LINK,
-                               POST_TYPE_VIDEO=constants.POST_TYPE_VIDEO,
-                               next_url=next_url, prev_url=prev_url,
-                               content_filters=content_filters,
-                               moderating_communities=moderating_communities(current_user.get_id()),
-                               joined_communities=joined_communities(current_user.get_id()),
-                               menu_topics=menu_topics(), site=g.site,
-                               inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
-                               )
-    else:
-        abort(404)
+            abort(404)
 
 
 @bp.route('/domains', methods=['GET'])

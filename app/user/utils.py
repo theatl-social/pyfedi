@@ -1,9 +1,11 @@
+import random
+import time
 from time import sleep
 
 from flask import current_app, json
 
 from app import celery, db
-from app.activitypub.signature import post_request, default_context, signed_get_request
+from app.activitypub.signature import post_request, default_context, signed_get_request, send_post_request
 from app.activitypub.util import actor_json_to_model
 from app.community.util import send_to_remote_instance
 from app.models import User, CommunityMember, Community, Instance, Site, utcnow, ActivityPubLog, BannedInstances
@@ -21,75 +23,75 @@ def purge_user_then_delete(user_id):
 
 @celery.task
 def purge_user_then_delete_task(user_id):
-    user = User.query.get(user_id)
-    if user:
-        # posts
-        for post in user.posts:
-            if not post.community.local_only:
-                delete_json = {
-                    'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
-                    'type': 'Delete',
-                    'actor': user.public_url(),
-                    'audience': post.community.public_url(),
-                    'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
-                    'published': ap_datetime(utcnow()),
-                    'cc': [
-                        user.followers_url()
-                    ],
-                    'object': post.ap_id,
-                }
-
-                if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
-                    success = post_request(post.community.ap_inbox_url, delete_json, user.private_key,
-                                           user.public_url() + '#main-key')
-
-                else:  # local community - send it to followers on remote instances, using Announce
-                    announce = {
-                        "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
-                        "type": 'Announce',
-                        "to": [
-                            "https://www.w3.org/ns/activitystreams#Public"
+    with current_app.app_context():
+        user = User.query.get(user_id)
+        if user:
+            # posts
+            for post in user.posts:
+                if not post.community.local_only:
+                    delete_json = {
+                        'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+                        'type': 'Delete',
+                        'actor': user.public_url(),
+                        'audience': post.community.public_url(),
+                        'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
+                        'published': ap_datetime(utcnow()),
+                        'cc': [
+                            user.followers_url()
                         ],
-                        "actor": post.community.ap_profile_id,
-                        "cc": [
-                            post.community.ap_followers_url
-                        ],
-                        '@context': default_context(),
-                        'object': delete_json
+                        'object': post.ap_id,
                     }
 
-                    for instance in post.community.following_instances():
-                        if instance.inbox and not instance_banned(instance.domain):
-                            send_to_remote_instance(instance.id, post.community.id, announce)
+                    if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
+                        send_post_request(post.community.ap_inbox_url, delete_json, user.private_key, user.public_url() + '#main-key')
 
-        # unsubscribe
-        communities = CommunityMember.query.filter_by(user_id=user_id).all()
-        for membership in communities:
-            community = Community.query.get(membership.community_id)
-            unsubscribe_from_community(community, user)
+                    else:  # local community - send it to followers on remote instances, using Announce
+                        announce = {
+                            "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+                            "type": 'Announce',
+                            "to": [
+                                "https://www.w3.org/ns/activitystreams#Public"
+                            ],
+                            "actor": post.community.ap_profile_id,
+                            "cc": [
+                                post.community.ap_followers_url
+                            ],
+                            '@context': default_context(),
+                            'object': delete_json
+                        }
 
-        # federate deletion of account
-        if user.is_local():
-            instances = Instance.query.all()
-            payload = {
-                "@context": default_context(),
-                "actor": user.ap_profile_id,
-                "id": f"{user.ap_profile_id}#delete",
-                "object": user.ap_profile_id,
-                "to": [
-                    "https://www.w3.org/ns/activitystreams#Public"
-                ],
-                "type": "Delete"
-            }
-            for instance in instances:
-                if instance.inbox and instance.id != 1:
-                    post_request(instance.inbox, payload, user.private_key, user.public_url() + '#main-key')
+                        for instance in post.community.following_instances():
+                            if instance.inbox and not instance_banned(instance.domain):
+                                send_to_remote_instance(instance.id, post.community.id, announce)
 
-        sleep(100)                                  # wait a while for any related activitypub traffic to die down.
-        user.deleted = True
-        user.delete_dependencies()
-        user.purge_content()
-        db.session.commit()
+            # unsubscribe
+            communities = CommunityMember.query.filter_by(user_id=user_id).all()
+            for membership in communities:
+                community = Community.query.get(membership.community_id)
+                unsubscribe_from_community(community, user)
+
+            # federate deletion of account
+            if user.is_local():
+                instances = Instance.query.all()
+                payload = {
+                    "@context": default_context(),
+                    "actor": user.ap_profile_id,
+                    "id": f"{user.ap_profile_id}#delete",
+                    "object": user.ap_profile_id,
+                    "to": [
+                        "https://www.w3.org/ns/activitystreams#Public"
+                    ],
+                    "type": "Delete"
+                }
+                for instance in instances:
+                    if instance.inbox and instance.online() and instance.id != 1:
+                        send_post_request(instance.inbox, payload, user.private_key, user.public_url() + '#main-key')
+
+            sleep(100)                                  # wait a while for any related activitypub traffic to die down.
+            user.deleted = True
+            user.delete_dependencies()
+            user.purge_content()
+            db.session.commit()
 
 
 def unsubscribe_from_community(community, user):
@@ -111,7 +113,7 @@ def unsubscribe_from_community(community, user):
         'id': undo_id,
         'object': follow
     }
-    post_request(community.ap_inbox_url, undo, user.private_key, user.public_url() + '#main-key')
+    send_post_request(community.ap_inbox_url, undo, user.private_key, user.public_url() + '#main-key')
 
 
 def search_for_user(address: str):
@@ -157,7 +159,7 @@ def search_for_user(address: str):
                         object_request = get_request(links['href'], headers={'Accept': type})
                     except httpx.HTTPError:
                         if attempt == 1:
-                            time.sleep(3)
+                            time.sleep(3 + random.randrange(3))
                         else:
                             return None
                 if object_request.status_code == 401:

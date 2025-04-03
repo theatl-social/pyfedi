@@ -1,0 +1,20 @@
+{
+    "@context": "https://www.w3.org/ns/activitystreams",
+    "type": "Announce",
+    "actor": "https://example.com/f/feedname",
+    "id": "https://example.com/activities/announce/d3ade180-f641-4d6b-8ae7-ceab824f2b72",
+    "object": {
+        "@context": "https://www.w3.org/ns/activitystreams",
+        "type": "Remove",
+        "actor": "https://example.com/f/feedname",
+        "id": "https://example.com/activities/feedremove/4242",
+        "object": {
+            "type": "Group",
+            "id": "https://example.com/c/communityname"
+        },
+        "target": {
+            "type": "Collection",
+            "id": "https://example.com/f/feedname/following"
+        }
+    }
+}

@@ -1,7 +1,7 @@
 <div class="row position-relative post_full">
         <div class="col post_col {% if post.type == POST_TYPE_IMAGE %}post_col post_type_image{% else %}post_type_normal{% endif %}">
             {% include "post/_breadcrumb_nav.html" %}
-            <h1 class="mt-2 post_title" {% if post.language_id and post.language.code != 'en' %}lang="{{ post.language.code }}"{% endif %}>{{ post.title }}
+            <h1 class="mt-2 post_title" lang="{{ post.language_code() }}">{{ post.title }}
                 {% if post.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif -%}
                 {% if post.nsfl -%}<span class="warning_badge nsfl" title="{{ _('Potentially emotionally scarring content') }}">nsfl</span>{% endif -%}
             </h1>
@@ -10,17 +10,16 @@
                     <a href="{{ post.url }}" target="_blank" rel="nofollow ugc" class="post_link"><img src="{{ post.image.thumbnail_url() }}" alt="{{ post.image.alt_text if post.image.alt_text else '' }}"
                             width="{{ post.image.thumbnail_width }}" height="{{ post.image.thumbnail_height }}" loading="lazy" /></a>
                 </div>
-            {% elif post.type == POST_TYPE_IMAGE and post.url -%}
-                <p><a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="Go to image">{{ post.url|shorten_url }}
-                    <span class="fe fe-external"></span></a></p>
             {% endif -%}
-            <p>{% if post.reports > 0 and current_user.is_authenticated and post.community.is_moderator(current_user) -%}
+            <div class="mb-2">{% if post.reports > 0 and current_user.is_authenticated and post.community.is_moderator(current_user) -%}
                     <span class="red fe fe-report" title="{{ _('Reported. Check post for issues.') }}"></span>
                 {% endif -%}<small>submitted <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post.posted_at).humanize(locale=locale) }}</time> by
-                {{ render_username(post.author) }}
-                {% if post.edited_at -%} edited <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post.edited_at).humanize(locale=locale) }}{% endif -%}</time></small>
-            </p>
+                {{ render_username(post.author, htmx_redirect_back_to=request.path) }}
+                {% if post.edited_at -%} edited <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post.edited_at).humanize(locale=locale) }}</time>{% endif -%}</small>
+            </div>
             {% if post.type == POST_TYPE_IMAGE -%}
+            <p class="mt-2"><a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="Go to image">{{ post.url|shorten_url }}
+                    <span class="fe fe-external"></span></a></p>
                 <div class="post_image">
                     {% if post.image_id -%}
                         {% if low_bandwidth -%}
@@ -40,7 +39,7 @@
                     {% endif -%}
                 </div>
             {% elif post.type == POST_TYPE_LINK -%}
-                <p><a href="{{ post.url }}" rel="nofollow ugc" target="_blank" class="post_link" aria-label="Go to post url">{{ post.url|shorten_url }}
+                <p class="mt-2"><a href="{{ post.url }}" rel="nofollow ugc" target="_blank" class="post_link" aria-label="Go to post url">{{ post.url|shorten_url }}
                 <span class="fe fe-external"></span></a>
                     {% if post.domain.post_warning -%}
                         <span class="fe fe-warning red" title="{{ post.domain.post_warning }}"></span>
@@ -100,17 +99,17 @@
                             width="{{ post.image.thumbnail_width }}" height="{{ post.image.thumbnail_height }}" loading="lazy" /></a>
                 {% endif -%}
             {% endif -%}
-            <div class="post_body"{% if post.language_id and post.language.code != 'en' %} lang="{{ post.language.code }}"{% endif %}>
-                {{ post.body_html|community_links|safe if post.body_html else '' }}
+            <div class="post_body" lang="{{ post.language_code() }}">
+                {{ post.body_html | community_links | person_links | safe if post.body_html else '' }}
                 {% if archive_link -%}
                     <p><a href="{{ archive_link }}" rel="nofollow ucg noindex" target="_blank">{{ _('Archive.ph link') }} <span class="fe fe-external"></span></a></p>
                 {% endif -%}
                 {% if post.licence_id -%}
-                    <p>Licence: {{ post.licence.name }}</p>
+                    <p>{{ _('Licence') }}: {{ post.licence.name }}</p>
                 {% endif -%}
             </div>
             {% if post.type == POST_TYPE_POLL -%}
-                <div class="post_poll">
+                <div class="post_poll" lang="{{ post.language_code() }}">
                     {% if poll_results and poll_total_votes == 0 -%}
                         <p>{{ _('The poll has finished, yet no votes were cast.') }}</p>
                     {% elif poll_results and poll_total_votes -%}
@@ -146,14 +145,14 @@
                                 {% endif -%}
                             {% endfor -%}
                             </ul>
-                            <input type="submit" class="btn btn-primary" value="Vote">
+                            <input type="submit" class="btn btn-primary" value="{{ _('Vote') }}">
                         </form>
                     {% endif -%}
                 </div>
             {% endif -%}
         </div>
 
-    {% if post.tags.count() > 0 -%}
+    {% if len(post.tags) > 0 -%}
         <nav role="navigation">
             <h3 class="visually-hidden">{{ _('Hashtags') }}</h3>
             <ul class="post_tags">
@@ -170,10 +169,27 @@
         </div>
         {% if post.cross_posts -%}
         <div class="cross_post_button">
-            <a href="{{ url_for('post.post_cross_posts', post_id=post.id) }}" aria-label="{{ _('Show cross-posts') }}"
-               title="{{ _('Show cross-posts') }}"><span class="fe fe-layers"></span>
-            <span aria-label="{{ _('Number of cross-posts:') }}">{{ len(post.cross_posts) }}</span></a>
+            <div class="dropdown">
+                <a href="{{ url_for('post.post_cross_posts', post_id=post.id) }}" aria-label="{{ _('Show cross-posts') }}"
+                   title="{{ _('Show cross-posts') }}" data-bs-toggle="dropdown" rel="nofollow">
+                   <span class="fe fe-layers"></span>
+                   <span aria-label="{{ _('Number of cross-posts:') }}">{{ len(post.cross_posts) }}</span>
+                </a>
+                <ul class="dropdown-menu" style="width: 380px; white-space: nowrap; overflow: hidden">
+                    <div
+                        hx-get="{{ url_for('post.post_cross_posts', post_id=post.id) }}"
+                        hx-trigger="intersect once"
+                        hx-target="this"
+                        hx-swap="outerHTML"
+                    ></div>
+                </ul>
+            </div>
         </div>
+        {% endif -%}
+        {% if current_user.is_authenticated and post.type == POST_TYPE_LINK -%}
+            <div class="post_cross_post_link">
+                <a rel="nofollow" aria-label="{{ _('Cross-post') }}" title="{{ _('Cross-post') }}" href="{{ url_for('post.post_cross_post', post_id=post.id) }}"><span class="fe fe-cross-post"></span></a>
+            </div>
         {% endif -%}
         <div class="notify_toggle pull-right">
             {% if current_user.is_authenticated and current_user.verified -%}

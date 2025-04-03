@@ -76,18 +76,22 @@ def parse_ld_date(value: str | None) -> datetime | None:
     return parser.isoparse(value).replace(microsecond=0)
 
 
-def post_request_in_background(uri: str, body: dict | None, private_key: str, key_id: str, content_type: str = "application/activity+json",
-        method: Literal["get", "post"] = "post", timeout: int = 5,):
+def send_post_request(uri: str, body: dict | None, private_key: str, key_id: str, content_type: str = "application/activity+json",
+                      method: Literal["get", "post"] = "post", timeout: int = 10):
     if current_app.debug:
-        return post_request(uri=uri, body=body, private_key=private_key, key_id=key_id, content_type=content_type, method=method, timeout=timeout)
+        post_request(uri=uri, body=body, private_key=private_key, key_id=key_id, content_type=content_type, method=method, timeout=timeout)
     else:
         post_request.delay(uri=uri, body=body, private_key=private_key, key_id=key_id, content_type=content_type, method=method, timeout=timeout)
         return True
 
 
-@celery.task
+class RetryLater(Exception):
+    ...
+
+
+@celery.task(autoretry_for=(RetryLater,), retry_backoff=60, max_retries=20, retry_backoff_max=15360, retry_jitter=True)
 def post_request(uri: str, body: dict | None, private_key: str, key_id: str, content_type: str = "application/activity+json",
-        method: Literal["get", "post"] = "post", timeout: int = 5,):
+        method: Literal["get", "post"] = "post", timeout: int = 10,):
     if '@context' not in body:  # add a default json-ld context if necessary
         body['@context'] = default_context()
     type = body['type'] if 'type' in body else ''
@@ -96,12 +100,15 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str, con
     db.session.add(log)
     db.session.commit()
 
+    http_status_code = None
+
     if uri is None or uri == '':
         log.result = 'failure'
         log.exception_message = 'empty uri'
     else:
         try:
             result = HttpSignature.signed_request(uri, body, private_key, key_id, content_type, method, timeout)
+            http_status_code = result.status_code
             if result.status_code != 200 and result.status_code != 202 and result.status_code != 204:
                 log.result = 'failure'
                 log.exception_message = f'{result.status_code}: {result.text:.100}' + ' - '
@@ -123,23 +130,23 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str, con
             log.result = 'failure'
             log.exception_message='could not send:' + str(e)
             current_app.logger.error(f'Exception while sending post to {uri}')
+            http_status_code = 404
     if log.result == 'processing':
         log.result = 'success'
     db.session.commit()
 
     if log.result != 'failure':
-        return True
+        return
     else:
-        return log.exception_message
+        if http_status_code is not None and (http_status_code == 429 or http_status_code >= 500):
+            if celery.current_worker_task:  # Only try to retry if running as a celery task
+                raise RetryLater
+        return
 
 
 def signed_get_request(uri: str, private_key: str, key_id: str, content_type: str = "application/activity+json",
-        method: Literal["get", "post"] = "get", timeout: int = 5,):
-    try:
-        result = HttpSignature.signed_request(uri, None, private_key, key_id, content_type, method, timeout)
-    except Exception as e:
-        current_app.logger.error(f'Exception while sending post to {uri}')
-
+        method: Literal["get", "post"] = "get", timeout: int = 10,):
+    result = HttpSignature.signed_request(uri, None, private_key, key_id, content_type, method, timeout)
     return result
 
 
@@ -387,7 +394,7 @@ class HttpSignature:
             }
         )
 
-        headers["User-Agent"] = 'PieFed/1.0'
+        headers["User-Agent"] = f'PieFed/1.0; +https://{current_app.config["SERVER_NAME"]}'
 
         # Send the request with all those headers except the pseudo one
         del headers["(request-target)"]

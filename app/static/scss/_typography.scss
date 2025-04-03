@@ -1,5 +1,5 @@
 /* for more info about the feather font used for icons see https://at-ui.github.io/feather-font/ */
-/* use https://fontdrop.info/ to get the unicode values of the featuer.ttf file */
+/* use https://fontdrop.info/ to get the unicode values of the feather.ttf file */
 @font-face {
   font-family: 'Feather';
   src: url('/static/fonts/feather/feather.ttf?cb') format('truetype'),
@@ -47,6 +47,22 @@
 
 .fe-circle::before {
   content: "\e937";
+}
+
+.fe-sticky::before {
+  content: "\e9fc";
+}
+
+.fe-unsticky::before {
+  content: "\e9fd";
+}
+
+.fe-lock::before {
+  content: "\e987";
+}
+
+.fe-unlock::before {
+  content: "\e9ee";
 }
 
 .fe-home::before {

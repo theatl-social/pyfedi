@@ -1,8 +1,9 @@
 from app import cache, db
 from app.api.alpha.views import user_view, community_view, instance_view
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
-from app.utils import authorise_api_user
-from app.models import CommunityMember, InstanceBlock, Language
+from app.utils import authorise_api_user, blocked_communities, blocked_instances, blocked_users
+from app.models import InstanceBlock, Language
+from app.constants import *
 from app.shared.site import block_remote_instance, unblock_remote_instance
 
 from flask import current_app, g
@@ -15,6 +16,7 @@ def users_total():
         'SELECT COUNT(id) as c FROM "user" WHERE ap_id is null AND verified is true AND banned is false AND deleted is false')).scalar()
 
 
+"""
 @cache.memoize(timeout=86400)
 def moderating_communities(user):
     cms = CommunityMember.query.filter_by(user_id=user.id, is_moderator=True)
@@ -22,8 +24,9 @@ def moderating_communities(user):
     for cm in cms:
         moderates.append({'community': community_view(cm.community_id, variant=1, stub=True), 'moderator': user_view(user, variant=1, stub=True)})
     return moderates
+"""
 
-
+"""
 @cache.memoize(timeout=86400)
 def joined_communities(user):
     cms = CommunityMember.query.filter_by(user_id=user.id, is_banned=False)
@@ -31,30 +34,31 @@ def joined_communities(user):
     for cm in cms:
         follows.append({'community': community_view(cm.community_id, variant=1, stub=True), 'follower': user_view(user, variant=1, stub=True)})
     return follows
+"""
 
 
-@cache.memoize(timeout=86400)
-def blocked_people(user):
+# @cache.memoize(timeout=86400)
+def blocked_people_view(user):
+    blocked_ids = blocked_users(user.id)
     blocked = []
-    blocked_ids = db.session.execute(text('SELECT blocked_id FROM "user_block" WHERE blocker_id = :blocker_id'), {"blocker_id": user.id}).scalars()
     for blocked_id in blocked_ids:
         blocked.append({'person': user_view(user, variant=1, stub=True), 'target': user_view(blocked_id, variant=1, stub=True)})
     return blocked
 
 
-@cache.memoize(timeout=86400)
-def blocked_communities(user):
+# @cache.memoize(timeout=86400)
+def blocked_communities_view(user):
+    blocked_ids = blocked_communities(user.id)
     blocked = []
-    blocked_ids = db.session.execute(text('SELECT community_id FROM "community_block" WHERE user_id = :user_id'), {"user_id": user.id}).scalars()
     for blocked_id in blocked_ids:
         blocked.append({'person': user_view(user, variant=1, stub=True), 'community': community_view(blocked_id, variant=1, stub=True)})
     return blocked
 
 
-@cache.memoize(timeout=86400)
-def blocked_instances(user):
+# @cache.memoize(timeout=86400)
+def blocked_instances_view(user):
+    blocked_ids = blocked_instances(user.id)
     blocked = []
-    blocked_ids = db.session.execute(text('SELECT instance_id FROM "instance_block" WHERE user_id = :user_id'), {"user_id": user.id}).scalars()
     for blocked_id in blocked_ids:
         blocked.append({'person': user_view(user, variant=1, stub=True), 'instance': instance_view(blocked_id, variant=1)})
     return blocked
@@ -66,16 +70,10 @@ def get_site(auth):
     else:
         user = None
 
-    logo = g.site.logo if g.site.logo else '/static/images/logo2.png'
-    logo_152 = g.site.logo_152 if g.site.logo_152 else '/static/images/apple-touch-icon.png'
-    logo_32 = g.site.logo_32 if g.site.logo_32 else '/static/images/favicon-32x32.png'
-    logo_16 = g.site.logo_16 if g.site.logo_16 else '/static/images/favicon-16x16.png'
+    logo = g.site.logo if g.site.logo else '/static/images/piefed_logo_icon_t_75.png'
     site = {
       "enable_downvotes": g.site.enable_downvotes,
       "icon": f"https://{current_app.config['SERVER_NAME']}{logo}",
-      "icon_152": f"https://{current_app.config['SERVER_NAME']}{logo_152}",
-      "icon_32": f"https://{current_app.config['SERVER_NAME']}{logo_32}",
-      "icon_16": f"https://{current_app.config['SERVER_NAME']}{logo_16}",
       "registration_mode": g.site.registration_mode,
       "name": g.site.name,
       "actor_id": f"https://{current_app.config['SERVER_NAME']}/",
@@ -121,11 +119,11 @@ def get_site(auth):
              "comment_count": user.post_reply_count
             }
           },
-          "moderates": moderating_communities(user),
-          "follows": joined_communities(user),
-          "community_blocks": blocked_communities(user),
-          "instance_blocks": blocked_instances(user),
-          "person_blocks": blocked_people(user),
+          "moderates": [], # moderating_communities(user),
+          "follows": [], # joined_communities(user),
+          "community_blocks": blocked_communities_view(user),
+          "instance_blocks": blocked_instances_view(user),
+          "person_blocks": blocked_people_view(user),
           "discussion_languages": []        # TODO
         }
     data = {
@@ -137,8 +135,6 @@ def get_site(auth):
 
     return data
 
-
-SRC_API = 3
 
 def post_site_block(auth, data):
     required(['instance_id', 'block'], data)

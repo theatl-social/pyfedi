@@ -7,7 +7,7 @@
 
 {% block app_content %}
 <div class="row">
-    <div class="col-12 col-md-8 position-relative main_pane">
+    <main class="col-12 col-md-8 position-relative main_pane">
         {% if search == '' %}
             <h1>{{ title }}</h1>
         {% else %}
@@ -70,7 +70,7 @@
         {% else -%}
             <p>{{ _('No results to show.') }}</p>
         {% endif %}
-    </div>
+    </main>
 </div>
 
 

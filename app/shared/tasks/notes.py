@@ -1,6 +1,6 @@
 from app import cache, celery, db
-from app.activitypub.signature import default_context, post_request
-from app.models import Community, CommunityBan, CommunityJoinRequest, CommunityMember, Notification, Post, PostReply, User, utcnow
+from app.activitypub.signature import default_context, post_request, send_post_request
+from app.models import Community, CommunityBan, CommunityJoinRequest, CommunityMember, Notification, Post, PostReply, utcnow
 from app.user.utils import search_for_user
 from app.utils import community_membership, gibberish, joined_communities, instance_banned, ap_datetime, \
                       recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies
@@ -42,25 +42,24 @@ import re
   'cc': []
   '@context':       (outer object only)
   'audience':       (not in Announce)
-  'tag': []         (not in Announce)
 }
 """
 
 
 
 @celery.task
-def make_reply(send_async, user_id, reply_id, parent_id):
-    send_reply(user_id, reply_id, parent_id)
+def make_reply(send_async, reply_id, parent_id):
+    send_reply(reply_id, parent_id)
 
 
 @celery.task
-def edit_reply(send_async, user_id, reply_id, parent_id):
-    send_reply(user_id, reply_id, parent_id, edit=True)
+def edit_reply(send_async, reply_id, parent_id):
+    send_reply(reply_id, parent_id, edit=True)
 
 
-def send_reply(user_id, reply_id, parent_id, edit=False):
-    user = User.query.filter_by(id=user_id).one()
+def send_reply(reply_id, parent_id, edit=False):
     reply = PostReply.query.filter_by(id=reply_id).one()
+    user = reply.author
     if parent_id:
         parent = PostReply.query.filter_by(id=parent_id).one()
     else:
@@ -114,7 +113,7 @@ def send_reply(user_id, reply_id, parent_id, edit=False):
     if community.local_only or not community.instance.online():
         return
 
-    banned = CommunityBan.query.filter_by(user_id=user_id, community_id=community.id).first()
+    banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
     if banned:
         return
     if not community.is_local():
@@ -149,7 +148,7 @@ def send_reply(user_id, reply_id, parent_id, edit=False):
       'distinguished': False,
     }
     if edit:
-        note['updated']: ap_datetime(utcnow())
+        note['updated'] = ap_datetime(utcnow())
 
     activity = 'create' if not edit else 'update'
     create_id = f"https://{current_app.config['SERVER_NAME']}/activities/{activity}/{gibberish(15)}"
@@ -162,7 +161,7 @@ def send_reply(user_id, reply_id, parent_id, edit=False):
       'to': to,
       'cc': cc,
       '@context': default_context(),
-      'tag': tag
+      'audience': community.public_url()
     }
 
     domains_sent_to = [current_app.config['SERVER_NAME']]
@@ -185,10 +184,10 @@ def send_reply(user_id, reply_id, parent_id, edit=False):
         }
         for instance in community.following_instances():
             if instance.inbox and instance.online() and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
-                post_request(instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
+                send_post_request(instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
                 domains_sent_to.append(instance.domain)
     else:
-        post_request(community.ap_inbox_url, create, user.private_key, user.public_url() + '#main-key')
+        send_post_request(community.ap_inbox_url, create, user.private_key, user.public_url() + '#main-key')
         domains_sent_to.append(community.instance.domain)
 
     # send copy of the Create to anyone else Mentioned in reply, but not on an instance that's already sent to.
@@ -196,7 +195,7 @@ def send_reply(user_id, reply_id, parent_id, edit=False):
         create['@context'] = default_context()
     for recipient in recipients:
         if recipient.instance.domain not in domains_sent_to:
-            post_request(recipient.instance.inbox, create, user.private_key, user.public_url() + '#main-key')
+            send_post_request(recipient.instance.inbox, create, user.private_key, user.public_url() + '#main-key')
 
 
 

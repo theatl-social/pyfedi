@@ -16,7 +16,7 @@ SUBSCRIPTION_NONMEMBER = 0
 SUBSCRIPTION_PENDING = -1
 SUBSCRIPTION_BANNED = -2
 
-THREAD_CUTOFF_DEPTH = 4
+THREAD_CUTOFF_DEPTH = 5
 
 REPORT_STATE_NEW = 0
 REPORT_STATE_ESCALATED = 1
@@ -31,6 +31,7 @@ NOTIF_COMMUNITY = 1
 NOTIF_TOPIC = 2
 NOTIF_POST = 3
 NOTIF_REPLY = 4
+NOTIF_FEED = 5
 
 ROLE_STAFF = 3
 ROLE_ADMIN = 4
@@ -41,6 +42,11 @@ DOWNVOTE_ACCEPT_INSTANCE = 4
 DOWNVOTE_ACCEPT_TRUSTED = 6
 
 MICROBLOG_APPS = ["mastodon", "misskey", "akkoma", "iceshrimp", "pleroma"]
+
+SRC_WEB = 1
+SRC_PUB = 2
+SRC_API = 3
+SRC_PLD = 4     # admin preload form to seed communities
 
 APLOG_IN            = True
 
@@ -70,8 +76,8 @@ APLOG_UNDO_DELETE   = (True, 'Undo Delete')
 APLOG_UNDO_VOTE     = (True, 'Undo Vote')
 APLOG_UNDO_USERBAN  = (True, 'Undo User Ban')
 
-APLOG_ADD           = (True, 'Add Mod/Sticky')
-APLOG_REMOVE        = (True, 'Remove Mod/Sticky')
+APLOG_ADD           = (True, 'Add')
+APLOG_REMOVE        = (True, 'Remove')
 
 APLOG_ANNOUNCE      = (True, 'Announce')
 APLOG_PT_VIEW       = (True, 'PeerTube View')
