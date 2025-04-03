@@ -167,6 +167,7 @@ def admin_misc():
         site.show_inoculation_block = form.show_inoculation_block.data
         site.updated = utcnow()
         site.default_theme = form.default_theme.data
+        site.additional_css = form.additional_css.data
         site.default_filter = form.default_filter.data
         if site.id is None:
             db.session.add(site)
@@ -192,6 +193,7 @@ def admin_misc():
         form.log_activitypub_json.data = site.log_activitypub_json
         form.show_inoculation_block.data = site.show_inoculation_block
         form.default_theme.data = site.default_theme if site.default_theme is not None else ''
+        form.additional_css.data = site.additional_css if site.additional_css is not None else ''
         form.default_filter.data = site.default_filter if site.default_filter else 'popular'
         form.public_modlog.data = get_setting('public_modlog', False)
         form.email_verification.data = get_setting('email_verification', True)

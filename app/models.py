@@ -2496,6 +2496,7 @@ class Site(db.Model):
     logo_32 = db.Column(db.String(40), default='')
     logo_16 = db.Column(db.String(40), default='')
     show_inoculation_block = db.Column(db.Boolean, default=True)
+    additional_css = db.Column(db.Text)
 
     @staticmethod
     def admins() -> List[User]:

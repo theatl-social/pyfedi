@@ -41,6 +41,7 @@ class SiteMiscForm(FlaskForm):
     auto_decline_countries = TextAreaField(_l('Ignore registrations from these countries'))
     auto_decline_referrers = TextAreaField(_l('Block registrations from these referrers (one per line)'))
     default_theme = SelectField(_l('Default theme'), coerce=str, render_kw={'class': 'form-select'})
+    additional_css = TextAreaField(_l('Additional CSS'))
     filters = [('subscribed', _l('Subscribed')),
                ('local', _l('Local')),
                ('popular', _l('Popular')),

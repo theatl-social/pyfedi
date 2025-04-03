@@ -125,6 +125,11 @@
       {% if preconnect and not low_bandwidth -%}
         <link rel="preconnect" href='{{ preconnect }}'>
       {% endif -%}
+      {% if g.site.additional_css -%}
+      <style>
+          {{ g.site.additional_css }}
+      </style>
+      {% endif -%}
     {% endblock -%}
     <script src="/static/js/set_theme.js" type="text/javascript"></script>
   </head>
