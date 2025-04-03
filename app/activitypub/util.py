@@ -1803,7 +1803,7 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
         try:
             new_updated = datetime.fromisoformat(request_json['object']['updated'])
         except ValueError:
-            new_updated = utcnow()
+            new_updated = datetime.now(timezone.utc)
         if reply.ap_updated > new_updated:
             return
     if 'content' in request_json['object']:   # Kbin, Mastodon, etc provide their posts as html
@@ -1879,7 +1879,7 @@ def update_post_from_activity(post: Post, request_json: dict):
         try:
             new_updated = datetime.fromisoformat(request_json['object']['updated'])
         except ValueError:
-            new_updated = utcnow()
+            new_updated = datetime.now(timezone.utc)
         if post.ap_updated > new_updated:
             return
 
