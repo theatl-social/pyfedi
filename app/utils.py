@@ -90,7 +90,7 @@ def getmtime(filename):
 
 # do a GET request to a uri, return the result
 def get_request(uri, params=None, headers=None) -> httpx.Response:
-    timeout = 15 if 'washingtonpost.com' in uri else 5  # Washington Post is really slow on og:image for some reason
+    timeout = 15 if 'washingtonpost.com' in uri else 10  # Washington Post is really slow on og:image for some reason
     if headers is None:
         headers = {'User-Agent': f'PieFed/1.0; +https://{current_app.config["SERVER_NAME"]}'}
     else:

@@ -1798,6 +1798,14 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
 
 
 def update_post_reply_from_activity(reply: PostReply, request_json: dict):
+    # Check if this update is more recent than what we currently have - activities can arrive in the wrong order
+    if 'updated' in request_json['object'] and reply.ap_updated is not None:
+        try:
+            new_updated = datetime.fromisoformat(request_json['object']['updated'])
+        except ValueError:
+            new_updated = utcnow()
+        if reply.ap_updated > new_updated:
+            return
     if 'content' in request_json['object']:   # Kbin, Mastodon, etc provide their posts as html
         if not (request_json['object']['content'].startswith('<p>') or request_json['object']['content'].startswith('<blockquote>')):
             request_json['object']['content'] = '<p>' + request_json['object']['content'] + '</p>'
@@ -1833,6 +1841,11 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
         if attachment_list:
             reply.body_html = markdown_to_html(reply.body)
 
+    try:
+        reply.ap_updated = datetime.fromisoformat(request_json['object']['updated']) if 'updated' in request_json['object'] else utcnow()
+    except ValueError:
+        reply.ap_updated = utcnow()
+
     # Check for Mentions of local users (that weren't in the original)
     if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
         for json_tag in request_json['object']['tag']:
@@ -1861,6 +1874,15 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
 
 
 def update_post_from_activity(post: Post, request_json: dict):
+    # Check if this update is more recent than what we currently have - activities can arrive in the wrong order if we have been offline
+    if 'updated' in request_json['object'] and post.ap_updated is not None:
+        try:
+            new_updated = datetime.fromisoformat(request_json['object']['updated'])
+        except ValueError:
+            new_updated = utcnow()
+        if post.ap_updated > new_updated:
+            return
+
     # redo body without checking if it's changed
     if 'content' in request_json['object'] and request_json['object']['content'] is not None:
         # prefer Markdown in 'source' in provided
@@ -1939,6 +1961,10 @@ def update_post_from_activity(post: Post, request_json: dict):
                                 db.session.add(notification)
 
     post.comments_enabled = request_json['object']['commentsEnabled'] if 'commentsEnabled' in request_json['object'] else True
+    try:
+        post.ap_updated = datetime.fromisoformat(request_json['object']['updated']) if 'updated' in request_json['object'] else utcnow()
+    except ValueError:
+        post.ap_updated = utcnow()
     post.edited_at = utcnow()
 
     if request_json['object']['type'] == 'Video':

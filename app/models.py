@@ -1203,6 +1203,7 @@ class Post(db.Model):
     ap_id = db.Column(db.String(255), index=True, unique=True)
     ap_create_id = db.Column(db.String(100))
     ap_announce_id = db.Column(db.String(100))
+    ap_updated = db.Column(db.DateTime)         # When the remote instance edited the Post. Useful when local instance has been offline and a flurry of potentially out of order updates are coming in.
 
     search_vector = db.Column(TSVectorType('title', 'body'))
 
@@ -1786,6 +1787,7 @@ class PostReply(db.Model):
     ap_id = db.Column(db.String(255), index=True, unique=True)
     ap_create_id = db.Column(db.String(100))
     ap_announce_id = db.Column(db.String(100))
+    ap_updated = db.Column(db.DateTime)         # When the remote instance edited the PostReply. Useful when local instance has been offline and a flurry of potentially out of order updates are coming in.
 
     search_vector = db.Column(TSVectorType('body'))
 

@@ -63,10 +63,8 @@ def send_message(message: str, conversation_id: int) -> ChatMessage:
                             "type": "Mention"
                           }
                         ]
-                    success = post_request(recipient.ap_inbox_url, reply_json, current_user.private_key,
-                                           current_user.public_url() + '#main-key')
-                    if success is False or isinstance(success, str):
-                        flash(_('Message failed to send to %(name)s.', name=recipient.link()), 'error')
+                    post_request_in_background(recipient.ap_inbox_url, reply_json, current_user.private_key,
+                                               current_user.public_url() + '#main-key')
 
     flash(_('Message sent.'))
     return reply
