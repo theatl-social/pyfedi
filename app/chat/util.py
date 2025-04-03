@@ -1,12 +1,11 @@
 from flask import flash, current_app
 from flask_login import current_user
 from flask_babel import _
-from sqlalchemy import text
 
 from app import db, celery
-from app.activitypub.signature import post_request, send_post_request
+from app.activitypub.signature import send_post_request
 from app.models import User, ChatMessage, Notification, utcnow, Conversation
-from app.utils import allowlist_html, shorten_string, gibberish, markdown_to_html
+from app.utils import shorten_string, gibberish, markdown_to_html
 
 
 @celery.task

@@ -79,9 +79,11 @@ def join_topic(topic_id):
                 db.session.commit()
                 send_community_follow(community.id, join_request.id, current_user.id)
 
-            member = CommunityMember(user_id=current_user.id, community_id=community.id)
-            db.session.add(member)
-            db.session.commit()
+            existing_member = CommunityMember.query.filter(CommunityMember.community_id == community.id, CommunityMember.user_id == current_user.id).first()
+            if not existing_member:
+                member = CommunityMember(user_id=current_user.id, community_id=community.id)
+                db.session.add(member)
+                db.session.commit()
             cache.delete_memoized(community_membership, current_user, community)
 
 def topics_for_form():
