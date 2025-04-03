@@ -76,8 +76,8 @@ def parse_ld_date(value: str | None) -> datetime | None:
     return parser.isoparse(value).replace(microsecond=0)
 
 
-def post_request_in_background(uri: str, body: dict | None, private_key: str, key_id: str, content_type: str = "application/activity+json",
-        method: Literal["get", "post"] = "post", timeout: int = 10,):
+def send_post_request(uri: str, body: dict | None, private_key: str, key_id: str, content_type: str = "application/activity+json",
+                      method: Literal["get", "post"] = "post", timeout: int = 10):
     if current_app.debug:
         post_request(uri=uri, body=body, private_key=private_key, key_id=key_id, content_type=content_type, method=method, timeout=timeout)
     else:

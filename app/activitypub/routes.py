@@ -11,7 +11,7 @@ from app import db, constants, cache, celery
 from app.activitypub import bp
 
 from app.activitypub.signature import HttpSignature, VerificationError, default_context, LDSignature, \
-    post_request_in_background
+    send_post_request
 from app.community.routes import show_community
 from app.community.util import send_to_remote_instance
 from app.feed.routes import show_feed
@@ -753,7 +753,7 @@ def process_inbox_request(request_json, store_ap_json):
                     reject = {"@context": default_context(), "actor": community.public_url(), "to": [user.public_url()],
                               "object": {"actor": user.public_url(), "to": None, "object": community.public_url(), "type": "Follow", "id": follow_id},
                               "type": "Reject", "id": f"https://{current_app.config['SERVER_NAME']}/activities/reject/" + gibberish(32)}
-                    post_request_in_background(user.ap_inbox_url, reject, community.private_key, f"{community.public_url()}#main-key")
+                    send_post_request(user.ap_inbox_url, reject, community.private_key, f"{community.public_url()}#main-key")
                 else:
                     existing_member = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
                     if not existing_member:
@@ -767,7 +767,7 @@ def process_inbox_request(request_json, store_ap_json):
                         accept = {"@context": default_context(), "actor": community.public_url(), "to": [user.public_url()],
                                   "object": {"actor": user.public_url(), "to": None, "object": community.public_url(), "type": "Follow", "id": follow_id},
                                   "type": "Accept", "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)}
-                        post_request_in_background(user.ap_inbox_url, accept, community.private_key, f"{community.public_url()}#main-key")
+                        send_post_request(user.ap_inbox_url, accept, community.private_key, f"{community.public_url()}#main-key")
                         log_incoming_ap(id, APLOG_FOLLOW, APLOG_SUCCESS, saved_json)
                 return
             elif isinstance(target, Feed):
@@ -784,7 +784,7 @@ def process_inbox_request(request_json, store_ap_json):
                     reject = {"@context": default_context(), "actor": feed.public_url(), "to": [user.public_url()],
                               "object": {"actor": user.public_url(), "to": None, "object": feed.public_url(), "type": "Follow", "id": follow_id},
                               "type": "Reject", "id": f"https://{current_app.config['SERVER_NAME']}/activities/reject/" + gibberish(32)}
-                    post_request_in_background(user.ap_inbox_url, reject, feed.private_key, f"{feed.public_url()}#main-key")
+                    send_post_request(user.ap_inbox_url, reject, feed.private_key, f"{feed.public_url()}#main-key")
                 else:
                     if feed_membership(user, feed) != SUBSCRIPTION_MEMBER:
                         member = FeedMember(user_id=user.id, feed_id=feed.id)
@@ -796,7 +796,7 @@ def process_inbox_request(request_json, store_ap_json):
                         accept = {"@context": default_context(), "actor": feed.public_url(), "to": [user.public_url()],
                                   "object": {"actor": user.public_url(), "to": None, "object": feed.public_url(), "type": "Follow", "id": follow_id},
                                   "type": "Accept", "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)}
-                        post_request_in_background(user.ap_inbox_url, accept, feed.private_key, f"{feed.public_url()}#main-key")
+                        send_post_request(user.ap_inbox_url, accept, feed.private_key, f"{feed.public_url()}#main-key")
                         log_incoming_ap(id, APLOG_FOLLOW, APLOG_SUCCESS, saved_json)
                 return
             elif isinstance(target, User):
@@ -816,7 +816,7 @@ def process_inbox_request(request_json, store_ap_json):
                     accept = {"@context": default_context(), "actor": local_user.public_url(), "to": [remote_user.public_url()],
                               "object": {"actor": remote_user.public_url(), "to": None, "object": local_user.public_url(), "type": "Follow", "id": follow_id},
                               "type": "Accept", "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)}
-                    post_request_in_background(remote_user.ap_inbox_url, accept, local_user.private_key, f"{local_user.public_url()}#main-key")
+                    send_post_request(remote_user.ap_inbox_url, accept, local_user.private_key, f"{local_user.public_url()}#main-key")
                     log_incoming_ap(id, APLOG_FOLLOW, APLOG_SUCCESS, saved_json)
             return
 
@@ -1151,7 +1151,7 @@ def process_inbox_request(request_json, store_ap_json):
                                         undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
                                         follow = {'actor': fm_user.public_url(), 'to': [community_to_remove.public_url()], 'object': community_to_remove.public_url(), 'type': 'Follow', 'id': follow_id}
                                         undo = {'actor': fm_user.public_url(), 'to': [community_to_remove.public_url()], 'type': 'Undo', 'id': undo_id, 'object': follow}
-                                        post_request_in_background(community_to_remove.ap_inbox_url, undo, fm_user.private_key, fm_user.public_url() + '#main-key', timeout=10)
+                                        send_post_request(community_to_remove.ap_inbox_url, undo, fm_user.private_key, fm_user.public_url() + '#main-key', timeout=10)
 
                                 if proceed:
                                     db.session.query(CommunityMember).filter_by(user_id=fm_user.id, community_id=community_to_remove.id).delete()

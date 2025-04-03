@@ -1,5 +1,5 @@
 from app import cache, celery, db
-from app.activitypub.signature import default_context, post_request, post_request_in_background
+from app.activitypub.signature import default_context, post_request, send_post_request
 from app.models import Community, CommunityBan, CommunityJoinRequest, CommunityMember, Notification, Post, PostReply, utcnow
 from app.user.utils import search_for_user
 from app.utils import community_membership, gibberish, joined_communities, instance_banned, ap_datetime, \
@@ -184,10 +184,10 @@ def send_reply(reply_id, parent_id, edit=False):
         }
         for instance in community.following_instances():
             if instance.inbox and instance.online() and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
-                post_request_in_background(instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
+                send_post_request(instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
                 domains_sent_to.append(instance.domain)
     else:
-        post_request_in_background(community.ap_inbox_url, create, user.private_key, user.public_url() + '#main-key')
+        send_post_request(community.ap_inbox_url, create, user.private_key, user.public_url() + '#main-key')
         domains_sent_to.append(community.instance.domain)
 
     # send copy of the Create to anyone else Mentioned in reply, but not on an instance that's already sent to.
@@ -195,7 +195,7 @@ def send_reply(reply_id, parent_id, edit=False):
         create['@context'] = default_context()
     for recipient in recipients:
         if recipient.instance.domain not in domains_sent_to:
-            post_request_in_background(recipient.instance.inbox, create, user.private_key, user.public_url() + '#main-key')
+            send_post_request(recipient.instance.inbox, create, user.private_key, user.public_url() + '#main-key')
 
 
 

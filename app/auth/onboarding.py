@@ -3,7 +3,7 @@ from flask_login import login_user, logout_user, current_user, login_required
 from flask_babel import _
 
 from app import db, cache
-from app.activitypub.signature import post_request, post_request_in_background
+from app.activitypub.signature import post_request, send_post_request
 from app.auth import bp
 from app.auth.forms import ChooseTopicsForm, ChooseTrumpMuskForm
 from app.constants import SUBSCRIPTION_NONMEMBER
@@ -107,4 +107,4 @@ def send_community_follow(community_id: int, join_request_id: int, user_id: int)
               "type": "Follow",
               "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request_id}"
             }
-            post_request_in_background(community.ap_inbox_url, follow, user.private_key, user.public_url() + '#main-key')
+            send_post_request(community.ap_inbox_url, follow, user.private_key, user.public_url() + '#main-key')

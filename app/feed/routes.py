@@ -6,7 +6,7 @@ from flask import g, current_app, request, redirect, url_for, flash, abort, Mark
 from flask_login import current_user, login_required
 from flask_babel import _
 from app import db, cache, celery
-from app.activitypub.signature import RsaKeys, post_request, default_context, post_request_in_background
+from app.activitypub.signature import RsaKeys, post_request, default_context, send_post_request
 from app.activitypub.util import find_actor_or_create, extract_domain_and_actor
 from app.community.util import save_icon_file, save_banner_file
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
@@ -582,8 +582,8 @@ def _feed_remove_community(community_id: int, current_feed_id: int, user_id: int
                         'id': undo_id,
                         'object': follow
                     }
-                    post_request_in_background(community.ap_inbox_url, undo, user.private_key,
-                                               user.public_url() + '#main-key', timeout=10)
+                    send_post_request(community.ap_inbox_url, undo, user.private_key,
+                                      user.public_url() + '#main-key', timeout=10)
 
             if proceed:
                 db.session.query(CommunityMember).filter_by(user_id=user.id, community_id=community.id).delete()
@@ -847,7 +847,7 @@ def do_feed_subscribe(actor, user_id):
                       "type": "Follow",
                       "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
                     }
-                    post_request_in_background(feed.ap_inbox_url, follow, user.private_key, user.public_url() + '#main-key', timeout=10)
+                    send_post_request(feed.ap_inbox_url, follow, user.private_key, user.public_url() + '#main-key', timeout=10)
                     
                     # reach out and get the feeditems from the remote /following collection
                     res = get_request(feed.ap_following_url)
@@ -911,8 +911,8 @@ def feed_unsubscribe(actor):
                           'id': undo_id,
                           'object': follow
                         }
-                        post_request_in_background(feed.ap_inbox_url, undo, current_user.private_key,
-                                                   current_user.public_url() + '#main-key', timeout=10)
+                        send_post_request(feed.ap_inbox_url, undo, current_user.private_key,
+                                          current_user.public_url() + '#main-key', timeout=10)
 
                 if proceed:
                     db.session.query(FeedMember).filter_by(user_id=current_user.id, feed_id=feed.id).delete()
@@ -1003,7 +1003,7 @@ def announce_feed_add_remove_to_subscribers(action: str, feed_id: int, community
         # if we get here the feedmember is a remote user
         instance: Instance = session.query(Instance).get(fm_user.instance.id)
         if instance.inbox and instance.online() and not instance_banned(instance.domain):
-            post_request_in_background(instance.inbox, activity_json, feed.private_key, feed.ap_profile_id + '#main-key', timeout=10)
+            send_post_request(instance.inbox, activity_json, feed.private_key, feed.ap_profile_id + '#main-key', timeout=10)
     session.close()
 
 
@@ -1042,5 +1042,5 @@ def announce_feed_delete_to_subscribers(user_id, feed_id):
         # if we get here the feedmember is a remote user
         instance: Instance = session.query(Instance).get(fm_user.instance.id)
         if instance.inbox and instance.online() and not instance_banned(instance.domain):
-            post_request_in_background(instance.inbox, delete_json, user.private_key, user.ap_profile_id + '#main-key', timeout=10)
+            send_post_request(instance.inbox, delete_json, user.private_key, user.ap_profile_id + '#main-key', timeout=10)
     session.close()

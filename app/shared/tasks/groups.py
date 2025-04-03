@@ -1,5 +1,5 @@
 from app import celery
-from app.activitypub.signature import default_context, post_request, post_request_in_background
+from app.activitypub.signature import default_context, post_request, send_post_request
 from app.models import Community, User, utcnow
 from app.utils import gibberish, ap_datetime
 
@@ -119,4 +119,4 @@ def edit_community(send_async, user_id, community_id):
 
     for instance in community.following_instances():
         if instance.inbox and instance.online():
-            post_request_in_background(instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
+            send_post_request(instance.inbox, announce, community.private_key, community.public_url() + '#main-key')

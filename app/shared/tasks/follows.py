@@ -1,6 +1,6 @@
 from app import cache, celery, db
 from app.constants import *
-from app.activitypub.signature import default_context, post_request, post_request_in_background
+from app.activitypub.signature import default_context, post_request, send_post_request
 from app.models import Community, CommunityBan, CommunityJoinRequest, User
 from app.utils import community_membership, gibberish, joined_communities, instance_banned
 
@@ -80,8 +80,8 @@ def join_community(send_async, user_id, community_id, src):
           '@context': default_context(),
           'to': [community.public_url()],
         }
-        post_request_in_background(community.ap_inbox_url, follow, user.private_key,
-                               user.public_url() + '#main-key', timeout=10)
+        send_post_request(community.ap_inbox_url, follow, user.private_key,
+                          user.public_url() + '#main-key', timeout=10)
 
     # for communities on local or offline instances, joining is instant
     cache.delete_memoized(community_membership, user, community)
@@ -136,6 +136,6 @@ def leave_community(send_async, user_id, community_id):
       'to': [community.public_url()]
     }
 
-    post_request_in_background(community.ap_inbox_url, undo, user.private_key, user.public_url() + '#main-key', timeout=10)
+    send_post_request(community.ap_inbox_url, undo, user.private_key, user.public_url() + '#main-key', timeout=10)
 
 

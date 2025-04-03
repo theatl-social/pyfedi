@@ -11,7 +11,7 @@ from slugify import slugify
 from sqlalchemy import or_, desc, text
 
 from app import db, cache, celery
-from app.activitypub.signature import RsaKeys, post_request, post_request_in_background
+from app.activitypub.signature import RsaKeys, post_request, send_post_request
 from app.activitypub.util import extract_domain_and_actor
 from app.chat.util import send_message
 from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, CreateImageForm, CreateLinkForm, \
@@ -504,7 +504,7 @@ def do_subscribe(actor, user_id, admin_preload=False, joined_via_feed=False):
                       "type": "Follow",
                       "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
                     }
-                    post_request_in_background(community.ap_inbox_url, follow, user.private_key, user.public_url() + '#main-key', timeout=10)
+                    send_post_request(community.ap_inbox_url, follow, user.private_key, user.public_url() + '#main-key', timeout=10)
 
             if not admin_preload:
                 if current_user and current_user.is_authenticated and current_user.id == user_id:
@@ -561,8 +561,8 @@ def unsubscribe(actor):
                           'id': undo_id,
                           'object': follow
                         }
-                        post_request_in_background(community.ap_inbox_url, undo, current_user.private_key,
-                                                   current_user.public_url() + '#main-key', timeout=10)
+                        send_post_request(community.ap_inbox_url, undo, current_user.private_key,
+                                          current_user.public_url() + '#main-key', timeout=10)
 
                 db.session.query(CommunityMember).filter_by(user_id=current_user.id, community_id=community.id).delete()
                 db.session.query(CommunityJoinRequest).filter_by(user_id=current_user.id, community_id=community.id).delete()
@@ -606,8 +606,8 @@ def join_then_add(actor):
                   "type": "Follow",
                   "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
                 }
-                post_request_in_background(community.ap_inbox_url, follow, current_user.private_key,
-                                            current_user.public_url() + '#main-key')
+                send_post_request(community.ap_inbox_url, follow, current_user.private_key,
+                                  current_user.public_url() + '#main-key')
         existing_member = CommunityMember.query.filter_by(user_id=current_user.id, community_id=community.id).first()
         if not existing_member:
             member = CommunityMember(user_id=current_user.id, community_id=community.id)

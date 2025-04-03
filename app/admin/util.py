@@ -7,8 +7,7 @@ from sqlalchemy import text, desc
 from flask_babel import _
 
 from app import db, cache, celery
-from app.activitypub.signature import post_request, default_context, post_request_in_background
-from app.activitypub.util import extract_domain_and_actor
+from app.activitypub.signature import default_context, send_post_request
 
 from app.models import User, Community, Instance, Site, ActivityPubLog, CommunityMember, Language
 from app.utils import gibberish, topic_tree, get_request
@@ -46,7 +45,7 @@ def unsubscribe_from_everything_then_delete_task(user_id):
             }
             for instance in instances:
                 if instance.inbox and instance.online() and instance.id != 1:  # instance id 1 is always the current instance
-                    post_request_in_background(instance.inbox, payload, user.private_key, f"{user.public_url()}#main-key")
+                    send_post_request(instance.inbox, payload, user.private_key, f"{user.public_url()}#main-key")
 
         sleep(5)
 
@@ -75,7 +74,7 @@ def unsubscribe_from_community(community, user):
         'id': undo_id,
         'object': follow
     }
-    post_request_in_background(community.ap_inbox_url, undo, user.private_key, user.public_url() + '#main-key')
+    send_post_request(community.ap_inbox_url, undo, user.private_key, user.public_url() + '#main-key')
 
 
 def send_newsletter(form):

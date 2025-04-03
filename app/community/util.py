@@ -12,7 +12,7 @@ from flask_login import current_user
 from pillow_heif import register_heif_opener
 
 from app import db, cache, celery
-from app.activitypub.signature import post_request, default_context, post_request_in_background
+from app.activitypub.signature import post_request, default_context, send_post_request
 from app.activitypub.util import find_actor_or_create, actor_json_to_model, ensure_domains_match, \
     find_hashtag_or_create, create_post, remote_object_to_json
 from app.models import Community, File, BannedInstances, PostReply, Post, utcnow, CommunityMember, Site, \
@@ -286,7 +286,7 @@ def delete_post_from_community_task(post_id):
         }
 
         if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
-            post_request_in_background(post.community.ap_inbox_url, delete_json, current_user.private_key, current_user.public_url() + '#main-key')
+            send_post_request(post.community.ap_inbox_url, delete_json, current_user.private_key, current_user.public_url() + '#main-key')
         else:  # local community - send it to followers on remote instances
             announce = {
                 "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
@@ -341,7 +341,7 @@ def delete_post_reply_from_community_task(post_reply_id):
             }
 
             if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
-                post_request_in_background(post.community.ap_inbox_url, delete_json, current_user.private_key, current_user.public_url() + '#main-key')
+                send_post_request(post.community.ap_inbox_url, delete_json, current_user.private_key, current_user.public_url() + '#main-key')
 
             else:  # local community - send it to followers on remote instances
                 announce = {
@@ -487,7 +487,7 @@ def send_to_remote_instance_task(instance_id: int, community_id: int, payload):
     if community:
         instance: Instance = session.query(Instance).get(instance_id)
         if instance.inbox and instance.online() and not instance_banned(instance.domain):
-            post_request_in_background(instance.inbox, payload, community.private_key, community.ap_profile_id + '#main-key', timeout=10)
+            send_post_request(instance.inbox, payload, community.private_key, community.ap_profile_id + '#main-key', timeout=10)
     session.close()
 
 

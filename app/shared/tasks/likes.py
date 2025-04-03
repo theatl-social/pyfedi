@@ -1,5 +1,5 @@
 from app import cache, celery
-from app.activitypub.signature import default_context, post_request, post_request_in_background
+from app.activitypub.signature import default_context, post_request, send_post_request
 from app.models import CommunityBan, Post, PostReply, User
 from app.utils import gibberish, instance_banned, recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies
 
@@ -142,7 +142,7 @@ def send_vote(user_id, object, vote_to_undo, vote_direction):
             }
             
             # Send the announcement
-            post_request_in_background(instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
+            send_post_request(instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
     else:
         # For remote communities, select appropriate payload based on privacy
         use_private = community.instance.votes_are_public() and user.vote_privately()
@@ -154,6 +154,6 @@ def send_vote(user_id, object, vote_to_undo, vote_direction):
         
         # Send with appropriate key ID
         key_id = (private_actor if use_private else public_actor) + '#main-key'
-        post_request_in_background(community.ap_inbox_url, payload, user.private_key, key_id)
+        send_post_request(community.ap_inbox_url, payload, user.private_key, key_id)
 
 

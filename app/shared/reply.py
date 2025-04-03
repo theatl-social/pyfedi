@@ -1,7 +1,7 @@
 from sqlalchemy import text
 
 from app import cache, db
-from app.activitypub.signature import default_context, post_request_in_background, post_request
+from app.activitypub.signature import default_context, send_post_request, post_request
 from app.community.util import send_to_remote_instance
 from app.constants import *
 from app.models import Instance, Notification, NotificationSubscription, Post, PostReply, PostReplyBookmark, Report, Site, User, utcnow

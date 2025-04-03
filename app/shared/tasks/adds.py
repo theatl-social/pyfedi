@@ -1,5 +1,5 @@
 from app import celery
-from app.activitypub.signature import default_context, post_request, post_request_in_background
+from app.activitypub.signature import default_context, post_request, send_post_request
 from app.models import Community, Post, User
 from app.utils import gibberish, instance_banned
 
@@ -77,6 +77,6 @@ def add_object(user_id, object, community_id=None):
         }
         for instance in community.following_instances():
             if instance.inbox and instance.online() and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
-                post_request_in_background(instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
+                send_post_request(instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
     else:
-        post_request_in_background(community.ap_inbox_url, add, user.private_key, user.public_url() + '#main-key')
+        send_post_request(community.ap_inbox_url, add, user.private_key, user.public_url() + '#main-key')
