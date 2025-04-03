@@ -242,10 +242,65 @@ def register(app):
 
             # Check for dormant or dead instances
             print(f'Check for dormant or dead instances {datetime.now()}')
+            HEADERS = {'Accept': 'application/activity+json'}
             try:
-                # Check for dormant or dead instances
-                instances = Instance.query.filter(Instance.gone_forever == False, Instance.id != 1).all()
-                HEADERS = {'Accept': 'application/activity+json'}
+                # Check for instances that have been dormant for 5+ days and mark them as gone_forever
+                five_days_ago = utcnow() - timedelta(days=5)
+                dormant_instances = Instance.query.filter(Instance.dormant == True, Instance.start_trying_again < five_days_ago).all()
+                
+                for instance in dormant_instances:
+                    instance.gone_forever = True
+                db.session.commit()
+                
+                # Re-check dormant instances that are not gone_forever
+                dormant_to_recheck = Instance.query.filter(Instance.dormant == True, Instance.gone_forever == False, Instance.id != 1).all()
+                
+                for instance in dormant_to_recheck:
+                    if instance_banned(instance.domain) or instance.domain == 'flipboard.com':
+                        continue
+                    
+                    try:
+                        # Try the nodeinfo endpoint first
+                        if instance.nodeinfo_href:
+                            node = get_request_instance(instance.nodeinfo_href, headers=HEADERS, instance=instance)
+                            if node.status_code == 200:
+                                try:
+                                    node_json = node.json()
+                                    if 'software' in node_json:
+                                        instance.software = node_json['software']['name'].lower()[:50]
+                                        instance.version = node_json['software']['version'][:50]
+                                        instance.failures = 0
+                                        instance.dormant = False
+                                        current_app.logger.info(f"Dormant instance {instance.domain} is back online")
+                                finally:
+                                    node.close()
+                        else:
+                            # If no nodeinfo_href, try to discover it
+                            nodeinfo = get_request_instance(f"https://{instance.domain}/.well-known/nodeinfo",
+                                                          headers=HEADERS, instance=instance)
+                            if nodeinfo.status_code == 200:
+                                try:
+                                    nodeinfo_json = nodeinfo.json()
+                                    for links in nodeinfo_json['links']:
+                                        if isinstance(links, dict) and 'rel' in links and links['rel'] in [
+                                            'http://nodeinfo.diaspora.software/ns/schema/2.0',
+                                            'https://nodeinfo.diaspora.software/ns/schema/2.0',
+                                            'http://nodeinfo.diaspora.software/ns/schema/2.1']:
+                                            instance.nodeinfo_href = links['href']
+                                            instance.failures = 0
+                                            instance.dormant = False
+                                            current_app.logger.info(f"Dormant instance {instance.domain} is back online")
+                                            break
+                                finally:
+                                    nodeinfo.close()
+                    except Exception as e:
+                        db.session.rollback()
+                        current_app.logger.error(f"Error rechecking dormant instance {instance.domain}: {e}")
+                
+                db.session.commit()
+
+                # Check healthy instances to see if still healthy
+                instances = Instance.query.filter(Instance.gone_forever == False, Instance.dormant == False, Instance.id != 1).all()
 
                 for instance in instances:
                     if instance_banned(instance.domain) or instance.domain == 'flipboard.com':
@@ -297,11 +352,21 @@ def register(app):
                                     instance.gone_forever = False
                             elif node.status_code >= 400:
                                 instance.nodeinfo_href = None
+                                instance.failures += 1
+                                instance.most_recent_attempt = utcnow()
+                                if instance.failures > 5:
+                                    instance.dormant = True
+                                    instance.start_trying_again = utcnow() + timedelta(days=5)
                         except Exception:
                             db.session.rollback()
                             instance.failures += 1
+                            instance.most_recent_attempt = utcnow()
+                            if instance.failures > 5:
+                                instance.dormant = True
+                                instance.start_trying_again = utcnow() + timedelta(days=5)
                         finally:
                             node.close()
+
                         db.session.commit()
 
                     # Handle admin roles
