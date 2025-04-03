@@ -4,7 +4,7 @@ from flask_babel import _
 from sqlalchemy import text
 
 from app import db, celery
-from app.activitypub.signature import post_request
+from app.activitypub.signature import post_request, send_post_request
 from app.models import User, ChatMessage, Notification, utcnow, Conversation
 from app.utils import allowlist_html, shorten_string, gibberish, markdown_to_html
 
@@ -63,8 +63,8 @@ def send_message(message: str, conversation_id: int) -> ChatMessage:
                             "type": "Mention"
                           }
                         ]
-                    post_request_in_background(recipient.ap_inbox_url, reply_json, current_user.private_key,
-                                               current_user.public_url() + '#main-key')
+                    send_post_request(recipient.ap_inbox_url, reply_json, current_user.private_key,
+                                      current_user.public_url() + '#main-key')
 
     flash(_('Message sent.'))
     return reply

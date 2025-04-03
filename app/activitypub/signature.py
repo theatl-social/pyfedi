@@ -138,7 +138,7 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str, con
     if log.result != 'failure':
         return
     else:
-        if http_status_code == 429 or http_status_code >= 500:
+        if http_status_code is not None and (http_status_code == 429 or http_status_code >= 500):
             if celery.current_worker_task:  # Only try to retry if running as a celery task
                 raise RetryLater
         return
