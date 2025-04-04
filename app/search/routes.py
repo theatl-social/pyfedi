@@ -1,9 +1,9 @@
 from flask import request, flash, json, url_for, current_app, redirect, g, abort
 from flask_login import login_required, current_user
 from flask_babel import _
-from sqlalchemy import or_, desc
+from sqlalchemy import or_, desc, text
 
-from app import limiter
+from app import limiter, db
 from app.models import Post, Language, Community, Instance, PostReply
 from app.search import bp
 from app.utils import moderating_communities, joined_communities, render_template, blocked_domains, blocked_instances, \
@@ -35,6 +35,7 @@ def run_search():
 
     if q is not None or type != 0 or language_id != 0 or community_id != 0:
         posts = None
+        db.session.execute(text("SET work_mem = '100MB';"))
         if search_for == 'posts':
             posts = Post.query.filter(Post.deleted == False)
             if current_user.is_authenticated:
