@@ -88,7 +88,7 @@ def run_search():
 
         replies = None
         if search_for == 'comments':
-            replies = PostReply.query.filter(Post.deleted == False)
+            replies = PostReply.query.filter(PostReply.deleted == False)
             if current_user.is_authenticated:
                 if current_user.ignore_bots == 1:
                     replies = replies.filter(PostReply.from_bot == False)
@@ -113,7 +113,7 @@ def run_search():
                 replies = replies.filter(PostReply.nsfl == False)
                 replies = replies.filter(PostReply.nsfw == False)
 
-            #replies = replies.join(Post, PostReply.post_id == Post.id).filter(Post.indexable == True)
+            replies = replies.join(Post, PostReply.post_id == Post.id).filter(Post.indexable == True, Post.deleted == False)
             if q is not None:
                 replies = replies.search(q, sort=True if sort_by == '' else False)
             if type != 0:

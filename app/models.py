@@ -1768,15 +1768,15 @@ class PostReply(db.Model):
     body_html = db.Column(db.Text)
     body_html_safe = db.Column(db.Boolean, default=False)
     score = db.Column(db.Integer, default=0, index=True)    # used for 'top' sorting
-    nsfw = db.Column(db.Boolean, default=False)
-    nsfl = db.Column(db.Boolean, default=False)
+    nsfw = db.Column(db.Boolean, default=False, index=True)
+    nsfl = db.Column(db.Boolean, default=False, index=True)
     notify_author = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, index=True, default=utcnow)
     posted_at = db.Column(db.DateTime, index=True, default=utcnow)
     deleted = db.Column(db.Boolean, default=False, index=True)
     deleted_by = db.Column(db.Integer, index=True)
     ip = db.Column(db.String(50))
-    from_bot = db.Column(db.Boolean, default=False)
+    from_bot = db.Column(db.Boolean, default=False, index=True)
     up_votes = db.Column(db.Integer, default=0)
     down_votes = db.Column(db.Integer, default=0)
     ranking = db.Column(db.Float, default=0.0, index=True)  # used for 'hot' sorting
