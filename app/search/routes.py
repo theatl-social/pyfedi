@@ -113,7 +113,7 @@ def run_search():
                 replies = replies.filter(PostReply.nsfl == False)
                 replies = replies.filter(PostReply.nsfw == False)
 
-            replies = replies.join(Post, PostReply.post_id == Post.id).filter(Post.indexable == True)
+            #replies = replies.join(Post, PostReply.post_id == Post.id).filter(Post.indexable == True)
             if q is not None:
                 replies = replies.search(q, sort=True if sort_by == '' else False)
             if type != 0:
@@ -133,8 +133,8 @@ def run_search():
                                    per_page=100 if current_user.is_authenticated and not low_bandwidth else 50,
                                    error_out=False)
 
-            next_url = url_for('search.run_search', page=replies.next_num, q=q) if replies.has_next else None
-            prev_url = url_for('search.run_search', page=replies.prev_num, q=q) if replies.has_prev and page != 1 else None
+            next_url = url_for('search.run_search', page=replies.next_num, q=q, search_for=search_for) if replies.has_next else None
+            prev_url = url_for('search.run_search', page=replies.prev_num, q=q, search_for=search_for) if replies.has_prev and page != 1 else None
 
         communities = None
         if search_for == 'communities':
