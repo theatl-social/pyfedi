@@ -1791,7 +1791,7 @@ class PostReply(db.Model):
 
     search_vector = db.Column(TSVectorType('body'))
 
-    author = db.relationship('User', foreign_keys=[user_id], single_parent=True, overlaps="post_replies")
+    author = db.relationship('User', lazy='joined', foreign_keys=[user_id], single_parent=True, overlaps="post_replies")
     community = db.relationship('Community', lazy='joined', overlaps='replies', foreign_keys=[community_id])
     language = db.relationship('Language', foreign_keys=[language_id], lazy='joined')
 
