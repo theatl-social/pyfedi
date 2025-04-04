@@ -82,7 +82,6 @@ def search_for_community(address: str) -> Community | None:
 
 @celery.task
 def retrieve_mods_and_backfill(community_id: int, server, name, community_json=None):
-    with current_app.app_context():
         community = Community.query.get(community_id)
         if not community:
             return

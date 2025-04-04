@@ -61,62 +61,61 @@ def send_async_email(subject, sender, recipients, text_body, html_body, reply_to
     # NB email will not be sent if you have not verified your domain name as an 'Identity' inside AWS SES
     if isinstance(recipients, str):
         recipients = [recipients]
-    with current_app.app_context():
-        if current_app.config['MAIL_SERVER']:
-            email_sender = SMTPEmailService(current_app.config['MAIL_USERNAME'],
-                                            current_app.config['MAIL_PASSWORD'],
-                                            (current_app.config['MAIL_SERVER'], current_app.config['MAIL_PORT']),
-                                            use_tls=current_app.config['MAIL_USE_TLS'])
-            email_sender.set_message(text_body, subject, sender, html_body)  # sender = 'John Doe <j.doe@server.com>'
-            email_sender.set_recipients(recipients)
-            email_sender.connect()
-            email_sender.send_all(close_connection=True)
-        elif current_app.config['AWS_REGION']:
-            try:
-                # Create a new SES resource and specify a region.
-                amazon_client = boto3.client('ses', region_name=current_app.config['AWS_REGION'])
-                # Provide the contents of the email.
-                if reply_to is None:
-                    amazon_client.send_email(
-                        Destination={'ToAddresses': recipients},
-                        Message={
-                            'Body': {
-                                'Html': {
-                                    'Charset': CHARSET, 'Data': html_body,
-                                },
-                                'Text': {
-                                    'Charset': CHARSET, 'Data': text_body,
-                                },
+    if current_app.config['MAIL_SERVER']:
+        email_sender = SMTPEmailService(current_app.config['MAIL_USERNAME'],
+                                        current_app.config['MAIL_PASSWORD'],
+                                        (current_app.config['MAIL_SERVER'], current_app.config['MAIL_PORT']),
+                                        use_tls=current_app.config['MAIL_USE_TLS'])
+        email_sender.set_message(text_body, subject, sender, html_body)  # sender = 'John Doe <j.doe@server.com>'
+        email_sender.set_recipients(recipients)
+        email_sender.connect()
+        email_sender.send_all(close_connection=True)
+    elif current_app.config['AWS_REGION']:
+        try:
+            # Create a new SES resource and specify a region.
+            amazon_client = boto3.client('ses', region_name=current_app.config['AWS_REGION'])
+            # Provide the contents of the email.
+            if reply_to is None:
+                amazon_client.send_email(
+                    Destination={'ToAddresses': recipients},
+                    Message={
+                        'Body': {
+                            'Html': {
+                                'Charset': CHARSET, 'Data': html_body,
                             },
-                            'Subject': {
-                                'Charset': CHARSET, 'Data': subject,
+                            'Text': {
+                                'Charset': CHARSET, 'Data': text_body,
                             },
                         },
-                        Source=sender,
-                        ReturnPath=return_path)
-                else:
-                    amazon_client.send_email(
-                        Destination={'ToAddresses': recipients},
-                        Message={
-                            'Body': {
-                                'Html': {
-                                    'Charset': CHARSET, 'Data': html_body,
-                                },
-                                'Text': {
-                                    'Charset': CHARSET, 'Data': text_body,
-                                },
+                        'Subject': {
+                            'Charset': CHARSET, 'Data': subject,
+                        },
+                    },
+                    Source=sender,
+                    ReturnPath=return_path)
+            else:
+                amazon_client.send_email(
+                    Destination={'ToAddresses': recipients},
+                    Message={
+                        'Body': {
+                            'Html': {
+                                'Charset': CHARSET, 'Data': html_body,
                             },
-                            'Subject': {
-                                'Charset': CHARSET, 'Data': subject,
+                            'Text': {
+                                'Charset': CHARSET, 'Data': text_body,
                             },
                         },
-                        Source=sender,
-                        ReturnPath=return_path,
-                        ReplyToAddresses=[reply_to])
-                    # message.attach_alternative("...AMPHTML content...", "text/x-amp-html")
-            except ClientError as e:
-                current_app.logger.error('Failed to send email. ' + e.response['Error']['Message'])
-                return e.response['Error']['Message']
+                        'Subject': {
+                            'Charset': CHARSET, 'Data': subject,
+                        },
+                    },
+                    Source=sender,
+                    ReturnPath=return_path,
+                    ReplyToAddresses=[reply_to])
+                # message.attach_alternative("...AMPHTML content...", "text/x-amp-html")
+        except ClientError as e:
+            current_app.logger.error('Failed to send email. ' + e.response['Error']['Message'])
+            return e.response['Error']['Message']
 
 
 def send_email(subject, sender, recipients: List[str], text_body, html_body, reply_to=None):

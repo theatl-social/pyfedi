@@ -23,7 +23,6 @@ def purge_user_then_delete(user_id):
 
 @celery.task
 def purge_user_then_delete_task(user_id):
-    with current_app.app_context():
         user = User.query.get(user_id)
         if user:
             # posts
