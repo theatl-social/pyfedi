@@ -36,6 +36,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     languages_for_form, menu_topics, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown, \
     permission_required, blocked_users, get_request, is_local_image_url, is_video_url, can_upvote, can_downvote, \
     menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, referrer, can_create_post_reply, communities_banned_from
+from app.post.util import post_type_to_form_url_type
 from app.shared.reply import make_reply, edit_reply
 from app.shared.post import edit_post, sticky_post, lock_post, bookmark_post, remove_bookmark_post
 
@@ -1665,7 +1666,8 @@ def post_cross_post(post_id: int):
     form.which_community.choices = which_community
     if form.validate_on_submit():
         community = Community.query.get_or_404(form.which_community.data)
-        response = make_response(redirect(url_for('community.add_post', actor=community.link(), type='link', source=str(post.id))))
+        post_type = post_type_to_form_url_type(post.type)
+        response = make_response(redirect(url_for('community.add_post', actor=community.link(), type=post_type, source=str(post.id))))
         response.delete_cookie('post_title')
         response.delete_cookie('post_description')
         response.delete_cookie('post_tags')
