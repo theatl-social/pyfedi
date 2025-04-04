@@ -16,6 +16,8 @@ from app.shared.auth import log_user_in
 from flask import current_app, jsonify, request
 from flask_limiter import RateLimitExceeded
 
+from sqlalchemy.orm.exc import NoResultFound
+
 def enable_api():
     return True if current_app.debug else False
 
