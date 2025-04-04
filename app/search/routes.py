@@ -114,6 +114,7 @@ def run_search():
                 replies = replies.filter(PostReply.nsfl == False)
                 replies = replies.filter(PostReply.nsfw == False)
 
+            print("here we go!!")
             replies = replies.join(Post, PostReply.post_id == Post.id).filter(Post.indexable == True, Post.deleted == False)
             if q is not None:
                 replies = replies.search(q, sort=True if sort_by == '' else False)
