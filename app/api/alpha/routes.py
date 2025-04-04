@@ -16,6 +16,8 @@ from app.shared.auth import log_user_in
 from flask import current_app, jsonify, request
 from flask_limiter import RateLimitExceeded
 
+from sqlalchemy.orm.exc import NoResultFound
+
 def enable_api():
     return True if current_app.debug else False
 
@@ -201,6 +203,8 @@ def put_alpha_post_save():
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
         return jsonify(put_post_save(auth, data))
+    except NoResultFound:
+        return jsonify({"error": "Post not found"}), 400
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 

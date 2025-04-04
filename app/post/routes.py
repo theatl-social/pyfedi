@@ -6,6 +6,7 @@ from flask import redirect, url_for, flash, current_app, abort, request, g, make
 from flask_login import logout_user, current_user, login_required
 from flask_babel import _
 from sqlalchemy import or_, desc, text
+from sqlalchemy.orm.exc import NoResultFound
 from wtforms import SelectField, RadioField
 
 from app import db, constants, cache, limiter
@@ -36,7 +37,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     permission_required, blocked_users, get_request, is_local_image_url, is_video_url, can_upvote, can_downvote, \
     menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, referrer, can_create_post_reply, communities_banned_from
 from app.shared.reply import make_reply, edit_reply
-from app.shared.post import edit_post, sticky_post, lock_post
+from app.shared.post import edit_post, sticky_post, lock_post, bookmark_post, remove_bookmark_post
 
 
 def show_post(post_id: int):
@@ -983,31 +984,23 @@ def post_purge(post_id: int):
 @bp.route('/post/<int:post_id>/bookmark', methods=['GET', 'POST'])
 @login_required
 def post_bookmark(post_id: int):
-    post = Post.query.get_or_404(post_id)
-    if post.deleted:
+    try:
+        bookmark_post(post_id, SRC_WEB)
+    except NoResultFound:
         abort(404)
-    existing_bookmark = PostBookmark.query.filter(PostBookmark.post_id == post_id, PostBookmark.user_id == current_user.id).first()
-    if not existing_bookmark:
-        db.session.add(PostBookmark(post_id=post_id, user_id=current_user.id))
-        db.session.commit()
-        flash(_('Bookmark added.'))
-    else:
-        flash(_('This post has already been bookmarked.'))
-    return redirect(referrer(url_for('activitypub.post_ap', post_id=post.id)))
+
+    return redirect(referrer(url_for('activitypub.post_ap', post_id=post_id)))
 
 
 @bp.route('/post/<int:post_id>/remove_bookmark', methods=['GET', 'POST'])
 @login_required
 def post_remove_bookmark(post_id: int):
-    post = Post.query.get_or_404(post_id)
-    if post.deleted:
+    try:
+        remove_bookmark_post(post_id, SRC_WEB)
+    except NoResultFound:
         abort(404)
-    existing_bookmark = PostBookmark.query.filter(PostBookmark.post_id == post_id, PostBookmark.user_id == current_user.id).first()
-    if existing_bookmark:
-        db.session.delete(existing_bookmark)
-        db.session.commit()
-        flash(_('Bookmark has been removed.'))
-    return redirect(referrer(url_for('activitypub.post_ap', post_id=post.id)))
+
+    return redirect(referrer(url_for('activitypub.post_ap', post_id=post_id)))
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/remove_bookmark', methods=['GET', 'POST'])
