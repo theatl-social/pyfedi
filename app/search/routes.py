@@ -114,7 +114,6 @@ def run_search():
                 replies = replies.filter(PostReply.nsfl == False)
                 replies = replies.filter(PostReply.nsfw == False)
 
-            print("here we go!!")
             replies = replies.join(Post, PostReply.post_id == Post.id).filter(Post.indexable == True, Post.deleted == False)
             if q is not None:
                 replies = replies.search(q, sort=True if sort_by == '' else False)
@@ -140,44 +139,7 @@ def run_search():
 
         communities = None
         if search_for == 'communities':
-            communities = Community.query.filter(Community.banned == False)
-            if current_user.is_authenticated:
-                if current_user.hide_nsfl == 1:
-                    communities = communities.filter(Community.nsfl == False)
-                if current_user.hide_nsfw == 1:
-                    communities = communities.filter(Community.nsfw == False)
-                instance_ids = blocked_instances(current_user.id)
-                if instance_ids:
-                    communities = communities.filter(
-                        or_(Community.instance_id.not_in(instance_ids), Community.instance_id == None))
-                community_ids = blocked_communities(current_user.id)
-                if community_ids:
-                    communities = communities.filter(Community.id.not_in(community_ids))
-                # filter blocked users
-                blocked_accounts = blocked_users(current_user.id)
-                if blocked_accounts:
-                    communities = communities.filter(Community.user_id.not_in(blocked_accounts))
-                if banned_from:
-                    communities = communities.filter(Community.id.not_in(banned_from))
-            else:
-                communities = communities.filter(Community.nsfl == False)
-                communities = communities.filter(Community.nsfw == False)
-
-            communities = communities.filter(Community.searchable == True)
-            if q is not None:
-                communities = communities.search(q, sort=True if sort_by == '' else False)
-            #if language_id:
-            #    replies = replies.filter(PostReply.language_id == language_id)
-            if software:
-                communities = communities.join(Community, Community.instance_id == Instance.id).filter(
-                    Instance.software == software)
-            if sort_by == 'date':
-                communities = communities.order_by(desc(Community.last_active))
-            elif sort_by == 'top':
-                communities = communities.order_by(desc(Community.subscriptions_count))
-
-            next_url = None
-            prev_url = None
+            return redirect(f'/communities?search={q}&language_id={language_id}')
 
         # Voting history
         if current_user.is_authenticated:
