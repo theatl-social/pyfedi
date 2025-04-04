@@ -966,6 +966,7 @@ def import_settings(filename):
 
 @celery.task
 def import_settings_task(user_id, filename):
+    with current_app.app_context():
         user = User.query.get(user_id)
         contents = file_get_contents(filename)
         contents_json = json.loads(contents)

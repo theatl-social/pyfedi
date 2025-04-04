@@ -98,6 +98,7 @@ def topics_for_form():
 
 
 def send_community_follow(community_id: int, join_request_id: int, user_id: int):
+    with current_app.app_context():
         user = User.query.get(user_id)
         community = Community.query.get(community_id)
         if not community.instance.gone_forever:
