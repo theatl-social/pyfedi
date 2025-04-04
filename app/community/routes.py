@@ -686,7 +686,7 @@ def add_post(actor, type):
             flash(community.posting_warning)
 
         # The source query parameter is used when cross-posting - load the source post's content into the form
-        if post_type == POST_TYPE_LINK and request.args.get('source'):
+        if (post_type == POST_TYPE_LINK or post_type == POST_TYPE_VIDEO) and request.args.get('source'):
             source_post = Post.query.get(request.args.get('source'))
             if source_post.deleted:
                 abort(404)
@@ -695,7 +695,10 @@ def add_post(actor, type):
             form.nsfw.data = source_post.nsfw
             form.nsfl.data = source_post.nsfl
             form.language_id.data = source_post.language_id
-            form.link_url.data = source_post.url
+            if post_type == POST_TYPE_LINK:
+                form.link_url.data = source_post.url
+            elif post_type == POST_TYPE_VIDEO:
+                form.video_url.data = source_post.url
             form.tags.data = tags_to_string(source_post)
 
     # empty post to pass since add_post.html extends edit_post.html 

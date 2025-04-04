@@ -8,6 +8,7 @@ from app import db
 from app.models import PostReply, Post, Community
 from app.utils import blocked_instances, blocked_users
 
+from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_ARTICLE, POST_TYPE_VIDEO
 
 # replies to a post, in a tree, sorted by a variety of methods
 def post_replies(community: Community, post_id: int, sort_by: str, show_first: int = 0) -> List[PostReply]:
@@ -116,3 +117,15 @@ def url_needs_archive(url) -> bool:
 def generate_archive_link(url) -> bool:
     return 'https://archive.ph/' + url
 
+# Forms like the cross post form need the type for the url
+def post_type_to_form_url_type(post_type: int):
+    if post_type == POST_TYPE_LINK:
+        return 'link'
+    elif post_type == POST_TYPE_IMAGE:
+        return 'image'
+    elif post_type == POST_TYPE_VIDEO:
+        return 'video'
+    elif post_type == POST_TYPE_POLL:
+        return 'poll'
+    else:
+        return ''
