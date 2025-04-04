@@ -51,58 +51,40 @@ def vote_for_post(post_id: int, vote_direction, src, auth=None):
                                recently_downvoted=recently_downvoted)
 
 
-# function can be shared between WEB and API (only API calls it for now)
-# post_bookmark in app/post/routes would just need to do 'return bookmark_the_post(post_id, SRC_WEB)'
-def bookmark_the_post(post_id: int, src, auth=None):
-    if src == SRC_API:
-        post = Post.query.filter_by(id=post_id, deleted=False).one()
-        user_id = authorise_api_user(auth)
-    else:
-        post = Post.query.get_or_404(post_id)
-        if post.deleted:
-            abort(404)
-        user_id = current_user.id
+def bookmark_post(post_id: int, src, auth=None):
+    Post.query.filter_by(id=post_id, deleted=False).one()
+    user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
-    existing_bookmark = PostBookmark.query.filter(PostBookmark.post_id == post_id, PostBookmark.user_id == user_id).first()
+    existing_bookmark = PostBookmark.query.filter_by(post_id=post_id, user_id=user_id).first()
     if not existing_bookmark:
         db.session.add(PostBookmark(post_id=post_id, user_id=user_id))
         db.session.commit()
         if src == SRC_WEB:
             flash(_('Bookmark added.'))
     else:
-        if src == SRC_WEB:
-            flash(_('This post has already been bookmarked.'))
+        msg = 'This post has already been bookmarked.'
+        raise Exception(msg) if src == SRC_API else flash(_(msg))
 
     if src == SRC_API:
         return user_id
-    else:
-        return redirect(url_for('activitypub.post_ap', post_id=post.id))
 
 
-# function can be shared between WEB and API (only API calls it for now)
-# post_remove_bookmark in app/post/routes would just need to do 'return remove_the_bookmark_from_post(post_id, SRC_WEB)'
-def remove_the_bookmark_from_post(post_id: int, src, auth=None):
-    if src == SRC_API:
-        post = Post.query.filter_by(id=post_id, deleted=False).one()
-        user_id = authorise_api_user(auth)
-    else:
-        post = Post.query.get_or_404(post_id)
-        if post.deleted:
-            abort(404)
-        user_id = current_user.id
+def remove_bookmark_post(post_id: int, src, auth=None):
+    Post.query.filter_by(id=post_id, deleted=False).one()
+    user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
-    existing_bookmark = PostBookmark.query.filter(PostBookmark.post_id == post_id, PostBookmark.user_id == user_id).first()
+    existing_bookmark = PostBookmark.query.filter_by(post_id=post_id, user_id=user_id).first()
     if existing_bookmark:
         db.session.delete(existing_bookmark)
         db.session.commit()
         if src == SRC_WEB:
             flash(_('Bookmark has been removed.'))
+    else:
+        msg = 'This post was not bookmarked.'
+        raise Exception(msg) if src == SRC_API else flash(_(msg))
 
     if src == SRC_API:
         return user_id
-    else:
-        return redirect(url_for('activitypub.post_ap', post_id=post.id))
-
 
 
 # function can be shared between WEB and API (only API calls it for now)

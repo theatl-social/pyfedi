@@ -2,7 +2,7 @@ from app.api.alpha.views import post_view, post_report_view
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
 from app.constants import *
 from app.models import Post, PostVote, Community, CommunityMember, utcnow
-from app.shared.post import vote_for_post, bookmark_the_post, remove_the_bookmark_from_post, toggle_post_notification, make_post, edit_post, \
+from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, toggle_post_notification, make_post, edit_post, \
                             delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post
 from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, recently_upvoted_posts
 
@@ -151,7 +151,7 @@ def put_post_save(auth, data):
     post_id = data['post_id']
     save = data['save']
 
-    user_id = bookmark_the_post(post_id, SRC_API, auth) if save else remove_the_bookmark_from_post(post_id, SRC_API, auth)
+    user_id = bookmark_post(post_id, SRC_API, auth) if save else remove_bookmark_post(post_id, SRC_API, auth)
     post_json = post_view(post=post_id, variant=4, user_id=user_id)
     return post_json
 
