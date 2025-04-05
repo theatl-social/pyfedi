@@ -29,8 +29,10 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     blocked_communities, piefed_markdown_to_lemmy_markdown, menu_instance_feeds, menu_my_feeds, languages_for_form, \
     read_language_choices
 from sqlalchemy import desc, or_, text, asc
+from sqlalchemy.orm.exc import NoResultFound
 import os
 import json as python_json
+from app.shared.user import subscribe_user
 
 
 @bp.route('/people', methods=['GET', 'POST'])
@@ -515,22 +517,10 @@ def user_settings_import_export():
 @bp.route('/user/<int:user_id>/notification', methods=['GET', 'POST'])
 @login_required
 def user_notification(user_id: int):
-    # Toggle whether the current user is subscribed to notifications about this user's posts or not
-    user = User.query.get_or_404(user_id)
-    existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == user.id,
-                                                                  NotificationSubscription.user_id == current_user.id,
-                                                                  NotificationSubscription.type == NOTIF_USER).first()
-    if existing_notification:
-        db.session.delete(existing_notification)
-        db.session.commit()
-    else:   # no subscription yet, so make one
-        if user.id != current_user.id and not user.has_blocked_user(current_user.id):
-            new_notification = NotificationSubscription(name=user.display_name(), user_id=current_user.id,
-                                                        entity_id=user.id, type=NOTIF_USER)
-            db.session.add(new_notification)
-            db.session.commit()
-
-    return render_template('user/_notification_toggle.html', user=user)
+    try:
+        return subscribe_user(user_id, None, SRC_WEB)
+    except NoResultFound:
+        abort(404)
 
 
 @bp.route('/u/<actor>/ban', methods=['GET'])

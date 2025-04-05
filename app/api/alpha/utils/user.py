@@ -5,7 +5,7 @@ from app.api.alpha.utils.post import get_post_list
 from app.api.alpha.utils.reply import get_reply_list
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
 from app.models import Conversation, ChatMessage, Notification, PostReply, User
-from app.shared.user import block_another_user, unblock_another_user, toggle_user_notification
+from app.shared.user import block_another_user, unblock_another_user, subscribe_user
 from app.constants import *
 
 from sqlalchemy import text, desc
@@ -164,8 +164,8 @@ def put_user_subscribe(auth, data):
     boolean_expected(['subscribe'], data)
 
     person_id = data['person_id']
-    subscribe = data['subscribe']           # not actually processed - is just a toggle
+    subscribe = data['subscribe']
 
-    user_id = toggle_user_notification(person_id, SRC_API, auth)
+    user_id = subscribe_user(person_id, subscribe, SRC_API, auth)
     user_json = user_view(user=person_id, variant=5, user_id=user_id)
     return user_json
