@@ -87,30 +87,32 @@ def remove_bookmark_post(post_id: int, src, auth=None):
         return user_id
 
 
-# function can be shared between WEB and API (only API calls it for now)
-# post_notification in app/post/routes would just need to do 'return toggle_post_notification(post_id, SRC_WEB)'
-def toggle_post_notification(post_id: int, src, auth=None):
-    # Toggle whether the current user is subscribed to notifications about top-level replies to this post or not
-    if src == SRC_API:
-        post = Post.query.filter_by(id=post_id, deleted=False).one()
-        user_id = authorise_api_user(auth)
-    else:
-        post = Post.query.get_or_404(post_id)
-        if post.deleted:
-            abort(404)
-        user_id = current_user.id
+def subscribe_post(post_id: int, subscribe, src, auth=None):
+    post = Post.query.filter_by(id=post_id, deleted=False).one()
+    user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
-    existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == post.id,
-                                                                  NotificationSubscription.user_id == user_id,
-                                                                  NotificationSubscription.type == NOTIF_POST).first()
-    if existing_notification:
-        db.session.delete(existing_notification)
-        db.session.commit()
-    else:  # no subscription yet, so make one
-        new_notification = NotificationSubscription(name=shorten_string(_('Replies to my post %(post_title)s', post_title=post.title)),
-                                                    user_id=user_id, entity_id=post.id, type=NOTIF_POST)
-        db.session.add(new_notification)
-        db.session.commit()
+    if src == SRC_WEB:
+        subscribe = False if post.notify_new_replies(user_id) else True
+
+    existing_notification = NotificationSubscription.query.filter_by(entity_id=post_id, user_id=user_id,
+                                                                         type=NOTIF_POST).first()
+    if subscribe == False:
+        if existing_notification:
+            db.session.delete(existing_notification)
+            db.session.commit()
+        else:
+            msg = 'A subscription for this post did not exist.'
+            raise Exception(msg) if src == SRC_API else flash(_(msg))
+
+    else:
+        if existing_notification:
+            msg = 'A subscription for this post already existed.'
+            raise Exception(msg) if src == SRC_API else flash(_(msg))
+        else:
+            new_notification = NotificationSubscription(name=shorten_string(_('Replies to my post %(post_title)s', post_title=post.title)),
+                                                        user_id=user_id, entity_id=post_id, type=NOTIF_POST)
+            db.session.add(new_notification)
+            db.session.commit()
 
     if src == SRC_API:
         return user_id

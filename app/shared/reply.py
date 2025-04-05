@@ -44,59 +44,40 @@ def vote_for_reply(reply_id: int, vote_direction, src, auth=None):
                                community=reply.community)
 
 
-# function can be shared between WEB and API (only API calls it for now)
-# post_reply_bookmark in app/post/routes would just need to do 'return bookmark_the_post_reply(comment_id, SRC_WEB)'
-def bookmark_the_post_reply(comment_id: int, src, auth=None):
-    if src == SRC_API:
-        post_reply = PostReply.query.filter_by(id=comment_id, deleted=False).one()
-        user_id = authorise_api_user(auth)
-    else:
-        post_reply = PostReply.query.get_or_404(comment_id)
-        if post_reply.deleted:
-            abort(404)
-        user_id = current_user.id
+def bookmark_reply(comment_id: int, src, auth=None):
+    PostReply.query.filter_by(id=comment_id, deleted=False).join(Post, Post.id == PostReply.post_id).filter_by(deleted=False).one()
+    user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
-    existing_bookmark = PostReplyBookmark.query.filter(PostReplyBookmark.post_reply_id == comment_id,
-                                                       PostReplyBookmark.user_id == user_id).first()
+    existing_bookmark = PostReplyBookmark.query.filter_by(post_reply_id=comment_id, user_id=user_id).first()
     if not existing_bookmark:
         db.session.add(PostReplyBookmark(post_reply_id=comment_id, user_id=user_id))
         db.session.commit()
         if src == SRC_WEB:
             flash(_('Bookmark added.'))
     else:
-        if src == SRC_WEB:
-            flash(_('This comment has already been bookmarked'))
+        msg = 'This comment has already been bookmarked.'
+        raise Exception(msg) if src == SRC_API else flash(_(msg))
 
     if src == SRC_API:
         return user_id
-    else:
-        return redirect(url_for('activitypub.post_ap', post_id=post_reply.post_id, _anchor=f'comment_{comment_id}'))
 
 
-# function can be shared between WEB and API (only API calls it for now)
-# post_reply_remove_bookmark in app/post/routes would just need to do 'return remove_the_bookmark_from_post_reply(comment_id, SRC_WEB)'
-def remove_the_bookmark_from_post_reply(comment_id: int, src, auth=None):
-    if src == SRC_API:
-        post_reply = PostReply.query.filter_by(id=comment_id, deleted=False).one()
-        user_id = authorise_api_user(auth)
-    else:
-        post_reply = PostReply.query.get_or_404(comment_id)
-        if post_reply.deleted:
-            abort(404)
-        user_id = current_user.id
+def remove_bookmark_reply(comment_id: int, src, auth=None):
+    PostReply.query.filter_by(id=comment_id, deleted=False).join(Post, Post.id == PostReply.post_id).filter_by(deleted=False).one()
+    user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
-    existing_bookmark = PostReplyBookmark.query.filter(PostReplyBookmark.post_reply_id == comment_id,
-                                                       PostReplyBookmark.user_id == user_id).first()
+    existing_bookmark = PostReplyBookmark.query.filter_by(post_reply_id=comment_id, user_id=user_id).first()
     if existing_bookmark:
         db.session.delete(existing_bookmark)
         db.session.commit()
         if src == SRC_WEB:
             flash(_('Bookmark has been removed.'))
+    else:
+        msg = 'This comment was not bookmarked.'
+        raise Exception(msg) if src == SRC_API else flash(_(msg))
 
     if src == SRC_API:
         return user_id
-    else:
-        return redirect(url_for('activitypub.post_ap', post_id=post_reply.post_id))
 
 
 # function can be shared between WEB and API (only API calls it for now)

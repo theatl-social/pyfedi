@@ -142,6 +142,8 @@ def put_alpha_community_subscribe():
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
         return jsonify(put_community_subscribe(auth, data))
+    except NoResultFound:
+        return jsonify({"error": "Community not found"}), 400
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
@@ -217,6 +219,8 @@ def put_alpha_post_subscribe():
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
         return jsonify(put_post_subscribe(auth, data))
+    except NoResultFound:
+        return jsonify({"error": "Post not found"}), 400
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
@@ -341,6 +345,8 @@ def put_alpha_comment_save():
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
         return jsonify(put_reply_save(auth, data))
+    except NoResultFound:
+        return jsonify({"error": "Comment not found"}), 400
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 

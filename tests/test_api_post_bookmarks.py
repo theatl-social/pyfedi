@@ -21,7 +21,7 @@ def app():
     return app
 
 
-def test_api_bookmarks(app):
+def test_api_post_bookmarks(app):
     with app.app_context():
         from app.api.alpha.utils.post import put_post_save
 
@@ -60,8 +60,7 @@ def test_api_bookmarks(app):
             assert str(ex.value) == 'This post has already been bookmarked.'
 
         # add to deleted
-        post = Post.query.filter(Post.deleted == False).first()
-        assert post is not None and hasattr(post, 'id')
+        post = Post.query.filter(Post.deleted == True).first()
         if post:
             data = {"post_id": post.id, "save": True}
             with pytest.raises(Exception):

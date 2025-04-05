@@ -9,6 +9,7 @@ from flask_login import current_user, login_required
 from flask_babel import _
 from slugify import slugify
 from sqlalchemy import or_, desc, text
+from sqlalchemy.orm.exc import NoResultFound
 
 from app import db, cache, celery
 from app.activitypub.signature import RsaKeys, post_request, send_post_request
@@ -32,7 +33,7 @@ from app.models import User, Community, CommunityMember, CommunityJoinRequest, C
     CommunityWikiPageRevision, read_posts, Feed, FeedItem, CommunityBlock
 from app.community import bp
 from app.post.util import tags_to_string
-from app.shared.community import invite_with_chat, invite_with_email
+from app.shared.community import invite_with_chat, invite_with_email, subscribe_community
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, gibberish, community_membership, ap_datetime, \
     request_etag_matches, return_304, can_upvote, can_downvote, user_filters_posts, \
@@ -537,7 +538,6 @@ def unsubscribe(actor):
         subscription = community_membership(current_user, community)
         if subscription:
             if subscription != SUBSCRIPTION_OWNER:
-                proceed = True
                 # Undo the Follow
                 if '@' in actor:    # this is a remote community, so activitypub is needed
                     if not community.instance.gone_forever:
@@ -1186,35 +1186,10 @@ def community_unban_user(community_id: int, user_id: int):
 @bp.route('/<int:community_id>/notification', methods=['GET', 'POST'])
 @login_required
 def community_notification(community_id: int):
-    # Toggle whether the current user is subscribed to notifications about this community's posts or not
-    community = Community.query.get_or_404(community_id)
-    existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == community.id,
-                                                                  NotificationSubscription.user_id == current_user.id,
-                                                                  NotificationSubscription.type == NOTIF_COMMUNITY).first()
-    if existing_notification:
-        db.session.delete(existing_notification)
-        db.session.commit()
-    else:  # no subscription yet, so make one
-        if community.id not in communities_banned_from(current_user.id):
-            new_notification = NotificationSubscription(name=shorten_string(_('New posts in %(community_name)s', community_name=community.title)),
-                                                        user_id=current_user.id, entity_id=community.id,
-                                                        type=NOTIF_COMMUNITY)
-            db.session.add(new_notification)
-            db.session.commit()
-
-    member_info = CommunityMember.query.filter(CommunityMember.community_id == community.id,
-                                               CommunityMember.user_id == current_user.id).first()
-    # existing community members get their notification flag toggled
-    if member_info and not member_info.is_banned:
-        member_info.notify_new_posts = not member_info.notify_new_posts
-        db.session.commit()
-    else:   # people who are not yet members become members, with notify on.
-        if community.id not in communities_banned_from(current_user.id):
-            new_member = CommunityMember(community_id=community.id, user_id=current_user.id, notify_new_posts=True)
-            db.session.add(new_member)
-            db.session.commit()
-
-    return render_template('community/_notification_toggle.html', community=community)
+    try:
+        return subscribe_community(community_id, None, SRC_WEB)
+    except NoResultFound:
+        abort(404)
 
 
 @bp.route('/<actor>/moderate', methods=['GET'])
