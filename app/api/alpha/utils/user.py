@@ -45,7 +45,6 @@ def get_user_list(auth, data):
     # (enough for instance view)
 
     type = data['type_'] if data and 'type_' in data else "All"
-    sort = data['sort'] if data and 'sort' in data else "New"
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 10
 
