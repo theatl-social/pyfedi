@@ -38,7 +38,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, referrer, can_create_post_reply, communities_banned_from
 from app.post.util import post_type_to_form_url_type
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply
-from app.shared.post import edit_post, sticky_post, lock_post, bookmark_post, remove_bookmark_post
+from app.shared.post import edit_post, sticky_post, lock_post, bookmark_post, remove_bookmark_post, subscribe_post
 
 
 def show_post(post_id: int):
@@ -1504,23 +1504,10 @@ def post_reply_purge(post_id: int, comment_id: int):
 @bp.route('/post/<int:post_id>/notification', methods=['GET', 'POST'])
 @login_required
 def post_notification(post_id: int):
-    # Toggle whether the current user is subscribed to notifications about top-level replies to this post or not
-    post = Post.query.get_or_404(post_id)
-    existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == post.id,
-                                                                  NotificationSubscription.user_id == current_user.id,
-                                                                  NotificationSubscription.type == NOTIF_POST).first()
-    if existing_notification:
-        db.session.delete(existing_notification)
-        db.session.commit()
-    else:  # no subscription yet, so make one
-        new_notification = NotificationSubscription(name=shorten_string(_('Replies to my post %(post_title)s',
-                                                                              post_title=post.title)),
-                                                    user_id=current_user.id, entity_id=post.id,
-                                                    type=NOTIF_POST)
-        db.session.add(new_notification)
-        db.session.commit()
-
-    return render_template('post/_post_notification_toggle.html', post=post)
+    try:
+        return subscribe_post(post_id, None, SRC_WEB)
+    except NoResultFound:
+        abort(404)
 
 
 @bp.route('/post_reply/<int:post_reply_id>/notification', methods=['GET', 'POST'])

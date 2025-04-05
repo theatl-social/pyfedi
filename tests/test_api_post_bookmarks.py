@@ -60,7 +60,7 @@ def test_api_post_bookmarks(app):
             assert str(ex.value) == 'This post has already been bookmarked.'
 
         # add to deleted
-        post = Post.query.filter(Post.deleted == False).first()
+        post = Post.query.filter(Post.deleted == True).first()
         if post:
             data = {"post_id": post.id, "save": True}
             with pytest.raises(Exception):
