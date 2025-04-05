@@ -505,11 +505,6 @@ def modlog():
                            )
 
 
-@bp.route('/donate')
-def donate():
-    return render_template('donate.html')
-
-
 @bp.route('/about')
 def about_page():
 

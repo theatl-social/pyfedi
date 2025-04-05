@@ -122,6 +122,7 @@
                 {% if user.referrer %}{{ _('Referer') }}: <span title="{{ _('Which website linked to PieFed when the user initially registered.') }}">{{ user.referrer }}</span><br />{% endif %}
                 {% if user.ip_address %}{{ _('IP and country code') }}: <span title="{{ _('IP address of last interaction.') }}">{{ user.ip_address }} ({{ user.ip_address_country if user.ip_address_country }})</span><br />{% endif %}
                 {% if user.last_seen %}{{ _('Active') }}: {{ arrow.get(user.last_seen).humanize(locale=locale) }}<br />{% endif %}
+                {% if user.stripe_subscription_id %}<strong>{{ _('Donor') }}</strong><br />{% endif %}
             {% endif -%}
         </p>
         <div class="profile_bio">

@@ -7,7 +7,7 @@
             [deleted]
         {% endif -%}
     {% else -%}
-        <a href="/u/{{ user.link() }}" aria-label="{{ _('Author') }}" class="author_link" title="" rel="author">
+        <a href="/u/{{ user.link() }}" aria-label="{{ _('Author') }}" class="author_link {{ 'donor' if user.stripe_subscription_id }}" title="" rel="author">
             {% if user.avatar_id and not low_bandwidth and not collapsed -%}
                 <img src="{{ user.avatar_thumbnail() }}" alt="" loading="lazy" />
             {% endif -%}
@@ -253,6 +253,9 @@
                                   <li><a class="dropdown-item{% if active_child == 'bookmarks' %} active{% endif %}" href="/bookmarks">{{ _('Bookmarks') }}</a></li>
                                   <li><a class="dropdown-item{% if active_child == 'alerts' %} active{% endif %}" href="/alerts">{{ _('Activity Alerts') }}</a></li>
                                   {% if current_user.is_authenticated -%}
+                                    {% if current_user.stripe_subscription_id -%}
+                                        <li><a class="dropdown-item{% if active_child == 'donate' %} active{% endif %}" href="/donate">{{ _('Manage donations') }}</a></li>
+                                    {% endif -%}
                                     {% if current_user.hide_read_posts -%}
                                         <li><a class="dropdown-item{% if active_child == 'read_posts' %} active{% endif %}" href="/read-posts">{{ _('Read Posts') }}</a></li>
                                     {% endif -%}

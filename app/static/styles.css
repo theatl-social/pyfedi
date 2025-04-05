@@ -2133,6 +2133,9 @@ form h5 {
 .render_username .author_link {
   display: inline-block;
 }
+.render_username .author_link.donor img {
+  box-shadow: rgba(0, 0, 0, 0.3) 0px 2px 6px;
+}
 .render_username .author_link + .user_preview {
   position: absolute;
   top: 17px;
