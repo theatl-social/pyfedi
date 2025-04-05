@@ -983,7 +983,6 @@ def import_settings_task(user_id, filename):
                             member = CommunityMember(user_id=user.id, community_id=community.id)
                             db.session.add(member)
                             db.session.commit()
-                        success = True
                         if not community.instance.gone_forever:
                             follow = {
                               "actor": user.public_url(),
