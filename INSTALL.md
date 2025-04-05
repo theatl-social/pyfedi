@@ -11,6 +11,7 @@
 * [Database Management](#database-management)
 * [Keeping your local instance up to date](#keeping-your-local-instance-up-to=date)
 * [Running PieFed in production](#running-piefed-in-production)
+* [Accepting donations through Stripe](#stripe)
 * [Pre-requisites for Mac OS](#pre-requisites-for-mac-os)
 * [Notes for Windows (WSL2)](#notes-for-windows-wsl2)        
 * [Notes for Pip Package Management](#notes-for-pip-package-management)
@@ -29,7 +30,7 @@ configuration. While it is quicker and easier, it's not to everyone's taste.
 
 ### Hard way: bare metal
 
-Read on
+Doing things this way will give you the ultimate customization that larger instances need.
 
 <div id="setup-database"></div>
 
@@ -530,6 +531,23 @@ silently do nothing.
 
 ---
 
+<div id="stripe"></div>
+
+## Accepting donations through Stripe
+
+In env.sample there are all the environment variables you need to add to your .env for Stripe to work.
+
+STRIPE_SECRET_KEY and STRIPE_PUBLISHABLE_KEY can be found on the Stripe dashboard.
+
+STRIPE_MONTHLY_SMALL and STRIPE_MONTHLY_BIG are the Price IDs of two reoccurring products. Find the price ID by editing
+a product you've made and then clicking on the 3 dot button to the right of the price.
+
+Change STRIPE_MONTHLY_SMALL_TEXT and STRIPE_MONTHLY_BIG_TEXT to be the amounts of your product prices.
+
+To get a WEBHOOK_SIGNING_SECRET you need to set up a webhook to send data to https://yourinstance/stripe_webhook, sending the
+checkout.session.completed and customer.subscription.deleted events.
+
+---
 
 <div id="pre-requisites-for-mac-os"></div>
 
