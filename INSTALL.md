@@ -539,7 +539,7 @@ In env.sample there are all the environment variables you need to add to your .e
 
 STRIPE_SECRET_KEY and STRIPE_PUBLISHABLE_KEY can be found on the Stripe dashboard.
 
-STRIPE_MONTHLY_SMALL and STRIPE_MONTHLY_BIG are the Price IDs of two reoccurring products. Find the price ID by editing
+STRIPE_MONTHLY_SMALL and STRIPE_MONTHLY_BIG are the Price IDs of two **monthly recurring** products. Find the price ID by editing
 a product you've made and then clicking on the 3 dot button to the right of the price.
 
 Change STRIPE_MONTHLY_SMALL_TEXT and STRIPE_MONTHLY_BIG_TEXT to be the amounts of your product prices.
