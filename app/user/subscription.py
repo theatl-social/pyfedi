@@ -11,19 +11,23 @@ from app.utils import render_template
 
 
 @bp.route('/donate')
-@login_required
 def choose_plan():
-    # inspired by https://stripe.com/docs/payments/checkout/subscriptions/starting
-    if current_user.stripe_subscription_id is not None:
-        flash(_('Thank you for supporting %(instance_name)s! Any choice you make below will replace your current donation plan.', instance_name=current_app.config['SERVER_NAME']))
+    if current_user.is_authenticated:
+        # inspired by https://stripe.com/docs/payments/checkout/subscriptions/starting
+        if current_user.stripe_subscription_id is not None:
+            flash(_('Thank you for supporting %(instance_name)s! Any choice you make below will replace your current donation plan.', instance_name=current_app.config['SERVER_NAME']))
 
-    if current_app.config['STRIPE_SECRET_KEY']:
-        return render_template('user/choose_plan.html', title=_('Choose a donation plan'),
-                               instance_name=current_app.config['SERVER_NAME'], monthly_small=current_app.config['STRIPE_MONTHLY_SMALL'],
-                               monthly_big=current_app.config['STRIPE_MONTHLY_BIG'], monthly_small_text=current_app.config['STRIPE_MONTHLY_SMALL_TEXT'],
-                               monthly_big_text=current_app.config['STRIPE_MONTHLY_BIG_TEXT']
-                               )
+        if current_app.config['STRIPE_SECRET_KEY']:
+            return render_template('user/choose_plan.html', title=_('Choose a donation plan'),
+                                   instance_name=current_app.config['SERVER_NAME'], monthly_small=current_app.config['STRIPE_MONTHLY_SMALL'],
+                                   monthly_big=current_app.config['STRIPE_MONTHLY_BIG'], monthly_small_text=current_app.config['STRIPE_MONTHLY_SMALL_TEXT'],
+                                   monthly_big_text=current_app.config['STRIPE_MONTHLY_BIG_TEXT']
+                                   )
+        else:
+            return render_template('donate.html', title=_('Donate'))
     else:
+        if current_app.config['STRIPE_SECRET_KEY']:
+            flash(_('Log in to donate to %(instance_name)s or donate to the PieFed project using the button below.', instance_name=current_app.config['SERVER_NAME']))
         return render_template('donate.html', title=_('Donate'))
 
 
