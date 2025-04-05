@@ -37,7 +37,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     permission_required, blocked_users, get_request, is_local_image_url, is_video_url, can_upvote, can_downvote, \
     menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, referrer, can_create_post_reply, communities_banned_from
 from app.post.util import post_type_to_form_url_type
-from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply
+from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply
 from app.shared.post import edit_post, sticky_post, lock_post, bookmark_post, remove_bookmark_post, subscribe_post
 
 
@@ -1513,22 +1513,10 @@ def post_notification(post_id: int):
 @bp.route('/post_reply/<int:post_reply_id>/notification', methods=['GET', 'POST'])
 @login_required
 def post_reply_notification(post_reply_id: int):
-    # Toggle whether the current user is subscribed to notifications about replies to this reply or not
-    post_reply = PostReply.query.get_or_404(post_reply_id)
-    existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == post_reply.id,
-                                                                  NotificationSubscription.user_id == current_user.id,
-                                                                  NotificationSubscription.type == NOTIF_REPLY).first()
-    if existing_notification:
-        db.session.delete(existing_notification)
-        db.session.commit()
-    else:  # no subscription yet, so make one
-        new_notification = NotificationSubscription(name=shorten_string(_('Replies to my comment on %(post_title)s',
-                                                                              post_title=post_reply.post.title)), user_id=current_user.id, entity_id=post_reply.id,
-                                                    type=NOTIF_REPLY)
-        db.session.add(new_notification)
-        db.session.commit()
-
-    return render_template('post/_reply_notification_toggle.html', comment={'comment': post_reply})
+    try:
+        return subscribe_reply(post_reply_id, None, SRC_WEB)
+    except NoResultFound:
+        abort(404)
 
 
 @bp.route('/post/<int:post_id>/cross_posts', methods=['GET'])

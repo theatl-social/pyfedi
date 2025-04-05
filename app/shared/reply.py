@@ -44,13 +44,13 @@ def vote_for_reply(reply_id: int, vote_direction, src, auth=None):
                                community=reply.community)
 
 
-def bookmark_reply(comment_id: int, src, auth=None):
-    PostReply.query.filter_by(id=comment_id, deleted=False).join(Post, Post.id == PostReply.post_id).filter_by(deleted=False).one()
+def bookmark_reply(reply_id: int, src, auth=None):
+    PostReply.query.filter_by(id=reply_id, deleted=False).join(Post, Post.id == PostReply.post_id).filter_by(deleted=False).one()
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
-    existing_bookmark = PostReplyBookmark.query.filter_by(post_reply_id=comment_id, user_id=user_id).first()
+    existing_bookmark = PostReplyBookmark.query.filter_by(post_reply_id=reply_id, user_id=user_id).first()
     if not existing_bookmark:
-        db.session.add(PostReplyBookmark(post_reply_id=comment_id, user_id=user_id))
+        db.session.add(PostReplyBookmark(post_reply_id=reply_id, user_id=user_id))
         db.session.commit()
         if src == SRC_WEB:
             flash(_('Bookmark added.'))
@@ -62,11 +62,11 @@ def bookmark_reply(comment_id: int, src, auth=None):
         return user_id
 
 
-def remove_bookmark_reply(comment_id: int, src, auth=None):
-    PostReply.query.filter_by(id=comment_id, deleted=False).join(Post, Post.id == PostReply.post_id).filter_by(deleted=False).one()
+def remove_bookmark_reply(reply_id: int, src, auth=None):
+    PostReply.query.filter_by(id=reply_id, deleted=False).join(Post, Post.id == PostReply.post_id).filter_by(deleted=False).one()
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
-    existing_bookmark = PostReplyBookmark.query.filter_by(post_reply_id=comment_id, user_id=user_id).first()
+    existing_bookmark = PostReplyBookmark.query.filter_by(post_reply_id=reply_id, user_id=user_id).first()
     if existing_bookmark:
         db.session.delete(existing_bookmark)
         db.session.commit()
@@ -80,36 +80,38 @@ def remove_bookmark_reply(comment_id: int, src, auth=None):
         return user_id
 
 
-# function can be shared between WEB and API (only API calls it for now)
-# post_reply_notification in app/post/routes would just need to do 'return toggle_post_reply_notification(post_reply_id, SRC_WEB)'
-def toggle_post_reply_notification(post_reply_id: int, src, auth=None):
-    # Toggle whether the current user is subscribed to notifications about replies to this reply or not
-    if src == SRC_API:
-        post_reply = PostReply.query.filter_by(id=post_reply_id, deleted=False).one()
-        user_id = authorise_api_user(auth)
-    else:
-        post_reply = PostReply.query.get_or_404(post_reply_id)
-        if post_reply.deleted:
-            abort(404)
-        user_id = current_user.id
+def subscribe_reply(reply_id: int, subscribe, src, auth=None):
+    reply = PostReply.query.filter_by(id=reply_id, deleted=False).join(Post, Post.id == PostReply.post_id).filter_by(deleted=False).one()
+    user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
-    existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == post_reply.id,
-                                                                  NotificationSubscription.user_id == user_id,
-                                                                  NotificationSubscription.type == NOTIF_REPLY).first()
-    if existing_notification:
-        db.session.delete(existing_notification)
-        db.session.commit()
-    else:  # no subscription yet, so make one
-        new_notification = NotificationSubscription(name=shorten_string(_('Replies to my comment on %(post_title)s',
-                                                    post_title=post_reply.post.title)), user_id=user_id, entity_id=post_reply.id,
-                                                    type=NOTIF_REPLY)
-        db.session.add(new_notification)
-        db.session.commit()
+    if src == SRC_WEB:
+        subscribe = False if reply.notify_new_replies(user_id) else True
+
+    existing_notification = NotificationSubscription.query.filter_by(entity_id=reply_id, user_id=user_id,
+                                                                     type=NOTIF_REPLY).first()
+    if subscribe == False:
+        if existing_notification:
+            db.session.delete(existing_notification)
+            db.session.commit()
+        else:
+            msg = 'A subscription for this comment did not exist.'
+            raise Exception(msg) if src == SRC_API else flash(_(msg))
+
+    else:
+        if existing_notification:
+            msg = 'A subscription for this comment already existed.'
+            raise Exception(msg) if src == SRC_API else flash(_(msg))
+        else:
+            new_notification = NotificationSubscription(name=shorten_string(_('Replies to my comment on %(post_title)s',
+                                                        post_title=reply.post.title)), user_id=user_id, entity_id=reply_id,
+                                                        type=NOTIF_REPLY)
+            db.session.add(new_notification)
+            db.session.commit()
 
     if src == SRC_API:
         return user_id
     else:
-        return render_template('post/_reply_notification_toggle.html', comment={'comment': post_reply})
+        return render_template('post/_reply_notification_toggle.html', comment={'comment': reply})
 
 
 def extra_rate_limit_check(user):
