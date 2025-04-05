@@ -538,7 +538,6 @@ def unsubscribe(actor):
         subscription = community_membership(current_user, community)
         if subscription:
             if subscription != SUBSCRIPTION_OWNER:
-                proceed = True
                 # Undo the Follow
                 if '@' in actor:    # this is a remote community, so activitypub is needed
                     if not community.instance.gone_forever:
