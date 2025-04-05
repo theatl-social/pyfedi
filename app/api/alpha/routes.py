@@ -142,6 +142,8 @@ def put_alpha_community_subscribe():
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
         return jsonify(put_community_subscribe(auth, data))
+    except NoResultFound:
+        return jsonify({"error": "Community not found"}), 400
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
