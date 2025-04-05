@@ -58,7 +58,7 @@ def stripe_redirect(plan):
             success_url=url_for('user.stripe_result', result='success', _external=True),
             cancel_url=url_for('user.stripe_result', result='failure', _external=True),
         )
-    elif plan == 'month_big':
+    elif plan == 'monthly_big':
         stripe_session = stripe.checkout.Session.create(
             client_reference_id=current_user.id,
             customer=stripe_customer,
