@@ -37,7 +37,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     permission_required, blocked_users, get_request, is_local_image_url, is_video_url, can_upvote, can_downvote, \
     menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, referrer, can_create_post_reply, communities_banned_from
 from app.post.util import post_type_to_form_url_type
-from app.shared.reply import make_reply, edit_reply
+from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply
 from app.shared.post import edit_post, sticky_post, lock_post, bookmark_post, remove_bookmark_post
 
 
@@ -1007,17 +1007,12 @@ def post_remove_bookmark(post_id: int):
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/remove_bookmark', methods=['GET', 'POST'])
 @login_required
 def post_reply_remove_bookmark(post_id: int, comment_id: int):
-    post = Post.query.get_or_404(post_id)
-    post_reply = PostReply.query.get_or_404(comment_id)
-
-    if post.deleted or post_reply.deleted:
+    try:
+        remove_bookmark_reply(comment_id, SRC_WEB)
+    except NoResultFound:
         abort(404)
-    existing_bookmark = PostReplyBookmark.query.filter(PostReplyBookmark.post_reply_id == comment_id, PostReplyBookmark.user_id == current_user.id).first()
-    if existing_bookmark:
-        db.session.delete(existing_bookmark)
-        db.session.commit()
-        flash(_('Bookmark has been removed.'))
-    return redirect(url_for('activitypub.post_ap', post_id=post.id))
+
+    return redirect(url_for('activitypub.post_ap', post_id=post_id))
 
 
 @bp.route('/post/<int:post_id>/report', methods=['GET', 'POST'])
@@ -1268,20 +1263,12 @@ def post_reply_report(post_id: int, comment_id: int):
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/bookmark', methods=['GET'])
 @login_required
 def post_reply_bookmark(post_id: int, comment_id: int):
-    post = Post.query.get_or_404(post_id)
-    post_reply = PostReply.query.get_or_404(comment_id)
-
-    if post.deleted or post_reply.deleted:
+    try:
+        bookmark_reply(comment_id, SRC_WEB)
+    except NoResultFound:
         abort(404)
-    existing_bookmark = PostReplyBookmark.query.filter(PostReplyBookmark.post_reply_id == comment_id,
-                                                       PostReplyBookmark.user_id == current_user.id).first()
-    if not existing_bookmark:
-        db.session.add(PostReplyBookmark(post_reply_id=comment_id, user_id=current_user.id))
-        db.session.commit()
-        flash(_('Bookmark added.'))
-    else:
-        flash(_('This comment has already been bookmarked.'))
-    return redirect(url_for('activitypub.post_ap', post_id=post.id, _anchor=f'comment_{comment_id}'))
+
+    return redirect(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{comment_id}'))
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/block_user', methods=['GET', 'POST'])
