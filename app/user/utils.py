@@ -95,7 +95,7 @@ def purge_user_then_delete_task(user_id):
 
 
 def unsubscribe_from_community(community, user):
-    if community.instance.gone_forever:
+    if community.instance.gone_forever or community.instance.dormant:
         return
 
     undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)

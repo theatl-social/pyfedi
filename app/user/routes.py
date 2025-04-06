@@ -782,7 +782,6 @@ def delete_account():
             current_user.cover.delete_from_disk()
             current_user.cover.source_url = ''
 
-        # to verify the deletes, remote servers will GET /u/<actor> so we can't fully delete the account until the POSTs are done
         current_user.banned = True
         current_user.email = f'deleted_{current_user.id}@deleted.com'
         current_user.deleted_by = current_user.id
@@ -818,15 +817,16 @@ def send_deletion_requests(user_id):
             community = Community.query.get(membership.community_id)
             unsubscribe_from_community(community, user)
 
-        instances = Instance.query.filter(Instance.dormant == False).all()
+        instances = Instance.query.filter(Instance.dormant == False, Instance.gone_forever == False).all()
         payload = {
             "@context": default_context(),
             "actor": user.public_url(),
-            "id": f"{user.public_url()}#delete",
+            "id": f"http://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
             "object": user.public_url(),
             "to": [
                 "https://www.w3.org/ns/activitystreams#Public"
             ],
+            "removeData": True,
             "type": "Delete"
         }
         for instance in instances:

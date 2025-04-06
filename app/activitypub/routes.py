@@ -287,14 +287,14 @@ def user_profile(actor):
         else:
             user: User = User.query.filter(or_(User.user_name == actor, User.alt_user_name == actor)).filter_by(ap_id=None).first()
             if user is None:
-                user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor.lower()}', deleted=False, ap_id=None).first()
+                user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor.lower()}', ap_id=None).first()
     else:
         if '@' in actor:
-            user: User = User.query.filter_by(ap_id=actor.lower(), deleted=False, banned=False).first()
+            user: User = User.query.filter_by(ap_id=actor.lower()).first()
         else:
-            user: User = User.query.filter(or_(User.user_name == actor, User.alt_user_name == actor)).filter_by(deleted=False, ap_id=None).first()
+            user: User = User.query.filter(or_(User.user_name == actor, User.alt_user_name == actor)).filter_by(ap_id=None).first()
             if user is None:
-                user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor.lower()}', deleted=False, ap_id=None).first()
+                user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor.lower()}', ap_id=None).first()
 
     if user is not None:
         main_user_name = True
@@ -329,6 +329,7 @@ def user_profile(actor):
                             },
                             "published": ap_datetime(user.created),
                         }
+
             if not main_user_name:
                 actor_data['name'] = 'Anonymous'
                 actor_data['published'] = ap_datetime(user.created + timedelta(minutes=randint(-2592000, 0)))
@@ -1007,7 +1008,7 @@ def process_inbox_request(request_json, store_ap_json):
                 ap_id = core_activity['object']['id']  # kbin
             to_delete = find_liked_object(ap_id)                        # Just for Posts and Replies (User deletes go through process_delete_request())
 
-            if to_delete:
+            if to_delete:   # Deleting content
                 if to_delete.deleted:
                     log_incoming_ap(id, APLOG_DELETE, APLOG_IGNORED, saved_json, 'Activity about local content which is already deleted')
                 else:
@@ -1015,8 +1016,18 @@ def process_inbox_request(request_json, store_ap_json):
                     delete_post_or_comment(user, to_delete, store_ap_json, request_json, reason)
                     if not announced:
                         announce_activity_to_followers(to_delete.community, user, request_json)
-            else:
-                log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, saved_json, 'Delete: cannot find ' + ap_id)
+            else:           # Remote user has deleted their account
+                to_delete = find_actor_or_create(ap_id, create_if_not_found=False)
+                if to_delete and isinstance(to_delete, User):
+                    if 'removeData' in core_activity and core_activity['removeData'] is True:
+                        to_delete.purge_content()
+                    to_delete.deleted_by = to_delete.id
+                    to_delete.deleted = True
+                    to_delete.delete_dependencies()
+                    db.session.commit()
+                    log_incoming_ap(id, APLOG_DELETE, APLOG_SUCCESS, saved_json, 'User deleted their account')
+                else:
+                    log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, saved_json, 'Delete: cannot find ' + ap_id)
             return
 
         if core_activity['type'] == 'Like' or core_activity['type'] == 'EmojiReact':  # Upvote
