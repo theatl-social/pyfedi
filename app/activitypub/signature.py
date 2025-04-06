@@ -144,7 +144,13 @@ def post_request(self, uri: str, body: dict | None, private_key: str, key_id: st
     else:
         if http_status_code is not None and (http_status_code == 429 or http_status_code >= 500):
             if celery.current_worker_task:  # Only try to retry if running as a celery task
-                raise self.retry(exc=RetryLater())
+                # Calculate retry delay with exponential backoff
+                retry_count = self.request.retries
+                backoff = 60 * (2 ** retry_count)
+                backoff = min(backoff, 15360)
+                raise self.retry(exc=RetryLater(),
+                                 countdown=backoff,
+                                 max_retries=20)
         return
 
 
