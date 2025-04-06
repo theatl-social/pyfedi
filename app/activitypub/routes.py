@@ -1008,7 +1008,7 @@ def process_inbox_request(request_json, store_ap_json):
                 ap_id = core_activity['object']['id']  # kbin
             to_delete = find_liked_object(ap_id)                        # Just for Posts and Replies (User deletes go through process_delete_request())
 
-            if to_delete:   # Deleting content
+            if to_delete:   # Deleting content. User self-deletes are handled in process_delete_request()
                 if to_delete.deleted:
                     log_incoming_ap(id, APLOG_DELETE, APLOG_IGNORED, saved_json, 'Activity about local content which is already deleted')
                 else:
@@ -1016,18 +1016,6 @@ def process_inbox_request(request_json, store_ap_json):
                     delete_post_or_comment(user, to_delete, store_ap_json, request_json, reason)
                     if not announced:
                         announce_activity_to_followers(to_delete.community, user, request_json)
-            else:           # Remote user has deleted their account
-                to_delete = find_actor_or_create(ap_id, create_if_not_found=False)
-                if to_delete and isinstance(to_delete, User):
-                    if 'removeData' in core_activity and core_activity['removeData'] is True:
-                        to_delete.purge_content()
-                    to_delete.deleted_by = to_delete.id
-                    to_delete.deleted = True
-                    to_delete.delete_dependencies()
-                    db.session.commit()
-                    log_incoming_ap(id, APLOG_DELETE, APLOG_SUCCESS, saved_json, 'User deleted their account')
-                else:
-                    log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, saved_json, 'Delete: cannot find ' + ap_id)
             return
 
         if core_activity['type'] == 'Like' or core_activity['type'] == 'EmojiReact':  # Upvote
@@ -1424,17 +1412,14 @@ def process_delete_request(request_json, store_ap_json):
         user_ap_id = request_json['actor']
         user = User.query.filter_by(ap_profile_id=user_ap_id.lower()).first()
         if user:
-            # check that the user really has been deleted, to avoid spoofing attacks
-            if user_removed_from_remote_server(user_ap_id, is_piefed=user.instance.software == 'PieFed'):
-                # soft self-delete
-                user.deleted = True
-                user.deleted_by = user.id
-                db.session.commit()
-                log_incoming_ap(id, APLOG_DELETE, APLOG_SUCCESS, saved_json)
-            else:
-                log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, saved_json, 'User not actually deleted.')
-        # TODO: acknowledge 'removeData' field from Lemmy
-        # TODO: hard-delete in 7 days (should purge avatar and cover images, but keep posts and replies unless already soft-deleted by removeData = True)
+            if 'removeData' in request_json and request_json['removeData'] is True:
+                user.purge_content()
+            user.deleted = True
+            user.deleted_by = user.id
+            user.delete_dependencies()
+            db.session.commit()
+            log_incoming_ap(id, APLOG_DELETE, APLOG_SUCCESS, saved_json)
+
 
 
 def announce_activity_to_followers(community, creator, activity):
