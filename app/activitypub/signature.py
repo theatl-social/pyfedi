@@ -79,7 +79,10 @@ def parse_ld_date(value: str | None) -> datetime | None:
 def send_post_request(uri: str, body: dict | None, private_key: str, key_id: str, content_type: str = "application/activity+json",
                       method: Literal["get", "post"] = "post", timeout: int = 10):
     if current_app.debug:
-        post_request(uri=uri, body=body, private_key=private_key, key_id=key_id, content_type=content_type, method=method, timeout=timeout)
+        # When in debug, we'll create a task instance but call it directly
+        task = post_request()
+        return task(uri=uri, body=body, private_key=private_key, key_id=key_id,
+                    content_type=content_type, method=method, timeout=timeout)
     else:
         post_request.delay(uri=uri, body=body, private_key=private_key, key_id=key_id, content_type=content_type, method=method, timeout=timeout)
         return True
