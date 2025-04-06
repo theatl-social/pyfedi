@@ -168,3 +168,34 @@ def put_user_subscribe(auth, data):
     user_id = subscribe_user(person_id, subscribe, SRC_API, auth)
     user_json = user_view(user=person_id, variant=5, user_id=user_id)
     return user_json
+
+
+def put_user_save_user_settings(auth, data):
+    user = authorise_api_user(auth, return_type='model')
+    show_nfsw = data['show_nsfw'] if 'show_nsfw' in data else None
+    show_read_posts = data['show_read_posts'] if 'show_read_posts' in data else None
+    about = data['bio'] if 'bio' in data else None
+
+    # english is fun, so lets do the reversing and update the user settings
+    if show_nfsw == True:
+        user.hide_nsfw = 0
+    elif show_nfsw == False:
+        user.hide_nsfw = 1
+
+    if show_read_posts == True:
+        user.hide_read_posts = False
+    elif show_read_posts == False:
+        user.hide_read_posts = True
+
+    if isinstance(about, str):
+        from app.utils import piefed_markdown_to_lemmy_markdown, markdown_to_html
+        user.about = piefed_markdown_to_lemmy_markdown(about)
+        user.about_html = markdown_to_html(about)
+
+    # save the change to the db
+    db.session.add(user)
+    db.session.commit()
+
+    user_json = user_view(user=user, variant=6)
+    return user_json
+

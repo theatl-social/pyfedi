@@ -100,7 +100,7 @@ def get_site(auth):
             "default_listing_type": user.default_filter.capitalize(),
             "show_scores": True,
             "show_bot_accounts": not user.ignore_bots == 1,
-            "show_read_posts": True,
+            "show_read_posts": False if user.hide_read_posts else True,
             },
             "person": {
               "id": user.id,

@@ -10,7 +10,8 @@ from app.api.alpha.utils import get_site, post_site_block, \
                                 get_community_list, get_community, post_community_follow, post_community_block, post_community, put_community, put_community_subscribe, post_community_delete, \
                                 get_user, post_user_block, get_user_unread_count, get_user_replies, post_user_mark_all_as_read, put_user_subscribe, \
                                 get_private_message_list, \
-                                post_upload_image, post_upload_community_image, post_upload_user_image
+                                post_upload_image, post_upload_community_image, post_upload_user_image, \
+                                put_user_save_user_settings
 from app.shared.auth import log_user_in
 
 from flask import current_app, jsonify, request
@@ -548,6 +549,19 @@ def put_alpha_user_subscribe():
         return jsonify({"error": str(ex)}), 400
 
 
+# currently handles hide_nsfw, hide_read_posts, and user.about 
+@bp.route('/api/alpha/user/save_user_settings', methods=['PUT'])
+def put_alpha_user_save_user_settings():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(put_user_save_user_settings(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
 # Upload
 @bp.route('/api/alpha/upload/image', methods=['POST'])
 def post_alpha_upload_image():
@@ -656,7 +670,6 @@ def alpha_chat():
 @bp.route('/api/alpha/user/delete_account', methods=['POST'])                     # Not available in app
 @bp.route('/api/alpha/user/password_reset', methods=['POST'])                     # Not available in app
 @bp.route('/api/alpha/user/password_change', methods=['POST'])                    # Not available in app
-@bp.route('/api/alpha/user/save_user_settings', methods=['PUT'])                  # Stage 2
 @bp.route('/api/alpha/user/change_password', methods=['PUT'])                     # Stage 2
 @bp.route('/api/alpha/user/report_count', methods=['GET'])                        # Stage 2
 @bp.route('/api/alpha/user/verify_email', methods=['POST'])                       # Admin function. No plans to implement
