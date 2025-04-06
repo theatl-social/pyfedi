@@ -34,6 +34,9 @@ def vote_for_post(post_id: int, vote_direction, src, auth=None):
 
     undo = post.vote(user, vote_direction)
 
+    # mark the post as read for the user
+    user.mark_post_as_read(post)
+
     task_selector('vote_for_post', user_id=user.id, post_id=post_id, vote_to_undo=undo, vote_direction=vote_direction)
 
     if src == SRC_API:
