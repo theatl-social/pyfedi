@@ -833,8 +833,6 @@ def send_deletion_requests(user_id):
             if instance.inbox and instance.online() and instance.id != 1: # instance id 1 is always the current instance
                 send_post_request(instance.inbox, payload, user.private_key, f"{user.public_url()}#main-key")
 
-        sleep(5)
-
         user.banned = True
         user.deleted = True
 
@@ -856,7 +854,6 @@ def ban_purge_profile(actor):
             flash(_('You cannot purge yourself.'), 'error')
         else:
             user.banned = True
-            # user.deleted = True # DO NOT set user.deleted until the deletion of their posts has been federated
             db.session.commit()
 
             # todo: empty relevant caches
