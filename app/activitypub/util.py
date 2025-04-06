@@ -253,11 +253,13 @@ def instance_allowed(host: str) -> bool:
 def find_actor_or_create(actor: str, create_if_not_found=True, community_only=False, feed_only=False) -> Union[User, Community, Feed, None]:
     """Find an actor by URL or webfinger, optionally creating it if not found.
     """
-    from app.activitypub.actor import find_actor_by_url
+    from app.activitypub.actor import find_actor_by_url, validate_remote_actor
     if isinstance(actor, dict):
         actor = actor['id']
 
     actor_url = actor.strip()
+    if not validate_remote_actor(actor_url):
+        return None
 
     # Find the actor
     actor_obj = find_actor_by_url(actor_url, community_only, feed_only)
