@@ -80,9 +80,10 @@ def send_post_request(uri: str, body: dict | None, private_key: str, key_id: str
                       method: Literal["get", "post"] = "post", timeout: int = 10):
     if current_app.debug:
         # When in debug, we'll create a task instance but call it directly
-        task = post_request()
-        return task(uri=uri, body=body, private_key=private_key, key_id=key_id,
-                    content_type=content_type, method=method, timeout=timeout)
+        return post_request.apply(args=(), kwargs={
+            'uri': uri, 'body': body, 'private_key': private_key, 'key_id': key_id,
+            'content_type': content_type, 'method': method, 'timeout': timeout
+        }).get()
     else:
         post_request.delay(uri=uri, body=body, private_key=private_key, key_id=key_id, content_type=content_type, method=method, timeout=timeout)
         return True
