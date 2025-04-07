@@ -1,3 +1,4 @@
+from app import db
 from app.api.alpha.views import post_view, post_report_view
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
 from app.constants import *
@@ -7,7 +8,7 @@ from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, 
 from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, recently_upvoted_posts
 
 from datetime import timedelta
-from sqlalchemy import desc
+from sqlalchemy import desc, text
 
 
 def get_post_list(auth, data, user_id=None, search_type='Posts'):
@@ -26,7 +27,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts'):
     # get the user to check if the user has hide_read posts set later down the function
     if user_id:
         user = User.query.get(user_id)
-    
+
     # user_id: the logged in user
     # person_id: the author of the posts being requested
 
@@ -90,12 +91,8 @@ def get_post_list(auth, data, user_id=None, search_type='Posts'):
         upvoted_post_ids = recently_upvoted_posts(user_id)
         posts = posts.filter(Post.id.in_(upvoted_post_ids), Post.user_id != user_id)
     elif user_id and user.hide_read_posts:
-        u_rp = user.read_post.all()
-        u_rp_ids = []
-        for p in u_rp:
-            u_rp_ids.append(p.id)
-        for p_id in u_rp_ids:
-            posts = posts.filter(Post.id != p_id)
+        u_rp_ids = db.session.execute(text('SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id'), {"user_id": user_id}).scalars()
+        posts = posts.filter(Post.id.not_in(u_rp_ids))
 
     if sort == "hot":
         posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
