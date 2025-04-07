@@ -93,7 +93,7 @@ class RetryLater(Exception):
     ...
 
 
-@celery.task(bind=True, autoretry_for=(RetryLater,), retry_backoff=60, max_retries=20, retry_backoff_max=15360, retry_jitter=True)
+@celery.task(bind=True, autoretry_for=(RetryLater,), retry_backoff=60, max_retries=2, retry_backoff_max=15360, retry_jitter=True)
 def post_request(self, uri: str, body: dict | None, private_key: str, key_id: str, content_type: str = "application/activity+json",
         method: Literal["get", "post"] = "post", timeout: int = 10,):
     if '@context' not in body:  # add a default json-ld context if necessary
