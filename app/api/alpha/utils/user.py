@@ -188,14 +188,13 @@ def put_user_save_user_settings(auth, data):
         user.hide_read_posts = True
 
     if isinstance(about, str):
-        from app.utils import piefed_markdown_to_lemmy_markdown, markdown_to_html
-        user.about = piefed_markdown_to_lemmy_markdown(about)
+        from app.utils import markdown_to_html
+        user.about = about
         user.about_html = markdown_to_html(about)
 
     # save the change to the db
-    db.session.add(user)
     db.session.commit()
 
-    user_json = user_view(user=user, variant=6)
+    user_json = {"my_user": user_view(user=user, variant=6)}
     return user_json
 
