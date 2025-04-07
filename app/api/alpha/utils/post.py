@@ -1,7 +1,7 @@
 from app.api.alpha.views import post_view, post_report_view
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
 from app.constants import *
-from app.models import Post, PostVote, Community, CommunityMember, utcnow
+from app.models import Post, PostVote, Community, CommunityMember, utcnow, User
 from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, subscribe_post, make_post, edit_post, \
                             delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post
 from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, recently_upvoted_posts
@@ -23,6 +23,10 @@ def get_post_list(auth, data, user_id=None, search_type='Posts'):
     if auth:
         user_id = authorise_api_user(auth)
 
+    # get the user to check if the user has hide_read posts set later down the function
+    if user_id:
+        user = User.query.get(user_id)
+    
     # user_id: the logged in user
     # person_id: the author of the posts being requested
 
@@ -85,6 +89,13 @@ def get_post_list(auth, data, user_id=None, search_type='Posts'):
     if user_id and liked_only:
         upvoted_post_ids = recently_upvoted_posts(user_id)
         posts = posts.filter(Post.id.in_(upvoted_post_ids), Post.user_id != user_id)
+    elif user_id and user.hide_read_posts:
+        u_rp = user.read_post.all()
+        u_rp_ids = []
+        for p in u_rp:
+            u_rp_ids.append(p.id)
+        for p_id in u_rp_ids:
+            posts = posts.filter(Post.id != p_id)
 
     if sort == "hot":
         posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
