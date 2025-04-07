@@ -166,6 +166,48 @@ def user_view(user: User | int, variant, stub=False, user_id=None):
         v5 = {'person_view': user_view(user=user, variant=2, user_id=user_id)}
         return v5
 
+    # Variant 6 - User Settings - api/user.dart saveUserSettings
+    if variant == 6:
+        # import here to avoid circular import error
+        from app.api.alpha.utils.site import blocked_communities_view, blocked_instances_view, blocked_people_view
+        v6 = {}
+        my_user = {
+          "local_user_view": {
+            "local_user": {
+            "show_nsfw": not user.hide_nsfw == 1,
+            "default_sort_type": user.default_sort.capitalize(),
+            "default_listing_type": user.default_filter.capitalize(),
+            "show_scores": True,
+            "show_bot_accounts": not user.ignore_bots == 1,
+            "show_read_posts": True,
+            },
+            "person": {
+              "id": user.id,
+              "user_name": user.user_name,
+              "banned": user.banned,
+              "published": user.created.isoformat() + 'Z',
+              "actor_id": user.public_url()[8:],
+              "local": True,
+              "deleted": user.deleted,
+              "bot": user.bot,
+              "instance_id": 1
+            },
+            "counts": {
+              "person_id": user.id,
+              "post_count": user.post_count,
+             "comment_count": user.post_reply_count
+            }
+          },
+          "moderates": [], # moderating_communities(user),
+          "follows": [], # joined_communities(user),
+          "community_blocks": blocked_communities_view(user),
+          "instance_blocks": blocked_instances_view(user),
+          "person_blocks": blocked_people_view(user),
+          "discussion_languages": []        # TODO
+        }
+        v6['my_user'] = my_user
+        return v6
+
 
 def community_view(community: Community | int | str, variant, stub=False, user_id=None):
     if isinstance(community, int):
