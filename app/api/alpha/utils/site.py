@@ -95,12 +95,12 @@ def get_site(auth):
         my_user = {
           "local_user_view": {
             "local_user": {
-            "show_nsfw": not user.hide_nsfw == 1,
-            "default_sort_type": user.default_sort.capitalize(),
-            "default_listing_type": user.default_filter.capitalize(),
-            "show_scores": True,
-            "show_bot_accounts": not user.ignore_bots == 1,
-            "show_read_posts": False if user.hide_read_posts else True,
+              "show_nsfw": not user.hide_nsfw == 1,
+              "default_sort_type": user.default_sort.capitalize(),
+              "default_listing_type": user.default_filter.capitalize(),
+              "show_scores": True,
+              "show_bot_accounts": not user.ignore_bots == 1,
+              "show_read_posts": not user.hide_read_posts == True
             },
             "person": {
               "id": user.id,
