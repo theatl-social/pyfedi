@@ -28,11 +28,11 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         form.user_name.data = form.user_name.data.strip()
-        user = User.query.filter(func.lower(User.user_name) == func.lower(form.user_name.data)).filter_by(ap_id=None).first()
+        user = User.query.filter(func.lower(User.user_name) == func.lower(form.user_name.data)).filter_by(ap_id=None).filter_by(deleted=False).first()
         if user is None:
-            user = User.query.filter_by(email=form.user_name.data, ap_id=None).first()
+            user = User.query.filter_by(email=form.user_name.data, ap_id=None, deleted=False).first()
         if user is None:    # ap_profile_id is always lower case so compare it with what_they_typed.lower()
-            user = User.query.filter(User.ap_profile_id.ilike(f"https://{current_app.config['SERVER_NAME']}/u/{form.user_name.data.lower()}")).first()
+            user = User.query.filter(User.ap_profile_id.ilike(f"https://{current_app.config['SERVER_NAME']}/u/{form.user_name.data.lower()}"), User.deleted == False).first()
         if user is None:
             flash(_('No account exists with that user name.'), 'error')
             return redirect(url_for('auth.login'))
@@ -209,7 +209,7 @@ def reset_password_request():
                 form.email.data.lower().startswith('noc@'):
             flash(_('Sorry, you cannot use that email address.'), 'error')
         else:
-            user = User.query.filter(func.lower(User.email) == func.lower(form.email.data)).filter_by(ap_id=None).first()
+            user = User.query.filter(func.lower(User.email) == func.lower(form.email.data)).filter_by(ap_id=None, deleted=False).first()
             if user:
                 send_password_reset_email(user)
                 flash(_('Check your email for a link to reset your password.'))
