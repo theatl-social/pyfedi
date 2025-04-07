@@ -8,7 +8,7 @@ from sqlalchemy.sql.operators import or_, and_
 from ua_parser import parse as uaparse
 
 from app import db, cache
-from app.activitypub.util import users_total, active_month, local_posts, local_communities
+from app.activitypub.util import users_total, active_month, local_posts, local_communities, is_activitypub_request, lemmy_site_data
 from app.activitypub.signature import default_context, LDSignature
 from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR
 from app.email import send_email
@@ -805,12 +805,25 @@ def list_feeds():
     if len(public_feeds) > 0:
         server_has_feeds = True
 
-    # render the page
-    return render_template('feed/public_feeds.html', server_has_feeds=server_has_feeds, public_feeds_list=public_feeds,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+    # respond with json collection of public feeds for curl/AP requests
+    if is_activitypub_request():
+        site_data = lemmy_site_data()
+        feeds_list = []
+        for f in public_feeds:
+            if f['feed'].is_local():
+                feeds_list.append(f'https://{current_app.config['SERVER_NAME']}/f/{f['feed'].machine_name}')
+        site_data['site_view']['public_feeds'] = feeds_list
+        site_data['site_view']['counts']['public_feeds'] = len(feeds_list)
+        resp = jsonify(site_data)
+        resp.content_type = 'application/activity+json'
+        return resp
+    else:
+        # render the page
+        return render_template('feed/public_feeds.html', server_has_feeds=server_has_feeds, public_feeds_list=public_feeds,
+                            moderating_communities=moderating_communities(current_user.get_id()),
+                            joined_communities=joined_communities(current_user.get_id()),
+                            menu_topics=menu_topics(),
+                            menu_instance_feeds=menu_instance_feeds(), 
+                            menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                            menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                            )
