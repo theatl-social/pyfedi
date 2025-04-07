@@ -32,11 +32,11 @@ def unsubscribe_from_everything_then_delete_task(user_id):
 
         # federate deletion of account
         if user.is_local():
-            instances = Instance.query.filter(Instance.dormant == False).all()
+            instances = Instance.query.filter(Instance.dormant == False, Instance.gone_forever == False).all()
             payload = {
                 "@context": default_context(),
                 "actor": user.public_url(),
-                "id": f"{user.public_url()}#delete",
+                "id": f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
                 "object": user.public_url(),
                 "to": [
                     "https://www.w3.org/ns/activitystreams#Public"
@@ -46,8 +46,6 @@ def unsubscribe_from_everything_then_delete_task(user_id):
             for instance in instances:
                 if instance.inbox and instance.online() and instance.id != 1:  # instance id 1 is always the current instance
                     send_post_request(instance.inbox, payload, user.private_key, f"{user.public_url()}#main-key")
-
-        sleep(5)
 
         user.banned = True
         user.deleted = True
