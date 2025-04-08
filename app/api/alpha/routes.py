@@ -8,10 +8,9 @@ from app.api.alpha.utils import get_site, post_site_block, \
                                 get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, put_reply, post_reply_mark_as_read, get_reply, \
                                 post_reply_delete, post_reply_report, post_reply_remove, \
                                 get_community_list, get_community, post_community_follow, post_community_block, post_community, put_community, put_community_subscribe, post_community_delete, \
-                                get_user, post_user_block, get_user_unread_count, get_user_replies, post_user_mark_all_as_read, put_user_subscribe, \
+                                get_user, post_user_block, get_user_unread_count, get_user_replies, post_user_mark_all_as_read, put_user_subscribe, put_user_save_user_settings, \
                                 get_private_message_list, \
-                                post_upload_image, post_upload_community_image, post_upload_user_image, \
-                                put_user_save_user_settings
+                                post_upload_image, post_upload_community_image, post_upload_user_image
 from app.shared.auth import log_user_in
 
 from flask import current_app, jsonify, request
