@@ -673,7 +673,12 @@ function setupKeyboardShortcuts() {
                 }
             } else if (event.key === 'Enter') {
                 if(currentPost && document.activeElement.tagName !== 'a') {
-                    currentPost.querySelector('.post_teaser_title_a').click();
+                    var target_element = currentPost.querySelector('.post_teaser_title_a');
+                    if(target_element == null && (document.activeElement.classList.contains('upvote_button') || document.activeElement.classList.contains('downvote_button'))) {
+                        target_element = document.activeElement;
+                    }
+                    if(target_element)
+                        target_element.click();
                     didSomething = true;
                 }
             } else if (event.key === 'j') {
@@ -735,7 +740,7 @@ function setupKeyboardShortcuts() {
         }
     });
 
-    const votableElements = document.querySelectorAll('.post_teaser, .post_type_image, .post_type_normal');
+    const votableElements = document.querySelectorAll('.post_teaser, .post_full');
     votableElements.forEach(votable => {
         votable.addEventListener('mouseover', event => {
             currentPost = event.currentTarget;
