@@ -773,6 +773,20 @@ def instance_banned(domain: str) -> bool:   # see also activitypub.util.instance
     return any(pattern.match(domain) for pattern in regex_patterns)
 
 
+@cache.memoize(timeout=150)
+def instance_online(domain: str) -> bool:
+    if domain is None or domain == '':
+        return False
+    domain = domain.lower().strip()
+    if 'https://' in domain or 'http://' in domain:
+        domain = urlparse(domain).hostname
+    instance = Instance.query.filter_by(domain=domain).first()
+    if instance is not None:
+        return instance.online()
+    else:
+        return False
+
+
 def user_cookie_banned() -> bool:
     cookie = request.cookies.get('sesion', None)
     return cookie is not None

@@ -27,7 +27,7 @@ from app.post.routes import post_delete_post
 from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
     shorten_string, get_request, blocked_communities, gibberish, get_request_instance, \
     instance_banned, recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, download_defeds, \
-    get_setting, set_setting, get_redis_connection
+    get_setting, set_setting, get_redis_connection, instance_online
 
 
 def register(app):
@@ -174,6 +174,10 @@ def register(app):
     @app.cli.command('daily-maintenance')
     def daily_maintenance():
         with app.app_context():
+            # Remove notifications older than 90 days
+            db.session.query(Notification).filter(Notification.created_at < utcnow() - timedelta(days=90)).delete()
+            db.session.commit()
+
             # Remove old content from communities
             print(f'Start removing old content from communities {datetime.now()}')
             communities = Community.query.filter(Community.content_retention > 0).all()
@@ -183,7 +187,7 @@ def register(app):
                 for post in old_posts:
                     post_delete_post(community, post, post.user_id, federate_all_communities=False)
                     community.post_count -= 1
-
+            db.session.commit()
 
             # Ensure accurate count of posts associated with each hashtag
             print(f'Ensure accurate count of posts associated with each hashtag {datetime.now()}')
@@ -417,19 +421,26 @@ def register(app):
             set_setting('send-queue-running', True)
 
             # Check size of redis memory. Abort if > 200 MB used
-            redis = get_redis_connection()
-            if redis and redis.memory_stats()['total.allocated'] > 200000000:
-                print('Redis memory is quite full - stopping send queue to avoid making it worse.')
+            try:
+                redis = get_redis_connection()
+                if redis and redis.memory_stats()['total.allocated'] > 200000000:
+                    print('Redis memory is quite full - stopping send queue to avoid making it worse.')
+                    set_setting('send-queue-running', False)
+                    return
+            except:
+                print('Could not connect to redis - cancelling')
+                set_setting('send-queue-running', False)
                 return
 
             to_be_deleted = []
             try:
                 # Send all waiting Activities that are due to be sent
                 for to_send in SendQueue.query.filter(SendQueue.send_after < utcnow()):
-                    if to_send.retries <= to_send.max_retries:
-                        send_post_request(to_send.destination, json.loads(to_send.payload), to_send.private_key, to_send.actor,
-                                          retries=to_send.retries + 1)
-                    to_be_deleted.append(to_send.id)
+                    if instance_online(to_send.destination_domain):
+                        if to_send.retries <= to_send.max_retries:
+                            send_post_request(to_send.destination, json.loads(to_send.payload), to_send.private_key, to_send.actor,
+                                              retries=to_send.retries + 1)
+                        to_be_deleted.append(to_send.id)
                 # Remove them once sent - send_post_request will have re-queued them if they failed
                 if len(to_be_deleted):
                     db.session.execute(text('DELETE FROM "send_queue" WHERE id IN :to_be_deleted'), {'to_be_deleted': tuple(to_be_deleted)})

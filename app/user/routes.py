@@ -888,10 +888,6 @@ def ban_purge_profile(actor):
 @bp.route('/notifications', methods=['GET', 'POST'])
 @login_required
 def notifications():
-    """Remove notifications older than 90 days"""
-    db.session.query(Notification).filter(
-        Notification.created_at < utcnow() - timedelta(days=90)).delete()
-    db.session.commit()
 
     # Update unread notifications count, just to be sure
     current_user.unread_notifications = Notification.query.filter_by(user_id=current_user.id, read=False).count()
