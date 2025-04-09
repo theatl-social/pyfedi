@@ -7,6 +7,7 @@ import random
 import urllib
 from collections import defaultdict
 from datetime import datetime, timedelta, date
+from json import JSONDecodeError
 from time import sleep
 from typing import List, Literal, Union
 
@@ -157,7 +158,10 @@ def get_setting(name: str, default=None):
     if setting is None:
         return default
     else:
-        return json.loads(setting.value)
+        try:
+            return json.loads(setting.value)
+        except JSONDecodeError:
+            return default
 
 
 # retrieves arbitrary object from persistent key-value store

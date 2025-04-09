@@ -15,18 +15,19 @@ from app import db
 import click
 import os
 
-from app.activitypub.signature import RsaKeys
+from app.activitypub.signature import RsaKeys, send_post_request
 from app.activitypub.util import find_actor_or_create, extract_domain_and_actor
 from app.auth.util import random_token
 from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY
 from app.email import send_email
 from app.models import Settings, BannedInstances, Role, User, RolePermission, Domain, ActivityPubLog, \
     utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply, Language, \
-    Tag, InstanceRole, Community, DefederationSubscription
+    Tag, InstanceRole, Community, DefederationSubscription, SendQueue
 from app.post.routes import post_delete_post
 from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
     shorten_string, get_request, blocked_communities, gibberish, get_request_instance, \
-    instance_banned, recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, download_defeds
+    instance_banned, recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, download_defeds, \
+    get_setting, set_setting, get_redis_connection
 
 
 def register(app):
@@ -404,15 +405,40 @@ def register(app):
                 db.session.rollback()
                 current_app.logger.error(f"Error in daily maintenance: {e}")
 
-                                # remove any InstanceRoles that are no longer part of instance-data['admins']
-                                #for instance_admin in InstanceRole.query.filter_by(instance_id=instance.id):
-                                #    if instance_admin.user.profile_id() not in admin_profile_ids:
-                                #        db.session.query(InstanceRole).filter(
-                                #            InstanceRole.user_id == instance_admin.user.id,
-                                #            InstanceRole.instance_id == instance.id,
-                                #            InstanceRole.role == 'admin').delete()
-                                #        db.session.commit()
             print(f'Done {datetime.now()}')
+
+    @app.cli.command('send-queue')
+    def send_queue():
+        with app.app_context():
+            # Semaphore to avoid parallel runs of this task
+            if get_setting('send-queue-running', False):
+                print('Send queue is still running - stopping this process to avoid duplication.')
+                return
+            set_setting('send-queue-running', True)
+
+            # Check size of redis memory. Abort if > 200 MB used
+            redis = get_redis_connection()
+            if redis and redis.memory_stats()['total.allocated'] > 200000000:
+                print('Redis memory is quite full - stopping send queue to avoid making it worse.')
+                return
+
+            to_be_deleted = []
+            try:
+                # Send all waiting Activities that are due to be sent
+                for to_send in SendQueue.query.filter(SendQueue.send_after < utcnow()):
+                    if to_send.retries <= to_send.max_retries:
+                        send_post_request(to_send.destination, json.loads(to_send.payload), to_send.private_key, to_send.actor,
+                                          retries=to_send.retries + 1)
+                    to_be_deleted.append(to_send.id)
+                # Remove them once sent - send_post_request will have re-queued them if they failed
+                if len(to_be_deleted):
+                    db.session.execute(text('DELETE FROM "send_queue" WHERE id IN :to_be_deleted'), {'to_be_deleted': tuple(to_be_deleted)})
+                    db.session.commit()
+            except Exception as e:
+                set_setting('send-queue-running', False)
+                raise e
+            finally:
+                set_setting('send-queue-running', False)
 
     @app.cli.command("spaceusage")
     def spaceusage():
