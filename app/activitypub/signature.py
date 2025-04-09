@@ -120,7 +120,7 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str, con
                     fix_local_community_membership(uri, private_key)
                 else:
                     current_app.logger.error(f'Response code for post attempt to {uri} was ' +
-                                         str(result.status_code) + ' ' + result.text)
+                                         str(result.status_code) + ' ' + result.text[:50])
             log.exception_message += uri
             if result.status_code == 202:
                 log.exception_message += ' 202'
