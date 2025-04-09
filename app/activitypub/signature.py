@@ -114,8 +114,8 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str, con
                 log.exception_message = f'{result.status_code}: {result.text:.100}' + ' - '
                 if 'DOCTYPE html' in result.text:
                     log.result = 'ignored'
-                    log.exception_message = f'{result.status_code}: HTML instead of JSON response - '
-                    log.activity_json += result.text
+                    log.exception_message = f'{result.status_code}: HTML instead of JSON response'
+                    #log.activity_json += result.text[]
                 elif 'community_has_no_followers' in result.text:
                     fix_local_community_membership(uri, private_key)
                 else:

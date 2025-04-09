@@ -24,7 +24,8 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
     menu_topics, blocked_communities, \
     permission_required, debug_mode_only, ip_address, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, \
-    feed_tree_public, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, html_to_text
+    feed_tree_public, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, html_to_text, \
+    get_redis_connection
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, read_posts, Feed, FeedItem
 
@@ -676,6 +677,16 @@ def test_email():
                'This is a test email. If you received this, email sending is working!',
                '<p>This is a test email. If you received this, email sending is working!</p>')
     return f'Email sent to {email}.'
+
+
+@bp.route('/test_redis')
+@debug_mode_only
+def test_redis():
+    redis = get_redis_connection()
+    if redis and redis.memory_stats():
+        return 'Redis connection is ok'
+    else:
+        return 'Redis error'
 
 
 @bp.route('/find_voters')
