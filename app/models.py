@@ -489,6 +489,14 @@ class Community(db.Model):
     image = db.relationship('File', foreign_keys=[image_id], single_parent=True, cascade="all, delete-orphan")
     languages = db.relationship('Language', lazy='dynamic', secondary=community_language, backref=db.backref('communities', lazy='dynamic'))
 
+    __table_args__ = (
+        db.Index(
+            'idx_community_fts',
+            'search_vector',
+            postgresql_using='gin'
+        ),
+    )
+
     def language_ids(self):
         return [language.id for language in self.languages.all()]
 
@@ -1220,6 +1228,24 @@ class Post(db.Model):
     # read_post is the corresponding User object variable
     read_by = db.relationship('User', secondary=read_posts, back_populates='read_post', lazy='dynamic')
 
+    __table_args__ = (
+        db.Index(
+            'ix_post_user_id_not_deleted',
+            'user_id',
+            postgresql_where=db.text('deleted = false')
+        ),
+        db.Index(
+            'ix_post_community_id_not_deleted',
+            'community_id',
+            postgresql_where=db.text('deleted = false')
+        ),
+        db.Index(
+            'idx_post_fts',
+            'search_vector',
+            postgresql_using='gin'
+        ),
+    )
+
     def is_local(self):
         return self.ap_id is None or self.ap_id.startswith('https://' + current_app.config['SERVER_NAME'])
 
@@ -1794,6 +1820,19 @@ class PostReply(db.Model):
     author = db.relationship('User', lazy='joined', foreign_keys=[user_id], single_parent=True, overlaps="post_replies")
     community = db.relationship('Community', lazy='joined', overlaps='replies', foreign_keys=[community_id])
     language = db.relationship('Language', foreign_keys=[language_id], lazy='joined')
+
+    __table_args__ = (
+        db.Index(
+            'ix_post_reply_community_id_not_deleted',
+            'community_id',
+            postgresql_where=db.text('deleted = false')
+        ),
+        db.Index(
+            'idx_post_reply_fts',
+            'search_vector',
+            postgresql_using='gin'
+        ),
+    )
 
     @classmethod
     def new(cls, user: User, post: Post, in_reply_to, body, body_html, notify_author, language_id, request_json: dict = None, announce_id=None):
@@ -2737,6 +2776,20 @@ class FeedJoinRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     feed_id = db.Column(db.Integer, db.ForeignKey('feed.id'), index=True)
+
+
+class SendQueue(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    destination_domain = db.Column(db.String(255), index=True)
+    destination = db.Column(db.String(1024))
+    actor = db.Column(db.String(255), index=True)
+    private_key = db.Column(db.String(2000))
+    payload = db.Column(db.Text)
+    retries = db.Column(db.Integer, default=0)
+    max_retries = db.Column(db.Integer, default=20)
+    retry_reason = db.Column(db.String(255))
+    created = db.Column(db.DateTime, default=utcnow)
+    send_after = db.Column(db.DateTime, default=utcnow, index=True)
 
 
 def _large_community_subscribers() -> float:

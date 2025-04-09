@@ -8,7 +8,7 @@ from sqlalchemy.sql.operators import or_, and_
 from ua_parser import parse as uaparse
 
 from app import db, cache
-from app.activitypub.util import users_total, active_month, local_posts, local_communities
+from app.activitypub.util import users_total, active_month, local_posts, local_communities, find_actor_or_create
 from app.activitypub.signature import default_context, LDSignature
 from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR
 from app.email import send_email
