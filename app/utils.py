@@ -259,13 +259,15 @@ def mime_type_using_head(url):
         return ''
 
 
+allowed_tags = ['p', 'strong', 'a', 'ul', 'ol', 'li', 'em', 'blockquote', 'cite', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre',
+                'code', 'img', 'details', 'summary', 'table', 'tr', 'td', 'th', 'tbody', 'thead', 'hr', 'span', 'small', 'sub', 'sup',
+                's']
+
 # sanitise HTML using an allow list
 def allowlist_html(html: str, a_target='_blank') -> str:
     if html is None or html == '':
         return ''
-    allowed_tags = ['p', 'strong', 'a', 'ul', 'ol', 'li', 'em', 'blockquote', 'cite', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre',
-                    'code', 'img', 'details', 'summary', 'table', 'tr', 'td', 'th', 'tbody', 'thead', 'hr', 'span', 'small', 'sub', 'sup',
-                    's']
+
     # Parse the HTML using BeautifulSoup
     soup = BeautifulSoup(html, 'html.parser')
 
@@ -357,10 +359,30 @@ def allowlist_html(html: str, a_target='_blank') -> str:
     return clean_html
 
 
+def escape_non_html_angle_brackets(text: str) -> str:
+    # This function finds all <...> in the text and escapes them unless they're valid HTML tags. To handle situations like https://ani.social/comment/9666667
+    def replacer(match):
+        tag_content = match.group(1).strip().lower()    # Get the text inside the angle brackets
+        # Extract the tag name (ignores any attributes or slashes)
+        tag_name = re.split(r'\s|/', tag_content)[0]
+        # If it's a known HTML tag, leave it alone
+        if tag_name in allowed_tags:
+            return match.group(0)
+        else:
+            # Otherwise, escape it to avoid being interpreted as HTML
+            return f"&lt;{match.group(1)}&gt;"
+    # Match anything that looks like <...> but not nested or malformed
+    return re.sub(r'<([^<>]+?)>', replacer, text)
+
+
 # use this for Markdown irrespective of origin, as it can deal with both soft break newlines ('\n' used by PieFed) and hard break newlines ('  \n' or ' \\n')
 # ' \\n' will create <br /><br /> instead of just <br />, but hopefully that's acceptable.
 def markdown_to_html(markdown_text, anchors_new_tab=True) -> str:
     if markdown_text:
+
+        # Escape <...> if it’s not a real HTML tag
+        markdown_text = escape_non_html_angle_brackets(markdown_text)   # To handle situations like https://ani.social/comment/9666667
+
         try:
             raw_html = markdown2.markdown(markdown_text,
                         extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True,

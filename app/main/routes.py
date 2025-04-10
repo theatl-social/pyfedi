@@ -588,6 +588,14 @@ def replay_inbox():
 @debug_mode_only
 def test():
 
+    markdown = """What light novels have you read in the past week? Something good? Bad? Let us know about it. 
+
+And if you want to add your score to the database to help your fellow Bookworms find new reading materials you can use the following template:
+
+><Book Title and Volume> Review Goes Here [5/10]"""
+
+    return markdown_to_html(markdown)
+
 
     return ip_address()
 
