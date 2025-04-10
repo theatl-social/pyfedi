@@ -461,6 +461,12 @@ One per day there are some maintenance tasks that PieFed needs to do:
 5 2 * * * rimu cd /home/rimu/pyfedi && /home/rimu/pyfedi/daily.sh
 ```
 
+Every few minutes PieFed will retry federation sending attempts that failed previously:
+
+```
+*/5 * * * * rimu cd /home/rimu/pyfedi && /home/rimu/pyfedi/send_queue.sh
+```
+
 If celery is hanging occasionally, put this script in /etc/cron.hourly:
 
 ```

@@ -338,7 +338,7 @@ def register(app):
                                         break
                                     else:
                                         instance.failures += 1
-                            elif nodeinfo.status_code >= 400:
+                            elif nodeinfo.status_code >= 300:
                                 current_app.logger.info(f"{instance.domain} has no well-known/nodeinfo response")
                                 instance.failures += 1
                         except Exception:
@@ -359,7 +359,7 @@ def register(app):
                                     instance.failures = 0
                                     instance.dormant = False
                                     instance.gone_forever = False
-                            elif node.status_code >= 400:
+                            elif node.status_code >= 300:
                                 instance.nodeinfo_href = None
                                 instance.failures += 1
                                 instance.most_recent_attempt = utcnow()
