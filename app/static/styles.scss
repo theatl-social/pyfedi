@@ -497,6 +497,12 @@ div.navbar {
     .post_teaser_clickable {
       cursor: pointer;
     }
+
+    .post_teaser_image_preview {
+      img.blur {
+        filter: blur(3px);
+      }
+    }
   }
 }
 
@@ -656,6 +662,10 @@ time {
 
     .masonry_thumb a, .masonry_thumb a:active {
       border: none;
+
+      img.blur {
+        filter: blur(3px);
+      }
     }
 
     .masonry_info {
@@ -1747,7 +1757,7 @@ form {
 
 .post_type_image.reported, .post_teaser_body.reported, .masonry_thumb.reported {
   img {
-    filter: grayscale(100%) blur(6px);
+    filter: grayscale(100%) blur(6px)!important;
   }
 }
 
