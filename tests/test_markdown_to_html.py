@@ -61,9 +61,15 @@ And if you want to add your score to the database to help your fellow Bookworms 
 ><Book Title and Volume> Review Goes Here [5/10]
 """
         result = markdown_to_html(markdown)
-        print("Result: " + result)
+        # print("Result: " + result)
         self.assertTrue("&lt;Book Title and Volume&gt;" in result)
         self.assertTrue("<blockquote>" in result)
+
+    def test_disallowed_tags(self):
+        """Test that disallowed tags are removed"""
+        markdown = "Paragraph with <script>alert('xss')</script> script."
+        result = markdown_to_html(markdown)
+        self.assertEqual(result, "<p>Paragraph with &lt;script&gt;alert('xss')&lt;/script&gt; script.</p>\n")
         
 if __name__ == '__main__':
     unittest.main()
