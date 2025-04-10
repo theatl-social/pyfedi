@@ -178,6 +178,10 @@ def register(app):
             db.session.query(Notification).filter(Notification.created_at < utcnow() - timedelta(days=90)).delete()
             db.session.commit()
 
+            # Remove SendQueue older than 7 days
+            db.session.query(SendQueue).filter(SendQueue.created < utcnow() - timedelta(days=7)).delete()
+            db.session.commit()
+
             # Remove old content from communities
             print(f'Start removing old content from communities {datetime.now()}')
             communities = Community.query.filter(Community.content_retention > 0).all()
