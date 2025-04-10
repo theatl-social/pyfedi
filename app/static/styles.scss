@@ -1745,6 +1745,12 @@ form {
   background-color: antiquewhite;
 }
 
+.post_type_image.reported, .post_teaser_body.reported, .masonry_thumb.reported {
+  img {
+    filter: grayscale(100%) blur(6px);
+  }
+}
+
 .dropdown-header {
   color: black;
 }

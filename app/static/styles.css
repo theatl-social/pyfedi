@@ -2043,6 +2043,10 @@ form h5 {
   background-color: antiquewhite;
 }
 
+.post_type_image.reported img, .post_teaser_body.reported img, .masonry_thumb.reported img {
+  filter: grayscale(100%) blur(6px);
+}
+
 .dropdown-header {
   color: black;
 }
