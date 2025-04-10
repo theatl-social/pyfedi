@@ -24,7 +24,7 @@ import math
 
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER, \
     SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER, NOTIF_COMMUNITY, NOTIF_TOPIC, NOTIF_POST, NOTIF_REPLY, \
-    ROLE_ADMIN, ROLE_STAFF, NOTIF_FEED
+    ROLE_ADMIN, ROLE_STAFF, NOTIF_FEED, NOTIF_DEFAULT
 
 
 # datetime.utcnow() is depreciated in Python 3.12 so it will need to be swapped out eventually
@@ -2353,6 +2353,8 @@ class Notification(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)       # who the notification should go to
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'))     # the person who caused the notification to happen
     created_at = db.Column(db.DateTime, default=utcnow)
+    notif_type = db.Column(db.Integer, default=NOTIF_DEFAULT)
+
 
 
 class Report(db.Model):
