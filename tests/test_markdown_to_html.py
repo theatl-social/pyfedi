@@ -57,6 +57,12 @@ class TestMarkdownToHtml(unittest.TestCase):
         markdown = "Normal text `code block > something else` normal text again"
         result = markdown_to_html(markdown)
         self.assertEqual(result, "<p>Normal text <code>code block &gt; something else</code> normal text again</p>\n")
+
+    def test_gt_lt_in_code_block(self):
+        """Test usage of angle brackets in large code block"""
+        markdown = "Normal text\n\n```\n<html>\n```\n\nnormal text again"
+        result = markdown_to_html(markdown)
+        self.assertEqual(result, "<p>Normal text</p>\n<pre><code>&lt;html&gt;\n</code></pre>\n<p>normal text again</p>\n")
         
     def test_complex_markdown_with_angle_brackets(self):
         """Test a more complex markdown sample with angle brackets"""

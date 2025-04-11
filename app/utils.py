@@ -360,19 +360,34 @@ def allowlist_html(html: str, a_target='_blank') -> str:
 
 
 def escape_non_html_angle_brackets(text: str) -> str:
-    # This function finds all <...> in the text and escapes them unless they're valid HTML tags. To handle situations like https://ani.social/comment/9666667
-    def replacer(match):
-        tag_content = match.group(1).strip().lower()    # Get the text inside the angle brackets
-        # Extract the tag name (ignores any attributes or slashes)
+    # Step 1: Extract inline and block code, replacing with placeholders
+    code_snippets = []
+
+    def store_code(match):
+        code_snippets.append(match.group(0))
+        return f"__CODE_PLACEHOLDER_{len(code_snippets) - 1}__"
+
+    # Fenced code blocks (```...```)
+    text = re.sub(r'```[\s\S]*?```', store_code, text)
+    # Inline code (`...`)
+    text = re.sub(r'`[^`\n]+`', store_code, text)
+
+    # Step 2: Escape <...> unless they look like valid HTML tags
+    def escape_tag(match):
+        tag_content = match.group(1).strip().lower()
         tag_name = re.split(r'\s|/', tag_content)[0]
-        # If it's a known HTML tag, leave it alone
         if tag_name in allowed_tags:
             return match.group(0)
         else:
-            # Otherwise, escape it to avoid being interpreted as HTML
             return f"&lt;{match.group(1)}&gt;"
-    # Match anything that looks like <...> but not nested or malformed
-    return re.sub(r'<([^<>]+?)>', replacer, text)
+
+    text = re.sub(r'<([^<>]+?)>', escape_tag, text)
+
+    # Step 3: Restore code blocks
+    for i, code in enumerate(code_snippets):
+        text = text.replace(f"__CODE_PLACEHOLDER_{i}__", code)
+
+    return text
 
 
 # use this for Markdown irrespective of origin, as it can deal with both soft break newlines ('\n' used by PieFed) and hard break newlines ('  \n' or ' \\n')
