@@ -76,8 +76,8 @@ class SettingsForm(FlaskForm):
     theme = SelectField(_l('Theme'), coerce=str, render_kw={'class': 'form-select'})
     compact_levels = [
         ('', _l('No')),
-        ('min', _l('Yes')),
-        ('max', _l('YEESSS')),
+        ('compact-min', _l('Yes')),
+        ('compact-min compact-max', _l('YEESSS')),  # this will apply both classes to the body tag
     ]
     compaction = SelectField(_l('Compact UI'), choices=compact_levels, coerce=str, render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Save settings'))
