@@ -74,6 +74,12 @@ class SettingsForm(FlaskForm):
     default_filter = SelectField(_l('Default home filter'), choices=filters, validators=[DataRequired()], coerce=str,
                                  render_kw={'class': 'form-select'})
     theme = SelectField(_l('Theme'), coerce=str, render_kw={'class': 'form-select'})
+    compact_levels = [
+        ('', _l('No')),
+        ('min', _l('Yes')),
+        ('max', _l('YEESSS')),
+    ]
+    compaction = SelectField(_l('Compact UI'), choices=compact_levels, coerce=str, render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Save settings'))
 
 
