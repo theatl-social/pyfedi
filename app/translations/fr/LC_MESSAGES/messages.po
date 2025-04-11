@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: piefed\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-03-17 20:26+1300\n"
-"PO-Revision-Date: 2025-03-26 00:10+0000\n"
+"PO-Revision-Date: 2025-04-11 20:37+0000\n"
 "Last-Translator: snoopy <snoopy@zaclys.net>\n"
 "Language-Team: French <http://translate.piefed.social/projects/piefed/"
 "main-web-app/fr/>\n"
@@ -177,7 +177,7 @@ msgstr "Adresse courriel de contact de l'instance"
 #: app/community/forms.py:85 app/feed/forms.py:25 app/feed/forms.py:57
 #: app/templates/admin/permissions.html:36 app/user/forms.py:147
 msgid "Save"
-msgstr "Publier"
+msgstr "Enregistrer"
 
 #: app/admin/forms.py:27
 msgid "Enable downvotes"
@@ -216,9 +216,8 @@ msgstr ""
 "modérateur·ices"
 
 #: app/admin/forms.py:34
-#, fuzzy
 msgid "Require new accounts to verify their email address"
-msgstr "[PieFed] Veuillez confirmer votre adresse de courriel"
+msgstr "Demandez aux nouveaux comptes de vérifier leur adresse de courriel"
 
 #: app/admin/forms.py:35
 msgid "Open"
@@ -242,12 +241,11 @@ msgstr "Question à poser aux personnes qui demandent un compte"
 
 #: app/admin/forms.py:38
 msgid "Provide a list of topics to subscribe to"
-msgstr ""
+msgstr "Fournissez une liste de rubriques auxquels s'abonner"
 
 #: app/admin/forms.py:39
-#, fuzzy
 msgid "Trump Musk filter setup"
-msgstr "Réglage du filtre de contenu"
+msgstr "Configuration du filtre Trump Musk"
 
 #: app/admin/forms.py:40
 msgid "Block registrations from these referrers (one per line)"
@@ -333,6 +331,8 @@ msgid ""
 "Discard all posts and comments by users with these words in their name "
 "(one per line)"
 msgstr ""
+"Rejeter tous les publications et commentaires des utilisateur·ices avec ces "
+"mots dans leur nom (un par ligne)"
 
 msgid ""
 "Discard all posts and comments by users with these phrases in their bio "
@@ -609,14 +609,13 @@ msgstr "Poids du vote"
 #: app/templates/instance/list_instances.html:20
 #: app/templates/instance/list_instances.html:49
 msgid "Dormant"
-msgstr "En sommeil"
+msgstr "Hors-ligne"
 
 #: app/admin/forms.py:149 app/templates/admin/instances.html:22
 #: app/templates/admin/instances.html:102
 #: app/templates/instance/list_instances.html:21
-#, fuzzy
 msgid "Gone forever"
-msgstr "Éteinte"
+msgstr "Cloturée"
 
 #: app/admin/forms.py:150 app/templates/admin/instances.html:23
 #: app/templates/admin/instances.html:56 app/templates/admin/instances.html:57
@@ -800,7 +799,6 @@ msgstr "Mode de test"
 msgid "Send newsletter"
 msgstr "Envoyer l'infolettre"
 
-
 msgid "Settings saved."
 msgstr "Paramètres enregistrés."
 
@@ -835,15 +833,15 @@ msgstr ""
 "%(parsed_communities_sorted)d communautés lancé en arrière-plan. Vérifiez "
 "admin/activities pour plus d'informations"
 
-#, fuzzy, python-format
+#, python-format
 msgid ""
 "Based on current filters, the subscription process for "
 "%(communities_to_join)d of %(candidate_communities)d communities launched"
 " in background, check admin/activities for details"
 msgstr ""
-"Basé sur les filtres actuels, le processus d'inscriptions pour "
-"%(communities_to_join)d de %(candidate_communities)d des communautés lancé "
-"en arrière-plan, vérifiez admin/activities pour plus d'informations"
+"Sur la base des filtres actuels, le processus d'abonnement pour "
+"%(communities_to_join)d de %(candidate_communities)d communautés a été lancé "
+"en arrière-plan, consultez admin/activités pour plus de détails"
 
 #: app/admin/routes.py:604
 msgid "Ban imports started in a background process."
@@ -867,6 +865,8 @@ msgid ""
 "LOG_ACTIVITYPUB_TO_DB is off so no incoming activities are being logged "
 "to the database."
 msgstr ""
+"LOG_ACTIVITYPUB_TO_DB est désactivé, de sorte qu'aucune activité entrante "
+"n'est enregistrée dans la base de données."
 
 #: app/admin/routes.py:877
 msgid "ActivityPub Log"
@@ -1066,7 +1066,7 @@ msgstr "Les noms d'utilisateur·ice ne peuvent pas contenir d'espaces."
 
 #: app/auth/forms.py:61
 msgid "Maximum password length is 128 characters."
-msgstr ""
+msgstr "La longueur maximale du mot de passe est de 128 caractères."
 
 #: app/auth/forms.py:79
 msgid "Request password reset"
@@ -1101,13 +1101,12 @@ msgid "Choose some topics you are interested in"
 msgstr "Choisissez des rubriques qui vous intéressent"
 
 #: app/auth/onboarding.py:55
-#, fuzzy
 msgid ""
 "You have joined some communities relating to those interests. Find more "
 "on the Topics menu or browse the home page."
 msgstr ""
-"Vous avez rejoint certaines communautés liées à ces intérêts. Trouvez-les"
-" dans le menu \"rubrique\" ou parcourez la page d'accueil."
+"Vous avez rejoint des communautés liées à ces centres d'intérêt. Retrouvez-"
+"les dans le menu \"Rubrique\" ou parcourez la page d'accueil."
 
 #: app/auth/onboarding.py:59
 msgid ""
@@ -1122,6 +1121,8 @@ msgid ""
 "Please join some communities you're interested in and then go to the home"
 " page by clicking on the logo above."
 msgstr ""
+"Rejoignez les communautés qui vous intéressent, puis accédez à la page "
+"d'accueil en cliquant sur le logo ci-dessus."
 
 #: app/auth/routes.py:37 app/auth/routes.py:40 app/shared/auth.py:35
 msgid "No account exists with that user name."
@@ -1417,7 +1418,7 @@ msgstr "Adresse de la communauté"
 #: app/templates/tag/tags.html:29 app/templates/tag/tags_blocked.html:29
 #: app/templates/themes/dillo/base.html:120
 msgid "Search"
-msgstr "›Recherche"
+msgstr "Recherche"
 
 #: app/community/forms.py:111
 msgid "Ban until"
@@ -1448,11 +1449,11 @@ msgstr "Communauté"
 #: app/templates/tag/tags_blocked.html:12
 #: app/templates/tag/tags_blocked.html:21
 msgid "Tags"
-msgstr "Mots-clés"
+msgstr "Mots-clics"
 
 #: app/community/forms.py:122 app/templates/post/post_options.html:23
 msgid "Sticky"
-msgstr "Épinglé"
+msgstr "Épingler"
 
 #: app/community/forms.py:123
 msgid "NSFW"
@@ -1474,9 +1475,8 @@ msgid "Language"
 msgstr "Langue"
 
 #: app/community/forms.py:127
-#, fuzzy
 msgid "Publish"
-msgstr "Flux publics"
+msgstr "Publier"
 
 #: app/community/forms.py:135 app/community/forms.py:153
 msgid "URL"
@@ -1989,12 +1989,11 @@ msgstr "Instances en ligne"
 
 #: app/instance/routes.py:36
 msgid "Dormant instances"
-msgstr "Instances dormantes"
+msgstr "Instances hors-lignes"
 
 #: app/instance/routes.py:39
-#, fuzzy
 msgid "Gone forever instances"
-msgstr "Instances éteintes"
+msgstr "Instances cloturées"
 
 #: app/instance/routes.py:72 app/templates/instance/overview.html:18
 #, fuzzy, python-format
@@ -2201,12 +2200,12 @@ msgstr "%(name)s a été bloqué·e."
 msgid "Posts linking to %(name)s will be hidden."
 msgstr "Les publications liées à %(name)s seront masquées."
 
-#, fuzzy, python-format
+#, python-format
 msgid "%(name)s has been stickied."
 msgstr "%(name)s a été épinglé."
 
 #: app/post/routes.py:1090
-#, fuzzy, python-format
+#, python-format
 msgid "%(name)s has been un-stickied."
 msgstr "%(name)s a été désépinglé."
 
@@ -2254,9 +2253,8 @@ msgid "Comments that have been replied to cannot be purged."
 msgstr "Les réponses aux commentaires ne peuvent pas être purgés."
 
 #: app/post/routes.py:1495 app/post/routes.py:1518
-#, fuzzy
 msgid "Voting Activity"
-msgstr "Activité des votes"
+msgstr "Activité de vote"
 
 msgid "Cross post"
 msgstr "Croix poteau"
@@ -2296,7 +2294,6 @@ msgid "This comment has already been bookmarked"
 msgstr "Ce commentaire est déjà dans vos favoris"
 
 #: app/shared/reply.py:174
-
 msgid "This comment has already been bookmarked"
 msgstr "Ce commentaire est déjà dans vos favoris"
 
@@ -2326,9 +2323,8 @@ msgid "Community is on banned or blocked instance"
 msgstr "La communauté est sur une instance bannie ou bloquée"
 
 #: app/templates/user/_read_posts_nav.html:8
-#, fuzzy
 msgid "Trending now"
-msgstr "En vendette"
+msgstr "En vogue"
 
 #: app/templates/_home_nav.html:3 app/templates/_home_nav.html:12
 #: app/templates/community/_community_nav.html:35
@@ -2381,15 +2377,13 @@ msgid "Active"
 msgstr "Actif"
 
 #: app/templates/_home_nav.html:7 app/templates/_home_nav.html:19
-#, fuzzy
 msgid "Trending in niche communities"
-msgstr "Publications dans les communautés"
+msgstr "En vogue dans les communautés de niche"
 
 #: app/templates/_home_nav.html:7 app/templates/_home_nav.html:20
 #: app/user/forms.py:65
-#, fuzzy
 msgid "Scaled"
-msgstr "Enregistré"
+msgstr "Équilibré"
 
 #: app/templates/_home_nav.html:10 app/templates/themes/dillo/_home_nav.html:1
 #: app/templates/themes/dillo/_home_nav.html:2
@@ -2574,6 +2568,7 @@ msgstr "Pas de filtre"
 #: app/templates/themes/dillo/_view_filter_nav.html:2
 msgid "Post filters: "
 msgstr "Filtres de publication : "
+
 #: app/templates/_view_filter_nav.html:3
 #: app/templates/themes/dillo/_view_filter_nav.html:4
 msgid "Posts from joined communities"
@@ -2593,6 +2588,7 @@ msgstr "Publications dans les communautés populaires"
 #: app/templates/themes/dillo/_view_filter_nav.html:14
 msgid "No filter"
 msgstr "Pas de filtre"
+
 #: app/templates/index.html:92 app/templates/keyboard_shortcuts.html:63
 #: app/templates/search/results.html:66
 #: app/templates/themes/dillo/_side_pane.html:128
@@ -3359,9 +3355,8 @@ msgid "Failed"
 msgstr "Échec"
 
 #: app/templates/admin/instances.html:80
-#, fuzzy
 msgid "Instance Status - Online/Dormant/Gone Forever"
-msgstr "État de l'instance - En ligne/Dormante/Éteinte"
+msgstr "État de l'instance - En ligne/Hors-ligne/Cloturée"
 
 #: app/templates/admin/instances.html:81 app/templates/admin/instances.html:102
 #: app/templates/admin/instances.html:104
@@ -3378,9 +3373,8 @@ msgid "Last Seen"
 msgstr "Dernière fois vu"
 
 #: app/templates/admin/misc.html:17
-#, fuzzy
 msgid "Content settings"
-msgstr "Vu pour la dernière fois"
+msgstr "Paramètres du contenu"
 
 #: app/templates/admin/site.html:19
 msgid ""
@@ -3461,7 +3455,6 @@ msgid "Reputation"
 msgstr "Réputation"
 
 #: app/templates/admin/users.html:72
-#, fuzzy
 msgid "Last seen."
 msgstr "Vu pour la dernière fois."
 
@@ -3547,7 +3540,6 @@ msgid "Reset your password"
 msgstr "Réinitialisez votre mot de passe"
 
 #: app/templates/auth/trump_musk.html:13
-#, fuzzy
 msgid "Content filter setup"
 msgstr "Réglage du filtre de contenu"
 
@@ -3693,7 +3685,6 @@ msgstr "À propos de la communauté"
 
 #: app/templates/community/_community_nav.html:37
 #: app/templates/feed/_feed_nav.html:35
-#, fuzzy
 msgid "Sort by top"
 msgstr "Trier par Meilleur"
 
@@ -4445,16 +4436,18 @@ msgstr "Croisimots"
 #: app/templates/post/post_teaser/_utilities_bar.html:20
 #: app/templates/post/post_teaser/_utilities_bar.html:21
 msgid "Show cross-posts"
-msgstr "Afficher les croix-poteaux"
+msgstr "Afficher les publications croisées"
 
 #: app/templates/post/_post_full.html:176
 #: app/templates/post/post_teaser/_utilities_bar.html:23
 msgid "Number of cross-posts:"
-msgstr "Nombre de croix-poteaux :"
+msgstr "Nombre de publications croisées :"
+
 #: app/templates/post/post_options.html:46
 #: app/templates/post/post_teaser/_utilities_bar.html:38
 msgid "Cross-post"
 msgstr "Croix-poteaux"
+
 #: app/templates/post/_post_reply_teaser.html:36
 #: app/templates/post/add_reply_inline_result.html:52
 msgid "Post creator"
@@ -4554,19 +4547,17 @@ msgstr "Commentaires avec le plus de hautvotes"
 msgid "Show newest first"
 msgstr "Plus récent d'abord"
 
-#, fuzzy
 msgid "Comments from other communities"
-msgstr "Publications dans les communautés rejointes"
+msgstr "Commentaires des autres communautés"
 
 #: app/templates/post/post.html:91
-#, fuzzy, python-format
+#, python-format
 msgid "Comments in %(name)s"
-msgstr "Publier dans %(name)s"
+msgstr "Commentaires dans %(name)s"
 
 #: app/templates/post/post.html:100
-#, fuzzy
 msgid "Community options"
-msgstr "Options des commentaires"
+msgstr "Options de la communauté"
 
 #: app/templates/post/post.html:110 app/templates/post/post_options.html:52
 #, python-format
@@ -4576,7 +4567,7 @@ msgstr "Bloquer la communauté %(community_name)s"
 #: app/templates/post/post_cross_post.html:12
 #, python-format
 msgid "Cross-post %(post_name)s"
-msgstr "Croix-poteaux %(post_name)s"
+msgstr "Publication croisée %(post_name)s"
 
 #: app/templates/post/post_edit.html:39
 msgid "Describe the image, to help visually impaired people."
@@ -4600,7 +4591,7 @@ msgstr "Ajouter un choix"
 
 #: app/templates/post/post_edit.html:117
 msgid "Separate each tag with a comma."
-msgstr "Séparez chaque mot clef par une virgule."
+msgstr "Séparez chaque mot-clic par une virgule."
 
 #: app/templates/post/post_edit.html:120
 msgid "More options"
@@ -4670,11 +4661,11 @@ msgstr ""
 #: app/templates/post/post_options.html:46
 #: app/templates/post/post_teaser/_utilities_bar.html:38
 msgid "Cross-post"
-msgstr "Croix-poteaux"
+msgstr "Publication croisée"
 
 #: app/templates/post/post_options.html:47
 msgid "Cross-post to another community"
-msgstr "Croix-poster sur une autre communauté"
+msgstr "Partager la publication sur une autre communauté"
 
 #: app/templates/post/post_options.html:50
 #, python-format
@@ -4883,11 +4874,11 @@ msgstr "Récupérer la publication distante"
 
 #: app/templates/tag/tag.html:23
 msgid "No posts in this tag yet."
-msgstr "Aucune publication avec ce mot clef pour le moment."
+msgstr "Aucune publication avec ce mot-clic pour le moment."
 
 #: app/templates/tag/tag.html:45
 msgid "Tag management"
-msgstr "Gestion des mots clefs"
+msgstr "Gestion des mots-clics"
 
 #: app/templates/tag/tag.html:66
 msgid "RSS"
@@ -4896,15 +4887,15 @@ msgstr "RSS"
 #: app/templates/tag/tags.html:14 app/templates/tag/tags_blocked.html:14
 #, python-format
 msgid "Tags containing \"%(search)s\""
-msgstr "Mots clefs contenant \"%(search)s\""
+msgstr "Mots-clics contenant \"%(search)s\""
 
 #: app/templates/tag/tags.html:24 app/templates/tag/tags_blocked.html:24
 msgid "Banned tags"
-msgstr "Mots clefs bannis"
+msgstr "Mots-clics bannis"
 
 #: app/templates/tag/tags.html:38 app/templates/tag/tags_blocked.html:38
 msgid "How many times has something using this tag been posted"
-msgstr "Combien de fois a quelque chose utilisant ce mot clef a été posté"
+msgstr "Combien de fois a-t-on publié en utilisant ce mot-clic"
 
 #: app/templates/topic/_notification_toggle.html:5
 msgid "Notify about every new post. Not advisable in high traffic topics!"
@@ -5123,11 +5114,13 @@ msgstr "Supprimer le compte"
 #: app/templates/user/edit_settings.html:35
 msgid "This is used for menus and labels in the user interface"
 msgstr ""
+"C'est utilisé dans les menus et les étiquettes de l'interface de "
+"l'utilisateur·ice"
 
 #: app/templates/user/edit_settings.html:37
-#, fuzzy, python-format
+#, python-format
 msgid "Posts and replies in these languages will be visible"
-msgstr "Les publications liées à %(name)s seront masquées."
+msgstr "Les publications et réponses dans ces langues seront affichées"
 
 #: app/templates/user/edit_settings.html:43
 msgid ""
@@ -5590,9 +5583,8 @@ msgid "Interface language"
 msgstr "Langue de l'interface"
 
 #: app/user/forms.py:44
-#, fuzzy
 msgid "Content language"
-msgstr "Langue de l'interface"
+msgstr "Langue du contenu"
 
 #: app/user/forms.py:47
 msgid "Receive email about missed notifications"
@@ -5701,7 +5693,7 @@ msgstr "Action à mener"
 
 #: app/user/forms.py:143
 msgid "Keywords that trigger this filter"
-msgstr "Mots clés qui déclenchent ce filtre"
+msgstr "Mots-clés qui déclenchent ce filtre"
 
 #: app/user/forms.py:146
 msgid "Expire after"
@@ -5816,11 +5808,10 @@ msgid "You cannot ban yourself."
 msgstr "Vous ne pouvez pas vous bannir vous-même."
 
 #: app/user/routes.py:556
-#, fuzzy
 msgid "Banned user was a remote instance admin."
 msgstr ""
-"L'utilisateur·ice banni·e était un·e administrateur·ice d'une instance à "
-"distance."
+"L'utilisateur·ice banni·e était un·e administrateur·ice d'une instance "
+"distante."
 
 #: app/user/routes.py:558
 msgid "Banned user with role permissions."
@@ -5845,6 +5836,7 @@ msgstr "%(actor)s a été bloqué·e."
 #: app/user/routes.py:633
 msgid "You cannot block your instance."
 msgstr "Vous ne pouvez pas bloquer votre instance."
+
 #, python-format
 msgid "%(actor)s has been unblocked."
 msgstr "%(actor)s a été débloqué·e."

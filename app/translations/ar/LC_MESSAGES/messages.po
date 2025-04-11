@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-03-20 15:42+1300\n"
-"PO-Revision-Date: 2025-03-22 05:47+0000\n"
+"PO-Revision-Date: 2025-03-29 21:47+0000\n"
 "Last-Translator: fxomt <services.thaw171@slmail.me>\n"
 "Language-Team: Arabic <http://translate.piefed.social/projects/piefed/"
 "main-web-app/ar/>\n"
@@ -37,7 +37,6 @@ msgstr "ردود لمنشوري %(post_title)s"
 #: app/cli.py:543 app/models.py:1844 app/post/routes.py:1454
 #: app/shared/reply.py:120
 #, fuzzy, python-format
-
 msgid "Replies to my comment on %(post_title)s"
 msgstr "ردود على تعليقي حول %(post_title)s"
 
@@ -59,82 +58,83 @@ msgstr "مرحبًا بك في PieFed"
 
 #: app/models.py:2424
 msgid "Added moderator"
-msgstr ""
+msgstr "تم إضافة مشرف"
 
 #: app/models.py:2425
 msgid "Removed moderator"
-msgstr ""
+msgstr "تم إزالة المشرف"
 
 #: app/models.py:2426
 msgid "Featured post"
-msgstr ""
+msgstr "تم تمييز المنشور"
 
 #: app/models.py:2427
 msgid "Unfeatured post"
-msgstr ""
+msgstr "تم إزالة تمييز المنشور"
 
 #: app/models.py:2428
 msgid "Deleted post"
-msgstr ""
+msgstr "تم حذف المنشور"
 
 #: app/models.py:2429
 msgid "Un-deleted post"
-msgstr ""
+msgstr "تم إلغاء حذف المنشور"
 
 #: app/models.py:2430
 msgid "Deleted comment"
-msgstr ""
+msgstr "تم حذف التعليق"
 
 #: app/models.py:2431
 msgid "Un-deleted comment"
-msgstr ""
+msgstr "تم إلغاء حذف التعليق"
 
 #: app/models.py:2432
 msgid "Deleted community"
-msgstr ""
+msgstr "تم حذف المجتمع"
 
 #: app/models.py:2433
 msgid "Deleted account"
-msgstr ""
+msgstr "تم حذف الحساب"
 
 #: app/models.py:2434
 msgid "Restored account"
-msgstr ""
+msgstr "تم استعاد المجتمع"
 
 #: app/models.py:2435
 msgid "Banned account"
-msgstr ""
+msgstr "تم حظر الحساب"
 
 #: app/models.py:2436
 msgid "Un-banned account"
-msgstr ""
+msgstr "تم إلغاء حظر الحساب"
 
 #: app/models.py:2437
 msgid "Lock post"
-msgstr ""
+msgstr "قفل المنشور"
 
 #: app/models.py:2438
 msgid "Un-lock post"
-msgstr ""
+msgstr "إلغاء قفل المنشور"
 
 #: app/auth/routes.py:50 app/auth/routes.py:237 app/post/routes.py:519
 #: app/shared/auth.py:59 app/utils.py:1329
+#, fuzzy
 msgid "You have been banned."
-msgstr ""
+msgstr "إنك منحظر"
 
 #: app/utils.py:1661
 msgid "Wrong Captcha text."
-msgstr ""
+msgstr "نَص الكابتشا غلط."
 
 #: app/activitypub/util.py:1886
 #, python-format
 msgid "Reply to %(post_title)s"
-msgstr ""
+msgstr "رد على %(post_title)s"
 
 #: app/activitypub/util.py:1900 app/activitypub/util.py:1905
 #, python-format
 msgid "Reply to comment on %(post_title)s"
-msgstr ""
+msgstr "رد على التعليق على %(post_title)s"
 
 #: app/activitypub/util.py:2323 app/post/routes.py:951 app/shared/post.py:519
 msgid "A post has been reported"
@@ -146,37 +146,38 @@ msgstr ""
 
 #: app/admin/forms.py:14
 msgid "Site Name"
-msgstr ""
+msgstr "إسم الموقع"
 
 #: app/admin/forms.py:15
 msgid "Tagline"
-msgstr ""
+msgstr "شعار"
 
 #: app/admin/forms.py:16
 msgid "Icon"
-msgstr ""
+msgstr "أيقونة"
 
 #: app/admin/forms.py:18
 msgid "Sidebar"
-msgstr ""
+msgstr "شريط الجانبي"
 
 #: app/admin/forms.py:19 app/templates/base.html:307
 #: app/templates/instance/people.html:24
 #: app/templates/themes/dillo/base.html:272
 msgid "About"
-msgstr ""
+msgstr "حول"
 
 #: app/admin/forms.py:20
 msgid "Announcement at top of home page"
-msgstr ""
+msgstr "إعلان في أعلى الصفحة الرئيسية"
 
 #: app/admin/forms.py:21
 msgid "Legal information"
-msgstr ""
+msgstr "معلومات قانونية"
 
 #: app/admin/forms.py:22
+#, fuzzy
 msgid "General instance contact email address"
-msgstr ""
+msgstr "عنوان البريد الإلكتروني العام للاتصال بمسؤول الخادم"
 
 #: app/admin/forms.py:23 app/admin/forms.py:53 app/admin/forms.py:65
 #: app/admin/forms.py:122 app/admin/forms.py:143 app/admin/forms.py:152
