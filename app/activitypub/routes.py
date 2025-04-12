@@ -126,12 +126,13 @@ def webfinger():
 @bp.route('/.well-known/nodeinfo')
 @cache.cached(timeout=600)
 def nodeinfo():
-    nodeinfo_data = {"links": [{"rel": "http://nodeinfo.diaspora.software/ns/schema/2.0",
+    nodeinfo_data = {"links": [{"rel": "https://www.w3.org/ns/activitystreams#Application",
+                                "href": f"https://{current_app.config['SERVER_NAME']}"},
+                               {"rel": "http://nodeinfo.diaspora.software/ns/schema/2.0",
                                 "href": f"https://{current_app.config['SERVER_NAME']}/nodeinfo/2.0"},
                                {"rel": "http://nodeinfo.diaspora.software/ns/schema/2.1",
                                 "href": f"https://{current_app.config['SERVER_NAME']}/nodeinfo/2.1"},
-                               {"rel": "https://www.w3.org/ns/activitystreams#Application",
-                                "href": f"https://{current_app.config['SERVER_NAME']}"}]}
+                               ]}
     return jsonify(nodeinfo_data)
 
 
@@ -151,7 +152,7 @@ def nodeinfo2():
     nodeinfo_data = {
                 "version": "2.0",
                 "software": {
-                    "name": "PieFed",
+                    "name": "piefed",
                     "version": "0.1"
                 },
                 "protocols": [
@@ -179,7 +180,7 @@ def nodeinfo21():
     nodeinfo_data = {
                 "version": "2.1",
                 "software": {
-                    "name": "PieFed",
+                    "name": "piefed",
                     "version": "0.1",
                     "repository": "https://codeberg.org/rimu/pyfedi",
                     "homepage": "https://join.piefed.social"
