@@ -1516,9 +1516,13 @@ def community_moderators_route(actor):
         }
 
         for moderator in moderators:
-            community_data['orderedItems'].append(moderator.ap_profile_id)
+            community_data['orderedItems'].append(moderator.public_url())
 
-        return jsonify(community_data)
+        resp = jsonify(community_data)
+        resp.content_type = 'application/activity+json'
+        return resp
+    else:
+        abort(404)
 
 
 @bp.route('/c/<actor>/followers', methods=['GET'])
