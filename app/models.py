@@ -24,7 +24,7 @@ import math
 
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER, \
     SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER, NOTIF_COMMUNITY, NOTIF_TOPIC, NOTIF_POST, NOTIF_REPLY, \
-    ROLE_ADMIN, ROLE_STAFF, NOTIF_FEED, NOTIF_DEFAULT
+    ROLE_ADMIN, ROLE_STAFF, NOTIF_FEED, NOTIF_DEFAULT, NOTIF_REPORT, NOTIF_MENTION
 
 
 # datetime.utcnow() is depreciated in Python 3.12 so it will need to be swapped out eventually
@@ -1383,7 +1383,7 @@ class Post(db.Model):
                 for community_member in post.community.moderators():
                     notify = Notification(title='Suspicious content', url=post.ap_id,
                                           user_id=community_member.user_id,
-                                          author_id=user.id)
+                                          author_id=user.id, notif_type=NOTIF_REPORT)
                     db.session.add(notify)
                     already_notified.add(community_member.user_id)
             if domain.notify_admins:
@@ -1391,7 +1391,7 @@ class Post(db.Model):
                     if admin.id not in already_notified:
                         notify = Notification(title='Suspicious content',
                                               url=post.ap_id, user_id=admin.id,
-                                              author_id=user.id)
+                                              author_id=user.id, notif_type=NOTIF_REPORT)
                         db.session.add(notify)
             if domain.banned or domain.name.endswith('.pages.dev'):
                 raise Exception(domain.name + ' is blocked by admin')
@@ -1472,7 +1472,7 @@ class Post(db.Model):
                                 if post.user_id not in blocked_senders:
                                     notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in post {post.id}"),
                                                                 url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
-                                                                author_id=post.user_id)
+                                                                author_id=post.user_id, notif_type=NOTIF_MENTION)
                                     recipient.unread_notifications += 1
                                     db.session.add(notification)
                                     db.session.commit()

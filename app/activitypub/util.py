@@ -1200,7 +1200,8 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                 notification = Notification(title='Review this',
                                                             user_id=1,
                                                             author_id=post.user_id,
-                                                            url=url_for('activitypub.post_ap', post_id=post.id))
+                                                            url=url_for('activitypub.post_ap', post_id=post.id),
+                                                            notif_type=NOTIF_REPORT)
                                 session.add(notification)
                                 session.commit()
 
@@ -1586,7 +1587,7 @@ def ban_user(blocker, blocked, community, core_activity):
             # Notify banned person
             notify = Notification(title=shorten_string('You have been banned from ' + community.title),
                                   url=f'/chat/ban_from_mod/{blocked.id}/{community.id}', user_id=blocked.id,
-                                  author_id=blocker.id)
+                                  author_id=blocker.id, notif_type=NOTIF_BAN)
             db.session.add(notify)
             if not current_app.debug:                           # user.unread_notifications += 1 hangs app if 'user' is the same person
                 blocked.unread_notifications += 1               # who pressed 'Re-submit this activity'.

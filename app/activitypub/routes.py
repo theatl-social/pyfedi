@@ -1808,7 +1808,7 @@ def process_chat(user, store_ap_json, core_activity):
             # Notify recipient
             notify = Notification(title=shorten_string('New message from ' + sender.display_name()),
                                   url=f'/chat/{existing_conversation.id}#message_{new_message.id}', user_id=recipient.id,
-                                  author_id=sender.id)
+                                  author_id=sender.id, notif_type=NOTIF_MESSAGE)
             db.session.add(notify)
             recipient.unread_notifications += 1
             existing_conversation.read = False
