@@ -25,7 +25,8 @@ from app.community.util import search_for_community, actor_to_community, \
     delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
-    REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, NOTIF_POST, POST_TYPE_POLL, MICROBLOG_APPS, SRC_WEB
+    REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, NOTIF_POST, POST_TYPE_POLL, MICROBLOG_APPS, SRC_WEB, \
+    NOTIF_REPORT, NOTIF_NEW_MOD, NOTIF_BAN, NOTIF_UNBAN, NOTIF_REPORT_ESCALATION
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, \
     File, PostVote, utcnow, Report, Notification, InstanceBlock, ActivityPubLog, Topic, Conversation, PostReply, \
@@ -734,7 +735,7 @@ def community_report(community_id: int):
         for admin in admins:
             notification = Notification(user_id=admin.id, title=_('A community has been reported'),
                                             url=community.local_url(),
-                                            author_id=current_user.id)
+                                            author_id=current_user.id, notif_type=NOTIF_REPORT)
             db.session.add(notification)
             admin.unread_notifications += 1
         db.session.commit()
@@ -955,7 +956,7 @@ def community_add_moderator(community_id: int, user_id: int):
         if new_moderator.is_local():
             notify = Notification(title=_('You are now a moderator of %(name)s', name=community.display_name()),
                                   url='/c/' + community.name, user_id=new_moderator.id,
-                                  author_id=current_user.id)
+                                  author_id=current_user.id, notif_type=NOTIF_NEW_MOD)
             new_moderator.unread_notifications += 1
             db.session.add(notify)
             db.session.commit()
@@ -1113,7 +1114,7 @@ def community_ban_user(community_id: int, user_id: int):
             cache.delete_memoized(moderating_communities, user.id)
             notify = Notification(title=shorten_string('You have been banned from ' + community.title),
                                   url='/notifications', user_id=user.id,
-                                  author_id=1)
+                                  author_id=1, notif_type=NOTIF_BAN)
             db.session.add(notify)
             user.unread_notifications += 1
             db.session.commit()
@@ -1168,7 +1169,7 @@ def community_unban_user(community_id: int, user_id: int):
         cache.delete_memoized(moderating_communities, user.id)
         notify = Notification(title=shorten_string('You have been un-banned from ' + community.title),
                               url='/notifications', user_id=user.id,
-                              author_id=1)
+                              author_id=1, notif_type=NOTIF_UNBAN)
         db.session.add(notify)
         user.unread_notifications += 1
         db.session.commit()
@@ -1649,7 +1650,7 @@ def community_moderate_report_escalate(community_id, report_id):
             form = EscalateReportForm()
             if form.validate_on_submit():
                 notify = Notification(title='Escalated report', url='/admin/reports', user_id=1,
-                                      author_id=current_user.id)
+                                      author_id=current_user.id, notif_type=NOTIF_REPORT_ESCALATION)
                 db.session.add(notify)
                 report.description = form.reason.data
                 report.status = REPORT_STATE_ESCALATED

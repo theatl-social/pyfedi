@@ -1619,7 +1619,8 @@ def unban_user(blocker, blocked, community, core_activity):
     if blocked.is_local():
         # Notify unbanned person
         notify = Notification(title=shorten_string('You have been unbanned from ' + community.title),
-                              url=f'/chat/ban_from_mod/{blocked.id}/{community.id}', user_id=blocked.id, author_id=blocker.id)
+                              url=f'/chat/ban_from_mod/{blocked.id}/{community.id}', user_id=blocked.id, 
+                              author_id=blocker.id, notif_type=NOTIF_UNBAN)
         db.session.add(notify)
         if not current_app.debug:                           # user.unread_notifications += 1 hangs app if 'user' is the same person
             blocked.unread_notifications += 1               # who pressed 'Re-submit this activity'.
@@ -1718,7 +1719,7 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
                     if post_reply.user_id not in blocked_senders:
                         notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in comment {post_reply.id}"),
                                                     url=f"https://{current_app.config['SERVER_NAME']}/comment/{post_reply.id}",
-                                                    author_id=user.id)
+                                                    author_id=user.id, notif_type=NOTIF_MENTION)
                         recipient.unread_notifications += 1
                         db.session.add(notification)
                         db.session.commit()
@@ -1774,7 +1775,8 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
                 new_notification = Notification(title=shorten_string(_('Reply to %(post_title)s',
                                                                        post_title=new_reply.post.title), 50),
                                                 url=f"/post/{new_reply.post.id}#comment_{new_reply.id}",
-                                                user_id=notify_id, author_id=new_reply.user_id)
+                                                user_id=notify_id, author_id=new_reply.user_id,
+                                                notif_type=NOTIF_POST)
                 db.session.add(new_notification)
                 user = User.query.get(notify_id)
                 user.unread_notifications += 1
@@ -1788,12 +1790,14 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
                     new_notification = Notification(title=shorten_string(_('Reply to comment on %(post_title)s',
                                                                            post_title=parent_reply.post.title), 50),
                                                     url=f"/post/{parent_reply.post.id}#comment_{new_reply.id}",
-                                                    user_id=notify_id, author_id=new_reply.user_id)
+                                                    user_id=notify_id, author_id=new_reply.user_id,
+                                                    notif_type=NOTIF_REPLY)
                 else:
                     new_notification = Notification(title=shorten_string(_('Reply to comment on %(post_title)s',
                                                                            post_title=parent_reply.post.title), 50),
                                                     url=f"/post/{parent_reply.post.id}/comment/{parent_reply.id}#comment_{new_reply.id}",
-                                                    user_id=notify_id, author_id=new_reply.user_id)
+                                                    user_id=notify_id, author_id=new_reply.user_id,
+                                                    notif_type=NOTIF_REPLY)
                 db.session.add(new_notification)
                 user = User.query.get(notify_id)
                 user.unread_notifications += 1
@@ -1869,7 +1873,7 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
                                 if not existing_notification:
                                     notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in comment {reply.id}"),
                                                                 url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
-                                                                author_id=reply.user_id)
+                                                                author_id=reply.user_id, notif_type=NOTIF_MENTION)
                                     recipient.unread_notifications += 1
                                     db.session.add(notification)
 
@@ -1959,7 +1963,7 @@ def update_post_from_activity(post: Post, request_json: dict):
                             if not existing_notification:
                                 notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in post {post.id}"),
                                                             url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
-                                                            author_id=post.user_id)
+                                                            author_id=post.user_id, notif_type=NOTIF_MENTION)
                                 recipient.unread_notifications += 1
                                 db.session.add(notification)
 
@@ -2135,7 +2139,7 @@ def update_post_from_activity(post: Post, request_json: dict):
                     for community_member in post.community.moderators():
                         notify = Notification(title='Suspicious content', url=post.ap_id,
                                                   user_id=community_member.user_id,
-                                                  author_id=1)
+                                                  author_id=1, notif_type=NOTIF_REPORT)
                         db.session.add(notify)
                         already_notified.add(community_member.user_id)
                 if new_domain.notify_admins:
@@ -2143,7 +2147,7 @@ def update_post_from_activity(post: Post, request_json: dict):
                         if admin.id not in already_notified:
                             notify = Notification(title='Suspicious content',
                                                       url=post.ap_id, user_id=admin.id,
-                                                      author_id=1)
+                                                      author_id=1, notif_type=NOTIF_REPORT)
                             db.session.add(notify)
                 new_domain.post_count += 1
                 post.domain = new_domain
@@ -2217,7 +2221,7 @@ def process_report(user, reported, request_json):
         for admin in Site.admins():
             if admin.id not in already_notified:
                 notify = Notification(title='Reported user', url='/admin/reports', user_id=admin.id,
-                                      author_id=user.id)
+                                      author_id=user.id, notif_type=NOTIF_REPORT)
                 db.session.add(notify)
                 admin.unread_notifications += 1
         reported.reports += 1
@@ -2236,7 +2240,7 @@ def process_report(user, reported, request_json):
         for mod in reported.community.moderators():
             notification = Notification(user_id=mod.user_id, title=_('A post has been reported'),
                                         url=f"https://{current_app.config['SERVER_NAME']}/post/{reported.id}",
-                                        author_id=user.id)
+                                        author_id=user.id, notif_type=NOTIF_REPORT)
             db.session.add(notification)
             already_notified.add(mod.user_id)
         reported.reports += 1
@@ -2257,7 +2261,7 @@ def process_report(user, reported, request_json):
         for mod in post.community.moderators():
             notification = Notification(user_id=mod.user_id, title=_('A comment has been reported'),
                                         url=f"https://{current_app.config['SERVER_NAME']}/comment/{reported.id}",
-                                        author_id=user.id)
+                                        author_id=user.id, notif_type=NOTIF_REPORT)
             db.session.add(notification)
             already_notified.add(mod.user_id)
         reported.reports += 1

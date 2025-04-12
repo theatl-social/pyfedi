@@ -1,6 +1,7 @@
 from app import celery, db
 from app.activitypub.signature import default_context, send_post_request
-from app.constants import POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, POST_TYPE_VIDEO, POST_TYPE_POLL, MICROBLOG_APPS
+from app.constants import POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, POST_TYPE_VIDEO, \
+    POST_TYPE_POLL, MICROBLOG_APPS, NOTIF_MENTION
 from app.models import CommunityBan, Instance, Notification, Poll, PollChoice, Post, User, UserFollower, utcnow
 from app.user.utils import search_for_user
 from app.utils import gibberish, instance_banned, ap_datetime
@@ -108,7 +109,7 @@ def send_post(post_id, edit=False):
             if not existing_notification:
                 notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in post {post.id}"),
                                             url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
-                                            author_id=user.id)
+                                            author_id=user.id, notif_type=NOTIF_MENTION)
                 recipient.unread_notifications += 1
                 db.session.add(notification)
                 db.session.commit()
