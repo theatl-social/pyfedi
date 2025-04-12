@@ -2280,7 +2280,8 @@ body.compact-min .btn {
 }
 body.compact-min .post_teaser .post_teaser_article_preview,
 body.compact-min .post_teaser .post_teaser_link_preview,
-body.compact-min .post_teaser .post_teaser_image_preview {
+body.compact-min .post_teaser .post_teaser_image_preview,
+body.compact-min .post_teaser .post_teaser_video_preview {
   display: none;
 }
 body.compact-min .community_icon {
