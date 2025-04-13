@@ -331,13 +331,17 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
             if domain.notify_mods:
                 for community_member in post.community.moderators():
                     if community_member.is_local():
-                        notify = Notification(title='Suspicious content', url=post.ap_id, user_id=community_member.user_id, author_id=user.id)
+                        notify = Notification(title='Suspicious content', url=post.ap_id, 
+                                              user_id=community_member.user_id, author_id=user.id,
+                                              notif_type=NOTIF_REPORT)
                         db.session.add(notify)
                         already_notified.add(community_member.user_id)
             if domain.notify_admins:
                 for admin in Site.admins():
                     if admin.id not in already_notified:
-                        notify = Notification(title='Suspicious content', url=post.ap_id, user_id=admin.id, author_id=user.id)
+                        notify = Notification(title='Suspicious content', url=post.ap_id, 
+                                              user_id=admin.id, author_id=user.id,
+                                              notif_type=NOTIF_REPORT)
                         db.session.add(notify)
 
         thumbnail_url, embed_url = fixup_url(url)
@@ -505,14 +509,15 @@ def report_post(post_id, input, src, auth=None):
         if moderator and moderator.is_local():
             notification = Notification(user_id=mod.user_id, title=_('A post has been reported'),
                                         url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
-                                        author_id=user_id)
+                                        author_id=user_id, notif_type=NOTIF_REPORT)
             db.session.add(notification)
             already_notified.add(mod.user_id)
     post.reports += 1
     # todo: only notify admins for certain types of report
     for admin in Site.admins():
         if admin.id not in already_notified:
-            notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, author_id=user_id)
+            notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, 
+                                  author_id=user_id, notif_type=NOTIF_REPORT)
             db.session.add(notify)
             admin.unread_notifications += 1
     db.session.commit()

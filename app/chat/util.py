@@ -4,6 +4,7 @@ from flask_babel import _
 
 from app import db, celery
 from app.activitypub.signature import send_post_request
+from app.constants import NOTIF_MESSAGE
 from app.models import User, ChatMessage, Notification, utcnow, Conversation
 from app.utils import shorten_string, gibberish, markdown_to_html
 
@@ -27,7 +28,8 @@ def send_message(message: str, conversation_id: int) -> ChatMessage:
                     notify = Notification(title=shorten_string('New message from ' + current_user.display_name()),
                                           url=f'/chat/{conversation_id}#message_{reply.id}',
                                           user_id=recipient.id,
-                                          author_id=current_user.id)
+                                          author_id=current_user.id,
+                                          notif_type=NOTIF_MESSAGE)
                     db.session.add(notify)
                     recipient.unread_notifications += 1
                     db.session.commit()

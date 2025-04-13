@@ -6,6 +6,7 @@ from sqlalchemy import desc, or_, and_, text
 from app import db, celery
 from app.chat.forms import AddReply, ReportConversationForm
 from app.chat.util import send_message
+from app.constants import NOTIF_REPORT
 from app.models import Site, User, Report, ChatMessage, Notification, InstanceBlock, Conversation, conversation_member, CommunityBan, ModLog
 from app.user.forms import ReportUserForm
 from app.utils import render_template, moderating_communities, joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, \
@@ -181,7 +182,7 @@ def chat_report(conversation_id):
             for admin in Site.admins():
                 if admin.id not in already_notified:
                     notify = Notification(title='Reported conversation with user', url='/admin/reports', user_id=admin.id,
-                                          author_id=current_user.id)
+                                          author_id=current_user.id, notif_type=NOTIF_REPORT)
                     db.session.add(notify)
                     admin.unread_notifications += 1
             db.session.commit()

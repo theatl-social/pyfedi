@@ -1,5 +1,6 @@
 from app import cache, celery, db
 from app.activitypub.signature import default_context, post_request, send_post_request
+from app.constants import NOTIF_MENTION
 from app.models import Community, CommunityBan, CommunityJoinRequest, CommunityMember, Notification, Post, PostReply, utcnow
 from app.user.utils import search_for_user
 from app.utils import community_membership, gibberish, joined_communities, instance_banned, ap_datetime, \
@@ -105,7 +106,7 @@ def send_reply(reply_id, parent_id, edit=False):
             if not existing_notification:
                 notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in comment {reply.id}"),
                                             url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
-                                            author_id=user.id)
+                                            author_id=user.id, notif_type=NOTIF_MENTION)
                 recipient.unread_notifications += 1
                 db.session.add(notification)
                 db.session.commit()

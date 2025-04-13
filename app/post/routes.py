@@ -16,6 +16,7 @@ from app.community.util import send_to_remote_instance
 from app.inoculation import inoculation
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm
 from app.community.forms import CreateLinkForm, CreateImageForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm
+from app.constants import NOTIF_REPORT
 from app.post.util import post_replies, get_comment_branch, tags_to_string, url_needs_archive, \
     generate_archive_link, body_has_no_archive_link
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
@@ -1036,14 +1037,15 @@ def post_report(post_id: int):
         for mod in post.community.moderators():
             notification = Notification(user_id=mod.user_id, title=_('A post has been reported'),
                                         url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
-                                        author_id=current_user.id)
+                                        author_id=current_user.id, notif_type=NOTIF_REPORT)
             db.session.add(notification)
             already_notified.add(mod.user_id)
         post.reports += 1
         # todo: only notify admins for certain types of report
         for admin in Site.admins():
             if admin.id not in already_notified:
-                notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, author_id=current_user.id)
+                notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, 
+                                      author_id=current_user.id, notif_type=NOTIF_REPORT)
                 db.session.add(notify)
                 admin.unread_notifications += 1
         db.session.commit()
@@ -1212,14 +1214,15 @@ def post_reply_report(post_id: int, comment_id: int):
         for mod in post.community.moderators():
             notification = Notification(user_id=mod.user_id, title=_('A comment has been reported'),
                                         url=f"https://{current_app.config['SERVER_NAME']}/comment/{post_reply.id}",
-                                        author_id=current_user.id)
+                                        author_id=current_user.id, notif_type=NOTIF_REPORT)
             db.session.add(notification)
             already_notified.add(mod.user_id)
         post_reply.reports += 1
         # todo: only notify admins for certain types of report
         for admin in Site.admins():
             if admin.id not in already_notified:
-                notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, author_id=current_user.id)
+                notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, 
+                                      author_id=current_user.id, notif_type=NOTIF_REPORT)
                 db.session.add(notify)
                 admin.unread_notifications += 1
         db.session.commit()

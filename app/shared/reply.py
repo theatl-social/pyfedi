@@ -285,14 +285,15 @@ def report_reply(reply_id, input, src, auth=None):
         if moderator and moderator.is_local():
             notification = Notification(user_id=mod.user_id, title=_('A comment has been reported'),
                                         url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
-                                        author_id=user_id)
+                                        author_id=user_id, notif_type=NOTIF_REPORT)
             db.session.add(notification)
             already_notified.add(mod.user_id)
     reply.reports += 1
     # todo: only notify admins for certain types of report
     for admin in Site.admins():
         if admin.id not in already_notified:
-            notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, author_id=user_id)
+            notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, 
+                                  author_id=user_id, notif_type=NOTIF_REPORT)
             db.session.add(notify)
             admin.unread_notifications += 1
     db.session.commit()
