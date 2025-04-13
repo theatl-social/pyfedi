@@ -1751,13 +1751,16 @@ def create_post(store_ap_json, community: Community, request_json: dict, user: U
 
 def notify_about_post(post: Post):
     if current_app.debug:
-        notify_about_post_task(post)
+        notify_about_post_task(post.id)
     else:
-        notify_about_post_task.delay(post)
+        notify_about_post_task.delay(post.id)
 
 
 @celery.task
-def notify_about_post_task(post: Post):
+def notify_about_post_task(post_id):
+    # get the post by id
+    post = Post.query.get(post_id)
+
     # Send notifications based on subscriptions
     notifications_sent_to = set()
 
