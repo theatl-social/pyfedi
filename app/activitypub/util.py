@@ -440,6 +440,7 @@ def refresh_user_profile_task(user_id):
                 user.bot = True if activity_json['type'] == 'Service' else False
             user.ap_fetched_at = utcnow()
             user.public_key = activity_json['publicKey']['publicKeyPem']
+            user.accept_private_messages = activity_json['acceptPrivateMessages'] if 'acceptPrivateMessages' in activity_json else 3
             user.indexable = new_indexable
 
             avatar_changed = cover_changed = False
@@ -802,7 +803,8 @@ def actor_json_to_model(activity_json, address, server):
                         ap_domain=server,
                         public_key=activity_json['publicKey']['publicKeyPem'],
                         bot=True if activity_json['type'] == 'Service' else False,
-                        instance_id=find_instance_id(server)
+                        instance_id=find_instance_id(server),
+                        accept_private_messages=activity_json['acceptPrivateMessages'] if 'acceptPrivateMessages' in activity_json else 3
                         # language=community_json['language'][0]['identifier'] # todo: language
                         )
         except KeyError:

@@ -319,6 +319,7 @@ def user_profile(actor):
                             "outbox": f"{user.public_url(main_user_name)}/outbox",
                             "discoverable": user.searchable,
                             "indexable": user.indexable,
+                            "acceptPrivateMessages": user.accept_private_messages,
                             "manuallyApprovesFollowers": False if not user.ap_manually_approves_followers else user.ap_manually_approves_followers,
                             "publicKey": {
                                 "id": f"{user.public_url(main_user_name)}#main-key",
@@ -1778,6 +1779,15 @@ def process_chat(user, store_ap_json, core_activity):
             return True
         elif recipient.has_blocked_user(sender.id) or recipient.has_blocked_instance(sender.instance_id):
             log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender blocked by recipient')
+            return True
+        elif recipient.accept_private_messages is None or recipient.accept_private_messages == 0:
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Recipient has turned off PMs')
+            return True
+        elif recipient.accept_private_messages == 1:
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Recipient only accepts local PMs')
+            return True
+        elif recipient.accept_private_messages == 2 and not sender.instance.trusted:
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender from untrusted instance')
             return True
         else:
             blocked_phrases_list = blocked_phrases()

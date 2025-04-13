@@ -80,6 +80,13 @@ class SettingsForm(FlaskForm):
         ('compact-min compact-max', _l('YEESSS')),  # this will apply both classes to the body tag
     ]
     compaction = SelectField(_l('Compact UI'), choices=compact_levels, coerce=str, render_kw={'class': 'form-select'})
+    accept_from = [
+        ('0', _l('None')),
+        ('1', _l('This instance')),
+        ('2', _l('Trusted instances')),
+        ('3', _l('All instances')),
+    ]
+    accept_private_messages = SelectField(_l('Accept private messages from'), choices=accept_from, coerce=int, render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Save settings'))
 
 

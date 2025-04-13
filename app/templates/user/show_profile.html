@@ -73,7 +73,15 @@
         {% endif %}
         <div class="profile_action_buttons">
         {% if current_user.is_authenticated and current_user != user %}
-                <a class="btn btn-primary" href="{{ url_for('chat.new_message', to=user.id) }}" rel="nofollow" aria-label="{{ _('Send message') }}">{{ _('Send message') }}</a>
+                {% if user.accept_private_messages -%}
+                    {% if user.is_local() -%}
+                        <a class="btn btn-primary" href="{{ url_for('chat.new_message', to=user.id) }}" rel="nofollow" aria-label="{{ _('Send message') }}">{{ _('Send message') }}</a>
+                    {% else -%}
+                        {% if user.accept_private_messages >= 2 -%}
+                            <a class="btn btn-primary" href="{{ url_for('chat.new_message', to=user.id) }}" rel="nofollow" aria-label="{{ _('Send message') }}">{{ _('Send message') }}</a>
+                        {% endif -%}
+                    {% endif -%}
+                {% endif -%}
                 {% if user.matrix_user_id %}
                     <a class="btn btn-primary" href="https://matrix.to/#/{{ user.matrix_user_id }}" rel="nofollow" aria-label="{{ _('Send message with matrix chat') }}">{{ _('Send message using Matrix') }}</a>
                 {% endif %}

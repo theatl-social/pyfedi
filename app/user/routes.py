@@ -420,6 +420,7 @@ def user_settings():
         current_user.feed_auto_follow = form.feed_auto_follow.data
         current_user.feed_auto_leave = form.feed_auto_leave.data
         current_user.read_language_ids = form.read_languages.data
+        current_user.accept_private_messages = form.accept_private_messages.data
         session['ui_language'] = form.interface_language.data
         session['compact_level'] = form.compaction.data
         if form.vote_privately.data:
@@ -452,6 +453,7 @@ def user_settings():
         form.feed_auto_leave.data = current_user.feed_auto_leave
         form.read_languages.data = current_user.read_language_ids
         form.compaction.data = session.get('compact_level', '')
+        form.accept_private_messages.data = current_user.accept_private_messages
 
     return render_template('user/edit_settings.html', title=_('Edit profile'), form=form, user=current_user,
                            moderating_communities=moderating_communities(current_user.get_id()),
