@@ -2689,18 +2689,25 @@ def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
     user = find_actor_or_create(actor)
     if user and community and post_data:
         request_json = {'id': f"https://{uri_domain}/activities/create/{gibberish(15)}", 'object': post_data}
-        post = create_post(False, community, request_json, user)
-        if post:
+        # not really what this function is intended for, but get comment or fail if comment URL is searched for
+        if 'inReplyTo' in post_data:
+            in_reply_to = post_data['inReplyTo']
+            object = create_post_reply(False, community, in_reply_to, request_json, user)
+        else:
+            in_reply_to = None
+            object = create_post(False, community, request_json, user)
+        if object:
             if 'published' in post_data:
-                post.posted_at=post_data['published']
-                post.last_active=post_data['published']
+                object.posted_at = post_data['published']
+                if not in_reply_to:
+                    object.last_active = post_data['published']
                 db.session.commit()
             if nodebb and topic_post_data['totalItems'] > 1:
                 if current_app.debug:
                     get_nodebb_replies_in_background(topic_post_data['orderedItems'][1:], community.id)
                 else:
                     get_nodebb_replies_in_background.delay(topic_post_data['orderedItems'][1:], community.id)
-            return post
+            return object if not in_reply_to else object.post
 
     return None
 
