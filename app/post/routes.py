@@ -23,7 +23,7 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_
     POST_TYPE_IMAGE, \
     POST_TYPE_ARTICLE, POST_TYPE_VIDEO, NOTIF_REPLY, NOTIF_POST, POST_TYPE_POLL, SRC_WEB
 from app.models import Post, PostReply, \
-    PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, InstanceBlock, Report, Site, Community, \
+    PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, Report, Site, Community, \
     Topic, User, Instance, NotificationSubscription, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
     PostReplyBookmark, CommunityBlock, File
 from app.post import bp
@@ -40,6 +40,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
 from app.post.util import post_type_to_form_url_type
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply
 from app.shared.post import edit_post, sticky_post, lock_post, bookmark_post, remove_bookmark_post, subscribe_post
+from app.shared.site import block_remote_instance
 
 
 def show_post(post_id: int):
@@ -1132,11 +1133,7 @@ def post_block_community(post_id: int):
 @login_required
 def post_block_instance(post_id: int):
     post = Post.query.get_or_404(post_id)
-    existing = InstanceBlock.query.filter_by(user_id=current_user.id, instance_id=post.instance_id).first()
-    if not existing:
-        db.session.add(InstanceBlock(user_id=current_user.id, instance_id=post.instance_id))
-        db.session.commit()
-        cache.delete_memoized(blocked_instances, current_user.id)
+    block_remote_instance(post.instance_id, SRC_WEB)
     flash(_('Content from %(name)s will be hidden.', name=post.instance.domain))
     return redirect(post.community.local_url())
 
@@ -1294,15 +1291,10 @@ def post_reply_block_user(post_id: int, comment_id: int):
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/block_instance', methods=['GET', 'POST'])
 @login_required
 def post_reply_block_instance(post_id: int, comment_id: int):
-    post = Post.query.get_or_404(post_id)
     post_reply = PostReply.query.get_or_404(comment_id)
-    existing = InstanceBlock.query.filter_by(user_id=current_user.id, instance_id=post_reply.instance_id).first()
-    if not existing:
-        db.session.add(InstanceBlock(user_id=current_user.id, instance_id=post_reply.instance_id))
-        db.session.commit()
-        cache.delete_memoized(blocked_instances, current_user.id)
+    block_remote_instance(post_reply.instance_id, SRC_WEB)
     flash(_('Content from %(name)s will be hidden.', name=post_reply.instance.domain))
-    return redirect(url_for('activitypub.post_ap', post_id=post.id))
+    return redirect(url_for('activitypub.post_ap', post_id=post_id))
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/edit', methods=['GET', 'POST'])
