@@ -1776,6 +1776,7 @@ def notify_about_post_task(post_id):
             user.unread_notifications += 1
             db.session.commit()
             notifications_sent_to.add(notify_id)
+
     # NOTIF_COMMUNITY
     community_send_notifs_to = notification_subscribers(post.community_id, NOTIF_COMMUNITY)
     for notify_id in community_send_notifs_to:
@@ -1788,6 +1789,7 @@ def notify_about_post_task(post_id):
             user.unread_notifications += 1
             db.session.commit()
             notifications_sent_to.add(notify_id)
+
     # NOTIF_TOPIC    
     topic_send_notifs_to = notification_subscribers(post.community.topic_id, NOTIF_TOPIC)
     for notify_id in topic_send_notifs_to:
