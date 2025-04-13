@@ -1750,22 +1750,58 @@ def create_post(store_ap_json, community: Community, request_json: dict, user: U
 
 
 def notify_about_post(post: Post):
-    # todo: eventually this function could trigger a lot of DB activity. This function will need to be a celery task.
+    if current_app.debug:
+        notify_about_post_task(post.id)
+    else:
+        notify_about_post_task.delay(post.id)
+
+
+@celery.task
+def notify_about_post_task(post_id):
+    # get the post by id
+    post = Post.query.get(post_id)
 
     # Send notifications based on subscriptions
     notifications_sent_to = set()
-    send_notifs_to = set(notification_subscribers(post.user_id, NOTIF_USER) +
-                         notification_subscribers(post.community_id, NOTIF_COMMUNITY) +
-                         notification_subscribers(post.community.topic_id, NOTIF_TOPIC))
-    for notify_id in send_notifs_to:
+
+    # NOTIF_USER 
+    user_send_notifs_to = notification_subscribers(post.user_id, NOTIF_USER)
+    for notify_id in user_send_notifs_to:
         if notify_id != post.user_id and notify_id not in notifications_sent_to:
             new_notification = Notification(title=shorten_string(post.title, 50), url=f"/post/{post.id}",
-                                            user_id=notify_id, author_id=post.user_id)
+                                            user_id=notify_id, author_id=post.user_id,
+                                            notif_type=NOTIF_USER)
             db.session.add(new_notification)
             user = User.query.get(notify_id)
             user.unread_notifications += 1
             db.session.commit()
             notifications_sent_to.add(notify_id)
+
+    # NOTIF_COMMUNITY
+    community_send_notifs_to = notification_subscribers(post.community_id, NOTIF_COMMUNITY)
+    for notify_id in community_send_notifs_to:
+        if notify_id != post.user_id and notify_id not in notifications_sent_to:
+            new_notification = Notification(title=shorten_string(post.title, 50), url=f"/post/{post.id}",
+                                            user_id=notify_id, author_id=post.user_id,
+                                            notif_type=NOTIF_COMMUNITY)
+            db.session.add(new_notification)
+            user = User.query.get(notify_id)
+            user.unread_notifications += 1
+            db.session.commit()
+            notifications_sent_to.add(notify_id)
+
+    # NOTIF_TOPIC    
+    topic_send_notifs_to = notification_subscribers(post.community.topic_id, NOTIF_TOPIC)
+    for notify_id in topic_send_notifs_to:
+        if notify_id != post.user_id and notify_id not in notifications_sent_to:
+            new_notification = Notification(title=shorten_string(post.title, 50), url=f"/post/{post.id}",
+                                            user_id=notify_id, author_id=post.user_id,
+                                            notif_type=NOTIF_TOPIC)
+            db.session.add(new_notification)
+            user = User.query.get(notify_id)
+            user.unread_notifications += 1
+            db.session.commit()
+            notifications_sent_to.add(notify_id)    
 
 
 def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: PostReply):
