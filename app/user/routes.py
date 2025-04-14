@@ -33,6 +33,7 @@ from sqlalchemy.orm.exc import NoResultFound
 import os
 import json as python_json
 from app.shared.user import subscribe_user
+from app.shared.site import block_remote_instance
 
 
 @bp.route('/people', methods=['GET', 'POST'])
@@ -621,21 +622,11 @@ def block_profile(actor):
 @login_required
 def user_block_instance(actor):
     actor = actor.strip()
-    user = User.query.filter_by(user_name=actor, deleted=False).first()
+    user = User.query.filter_by(ap_id=actor, deleted=False).first()
     if user is None:
-        user = User.query.filter_by(ap_id=actor, deleted=False).first()
-        if user is None:
-            abort(404)
-
-    if user.instance_id == 1:
-        flash(_('You cannot block your instance.'), 'error')
-    else:
-        existing = InstanceBlock.query.filter_by(user_id=current_user.id, instance_id=user.instance_id).first()
-        if not existing:
-            db.session.add(InstanceBlock(user_id=current_user.id, instance_id=user.instance_id))
-            db.session.commit()
-            cache.delete_memoized(blocked_instances, current_user.id)
-        flash(_('Content from %(name)s will be hidden.', name=user.ap_domain))
+        abort(404)
+    block_remote_instance(user.instance_id, SRC_WEB)
+    flash(_('Content from %(name)s will be hidden.', name=user.ap_domain))
     goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
     return redirect(goto)
 

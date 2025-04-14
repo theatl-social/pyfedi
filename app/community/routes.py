@@ -29,7 +29,7 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LIN
     NOTIF_REPORT, NOTIF_NEW_MOD, NOTIF_BAN, NOTIF_UNBAN, NOTIF_REPORT_ESCALATION
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, \
-    File, PostVote, utcnow, Report, Notification, InstanceBlock, ActivityPubLog, Topic, Conversation, PostReply, \
+    File, PostVote, utcnow, Report, Notification, ActivityPubLog, Topic, Conversation, PostReply, \
     NotificationSubscription, UserFollower, Instance, Language, Poll, PollChoice, ModLog, CommunityWikiPage, \
     CommunityWikiPageRevision, read_posts, Feed, FeedItem, CommunityBlock
 from app.community import bp
@@ -1051,18 +1051,6 @@ def community_block(community_id: int):
         cache.delete_memoized(blocked_communities, current_user.id)
     flash(_('Posts in %(name)s will be hidden.', name=community.display_name()))
     return redirect(referrer())
-
-
-@bp.route('/community/<int:community_id>/block_instance', methods=['GET', 'POST'])
-@login_required
-def community_block_instance(community_id: int):
-    community = Community.query.get_or_404(community_id)
-    existing = InstanceBlock.query.filter_by(user_id=current_user.id, instance_id=community.instance_id).first()
-    if not existing:
-        db.session.add(InstanceBlock(user_id=current_user.id, instance_id=community.instance_id))
-        db.session.commit()
-    flash(_('Content from %(name)s will be hidden.', name=community.instance.domain))
-    return redirect(community.local_url())
 
 
 @bp.route('/community/<int:community_id>/<int:user_id>/ban_user_community', methods=['GET', 'POST'])

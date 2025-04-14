@@ -6,12 +6,13 @@ from sqlalchemy import desc, or_, and_, text
 from app import db, celery
 from app.chat.forms import AddReply, ReportConversationForm
 from app.chat.util import send_message
-from app.constants import NOTIF_REPORT
-from app.models import Site, User, Report, ChatMessage, Notification, InstanceBlock, Conversation, conversation_member, CommunityBan, ModLog
+from app.constants import NOTIF_REPORT, SRC_WEB
+from app.models import Site, User, Report, ChatMessage, Notification, Conversation, conversation_member, CommunityBan, ModLog
 from app.user.forms import ReportUserForm
 from app.utils import render_template, moderating_communities, joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, \
     menu_subscribed_feeds
 from app.chat import bp
+from app.shared.site import block_remote_instance
 
 
 @bp.route('/chat', methods=['GET', 'POST'])
@@ -157,10 +158,7 @@ def chat_delete(conversation_id):
 @bp.route('/chat/<int:instance_id>/block_instance', methods=['GET', 'POST'])
 @login_required
 def block_instance(instance_id):
-    existing = InstanceBlock.query.filter_by(user_id=current_user.id, instance_id=instance_id).first()
-    if not existing:
-        db.session.add(InstanceBlock(user_id=current_user.id, instance_id=instance_id))
-        db.session.commit()
+    block_remote_instance(instance_id, SRC_WEB)
     flash(_('Instance blocked.'))
     return redirect(url_for('chat.chat_home'))
 

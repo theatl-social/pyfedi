@@ -1750,22 +1750,58 @@ def create_post(store_ap_json, community: Community, request_json: dict, user: U
 
 
 def notify_about_post(post: Post):
-    # todo: eventually this function could trigger a lot of DB activity. This function will need to be a celery task.
+    if current_app.debug:
+        notify_about_post_task(post.id)
+    else:
+        notify_about_post_task.delay(post.id)
+
+
+@celery.task
+def notify_about_post_task(post_id):
+    # get the post by id
+    post = Post.query.get(post_id)
 
     # Send notifications based on subscriptions
     notifications_sent_to = set()
-    send_notifs_to = set(notification_subscribers(post.user_id, NOTIF_USER) +
-                         notification_subscribers(post.community_id, NOTIF_COMMUNITY) +
-                         notification_subscribers(post.community.topic_id, NOTIF_TOPIC))
-    for notify_id in send_notifs_to:
+
+    # NOTIF_USER 
+    user_send_notifs_to = notification_subscribers(post.user_id, NOTIF_USER)
+    for notify_id in user_send_notifs_to:
         if notify_id != post.user_id and notify_id not in notifications_sent_to:
             new_notification = Notification(title=shorten_string(post.title, 50), url=f"/post/{post.id}",
-                                            user_id=notify_id, author_id=post.user_id)
+                                            user_id=notify_id, author_id=post.user_id,
+                                            notif_type=NOTIF_USER)
             db.session.add(new_notification)
             user = User.query.get(notify_id)
             user.unread_notifications += 1
             db.session.commit()
             notifications_sent_to.add(notify_id)
+
+    # NOTIF_COMMUNITY
+    community_send_notifs_to = notification_subscribers(post.community_id, NOTIF_COMMUNITY)
+    for notify_id in community_send_notifs_to:
+        if notify_id != post.user_id and notify_id not in notifications_sent_to:
+            new_notification = Notification(title=shorten_string(post.title, 50), url=f"/post/{post.id}",
+                                            user_id=notify_id, author_id=post.user_id,
+                                            notif_type=NOTIF_COMMUNITY)
+            db.session.add(new_notification)
+            user = User.query.get(notify_id)
+            user.unread_notifications += 1
+            db.session.commit()
+            notifications_sent_to.add(notify_id)
+
+    # NOTIF_TOPIC    
+    topic_send_notifs_to = notification_subscribers(post.community.topic_id, NOTIF_TOPIC)
+    for notify_id in topic_send_notifs_to:
+        if notify_id != post.user_id and notify_id not in notifications_sent_to:
+            new_notification = Notification(title=shorten_string(post.title, 50), url=f"/post/{post.id}",
+                                            user_id=notify_id, author_id=post.user_id,
+                                            notif_type=NOTIF_TOPIC)
+            db.session.add(new_notification)
+            user = User.query.get(notify_id)
+            user.unread_notifications += 1
+            db.session.commit()
+            notifications_sent_to.add(notify_id)    
 
 
 def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: PostReply):
@@ -2653,18 +2689,25 @@ def resolve_remote_post_from_search(uri: str) -> Union[Post, None]:
     user = find_actor_or_create(actor)
     if user and community and post_data:
         request_json = {'id': f"https://{uri_domain}/activities/create/{gibberish(15)}", 'object': post_data}
-        post = create_post(False, community, request_json, user)
-        if post:
+        # not really what this function is intended for, but get comment or fail if comment URL is searched for
+        if 'inReplyTo' in post_data:
+            in_reply_to = post_data['inReplyTo']
+            object = create_post_reply(False, community, in_reply_to, request_json, user)
+        else:
+            in_reply_to = None
+            object = create_post(False, community, request_json, user)
+        if object:
             if 'published' in post_data:
-                post.posted_at=post_data['published']
-                post.last_active=post_data['published']
+                object.posted_at = post_data['published']
+                if not in_reply_to:
+                    object.last_active = post_data['published']
                 db.session.commit()
             if nodebb and topic_post_data['totalItems'] > 1:
                 if current_app.debug:
                     get_nodebb_replies_in_background(topic_post_data['orderedItems'][1:], community.id)
                 else:
                     get_nodebb_replies_in_background.delay(topic_post_data['orderedItems'][1:], community.id)
-            return post
+            return object if not in_reply_to else object.post
 
     return None
 
