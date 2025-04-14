@@ -10,7 +10,7 @@ from flask_babel import _, lazy_gettext as _l
 
 
 class AddCopyFeedForm(FlaskForm):
-    feed_name = StringField(_l('Name'), validators=[DataRequired()])
+    title = StringField(_l('Name'), validators=[DataRequired()])
     url = StringField(_l('Url'))
     description = TextAreaField(_l('Description'))
     parent_feed_id = SelectField(_l('Parent feed'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
@@ -42,7 +42,8 @@ class AddCopyFeedForm(FlaskForm):
 
 
 class EditFeedForm(FlaskForm):
-    feed_name = StringField(_l('Name'), validators=[DataRequired()])
+    feed_id = 0
+    title = StringField(_l('Name'), validators=[DataRequired()])
     url = StringField(_l('Url'))
     description = TextAreaField(_l('Description'))
     parent_feed_id = SelectField(_l('Parent feed'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
@@ -55,6 +56,15 @@ class EditFeedForm(FlaskForm):
     public = BooleanField('Public')
     is_instance_feed = BooleanField('Add to main menu')
     submit = SubmitField(_l('Save'))
+
+    def validate(self, extra_validators=None):
+        if not super().validate():
+            return False
+        feed = Feed.query.filter(Feed.name == self.url.data.strip().lower(), Feed.ap_id == None).first()
+        if feed is not None and feed.id != self.feed_id:
+            self.url.errors.append(_l('Url is already used by another feed.'))
+            return False
+        return True
 
 
 class SearchRemoteFeed(FlaskForm):

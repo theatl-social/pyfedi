@@ -676,6 +676,7 @@ class Community(db.Model):
         for post in self.posts:
             post.delete_dependencies()
             db.session.delete(post)
+        db.session.query(FeedItem).filter(FeedItem.community_id == self.id).delete()
         db.session.query(CommunityBan).filter(CommunityBan.community_id == self.id).delete()
         db.session.query(CommunityBlock).filter(CommunityBlock.community_id == self.id).delete()
         db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == self.id).delete()
@@ -2585,9 +2586,9 @@ class Feed(db.Model):
     query_class = FullTextSearchQuery
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
-    title = db.Column(db.String(256))
-    name = db.Column(db.String(256), index=True, unique=True)
-    machine_name = db.Column(db.String(50), index=True)
+    title = db.Column(db.String(256))                           # Human name
+    name = db.Column(db.String(256), index=True, unique=True)   # url
+    machine_name = db.Column(db.String(50), index=True)         # url also?!
     description = db.Column(db.Text)        # markdown
     description_html = db.Column(db.Text)   # html equivalent of above markdown
     nsfw = db.Column(db.Boolean, default=False)

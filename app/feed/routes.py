@@ -166,12 +166,13 @@ def feed_edit(feed_id: int):
         abort(404)
     edit_feed_form = EditFeedForm()
     edit_feed_form.parent_feed_id.choices = feeds_for_form(feed_id, current_user.id)
+    edit_feed_form.feed_id = feed_id
 
     if not current_user.is_admin():
         edit_feed_form.is_instance_feed.render_kw = {'disabled': True}
     
     if edit_feed_form.validate_on_submit():
-        feed_to_edit.title = edit_feed_form.feed_name.data
+        feed_to_edit.title = edit_feed_form.title.data
         feed_to_edit.name = edit_feed_form.url.data
         feed_to_edit.machine_name = edit_feed_form.url.data
         feed_to_edit.description = piefed_markdown_to_lemmy_markdown(edit_feed_form.description.data)
@@ -218,7 +219,7 @@ def feed_edit(feed_id: int):
         return redirect(referrer())
 
     # add the current data to the form
-    edit_feed_form.feed_name.data = feed_to_edit.title
+    edit_feed_form.title.data = feed_to_edit.title
     edit_feed_form.url.data = feed_to_edit.name
     edit_feed_form.description.data = feed_to_edit.description
     edit_feed_form.communities.data = feed_communities_for_edit(feed_to_edit.id)

@@ -13,11 +13,11 @@
                     <div class="card-title">{{ _('Edit Feed') }}</div>
                     <form method="post" enctype="multipart/form-data" id="new_feed_form" role="form">
                         {{ form.csrf_token() }}
-                        {{ render_field(form.feed_name) }}
+                        {{ render_field(form.title) }}
                         <div class="form-group">{{ form.url.label(class_="form-control-label required") }}
-                            /f/{{ form.url(class_="form-control", maxlength=255) }}
+                            /f/{{ form.url(class_="form-control", maxlength=255) }}<br>
                             {% for error in form.url.errors %}
-                            <span style="color: red;">[{{ error }}]</span>
+                            <span style="color: red;">{{ error }}</span>
                             {% endfor %}
                         </div>
                         {{ render_field(form.description) }}
