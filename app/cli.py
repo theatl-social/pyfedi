@@ -304,6 +304,7 @@ def register(app):
                                     nodeinfo.close()
                     except Exception as e:
                         db.session.rollback()
+                        instance.failures += 1
                         current_app.logger.error(f"Error rechecking dormant instance {instance.domain}: {e}")
                 
                 db.session.commit()
