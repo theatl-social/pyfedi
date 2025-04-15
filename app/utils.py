@@ -610,7 +610,7 @@ def community_membership(user: User, community: Community) -> int:
     return user.subscribed(community.id)
 
 
-@cache.memoize(timeout=300)
+@cache.memoize(timeout=10)
 def feed_membership(user: User, feed: Feed) -> int:
     if feed is None:
         return False
