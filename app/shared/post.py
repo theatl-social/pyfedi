@@ -66,7 +66,10 @@ def bookmark_post(post_id: int, src, auth=None):
             flash(_('Bookmark added.'))
     else:
         msg = 'This post has already been bookmarked.'
-        raise Exception(msg) if src == SRC_API else flash(_(msg))
+        if src == SRC_API:
+            raise Exception(msg)
+        else:
+            flash(_(msg))
 
     if src == SRC_API:
         return user_id
@@ -84,7 +87,10 @@ def remove_bookmark_post(post_id: int, src, auth=None):
             flash(_('Bookmark has been removed.'))
     else:
         msg = 'This post was not bookmarked.'
-        raise Exception(msg) if src == SRC_API else flash(_(msg))
+        if src == SRC_API:
+            raise Exception(msg)
+        else:
+            flash(_(msg))
 
     if src == SRC_API:
         return user_id
@@ -105,12 +111,18 @@ def subscribe_post(post_id: int, subscribe, src, auth=None):
             db.session.commit()
         else:
             msg = 'A subscription for this post did not exist.'
-            raise Exception(msg) if src == SRC_API else flash(_(msg))
+            if src == SRC_API:
+                raise Exception(msg)
+            else:
+                flash(_(msg))
 
     else:
         if existing_notification:
             msg = 'A subscription for this post already existed.'
-            raise Exception(msg) if src == SRC_API else flash(_(msg))
+            if src == SRC_API:
+                raise Exception(msg)
+            else:
+                flash(_(msg))
         else:
             new_notification = NotificationSubscription(name=shorten_string(_('Replies to my post %(post_title)s', post_title=post.title)),
                                                         user_id=user_id, entity_id=post_id, type=NOTIF_POST)

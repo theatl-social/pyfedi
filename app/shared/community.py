@@ -9,7 +9,8 @@ from app.shared.upload import process_upload
 from app.shared.tasks import task_selector
 from app.user.utils import search_for_user
 from app.utils import authorise_api_user, blocked_communities, shorten_string, gibberish, markdown_to_html, \
-    instance_banned, community_membership, joined_communities, moderating_communities, is_image_url, communities_banned_from
+    instance_banned, community_membership, joined_communities, moderating_communities, is_image_url, \
+    communities_banned_from, piefed_markdown_to_lemmy_markdown
 from app.constants import *
 
 from flask import current_app, flash, render_template
@@ -354,16 +355,25 @@ def subscribe_community(community_id: int, subscribe, src, auth=None):
             db.session.commit()
         else:
             msg = 'A subscription for this community did not exist.'
-            raise Exception(msg) if src == SRC_API else flash(_(msg))
+            if src == SRC_API:
+                raise Exception(msg)
+            else:
+                flash(_(msg))
 
     else:
         if existing_notification:
             msg = 'A subscription for this community already existed.'
-            raise Exception(msg) if src == SRC_API else flash(_(msg))
+            if src == SRC_API:
+                raise Exception(msg)
+            else:
+                flash(_(msg))
         else:
             if community_id in communities_banned_from(user_id):
                 msg = 'You are banned from this community.'
-                raise Exception(msg) if src == SRC_API else flash(_(msg))
+                if src == SRC_API:
+                    raise Exception(msg)
+                else:
+                    flash(_(msg))
             else:
                 new_notification = NotificationSubscription(name=shorten_string(_('New posts in %(community_name)s', community_name=community.title)),
                                                             user_id=user_id, entity_id=community_id, type=NOTIF_COMMUNITY)

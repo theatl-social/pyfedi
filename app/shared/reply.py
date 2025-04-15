@@ -56,7 +56,10 @@ def bookmark_reply(reply_id: int, src, auth=None):
             flash(_('Bookmark added.'))
     else:
         msg = 'This comment has already been bookmarked.'
-        raise Exception(msg) if src == SRC_API else flash(_(msg))
+        if src == SRC_API:
+            raise Exception(msg)
+        else:
+            flash(_(msg))
 
     if src == SRC_API:
         return user_id
@@ -74,7 +77,10 @@ def remove_bookmark_reply(reply_id: int, src, auth=None):
             flash(_('Bookmark has been removed.'))
     else:
         msg = 'This comment was not bookmarked.'
-        raise Exception(msg) if src == SRC_API else flash(_(msg))
+        if src == SRC_API:
+            raise Exception(msg)
+        else:
+            flash(_(msg))
 
     if src == SRC_API:
         return user_id
@@ -95,12 +101,18 @@ def subscribe_reply(reply_id: int, subscribe, src, auth=None):
             db.session.commit()
         else:
             msg = 'A subscription for this comment did not exist.'
-            raise Exception(msg) if src == SRC_API else flash(_(msg))
+            if src == SRC_API:
+                raise Exception(msg)
+            else:
+                flash(_(msg))
 
     else:
         if existing_notification:
             msg = 'A subscription for this comment already existed.'
-            raise Exception(msg) if src == SRC_API else flash(_(msg))
+            if src == SRC_API:
+                raise Exception(msg)
+            else:
+                flash(_(msg))
         else:
             new_notification = NotificationSubscription(name=shorten_string(_('Replies to my comment on %(post_title)s',
                                                         post_title=reply.post.title)), user_id=user_id, entity_id=reply_id,
