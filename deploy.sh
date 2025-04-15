@@ -1,5 +1,4 @@
 #!/bin/bash
-date > updated.txt
 
 sudo systemctl stop celery.service
 git pull
@@ -11,3 +10,5 @@ pybabel compile -d app/translations
 sudo systemctl start celery.service
 sudo systemctl restart pyfedi.service
 flask populate_community_search
+
+date > updated.txt

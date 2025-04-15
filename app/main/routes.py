@@ -26,7 +26,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     menu_topics, blocked_communities, \
     permission_required, debug_mode_only, ip_address, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, \
     feed_tree_public, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, html_to_text, \
-    get_redis_connection
+    get_redis_connection, subscribed_feeds
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, read_posts, Feed, FeedItem
 
@@ -842,8 +842,9 @@ def list_feeds():
         return render_template('feed/public_feeds.html', server_has_feeds=server_has_feeds, public_feeds_list=public_feeds,
                             moderating_communities=moderating_communities(current_user.get_id()),
                             joined_communities=joined_communities(current_user.get_id()),
+                            subscribed_feeds=subscribed_feeds(current_user.get_id()),
                             menu_topics=menu_topics(),
                             menu_instance_feeds=menu_instance_feeds(),
                             menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                            menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                            menu_subscribed_feeds=menu_subscribed_feeds(current_user.get_id()) if current_user.is_authenticated else None,
                             )

@@ -1079,9 +1079,16 @@ def menu_my_feeds(user_id):
     return Feed.query.filter(Feed.parent_feed_id == None).filter(Feed.user_id == user_id).order_by(Feed.name).all()
 
 
-# @cache.memoize(timeout=3000)
+@cache.memoize(timeout=3000)
 def menu_subscribed_feeds(user_id):
-    return Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter_by(user_id=user_id).filter_by(is_owner=False)
+    return Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter(FeedMember.user_id == user_id).filter_by(is_owner=False).all()
+
+
+# @cache.memoize(timeout=3000)
+def subscribed_feeds(user_id: int) -> List[int]:
+    if user_id is None or user_id == 0:
+        return []
+    return [feed.id for feed in Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter(FeedMember.user_id == user_id)]
 
 
 @cache.memoize(timeout=300)

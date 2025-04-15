@@ -1480,9 +1480,9 @@ def user_myfeeds():
 
     # this is for feeds the user is subscribed to
     user_has_feed_subscriptions = False
-    if current_user.is_authenticated and len(Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter_by(user_id=current_user.id).all()) > 0:
+    if current_user.is_authenticated and len(Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter(FeedMember.user_id == current_user.id).all()) > 0:
         user_has_feed_subscriptions = True
-    subbed_feeds = Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter_by(user_id=current_user.id).filter_by(is_owner=False)
+    subbed_feeds = Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter(FeedMember.user_id == current_user.id).filter_by(is_owner=False)
     
     return render_template('user/user_feeds.html', user_has_feeds=user_has_feeds, user_feeds_list=current_user_feeds,
                            user_has_feed_subscriptions=user_has_feed_subscriptions,

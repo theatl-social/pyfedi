@@ -873,6 +873,7 @@ def do_feed_subscribe(actor, user_id):
             flash(_(msg_to_user))
 
         cache.delete_memoized(feed_membership, user, feed)
+        cache.delete_memoized(menu_subscribed_feeds, user.id)
         cache.delete_memoized(joined_communities, user.id)
     else:
         abort(404)
@@ -933,6 +934,7 @@ def feed_unsubscribe(actor):
 
                     flash(_('You have left %(feed_title)s', feed_title=feed.title))
                 cache.delete_memoized(feed_membership, current_user, feed)
+                cache.delete_memoized(menu_subscribed_feeds, current_user.id)
                 cache.delete_memoized(joined_communities, current_user.id)
             else:
                 # todo: community deletion
