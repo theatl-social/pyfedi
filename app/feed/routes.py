@@ -49,7 +49,7 @@ def feed_new():
             form.url.data = form.url.data[3:]
         form.url.data = slugify(form.url.data.strip(), separator='_').lower()
         private_key, public_key = RsaKeys.generate_keypair()
-        feed = Feed(user_id=current_user.id, title=form.feed_name.data, name=form.url.data, machine_name=form.url.data, 
+        feed = Feed(user_id=current_user.id, title=form.title.data, name=form.url.data, machine_name=form.url.data,
                     description=piefed_markdown_to_lemmy_markdown(form.description.data),
                     description_html=markdown_to_html(form.description.data),
                     show_posts_in_children=form.show_child_posts.data,
@@ -98,7 +98,7 @@ def feed_new():
         community_apids = []
         for community in topic.communities:
             community_apids.append(community.lemmy_link().replace('!', ''))
-        form.feed_name.data = topic.name
+        form.title.data = topic.name
         form.url.data = topic.machine_name
         form.communities.data = '\n'.join(community_apids)
 
@@ -314,7 +314,7 @@ def feed_copy(feed_id: int):
             copy_feed_form.url.data = copy_feed_form.url.data[3:]
         copy_feed_form.url.data = slugify(copy_feed_form.url.data.strip(), separator='_').lower()
         private_key, public_key = RsaKeys.generate_keypair()
-        feed = Feed(user_id=current_user.id, title=copy_feed_form.feed_name.data, name=copy_feed_form.url.data, machine_name=copy_feed_form.url.data, 
+        feed = Feed(user_id=current_user.id, title=copy_feed_form.title.data, name=copy_feed_form.url.data, machine_name=copy_feed_form.url.data, 
                     description=piefed_markdown_to_lemmy_markdown(copy_feed_form.description.data),
                     description_html=markdown_to_html(copy_feed_form.description.data),
                     show_posts_in_children=copy_feed_form.show_child_posts.data,
@@ -377,7 +377,7 @@ def feed_copy(feed_id: int):
         return redirect(url_for('main.index'))        
 
     # add the current data to the form
-    copy_feed_form.feed_name.data = feed_to_copy.title
+    copy_feed_form.title.data = feed_to_copy.title
     copy_feed_form.url.data = feed_to_copy.name
     copy_feed_form.description.data = feed_to_copy.description
     copy_feed_form.show_child_posts.data = feed_to_copy.show_posts_in_children

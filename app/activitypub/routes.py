@@ -529,7 +529,11 @@ def shared_inbox():
             except VerificationError as e:
                 log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Could not verify LD signature: ' + str(e))
                 return '', 400
-        # not HTTP sig, and no LD sig, so reduce the inner object to just its remote ID, and then fetch it and check it in process_inbox_request()
+        elif (actor.ap_profile_id == 'https://fediseer.com/api/v1/user/fediseer' and                   # accept unsigned chat message from fediseer for API key
+              request_json['type'] == 'Create' and isinstance(request_json['object'], dict) and
+              'type' in request_json['object'] and request_json['object']['type'] == 'ChatMessage'):
+            ...
+        # no HTTP sig, and no LD sig, so reduce the inner object to just its remote ID, and then fetch it and check it in process_inbox_request()
         elif ((request_json['type'] == 'Create' or request_json['type'] == 'Update') and
               isinstance(request_json['object'], dict) and 'id' in request_json['object'] and isinstance(request_json['object']['id'], str)):
             request_json['object'] = request_json['object']['id']
@@ -1774,7 +1778,7 @@ def process_chat(user, store_ap_json, core_activity):
     recipient_ap_id = core_activity['object']['to'][0]
     recipient = find_actor_or_create(recipient_ap_id, create_if_not_found=False)
     if recipient and recipient.is_local():
-        if sender.created_recently() or sender.reputation <= -10:
+        if sender.ap_profile_id != 'https://fediseer.com/api/v1/user/fediseer' and (sender.created_recently() or sender.reputation <= -10):
             log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender not eligible to send')
             return True
         elif recipient.has_blocked_user(sender.id) or recipient.has_blocked_instance(sender.instance_id):
