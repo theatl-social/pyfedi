@@ -270,15 +270,15 @@ def feed_delete(feed_id: int):
     for fm in feed_members.all():
         db.session.delete(fm)
 
-    # delete the feed if its empty
-    if feed.num_communities == 0:
-        db.session.delete(feed)
-        flash(_('Feed deleted'))
-    else:
-        flash(_('Cannot delete feed with communities assigned to it.', 'error'))
+    # delete the feed
+    if feed.num_communities > 0:
+        db.session.query(FeedItem).filter(FeedItem.feed_id == feed.id).delete()
+    db.session.delete(feed)
 
     # commit the  removal changes
     db.session.commit()
+
+    flash(_('Feed deleted'))
 
     # clear instance feeds for dropdown menu cache
     if instance_feed:
