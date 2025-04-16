@@ -1188,6 +1188,9 @@ def url_to_thumbnail_file(filename) -> File:
         content_type = response.headers.get('content-type')
         if content_type and content_type.startswith('image'):
             # Generate file extension from mime type
+            if ';' in content_type:
+                content_type_parts = content_type.split(';')
+                content_type = content_type_parts[0]
             content_type_parts = content_type.split('/')
             if content_type_parts:
                 file_extension = '.' + content_type_parts[-1]
