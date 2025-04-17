@@ -69,11 +69,11 @@ class Instance(db.Model):
     updated_at = db.Column(db.DateTime, default=utcnow)
     last_seen = db.Column(db.DateTime, default=utcnow)      # When an Activity was received from them
     last_successful_send = db.Column(db.DateTime)           # When we successfully sent them an Activity
-    failures = db.Column(db.Integer, default=0)             # How many times we failed to send (reset to 0 after every successful send)
+    failures = db.Column(db.Integer, default=0)             # How many days that we have been unable to send (reset to 0 after every successful send)
     most_recent_attempt = db.Column(db.DateTime)            # When the most recent failure was
-    dormant = db.Column(db.Boolean, default=False)          # True once this instance is considered offline and not worth sending to any more
-    start_trying_again = db.Column(db.DateTime)             # When to start trying again. Should grow exponentially with each failure.
-    gone_forever = db.Column(db.Boolean, default=False)     # True once this instance is considered offline forever - never start trying again
+    dormant = db.Column(db.Boolean, default=False)          # True once this instance is considered offline and not worth sending to any more (5 days offline)
+    start_trying_again = db.Column(db.DateTime)             # When to start trying again.
+    gone_forever = db.Column(db.Boolean, default=False)     # True once this instance is considered offline forever - never start trying again (12 days offline)
     ip_address = db.Column(db.String(50))
     trusted = db.Column(db.Boolean, default=False, index=True)
     posting_warning = db.Column(db.String(512))
@@ -2356,7 +2356,6 @@ class Notification(db.Model):
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'))     # the person who caused the notification to happen
     created_at = db.Column(db.DateTime, default=utcnow)
     notif_type = db.Column(db.Integer, default=NOTIF_DEFAULT)   # see constants.py for possible values: NOTIF_*
-
 
 
 class Report(db.Model):

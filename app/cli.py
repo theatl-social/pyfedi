@@ -374,9 +374,20 @@ def register(app):
                             if instance.failures > 5:
                                 instance.dormant = True
                                 instance.start_trying_again = utcnow() + timedelta(days=5)
+                            if instance.failures > 12:
+                                instance.gone_forever = True
                         finally:
                             node.close()
 
+                        db.session.commit()
+                    else:
+                        instance.failures += 1
+                        instance.most_recent_attempt = utcnow()
+                        if instance.failures > 5:
+                            instance.dormant = True
+                            instance.start_trying_again = utcnow() + timedelta(days=5)
+                        if instance.failures > 12:
+                            instance.gone_forever = True
                         db.session.commit()
 
                     # Handle admin roles
