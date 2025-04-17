@@ -1623,7 +1623,7 @@ def post_cross_post(post_id: int):
     form.which_community.choices = which_community
     if form.validate_on_submit():
         community = Community.query.get_or_404(form.which_community.data)
-        post_type = post_type_to_form_url_type(post.type)
+        post_type = post_type_to_form_url_type(post.type, post.url)
         response = make_response(redirect(url_for('community.add_post', actor=community.link(), type=post_type, source=str(post.id))))
         response.delete_cookie('post_title')
         response.delete_cookie('post_description')

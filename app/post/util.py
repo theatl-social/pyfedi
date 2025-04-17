@@ -6,7 +6,7 @@ from sqlalchemy import desc, text, or_
 
 from app import db
 from app.models import PostReply, Post, Community
-from app.utils import blocked_instances, blocked_users
+from app.utils import blocked_instances, blocked_users, is_video_hosting_site
 
 from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_ARTICLE, POST_TYPE_VIDEO
 
@@ -118,8 +118,8 @@ def generate_archive_link(url) -> bool:
     return 'https://archive.ph/' + url
 
 # Forms like the cross post form need the type for the url
-def post_type_to_form_url_type(post_type: int):
-    if post_type == POST_TYPE_LINK:
+def post_type_to_form_url_type(post_type: int, post_url: str):
+    if post_type == POST_TYPE_LINK or is_video_hosting_site(post_url):
         return 'link'
     elif post_type == POST_TYPE_IMAGE:
         return 'image'

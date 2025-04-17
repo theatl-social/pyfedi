@@ -387,6 +387,8 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
                 post.type = POST_TYPE_LINK
 
         post.calculate_cross_posts(url_changed=url_changed)
+    elif url and is_video_hosting_site(url):
+        post.type = POST_TYPE_VIDEO
 
     federate = True
     if type == POST_TYPE_POLL:
