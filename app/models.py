@@ -1192,7 +1192,7 @@ class Post(db.Model):
     score = db.Column(db.Integer, default=0, index=True)                # used for 'top' ranking
     nsfw = db.Column(db.Boolean, default=False, index=True)
     nsfl = db.Column(db.Boolean, default=False, index=True)
-    sticky = db.Column(db.Boolean, default=False)
+    sticky = db.Column(db.Boolean, default=False, index=True)
     notify_author = db.Column(db.Boolean, default=True)
     indexable = db.Column(db.Boolean, default=True)
     from_bot = db.Column(db.Boolean, default=False, index=True)
