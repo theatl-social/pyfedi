@@ -1695,6 +1695,7 @@ def admin_community_move(community_id, new_owner):
         community.ap_public_url = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data
         community.ap_followers_url = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data + '/followers'
         community.ap_domain = current_app.config['SERVER_NAME']
+        community.instance_id = 1
         if form.new_owner.data:
             community.user_id = new_owner_user.id
         db.session.commit()
