@@ -15,11 +15,11 @@ from urllib.parse import urlparse
 
 from app import db, celery, cache
 from app.activitypub.routes import process_inbox_request, process_delete_request, replay_inbox_request
-from app.activitypub.signature import post_request, default_context
+from app.activitypub.signature import post_request, default_context, RsaKeys
 from app.activitypub.util import instance_allowed, extract_domain_and_actor
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm, \
-    EditInstanceForm, RemoteInstanceScanForm
+    EditInstanceForm, RemoteInstanceScanForm, MoveCommunityForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form
 from app.community.util import save_icon_file, save_banner_file, search_for_community
@@ -32,7 +32,8 @@ from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
     topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents, \
-    download_defeds, instance_banned, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, referrer
+    download_defeds, instance_banned, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, referrer, \
+    community_membership
 from app.admin import bp
 
 
@@ -1668,6 +1669,53 @@ def admin_instance_edit(instance_id):
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(),
                            site=g.site, menu_instance_feeds=menu_instance_feeds(), 
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                           )
+
+
+@bp.route('/community/<int:community_id>/move/<int:new_owner>', methods=['GET', 'POST'])
+@login_required
+@permission_required('change instance settings')
+def admin_community_move(community_id, new_owner):
+    community = Community.query.get_or_404(community_id)
+    new_owner_user = User.query.get_or_404(new_owner)
+    form = MoveCommunityForm()
+
+    form.new_owner.label.text = _('Set community owner to %(user_name)s', user_name=new_owner_user.link())
+
+    if form.validate_on_submit():
+        old_name = community.link()
+        community.ap_id = None
+        private_key, public_key = RsaKeys.generate_keypair()
+        community.name = form.new_url.data.lower()
+        community.private_key = private_key
+        community.public_key = public_key
+        community.ap_profile_id = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data.lower()
+        community.ap_public_url = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data
+        community.ap_followers_url = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data + '/followers'
+        community.ap_domain = current_app.config['SERVER_NAME']
+        if form.new_owner.data:
+            community.user_id = new_owner_user.id
+        db.session.commit()
+
+        cache.delete_memoized(community_membership, new_owner_user, community)
+        cache.delete_memoized(joined_communities, new_owner_user.id)
+        cache.delete_memoized(moderating_communities, new_owner_user.id)
+
+        new_url = f'https://{current_app.config["SERVER_NAME"]}/c/{community.link()}'
+        flash(_('%(community_name)s is now %(new_url)s. Contact the initiator of this request to let them know.', community_name=old_name, new_url=new_url))
+
+        flash(_('Ensure this community has the right moderators.'))
+        return redirect(url_for('community.community_mod_list', community_id=community.id))
+
+    form.new_url.data = community.name
+
+    return render_template('admin/community_move.html', title=_('Move community'), form=form, community=community,
+                           moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_topics=menu_topics(),
+                           site=g.site, menu_instance_feeds=menu_instance_feeds(),
                            menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
                            menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                            )

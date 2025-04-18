@@ -54,6 +54,9 @@
                 {% if rss_feed and not community.is_local() -%}
                     <ul>
                         <li><p><a href="{{ community.public_url() }}">{{ _('View community on original server') }}</a></p></li>
+                        {% if instance_domain -%}
+                        <li><p><a href="/community/{{ community.link() }}/move">{{ _('Move community to %(instance_domain)s', instance_domain=instance_domain) }}</a></p></li>
+                        {% endif -%}
                         <li><p><a href="{{ url_for('search.retrieve_remote_post') }}">{{ _('Retrieve a post from the original server') }}</a></p></li>
                     </ul>
                 {% endif -%}

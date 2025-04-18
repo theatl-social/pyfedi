@@ -257,3 +257,14 @@ class SendNewsletterForm(FlaskForm):
     body_html = TextAreaField(_l('Body (html)'), render_kw={"rows": 20}, validators=[DataRequired()])
     test = BooleanField(_l('Test mode'), render_kw={'checked': True})
     submit = SubmitField(_l('Send newsletter'))
+
+
+class MoveCommunityForm(FlaskForm):
+    new_url = StringField(_l('New url'), validators=[DataRequired()])
+    new_owner = BooleanField(_l('Set new owner'))
+    submit = SubmitField(_l('Submit'))
+
+    def validate_new_url(self, new_url):
+        existing_community = Community.query.filter(Community.ap_id == None, Community.name == new_url.data.lower()).first()
+        if existing_community:
+            raise ValidationError(_l('A local community at that url already exists'))

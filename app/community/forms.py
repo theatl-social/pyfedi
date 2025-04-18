@@ -293,3 +293,9 @@ class RetrieveRemotePost(FlaskForm):
 class InviteCommunityForm(FlaskForm):
     to = TextAreaField(_l('To'), validators=[DataRequired()], render_kw={'placeholder': _l('Email addresses or fediverse handles, one per line'), 'autofocus': True})
     submit = SubmitField(_l('Invite'))
+
+
+class MoveCommunityForm(FlaskForm):
+    old_community_locked = BooleanField(_l('The old community is locked'), validators=[DataRequired()])
+    post_link = StringField(_l('Move notification post in old community'), validators=[DataRequired()])
+    submit = SubmitField(_l('Request move'))

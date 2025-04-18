@@ -19,14 +19,15 @@ from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, Cre
     ReportCommunityForm, \
     DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm, \
     EscalateReportForm, ResolveReportForm, CreateVideoForm, CreatePollForm, EditCommunityWikiPageForm, \
-    InviteCommunityForm
+    InviteCommunityForm, MoveCommunityForm
 from app.community.util import search_for_community, actor_to_community, \
     save_icon_file, save_banner_file, \
     delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
     REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, NOTIF_POST, POST_TYPE_POLL, MICROBLOG_APPS, SRC_WEB, \
-    NOTIF_REPORT, NOTIF_NEW_MOD, NOTIF_BAN, NOTIF_UNBAN, NOTIF_REPORT_ESCALATION
+    NOTIF_REPORT, NOTIF_NEW_MOD, NOTIF_BAN, NOTIF_UNBAN, NOTIF_REPORT_ESCALATION, NOTIF_MENTION
+from app.email import send_email
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, \
     File, PostVote, utcnow, Report, Notification, ActivityPubLog, Topic, Conversation, PostReply, \
@@ -1178,6 +1179,47 @@ def community_notification(community_id: int):
     try:
         return subscribe_community(community_id, None, SRC_WEB)
     except NoResultFound:
+        abort(404)
+
+
+@bp.route('/<actor>/move', methods=['GET', 'POST'])
+@login_required
+def community_move(actor):
+    if current_user.banned:
+        return show_ban_message()
+    community = actor_to_community(actor)
+
+    if community is not None and not community.is_local():
+        form = MoveCommunityForm()
+        if form.validate_on_submit():
+            from flask import render_template as flask_render_template
+
+            # Notify admin
+            text_body = flask_render_template('email/move_community.txt', current_user=current_user, community=community,
+                                              post_url=form.post_link.data,
+                                              home_domain=current_app.config['SERVER_NAME'])
+            html_body = flask_render_template('email/move_community.html', current_user=current_user, community=community,
+                                              post_url=form.post_link.data,
+                                              home_domain=current_app.config['SERVER_NAME'])
+            send_email(f'Request to move {community.link()}', f'noreply@{current_app.config["SERVER_NAME"]}',
+                       g.site.contact_email, text_body, html_body, current_user.email)
+
+            notify = Notification(title='Community move requested, check your email.', url=f'/admin/community/{community.id}/move/{current_user.id}', user_id=1,
+                                  author_id=current_user.id, notif_type=NOTIF_MENTION)
+            db.session.add(notify)
+            db.session.execute(text('UPDATE "user" SET unread_notifications = unread_notifications + 1 WHERE id = 1'))
+            db.session.commit()
+
+            flash(_('Your request has been sent to the site admins.'))
+        return render_template('community/community_move.html', community=community, form=form,
+                               moderating_communities=moderating_communities(current_user.get_id()),
+                               joined_communities=joined_communities(current_user.get_id()),
+                               menu_topics=menu_topics(),
+                               site=g.site, menu_instance_feeds=menu_instance_feeds(),
+                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                               menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                               )
+    else:
         abort(404)
 
 
