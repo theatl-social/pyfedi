@@ -824,6 +824,20 @@ def instance_online(domain: str) -> bool:
         return False
 
 
+@cache.memoize(timeout=150)
+def instance_gone_forever(domain: str) -> bool:
+    if domain is None or domain == '':
+        return False
+    domain = domain.lower().strip()
+    if 'https://' in domain or 'http://' in domain:
+        domain = urlparse(domain).hostname
+    instance = Instance.query.filter_by(domain=domain).first()
+    if instance is not None:
+        return instance.gone_forever
+    else:
+        return True
+
+
 def user_cookie_banned() -> bool:
     cookie = request.cookies.get('sesion', None)
     return cookie is not None

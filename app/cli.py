@@ -27,7 +27,7 @@ from app.post.routes import post_delete_post
 from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
     shorten_string, get_request, blocked_communities, gibberish, get_request_instance, \
     instance_banned, recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, download_defeds, \
-    get_setting, set_setting, get_redis_connection, instance_online
+    get_setting, set_setting, get_redis_connection, instance_online, instance_gone_forever
 
 
 def register(app):
@@ -456,6 +456,8 @@ def register(app):
                         if to_send.retries <= to_send.max_retries:
                             send_post_request(to_send.destination, json.loads(to_send.payload), to_send.private_key, to_send.actor,
                                               retries=to_send.retries + 1)
+                        to_be_deleted.append(to_send.id)
+                    elif instance_gone_forever(to_send.destination_domain):
                         to_be_deleted.append(to_send.id)
                 # Remove them once sent - send_post_request will have re-queued them if they failed
                 if len(to_be_deleted):
