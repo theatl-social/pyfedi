@@ -1621,9 +1621,7 @@ def admin_instances():
             instances = instances.join(BannedInstances, BannedInstances.domain == Instance.domain)
 
     instances = instances.order_by(text('"instance".' + sort_by))
-    instances = instances.paginate(page=page,
-                                       per_page=250 if current_user.is_authenticated and not low_bandwidth else 50,
-                                       error_out=False)
+    instances = instances.paginate(page=page, per_page=50, error_out=False)
     next_url = url_for('admin.admin_instances', page=instances.next_num, search=search, filter=filter, sort_by=sort_by) if instances.has_next else None
     prev_url = url_for('admin.admin_instances', page=instances.prev_num, search=search, filter=filter, sort_by=sort_by) if instances.has_prev and page != 1 else None
 

@@ -41,9 +41,7 @@ def list_instances():
             title = _('Gone forever instances')
 
     # Pagination
-    instances = instances.paginate(page=page,
-                                   per_page=250 if current_user.is_authenticated and not low_bandwidth else 50,
-                                   error_out=False)
+    instances = instances.paginate(page=page, per_page=50, error_out=False)
     next_url = url_for('instance.list_instances', page=instances.next_num) if instances.has_next else None
     prev_url = url_for('instance.list_instances', page=instances.prev_num) if instances.has_prev and page != 1 else None
 
