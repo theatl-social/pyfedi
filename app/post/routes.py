@@ -78,7 +78,7 @@ def show_post(post_id: int):
 
         # handle top-level comments/replies
         form = NewReplyForm()
-        form.language_id.choices = languages_for_form()
+        form.language_id.choices = languages_for_form() if current_user.is_authenticated else []
         if current_user.is_authenticated and current_user.verified and form.validate_on_submit():
 
             try:
