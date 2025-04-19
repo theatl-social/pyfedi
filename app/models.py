@@ -286,6 +286,7 @@ class File(db.Model):
     thumbnail_path = db.Column(db.String(255))
     thumbnail_width = db.Column(db.Integer)
     thumbnail_height = db.Column(db.Integer)
+    hash = db.Column(db.String(64), index=True)
 
     def view_url(self, resize=False):
         if self.source_url:
@@ -2349,7 +2350,7 @@ class RolePermission(db.Model):
 
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(50))
+    title = db.Column(db.String(150))
     url = db.Column(db.String(512))
     read = db.Column(db.Boolean, default=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)       # who the notification should go to
