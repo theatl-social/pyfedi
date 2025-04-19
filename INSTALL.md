@@ -467,31 +467,6 @@ Every few minutes PieFed will retry federation sending attempts that failed prev
 */5 * * * * rimu cd /home/rimu/pyfedi && /home/rimu/pyfedi/send_queue.sh
 ```
 
-If celery is hanging occasionally, put this script in /etc/cron.hourly:
-
-```
-#!/bin/bash
-
-# Define the service to restart
-SERVICE="celery.service"
-
-# Get the load average for the last 1 minute
-LOAD=$(awk '{print $1}' /proc/loadavg)
-
-# Check if the load average is less than 0.1
-if (( $(echo "$LOAD < 0.1" | bc -l) )); then
-    # Restart the service
-    systemctl restart $SERVICE
-    # Log the action
-    echo "$(date): Load average is $LOAD. Restarted $SERVICE." >> /var/log/restart_service.log
-else
-    # Log that no action was taken
-    echo "$(date): Load average is $LOAD. No action taken." >> /var/log/restart_service.log
-fi
-
-```
-
-Adjust the echo "$LOAD < 0.1" to suit your system.
 
 ### Email
 
@@ -520,6 +495,25 @@ PieFed has the capability to automatically remove file copies from the Cloudflar
 
 - `CLOUDFLARE_API_TOKEN` - go to https://dash.cloudflare.com/profile/api-tokens and create a "Zone.Cache Purge" token.
 - `CLOUDFLARE_ZONE_ID` - this can be found in the right hand column of your Cloudflare dashboard in the API section.
+
+#### S3 (object storage)
+
+Over time images for user profile photos, image posts and link thumbnails will consume quite a lot of storage space so it is a good idea
+to use a cheaper form of storage such as AWS S3 or Cloudflare R2. The S3 API is widely implemented by many providers and PieFed can
+store media in any of them. Cloudflare R2 has the benefit of a CSAM detection service as part of R2 and does not charge egress fees
+so they are a good choice.
+
+To enable S3 storage you need to set these environment variables in your .env file:
+
+ - S3_REGION = 'auto'
+ - S3_BUCKET = 'piefed-media'
+ - S3_ENDPOINT = 'https://something_something.r2.cloudflarestorage.com'
+ - S3_PUBLIC_URL = 'media.piefed.social'
+ - S3_ACCESS_KEY = 'xyz'
+ - S3_ACCESS_SECRET = 'xyzxyz'
+
+Cloudflare does not care about S3_REGION so it can be 'auto' but for AWS you should use something like us-east-1. All the
+other values are set during the setup of the space (often called the "bucket") on your S3 provider.
 
 #### SMTP
 
