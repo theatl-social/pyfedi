@@ -474,6 +474,8 @@ def register(app):
         with app.app_context():
             from app.utils import move_file_to_s3
 
+            print('This will run for a long time, you should run it in a tmux session. Hit Ctrl+C now if not using tmux.')
+            sleep(5.0)
             for community in Community.query.filter(Community.banned == False):
                 did_something = False
                 if community.icon_id:
