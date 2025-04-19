@@ -1905,7 +1905,7 @@ def move_file_to_s3(file_id, s3):
         if file:
             if file.thumbnail_path and not file.thumbnail_path.startswith('http') and file.thumbnail_path.startswith(
                     'app/static/media'):
-                if os.stat(file.thumbnail_path):
+                if os.path.isfile(file.thumbnail_path):
                     new_path = file.thumbnail_path.replace('app/static/media/', f"")
                     s3.upload_file(file.thumbnail_path, current_app.config['S3_BUCKET'], new_path)
                     os.unlink(file.thumbnail_path)
@@ -1914,7 +1914,7 @@ def move_file_to_s3(file_id, s3):
 
             if file.file_path and not file.file_path.startswith('http') and file.file_path.startswith(
                     'app/static/media'):
-                if os.stat(file.file_path):
+                if os.path.isfile(file.file_path):
                     new_path = file.file_path.replace('app/static/media/', f"")
                     s3.upload_file(file.file_path, current_app.config['S3_BUCKET'], new_path)
                     os.unlink(file.file_path)
@@ -1923,7 +1923,7 @@ def move_file_to_s3(file_id, s3):
 
             if file.source_url and not file.source_url.startswith('http') and file.source_url.startswith(
                     'app/static/media'):
-                if os.stat(file.source_url):
+                if os.path.isfile(file.source_url):
                     new_path = file.source_url.replace('app/static/media/', f"")
                     s3.upload_file(file.source_url, current_app.config['S3_BUCKET'], new_path)
                     os.unlink(file.source_url)
