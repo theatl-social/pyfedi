@@ -500,8 +500,7 @@ PieFed has the capability to automatically remove file copies from the Cloudflar
 
 Over time images for user profile photos, image posts and link thumbnails will consume quite a lot of storage space so it is a good idea
 to use a cheaper form of storage such as AWS S3 or Cloudflare R2. The S3 API is widely implemented by many providers and PieFed can
-store media in any of them. Cloudflare R2 has the benefit of a CSAM detection service as part of R2 and does not charge egress fees
-so they are a good choice.
+store media in any of them. Cloudflare does not charge egress fees so they are pretty good value.
 
 To enable S3 storage you need to set these environment variables in your .env file:
 
