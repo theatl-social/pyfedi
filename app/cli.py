@@ -514,6 +514,7 @@ def register(app):
         with app.app_context():
             from app.utils import move_file_to_s3
             import boto3
+            processed = 0
             print(f'Beginning move of post images... this could take a long time. Use tmux.')
             local_post_image_ids = db.session.execute(text('SELECT image_id FROM "post" WHERE deleted is false and image_id is not null and instance_id = 1 ORDER BY id DESC')).scalars()
             remote_post_image_ids = db.session.execute(text('SELECT image_id FROM "post" WHERE deleted is false and image_id is not null and instance_id != 1 ORDER BY id DESC')).scalars()
@@ -527,12 +528,14 @@ def register(app):
             )
             for post_image_id in local_post_image_ids:
                 move_file_to_s3(post_image_id, s3)
-                print('.', end='')
+                processed += 1
+                print(processed)
 
             print('Finished moving local post images, doing remote ones now...')
             for post_image_id in remote_post_image_ids:
                 move_file_to_s3(post_image_id, s3)
-                print('.', end='')
+                processed += 1
+                print(processed)
             s3.close()
             print('Done')
 
