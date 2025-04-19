@@ -515,6 +515,8 @@ To enable S3 storage you need to set these environment variables in your .env fi
 Cloudflare does not care about S3_REGION so it can be 'auto' but for AWS you should use something like us-east-1. All the
 other values are set during the setup of the space (often called the "bucket") on your S3 provider.
 
+Test your S3 connection by going to https://yourinstance.tld/test_s3. If it crashes, something is wrong. If you see 'Ok' all is well.
+
 #### SMTP
 
 To use SMTP you need to set all the `MAIL_*` environment variables in you `.env` file. See `env.sample` for a list of them.
