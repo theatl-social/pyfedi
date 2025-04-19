@@ -5,6 +5,7 @@ from typing import List, Union, Type
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 import arrow
+import boto3
 from flask import current_app, escape, url_for, render_template_string
 from flask_login import UserMixin, current_user
 from sqlalchemy import or_, text, desc
@@ -295,6 +296,8 @@ class File(db.Model):
             else:
                 return self.source_url
         elif self.file_path:
+            if self.file_path.startswith('https://'):
+                return self.file_path
             file_path = self.file_path[4:] if self.file_path.startswith('app/') else self.file_path
             scheme = 'http' if current_app.config['SERVER_NAME'] == '127.0.0.1:5000' else 'https'
             return f"{scheme}://{current_app.config['SERVER_NAME']}/{file_path}"
@@ -304,6 +307,8 @@ class File(db.Model):
     def medium_url(self):
         if self.file_path is None:
             return self.thumbnail_url()
+        if self.file_path.startswith('https://'):
+            return self.file_path
         file_path = self.file_path[4:] if self.file_path.startswith('app/') else self.file_path
         scheme = 'http' if current_app.config['SERVER_NAME'] == '127.0.0.1:5000' else 'https'
         return f"{scheme}://{current_app.config['SERVER_NAME']}/{file_path}"
@@ -314,31 +319,65 @@ class File(db.Model):
                 return self.source_url
             else:
                 return ''
+        if self.thumbnail_path.startswith('https://'):
+            return self.thumbnail_path
         thumbnail_path = self.thumbnail_path[4:] if self.thumbnail_path.startswith('app/') else self.thumbnail_path
         scheme = 'http' if current_app.config['SERVER_NAME'] == '127.0.0.1:5000' else 'https'
         return f"{scheme}://{current_app.config['SERVER_NAME']}/{thumbnail_path}"
 
     def delete_from_disk(self):
         purge_from_cache = []
-        if self.file_path and os.path.isfile(self.file_path):
-            try:
-                os.unlink(self.file_path)
-            except FileNotFoundError:
-                ...
-            purge_from_cache.append(self.file_path.replace('app/', f"https://{current_app.config['SERVER_NAME']}/"))
-        if self.thumbnail_path and os.path.isfile(self.thumbnail_path):
-            try:
-                os.unlink(self.thumbnail_path)
-            except FileNotFoundError:
-                ...
-            purge_from_cache.append(self.thumbnail_path.replace('app/', f"https://{current_app.config['SERVER_NAME']}/"))
-        if self.source_url and self.source_url.startswith('http') and current_app.config['SERVER_NAME'] in self.source_url:
-            # self.source_url is always a url rather than a file path, which makes deleting the file a bit fiddly
-            try:
-                os.unlink(self.source_url.replace(f"https://{current_app.config['SERVER_NAME']}/", 'app/'))
-            except FileNotFoundError:
-                ...
-            purge_from_cache.append(self.source_url) # otoh it makes purging the cdn cache super easy.
+        s3_files_to_delete = []
+        if self.file_path:
+            if self.file_path.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}'):
+                s3_path = self.file_path.replace(f'https://{current_app.config["S3_PUBLIC_URL"]}/', '')
+                s3_files_to_delete.append(s3_path)
+                purge_from_cache.append(self.file_path)
+            elif os.path.isfile(self.file_path):
+                try:
+                    os.unlink(self.file_path)
+                except FileNotFoundError:
+                    ...
+                purge_from_cache.append(self.file_path.replace('app/', f"https://{current_app.config['SERVER_NAME']}/"))
+
+        if self.thumbnail_path:
+            if self.thumbnail_path.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}'):
+                s3_path = self.thumbnail_path.replace(f'https://{current_app.config["S3_PUBLIC_URL"]}/', '')
+                s3_files_to_delete.append(s3_path)
+                purge_from_cache.append(self.thumbnail_path)
+            elif os.path.isfile(self.thumbnail_path):
+                try:
+                    os.unlink(self.thumbnail_path)
+                except FileNotFoundError:
+                    ...
+                purge_from_cache.append(self.thumbnail_path.replace('app/', f"https://{current_app.config['SERVER_NAME']}/"))
+        if self.source_url:
+            if self.source_url.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}'):
+                s3_path = self.source_url.replace(f'https://{current_app.config["S3_PUBLIC_URL"]}/', '')
+                s3_files_to_delete.append(s3_path)
+                purge_from_cache.append(self.source_url)
+            elif self.source_url.startswith('http') and current_app.config['SERVER_NAME'] in self.source_url:
+                try:
+                    os.unlink(self.source_url.replace(f"https://{current_app.config['SERVER_NAME']}/", 'app/'))
+                except FileNotFoundError:
+                    ...
+                purge_from_cache.append(self.source_url)
+
+        if len(s3_files_to_delete) > 0:
+            delete_payload = {
+                'Objects': [{'Key': key} for key in s3_files_to_delete],
+                'Quiet': True  # Optional: if True, successful deletions are not returned
+            }
+            boto3_session = boto3.session.Session()
+            s3 = boto3_session.client(
+                service_name='s3',
+                region_name=current_app.config['S3_REGION'],
+                endpoint_url=current_app.config['S3_ENDPOINT'],
+                aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+            )
+            s3.delete_objects(Bucket=current_app.config['S3_BUCKET'], Delete=delete_payload)
+            s3.close()
 
         if purge_from_cache:
             flush_cdn_cache(purge_from_cache)
@@ -364,36 +403,38 @@ def flush_cdn_cache(url: Union[str, List[str]]):
 
 @celery.task
 def flush_cdn_cache_task(to_purge: Union[str, List[str]]):
-    zone_id = current_app.config['CLOUDFLARE_ZONE_ID']
-    token = current_app.config['CLOUDFLARE_API_TOKEN']
-    headers = {
-        'Authorization': f"Bearer {token}",
-        'Content-Type': 'application/json'
-    }
-    # url can be a string or a list of strings
-    body = ''
-    if isinstance(to_purge, str) and to_purge == 'all':
-        body = {
-            'purge_everything': True
-        }
-    else:
-        if isinstance(to_purge, str):
-            body = {
-                'files': [to_purge]
+    with current_app.app_context():
+        zone_id = current_app.config['CLOUDFLARE_ZONE_ID']
+        token = current_app.config['CLOUDFLARE_API_TOKEN']
+        if zone_id and token:
+            headers = {
+                'Authorization': f"Bearer {token}",
+                'Content-Type': 'application/json'
             }
-        elif isinstance(to_purge, list):
-            body = {
-                'files': to_purge
-            }
+            # url can be a string or a list of strings
+            body = ''
+            if isinstance(to_purge, str) and to_purge == 'all':
+                body = {
+                    'purge_everything': True
+                }
+            else:
+                if isinstance(to_purge, str):
+                    body = {
+                        'files': [to_purge]
+                    }
+                elif isinstance(to_purge, list):
+                    body = {
+                        'files': to_purge
+                    }
 
-    if body:
-        httpx_client.request(
-            'POST',
-            f'https://api.cloudflare.com/client/v4/zones/{zone_id}/purge_cache',
-            headers=headers,
-            json=body,
-            timeout=5,
-        )
+            if body:
+                httpx_client.request(
+                    'POST',
+                    f'https://api.cloudflare.com/client/v4/zones/{zone_id}/purge_cache',
+                    headers=headers,
+                    json=body,
+                    timeout=5,
+                )
 
 
 class Topic(db.Model):

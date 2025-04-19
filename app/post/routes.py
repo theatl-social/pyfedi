@@ -786,8 +786,9 @@ def post_edit(post_id: int):
                     path = "app/" + post.image.source_url.replace(
                         f"https://{current_app.config['SERVER_NAME']}/", ""
                     )
-                with open(path, "rb")as file:
-                    form.image_file.data = file.read()
+                if not path.startswith('http'):
+                    with open(path, "rb")as file:
+                        form.image_file.data = file.read()
 
             elif post_type == POST_TYPE_VIDEO:
                 form.video_url.data = post.url

@@ -1,3 +1,4 @@
+import os
 from app import db, cache
 from app.activitypub.util import make_image_sizes, notify_about_post
 from app.constants import *
@@ -5,20 +6,19 @@ from app.community.util import tags_from_string_old, end_poll_date
 from app.models import File, Notification, NotificationSubscription, Poll, PollChoice, Post, PostBookmark, PostVote, Report, Site, User, utcnow
 from app.shared.tasks import task_selector
 from app.utils import render_template, authorise_api_user, shorten_string, gibberish, ensure_directory_exists, \
-                      piefed_markdown_to_lemmy_markdown, markdown_to_html, fixup_url, domain_from_url, \
-                      opengraph_parse, url_to_thumbnail_file, can_create_post, is_video_hosting_site, recently_upvoted_posts, \
-                      is_image_url, add_to_modlog_activitypub
+    piefed_markdown_to_lemmy_markdown, markdown_to_html, fixup_url, domain_from_url, \
+    opengraph_parse, url_to_thumbnail_file, can_create_post, is_video_hosting_site, recently_upvoted_posts, \
+    is_image_url, add_to_modlog_activitypub, store_files_in_s3
 
 from flask import abort, flash, redirect, request, url_for, current_app, g
 from flask_babel import _
 from flask_login import current_user
-
+import boto3
 from pillow_heif import register_heif_opener
 from PIL import Image, ImageOps
 
 from sqlalchemy import text
 
-import os
 
 
 # function can be shared between WEB and API (only API calls it for now)
@@ -302,7 +302,10 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
 
         new_filename = gibberish(15)
         # set up the storage directory
-        directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
+        if store_files_in_s3():
+            directory = 'app/static/tmp'
+        else:
+            directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
         ensure_directory_exists(directory)
 
         # save the file
@@ -325,12 +328,28 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
 
                 img.thumbnail((2000, 2000))
                 img.save(final_place)
-
-                url = f"https://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
             else:
                 raise Exception('filetype not allowed')
-        else:
-            url = f"https://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
+
+        url = f"https://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
+
+        # Move uploaded file to S3
+        if store_files_in_s3():
+            session = boto3.session.Session()
+            s3 = session.client(
+                service_name='s3',
+                region_name=current_app.config['S3_REGION'],
+                endpoint_url=current_app.config['S3_ENDPOINT'],
+                aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+            )
+            s3.upload_file(final_place, current_app.config['S3_BUCKET'], 'posts/' +
+                           new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + file_ext)
+            url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/" + \
+                  new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + file_ext
+            s3.close()
+            os.unlink(final_place)
+
 
     if url and (from_scratch or url_changed):
         domain = domain_from_url(url)
@@ -675,5 +694,3 @@ def mod_restore_post(post_id, reason, src, auth):
         return user.id, post
     else:
         return
-
-

@@ -698,6 +698,23 @@ def test_redis():
         return 'Redis error'
 
 
+@bp.route('/test_s3')
+@debug_mode_only
+def test_s3():
+    import boto3
+    session = boto3.session.Session()
+    s3 = session.client(
+        service_name='s3',
+        region_name=current_app.config['S3_REGION'],
+        endpoint_url=current_app.config['S3_ENDPOINT'],
+        aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+        aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+    )
+    s3.upload_file('babel.cfg', current_app.config['S3_BUCKET'], 'babel.cfg')
+    s3.delete_object(Bucket=current_app.config['S3_BUCKET'], Key='babel.cfg')
+    return 'Ok'
+
+
 @bp.route('/find_voters')
 @login_required
 @permission_required('change instance settings')

@@ -213,7 +213,7 @@ def is_local_image_url(url):
     if not is_image_url(url):
         return False
     f = furl(url)
-    return f.host in ["127.0.0.1", current_app.config["SERVER_NAME"]]
+    return f.host in ["127.0.0.1", current_app.config["SERVER_NAME"], current_app.config['S3_PUBLIC_URL']]
 
 
 def is_video_url(url: str) -> bool:
@@ -1891,3 +1891,7 @@ def post_ids_to_models(post_ids: List[int], sort: str):
     elif sort == 'active':
         posts = posts.order_by(desc(Post.last_active))
     return posts
+
+
+def store_files_in_s3():
+    return current_app.config['S3_ACCESS_KEY'] and current_app.config['S3_ACCESS_SECRET'] and current_app.config['S3_ENDPOINT']

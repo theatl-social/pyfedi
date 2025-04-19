@@ -69,3 +69,10 @@ class Config(object):
     STRIPE_MONTHLY_SMALL_TEXT = os.environ.get('STRIPE_MONTHLY_SMALL_TEXT') or ''
     STRIPE_MONTHLY_BIG_TEXT = os.environ.get('STRIPE_MONTHLY_BIG_TEXT') or ''
     WEBHOOK_SIGNING_SECRET = os.environ.get('WEBHOOK_SIGNING_SECRET') or ''
+
+    S3_REGION = os.environ.get('S3_REGION') or ''
+    S3_ENDPOINT = os.environ.get('S3_ENDPOINT') or ''
+    S3_BUCKET = os.environ.get('S3_BUCKET') or ''
+    S3_ACCESS_KEY = os.environ.get('S3_ACCESS_KEY') or ''
+    S3_ACCESS_SECRET = os.environ.get('S3_ACCESS_SECRET') or ''
+    S3_PUBLIC_URL = os.environ.get('S3_PUBLIC_URL') or ''
