@@ -469,6 +469,38 @@ def register(app):
             finally:
                 set_setting('send-queue-running', False)
 
+    @app.cli.command('move-files-to-s3')
+    def move_files_to_s3():
+        with app.app_context():
+            from app.utils import move_file_to_s3
+
+            for community in Community.query.filter(Community.banned == False):
+                did_something = False
+                if community.icon_id:
+                    did_something = True
+                    move_file_to_s3(community.icon_id)
+                if community.image_id:
+                    did_something = True
+                    move_file_to_s3(community.image_id)
+                if did_something:
+                    print(f'Moved image for community {community.link()}')
+
+            for user in User.query.filter(User.deleted == False, User.banned == False, User.last_seen > utcnow() - timedelta(days=180)):
+                did_something = False
+                if user.avatar_id:
+                    did_something = True
+                    move_file_to_s3(user.avatar_id)
+                if user.cover_id:
+                    did_something = True
+                    move_file_to_s3(user.cover_id)
+                if did_something:
+                    print(f'Moved image for user {user.link()}')
+
+            print(f'Beginning move of post images... this could take a while.')
+            for post in Post.query.filter(Post.deleted == False, Post.image_id != None):
+                move_file_to_s3(post.image_id)
+            print('Done')
+
     @app.cli.command("spaceusage")
     def spaceusage():
         with app.app_context():
