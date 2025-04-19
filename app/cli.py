@@ -473,17 +473,26 @@ def register(app):
     def move_files_to_s3():
         with app.app_context():
             from app.utils import move_file_to_s3
+            import boto3
 
             print('This will run for a long time, you should run it in a tmux session. Hit Ctrl+C now if not using tmux.')
             sleep(5.0)
+            boto3_session = boto3.session.Session()
+            s3 = boto3_session.client(
+                service_name='s3',
+                region_name=current_app.config['S3_REGION'],
+                endpoint_url=current_app.config['S3_ENDPOINT'],
+                aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+            )
             for community in Community.query.filter(Community.banned == False):
                 did_something = False
                 if community.icon_id:
                     did_something = True
-                    move_file_to_s3(community.icon_id)
+                    move_file_to_s3(community.icon_id, s3)
                 if community.image_id:
                     did_something = True
-                    move_file_to_s3(community.image_id)
+                    move_file_to_s3(community.image_id, s3)
                 if did_something:
                     print(f'Moved image for community {community.link()}')
 
@@ -491,21 +500,40 @@ def register(app):
                 did_something = False
                 if user.avatar_id:
                     did_something = True
-                    move_file_to_s3(user.avatar_id)
+                    move_file_to_s3(user.avatar_id, s3)
                 if user.cover_id:
                     did_something = True
-                    move_file_to_s3(user.cover_id)
+                    move_file_to_s3(user.cover_id, s3)
                 if did_something:
                     print(f'Moved image for user {user.link()}')
+            s3.close()
+            print('Done')
 
     @app.cli.command('move-post-images-to-s3')
     def move_post_images_to_s3():
         with app.app_context():
             from app.utils import move_file_to_s3
-            print(f'Beginning move of post images... this could take a while.')
-            post_image_ids = db.session.execute(text('SELECT image_id FROM "post" WHERE deleted is false and image_id is not null')).scalars()
-            for post_image_id in post_image_ids:
-                move_file_to_s3(post_image_id)
+            import boto3
+            print(f'Beginning move of post images... this could take a long time. Use tmux.')
+            local_post_image_ids = db.session.execute(text('SELECT image_id FROM "post" WHERE deleted is false and image_id is not null and instance_id = 1 ORDER BY id DESC')).scalars()
+            remote_post_image_ids = db.session.execute(text('SELECT image_id FROM "post" WHERE deleted is false and image_id is not null and instance_id != 1 ORDER BY id DESC')).scalars()
+            boto3_session = boto3.session.Session()
+            s3 = boto3_session.client(
+                service_name='s3',
+                region_name=current_app.config['S3_REGION'],
+                endpoint_url=current_app.config['S3_ENDPOINT'],
+                aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+            )
+            for post_image_id in local_post_image_ids:
+                move_file_to_s3(post_image_id, s3)
+                print('.', end='')
+
+            print('Finished moving local post images, doing remote ones now...')
+            for post_image_id in remote_post_image_ids:
+                move_file_to_s3(post_image_id, s3)
+                print('.', end='')
+            s3.close()
             print('Done')
 
     @app.cli.command("spaceusage")

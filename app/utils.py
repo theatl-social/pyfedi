@@ -1899,77 +1899,34 @@ def store_files_in_s3():
     return current_app.config['S3_ACCESS_KEY'] and current_app.config['S3_ACCESS_SECRET'] and current_app.config['S3_ENDPOINT']
 
 
-def move_file_to_s3(file_id):
+def move_file_to_s3(file_id, s3):
     if store_files_in_s3():
-        if current_app.debug:
-            move_file_to_s3_worker(file_id)
-        else:
-            move_file_to_s3_worker.delay(file_id)
-
-
-@celery.task
-def move_file_to_s3_worker(file_id):
-    with current_app.app_context():
-        boto3_session = None
-        s3 = None
-        session = get_task_session()
-        file: File = session.query(File).get(file_id)
+        file: File = File.query.get(file_id)
         if file:
-            if file.thumbnail_path and not file.thumbnail_path.startswith('http') and file.thumbnail_path.startswith('app/static/media'):
+            if file.thumbnail_path and not file.thumbnail_path.startswith('http') and file.thumbnail_path.startswith(
+                    'app/static/media'):
                 if os.stat(file.thumbnail_path):
-                    if boto3_session is None:
-                        boto3_session = boto3.session.Session()
-                        s3 = boto3_session.client(
-                            service_name='s3',
-                            region_name=current_app.config['S3_REGION'],
-                            endpoint_url=current_app.config['S3_ENDPOINT'],
-                            aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
-                            aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
-                        )
                     new_path = file.thumbnail_path.replace('app/static/media/', f"")
                     s3.upload_file(file.thumbnail_path, current_app.config['S3_BUCKET'], new_path)
                     os.unlink(file.thumbnail_path)
                     file.thumbnail_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
-                    session.commit()
+                    db.session.commit()
 
-            if file.file_path and not file.file_path.startswith('http') and file.file_path.startswith('app/static/media'):
+            if file.file_path and not file.file_path.startswith('http') and file.file_path.startswith(
+                    'app/static/media'):
                 if os.stat(file.file_path):
-                    if boto3_session is None:
-                        boto3_session = boto3.session.Session()
-                        s3 = boto3_session.client(
-                            service_name='s3',
-                            region_name=current_app.config['S3_REGION'],
-                            endpoint_url=current_app.config['S3_ENDPOINT'],
-                            aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
-                            aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
-                        )
                     new_path = file.file_path.replace('app/static/media/', f"")
                     s3.upload_file(file.file_path, current_app.config['S3_BUCKET'], new_path)
                     os.unlink(file.file_path)
                     file.file_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
-                    session.commit()
+                    db.session.commit()
 
-            if file.source_url and not file.source_url.startswith('http') and file.source_url.startswith('app/static/media'):
+            if file.source_url and not file.source_url.startswith('http') and file.source_url.startswith(
+                    'app/static/media'):
                 if os.stat(file.source_url):
-                    if boto3_session is None:
-                        boto3_session = boto3.session.Session()
-                        s3 = boto3_session.client(
-                            service_name='s3',
-                            region_name=current_app.config['S3_REGION'],
-                            endpoint_url=current_app.config['S3_ENDPOINT'],
-                            aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
-                            aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
-                        )
                     new_path = file.source_url.replace('app/static/media/', f"")
                     s3.upload_file(file.source_url, current_app.config['S3_BUCKET'], new_path)
                     os.unlink(file.source_url)
                     file.source_url = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
-                    session.commit()
-
-            if s3:
-                s3.close()
-
-            session.commit()
-        session.close()
-
+                    db.session.commit()
 
