@@ -498,9 +498,14 @@ def register(app):
                 if did_something:
                     print(f'Moved image for user {user.link()}')
 
+    @app.cli.command('move-post-images-to-s3')
+    def move_post_images_to_s3():
+        with app.app_context():
+            from app.utils import move_file_to_s3
             print(f'Beginning move of post images... this could take a while.')
-            for post in Post.query.filter(Post.deleted == False, Post.image_id != None):
-                move_file_to_s3(post.image_id)
+            post_image_ids = db.session.execute(text('SELECT image_id FROM "post" WHERE deleted is false and image_id is not null')).scalars()
+            for post_image_id in post_image_ids:
+                move_file_to_s3(post_image_id)
             print('Done')
 
     @app.cli.command("spaceusage")
