@@ -126,11 +126,12 @@ def topics_for_form_children(topics, current_topic: int, depth: int) -> List[Tup
             result.extend(topics_for_form_children(topic['children'], current_topic, depth + 1))
     return result
 
+
 @celery.task
 def move_community_images_to_here(community_id):
     import shutil
-    post_ids = db.session.execute(text('SELECT id FROM "post" WHERE type = :post_type AND community_id = :community_id AND deleted is false AND image_id is not null'),
-                                  {'post_type': POST_TYPE_IMAGE, 'community_id': community_id}).scalars()
+    post_ids = list(db.session.execute(text('SELECT id FROM "post" WHERE type = :post_type AND community_id = :community_id AND deleted is false AND image_id is not null'),
+                                       {'post_type': POST_TYPE_IMAGE, 'community_id': community_id}).scalars())
 
     if store_files_in_s3():
         boto3_session = boto3.session.Session()

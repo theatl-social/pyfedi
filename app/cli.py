@@ -516,8 +516,8 @@ def register(app):
             import boto3
             processed = 0
             print(f'Beginning move of post images... this could take a long time. Use tmux.')
-            local_post_image_ids = db.session.execute(text('SELECT image_id FROM "post" WHERE deleted is false and image_id is not null and instance_id = 1 ORDER BY id DESC')).scalars()
-            remote_post_image_ids = db.session.execute(text('SELECT image_id FROM "post" WHERE deleted is false and image_id is not null and instance_id != 1 ORDER BY id DESC')).scalars()
+            local_post_image_ids = list(db.session.execute(text('SELECT image_id FROM "post" WHERE deleted is false and image_id is not null and instance_id = 1 ORDER BY id DESC')).scalars())
+            remote_post_image_ids = list(db.session.execute(text('SELECT image_id FROM "post" WHERE deleted is false and image_id is not null and instance_id != 1 ORDER BY id DESC')).scalars())
             boto3_session = boto3.session.Session()
             s3 = boto3_session.client(
                 service_name='s3',
