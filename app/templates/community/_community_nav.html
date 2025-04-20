@@ -90,9 +90,15 @@
         <a href="?content_type=posts&sort={{ sort }}&layout={{ post_layout }}" aria-label="{{ _('Show posts') }}" class="btn {{ 'btn-primary' if content_type == '' or content_type == 'posts' else 'btn-outline-secondary' }}" rel="nofollow noindex">
             {{ _('Posts') }}
         </a>
-        <a href="?content_type=comments&sort={{ sort }}&layout={{ post_layout }}" aria-label="{{ _('Show comments') }}" class="btn {{ 'btn-primary' if content_type == 'comments' else 'btn-outline-secondary' }}" rel="nofollow noindex">
-            {{ _('Comments') }}
-        </a>
+        {% if sort == '' %}
+            <a href="?content_type=comments&sort=new&layout={{ post_layout }}" aria-label="{{ _('Show comments') }}" class="btn {{ 'btn-primary' if content_type == 'comments' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                {{ _('Comments') }}
+            </a>
+        {% else %}
+            <a href="?content_type=comments&sort={{ sort }}&layout={{ post_layout }}" aria-label="{{ _('Show comments') }}" class="btn {{ 'btn-primary' if content_type == 'comments' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                {{ _('Comments') }}
+            </a>
+        {% endif %}
     </div>
     {% if post_layout != '' and post_layout is not none %}
     <div class="btn-group mt-1 mb-2 layout_switcher">
