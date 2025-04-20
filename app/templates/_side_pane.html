@@ -4,6 +4,11 @@
         <div class="card">
             <div class="card-body">
                 <div class="row">
+                    {% if not community.restricted_to_mods or (community.restricted_to_mods and current_user.is_authenticated and community_membership(current_user, community) in [SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER]) -%}
+                        <div class="col-6">
+                            <a class="w-100 btn btn-primary" href="/community/{{ community.link() }}/submit">{{ _('Create post') }}</a>
+                        </div>
+                    {% endif -%}
                     <div class="col-6">
                         {% if current_user.is_authenticated and community_membership(current_user, community) in [SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER] -%}
                             <a class="w-100 btn btn-primary" href="/community/{{ community.link() }}/unsubscribe" rel="nofollow">{{ _('Leave') }}</a>
@@ -13,11 +18,6 @@
                             <a class="w-100 btn btn-primary" href="/community/{{ community.link() }}/subscribe" rel="nofollow">{{ _('Join') }}</a>
                         {% endif -%}
                     </div>
-                    {% if not community.restricted_to_mods or (community.restricted_to_mods and current_user.is_authenticated and community_membership(current_user, community) in [SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER]) -%}
-                        <div class="col-6">
-                            <a class="w-100 btn btn-primary" href="/community/{{ community.link() }}/submit">{{ _('Create post') }}</a>
-                        </div>
-                    {% endif -%}
                 </div>
                 <form method="get" action="/search">
                     <input type="search" id="search_community" name="q" class="form-control mt-2" placeholder="{{ _('Search this community') }}" />
