@@ -62,8 +62,6 @@ def find_remote_actor(actor_url):
     """Find a remote actor in the database."""
     # Look for a remote user
     actor = User.query.filter(User.ap_profile_id == actor_url).first()
-    if actor and (actor.banned or actor.deleted or actor_profile_contains_blocked_words(actor)):
-        return None
 
     # Look for a remote community if not found as user
     if actor is None:
@@ -196,6 +194,7 @@ def create_actor_from_remote(actor_address: str, community_only=False, feed_only
 
 def find_actor_by_url(actor_url, community_only=False, feed_only=False):
     """Find an actor by URL without creating it."""
+    """Warning: this function returns None if not found, False if found and banned/deleted"""
     actor_url = actor_url.strip().lower()
     server_name = current_app.config['SERVER_NAME']
 
@@ -228,8 +227,7 @@ def find_actor_by_url(actor_url, community_only=False, feed_only=False):
 
         if actor:
             if not validate_remote_actor(actor_url, actor):
-                return None
-
+                return False    # banned actor found
             if community_only and not isinstance(actor, Community):
                 return None
             if feed_only and not isinstance(actor, Feed):

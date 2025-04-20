@@ -266,6 +266,9 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
     # Find the actor
     actor_obj = find_actor_by_url(actor_url, community_only, feed_only)
 
+    if actor_obj is False:  # banned or deleted actor was found
+        return None
+
     if actor_obj:
         # Schedule a refresh if needed
         from app.activitypub.actor import schedule_actor_refresh
