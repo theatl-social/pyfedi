@@ -906,3 +906,28 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
+
+
+
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', function (e) {
+    // Prevent the mini-infobar from appearing on mobile
+    e.preventDefault();
+    // Stash the event so it can be triggered later.
+    deferredPrompt = e;
+    document.getElementById('btn_add_home_screen').style.display = 'inline-block';
+});
+
+document.getElementById('btn_add_home_screen').addEventListener('click', function () {
+    document.getElementById('btn_add_home_screen').style.display = 'none';
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function (choiceResult) {
+        if (choiceResult.outcome === 'accepted') {
+            console.log('User accepted the A2HS prompt');
+        } else {
+            console.log('User dismissed the A2HS prompt');
+        }
+        deferredPrompt = null;
+    });
+});
