@@ -18,7 +18,7 @@
                 {% if post.edited_at -%} edited <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post.edited_at).humanize(locale=locale) }}</time>{% endif -%}</small>
             </div>
             {% if post.type == POST_TYPE_IMAGE -%}
-            <p class="mt-2"><a href="{{ post.image.view_url() }}" rel="nofollow ugc" target="_blank" aria-label="Go to image">{{ post.image.view_url()|shorten_url }}
+            <p class="mt-2"><a href="{{ post.image.view_url() if post.image_id else post.url }}" rel="nofollow ugc" target="_blank" aria-label="Go to image">{{ post.image.view_url() if post.image_id else post.url|shorten_url }}
                     <span class="fe fe-external"></span></a></p>
                 <div class="post_image">
                     {% if post.image_id -%}
