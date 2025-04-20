@@ -21,7 +21,7 @@ from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditC
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm, \
     EditInstanceForm, RemoteInstanceScanForm, MoveCommunityForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
-    topics_for_form
+    topics_for_form, move_community_images_to_here
 from app.community.util import save_icon_file, save_banner_file, search_for_community
 from app.community.routes import do_subscribe
 from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED
@@ -1703,6 +1703,11 @@ def admin_community_move(community_id, new_owner):
         cache.delete_memoized(community_membership, new_owner_user, community)
         cache.delete_memoized(joined_communities, new_owner_user.id)
         cache.delete_memoized(moderating_communities, new_owner_user.id)
+
+        if current_app.debug:
+            move_community_images_to_here(community.id)
+        else:
+            move_community_images_to_here.delay(community.id)
 
         new_url = f'https://{current_app.config["SERVER_NAME"]}/c/{community.link()}'
         flash(_('%(community_name)s is now %(new_url)s. Contact the initiator of this request to let them know.', community_name=old_name, new_url=new_url))
