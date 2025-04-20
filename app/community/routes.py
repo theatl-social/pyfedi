@@ -215,6 +215,7 @@ def show_community(community: Community):
 
     page = request.args.get('page', 1, type=int)
     sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)
+    content_type = request.args.get('content_type', 'posts')
     if sort is None:
         sort = ''
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
@@ -257,57 +258,98 @@ def show_community(community: Community):
     if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()):
         un_moderated = len(mod_user_ids) == len(inactive_mods)
 
-    posts = community.posts
+    posts = None
+    comments = None
+    if content_type == 'posts':
+        posts = community.posts
 
-    # filter out nsfw and nsfl if desired
-    if current_user.is_anonymous:
-        posts = posts.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
-        content_filters = {}
-        user = None
+        # filter out nsfw and nsfl if desired
+        if current_user.is_anonymous:
+            posts = posts.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
+            content_filters = {}
+            user = None
+        else:
+            user = current_user
+            if current_user.ignore_bots == 1:
+                posts = posts.filter(Post.from_bot == False)
+            if current_user.hide_nsfl == 1:
+                posts = posts.filter(Post.nsfl == False)
+            if current_user.hide_nsfw == 1:
+                posts = posts.filter(Post.nsfw == False)
+            if current_user.hide_read_posts:
+                posts = posts.outerjoin(read_posts, (Post.id == read_posts.c.read_post_id) & (read_posts.c.user_id == current_user.id))
+                posts = posts.filter(read_posts.c.read_post_id.is_(None))  # Filter where there is no corresponding read post for the current user
+            content_filters = user_filters_posts(current_user.id)
+            posts = posts.filter(Post.deleted == False)
+
+            # filter domains and instances
+            domains_ids = blocked_domains(current_user.id)
+            if domains_ids:
+                posts = posts.filter(or_(Post.domain_id.not_in(domains_ids), Post.domain_id == None))
+            instance_ids = blocked_instances(current_user.id)
+            if instance_ids:
+                posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
+            community_ids = blocked_communities(current_user.id)
+            if community_ids:
+                posts = posts.filter(Post.community_id.not_in(community_ids))
+
+            # filter blocked users
+            blocked_accounts = blocked_users(current_user.id)
+            if blocked_accounts:
+                posts = posts.filter(Post.user_id.not_in(blocked_accounts))
+
+        if sort == '' or sort == 'hot':
+            posts = posts.order_by(desc(Post.sticky)).order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
+        elif sort == 'top':
+            posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=7)).order_by(desc(Post.sticky)).order_by(desc(Post.up_votes - Post.down_votes))
+        elif sort == 'new':
+            posts = posts.order_by(desc(Post.posted_at))
+        elif sort == 'active':
+            posts = posts.order_by(desc(Post.sticky)).order_by(desc(Post.last_active))
+        per_page = 100
+        if post_layout == 'masonry':
+            per_page = 200
+        elif post_layout == 'masonry_wide':
+            per_page = 300
+        posts = posts.paginate(page=page, per_page=per_page, error_out=False)
     else:
-        user = current_user
-        if current_user.ignore_bots == 1:
-            posts = posts.filter(Post.from_bot == False)
-        if current_user.hide_nsfl == 1:
-            posts = posts.filter(Post.nsfl == False)
-        if current_user.hide_nsfw == 1:
-            posts = posts.filter(Post.nsfw == False)
-        if current_user.hide_read_posts:
-            posts = posts.outerjoin(read_posts, (Post.id == read_posts.c.read_post_id) & (read_posts.c.user_id == current_user.id))
-            posts = posts.filter(read_posts.c.read_post_id.is_(None))  # Filter where there is no corresponding read post for the current user
-        content_filters = user_filters_posts(current_user.id)
-        posts = posts.filter(Post.deleted == False)
+        content_filters = {}
+        comments = community.replies
 
-        # filter domains and instances
-        domains_ids = blocked_domains(current_user.id)
-        if domains_ids:
-            posts = posts.filter(or_(Post.domain_id.not_in(domains_ids), Post.domain_id == None))
-        instance_ids = blocked_instances(current_user.id)
-        if instance_ids:
-            posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
-        community_ids = blocked_communities(current_user.id)
-        if community_ids:
-            posts = posts.filter(Post.community_id.not_in(community_ids))
+        # filter out nsfw and nsfl if desired
+        if current_user.is_anonymous:
+            comments = comments.filter(PostReply.from_bot == False, PostReply.nsfw == False, PostReply.nsfl == False, PostReply.deleted == False)
+            user = None
+        else:
+            user = current_user
+            if current_user.ignore_bots == 1:
+                comments = comments.filter(PostReply.from_bot == False)
+            if current_user.hide_nsfl == 1:
+                comments = comments.filter(PostReply.nsfl == False)
+            if current_user.hide_nsfw == 1:
+                comments = comments.filter(PostReply.nsfw == False)
 
-        # filter blocked users
-        blocked_accounts = blocked_users(current_user.id)
-        if blocked_accounts:
-            posts = posts.filter(Post.user_id.not_in(blocked_accounts))
+            comments = comments.filter(PostReply.deleted == False)
 
-    if sort == '' or sort == 'hot':
-        posts = posts.order_by(desc(Post.sticky)).order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
-    elif sort == 'top':
-        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=7)).order_by(desc(Post.sticky)).order_by(desc(Post.up_votes - Post.down_votes))
-    elif sort == 'new':
-        posts = posts.order_by(desc(Post.posted_at))
-    elif sort == 'active':
-        posts = posts.order_by(desc(Post.sticky)).order_by(desc(Post.last_active))
-    per_page = 100
-    if post_layout == 'masonry':
-        per_page = 200
-    elif post_layout == 'masonry_wide':
-        per_page = 300
-    posts = posts.paginate(page=page, per_page=per_page, error_out=False)
+            # filter instances
+            instance_ids = blocked_instances(current_user.id)
+            if instance_ids:
+                comments = comments.filter(or_(PostReply.instance_id.not_in(instance_ids), PostReply.instance_id == None))
+
+            # filter blocked users
+            blocked_accounts = blocked_users(current_user.id)
+            if blocked_accounts:
+                comments = comments.filter(PostReply.user_id.not_in(blocked_accounts))
+
+        if sort == '' or sort == 'hot':
+            comments = comments.order_by(desc(PostReply.ranking)).order_by(desc(PostReply.posted_at))
+        elif sort == 'top':
+            comments = comments.filter(PostReply.posted_at > utcnow() - timedelta(days=7)).order_by(
+                desc(PostReply.up_votes - PostReply.down_votes))
+        elif sort == 'new' or sort == 'active':
+            comments = comments.order_by(desc(PostReply.posted_at))
+        per_page = 100
+        comments = comments.paginate(page=page, per_page=per_page, error_out=False)
 
     breadcrumbs = []
     breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
@@ -349,10 +391,20 @@ def show_community(community: Community):
     description = shorten_string(community.description, 150) if community.description else None
     og_image = community.image.source_url if community.image_id else None
 
-    next_url = url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not None else community.name,
-                       page=posts.next_num, sort=sort, layout=post_layout) if posts.has_next else None
-    prev_url = url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not None else community.name,
-                       page=posts.prev_num, sort=sort, layout=post_layout) if posts.has_prev and page != 1 else None
+    if content_type == 'posts':
+        next_url = url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not None else community.name,
+                           page=posts.next_num, sort=sort, layout=post_layout, content_type=content_type) if posts.has_next else None
+        prev_url = url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not None else community.name,
+                           page=posts.prev_num, sort=sort, layout=post_layout, content_type=content_type) if posts.has_prev and page != 1 else None
+    else:
+        next_url = url_for('activitypub.community_profile',
+                           actor=community.ap_id if community.ap_id is not None else community.name,
+                           page=comments.next_num, sort=sort, layout=post_layout,
+                           content_type=content_type) if comments.has_next else None
+        prev_url = url_for('activitypub.community_profile',
+                           actor=community.ap_id if community.ap_id is not None else community.name,
+                           page=comments.prev_num, sort=sort, layout=post_layout,
+                           content_type=content_type) if comments.has_prev and page != 1 else None
 
     # Voting history
     if current_user.is_authenticated:
@@ -363,8 +415,8 @@ def show_community(community: Community):
         recently_downvoted = []
 
     return render_template('community/community.html', community=community, title=community.title, breadcrumbs=breadcrumbs,
-                           is_moderator=is_moderator, is_owner=is_owner, is_admin=is_admin, mods=mod_list, posts=posts, description=description,
-                           og_image=og_image, POST_TYPE_IMAGE=POST_TYPE_IMAGE, POST_TYPE_LINK=POST_TYPE_LINK,
+                           is_moderator=is_moderator, is_owner=is_owner, is_admin=is_admin, mods=mod_list, posts=posts, comments=comments,
+                           description=description, og_image=og_image, POST_TYPE_IMAGE=POST_TYPE_IMAGE, POST_TYPE_LINK=POST_TYPE_LINK,
                            POST_TYPE_VIDEO=POST_TYPE_VIDEO, POST_TYPE_POLL=POST_TYPE_POLL, SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING,
                            SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                            etag=f"{community.id}{sort}{post_layout}_{hash(community.last_active)}", related_communities=related_communities,
@@ -376,7 +428,7 @@ def show_community(community: Community):
                            joined_communities=joined_communities(current_user.get_id()),
                            menu_topics=menu_topics(), site=g.site, sort=sort,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                           post_layout=post_layout, current_app=current_app,
+                           post_layout=post_layout, content_type=content_type, current_app=current_app,
                            user_has_feeds=user_has_feeds, current_feed_id=current_feed_id,
                            current_feed_title=current_feed_title, menu_instance_feeds=menu_instance_feeds(), 
                            menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
@@ -1321,7 +1373,7 @@ def community_moderate_comments(actor):
 
             return render_template('community/community_moderate_comments.html', post_replies=post_replies,
                                    replies_next_url=replies_next_url, replies_prev_url=replies_prev_url,
-                                   hide_vote_buttons=True, community=community, current='comments',
+                                   disable_voting=True, community=community, current='comments',
                                    moderating_communities=moderating_communities(current_user.get_id()),
                                    joined_communities=joined_communities(current_user.get_id()),
                                    menu_topics=menu_topics(), site=g.site,
