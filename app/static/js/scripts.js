@@ -909,6 +909,8 @@ if ('serviceWorker' in navigator) {
 
 
 
+
+// Add PieFed app button to install PWA
 let deferredPrompt;
 
 window.addEventListener('beforeinstallprompt', function (e) {

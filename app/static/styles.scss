@@ -19,6 +19,19 @@ html {
 
 body {
   font-size: 0.95rem;
+
+  &.embed {
+    .post_teaser_body h3 {
+      font-size: 1.2rem!important;
+      margin-bottom: 2px;
+    }
+
+    .embed_logo {
+      float: right;
+      width: 40px;
+      margin-right: 10px;
+    }
+  }
 }
 
 a {

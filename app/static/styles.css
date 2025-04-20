@@ -100,6 +100,10 @@
   content: "\ea03";
 }
 
+.fe-embed::before {
+  content: "\e940";
+}
+
 .fe-external::before {
   content: "\e95b";
 }
@@ -506,6 +510,15 @@ fieldset legend {
 
 body {
   font-size: 0.95rem;
+}
+body.embed .post_teaser_body h3 {
+  font-size: 1.2rem !important;
+  margin-bottom: 2px;
+}
+body.embed .embed_logo {
+  float: right;
+  width: 40px;
+  margin-right: 10px;
 }
 
 a {

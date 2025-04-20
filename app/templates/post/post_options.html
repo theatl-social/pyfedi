@@ -70,6 +70,8 @@
 {% endif -%}
 <li><a href="{{ url_for('post.post_report', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-report"></span>
         {{ _('Report to moderators') }}</a></li>
+<li><a href="{{ url_for('post.post_embed_code', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-embed"></span>
+        {{ _('Get embed code') }}</a></li>
 {% if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()) -%}
     <li><a href="{{ url_for('post.post_view_voting_activity', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-sticky-left"></span>
                 {{ _('View Voting Activity') }}</a></li>

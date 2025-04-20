@@ -221,6 +221,104 @@ def show_post(post_id: int):
         return response
 
 
+@bp.route('/post/<int:post_id>/embed', methods=['GET', 'HEAD'])
+def post_embed(post_id):
+    with limiter.limit('30/minute'):
+        post = Post.query.get_or_404(post_id)
+        community: Community = post.community
+
+        if community.banned or post.deleted:
+            if current_user.is_anonymous or not (
+                    current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff())):
+                abort(404)
+            else:
+                if post.deleted_by == post.user_id:
+                    flash(_('This post has been deleted by the author and is only visible to staff and admins.'),
+                          'warning')
+                else:
+                    flash(_('This post has been deleted and is only visible to staff and admins.'), 'warning')
+
+        # If nothing has changed since their last visit, return HTTP 304
+        current_etag = f"{post.id}_{hash(post.last_active)}"
+        if current_user.is_anonymous and request_etag_matches(current_etag):
+            return return_304(current_etag)
+
+        if post.mea_culpa:
+            flash(_('%(name)s has indicated they made a mistake in this post.', name=post.author.user_name), 'warning')
+
+        response = render_template('post/post_embed.html', title=post.title, post=post, show_post_community=True,
+                                   etag=f"{post.id}_{hash(post.last_active)}", embed=True)
+        response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
+        return response
+
+
+@bp.route('/post/<int:post_id>/embed_code', methods=['GET', 'HEAD'])
+def post_embed_code(post_id):
+    post = Post.query.get_or_404(post_id)
+    community = post.community
+
+    # Breadcrumbs
+    breadcrumbs = []
+    breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+    breadcrumb.text = _('Home')
+    breadcrumb.url = '/'
+    breadcrumbs.append(breadcrumb)
+
+    if community.topic_id:
+        related_communities = Community.query.filter_by(topic_id=community.topic_id). \
+            filter(Community.id != community.id, Community.banned == False).order_by(Community.name)
+        topics = []
+        previous_topic = Topic.query.get(community.topic_id)
+        topics.append(previous_topic)
+        while previous_topic.parent_id:
+            topic = Topic.query.get(previous_topic.parent_id)
+            topics.append(topic)
+            previous_topic = topic
+        topics = list(reversed(topics))
+
+        breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+        breadcrumb.text = _('Topics')
+        breadcrumb.url = '/topics'
+        breadcrumbs.append(breadcrumb)
+
+        existing_url = '/topic'
+        for topic in topics:
+            breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+            breadcrumb.text = topic.name
+            breadcrumb.url = f"{existing_url}/{topic.machine_name}"
+            breadcrumbs.append(breadcrumb)
+            existing_url = breadcrumb.url
+
+        breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+        breadcrumb.text = post.title
+        breadcrumb.url = f'/post/{post.id}'
+        breadcrumbs.append(breadcrumb)
+    else:
+        related_communities = []
+
+        breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+        breadcrumb.text = _('Communities')
+        breadcrumb.url = '/communities'
+        breadcrumbs.append(breadcrumb)
+
+        breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+        breadcrumb.text = post.community.display_name()
+        breadcrumb.url = '/c/' + post.community.link()
+        breadcrumbs.append(breadcrumb)
+
+        breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+        breadcrumb.text = post.title
+        breadcrumb.url = f'/post/{post.id}'
+        breadcrumbs.append(breadcrumb)
+
+
+
+
+
+    return render_template('post/post_embed_code.html', title=_('Embed code for %(post_title)s', post_title=post.title),
+                           post=post, breadcrumbs=breadcrumbs)
+
+
 @bp.route('/post/<int:post_id>/<vote_direction>', methods=['GET', 'POST'])
 @login_required
 @validation_required

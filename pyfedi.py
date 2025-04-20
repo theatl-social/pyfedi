@@ -83,5 +83,6 @@ def after_request(response):
         response.headers['Content-Security-Policy'] = f"script-src 'self' 'nonce-{session['nonce']}'"
         response.headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains; preload'
         response.headers['X-Content-Type-Options'] = 'nosniff'
-        response.headers['X-Frame-Options'] = 'DENY'
+        if '/embed' not in request.path:
+            response.headers['X-Frame-Options'] = 'DENY'
     return response
