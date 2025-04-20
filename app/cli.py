@@ -529,13 +529,15 @@ def register(app):
             for post_image_id in local_post_image_ids:
                 move_file_to_s3(post_image_id, s3)
                 processed += 1
-                print(processed)
+                if processed % 5:
+                    print(processed)
 
             print('Finished moving local post images, doing remote ones now...')
             for post_image_id in remote_post_image_ids:
                 move_file_to_s3(post_image_id, s3)
                 processed += 1
-                print(processed)
+                if processed % 5:
+                    print(processed)
             s3.close()
             print('Done')
 
