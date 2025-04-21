@@ -11,6 +11,18 @@ window.addEventListener('message', function (e) {
   }, '*');
 });
 
+function sendHeight() {
+  const height = document.body.scrollHeight;
+  window.parent.postMessage({
+    type: 'setHeight',
+    height: height,
+    id: new URLSearchParams(location.hash.substring(1)).get('secret') || 0
+  }, '*');
+}
+
+window.addEventListener('load', sendHeight);
+new ResizeObserver(sendHeight).observe(document.body);
+
 
 function copyToClipboard() {
   const textarea = document.getElementById("embedCode");
