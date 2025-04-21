@@ -337,15 +337,29 @@ def user_profile(actor):
                 actor_data['published'] = ap_datetime(user.created + timedelta(minutes=randint(-2592000, 0)))
                 actor_data['summary'] = '<p>This is an anonymous alternative account of another account. It has been generated automatically for a Piefed user who chose to keep their interactions private. They cannot reply to your messages using this account, but only upvote (like) or downvote (dislike). For more information about Piefed and this feature see <a href="https://piefed.social/post/205362">https://piefed.social/post/205362</a>.</p>'
             if user.avatar_id is not None and main_user_name:
-                actor_data["icon"] = {
-                    "type": "Image",
-                    "url": f"https://{current_app.config['SERVER_NAME']}{user.avatar_image()}"
-                }
+                avatar_image = user.avatar_image()
+                if avatar_image.startswith('http'):
+                    actor_data["icon"] = {
+                        "type": "Image",
+                        "url": user.avatar_image()
+                    }
+                else:
+                    actor_data["icon"] = {
+                        "type": "Image",
+                        "url": f"https://{current_app.config['SERVER_NAME']}{user.avatar_image()}"
+                    }
             if user.cover_id is not None and main_user_name:
-                actor_data["image"] = {
-                    "type": "Image",
-                    "url": f"https://{current_app.config['SERVER_NAME']}{user.cover_image()}"
-                }
+                cover_image = user.cover_image()
+                if cover_image.startswith('http'):
+                    actor_data["image"] = {
+                        "type": "Image",
+                        "url": user.cover_image()
+                    }
+                else:
+                    actor_data["image"] = {
+                        "type": "Image",
+                        "url": f"https://{current_app.config['SERVER_NAME']}{user.cover_image()}"
+                    }
             if user.about_html and main_user_name:
                 actor_data['summary'] = user.about_html
                 actor_data['source'] = {'content': user.about, 'mediaType': 'text/markdown'}
@@ -430,15 +444,29 @@ def community_profile(actor):
                 actor_data["summary"] = community.description_html
                 actor_data['source'] = {'content': community.description, 'mediaType': 'text/markdown'}
             if community.icon_id is not None:
-                actor_data["icon"] = {
-                    "type": "Image",
-                    "url": f"https://{current_app.config['SERVER_NAME']}{community.icon_image()}"
-                }
+                icon_image = community.icon_image()
+                if icon_image.startswith('http'):
+                    actor_data["icon"] = {
+                        "type": "Image",
+                        "url": community.icon_image()
+                    }
+                else:
+                    actor_data["icon"] = {
+                        "type": "Image",
+                        "url": f"https://{current_app.config['SERVER_NAME']}{community.icon_image()}"
+                    }
             if community.image_id is not None:
-                actor_data["image"] = {
-                    "type": "Image",
-                    "url": f"https://{current_app.config['SERVER_NAME']}{community.header_image()}"
-                }
+                header_image = community.header_image()
+                if header_image.startswith('http'):
+                    actor_data["image"] = {
+                        "type": "Image",
+                        "url": community.header_image()
+                    }
+                else:
+                    actor_data["image"] = {
+                        "type": "Image",
+                        "url": f"https://{current_app.config['SERVER_NAME']}{community.header_image()}"
+                    }
             resp = jsonify(actor_data)
             resp.content_type = 'application/activity+json'
             resp.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/c/{actor}>; rel="alternate"; type="text/html"')
@@ -1884,15 +1912,29 @@ def feed_profile(actor):
                 actor_data["summary"] = feed.description_html
                 actor_data['source'] = {'content': feed.description, 'mediaType': 'text/markdown'}
             if feed.icon_id is not None:
-                actor_data["icon"] = {
-                    "type": "Image",
-                    "url": f"https://{current_app.config['SERVER_NAME']}{feed.icon_image()}"
-                }
+                icon_image = feed.icon_image()
+                if icon_image.startswith('http'):
+                    actor_data["icon"] = {
+                        "type": "Image",
+                        "url": feed.icon_image()
+                    }
+                else:
+                    actor_data["icon"] = {
+                        "type": "Image",
+                        "url": f"https://{current_app.config['SERVER_NAME']}{feed.icon_image()}"
+                    }
             if feed.image_id is not None:
-                actor_data["image"] = {
-                    "type": "Image",
-                    "url": f"https://{current_app.config['SERVER_NAME']}{feed.header_image()}"
-                }
+                header_image = feed.header_image()
+                if header_image.startswith('http'):
+                    actor_data["image"] = {
+                        "type": "Image",
+                        "url": feed.header_image()
+                    }
+                else:
+                    actor_data["image"] = {
+                        "type": "Image",
+                        "url": f"https://{current_app.config['SERVER_NAME']}{feed.header_image()}"
+                    }
             resp = jsonify(actor_data)
             resp.content_type = 'application/activity+json'
             resp.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/f/{actor}>; rel="alternate"; type="text/html"')
