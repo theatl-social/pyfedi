@@ -37,6 +37,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupPostTypeSwitcher();
     setupSelectNavigation();
     setupUserPopup();
+    preventDoubleFormSubmissions();
 });
 
 
@@ -863,6 +864,17 @@ function setupAddPollChoice() {
     }
 }
 
+function preventDoubleFormSubmissions() {
+    let submitting = false;
+    document.querySelector('form').addEventListener('submit', function (e) {
+      if (submitting) {
+        e.preventDefault();
+      } else {
+        submitting = true;
+      }
+    });
+}
+
 function getCookie(name) {
     var cookies = document.cookie.split(';');
 
@@ -906,7 +918,6 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
-
 
 
 
