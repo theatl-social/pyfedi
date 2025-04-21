@@ -31,21 +31,8 @@
         </ul>
         {% endif %}
 
-        <div class="mobile_create_post d-md-none mt-1">
-            <div class="dropdown">
-                <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    {{ _('Actions') }}
-                </button>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="{{ url_for('topic.topic_create_post', topic_name=topic.machine_name) }}" rel="nofollow noindex">{{ _('Create post') }}</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('feed.feed_new', topic_id=topic.id) }}" rel="nofollow noindex">{{ _('Create feed') }}</a></li>
-                    <li><a class="dropdown-item" href="#topic_communities">{{ _('Communities') }}</a></li>
-                </ul>
-            </div>
-        </div>
-
         {% include "community/_community_nav.html" %}
-        {% if post_layout == 'masonry' or post_layout == 'masonry_wide' %}
+        {% if content_type == 'posts' and (post_layout == 'masonry' or post_layout == 'masonry_wide') %}
              <div class="masonry" id="masonry">
               <!-- Masonry columns will be added here -->
             </div>
@@ -61,13 +48,24 @@
               });
             </script>
         {% else %}
-            <div class="post_list">
-                {% for post in posts %}
-                    {% include 'post/_post_teaser.html' %}
-                {% else %}
-                    <p>{{ _('No posts in this topic yet.') }}</p>
-                {% endfor %}
-            </div>
+            {% if posts -%}
+                <div class="post_list">
+                    {% for post in posts %}
+                        {% include 'post/_post_teaser.html' %}
+                    {% else %}
+                        <p>{{ _('No posts in this topic yet.') }}</p>
+                    {% endfor %}
+                </div>
+            {% endif -%}
+            {% if comments -%}
+                <div class="post_list comments">
+                    {% for post_reply in comments.items %}
+                        {% with teaser=True %}
+                            {% include 'post/_post_reply_teaser.html' %}
+                        {% endwith %}
+                    {% endfor %}
+                </div>
+            {% endif -%}
         {% endif %}
 
         <nav aria-label="Pagination" class="mt-4" role="navigation">

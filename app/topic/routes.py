@@ -7,13 +7,13 @@ from feedgen.feed import FeedGenerator
 from flask import request, flash, url_for, current_app, redirect, abort, make_response, g
 from flask_login import login_required, current_user
 from flask_babel import _
-from sqlalchemy import text, desc
+from sqlalchemy import text, desc, or_
 
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
     POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_TOPIC
 from app.inoculation import inoculation
 from app.models import Topic, Community, Post, \
-    NotificationSubscription
+    NotificationSubscription, PostReply, utcnow
 from app.topic import bp
 from app.email import send_topic_suggestion
 from app import db, cache
@@ -22,7 +22,7 @@ from app.utils import render_template, user_filters_posts, moderating_communitie
     validation_required, mimetype_from_url, \
     menu_topics, menu_instance_feeds, \
     menu_my_feeds, menu_subscribed_feeds, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, \
-    recently_upvoted_posts, recently_downvoted_posts
+    recently_upvoted_posts, recently_downvoted_posts, blocked_instances, blocked_users
 
 
 @bp.route('/topic/<path:topic_path>', methods=['GET'])
@@ -32,6 +32,7 @@ def show_topic(topic_path):
     result_id = request.args.get('result_id', gibberish(15)) if current_user.is_authenticated else None
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
     post_layout = request.args.get('layout', 'list' if not low_bandwidth else None)
+    content_type = request.args.get('content_type', 'posts')
     page_length = 20 if low_bandwidth else 100
     if post_layout == 'masonry':
         page_length = 200
@@ -65,17 +66,65 @@ def show_topic(topic_path):
         community_ids = db.session.execute(text('SELECT id FROM community WHERE banned is false AND topic_id IN :topic_ids'),
                                            {'topic_ids': tuple(topic_ids)}).scalars()
 
-        post_ids = get_deduped_post_ids(result_id, list(community_ids), sort)
-        has_next_page = len(post_ids) > page + 1 * page_length
-        post_ids = paginate_post_ids(post_ids, page, page_length=page_length)
-        posts = post_ids_to_models(post_ids, sort)
-
         topic_communities = Community.query.filter(Community.topic_id == current_topic.id, Community.banned == False).order_by(Community.name)
 
-        next_url = url_for('topic.show_topic', topic_path=topic_path, result_id=result_id,
-                           page=page + 1, sort=sort, layout=post_layout) if has_next_page else None
-        prev_url = url_for('topic.show_topic', topic_path=topic_path, result_id=result_id,
-                           page=page - 1, sort=sort, layout=post_layout) if page > 0 else None
+        posts = None
+        comments = None
+        if content_type == 'posts':
+            post_ids = get_deduped_post_ids(result_id, list(community_ids), sort)
+            has_next_page = len(post_ids) > page + 1 * page_length
+            post_ids = paginate_post_ids(post_ids, page, page_length=page_length)
+            posts = post_ids_to_models(post_ids, sort)
+
+            next_url = url_for('topic.show_topic', topic_path=topic_path, result_id=result_id,
+                               page=page + 1, sort=sort, layout=post_layout) if has_next_page else None
+            prev_url = url_for('topic.show_topic', topic_path=topic_path, result_id=result_id,
+                               page=page - 1, sort=sort, layout=post_layout) if page > 0 else None
+        elif content_type == 'comments':
+            content_filters = {}
+            comments = PostReply.query.filter(PostReply.community_id.in_(list(community_ids)))
+
+            # filter out nsfw and nsfl if desired
+            if current_user.is_anonymous:
+                comments = comments.filter(PostReply.from_bot == False, PostReply.nsfw == False,
+                                           PostReply.nsfl == False, PostReply.deleted == False)
+                user = None
+            else:
+                user = current_user
+                if current_user.ignore_bots == 1:
+                    comments = comments.filter(PostReply.from_bot == False)
+                if current_user.hide_nsfl == 1:
+                    comments = comments.filter(PostReply.nsfl == False)
+                if current_user.hide_nsfw == 1:
+                    comments = comments.filter(PostReply.nsfw == False)
+
+                comments = comments.filter(PostReply.deleted == False)
+
+                # filter instances
+                instance_ids = blocked_instances(current_user.id)
+                if instance_ids:
+                    comments = comments.filter(
+                        or_(PostReply.instance_id.not_in(instance_ids), PostReply.instance_id == None))
+
+                # filter blocked users
+                blocked_accounts = blocked_users(current_user.id)
+                if blocked_accounts:
+                    comments = comments.filter(PostReply.user_id.not_in(blocked_accounts))
+
+            if sort == '' or sort == 'hot':
+                comments = comments.order_by(desc(PostReply.ranking)).order_by(desc(PostReply.posted_at))
+            elif sort == 'top':
+                comments = comments.filter(PostReply.posted_at > utcnow() - timedelta(days=7)).order_by(desc(PostReply.up_votes - PostReply.down_votes))
+            elif sort == 'new' or sort == 'active':
+                comments = comments.order_by(desc(PostReply.posted_at))
+            per_page = 100
+            comments = comments.paginate(page=page, per_page=per_page, error_out=False)
+            next_url = url_for('topic.show_topic', topic_path=topic_path,
+                               page=comments.next_num, sort=sort, layout=post_layout,
+                               content_type=content_type) if comments.has_next else None
+            prev_url = url_for('topic.show_topic', topic_path=topic_path,
+                               page=comments.prev_num, sort=sort, layout=post_layout,
+                               content_type=content_type) if comments.has_prev and page != 1 else None
 
         sub_topics = Topic.query.filter_by(parent_id=current_topic.id).order_by(Topic.name).all()
 
@@ -88,11 +137,11 @@ def show_topic(topic_path):
             recently_downvoted = []
 
         return render_template('topic/show_topic.html', title=_(current_topic.name), posts=posts, topic=current_topic, sort=sort,
-                               page=page, post_layout=post_layout, next_url=next_url, prev_url=prev_url,
+                               page=page, post_layout=post_layout, next_url=next_url, prev_url=prev_url, comments=comments,
                                topic_communities=topic_communities, content_filters=user_filters_posts(current_user.id) if current_user.is_authenticated else {},
                                sub_topics=sub_topics, topic_path=topic_path, breadcrumbs=breadcrumbs,
                                rss_feed=f"https://{current_app.config['SERVER_NAME']}/topic/{topic_path}.rss",
-                               rss_feed_name=f"{current_topic.name} on {g.site.name}",
+                               rss_feed_name=f"{current_topic.name} on {g.site.name}", content_type=content_type,
                                show_post_community=True, moderating_communities=moderating_communities(current_user.get_id()),
                                joined_communities=joined_communities(current_user.get_id()),
                                menu_topics=menu_topics(), recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
