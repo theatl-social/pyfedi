@@ -854,7 +854,8 @@ def banned_ip_addresses() -> List[str]:
 def guess_mime_type(file_path: str) -> str:
     content_type = mimetypes.guess_type(file_path)
     if content_type is None:
-        content_type = 'binary/octet-stream'
+        ext = os.path.splitext(file_path)[1].lower().lstrip('.')  # get extension without dot
+        content_type = f'image/{ext}' if ext else 'application/octet-stream'
     else:
         content_type = content_type[0]
     return content_type
