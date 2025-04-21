@@ -2,7 +2,7 @@ from collections import namedtuple, defaultdict
 from datetime import datetime, timedelta
 from random import randint
 
-from flask import redirect, url_for, flash, current_app, abort, request, g, make_response
+from flask import redirect, url_for, flash, current_app, abort, request, g, make_response, jsonify
 from flask_login import logout_user, current_user, login_required
 from flask_babel import _
 from sqlalchemy import or_, desc, text
@@ -218,6 +218,8 @@ def show_post(post_id: int):
                                )
         response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
         response.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/post/{post.id}>; rel="alternate"; type="application/activity+json"')
+        oembed_url = url_for('post.post_oembed', post_id=post.id, _external=True)
+        response.headers.set('Link', f'<{oembed_url}>; rel="alternate"; type="application/json+oembed"')
         return response
 
 
@@ -311,12 +313,26 @@ def post_embed_code(post_id):
         breadcrumb.url = f'/post/{post.id}'
         breadcrumbs.append(breadcrumb)
 
-
-
-
-
     return render_template('post/post_embed_code.html', title=_('Embed code for %(post_title)s', post_title=post.title),
                            post=post, breadcrumbs=breadcrumbs)
+
+
+@bp.route('/post/<int:post_id>/oembed', methods=['GET', 'HEAD'])
+def post_oembed(post_id):
+    post = Post.query.get_or_404(post_id)
+    iframe_url = url_for('post.post_embed', post_id=post.id, _external=True)
+    oembed = {
+      "version": "1.0",
+      "type": "rich",
+      "provider_name": g.site.name,
+      "provider_url": f"https://{current_app.config['SERVER_NAME']}",
+      "title": post.title,
+      "html": f"<p><iframe src='{iframe_url}' class='piefed-embed' style='max-width: 100%; border: 0' width='400' allowfullscreen='allowfullscreen'></iframe><script src='https://{current_app.config['SERVER_NAME']}/static/js/embed.js' async='async'></script></p>",
+      "width": 400,
+      "height": 300,
+      "author_name": post.author.display_name(),
+    }
+    return jsonify(oembed)
 
 
 @bp.route('/post/<int:post_id>/<vote_direction>', methods=['GET', 'POST'])
