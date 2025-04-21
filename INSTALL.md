@@ -500,7 +500,8 @@ PieFed has the capability to automatically remove file copies from the Cloudflar
 
 Over time images for user profile photos, image posts and link thumbnails will consume quite a lot of storage space so it is a good idea
 to use a cheaper form of storage such as AWS S3 or Cloudflare R2. The S3 API is widely implemented by many providers and PieFed can
-store media in any of them. Cloudflare does not charge egress fees so they are pretty good value.
+store media in any of them. Cloudflare does not charge egress fees so they are pretty good value. Wasabi is cheaper than Cloudflare
+and AWS - see the [Wasabi setup tips](https://codeberg.org/rimu/pyfedi/src/branch/main/docs/Using%20Wasabi%20S3%20with%20Piefed.md).
 
 To enable S3 storage you need to set these environment variables in your .env file:
 
@@ -515,6 +516,8 @@ Cloudflare does not care about S3_REGION so it can be 'auto' but for AWS you sho
 other values are shown to you during the setup of the space (often called the "bucket") on your S3 provider.
 
 Test your S3 connection by going to https://yourinstance.tld/test_s3. If it crashes, something is wrong. If you see 'Ok' all is well.
+
+
 
 #### SMTP
 
