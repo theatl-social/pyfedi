@@ -37,7 +37,7 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     html_to_text, add_to_modlog_activitypub, joined_communities, \
     moderating_communities, get_task_session, is_video_hosting_site, opengraph_parse, instance_banned, \
     mastodon_extra_field_link, blocked_users, piefed_markdown_to_lemmy_markdown, actor_profile_contains_blocked_words, \
-    store_files_in_s3
+    store_files_in_s3, guess_mime_type
 
 from sqlalchemy import or_
 
@@ -1189,6 +1189,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                     image.thumbnail((medium_width, medium_width))
                                 image.save(final_place)
                                 if store_files_in_s3():
+                                    content_type = guess_mime_type(final_place)
                                     boto3_session = boto3.session.Session()
                                     s3 = boto3_session.client(
                                         service_name='s3',
@@ -1198,7 +1199,8 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                         aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
                                     )
                                     s3.upload_file(final_place, current_app.config['S3_BUCKET'], original_directory + '/' +
-                                                   new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + file_ext)
+                                                   new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + file_ext,
+                                                   ExtraArgs={'ContentType': content_type})
                                     os.unlink(final_place)
                                     final_place = f"https://{current_app.config['S3_PUBLIC_URL']}/{original_directory}/{new_filename[0:2]}/{new_filename[2:4]}" + \
                                                   '/' + new_filename + file_ext
@@ -1213,6 +1215,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                     image.thumbnail((thumbnail_width, thumbnail_width))
                                 image.save(final_place_thumbnail, format="WebP", quality=93)
                                 if store_files_in_s3():
+                                    content_type = guess_mime_type(final_place_thumbnail)
                                     if boto3_session is None and s3 is None:
                                         boto3_session = boto3.session.Session()
                                         s3 = boto3_session.client(
@@ -1224,7 +1227,8 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                         )
                                     s3.upload_file(final_place_thumbnail, current_app.config['S3_BUCKET'],
                                                    original_directory + '/' +
-                                                   new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + '_thumbnail.webp')
+                                                   new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + '_thumbnail.webp',
+                                                   ExtraArgs={'ContentType': content_type})
                                     os.unlink(final_place_thumbnail)
                                     final_place_thumbnail = f"https://{current_app.config['S3_PUBLIC_URL']}/{original_directory}/{new_filename[0:2]}/{new_filename[2:4]}" + \
                                                             '/' + new_filename + '_thumbnail.webp'

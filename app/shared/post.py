@@ -1,4 +1,5 @@
 import os
+import mimetypes
 from app import db, cache
 from app.activitypub.util import make_image_sizes, notify_about_post
 from app.constants import *
@@ -8,7 +9,7 @@ from app.shared.tasks import task_selector
 from app.utils import render_template, authorise_api_user, shorten_string, gibberish, ensure_directory_exists, \
     piefed_markdown_to_lemmy_markdown, markdown_to_html, fixup_url, domain_from_url, \
     opengraph_parse, url_to_thumbnail_file, can_create_post, is_video_hosting_site, recently_upvoted_posts, \
-    is_image_url, add_to_modlog_activitypub, store_files_in_s3
+    is_image_url, add_to_modlog_activitypub, store_files_in_s3, guess_mime_type
 
 from flask import abort, flash, redirect, request, url_for, current_app, g
 from flask_babel import _
@@ -344,7 +345,8 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
                 aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
             )
             s3.upload_file(final_place, current_app.config['S3_BUCKET'], 'posts/' +
-                           new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + file_ext)
+                           new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + file_ext,
+                           ExtraArgs={'ContentType': guess_mime_type(final_place)})
             url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/" + \
                   new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + file_ext
             s3.close()

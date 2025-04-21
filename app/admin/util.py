@@ -13,7 +13,7 @@ from app.activitypub.signature import default_context, send_post_request
 from app.constants import POST_TYPE_IMAGE
 
 from app.models import User, Community, Instance, Site, ActivityPubLog, CommunityMember, Language, Post
-from app.utils import gibberish, topic_tree, get_request, store_files_in_s3, ensure_directory_exists
+from app.utils import gibberish, topic_tree, get_request, store_files_in_s3, ensure_directory_exists, guess_mime_type
 
 
 def unsubscribe_from_everything_then_delete(user_id):
@@ -147,8 +147,9 @@ def move_community_images_to_here(community_id):
             if post.image.source_url and not post.image.source_url.startswith(f"https://{current_app.config['S3_PUBLIC_URL']}"):
                 if post.image.source_url.startswith('app/static/media'):
                     if os.path.isfile(post.image.source_url):
+                        content_type = guess_mime_type(post.image.source_url)
                         new_path = post.image.source_url.replace('app/static/media/', f"")
-                        s3.upload_file(post.image.source_url, current_app.config['S3_BUCKET'], new_path)
+                        s3.upload_file(post.image.source_url, current_app.config['S3_BUCKET'], new_path, ExtraArgs={'ContentType': content_type})
                         os.unlink(post.image.source_url)
                         post.image.source_url = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
                         db.session.commit()
@@ -185,8 +186,9 @@ def move_community_images_to_here(community_id):
                                 response.close()
                                 
                                 # Upload to S3
+                                content_type = guess_mime_type(tmp_file)
                                 new_path = f"posts/{new_filename[0:2]}/{new_filename[2:4]}/{new_filename}{file_extension}"
-                                s3.upload_file(tmp_file, current_app.config['S3_BUCKET'], new_path)
+                                s3.upload_file(tmp_file, current_app.config['S3_BUCKET'], new_path, ExtraArgs={'ContentType': content_type})
                                 
                                 # Delete temporary file
                                 os.unlink(tmp_file)

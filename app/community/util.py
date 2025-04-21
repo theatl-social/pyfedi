@@ -17,7 +17,8 @@ from app.activitypub.util import find_actor_or_create, actor_json_to_model, ensu
     find_hashtag_or_create, create_post, remote_object_to_json
 from app.models import Community, File, BannedInstances, PostReply, Post, utcnow, CommunityMember, Site, \
     Instance, User, Tag
-from app.utils import get_request, gibberish, ensure_directory_exists, ap_datetime, instance_banned, get_task_session, store_files_in_s3
+from app.utils import get_request, gibberish, ensure_directory_exists, ap_datetime, instance_banned, get_task_session, \
+    store_files_in_s3, guess_mime_type
 from sqlalchemy import func, desc
 import os
 
@@ -410,7 +411,7 @@ def save_icon_file(icon_file, directory='communities') -> File:
                     aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
                 )
                 s3_path = f'{s3_directory}/{new_filename}{file_ext}'
-                s3.upload_file(final_place, current_app.config['S3_BUCKET'], s3_path)
+                s3.upload_file(final_place, current_app.config['S3_BUCKET'], s3_path, ExtraArgs={'ContentType': guess_mime_type(final_place)})
                 file.file_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_path}"
                 file.thumbnail_path = file.file_path
                 s3.close()
@@ -453,12 +454,12 @@ def save_icon_file(icon_file, directory='communities') -> File:
                 )
                 # Upload main image
                 s3_path = f'{s3_directory}/{new_filename}{file_ext}'
-                s3.upload_file(final_place, current_app.config['S3_BUCKET'], s3_path)
+                s3.upload_file(final_place, current_app.config['S3_BUCKET'], s3_path, ExtraArgs={'ContentType': guess_mime_type(final_place)})
                 file.file_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_path}"
                 
                 # Upload thumbnail
                 s3_thumbnail_path = f'{s3_directory}/{new_filename}_thumbnail.webp'
-                s3.upload_file(final_place_thumbnail, current_app.config['S3_BUCKET'], s3_thumbnail_path)
+                s3.upload_file(final_place_thumbnail, current_app.config['S3_BUCKET'], s3_thumbnail_path, ExtraArgs={'ContentType': guess_mime_type(final_place_thumbnail)})
                 file.thumbnail_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_thumbnail_path}"
                 
                 s3.close()
@@ -533,12 +534,12 @@ def save_banner_file(banner_file, directory='communities') -> File:
             )
             # Upload main image
             s3_path = f'{s3_directory}/{new_filename}{file_ext}'
-            s3.upload_file(final_place, current_app.config['S3_BUCKET'], s3_path)
+            s3.upload_file(final_place, current_app.config['S3_BUCKET'], s3_path, ExtraArgs={'ContentType': guess_mime_type(final_place)})
             file.file_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_path}"
             
             # Upload thumbnail
             s3_thumbnail_path = f'{s3_directory}/{new_filename}_thumbnail.webp'
-            s3.upload_file(final_place_thumbnail, current_app.config['S3_BUCKET'], s3_thumbnail_path)
+            s3.upload_file(final_place_thumbnail, current_app.config['S3_BUCKET'], s3_thumbnail_path, ExtraArgs={'ContentType': guess_mime_type(final_place_thumbnail)})
             file.thumbnail_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_thumbnail_path}"
             
             s3.close()
