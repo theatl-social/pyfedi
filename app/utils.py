@@ -857,6 +857,9 @@ def guess_mime_type(file_path: str) -> str:
         ext = os.path.splitext(file_path)[1].lower().lstrip('.')  # get extension without dot
         content_type = f'image/{ext}' if ext else 'application/octet-stream'
     else:
+        if content_type[0] is None:
+            ext = os.path.splitext(file_path)[1].lower().lstrip('.')  # get extension without dot
+            return f'image/{ext}' if ext else 'application/octet-stream'
         content_type = content_type[0]
     return content_type
 
