@@ -329,7 +329,7 @@ class File(db.Model):
         purge_from_cache = []
         s3_files_to_delete = []
         if self.file_path:
-            if self.file_path.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}'):
+            if self.file_path.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}') and _store_files_in_s3():
                 s3_path = self.file_path.replace(f'https://{current_app.config["S3_PUBLIC_URL"]}/', '')
                 s3_files_to_delete.append(s3_path)
                 purge_from_cache.append(self.file_path)
@@ -341,7 +341,7 @@ class File(db.Model):
                 purge_from_cache.append(self.file_path.replace('app/', f"https://{current_app.config['SERVER_NAME']}/"))
 
         if self.thumbnail_path:
-            if self.thumbnail_path.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}'):
+            if self.thumbnail_path.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}') and _store_files_in_s3():
                 s3_path = self.thumbnail_path.replace(f'https://{current_app.config["S3_PUBLIC_URL"]}/', '')
                 s3_files_to_delete.append(s3_path)
                 purge_from_cache.append(self.thumbnail_path)
@@ -352,7 +352,7 @@ class File(db.Model):
                     ...
                 purge_from_cache.append(self.thumbnail_path.replace('app/', f"https://{current_app.config['SERVER_NAME']}/"))
         if self.source_url:
-            if self.source_url.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}'):
+            if self.source_url.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}') and _store_files_in_s3():
                 s3_path = self.source_url.replace(f'https://{current_app.config["S3_PUBLIC_URL"]}/', '')
                 s3_files_to_delete.append(s3_path)
                 purge_from_cache.append(self.source_url)
@@ -2854,3 +2854,7 @@ def _large_community_subscribers() -> float:
         result = db.session.execute(text(sql)).scalar()
         cache.set('large_community_subscribers', result, timeout=3600)
     return result
+
+
+def _store_files_in_s3():
+    return current_app.config['S3_ACCESS_KEY'] != '' and current_app.config['S3_ACCESS_SECRET'] != '' and current_app.config['S3_ENDPOINT'] != ''

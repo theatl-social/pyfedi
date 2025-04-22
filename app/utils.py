@@ -1909,7 +1909,7 @@ def post_ids_to_models(post_ids: List[int], sort: str):
 
 
 def store_files_in_s3():
-    return current_app.config['S3_ACCESS_KEY'] and current_app.config['S3_ACCESS_SECRET'] and current_app.config['S3_ENDPOINT']
+    return current_app.config['S3_ACCESS_KEY'] != '' and current_app.config['S3_ACCESS_SECRET'] != '' and current_app.config['S3_ENDPOINT'] != ''
 
 
 def move_file_to_s3(file_id, s3):
