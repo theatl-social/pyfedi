@@ -7,7 +7,7 @@ from flask_login import login_user, logout_user, current_user
 from flask_babel import _
 from wtforms import Label
 
-from app import db, cache, limiter
+from app import db, cache, limiter, oauth
 from app.auth import bp
 from app.auth.forms import LoginForm, RegistrationForm, ResetPasswordRequestForm, ResetPasswordForm
 from app.auth.util import random_token, normalize_utf, ip2location, no_admins_logged_in_recently
@@ -84,7 +84,7 @@ def login():
         else:
             response.set_cookie('low_bandwidth', '0', expires=datetime(year=2099, month=12, day=30))
         return response
-    return render_template('auth/login.html', title=_('Login'), form=form)
+    return render_template('auth/login.html', title=_('Login'), form=form, google_oauth=current_app.config['GOOGLE_OAUTH_CLIENT_ID'])
 
 
 @bp.route('/logout')
@@ -185,7 +185,8 @@ def register():
             form.question.label = Label('question', g.site.application_question)
         if g.site.registration_mode != 'RequireApplication':
             del form.question
-        return render_template('auth/register.html', title=_('Register'), form=form, site=g.site)
+        return render_template('auth/register.html', title=_('Register'), form=form, site=g.site,
+                               google_oauth=current_app.config['GOOGLE_OAUTH_CLIENT_ID'])
 
 
 @bp.route('/please_wait', methods=['GET'])
@@ -275,3 +276,120 @@ def validation_required():
 @bp.route('/permission_denied')
 def permission_denied():
     return render_template('auth/permission_denied.html')
+
+
+@bp.route('/google_login')
+def google_login():
+    return oauth.google.authorize_redirect(redirect_uri=url_for('auth.google_authorize', _external=True))
+
+
+@bp.route('/google_authorize')
+def google_authorize():
+    try:
+        token = oauth.google.authorize_access_token()
+    except Exception as e:
+        current_app.logger.exception("Google OAuth error")
+        flash(_('Login failed due to a problem with Google.'), 'error')
+        return redirect(url_for('auth.login'))
+    resp = oauth.google.get('oauth2/v2/userinfo', token=token)
+    user_info = resp.json()
+    google_id = user_info['id']
+    email = user_info['email']
+    name = user_info.get('name', '')
+
+    # Try to find user by google_id first
+    user = User.query.filter_by(google_oauth_id=google_id).first()
+
+    # If not found, check by email and link
+    if not user:
+        user = User.query.filter_by(email=email).first()
+        if user:
+            user.google_oauth_id = google_id
+        else:
+            # Country-based registration blocking
+            ip_address_info = ip2location(ip_address())
+            if ip_address_info and ip_address_info['country']:
+                for country_code in get_setting('auto_decline_countries', '').split('\n'):
+                    if country_code and country_code.strip().upper() == ip_address_info['country'].upper():
+                        return redirect(url_for('auth.please_wait'))
+
+            user = User(user_name=find_new_username(email), title=name, email=email, verified=True,
+                        verification_token='', instance_id=1, ip_address=ip_address(),
+                        banned=user_ip_banned() or user_cookie_banned(), email_unread_sent=False,
+                        referrer='', alt_user_name=gibberish(randint(8, 20)), google_oauth_id=google_id)
+            user.ip_address_country = ip_address_info['country'] if ip_address_info else ''
+            db.session.add(user)
+
+        db.session.commit()
+
+        if g.site.registration_mode == 'RequireApplication' and g.site.application_question:
+            application = UserRegistration(user_id=user.id, answer='Signed in with Google')
+            db.session.add(application)
+            for admin in Site.admins():
+                notify = Notification(title='New registration', url=f'/admin/approve_registrations?account={user.id}',
+                                      user_id=admin.id,
+                                      author_id=user.id, notif_type=NOTIF_REGISTRATION)
+                admin.unread_notifications += 1
+                db.session.add(notify)
+                # todo: notify everyone with the "approve registrations" permission, instead of just all admins
+            db.session.commit()
+            return redirect(url_for('auth.please_wait'))
+        else:
+            if user.verified:
+                finalize_user_setup(user)
+                login_user(user, remember=True)
+                return redirect(url_for('auth.trump_musk'))
+            else:
+                return redirect(url_for('auth.check_email'))
+    else:
+        # user already exists
+        if user.id != 1 and (user.banned or user_ip_banned() or user_cookie_banned()):
+            flash(_('You have been banned.'), 'error')
+
+            response = make_response(redirect(url_for('auth.login')))
+            # Detect if a banned user tried to log in from a new IP address
+            if user.banned and not user_ip_banned():
+                # If so, ban their new IP address as well
+                new_ip_ban = IpBan(ip_address=ip_address(), notes=user.user_name + ' used new IP address')
+                db.session.add(new_ip_ban)
+                db.session.commit()
+                cache.delete_memoized(banned_ip_addresses)
+
+            # Set a cookie so we have another way to track banned people
+            response.set_cookie('sesion', '17489047567495', expires=datetime(year=2099, month=12, day=30))
+            return response
+        if user.waiting_for_approval():
+            return redirect(url_for('auth.please_wait'))
+        else:
+            login_user(user, remember=True)
+            session['ui_language'] = user.interface_language
+            current_user.last_seen = utcnow()
+            current_user.ip_address = ip_address()
+            ip_address_info = ip2location(current_user.ip_address)
+            current_user.ip_address_country = ip_address_info[
+                'country'] if ip_address_info else current_user.ip_address_country
+            db.session.commit()
+            [limiter.limiter.clear(limit.limit, *limit.request_args) for limit in limiter.current_limits]
+            next_page = request.args.get('next')
+            if not next_page or url_parse(next_page).netloc != '':
+                if len(current_user.communities()) == 0:
+                    next_page = url_for('auth.trump_musk')
+                else:
+                    next_page = url_for('main.index')
+            return redirect(next_page)
+
+
+def find_new_username(email: str) -> str:
+    email_parts = email.lower().split('@')
+    original_email_part = email_parts[0]
+    attempts = 0
+
+    while attempts < 1000:
+        existing_user = User.query.filter(User.user_name == email_parts[0], User.ap_id == None).first()
+        if existing_user is None:
+            return email_parts[0]
+        else:
+            email_parts[0] = original_email_part + str(randint(1, 1000))
+            attempts += 1
+
+    return gibberish(10)

@@ -12,9 +12,15 @@
                 <div class="card-body p-6">
                     <div class="card-title text-center">{{ _('Log in') }}</div>
                     {{ render_form(form) }}
+                    {% if google_oauth -%}
                     <br>
                     <hr />
-                    <br>
+                    <p align="center">OR<br><br>
+                        <a href="/auth/google_login" class="btn btn-outline-primary">{{ _('Log in with Google') }}
+                            <img src="/static/images/tiny_g_logo.png" width="16" alt="Logo"></a>
+                    </p>
+                    {% endif -%}
+                    <hr />
                     <p>{{ _('New User?') }} <a href="{{ url_for('auth.register') }}">{{ _('Register new account') }}</a></p>
                     <p class="mb-0">
                         {{ _('Forgot Your Password?') }}

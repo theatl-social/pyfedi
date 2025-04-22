@@ -76,3 +76,6 @@ class Config(object):
     S3_ACCESS_KEY = os.environ.get('S3_ACCESS_KEY') or ''
     S3_ACCESS_SECRET = os.environ.get('S3_ACCESS_SECRET') or ''
     S3_PUBLIC_URL = os.environ.get('S3_PUBLIC_URL') or ''
+
+    GOOGLE_OAUTH_CLIENT_ID = os.environ.get('GOOGLE_OAUTH_CLIENT_ID') or ''
+    GOOGLE_OAUTH_SECRET = os.environ.get('GOOGLE_OAUTH_SECRET') or ''

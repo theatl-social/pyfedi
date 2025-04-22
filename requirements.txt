@@ -37,3 +37,4 @@ ua-parser[regex]
 captcha
 pytest
 stripe~=12.0.0
+pip install Authlib~=1.5.0

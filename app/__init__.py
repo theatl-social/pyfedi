@@ -18,6 +18,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from celery import Celery
 from sqlalchemy_searchable import make_searchable
 import httpx
+from authlib.integrations.flask_client import OAuth
 
 from config import Config
 
@@ -47,6 +48,7 @@ cache = Cache()
 limiter = Limiter(get_remote_address, storage_uri='redis+'+Config.CACHE_REDIS_URL if Config.CACHE_REDIS_URL.startswith("unix://") else Config.CACHE_REDIS_URL)
 celery = Celery(__name__, broker=Config.CELERY_BROKER_URL)
 httpx_client = httpx.Client(http2=True)
+oauth = OAuth()
 
 
 def create_app(config_class=Config):
@@ -72,6 +74,17 @@ def create_app(config_class=Config):
     cache.init_app(app)
     limiter.init_app(app)
     celery.conf.update(app.config)
+    if app.config['GOOGLE_OAUTH_CLIENT_ID']:
+        oauth.init_app(app)
+        oauth.register(
+            name='google',
+            client_id=app.config['GOOGLE_OAUTH_CLIENT_ID'],
+            client_secret=app.config['GOOGLE_OAUTH_SECRET'],
+            access_token_url='https://oauth2.googleapis.com/token',
+            authorize_url='https://accounts.google.com/o/oauth2/v2/auth',
+            api_base_url='https://www.googleapis.com/',
+            client_kwargs={'scope': 'email profile'}
+        )
 
     from app.main import bp as main_bp
     app.register_blueprint(main_bp)

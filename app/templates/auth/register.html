@@ -13,6 +13,14 @@
                     <div class="card-body p-6" id="registration_form">
                         {% if site.registration_mode != 'Closed' %}
                             <div class="card-title text-center">{{ _('Create new account') }}</div>
+                            {% if google_oauth -%}
+                            <p align="center">
+                                <a href="/auth/google_login" class="btn btn-outline-primary">{{ _('Log in with Google') }}
+                                    <img src="/static/images/tiny_g_logo.png" width="16" alt="Logo"></a>
+
+                            </p>
+                            <p align="center">{{ _('or use a username and password:') }}</p>
+                            {% endif -%}
                             {{ render_form(form) }}
                         {% else %}
                             <p>{{ _('Registration is closed. Only admins can create accounts.') }}</p>
