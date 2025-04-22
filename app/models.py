@@ -1,4 +1,5 @@
 import html
+import json
 from datetime import datetime, timedelta, date, timezone
 from time import time
 from typing import List, Union, Type
@@ -1451,18 +1452,22 @@ class Post(db.Model):
             # notify about links to banned websites.
             already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
             if domain.notify_mods:
+                targets_data = {'subtype':'post_from_suspicious_domain','post_id': post.id}
                 for community_member in post.community.moderators():
                     notify = Notification(title='Suspicious content', url=post.ap_id,
                                           user_id=community_member.user_id,
-                                          author_id=user.id, notif_type=NOTIF_REPORT)
+                                          author_id=user.id, notif_type=NOTIF_REPORT,
+                                          targets=json.dumps(targets_data))
                     db.session.add(notify)
                     already_notified.add(community_member.user_id)
             if domain.notify_admins:
+                targets_data = {'subtype':'post_from_suspicious_domain','post_id': post.id}
                 for admin in Site.admins():
                     if admin.id not in already_notified:
                         notify = Notification(title='Suspicious content',
                                               url=post.ap_id, user_id=admin.id,
-                                              author_id=user.id, notif_type=NOTIF_REPORT)
+                                              author_id=user.id, notif_type=NOTIF_REPORT,
+                                              targets=json.dumps(targets_data))
                         db.session.add(notify)
             if domain.banned or domain.name.endswith('.pages.dev'):
                 raise Exception(domain.name + ' is blocked by admin')
@@ -1541,9 +1546,11 @@ class Post(db.Model):
                             if recipient:
                                 blocked_senders = blocked_users(recipient.id)
                                 if post.user_id not in blocked_senders:
+                                    targets_data = {'subtype':'post_mention','post_id': post.id}
                                     notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in post {post.id}"),
                                                                 url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
-                                                                author_id=post.user_id, notif_type=NOTIF_MENTION)
+                                                                author_id=post.user_id, notif_type=NOTIF_MENTION,
+                                                                targets=json.dumps(targets_data))
                                     recipient.unread_notifications += 1
                                     db.session.add(notification)
                                     db.session.commit()
