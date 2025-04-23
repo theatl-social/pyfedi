@@ -1635,7 +1635,7 @@ def ban_user(blocker, blocked, community, core_activity):
             db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == community.id, CommunityJoinRequest.user_id == blocked.id).delete()
 
             # Notify banned person
-            targets_data = {'subtype':'user_ban','community_id': community.id}
+            targets_data = {'subtype':'user_banned_from_community','community_id': community.id}
             notify = Notification(title=shorten_string('You have been banned from ' + community.title),
                                   url=f'/chat/ban_from_mod/{blocked.id}/{community.id}', user_id=blocked.id,
                                   author_id=blocker.id, notif_type=NOTIF_BAN,
@@ -1670,7 +1670,7 @@ def unban_user(blocker, blocked, community, core_activity):
 
     if blocked.is_local():
         # Notify unbanned person
-        targets_data = {'subtype':'user_unban','community_id': community.id}
+        targets_data = {'subtype':'user_unbanned_from_community','community_id': community.id}
         notify = Notification(title=shorten_string('You have been unbanned from ' + community.title),
                               url=f'/chat/ban_from_mod/{blocked.id}/{community.id}', user_id=blocked.id, 
                               author_id=blocker.id, notif_type=NOTIF_UNBAN,
@@ -2263,17 +2263,21 @@ def update_post_from_activity(post: Post, request_json: dict):
                 already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
                 if new_domain.notify_mods:
                     for community_member in post.community.moderators():
+                        targets_data = {'subtype':'post_from_suspicious_domain','post_id': post.id}
                         notify = Notification(title='Suspicious content', url=post.ap_id,
                                                   user_id=community_member.user_id,
-                                                  author_id=1, notif_type=NOTIF_REPORT)
+                                                  author_id=1, notif_type=NOTIF_REPORT,
+                                                  targets=json.dumps(targets_data))
                         db.session.add(notify)
                         already_notified.add(community_member.user_id)
                 if new_domain.notify_admins:
                     for admin in Site.admins():
                         if admin.id not in already_notified:
+                            targets_data = {'subtype':'post_from_suspicious_domain','post_id': post.id}
                             notify = Notification(title='Suspicious content',
                                                       url=post.ap_id, user_id=admin.id,
-                                                      author_id=1, notif_type=NOTIF_REPORT)
+                                                      author_id=1, notif_type=NOTIF_REPORT,
+                                                      targets=json.dumps(targets_data))
                             db.session.add(notify)
                 new_domain.post_count += 1
                 post.domain = new_domain
