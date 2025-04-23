@@ -1877,6 +1877,11 @@ class PostReply(db.Model):
             'search_vector',
             postgresql_using='gin'
         ),
+        db.Index(
+            'idx_post_reply_path',
+            'path',
+            postgresql_using='gin'
+        ),
     )
 
     @classmethod

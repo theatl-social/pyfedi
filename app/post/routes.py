@@ -14,7 +14,7 @@ from app.activitypub.signature import HttpSignature, post_request, default_conte
 from app.activitypub.util import notify_about_post_reply, update_post_from_activity
 from app.community.util import send_to_remote_instance
 from app.inoculation import inoculation
-from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm
+from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm, ConfirmationForm
 from app.community.forms import CreateLinkForm, CreateImageForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm
 from app.constants import NOTIF_REPORT
 from app.post.util import post_replies, get_comment_branch, tags_to_string, url_needs_archive, \
@@ -1508,6 +1508,31 @@ def post_reply_delete(post_id: int, comment_id: int):
                           link=f'post/{post.id}#comment_{post_reply.id}')
 
     return redirect(url_for('activitypub.post_ap', post_id=post.id))
+
+
+@bp.route('/post/<int:post_id>/comment/<int:comment_id>/delete_all', methods=['GET', 'POST'])
+@login_required
+def post_reply_delete_all(post_id: int, comment_id: int):
+    post = Post.query.get_or_404(post_id)
+    post_reply = PostReply.query.get_or_404(comment_id)
+    child_post_ids = db.session.execute(text('select id from "post_reply" where path @> ARRAY[:parent_path]'),
+                                        {'parent_path': post_reply.path}).scalars()
+    form = ConfirmationForm()
+
+    if form.validate_on_submit():
+        num_deleted = 0
+        for child_post_id in child_post_ids:
+            if child_post_id != 0:
+                post_reply_delete(post_id, child_post_id)
+                num_deleted += 1
+        flash(_('Deleted %(num_deleted)s comments.', num_deleted=num_deleted))
+        return redirect(url_for('activitypub.post_ap', post_id=post.id, _anchor=f'comment_{post_reply.parent_id}' if post_reply.parent_id else None))
+    else:
+        num_to_delete = 0
+        for child_post_id in child_post_ids:
+            if child_post_id != 0:
+                num_to_delete += 1
+        return render_template('generic_form.html', title=_('Are you sure you want to delete %(num_to_delete)s comments?', num_to_delete=num_to_delete), form=form)
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/restore', methods=['GET', 'POST'])
