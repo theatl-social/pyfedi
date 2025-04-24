@@ -31,7 +31,28 @@ configuration. While it is quicker and easier, it's not to everyone's taste.
 
 ### Hard way: bare metal
 
-Doing things this way will give you the ultimate customization that larger instances need.
+Doing things this way will give you the ultimate customization that larger instances need. You will need to be more careful about
+whether your OS is compatible with what PieFed needs:
+
+#### Software requirements
+
+ - Python 3.9+
+ - PostgreSQL 13+
+ - Redis 6.x
+
+#### Hardware requirements
+
+It really depends on how many communities you will be subscribing to and how many users you have.
+
+Minimum:
+ - 2 CPU cores
+ - 3 GB of RAM
+
+Recommended:
+ - 4 CPU cores
+ - 5+ GB of RAM
+
+PieFed is quite frugal with storage usage but it will grow over time. After 18 months of operation PieFed.social uses 100 GB of space, for example.
 
 <div id="setup-database"></div>
 
