@@ -678,10 +678,12 @@ def report_profile(actor):
 
             # Notify site admin
             already_notified = set()
+            targets_data = {'subtype':'user_reported','suspect_user_id': user.id,'reporter_id':current_user.id}
             for admin in Site.admins():
                 if admin.id not in already_notified:
                     notify = Notification(title='Reported user', url='/admin/reports', user_id=admin.id, 
-                                          author_id=current_user.id, notif_type=NOTIF_REPORT)
+                                          author_id=current_user.id, notif_type=NOTIF_REPORT,
+                                          targets=json.dumps(targets_data))
                     db.session.add(notify)
                     admin.unread_notifications += 1
             user.reports += 1

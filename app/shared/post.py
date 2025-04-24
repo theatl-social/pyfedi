@@ -1,3 +1,4 @@
+import json
 import os
 import mimetypes
 from app import db, cache
@@ -357,12 +358,14 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
             post.domain = domain
             domain.post_count += 1
             already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
+            targets_data = {'subtype':'post_from_suspicious_domain','post_id': post.id}
             if domain.notify_mods:
                 for community_member in post.community.moderators():
                     if community_member.is_local():
                         notify = Notification(title='Suspicious content', url=post.ap_id, 
                                               user_id=community_member.user_id, author_id=user.id,
-                                              notif_type=NOTIF_REPORT)
+                                              notif_type=NOTIF_REPORT,
+                                              targets=json.dumps(targets_data))
                         db.session.add(notify)
                         already_notified.add(community_member.user_id)
             if domain.notify_admins:
@@ -370,7 +373,8 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
                     if admin.id not in already_notified:
                         notify = Notification(title='Suspicious content', url=post.ap_id, 
                                               user_id=admin.id, author_id=user.id,
-                                              notif_type=NOTIF_REPORT)
+                                              notif_type=NOTIF_REPORT,
+                                              targets=json.dumps(targets_data))
                         db.session.add(notify)
 
         thumbnail_url, embed_url = fixup_url(url)
@@ -535,12 +539,14 @@ def report_post(post_id, input, src, auth=None):
 
     # Notify moderators
     already_notified = set()
+    targets_data = {'subtype':'post_reported','suspect_post_id':post.id,'suspect_user_id':post.user_id,'reporter_id':user_id}
     for mod in post.community.moderators():
         moderator = User.query.get(mod.user_id)
         if moderator and moderator.is_local():
             notification = Notification(user_id=mod.user_id, title=_('A post has been reported'),
                                         url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
-                                        author_id=user_id, notif_type=NOTIF_REPORT)
+                                        author_id=user_id, notif_type=NOTIF_REPORT,
+                                        targets=json.dumps(targets_data))
             db.session.add(notification)
             already_notified.add(mod.user_id)
     post.reports += 1
@@ -548,7 +554,8 @@ def report_post(post_id, input, src, auth=None):
     for admin in Site.admins():
         if admin.id not in already_notified:
             notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, 
-                                  author_id=user_id, notif_type=NOTIF_REPORT)
+                                  author_id=user_id, notif_type=NOTIF_REPORT,
+                                  targets=json.dumps(targets_data))
             db.session.add(notify)
             admin.unread_notifications += 1
     db.session.commit()

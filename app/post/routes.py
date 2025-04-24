@@ -1,3 +1,4 @@
+import json
 from collections import namedtuple, defaultdict
 from datetime import datetime, timedelta
 from random import randint
@@ -904,10 +905,12 @@ def post_report(post_id: int):
 
         # Notify moderators
         already_notified = set()
+        targets_data = {'subtype':'post_reported','suspect_post_id':post.id,'suspect_user_id':post.author.id,'reporter_id':current_user.id}
         for mod in post.community.moderators():
             notification = Notification(user_id=mod.user_id, title=_('A post has been reported'),
                                         url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
-                                        author_id=current_user.id, notif_type=NOTIF_REPORT)
+                                        author_id=current_user.id, notif_type=NOTIF_REPORT,
+                                        targets=json.dumps(targets_data))
             db.session.add(notification)
             already_notified.add(mod.user_id)
         post.reports += 1
@@ -915,7 +918,8 @@ def post_report(post_id: int):
         for admin in Site.admins():
             if admin.id not in already_notified:
                 notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, 
-                                      author_id=current_user.id, notif_type=NOTIF_REPORT)
+                                      author_id=current_user.id, notif_type=NOTIF_REPORT,
+                                      targets=json.dumps(targets_data))
                 db.session.add(notify)
                 admin.unread_notifications += 1
         db.session.commit()
@@ -1067,10 +1071,12 @@ def post_reply_report(post_id: int, comment_id: int):
 
         # Notify moderators
         already_notified = set()
+        targets_data = {'subtype':'comment_reported','suspect_comment_id':post_reply.id,'suspect_user_id':post_reply.author.id,'reporter_id':current_user.id}
         for mod in post.community.moderators():
             notification = Notification(user_id=mod.user_id, title=_('A comment has been reported'),
                                         url=f"https://{current_app.config['SERVER_NAME']}/comment/{post_reply.id}",
-                                        author_id=current_user.id, notif_type=NOTIF_REPORT)
+                                        author_id=current_user.id, notif_type=NOTIF_REPORT,
+                                        targets=json.dumps(targets_data))
             db.session.add(notification)
             already_notified.add(mod.user_id)
         post_reply.reports += 1
@@ -1078,7 +1084,8 @@ def post_reply_report(post_id: int, comment_id: int):
         for admin in Site.admins():
             if admin.id not in already_notified:
                 notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, 
-                                      author_id=current_user.id, notif_type=NOTIF_REPORT)
+                                      author_id=current_user.id, notif_type=NOTIF_REPORT,
+                                      targets=json.dumps(targets_data))
                 db.session.add(notify)
                 admin.unread_notifications += 1
         db.session.commit()

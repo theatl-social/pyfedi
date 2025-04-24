@@ -1,3 +1,4 @@
+import json
 from datetime import date, datetime
 from random import randint
 from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, g
@@ -162,9 +163,11 @@ def register():
                 if g.site.registration_mode == 'RequireApplication' and g.site.application_question:
                     application = UserRegistration(user_id=user.id, answer=form.question.data)
                     db.session.add(application)
+                    targets_data = {'subtype':'new_registration_for_approval','application_id':application.id,'user_id':user.id}
                     for admin in Site.admins():
                         notify = Notification(title='New registration', url=f'/admin/approve_registrations?account={user.id}', user_id=admin.id,
-                                          author_id=user.id, notif_type=NOTIF_REGISTRATION)
+                                          author_id=user.id, notif_type=NOTIF_REGISTRATION,
+                                          targets=json.dumps(targets_data))
                         admin.unread_notifications += 1
                         db.session.add(notify)
                         # todo: notify everyone with the "approve registrations" permission, instead of just all admins
@@ -327,10 +330,12 @@ def google_authorize():
         if g.site.registration_mode == 'RequireApplication' and g.site.application_question:
             application = UserRegistration(user_id=user.id, answer='Signed in with Google')
             db.session.add(application)
+            targets_data = {'subtype':'new_registration_for_approval','application_id':application.id,'user_id':user.id}
             for admin in Site.admins():
                 notify = Notification(title='New registration', url=f'/admin/approve_registrations?account={user.id}',
                                       user_id=admin.id,
-                                      author_id=user.id, notif_type=NOTIF_REGISTRATION)
+                                      author_id=user.id, notif_type=NOTIF_REGISTRATION,
+                                      targets=json.dumps(targets_data))
                 admin.unread_notifications += 1
                 db.session.add(notify)
                 # todo: notify everyone with the "approve registrations" permission, instead of just all admins

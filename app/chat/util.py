@@ -1,3 +1,4 @@
+import json
 from flask import flash, current_app
 from flask_login import current_user
 from flask_babel import _
@@ -25,11 +26,13 @@ def send_message(message: str, conversation_id: int) -> ChatMessage:
                 db.session.commit()
                 if recipient.is_local():
                     # Notify local recipient
+                    targets_data = {'subtype':'chat_message','conversation_id':conversation.id,'message_id': reply.id}
                     notify = Notification(title=shorten_string('New message from ' + current_user.display_name()),
                                           url=f'/chat/{conversation_id}#message_{reply.id}',
                                           user_id=recipient.id,
                                           author_id=current_user.id,
-                                          notif_type=NOTIF_MESSAGE)
+                                          notif_type=NOTIF_MESSAGE,
+                                          targets=json.dumps(targets_data))
                     db.session.add(notify)
                     recipient.unread_notifications += 1
                     db.session.commit()

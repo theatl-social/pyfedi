@@ -2350,8 +2350,10 @@ def process_report(user, reported, request_json):
         already_notified = set()
         for admin in Site.admins():
             if admin.id not in already_notified:
+                targets_data = {'subtype':'user_reported','suspect_user_id': reported.id,'reporter_id':user.id,'source_instance_id':user.instance_id}
                 notify = Notification(title='Reported user', url='/admin/reports', user_id=admin.id,
-                                      author_id=user.id, notif_type=NOTIF_REPORT)
+                                      author_id=user.id, notif_type=NOTIF_REPORT,
+                                      targets=json.dumps(targets_data))
                 db.session.add(notify)
                 admin.unread_notifications += 1
         reported.reports += 1
@@ -2368,9 +2370,11 @@ def process_report(user, reported, request_json):
 
         already_notified = set()
         for mod in reported.community.moderators():
+            targets_data = {'subtype':'post_reported','suspect_post_id':reported.id,'suspect_user_id':reported.author.id,'reporter_id':user.id,'source_instance_id':user.instance_id}
             notification = Notification(user_id=mod.user_id, title=_('A post has been reported'),
                                         url=f"https://{current_app.config['SERVER_NAME']}/post/{reported.id}",
-                                        author_id=user.id, notif_type=NOTIF_REPORT)
+                                        author_id=user.id, notif_type=NOTIF_REPORT,
+                                        targets=json.dumps(targets_data))
             db.session.add(notification)
             already_notified.add(mod.user_id)
         reported.reports += 1
@@ -2389,9 +2393,11 @@ def process_report(user, reported, request_json):
         # Notify moderators
         already_notified = set()
         for mod in post.community.moderators():
+            targets_data = {'subtype':'comment_reported','suspect_comment_id':reported.id,'suspect_user_id':reported.author.id,'reporter_id':user.id,'source_instance_id':user.instance_id}
             notification = Notification(user_id=mod.user_id, title=_('A comment has been reported'),
                                         url=f"https://{current_app.config['SERVER_NAME']}/comment/{reported.id}",
-                                        author_id=user.id, notif_type=NOTIF_REPORT)
+                                        author_id=user.id, notif_type=NOTIF_REPORT,
+                                        targets=json.dumps(targets_data))
             db.session.add(notification)
             already_notified.add(mod.user_id)
         reported.reports += 1
