@@ -4,7 +4,7 @@ from random import randint
 from flask import request, current_app, abort, jsonify, json, g, url_for, redirect, make_response
 from flask_login import current_user
 from psycopg2 import IntegrityError
-from sqlalchemy import desc, or_
+from sqlalchemy import desc, or_, text
 import werkzeug.exceptions
 
 from app import db, constants, cache, celery
@@ -704,7 +704,10 @@ def process_inbox_request(request_json, store_ap_json):
             actor = find_actor_or_create(actor_id, create_if_not_found=False)
             if actor and isinstance(actor, User):
                 user = actor
-                user.last_seen = utcnow()
+                # Update user's last_seen in a separate transaction to avoid deadlocks
+                with db.session.begin_nested():
+                    db.session.execute(text('UPDATE "user" SET last_seen=:last_seen WHERE id = :user_id'),
+                                     {"last_seen": utcnow(), "user_id": user.id})
                 db.session.commit()
             elif actor and isinstance(actor, Community):                  # Process a few activities from NodeBB and a.gup.pe
                 if request_json['type'] == 'Add' or request_json['type'] == 'Remove':

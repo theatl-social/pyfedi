@@ -8,7 +8,7 @@ import arrow
 import boto3
 from flask import current_app, escape, url_for, render_template_string
 from flask_login import UserMixin, current_user
-from sqlalchemy import or_, text, desc
+from sqlalchemy import or_, text, desc, Index
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_babel import _, lazy_gettext as _l
@@ -1017,30 +1017,56 @@ class User(UserMixin, db.Model):
         return self.expires < datetime(2019, 9, 1)
 
     def recalculate_attitude(self):
-        upvotes = downvotes = 0
-        with db.session.no_autoflush:  # Avoid StaleDataError exception
-            last_50_votes = PostVote.query.filter(PostVote.user_id == self.id).order_by(-PostVote.id).limit(50)
-            for vote in last_50_votes:
-                if vote.effect > 0:
-                    upvotes += 1
-                if vote.effect < 0:
-                    downvotes += 1
-
-            comment_upvotes = comment_downvotes = 0
-            last_50_votes = PostReplyVote.query.filter(PostReplyVote.user_id == self.id).order_by(-PostReplyVote.id).limit(50)
-            for vote in last_50_votes:
-                if vote.effect > 0:
-                    comment_upvotes += 1
-                if vote.effect < 0:
-                    comment_downvotes += 1
+        # Use direct SQL queries to avoid potential ORM-related deadlocks
+        # Count post upvotes and downvotes
+        post_votes_result = db.session.execute(text("""
+            SELECT 
+                COUNT(CASE WHEN effect > 0 THEN 1 END) AS upvotes,
+                COUNT(CASE WHEN effect < 0 THEN 1 END) AS downvotes
+            FROM (
+                SELECT effect
+                FROM post_vote
+                WHERE user_id = :user_id
+                ORDER BY id DESC
+                LIMIT 50
+            ) AS recent_votes
+        """), {"user_id": self.id}).fetchone()
+        
+        upvotes = post_votes_result[0] or 0
+        downvotes = post_votes_result[1] or 0
+        
+        # Count comment upvotes and downvotes
+        comment_votes_result = db.session.execute(text("""
+            SELECT 
+                COUNT(CASE WHEN effect > 0 THEN 1 END) AS upvotes,
+                COUNT(CASE WHEN effect < 0 THEN 1 END) AS downvotes
+            FROM (
+                SELECT effect
+                FROM post_reply_vote
+                WHERE user_id = :user_id
+                ORDER BY id DESC
+                LIMIT 50
+            ) AS recent_votes
+        """), {"user_id": self.id}).fetchone()
+        
+        comment_upvotes = comment_votes_result[0] or 0
+        comment_downvotes = comment_votes_result[1] or 0
 
         total_upvotes = upvotes + comment_upvotes
         total_downvotes = downvotes + comment_downvotes
 
-        if total_upvotes + total_downvotes > 2:  # Only calculate attitude if they've done 3 or more votes as anything less than this could be an outlier and not representative of their overall attitude (also guard against division by zero)
-            self.attitude = (total_upvotes - total_downvotes) / (total_upvotes + total_downvotes)
+        # Calculate the new attitude value
+        if total_upvotes + total_downvotes > 2:  # Only calculate attitude if they've done 3 or more votes
+            new_attitude = (total_upvotes - total_downvotes) / (total_upvotes + total_downvotes)
         else:
-            self.attitude = None
+            new_attitude = None
+        
+        # Update attitude with direct SQL query to avoid deadlocks
+        db.session.execute(text("""
+            UPDATE "user" 
+            SET attitude = :attitude
+            WHERE id = :user_id
+        """), {"attitude": new_attitude, "user_id": self.id})
 
     def get_num_upvotes(self):
         post_votes = db.session.execute(text('SELECT COUNT(*) FROM "post_vote" WHERE user_id = :user_id AND effect > 0'), {'user_id': self.id}).scalar()
@@ -1808,16 +1834,37 @@ class Post(db.Model):
             # upvotes do not increase reputation in low quality communities
             if self.community.low_quality and effect > 0:
                 effect = 0
-            self.author.reputation += effect
+            with db.session.begin_nested():
+                db.session.execute(text('UPDATE "user" SET reputation = reputation + :effect WHERE id = :user_id'),
+                                   {'effect': effect, 'user_id': self.user_id})
             db.session.add(vote)
 
-        user.last_seen = utcnow()
         db.session.commit()
-        if not user.banned:
-            self.ranking = self.post_ranking(self.score, self.created_at)
-            self.ranking_scaled = int(self.ranking + self.community.scale_by())
+            
+        # Update user's last_seen in a separate transaction to avoid deadlocks
+        with db.session.begin_nested():
+            db.session.execute(text('UPDATE "user" SET last_seen=:last_seen WHERE id=:user_id'),
+                             {"last_seen": utcnow(), "user_id": user.id})
+        db.session.commit()
+        
+        # Calculate new ranking values
+        new_ranking = self.post_ranking(self.score, self.created_at)
+        new_ranking_scaled = int(new_ranking + self.community.scale_by())
+        
+        # Update post ranking in a separate transaction to avoid deadlocks
+        with db.session.begin_nested():
+            db.session.execute(text("""UPDATE "post" 
+                               SET ranking=:ranking, ranking_scaled=:ranking_scaled 
+                               WHERE id=:post_id"""),
+                             {"ranking": new_ranking, 
+                              "ranking_scaled": new_ranking_scaled, 
+                              "post_id": self.id})
+        
+        # Update user's attitude in another separate transaction
+        with db.session.begin_nested():
             user.recalculate_attitude()
-            db.session.commit()
+        
+        db.session.commit()
         return undo
 
 
@@ -2159,12 +2206,30 @@ class PostReply(db.Model):
             self.score += effect
             vote = PostReplyVote(user_id=user.id, post_reply_id=self.id, author_id=self.author.id,
                                  effect=effect)
-            self.author.reputation += effect
+            with db.session.begin_nested():
+                db.session.execute(text('UPDATE "user" SET reputation = reputation + :effect WHERE id = :user_id'),
+                                   {'effect': effect, 'user_id': self.user_id})
             db.session.add(vote)
         db.session.commit()
-        user.last_seen = utcnow()
-        self.ranking = PostReply.confidence(self.up_votes, self.down_votes)
-        user.recalculate_attitude()
+        
+        # Update user and ranking in separate transactions to avoid deadlocks
+        with db.session.begin_nested():
+            db.session.execute(text('UPDATE "user" SET last_seen=:last_seen WHERE id=:user_id'),
+                             {"last_seen": utcnow(), "user_id": user.id})
+        db.session.commit()
+        
+        # Calculate the new ranking value
+        new_ranking = PostReply.confidence(self.up_votes, self.down_votes)
+        
+        # Update ranking in a separate transaction to avoid deadlocks
+        with db.session.begin_nested():
+            db.session.execute(text("UPDATE post_reply SET ranking=:ranking WHERE id=:post_reply_id"),
+                             {"ranking": new_ranking, "post_reply_id": self.id})
+        
+        # Update user's attitude in another separate transaction
+        with db.session.begin_nested():
+            user.recalculate_attitude()
+        
         db.session.commit()
         return undo
 
@@ -2343,6 +2408,10 @@ class PostVote(db.Model):
     created_at = db.Column(db.DateTime, default=utcnow)
     post = db.relationship('Post', foreign_keys=[post_id])
 
+    __table_args__ = (
+        Index('ix_post_vote_user_id_id_desc', 'user_id', desc('id')),
+    )
+
 
 class PostReplyVote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -2351,6 +2420,10 @@ class PostReplyVote(db.Model):
     post_reply_id = db.Column(db.Integer, db.ForeignKey('post_reply.id'), index=True)
     effect = db.Column(db.Float)
     created_at = db.Column(db.DateTime, default=utcnow)
+
+    __table_args__ = (
+        Index('ix_post_reply_vote_user_id_id_desc', 'user_id', desc('id')),
+    )
 
 
 # save every activity to a log, to aid debugging
