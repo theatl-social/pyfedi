@@ -388,6 +388,8 @@ def show_community(community: Community):
         breadcrumb.url = '/communities'
         breadcrumbs.append(breadcrumb)
 
+    community_feeds = Feed.query.join(FeedItem, FeedItem.feed_id == Feed.id).filter(FeedItem.community_id == community.id).filter(Feed.public == True).all()
+
     description = shorten_string(community.description, 150) if community.description else None
     og_image = community.image.source_url if community.image_id else None
 
@@ -421,7 +423,7 @@ def show_community(community: Community):
                            SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                            etag=f"{community.id}{sort}{post_layout}_{hash(community.last_active)}", related_communities=related_communities,
                            next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth, un_moderated=un_moderated,
-                           recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
+                           recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, community_feeds=community_feeds,
                            canonical=community.profile_id(), can_upvote_here=can_upvote(user, community), can_downvote_here=can_downvote(user, community, g.site),
                            rss_feed=f"https://{current_app.config['SERVER_NAME']}/community/{community.link()}/feed", rss_feed_name=f"{community.title} on {g.site.name}",
                            content_filters=content_filters, moderating_communities=moderating_communities(current_user.get_id()),

@@ -87,6 +87,24 @@
             </div>
         </div>
         {% endif -%}
+        {% if community_feeds -%}
+            <div class="card mt-3">
+                <div class="card-header">
+                     <h2>{{ _('Feeds') }}</h2>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for feed in community_feeds -%}
+                            <li class="list-group-item">
+                                {{ render_feedname(feed) }}
+                            </li>
+                        {% endfor -%}
+                    </ul>
+
+                    <p class="mt-4"><a class="btn btn-primary" href="/feeds">{{ _('More feeds') }}</a></p>
+                </div>
+            </div>
+        {% endif -%}
     {% endblock %}
     {% block community_settings %}
         {% if is_moderator or is_admin -%}
