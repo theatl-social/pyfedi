@@ -189,10 +189,7 @@ def post_to_page(post: Post):
 
 
 def post_replies_for_ap(post_id: int) -> List[dict]:
-    replies = PostReply.query.\
-        filter_by(post_id=post_id, deleted=False).\
-        order_by(desc(PostReply.posted_at)).\
-        limit(2000)
+    replies = PostReply.query.filter_by(post_id=post_id, deleted=False).order_by(PostReply.posted_at).limit(2000)
     return [comment_model_to_json(reply) for reply in replies]
 
 

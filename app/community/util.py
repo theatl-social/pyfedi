@@ -180,6 +180,8 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                             post.posted_at = activity['published']
                             post.last_active = activity['published']
                             db.session.commit()
+
+                            # todo: create post_replies based on activity['replies'], if it exists
                     activities_processed += 1
                     if activities_processed >= max:
                         break

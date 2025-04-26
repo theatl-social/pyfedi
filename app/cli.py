@@ -439,12 +439,15 @@ def register(app):
             # Check size of redis memory. Abort if > 200 MB used
             try:
                 redis = get_redis_connection()
-                if redis and redis.memory_stats()['total.allocated'] > 200000000:
-                    print('Redis memory is quite full - stopping send queue to avoid making it worse.')
-                    set_setting('send-queue-running', False)
-                    return
+                try:
+                    if redis and redis.memory_stats()['total.allocated'] > 200000000:
+                        print('Redis memory is quite full - stopping send queue to avoid making it worse.')
+                        set_setting('send-queue-running', False)
+                        return
+                except: # retrieving memory stats fails on recent versions of redis. Once the redis package is fixed this problem should go away.
+                    ...
             except:
-                print('Could not connect to redis - cancelling')
+                print('Could not connect to redis')
                 set_setting('send-queue-running', False)
                 return
 
