@@ -10,7 +10,7 @@
             <li><a href="{{ url_for('post.post_purge', post_id=post.id) }}" hx-get="{{ url_for('post.post_purge', post_id=post.id) }}" hx-confirm="Are you sure?" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-delete red"></span>
                 {{ _('Purge') }}</a></li>
         {% else -%}
-            <li><a href="{{ url_for('post.post_delete', post_id=post.id) }}" hx-get="{{ url_for('post.post_delete', post_id=post.id) }}" hx-confirm="Are you sure?" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-delete"></span>
+            <li><a href="{{ url_for('post.post_delete', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-delete"></span>
                 {{ _('Delete') }}</a></li>
         {% endif -%}
     {% endif -%}

@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import TextAreaField, SubmitField, BooleanField, StringField
+from wtforms import TextAreaField, SubmitField, BooleanField, StringField, HiddenField
 from wtforms.fields.choices import SelectField
 from wtforms.validators import DataRequired, Length, ValidationError
 from flask_babel import _, lazy_gettext as _l
@@ -50,7 +50,8 @@ class CrossPostForm(FlaskForm):
 
 
 class ConfirmationForm(FlaskForm):
-    submit = SubmitField(_l('Yes'))
+    referrer = HiddenField()
+    submit = SubmitField(_l('Yes'), render_kw={'autofocus': True})
 
 
 class ConfirmationMultiDeleteForm(FlaskForm):

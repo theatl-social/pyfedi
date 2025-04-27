@@ -941,9 +941,15 @@ def post_delete(post_id: int):
     post = Post.query.get_or_404(post_id)
     community = post.community
     if post.user_id == current_user.id or community.is_moderator() or current_user.is_admin():
-        post_delete_post(community, post, current_user.id)
-    return redirect(url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not None else community.name))
-
+        form = ConfirmationForm()
+        if form.validate_on_submit():
+            post_delete_post(community, post, current_user.id)
+            return redirect(request.form.get('referrer'))
+        else:
+            form.referrer.data = referrer(url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not None else community.name))
+            return render_template('generic_form.html', title=_('Are you sure you want to delete the post "%(post_title)s"?',
+                                                                post_title=post.title),
+                                   form=form)
 
 def post_delete_post(community: Community, post: Post, user_id: int, federate_all_communities=True):
     user: User = User.query.get(user_id)
@@ -1487,7 +1493,7 @@ def post_reply_delete(post_id: int, comment_id: int):
                 num_deleted = 1
         if num_deleted > 0:
             flash(_('Deleted %(num_deleted)s comments.', num_deleted=num_deleted))
-        return redirect(url_for('activitypub.post_ap', post_id=post.id))
+        return redirect(url_for('activitypub.post_ap', post_id=post.id, _anchor=f'comment_{comment_id}'))
     else:
         return render_template('generic_form.html', title=_('Are you sure you want to delete this comment?'), form=form)
 
