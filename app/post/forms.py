@@ -51,3 +51,8 @@ class CrossPostForm(FlaskForm):
 
 class ConfirmationForm(FlaskForm):
     submit = SubmitField(_l('Yes'))
+
+
+class ConfirmationMultiDeleteForm(FlaskForm):
+    also_delete_replies = BooleanField(_l('Also delete replies to this comment'))
+    submit = SubmitField(_l('Yes'), render_kw={'autofocus': True})

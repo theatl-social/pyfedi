@@ -14,7 +14,8 @@ from app.activitypub.signature import HttpSignature, post_request, default_conte
 from app.activitypub.util import notify_about_post_reply, update_post_from_activity
 from app.community.util import send_to_remote_instance
 from app.inoculation import inoculation
-from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm, ConfirmationForm
+from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm, ConfirmationForm, \
+    ConfirmationMultiDeleteForm
 from app.community.forms import CreateLinkForm, CreateImageForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm
 from app.constants import NOTIF_REPORT
 from app.post.util import post_replies, get_comment_branch, tags_to_string, url_needs_archive, \
@@ -1452,51 +1453,43 @@ def post_reply_delete(post_id: int, comment_id: int):
     post = Post.query.get_or_404(post_id)
     post_reply = PostReply.query.get_or_404(comment_id)
     community = post.community
-    
-    if post_reply.user_id == current_user.id:
-        # User is deleting their own reply
-        delete_reply(post_reply.id, SRC_WEB, None)
-    elif community.is_moderator() or current_user.is_admin():
-        # Moderator or admin is deleting the reply
-        reason = 'Deleted by mod'
-        mod_remove_reply(post_reply.id, reason, SRC_WEB, None)
-    
-    return redirect(url_for('activitypub.post_ap', post_id=post.id))
 
-
-@bp.route('/post/<int:post_id>/comment/<int:comment_id>/delete_all', methods=['GET', 'POST'])
-@login_required
-def post_reply_delete_all(post_id: int, comment_id: int):
-    post = Post.query.get_or_404(post_id)
-    post_reply = PostReply.query.get_or_404(comment_id)
-    child_post_ids = db.session.execute(text('select id from "post_reply" where path @> ARRAY[:parent_path]'),
-                                        {'parent_path': post_reply.path}).scalars()
-    form = ConfirmationForm()
+    form = ConfirmationMultiDeleteForm()
 
     if form.validate_on_submit():
-        num_deleted = 0
-        for child_post_id in child_post_ids:
-            if child_post_id != 0:
-                reply = PostReply.query.get_or_404(child_post_id)
-                
-                if reply.user_id == current_user.id:
-                    # User is deleting their own reply
-                    delete_reply(reply.id, SRC_WEB, None)
-                elif post.community.is_moderator() or current_user.is_admin():
-                    # Moderator or admin is deleting the reply
-                    reason = 'Deleted by mod'
-                    mod_remove_reply(reply.id, reason, SRC_WEB, None)
-                
-                num_deleted += 1
-                
-        flash(_('Deleted %(num_deleted)s comments.', num_deleted=num_deleted))
-        return redirect(url_for('activitypub.post_ap', post_id=post.id, _anchor=f'comment_{post_reply.parent_id}' if post_reply.parent_id else None))
+        if form.also_delete_replies.data:
+            num_deleted = 0
+            # Find all the post_replys that have the same IDs in the path. NB the @>
+            child_post_ids = db.session.execute(text('select id from "post_reply" where path @> ARRAY[:parent_path]'),
+                                                {'parent_path': post_reply.path}).scalars()
+            for child_post_id in child_post_ids:
+                if child_post_id != 0:
+                    reply = PostReply.query.get_or_404(child_post_id)
+
+                    if reply.user_id == current_user.id:
+                        # User is deleting their own reply
+                        delete_reply(reply.id, SRC_WEB, None)
+                    elif post.community.is_moderator() or current_user.is_admin():
+                        # Moderator or admin is deleting the reply
+                        reason = 'Deleted by mod'
+                        mod_remove_reply(reply.id, reason, SRC_WEB, None)
+                    num_deleted += 1
+        else:
+            num_deleted = 0
+            if post_reply.user_id == current_user.id:
+                # User is deleting their own reply
+                delete_reply(post_reply.id, SRC_WEB, None)
+                num_deleted = 1
+            elif community.is_moderator() or current_user.is_admin():
+                # Moderator or admin is deleting the reply
+                reason = 'Deleted by mod'
+                mod_remove_reply(post_reply.id, reason, SRC_WEB, None)
+                num_deleted = 1
+        if num_deleted > 0:
+            flash(_('Deleted %(num_deleted)s comments.', num_deleted=num_deleted))
+        return redirect(url_for('activitypub.post_ap', post_id=post.id))
     else:
-        num_to_delete = 0
-        for child_post_id in child_post_ids:
-            if child_post_id != 0:
-                num_to_delete += 1
-        return render_template('generic_form.html', title=_('Are you sure you want to delete %(num_to_delete)s comments?', num_to_delete=num_to_delete), form=form)
+        return render_template('generic_form.html', title=_('Are you sure you want to delete this comment?'), form=form)
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/restore', methods=['GET', 'POST'])

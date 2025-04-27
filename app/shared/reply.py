@@ -226,8 +226,6 @@ def delete_reply(reply_id, src, auth):
         db.session.execute(text('update post_reply set child_count = child_count - 1 where id in :parents'),
                            {'parents': tuple(reply.path[:-1])})
     db.session.commit()
-    if src == SRC_WEB:
-        flash(_('Comment deleted.'))
 
     task_selector('delete_reply', user_id=user_id, reply_id=reply.id)
 

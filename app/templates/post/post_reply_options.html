@@ -14,12 +14,8 @@
                 {% endif -%}
             {% endif -%}
         {% else -%}
-            <li><a href="{{ url_for('post.post_reply_delete', post_id=post.id, comment_id=post_reply.id) }}" hx-get="{{ url_for('post.post_reply_delete', post_id=post.id, comment_id=post_reply.id) }}" hx-confirm="Are you sure?" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-delete"></span>
+            <li><a href="{{ url_for('post.post_reply_delete', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-delete"></span>
                 {{ _('Delete') }}</a></li>
-        {% endif -%}
-        {% if post.community.is_moderator() or current_user.is_admin() -%}
-            <li><a href="{{ url_for('post.post_reply_delete_all', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-delete"></span>
-                {{ _('Delete + child replies') }}</a></li>
         {% endif -%}
     {% endif -%}
     {% if existing_bookmark -%}
