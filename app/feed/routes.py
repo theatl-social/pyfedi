@@ -187,11 +187,13 @@ def feed_edit(feed_id: int):
             file = save_icon_file(icon_file, directory='feeds')
             if file:
                 feed_to_edit.icon = file
+            cache.delete_memoized(Feed.icon_image, feed_to_edit)
         banner_file = request.files['banner_file']
         if banner_file and banner_file.filename != '':
             file = save_banner_file(banner_file, directory='feeds')
             if file:
                 feed_to_edit.image = file
+            cache.delete_memoized(Feed.header_image, feed_to_edit)
         if g.site.enable_nsfw:
             feed_to_edit.nsfw = edit_feed_form.nsfw.data
         if g.site.enable_nsfl:
