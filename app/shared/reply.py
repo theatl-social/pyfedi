@@ -332,7 +332,7 @@ def mod_remove_reply(reply_id, reason, src, auth):
         user = current_user
 
     reply = PostReply.query.filter_by(id=reply_id, deleted=False).one()
-    if not reply.community.is_moderator(user) and not reply.community.is_instance_admin(user):
+    if not reply.community.is_moderator(user) and not reply.community.is_instance_admin(user) and not user.is_admin():
         raise Exception('Does not have permission')
 
     reply.deleted = True
