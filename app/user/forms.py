@@ -41,8 +41,8 @@ class ProfileForm(FlaskForm):
 class SettingsForm(FlaskForm):
     interface_language = SelectField(_l('Interface language'), coerce=str, validators=[Optional()],
                                      render_kw={'class': 'form-select'})
-    read_languages = SelectMultipleField(_l('Content language'), coerce=int, validators=[Optional()],
-                                         render_kw={'class': 'form-select'})
+    read_languages = MultiCheckboxField(_l('Content language'), coerce=int, validators=[Optional()],
+                                        render_kw={'class':'form-multicheck-columns'})
     newsletter = BooleanField(_l('Subscribe to email newsletter'))
     email_unread = BooleanField(_l('Receive email about missed notifications'))
     ignore_bots = BooleanField(_l('Hide posts by bots'))
