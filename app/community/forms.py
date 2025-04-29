@@ -2,7 +2,7 @@ from flask import request, g
 from flask_login import current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, TextAreaField, BooleanField, HiddenField, SelectField, FileField, \
-    DateField
+    DateField, DateTimeField
 from wtforms.fields.choices import SelectMultipleField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Regexp, Optional
 from flask_babel import _, lazy_gettext as _l
@@ -124,6 +124,7 @@ class CreatePostForm(FlaskForm):
     nsfl = BooleanField(_l('Gore/gross'))
     notify_author = BooleanField(_l('Notify about replies'))
     language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
+    scheduled_for = DateTimeField(_l('Scheduled for'), validators=[Optional()])
     submit = SubmitField(_l('Publish'))
 
     def validate_nsfw(self, field):
@@ -138,6 +139,12 @@ class CreatePostForm(FlaskForm):
             if field.data:
                 self.nsfl.errors.append(_l('NSFL posts are not allowed.'))
                 return False
+        return True
+
+    def validate_scheduled_for(self, field):
+        if field.data and field.data < utcnow():
+            self.scheduled_for.errors.append(_l('Choose a time in the future.'))
+            return False
         return True
 
 

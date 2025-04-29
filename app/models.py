@@ -2234,6 +2234,31 @@ class PostReply(db.Model):
         return undo
 
 
+class ScheduledPost(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    community_id = db.Column(db.Integer, db.ForeignKey('community.id'), index=True)
+    image_id = db.Column(db.Integer, db.ForeignKey('file.id'), index=True)
+    domain_id = db.Column(db.Integer, db.ForeignKey('domain.id'), index=True)
+    licence_id = db.Column(db.Integer, db.ForeignKey('licence.id'), index=True)
+    title = db.Column(db.String(255))
+    url = db.Column(db.String(2048))
+    body = db.Column(db.Text)
+    microblog = db.Column(db.Boolean, default=False)
+    nsfw = db.Column(db.Boolean, default=False, index=True)
+    nsfl = db.Column(db.Boolean, default=False, index=True)
+    sticky = db.Column(db.Boolean, default=False, index=True)
+    indexable = db.Column(db.Boolean, default=True)
+    from_bot = db.Column(db.Boolean, default=False, index=True)
+    created_at = db.Column(db.DateTime, index=True, default=utcnow)
+    language_id = db.Column(db.Integer, db.ForeignKey('language.id'), index=True)
+
+    @classmethod
+    def new(cls, user, community: Community, request_json: dict):
+        ...
+        # use Post.new() for inspiration
+
+
 class Domain(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), index=True)
