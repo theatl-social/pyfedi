@@ -56,9 +56,9 @@ def webfinger():
         query = request.args.get('resource')  # acct:alice@tada.club
         if 'acct:' in query:
             actor = query.split(':')[1].split('@')[0]  # alice
-        elif 'feed:' in query:
-            actor = query.split(':')[1].split('@')[0]  # alice
-            feed = True # A feed is being searched for, so set a flag to avoid the community lookup
+            if actor.startswith('~'):
+                feed = True
+                actor = actor[1:]
         elif 'https:' in query or 'http:' in query:
             actor = query.split('/')[-1]
         else:

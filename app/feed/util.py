@@ -54,12 +54,12 @@ def search_for_feed(address: str):
         # Look up the profile address of the Feed using WebFinger
         try:
             webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
-                                         params={'resource': f"feed:{address[1:]}"})
+                                         params={'resource': f"acct:{address}"})    # include the ~ on the start to indicate we're searching for a feed
         except httpx.HTTPError:
             sleep(randint(3, 10))
             try:
                 webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
-                                            params={'resource': f"feed:{address[1:]}"})
+                                            params={'resource': f"acct:{address}"})
             except httpx.HTTPError:
                 return None
 
