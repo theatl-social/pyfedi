@@ -52,9 +52,13 @@ def testredis_get():
 @bp.route('/.well-known/webfinger')
 def webfinger():
     if request.args.get('resource'):
+        feed = False
         query = request.args.get('resource')  # acct:alice@tada.club
         if 'acct:' in query:
             actor = query.split(':')[1].split('@')[0]  # alice
+        elif 'feed:' in query:
+            actor = query.split(':')[1].split('@')[0]  # alice
+            feed = True # A feed is being searched for, so set a flag to avoid the community lookup
         elif 'https:' in query or 'http:' in query:
             actor = query.split('/')[-1]
         else:
@@ -82,20 +86,27 @@ def webfinger():
             resp.headers.add_header('Access-Control-Allow-Origin', '*')
             return resp
 
-        # look for the User first, then the Community, then the Feed that matches
-        seperator = 'u'
-        type = 'Person'
-        user = User.query.filter(or_(User.user_name == actor.strip(), User.alt_user_name == actor.strip())).filter_by(deleted=False, banned=False, ap_id=None).first()
-        if user is None:
-            community = Community.query.filter_by(name=actor.strip(), ap_id=None).first()
-            seperator = 'c'
-            type = 'Group'
-            if community is None:
-                feed = Feed.query.filter_by(name=actor.strip(), ap_id=None).first()
-                if feed is None:
-                    return ''
-                seperator = 'f'
-                type = 'Feed'
+        if not feed:
+            # look for the User first, then the Community, then the Feed that matches
+            seperator = 'u'
+            type = 'Person'
+            user = User.query.filter(or_(User.user_name == actor.strip(), User.alt_user_name == actor.strip())).filter_by(deleted=False, banned=False, ap_id=None).first()
+            if user is None:
+                community = Community.query.filter_by(name=actor.strip(), ap_id=None).first()
+                seperator = 'c'
+                type = 'Group'
+                if community is None:
+                    feed = Feed.query.filter_by(name=actor.strip(), ap_id=None).first()
+                    if feed is None:
+                        return ''
+                    seperator = 'f'
+                    type = 'Feed'
+        else:
+            feed = Feed.query.filter_by(name=actor.strip(), ap_id=None).first()
+            if feed is None:
+                return ''
+            seperator = 'f'
+            type = 'Feed'
 
         webfinger_data = {
             "subject": f"acct:{actor}@{current_app.config['SERVER_NAME']}",
