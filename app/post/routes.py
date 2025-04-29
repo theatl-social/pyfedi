@@ -37,7 +37,8 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, reply_is_stupid, \
     languages_for_form, menu_topics, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown, \
     permission_required, blocked_users, get_request, is_local_image_url, is_video_url, can_upvote, can_downvote, \
-    menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, referrer, can_create_post_reply, communities_banned_from
+    menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, referrer, can_create_post_reply, communities_banned_from, \
+    block_bots
 from app.post.util import post_type_to_form_url_type
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, \
     delete_reply, mod_remove_reply
@@ -772,6 +773,7 @@ def add_reply_inline(post_id: int, comment_id: int):
 
 
 @bp.route('/post/<int:post_id>/options_menu', methods=['GET'])
+@block_bots
 def post_options(post_id: int):
     post = Post.query.get_or_404(post_id)
     if post.deleted:
@@ -796,6 +798,7 @@ def post_options(post_id: int):
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/options_menu', methods=['GET'])
+@block_bots
 def post_reply_options(post_id: int, comment_id: int):
     post = Post.query.get_or_404(post_id)
     post_reply = PostReply.query.get_or_404(comment_id)

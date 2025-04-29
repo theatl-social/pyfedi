@@ -759,6 +759,26 @@ def debug_mode_only(func):
     return decorated_function
 
 
+def block_bots(func):
+    @wraps(func)
+    def decorated_function(*args, **kwargs):
+        if not is_bot(request.user_agent.string):
+            return func(*args, **kwargs)
+        else:
+            return abort(403, description="Do not index this.")
+
+    return decorated_function
+
+
+def is_bot(user_agent) -> bool:
+    user_agent = user_agent.lower()
+    if 'bot' in user_agent:
+        return True
+    if 'meta-externalagent' in user_agent:
+        return True
+    return False
+
+
 # sends the user back to where they came from
 def back(default_url):
     # Get the referrer from the request headers
