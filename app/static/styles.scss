@@ -359,6 +359,15 @@ div.navbar {
   }
 }
 
+ul.form-multicheck-columns {
+  display: flex;
+  list-style: none;
+  max-height: 12rem;
+  flex-direction: column;
+  flex-wrap: wrap;
+  overflow-y: auto;
+}
+
 .add_reply {
   .form-control-label {
     display: none;
