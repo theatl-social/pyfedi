@@ -1,8 +1,8 @@
 """scheduled posts
 
-Revision ID: 0d50729d62f1
+Revision ID: 755c3ffc142b
 Revises: e5b27b52ad78
-Create Date: 2025-04-29 21:19:02.608292
+Create Date: 2025-04-29 21:22:32.755517
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '0d50729d62f1'
+revision = '755c3ffc142b'
 down_revision = 'e5b27b52ad78'
 branch_labels = None
 depends_on = None
@@ -36,6 +36,8 @@ def upgrade():
     sa.Column('from_bot', sa.Boolean(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('language_id', sa.Integer(), nullable=True),
+    sa.Column('scheduled_for', sa.DateTime(), nullable=True),
+    sa.Column('repeat', sa.String(length=20), nullable=True),
     sa.ForeignKeyConstraint(['community_id'], ['community.id'], ),
     sa.ForeignKeyConstraint(['domain_id'], ['domain.id'], ),
     sa.ForeignKeyConstraint(['image_id'], ['file.id'], ),
@@ -54,6 +56,7 @@ def upgrade():
         batch_op.create_index(batch_op.f('ix_scheduled_post_licence_id'), ['licence_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_scheduled_post_nsfl'), ['nsfl'], unique=False)
         batch_op.create_index(batch_op.f('ix_scheduled_post_nsfw'), ['nsfw'], unique=False)
+        batch_op.create_index(batch_op.f('ix_scheduled_post_scheduled_for'), ['scheduled_for'], unique=False)
         batch_op.create_index(batch_op.f('ix_scheduled_post_sticky'), ['sticky'], unique=False)
         batch_op.create_index(batch_op.f('ix_scheduled_post_user_id'), ['user_id'], unique=False)
 
@@ -65,6 +68,7 @@ def downgrade():
     with op.batch_alter_table('scheduled_post', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_scheduled_post_user_id'))
         batch_op.drop_index(batch_op.f('ix_scheduled_post_sticky'))
+        batch_op.drop_index(batch_op.f('ix_scheduled_post_scheduled_for'))
         batch_op.drop_index(batch_op.f('ix_scheduled_post_nsfw'))
         batch_op.drop_index(batch_op.f('ix_scheduled_post_nsfl'))
         batch_op.drop_index(batch_op.f('ix_scheduled_post_licence_id'))

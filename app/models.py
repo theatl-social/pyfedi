@@ -2252,6 +2252,8 @@ class ScheduledPost(db.Model):
     from_bot = db.Column(db.Boolean, default=False, index=True)
     created_at = db.Column(db.DateTime, index=True, default=utcnow)
     language_id = db.Column(db.Integer, db.ForeignKey('language.id'), index=True)
+    scheduled_for = db.Column(db.DateTime, index=True)  # The first (or only) occurrence of this post
+    repeat = db.Column(db.String(20), default='')   # 'daily', 'weekly', 'monthly'. Empty string = no repeat, just post once.
 
     @classmethod
     def new(cls, user, community: Community, request_json: dict):
