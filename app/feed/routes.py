@@ -103,7 +103,7 @@ def feed_new():
         form.communities.data = '\n'.join(community_apids)
 
     return render_template('feed/feed_new.html', title=_('Create a Feed'), form=form,
-                           current_app=current_app, menu_topics=menu_topics(), )
+                           current_app=current_app, )
 
 
 @bp.route('/feed/add_remote', methods=['GET','POST'])
@@ -230,7 +230,7 @@ def feed_edit(feed_id: int):
     edit_feed_form.public.data = feed_to_edit.public
     edit_feed_form.is_instance_feed.data = feed_to_edit.is_instance_feed
 
-    return render_template('feed/feed_edit.html', form=edit_feed_form, menu_topics=menu_topics(), )
+    return render_template('feed/feed_edit.html', form=edit_feed_form, )
 
 
 @bp.route('/feed/<int:feed_id>/delete', methods=['GET','POST'])
@@ -383,7 +383,7 @@ def feed_copy(feed_id: int):
     copy_feed_form.public.data = feed_to_copy.public
     copy_feed_form.is_instance_feed.data = feed_to_copy.is_instance_feed
 
-    return render_template('feed/feed_copy.html', form=copy_feed_form, menu_topics=menu_topics(), )
+    return render_template('feed/feed_copy.html', form=copy_feed_form )
 
 
 @bp.route('/feed/<int:feed_id>/notification', methods=['GET', 'POST'])

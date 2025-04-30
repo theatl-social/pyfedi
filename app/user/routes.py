@@ -1372,7 +1372,7 @@ def edit_user_note(actor):
         form.note.data = user.get_note(current_user)
 
     return render_template('user/edit_note.html', title=_('Edit note'), form=form, user=user, return_to=return_to,
-                           menu_topics=menu_topics(), site=g.site, )
+                           site=g.site, )
 
 
 @bp.route('/user/<int:user_id>/preview')
@@ -1441,7 +1441,6 @@ def user_myfeeds():
     return render_template('user/user_feeds.html', user_has_feeds=user_has_feeds, user_feeds_list=current_user_feeds,
                            user_has_feed_subscriptions=user_has_feed_subscriptions,
                            subbed_feeds=subbed_feeds,
-                           menu_topics=menu_topics(), 
                            )
 
 
@@ -1465,7 +1464,6 @@ def user_feeds(actor):
         user_has_public_feeds = True
 
     return render_template('user/user_public_feeds.html', user_has_public_feeds=user_has_public_feeds, 
-                           creator_name=user.user_name, user_feeds_list=user_public_feeds,
-                           menu_topics=menu_topics(), 
+                           creator_name=user.user_name, user_feeds_list=user_public_feeds
                            )
 
