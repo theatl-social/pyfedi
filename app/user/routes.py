@@ -693,12 +693,7 @@ def report_profile(actor):
         elif request.method == 'GET':
             form.report_remote.data = True
 
-    return render_template('user/user_report.html', title=_('Report user'), form=form, user=user,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics = menu_topics(), site=g.site,
-                           
-                           )
+    return render_template('user/user_report.html', title=_('Report user'), form=form, user=user, site=g.site)
 
 
 @bp.route('/u/<actor>/delete', methods=['GET'])

@@ -102,11 +102,8 @@ def add_local():
         cache.delete_memoized(moderating_communities, current_user.id)
         return redirect('/c/' + community.name)
 
-    return render_template('community/add_local.html', title=_('Create community'), form=form, moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           current_app=current_app,
-                           menu_topics=menu_topics(),
-                           site=g.site, )
+    return render_template('community/add_local.html', title=_('Create community'), form=form,
+                           current_app=current_app, site=g.site, )
 
 
 @bp.route('/add_remote', methods=['GET', 'POST'])
@@ -750,10 +747,7 @@ def add_post(actor, type):
 
     return render_template('community/add_post.html', title=_('Add post to community'), form=form,
                            post_type=post_type, community=community, post=post,
-                           markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.id),
-                           menu_topics=menu_topics(), site=g.site,
+                           markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor, site=g.site,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                            )
 
@@ -1796,11 +1790,7 @@ def community_invite(actor):
             return redirect('/c/' + community.link())
 
         return render_template('community/invite.html', title=_('Invite to community'), form=form, community=community,
-                               moderating_communities=moderating_communities(current_user.get_id()),
-                               joined_communities=joined_communities(current_user.get_id()),
-                               current_app=current_app,
-                               menu_topics=menu_topics(),
-                               site=g.site, 
+                               current_app=current_app, site=g.site,
                                )
     else:
         abort(404)

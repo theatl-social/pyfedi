@@ -712,11 +712,10 @@ def add_reply(post_id: int, comment_id: int):
 
         return render_template('post/add_reply.html', title=_('Discussing %(title)s', title=post.title), post=post,
                                is_moderator=is_moderator, form=form, comment=in_reply_to, markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
-                               moderating_communities=moderating_communities(current_user.get_id()), mods=mod_list,
-                               joined_communities = joined_communities(current_user.id), community=post.community,
+                               mods=mod_list,
+                               community=post.community,
                                SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                               menu_topics=menu_topics(), 
                                )
 
 
@@ -1402,8 +1401,7 @@ def post_reply_edit(post_id: int, comment_id: int):
             form.notify_author.data = post_reply.notify_author
             form.language_id.data = post_reply.language_id
             return render_template('post/post_reply_edit.html', title=_('Edit comment'), form=form, post=post, post_reply=post_reply,
-                                   comment=comment, markdown_editor=current_user.markdown_editor, moderating_communities=moderating_communities(current_user.get_id()),
-                                   joined_communities=joined_communities(current_user.get_id()), menu_topics=menu_topics(),
+                                   comment=comment, markdown_editor=current_user.markdown_editor,
                                    community=post.community, site=g.site,
                                    SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
@@ -1695,9 +1693,7 @@ def post_cross_post(post_id: int):
 
         return render_template('post/post_cross_post.html', title=_('Cross post'), form=form, post=post,
                                breadcrumbs=breadcrumbs,
-                               moderating_communities=moderating,
-                               joined_communities=joined,
-                               menu_topics=menu_topics(), site=g.site,
+                               site=g.site,
                                )
 
 

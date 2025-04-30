@@ -55,10 +55,7 @@ def chat_home(conversation_id=None):
                                    title=_('Chat with %(name)s', name=conversation.member_names(current_user.id)),
                                    conversations=conversations, messages=messages, form=form,
                                    current_conversation=conversation_id, conversation=conversation,
-                                   moderating_communities=moderating_communities(current_user.get_id()),
-                                   joined_communities=joined_communities(current_user.get_id()),
-                                   menu_topics=menu_topics(),
-                                   site=g.site, 
+                                   site=g.site,
                                    )
 
 
@@ -87,7 +84,7 @@ def new_message(to):
         return render_template('chat/new_message.html', form=form, title=_('New message to "%(recipient_name)s"', recipient_name=recipient.link()),
                                recipient=recipient,
                                
-                               site=g.site, 
+                               site=g.site,
                                )
 
 
