@@ -657,7 +657,9 @@ def topics_menu():
 @bp.route('/feeds_menu')
 def feeds_menu():
     return render_template('feeds_menu.html',
-                           
+                           menu_instance_feeds=menu_instance_feeds(),
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                            )
 
 
