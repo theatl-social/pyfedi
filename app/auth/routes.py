@@ -68,6 +68,7 @@ def login():
         session['ui_language'] = user.interface_language
         current_user.last_seen = utcnow()
         current_user.ip_address = ip_address()
+        current_user.timezone = form.timezone.data
         ip_address_info = ip2location(current_user.ip_address)
         current_user.ip_address_country = ip_address_info['country'] if ip_address_info else current_user.ip_address_country
         db.session.commit()
@@ -148,6 +149,7 @@ def register():
                             referrer=session.get('Referer', ''), alt_user_name=gibberish(randint(8, 20)))
                 user.set_password(form.password.data)
                 user.ip_address_country = ip_address_info['country'] if ip_address_info else ''
+                user.timezone = form.timezone.data
                 if get_setting('email_verification', True):
                     user.verified = False
                 else:

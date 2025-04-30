@@ -143,6 +143,7 @@ def edit_profile(actor):
         current_user.about_html = markdown_to_html(form.about.data)
         current_user.matrix_user_id = form.matrixuserid.data
         current_user.extra_fields = []
+        current_user.timezone = form.timezone.data
         if form.extra_label_1.data.strip() != '' and form.extra_text_1.data.strip() != '':
             current_user.extra_fields.append(UserExtraField(label=form.extra_label_1.data.strip(), text=form.extra_text_1.data.strip()))
         if form.extra_label_2.data.strip() != '' and form.extra_text_2.data.strip() != '':

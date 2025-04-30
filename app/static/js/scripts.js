@@ -38,6 +38,13 @@ document.addEventListener("DOMContentLoaded", function () {
     setupSelectNavigation();
     setupUserPopup();
     preventDoubleFormSubmissions();
+
+    // save user timezone into a timezone field, if it exists
+    const timezoneField = document.getElementById('timezone');
+    if(timezoneField && timezoneField.type === 'hidden') {
+        timezoneField.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    }
+
 });
 
 

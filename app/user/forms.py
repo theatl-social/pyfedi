@@ -1,7 +1,7 @@
 from flask_login import current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, PasswordField, BooleanField, EmailField, TextAreaField, FileField, \
-    RadioField, DateField, SelectField, IntegerField, SelectMultipleField
+    RadioField, DateField, SelectField, IntegerField, SelectMultipleField, HiddenField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Optional
 from flask_babel import _, lazy_gettext as _l
 
@@ -27,6 +27,7 @@ class ProfileForm(FlaskForm):
     profile_file = FileField(_l('Avatar image'), render_kw={'accept': 'image/*'})
     banner_file = FileField(_l('Top banner image'), render_kw={'accept': 'image/*'})
     bot = BooleanField(_l('This profile is a bot'))
+    timezone = HiddenField(render_kw={'id': 'timezone'})
     submit = SubmitField(_l('Save profile'))
 
     def validate_email(self, field):

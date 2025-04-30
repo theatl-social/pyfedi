@@ -13,6 +13,7 @@ class LoginForm(FlaskForm):
     user_name = StringField(_l('User name'), validators=[DataRequired()], render_kw={'autofocus': True, 'autocomplete': 'username', 'placeholder': _l('or email')})
     password = PasswordField(_l('Password'), validators=[DataRequired()])
     low_bandwidth_mode = BooleanField(_l('Low bandwidth mode'))
+    timezone = HiddenField(render_kw={'id': 'timezone'})
     submit = SubmitField(_l('Log In'))
 
 
@@ -26,6 +27,7 @@ class RegistrationForm(FlaskForm):
                                            EqualTo('password')])
     question = StringField(_l('Why would you like to join this site?'), validators=[DataRequired(), Length(min=1, max=512)])
     captcha = CaptchaField(_l('Enter captcha code'), validators=[DataRequired()])
+    timezone = HiddenField(render_kw={'id': 'timezone'})
 
     submit = SubmitField(_l('Register'))
 
