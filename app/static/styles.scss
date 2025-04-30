@@ -188,6 +188,25 @@ div.navbar {
   }
 }
 
+.dropdown-divider {
+  margin-right: 10px;
+}
+
+.topics_menu, .feeds_menu {
+  ul {
+    margin-left: 0;
+    list-style-type: none;
+    padding-left: 0;
+
+    .dropdown-header {
+      padding-left: 6px;
+    }
+    li {
+
+    }
+  }
+}
+
 #outer_container {
   margin-top: -1px;
   @include breakpoint(tablet) {

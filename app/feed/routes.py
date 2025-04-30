@@ -103,10 +103,7 @@ def feed_new():
         form.communities.data = '\n'.join(community_apids)
 
     return render_template('feed/feed_new.html', title=_('Create a Feed'), form=form,
-                           current_app=current_app, menu_topics=menu_topics(), menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+                           current_app=current_app, menu_topics=menu_topics(), )
 
 
 @bp.route('/feed/add_remote', methods=['GET','POST'])
@@ -145,13 +142,8 @@ def feed_add_remote():
 
     return render_template('feed/add_remote.html',
                            title=_('Add remote feed'), form=form, new_feed=new_feed,
-                           subscribed=feed_membership(current_user, new_feed) >= SUBSCRIPTION_MEMBER, moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )    
+                           subscribed=feed_membership(current_user, new_feed) >= SUBSCRIPTION_MEMBER, 
+                           site=g.site, )    
 
 
 @bp.route('/feed/<int:feed_id>/edit', methods=['GET','POST'])
@@ -238,10 +230,7 @@ def feed_edit(feed_id: int):
     edit_feed_form.public.data = feed_to_edit.public
     edit_feed_form.is_instance_feed.data = feed_to_edit.is_instance_feed
 
-    return render_template('feed/feed_edit.html', form=edit_feed_form, menu_topics=menu_topics(), menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+    return render_template('feed/feed_edit.html', form=edit_feed_form, menu_topics=menu_topics(), )
 
 
 @bp.route('/feed/<int:feed_id>/delete', methods=['GET','POST'])
@@ -394,10 +383,7 @@ def feed_copy(feed_id: int):
     copy_feed_form.public.data = feed_to_copy.public
     copy_feed_form.is_instance_feed.data = feed_to_copy.is_instance_feed
 
-    return render_template('feed/feed_copy.html', form=copy_feed_form, menu_topics=menu_topics(), menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+    return render_template('feed/feed_copy.html', form=copy_feed_form, menu_topics=menu_topics(), )
 
 
 @bp.route('/feed/<int:feed_id>/notification', methods=['GET', 'POST'])
@@ -736,9 +722,6 @@ def show_feed(feed):
                                joined_communities=joined_communities(current_user.get_id()),
                                menu_topics=menu_topics(),
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                               menu_instance_feeds=menu_instance_feeds(), 
-                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                               menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                                POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
                                POST_TYPE_VIDEO=POST_TYPE_VIDEO,
                                SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
@@ -782,12 +765,7 @@ def feed_create_post(feed_name):
         return redirect(url_for('community.join_then_add', actor=community.link()))
     return render_template('feed/feed_create_post.html', communities=communities, sub_communities=sub_communities,
                            feed=feed,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                           
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR)
 
 
