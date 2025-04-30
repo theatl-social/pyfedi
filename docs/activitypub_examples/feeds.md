@@ -51,6 +51,8 @@ The result should look something like this:
 }
 ```
 
+NB the type is 'Feed', not 'Group' but for all intents and purposes it is a Group.
+
 ### Getting the communities in the feed
 
 Now that we have the feed object we can retrieve the communities in the feed by requesting the url in it's `following` property
