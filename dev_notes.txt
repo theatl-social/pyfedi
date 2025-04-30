@@ -2,6 +2,8 @@ In .env, set LOG_ACTIVITYPUB_TO_DB = 1 so that incoming federation Activities wi
 Also at yourdomain.tld/admin/misc consider turning on "Log ActivityPub JSON for debugging" to see the full JSON of what is sent
 to your instance.
 
+Ensure that the FLASK_APP environmenet variable is set to pyfedi.py.
+
 For running celery during development, run this:
 
 celery -A celery_worker.celery worker --loglevel=INFO
