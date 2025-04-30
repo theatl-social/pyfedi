@@ -1114,7 +1114,7 @@ def admin_topic_edit(topic_id):
     if form.validate_on_submit():
         topic.name = form.name.data
         topic.num_communities = topic.communities.count()
-        topic.machine_name = form.machine_name.data
+        topic.machine_name = slugify(form.machine_name.data.strip())
         topic.show_posts_in_children = form.show_posts_in_children.data
         if form.parent_id.data:
             topic.parent_id = form.parent_id.data
