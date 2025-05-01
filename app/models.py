@@ -2503,7 +2503,9 @@ class Notification(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)       # who the notification should go to
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'))     # the person who caused the notification to happen
     created_at = db.Column(db.DateTime, default=utcnow)
-    notif_type = db.Column(db.Integer, default=NOTIF_DEFAULT)   # see constants.py for possible values: NOTIF_*
+    notif_type = db.Column(db.Integer, default=NOTIF_DEFAULT, index=True)   # see constants.py for possible values: NOTIF_*
+    subtype = db.Column(db.String(50), index=True)
+    targets = db.Column(db.JSON)
 
 
 class Report(db.Model):
