@@ -105,11 +105,12 @@ def send_reply(reply_id, parent_id, edit=False):
             else:
                 existing_notification = None
             if not existing_notification:
-                targets_data = {'subtype':'comment_mention','post_id':reply.post_id,'comment_id': reply.id}
+                targets_data = {'post_id':reply.post_id,'comment_id': reply.id}
                 notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in comment {reply.id}"),
                                             url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
                                             author_id=user.id, notif_type=NOTIF_MENTION,
-                                            targets=json.dumps(targets_data))
+                                            subtype='comment_mention',
+                                            targets=targets_data)
                 recipient.unread_notifications += 1
                 db.session.add(notification)
                 db.session.commit()

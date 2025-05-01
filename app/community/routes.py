@@ -787,12 +787,13 @@ def community_report(community_id: int):
         # Notify admin
         # todo: find all instance admin(s). for now just load User.id == 1
         admins = [User.query.get_or_404(1)]
-        targets_data = {'subtype':'community_reported','suspect_community_id':community.id,'reporter_id':current_user.id}
+        targets_data = {'suspect_community_id':community.id,'reporter_id':current_user.id}
         for admin in admins:
             notification = Notification(user_id=admin.id, title=_('A community has been reported'),
                                             url=community.local_url(),
                                             author_id=current_user.id, notif_type=NOTIF_REPORT,
-                                            targets=json.dumps(targets_data))
+                                            subtype='community_reported',
+                                            targets=targets_data)
             db.session.add(notification)
             admin.unread_notifications += 1
         db.session.commit()
@@ -996,11 +997,12 @@ def community_add_moderator(community_id: int, user_id: int):
 
         # Notify new mod
         if new_moderator.is_local():
-            targets_data = {'subtype':'new_moderator','community_id':community.id}
+            targets_data = {'community_id':community.id}
             notify = Notification(title=_('You are now a moderator of %(name)s', name=community.display_name()),
                                   url='/c/' + community.name, user_id=new_moderator.id,
                                   author_id=current_user.id, notif_type=NOTIF_NEW_MOD,
-                                  targets=json.dumps(targets_data))
+                                  subtype='new_moderator',
+                                  targets=targets_data)
             new_moderator.unread_notifications += 1
             db.session.add(notify)
             db.session.commit()
@@ -1139,11 +1141,12 @@ def community_ban_user(community_id: int, user_id: int):
 
             cache.delete_memoized(joined_communities, user.id)
             cache.delete_memoized(moderating_communities, user.id)
-            targets_data = {'subtype':'user_banned_from_community','community_id': community.id}
+            targets_data = {'community_id': community.id}
             notify = Notification(title=shorten_string('You have been banned from ' + community.title),
                                   url='/notifications', user_id=user.id,
                                   author_id=1, notif_type=NOTIF_BAN,
-                                  targets=json.dumps(targets_data))
+                                  subtype='user_banned_from_community',
+                                  targets=targets_data)
             db.session.add(notify)
             user.unread_notifications += 1
             db.session.commit()
@@ -1191,11 +1194,12 @@ def community_unban_user(community_id: int, user_id: int):
     if user.is_local():
         cache.delete_memoized(joined_communities, user.id)
         cache.delete_memoized(moderating_communities, user.id)
-        targets_data = {'subtype':'user_unbanned_from_community','community_id': community.id}
+        targets_data = {'community_id': community.id}
         notify = Notification(title=shorten_string('You have been un-banned from ' + community.title),
                               url='/notifications', user_id=user.id,
                               author_id=1, notif_type=NOTIF_UNBAN,
-                              targets=json.dumps(targets_data))
+                              subtype='user_unbanned_from_community',
+                              targets=targets_data)
         db.session.add(notify)
         user.unread_notifications += 1
         db.session.commit()
@@ -1241,10 +1245,11 @@ def community_move(actor):
             send_email(f'Request to move {community.link()}', f'noreply@{current_app.config["SERVER_NAME"]}',
                        g.site.contact_email, text_body, html_body, current_user.email)
 
-            targets_data = {'subtype':'community_move_request','community_id': community.id,'requestor_id':current_user.id}
+            targets_data = {'community_id': community.id,'requestor_id':current_user.id}
             notify = Notification(title='Community move requested, check your email.', url=f'/admin/community/{community.id}/move/{current_user.id}', user_id=1,
                                   author_id=current_user.id, notif_type=NOTIF_MENTION,
-                                  targets=json.dumps(targets_data))
+                                  subtype='community_move_request',
+                                  targets=targets_data)
             db.session.add(notify)
             db.session.execute(text('UPDATE "user" SET unread_notifications = unread_notifications + 1 WHERE id = 1'))
             db.session.commit()
@@ -1689,10 +1694,11 @@ def community_moderate_report_escalate(community_id, report_id):
         if report:
             form = EscalateReportForm()
             if form.validate_on_submit():
-                targets_data = {'subtype':'report_escalation_from_community_mod','community_id': community.id,'report_id':report_id}
+                targets_data = {'community_id': community.id,'report_id':report_id}
                 notify = Notification(title='Escalated report', url='/admin/reports', user_id=1,
                                       author_id=current_user.id, notif_type=NOTIF_REPORT_ESCALATION,
-                                      targets=json.dumps(targets_data))
+                                      subtype='report_escalation_from_community_mod',
+                                      targets=targets_data)
                 db.session.add(notify)
                 report.description = form.reason.data
                 report.status = REPORT_STATE_ESCALATED
