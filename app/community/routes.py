@@ -340,6 +340,8 @@ def show_community(community: Community):
         per_page = 100
         comments = comments.paginate(page=page, per_page=per_page, error_out=False)
 
+    community_feeds = Feed.query.join(FeedItem, FeedItem.feed_id == Feed.id).filter(FeedItem.community_id == community.id).filter(Feed.public == True).all()
+
     breadcrumbs = []
     breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
     breadcrumb.text = _('Home')
@@ -372,12 +374,32 @@ def show_community(community: Community):
             existing_url = breadcrumb.url
     else:
         related_communities = []
-        breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
-        breadcrumb.text = _('Communities')
-        breadcrumb.url = '/communities'
-        breadcrumbs.append(breadcrumb)
+        if len(community_feeds) == 0:
+            breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+            breadcrumb.text = _('Communities')
+            breadcrumb.url = '/communities'
+            breadcrumbs.append(breadcrumb)
+        else:
+            breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+            breadcrumb.text = _('Feeds')
+            breadcrumb.url = '/feeds'
+            breadcrumbs.append(breadcrumb)
 
-    community_feeds = Feed.query.join(FeedItem, FeedItem.feed_id == Feed.id).filter(FeedItem.community_id == community.id).filter(Feed.public == True).all()
+            feeds = []
+            previous_feed = community_feeds[0]
+            feeds.append(previous_feed)
+            while previous_feed.parent_feed_id:
+                feed = Feed.query.get(previous_feed.parent_feed_id)
+                feeds.append(feed)
+                previous_feed = feed
+            feeds = list(reversed(feeds))
+
+            for feed in feeds:
+                breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+                breadcrumb.text = feed.title
+                breadcrumb.url = f"/f/{feed.link()}"
+                breadcrumbs.append(breadcrumb)
+
 
     description = shorten_string(community.description, 150) if community.description else None
     og_image = community.image.source_url if community.image_id else None
