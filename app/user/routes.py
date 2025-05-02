@@ -1505,14 +1505,18 @@ def show_profile_rss(actor):
         fg.link(href=f"https://{current_app.config['SERVER_NAME']}/c/{actor}/feed", rel='self')
         fg.language('en')
 
+        already_added = set()
         for post in posts:
             fe = fg.add_entry()
             fe.title(post.title)
             fe.link(href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}")
             if post.url:
+                if post.url in already_added:
+                    continue
                 type = mimetype_from_url(post.url)
                 if type and not type.startswith('text/'):
                     fe.enclosure(post.url, type=type)
+                already_added.add(post.url)
             fe.description(post.body_html)
             fe.guid(post.profile_id(), permalink=True)
             fe.author(name=post.author.user_name)
