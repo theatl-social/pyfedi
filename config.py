@@ -79,3 +79,7 @@ class Config(object):
 
     GOOGLE_OAUTH_CLIENT_ID = os.environ.get('GOOGLE_OAUTH_CLIENT_ID') or ''
     GOOGLE_OAUTH_SECRET = os.environ.get('GOOGLE_OAUTH_SECRET') or ''
+
+    # enable the aplha api
+    ENABLE_ALPHA_API = os.environ.get('ENABLE_ALPHA_API') or False
+
