@@ -1,8 +1,9 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from time import sleep
 from random import randint
 from io import BytesIO
 
+from feedgen.feed import FeedGenerator
 from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, json, g, send_file
 from flask_login import logout_user, current_user, login_required
 from flask_babel import _, lazy_gettext as _l
@@ -27,7 +28,7 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     user_filters_posts, user_filters_replies, moderating_communities, joined_communities, theme_list, blocked_instances, \
     blocked_users, menu_topics, add_to_modlog, \
     blocked_communities, piefed_markdown_to_lemmy_markdown, menu_instance_feeds, menu_my_feeds, languages_for_form, \
-    read_language_choices
+    read_language_choices, request_etag_matches, return_304, mimetype_from_url
 from sqlalchemy import desc, or_, text, asc
 from sqlalchemy.orm.exc import NoResultFound
 import os
@@ -109,6 +110,8 @@ def show_profile(user):
                            replies_next_url=replies_next_url, replies_prev_url=replies_prev_url,
                            noindex=not user.indexable, show_post_community=True, hide_vote_buttons=True,
                            site=g.site,
+                           rss_feed=f"https://{current_app.config['SERVER_NAME']}/u/{user.link()}/feed" if user.post_count > 0 else None,
+                           rss_feed_name=f"{user.display_name()} on {g.site.name}" if user.post_count > 0 else None,
                            user_has_public_feeds=user_has_public_feeds,
                            user_public_feeds=user_public_feeds,
                            
@@ -1468,3 +1471,57 @@ def user_feeds(actor):
                            creator_name=user.user_name, user_feeds_list=user_public_feeds
                            )
 
+
+# RSS feed of the community
+@bp.route('/u/<actor>/feed', methods=['GET'])
+@cache.cached(timeout=600)
+def show_profile_rss(actor):
+    actor = actor.strip()
+    if '@' in actor:
+        user: User = User.query.filter_by(ap_id=actor, banned=False).first()
+    else:
+        user: User = User.query.filter_by(name=actor, banned=False, ap_id=None).first()
+    if user is not None:
+        # If nothing has changed since their last visit, return HTTP 304
+        current_etag = f"{user.id}_{hash(user.last_seen)}"
+        if request_etag_matches(current_etag):
+            return return_304(current_etag, 'application/rss+xml')
+
+        posts = user.posts.filter(Post.from_bot == False, Post.deleted == False).order_by(desc(Post.created_at)).limit(100).all()
+        description = shorten_string(user.about, 150) if user.about else None
+        og_image = user.avatar_image() if user.avatar_id else None
+        fg = FeedGenerator()
+        fg.id(f"https://{current_app.config['SERVER_NAME']}/c/{actor}")
+        fg.title(f'{user.display_name()} on {g.site.name}')
+        fg.link(href=f"https://{current_app.config['SERVER_NAME']}/c/{actor}", rel='alternate')
+        if og_image:
+            fg.logo(og_image)
+        else:
+            fg.logo(f"https://{current_app.config['SERVER_NAME']}/static/images/apple-touch-icon.png")
+        if description:
+            fg.subtitle(description)
+        else:
+            fg.subtitle(' ')
+        fg.link(href=f"https://{current_app.config['SERVER_NAME']}/c/{actor}/feed", rel='self')
+        fg.language('en')
+
+        for post in posts:
+            fe = fg.add_entry()
+            fe.title(post.title)
+            fe.link(href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}")
+            if post.url:
+                type = mimetype_from_url(post.url)
+                if type and not type.startswith('text/'):
+                    fe.enclosure(post.url, type=type)
+            fe.description(post.body_html)
+            fe.guid(post.profile_id(), permalink=True)
+            fe.author(name=post.author.user_name)
+            fe.pubDate(post.created_at.replace(tzinfo=timezone.utc))
+
+        response = make_response(fg.rss_str())
+        response.headers.set('Content-Type', 'application/rss+xml')
+        response.headers.add_header('ETag', f"{user.id}_{hash(user.last_seen)}")
+        response.headers.add_header('Cache-Control', 'no-cache, max-age=600, must-revalidate')
+        return response
+    else:
+        abort(404)
