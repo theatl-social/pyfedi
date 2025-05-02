@@ -1,5 +1,7 @@
+from datetime import timezone
 from random import randint
 
+from feedgen.feed import FeedGenerator
 from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, g
 from flask_login import login_user, logout_user, current_user, login_required
 from flask_babel import _
@@ -10,7 +12,8 @@ from app.models import Post, Domain, Community, DomainBlock, read_posts
 from app.domain import bp
 from app.utils import render_template, permission_required, joined_communities, moderating_communities, \
     user_filters_posts, blocked_domains, blocked_instances, menu_topics, menu_instance_feeds, menu_my_feeds, \
-    menu_subscribed_feeds, recently_upvoted_posts, recently_downvoted_posts
+    menu_subscribed_feeds, recently_upvoted_posts, recently_downvoted_posts, mimetype_from_url, request_etag_matches, \
+    return_304
 from sqlalchemy import desc, or_
 
 
@@ -65,8 +68,61 @@ def show_domain(domain_id):
                                    next_url=next_url, prev_url=prev_url,
                                    content_filters=content_filters, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
                                    site=g.site,
+                                   rss_feed=f"https://{current_app.config['SERVER_NAME']}/d/{domain.id}/feed" if domain.post_count > 0 else None,
+                                   rss_feed_name=f"{domain.name} on {g.site.name}" if domain.post_count > 0 else None,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                                    )
+        else:
+            abort(404)
+
+
+@bp.route('/d/<domain_id>/feed', methods=['GET'])
+def show_domain_rss(domain_id):
+    with limiter.limit('60/minute'):
+        if '.' in domain_id:
+            domain = Domain.query.filter_by(name=domain_id, banned=False).first()
+        else:
+            domain = Domain.query.get_or_404(domain_id)
+            if domain.banned:
+                domain = None
+        if domain:
+            # If nothing has changed since their last visit, return HTTP 304
+            current_etag = f"{domain.id}_{hash(domain.post_count)}"
+            if request_etag_matches(current_etag):
+                return return_304(current_etag, 'application/rss+xml')
+
+            posts = Post.query.join(Community, Community.id == Post.community_id). \
+                filter(Post.from_bot == False, Post.domain_id == domain.id, Community.banned == False,
+                       Post.deleted == False). \
+                order_by(desc(Post.posted_at)).limit(100)
+
+            fg = FeedGenerator()
+            fg.id(f"https://{current_app.config['SERVER_NAME']}/d/{domain_id}")
+            fg.title(f'{domain.name} on {g.site.name}')
+            fg.link(href=f"https://{current_app.config['SERVER_NAME']}/d/{domain_id}", rel='alternate')
+            fg.logo(f"https://{current_app.config['SERVER_NAME']}/static/images/apple-touch-icon.png")
+            fg.subtitle(' ')
+            fg.link(href=f"https://{current_app.config['SERVER_NAME']}/c/{domain_id}/feed", rel='self')
+            fg.language('en')
+
+            for post in posts:
+                fe = fg.add_entry()
+                fe.title(post.title)
+                fe.link(href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}")
+                if post.url:
+                    type = mimetype_from_url(post.url)
+                    if type and not type.startswith('text/'):
+                        fe.enclosure(post.url, type=type)
+                fe.description(post.body_html)
+                fe.guid(post.profile_id(), permalink=True)
+                fe.author(name=post.author.user_name)
+                fe.pubDate(post.created_at.replace(tzinfo=timezone.utc))
+
+            response = make_response(fg.rss_str())
+            response.headers.set('Content-Type', 'application/rss+xml')
+            response.headers.add_header('ETag', f"{domain.id}_{hash(domain.post_count)}")
+            response.headers.add_header('Cache-Control', 'no-cache, max-age=600, must-revalidate')
+            return response
         else:
             abort(404)
 

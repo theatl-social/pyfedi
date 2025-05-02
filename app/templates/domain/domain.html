@@ -15,6 +15,11 @@
             <li class="breadcrumb-item active">{{ domain.name|shorten }}</li>
           </ol>
         </nav>
+        {% if rss_feed -%}
+            <p class="mt-4 d-block" style="float: right;">
+                <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
+            </p>
+        {% endif -%}
         <h1 class="mt-2">{{ domain.name }}</h1>
         {% if domain.post_warning -%}
             <p>{{ domain.post_warning }}</p>
