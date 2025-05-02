@@ -1278,6 +1278,9 @@ class Post(db.Model):
     reports = db.Column(db.Integer, default=0)                          # how many times this post has been reported. Set to -1 to ignore reports
     language_id = db.Column(db.Integer, db.ForeignKey('language.id'), index=True)
     cross_posts = db.Column(MutableList.as_mutable(ARRAY(db.Integer)))
+    scheduled_for = db.Column(db.DateTime, index=True)  # The first (or only) occurrence of this post
+    repeat = db.Column(db.String(20), default='')   # 'daily', 'weekly', 'monthly'. Empty string = no repeat, just post once.
+    stop_repeating = db.Column(db.DateTime, index=True)  # No more repeats after this datetime
     tags = db.relationship('Tag', lazy='joined', secondary=post_tag, backref=db.backref('posts', lazy='dynamic'))
 
     ap_id = db.Column(db.String(255), index=True, unique=True)
