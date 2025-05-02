@@ -8,7 +8,7 @@ from flask import redirect, url_for, flash, request, make_response, session, Mar
 from flask_login import logout_user, current_user, login_required
 from flask_babel import _, lazy_gettext as _l
 
-from app import db, cache, celery, limiter
+from app import db, cache, celery
 from app.activitypub.signature import post_request, default_context, send_post_request
 from app.activitypub.util import find_actor_or_create, extract_domain_and_actor
 from app.auth.util import random_token
@@ -1474,58 +1474,62 @@ def user_feeds(actor):
 
 # RSS feed of the community
 @bp.route('/u/<actor>/feed', methods=['GET'])
+@cache.cached(timeout=600)
 def show_profile_rss(actor):
-    with limiter.limit('60/minute'):
-        actor = actor.strip()
-        if '@' in actor:
-            user: User = User.query.filter_by(ap_id=actor, banned=False).first()
+    actor = actor.strip()
+    if '@' in actor:
+        user: User = User.query.filter_by(ap_id=actor.lower()).first()
+    else:
+        user: User = User.query.filter(User.user_name == actor).filter_by(ap_id=None).first()
+        if user is None:
+            user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor.lower()}',
+                                        ap_id=None).first()
+
+    if user is not None:
+        # If nothing has changed since their last visit, return HTTP 304
+        current_etag = f"{user.id}_{hash(user.last_seen)}"
+        if request_etag_matches(current_etag):
+            return return_304(current_etag, 'application/rss+xml')
+
+        posts = user.posts.filter(Post.from_bot == False, Post.deleted == False).order_by(desc(Post.created_at)).limit(100).all()
+        description = shorten_string(user.about, 150) if user.about else None
+        og_image = user.avatar_image() if user.avatar_id else None
+        fg = FeedGenerator()
+        fg.id(f"https://{current_app.config['SERVER_NAME']}/c/{actor}")
+        fg.title(f'{user.display_name()} on {g.site.name}')
+        fg.link(href=f"https://{current_app.config['SERVER_NAME']}/c/{actor}", rel='alternate')
+        if og_image:
+            fg.logo(og_image)
         else:
-            user: User = User.query.filter_by(name=actor, banned=False, ap_id=None).first()
-        if user is not None:
-            # If nothing has changed since their last visit, return HTTP 304
-            current_etag = f"{user.id}_{hash(user.last_seen)}"
-            if request_etag_matches(current_etag):
-                return return_304(current_etag, 'application/rss+xml')
-
-            posts = user.posts.filter(Post.from_bot == False, Post.deleted == False).order_by(desc(Post.created_at)).limit(100).all()
-            description = shorten_string(user.about, 150) if user.about else None
-            og_image = user.avatar_image() if user.avatar_id else None
-            fg = FeedGenerator()
-            fg.id(f"https://{current_app.config['SERVER_NAME']}/c/{actor}")
-            fg.title(f'{user.display_name()} on {g.site.name}')
-            fg.link(href=f"https://{current_app.config['SERVER_NAME']}/c/{actor}", rel='alternate')
-            if og_image:
-                fg.logo(og_image)
-            else:
-                fg.logo(f"https://{current_app.config['SERVER_NAME']}/static/images/apple-touch-icon.png")
-            if description:
-                fg.subtitle(description)
-            else:
-                fg.subtitle(' ')
-            fg.link(href=f"https://{current_app.config['SERVER_NAME']}/c/{actor}/feed", rel='self')
-            fg.language('en')
-
-            already_added = set()
-            for post in posts:
-                fe = fg.add_entry()
-                fe.title(post.title)
-                fe.link(href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}")
-                if post.url:
-                    if post.url in already_added:
-                        continue
-                    type = mimetype_from_url(post.url)
-                    if type and not type.startswith('text/'):
-                        fe.enclosure(post.url, type=type)
-                    already_added.add(post.url)
-                fe.description(post.body_html)
-                fe.guid(post.profile_id(), permalink=True)
-                fe.author(name=post.author.user_name)
-                fe.pubDate(post.created_at.replace(tzinfo=timezone.utc))
-
-            response = make_response(fg.rss_str())
-            response.headers.set('Content-Type', 'application/rss+xml')
-            response.headers.add_header('ETag', f"{user.id}_{hash(user.last_seen)}")
-            response.headers.add_header('Cache-Control', 'no-cache, max-age=600, must-revalidate')
-            return response
+            fg.logo(f"https://{current_app.config['SERVER_NAME']}/static/images/apple-touch-icon.png")
+        if description:
+            fg.subtitle(description)
         else:
-            abort(404)
+            fg.subtitle(' ')
+        fg.link(href=f"https://{current_app.config['SERVER_NAME']}/c/{actor}/feed", rel='self')
+        fg.language('en')
+
+        already_added = set()
+        for post in posts:
+            fe = fg.add_entry()
+            fe.title(post.title)
+            fe.link(href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}")
+            if post.url:
+                if post.url in already_added:
+                    continue
+                type = mimetype_from_url(post.url)
+                if type and not type.startswith('text/'):
+                    fe.enclosure(post.url, type=type)
+                already_added.add(post.url)
+            fe.description(post.body_html)
+            fe.guid(post.profile_id(), permalink=True)
+            fe.author(name=post.author.user_name)
+            fe.pubDate(post.created_at.replace(tzinfo=timezone.utc))
+
+        response = make_response(fg.rss_str())
+        response.headers.set('Content-Type', 'application/rss+xml')
+        response.headers.add_header('ETag', f"{user.id}_{hash(user.last_seen)}")
+        response.headers.add_header('Cache-Control', 'no-cache, max-age=600, must-revalidate')
+        return response
+    else:
+        abort(404)
