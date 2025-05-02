@@ -1,3 +1,4 @@
+import json
 from sqlalchemy import text
 
 from app import cache, db
@@ -288,12 +289,15 @@ def report_reply(reply_id, input, src, auth=None):
 
     # Notify moderators
     already_notified = set()
+    targets_data = {'suspect_comment_id':reply.id,'suspect_user_id':reply.author.id,'reporter_id':user_id}
     for mod in reply.community.moderators():
         moderator = User.query.get(mod.user_id)
         if moderator and moderator.is_local():
             notification = Notification(user_id=mod.user_id, title=_('A comment has been reported'),
                                         url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
-                                        author_id=user_id, notif_type=NOTIF_REPORT)
+                                        author_id=user_id, notif_type=NOTIF_REPORT,
+                                        subtype='comment_reported',
+                                        targets=targets_data)
             db.session.add(notification)
             already_notified.add(mod.user_id)
     reply.reports += 1
@@ -301,7 +305,9 @@ def report_reply(reply_id, input, src, auth=None):
     for admin in Site.admins():
         if admin.id not in already_notified:
             notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, 
-                                  author_id=user_id, notif_type=NOTIF_REPORT)
+                                  author_id=user_id, notif_type=NOTIF_REPORT,
+                                  subtype='comment_reported',
+                                  targets=targets_data)
             db.session.add(notify)
             admin.unread_notifications += 1
     db.session.commit()

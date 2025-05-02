@@ -1862,9 +1862,11 @@ def process_chat(user, store_ap_json, core_activity):
             db.session.commit()
 
             # Notify recipient
+            targets_data = {'conversation_id':existing_conversation.id,'message_id': new_message.id}
             notify = Notification(title=shorten_string('New message from ' + sender.display_name()),
                                   url=f'/chat/{existing_conversation.id}#message_{new_message.id}', user_id=recipient.id,
-                                  author_id=sender.id, notif_type=NOTIF_MESSAGE)
+                                  author_id=sender.id, notif_type=NOTIF_MESSAGE, subtype='chat_message',
+                                  targets=targets_data)
             db.session.add(notify)
             recipient.unread_notifications += 1
             existing_conversation.read = False

@@ -1245,11 +1245,14 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                     image_text = ''
                                 if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):   # chan posts usually contain the text 'Anonymous' and ' No.12345'
                                     post = Post.query.filter_by(image_id=file.id).first()
+                                    targets_data = {'post_id': post.id}
                                     notification = Notification(title='Review this',
                                                                 user_id=1,
                                                                 author_id=post.user_id,
                                                                 url=url_for('activitypub.post_ap', post_id=post.id),
-                                                                notif_type=NOTIF_REPORT)
+                                                                notif_type=NOTIF_REPORT,
+                                                                subtype='post_with_suspicious_image',
+                                                                targets=targets_data)
                                     session.add(notification)
                                     session.commit()
 
@@ -1633,9 +1636,11 @@ def ban_user(blocker, blocked, community, core_activity):
             db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == community.id, CommunityJoinRequest.user_id == blocked.id).delete()
 
             # Notify banned person
+            targets_data = {'community_id': community.id}
             notify = Notification(title=shorten_string('You have been banned from ' + community.title),
                                   url=f'/chat/ban_from_mod/{blocked.id}/{community.id}', user_id=blocked.id,
-                                  author_id=blocker.id, notif_type=NOTIF_BAN)
+                                  author_id=blocker.id, notif_type=NOTIF_BAN, subtype='user_banned_from_community',
+                                  targets=targets_data)
             db.session.add(notify)
             if not current_app.debug:                           # user.unread_notifications += 1 hangs app if 'user' is the same person
                 blocked.unread_notifications += 1               # who pressed 'Re-submit this activity'.
@@ -1666,9 +1671,12 @@ def unban_user(blocker, blocked, community, core_activity):
 
     if blocked.is_local():
         # Notify unbanned person
+        targets_data = {'community_id': community.id}
         notify = Notification(title=shorten_string('You have been unbanned from ' + community.title),
                               url=f'/chat/ban_from_mod/{blocked.id}/{community.id}', user_id=blocked.id, 
-                              author_id=blocker.id, notif_type=NOTIF_UNBAN)
+                              author_id=blocker.id, notif_type=NOTIF_UNBAN,
+                              subtype='user_unbanned_from_community',
+                              targets=targets_data)
         db.session.add(notify)
         if not current_app.debug:                           # user.unread_notifications += 1 hangs app if 'user' is the same person
             blocked.unread_notifications += 1               # who pressed 'Re-submit this activity'.
@@ -1765,9 +1773,12 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
                 if recipient:
                     blocked_senders = blocked_users(recipient.id)
                     if post_reply.user_id not in blocked_senders:
+                        targets_data = {'post_id':post_reply.post_id,'comment_id': post_reply.id}
                         notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in comment {post_reply.id}"),
                                                     url=f"https://{current_app.config['SERVER_NAME']}/comment/{post_reply.id}",
-                                                    author_id=user.id, notif_type=NOTIF_MENTION)
+                                                    author_id=user.id, notif_type=NOTIF_MENTION,
+                                                    subtype='comment_mention',
+                                                    targets=targets_data)
                         recipient.unread_notifications += 1
                         db.session.add(notification)
                         db.session.commit()
@@ -1814,9 +1825,12 @@ def notify_about_post_task(post_id):
     user_send_notifs_to = notification_subscribers(post.user_id, NOTIF_USER)
     for notify_id in user_send_notifs_to:
         if notify_id != post.user_id and notify_id not in notifications_sent_to:
+            targets_data = {'post_id': post.id,'author_id':post.user_id}
             new_notification = Notification(title=shorten_string(post.title, 50), url=f"/post/{post.id}",
                                             user_id=notify_id, author_id=post.user_id,
-                                            notif_type=NOTIF_USER)
+                                            notif_type=NOTIF_USER, 
+                                            subtype='new_post_from_followed_user',
+                                            targets=targets_data)
             db.session.add(new_notification)
             user = User.query.get(notify_id)
             user.unread_notifications += 1
@@ -1827,9 +1841,12 @@ def notify_about_post_task(post_id):
     community_send_notifs_to = notification_subscribers(post.community_id, NOTIF_COMMUNITY)
     for notify_id in community_send_notifs_to:
         if notify_id != post.user_id and notify_id not in notifications_sent_to:
+            targets_data = {'post_id': post.id,'community_id':post.community_id}
             new_notification = Notification(title=shorten_string(post.title, 50), url=f"/post/{post.id}",
                                             user_id=notify_id, author_id=post.user_id,
-                                            notif_type=NOTIF_COMMUNITY)
+                                            notif_type=NOTIF_COMMUNITY,
+                                            subtype='new_post_in_followed_community',
+                                            targets=targets_data)
             db.session.add(new_notification)
             user = User.query.get(notify_id)
             user.unread_notifications += 1
@@ -1840,9 +1857,12 @@ def notify_about_post_task(post_id):
     topic_send_notifs_to = notification_subscribers(post.community.topic_id, NOTIF_TOPIC)
     for notify_id in topic_send_notifs_to:
         if notify_id != post.user_id and notify_id not in notifications_sent_to:
+            targets_data = {'post_id': post.id,'author_id':post.user_id}
             new_notification = Notification(title=shorten_string(post.title, 50), url=f"/post/{post.id}",
                                             user_id=notify_id, author_id=post.user_id,
-                                            notif_type=NOTIF_TOPIC)
+                                            notif_type=NOTIF_TOPIC,
+                                            subtype='new_post_in_followed_topic',
+                                            targets=targets_data)
             db.session.add(new_notification)
             user = User.query.get(notify_id)
             user.unread_notifications += 1
@@ -1858,9 +1878,12 @@ def notify_about_post_task(post_id):
         feed_send_notifs_to = notification_subscribers(feed.id, NOTIF_FEED)
         for notify_id in feed_send_notifs_to:
             if notify_id != post.user_id and notify_id not in notifications_sent_to:
+                targets_data = {'post_id':post.id,'feed_id':feed.id}
                 new_notification = Notification(title=shorten_string(post.title, 50), url=f"/post/{post.id}",
                                                 user_id=notify_id, author_id=post.user_id,
-                                                notif_type=NOTIF_FEED)
+                                                notif_type=NOTIF_FEED,
+                                                subtype='new_post_in_followed_feed',
+                                                targets=targets_data)
                 db.session.add(new_notification)
                 user = User.query.get(notify_id)
                 user.unread_notifications += 1
@@ -1874,11 +1897,14 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
         send_notifs_to = notification_subscribers(new_reply.post.id, NOTIF_POST)
         for notify_id in send_notifs_to:
             if new_reply.user_id != notify_id:
+                targets_data = {'post_id':new_reply.post.id,'comment_id':new_reply.id}
                 new_notification = Notification(title=shorten_string(_('Reply to %(post_title)s',
                                                                        post_title=new_reply.post.title), 50),
                                                 url=f"/post/{new_reply.post.id}#comment_{new_reply.id}",
                                                 user_id=notify_id, author_id=new_reply.user_id,
-                                                notif_type=NOTIF_POST)
+                                                notif_type=NOTIF_POST,
+                                                subtype='top_level_comment_on_followed_post',
+                                                targets=targets_data)
                 db.session.add(new_notification)
                 user = User.query.get(notify_id)
                 user.unread_notifications += 1
@@ -1889,17 +1915,23 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
         for notify_id in send_notifs_to:
             if new_reply.user_id != notify_id:
                 if new_reply.depth <= THREAD_CUTOFF_DEPTH:
+                    targets_data = {'post_id':parent_reply.post.id,'comment_id':new_reply.id,'author_id':new_reply.user_id}
                     new_notification = Notification(title=shorten_string(_('Reply to comment on %(post_title)s',
                                                                            post_title=parent_reply.post.title), 50),
                                                     url=f"/post/{parent_reply.post.id}#comment_{new_reply.id}",
                                                     user_id=notify_id, author_id=new_reply.user_id,
-                                                    notif_type=NOTIF_REPLY)
+                                                    notif_type=NOTIF_REPLY,
+                                                    subtype='new_reply_on_followed_comment',
+                                                    targets=targets_data)
                 else:
+                    targets_data = {'post_id':parent_reply.post.id,'parent_comment_id':parent_reply.id,'comment_id':new_reply.id,'author_id':new_reply.user_id}
                     new_notification = Notification(title=shorten_string(_('Reply to comment on %(post_title)s',
                                                                            post_title=parent_reply.post.title), 50),
                                                     url=f"/post/{parent_reply.post.id}/comment/{parent_reply.id}#comment_{new_reply.id}",
                                                     user_id=notify_id, author_id=new_reply.user_id,
-                                                    notif_type=NOTIF_REPLY)
+                                                    notif_type=NOTIF_REPLY,
+                                                    subtype='new_reply_on_followed_comment',
+                                                    targets=targets_data)
                 db.session.add(new_notification)
                 user = User.query.get(notify_id)
                 user.unread_notifications += 1
@@ -1973,9 +2005,12 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
                             if reply.user_id not in blocked_senders:
                                 existing_notification = Notification.query.filter(Notification.user_id == recipient.id, Notification.url == f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}").first()
                                 if not existing_notification:
+                                    targets_data = {'post_id':reply.post_id,'comment_id': reply.id}
                                     notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in comment {reply.id}"),
                                                                 url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
-                                                                author_id=reply.user_id, notif_type=NOTIF_MENTION)
+                                                                author_id=reply.user_id, notif_type=NOTIF_MENTION,
+                                                                subtype='comment_mention',
+                                                                targets=targets_data)
                                     recipient.unread_notifications += 1
                                     db.session.add(notification)
 
@@ -2063,9 +2098,12 @@ def update_post_from_activity(post: Post, request_json: dict):
                         if post.user_id not in blocked_senders:
                             existing_notification = Notification.query.filter(Notification.user_id == recipient.id, Notification.url == f"https://{current_app.config['SERVER_NAME']}/post/{post.id}").first()
                             if not existing_notification:
+                                targets_data = {'post_id':post.id}
                                 notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in post {post.id}"),
                                                             url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
-                                                            author_id=post.user_id, notif_type=NOTIF_MENTION)
+                                                            author_id=post.user_id, notif_type=NOTIF_MENTION,
+                                                            subtype='post_mention',
+                                                            targets=targets_data)
                                 recipient.unread_notifications += 1
                                 db.session.add(notification)
 
@@ -2239,17 +2277,23 @@ def update_post_from_activity(post: Post, request_json: dict):
                 already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
                 if new_domain.notify_mods:
                     for community_member in post.community.moderators():
+                        targets_data = {'post_id': post.id}
                         notify = Notification(title='Suspicious content', url=post.ap_id,
                                                   user_id=community_member.user_id,
-                                                  author_id=1, notif_type=NOTIF_REPORT)
+                                                  author_id=1, notif_type=NOTIF_REPORT,
+                                                  subtype='post_from_suspicious_domain',
+                                                  targets=targets_data)
                         db.session.add(notify)
                         already_notified.add(community_member.user_id)
                 if new_domain.notify_admins:
                     for admin in Site.admins():
                         if admin.id not in already_notified:
+                            targets_data = {'post_id': post.id}
                             notify = Notification(title='Suspicious content',
                                                       url=post.ap_id, user_id=admin.id,
-                                                      author_id=1, notif_type=NOTIF_REPORT)
+                                                      author_id=1, notif_type=NOTIF_REPORT,
+                                                      subtype='post_from_suspicious_domain',
+                                                      targets=targets_data)
                             db.session.add(notify)
                 new_domain.post_count += 1
                 post.domain = new_domain
@@ -2322,8 +2366,11 @@ def process_report(user, reported, request_json):
         already_notified = set()
         for admin in Site.admins():
             if admin.id not in already_notified:
+                targets_data = {'suspect_user_id': reported.id,'reporter_id':user.id,'source_instance_id':user.instance_id}
                 notify = Notification(title='Reported user', url='/admin/reports', user_id=admin.id,
-                                      author_id=user.id, notif_type=NOTIF_REPORT)
+                                      author_id=user.id, notif_type=NOTIF_REPORT,
+                                      subtype='user_reported',
+                                      targets=targets_data)
                 db.session.add(notify)
                 admin.unread_notifications += 1
         reported.reports += 1
@@ -2340,9 +2387,12 @@ def process_report(user, reported, request_json):
 
         already_notified = set()
         for mod in reported.community.moderators():
+            targets_data = {'suspect_post_id':reported.id,'suspect_user_id':reported.author.id,'reporter_id':user.id,'source_instance_id':user.instance_id}
             notification = Notification(user_id=mod.user_id, title=_('A post has been reported'),
                                         url=f"https://{current_app.config['SERVER_NAME']}/post/{reported.id}",
-                                        author_id=user.id, notif_type=NOTIF_REPORT)
+                                        author_id=user.id, notif_type=NOTIF_REPORT,
+                                        subtype='post_reported',
+                                        targets=targets_data)
             db.session.add(notification)
             already_notified.add(mod.user_id)
         reported.reports += 1
@@ -2361,9 +2411,12 @@ def process_report(user, reported, request_json):
         # Notify moderators
         already_notified = set()
         for mod in post.community.moderators():
+            targets_data = {'suspect_comment_id':reported.id,'suspect_user_id':reported.author.id,'reporter_id':user.id,'source_instance_id':user.instance_id}
             notification = Notification(user_id=mod.user_id, title=_('A comment has been reported'),
                                         url=f"https://{current_app.config['SERVER_NAME']}/comment/{reported.id}",
-                                        author_id=user.id, notif_type=NOTIF_REPORT)
+                                        author_id=user.id, notif_type=NOTIF_REPORT,
+                                        subtype='comment_reported',
+                                        targets=targets_data)
             db.session.add(notification)
             already_notified.add(mod.user_id)
         reported.reports += 1

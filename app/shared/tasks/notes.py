@@ -1,3 +1,4 @@
+import json
 from app import cache, celery, db
 from app.activitypub.signature import default_context, post_request, send_post_request
 from app.constants import NOTIF_MENTION
@@ -104,9 +105,12 @@ def send_reply(reply_id, parent_id, edit=False):
             else:
                 existing_notification = None
             if not existing_notification:
+                targets_data = {'post_id':reply.post_id,'comment_id': reply.id}
                 notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in comment {reply.id}"),
                                             url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
-                                            author_id=user.id, notif_type=NOTIF_MENTION)
+                                            author_id=user.id, notif_type=NOTIF_MENTION,
+                                            subtype='comment_mention',
+                                            targets=targets_data)
                 recipient.unread_notifications += 1
                 db.session.add(notification)
                 db.session.commit()
