@@ -21,10 +21,6 @@ from PIL import Image, ImageOps
 from sqlalchemy import text
 
 
-
-# function can be shared between WEB and API (only API calls it for now)
-# post_vote in app/post/routes would just need to do 'return vote_for_post(post_id, vote_direction, SRC_WEB)'
-
 def vote_for_post(post_id: int, vote_direction, src, auth=None):
     if src == SRC_API:
         post = Post.query.filter_by(id=post_id).one()

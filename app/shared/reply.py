@@ -14,8 +14,6 @@ from flask_babel import _
 from flask_login import current_user
 
 
-# function can be shared between WEB and API (only API calls it for now)
-# comment_vote in app/post/routes would just need to do 'return vote_for_reply(reply_id, vote_direction, SRC_WEB)'
 def vote_for_reply(reply_id: int, vote_direction, src, auth=None):
     if src == SRC_API:
         reply = PostReply.query.filter_by(id=reply_id).one()
@@ -38,7 +36,7 @@ def vote_for_reply(reply_id: int, vote_direction, src, auth=None):
         elif vote_direction == 'downvote' and undo is None:
             recently_downvoted = [reply_id]
 
-        return render_template('post/_reply_voting_buttons.html', comment=reply,
+        return render_template('post/_comment_voting_buttons.html', comment=reply,
                                recently_upvoted_replies=recently_upvoted,
                                recently_downvoted_replies=recently_downvoted,
                                community=reply.community)
