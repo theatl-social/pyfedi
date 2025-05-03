@@ -27,7 +27,7 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_
 from app.models import Post, PostReply, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, Report, Site, Community, \
     Topic, User, Instance, NotificationSubscription, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
-    PostReplyBookmark, CommunityBlock, File
+    PostReplyBookmark, CommunityBlock, File, CommunityFlair
 from app.post import bp
 from app.shared.tasks import task_selector
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
@@ -39,7 +39,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     languages_for_form, menu_topics, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown, \
     permission_required, blocked_users, get_request, is_local_image_url, is_video_url, can_upvote, can_downvote, \
     referrer, can_create_post_reply, communities_banned_from, \
-    block_bots
+    block_bots, flair_for_form
 from app.post.util import post_type_to_form_url_type
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, \
     delete_reply, mod_remove_reply, vote_for_reply
@@ -197,8 +197,10 @@ def show_post(post_id: int):
         else:
             user = None
 
+        community_flair = CommunityFlair.query.filter(CommunityFlair.community_id == post.community_id).order_by(CommunityFlair.flair).all()
+
         response = render_template('post/post.html', title=post.title, post=post, is_moderator=is_moderator, is_owner=community.is_owner(),
-                               community=post.community,
+                               community=post.community, community_flair=community_flair,
                                breadcrumbs=breadcrumbs, related_communities=related_communities, mods=mod_list,
                                poll_form=poll_form, poll_results=poll_results, poll_data=poll_data, poll_choices=poll_choices, poll_total_votes=poll_total_votes,
                                canonical=post.ap_id, form=form, replies=replies, more_replies=more_replies,
@@ -605,6 +607,12 @@ def post_edit(post_id: int):
 
     del form.communities
 
+    flair_choices = flair_for_form(post.community_id)
+    if len(flair_choices):
+        form.flair.choices = flair_choices
+    else:
+        del form.flair
+
     mods = post.community.moderators()
     if post.community.private_mods:
         mod_list = []
@@ -643,6 +651,8 @@ def post_edit(post_id: int):
             form.sticky.data = post.sticky
             form.language_id.data = post.language_id
             form.tags.data = tags_to_string(post)
+            if hasattr(form, 'flair'):
+                form.flair.data = [flair.id for flair in post.flair]
             if post_type == POST_TYPE_LINK:
                 form.link_url.data = post.url
             elif post_type == POST_TYPE_IMAGE:

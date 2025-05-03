@@ -19,7 +19,7 @@ from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, Cre
     ReportCommunityForm, \
     DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm, \
     EscalateReportForm, ResolveReportForm, CreateVideoForm, CreatePollForm, EditCommunityWikiPageForm, \
-    InviteCommunityForm, MoveCommunityForm
+    InviteCommunityForm, MoveCommunityForm, EditCommunityFlairForm
 from app.community.util import search_for_community, actor_to_community, \
     save_icon_file, save_banner_file, \
     delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users
@@ -32,7 +32,7 @@ from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, \
     File, PostVote, utcnow, Report, Notification, ActivityPubLog, Topic, Conversation, PostReply, \
     NotificationSubscription, UserFollower, Instance, Language, Poll, PollChoice, ModLog, CommunityWikiPage, \
-    CommunityWikiPageRevision, read_posts, Feed, FeedItem, CommunityBlock
+    CommunityWikiPageRevision, read_posts, Feed, FeedItem, CommunityBlock, CommunityFlair, post_flair
 from app.community import bp
 from app.post.util import tags_to_string
 from app.shared.community import invite_with_chat, invite_with_email, subscribe_community
@@ -43,7 +43,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     community_moderators, communities_banned_from, show_ban_message, recently_upvoted_posts, recently_downvoted_posts, \
     blocked_users, languages_for_form, menu_topics, add_to_modlog, \
     blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, \
-    instance_software, domain_from_email, referrer
+    instance_software, domain_from_email, referrer, flair_for_form, find_flair_id
 from app.shared.post import make_post
 from app.shared.tasks import task_selector
 from feedgen.feed import FeedGenerator
@@ -205,6 +205,7 @@ def show_community(community: Community):
     page = request.args.get('page', 1, type=int)
     sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)
     content_type = request.args.get('content_type', 'posts')
+    flair = request.args.get('flair', '')
     if sort is None:
         sort = ''
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
@@ -287,6 +288,11 @@ def show_community(community: Community):
             if blocked_accounts:
                 posts = posts.filter(Post.user_id.not_in(blocked_accounts))
 
+        if flair:
+            flair_id = find_flair_id(flair, community.id)
+            if flair_id:
+                posts = posts.join(post_flair).filter(post_flair.c.flair_id == flair_id)
+
         if sort == '' or sort == 'hot':
             posts = posts.order_by(desc(Post.sticky)).order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
         elif sort == 'top':
@@ -341,6 +347,8 @@ def show_community(community: Community):
         comments = comments.paginate(page=page, per_page=per_page, error_out=False)
 
     community_feeds = Feed.query.join(FeedItem, FeedItem.feed_id == Feed.id).filter(FeedItem.community_id == community.id).filter(Feed.public == True).all()
+
+    community_flair = CommunityFlair.query.filter(CommunityFlair.community_id == community.id).order_by(CommunityFlair.flair).all()
 
     breadcrumbs = []
     breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
@@ -433,11 +441,11 @@ def show_community(community: Community):
                            POST_TYPE_VIDEO=POST_TYPE_VIDEO, POST_TYPE_POLL=POST_TYPE_POLL, SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING,
                            SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                            etag=f"{community.id}{sort}{post_layout}_{hash(community.last_active)}", related_communities=related_communities,
-                           next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth, un_moderated=un_moderated,
+                           next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth, un_moderated=un_moderated, community_flair=community_flair,
                            recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, community_feeds=community_feeds,
                            canonical=community.profile_id(), can_upvote_here=can_upvote(user, community), can_downvote_here=can_downvote(user, community, g.site),
                            rss_feed=f"https://{current_app.config['SERVER_NAME']}/community/{community.link()}/feed", rss_feed_name=f"{community.title} on {g.site.name}",
-                           content_filters=content_filters, site=g.site, sort=sort,
+                           content_filters=content_filters, site=g.site, sort=sort, flair=flair,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                            post_layout=post_layout, content_type=content_type, current_app=current_app,
                            user_has_feeds=user_has_feeds, current_feed_id=current_feed_id,
@@ -723,6 +731,11 @@ def add_post(actor, type):
         form.communities.choices.append((community.id, community.display_name()))
 
     form.language_id.choices = languages_for_form()
+    flair_choices = flair_for_form(community.id)
+    if len(flair_choices):
+        form.flair.choices = flair_choices
+    else:
+        del form.flair
 
     if form.validate_on_submit():
         community = Community.query.get_or_404(form.communities.data)
@@ -1793,6 +1806,75 @@ def community_moderate_report_ignore(community_id, report_id):
             return redirect(url_for('community.community_moderate', actor=community.link()))
         else:
             abort(404)
+
+
+@bp.route('/<actor>/moderate/flair', methods=['GET'])
+@login_required
+def community_flair(actor):
+    community = actor_to_community(actor)
+
+    if community is not None:
+        if community.is_moderator() or current_user.is_admin():
+
+            low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+
+            flairs = CommunityFlair.query.filter(CommunityFlair.community_id == community.id).order_by(CommunityFlair.flair)
+
+            return render_template('community/community_flair.html', flairs=flairs,
+                                   title=_('Flair in %(community)s', community=community.display_name()),
+                                   community=community, current='flair', low_bandwidth=low_bandwidth, site=g.site,
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
+        else:
+            abort(401)
+    else:
+        abort(404)
+
+
+@bp.route('/community/<int:community_id>/flair/<int:flair_id>', methods=['GET', 'POST'])
+@login_required
+def community_flair_edit(community_id, flair_id):
+    community = Community.query.get_or_404(community_id)
+
+    if community.is_moderator() or current_user.is_admin():
+        flair = CommunityFlair.query.get(flair_id) if flair_id else None
+        form = EditCommunityFlairForm()
+        if form.validate_on_submit():
+            if flair is None:
+                flair = CommunityFlair(community_id=community.id)
+                db.session.add(flair)
+                flash(_('Flair added.'))
+            else:
+                flash(_('Flair updated.'))
+            flair.flair = form.flair.data
+            flair.text_color = form.text_color.data
+            flair.background_color = form.background_color.data
+            db.session.commit()
+
+            return redirect(url_for('community.community_flair', actor=community.link()))
+        else:
+            form.flair.data = flair.flair if flair else ''
+            form.text_color.data = flair.text_color if flair else '#000000'
+            form.background_color.data = flair.background_color if flair else '#deddda'
+            return render_template('generic_form.html', form=form, flair=flair,
+                                   title=_('Edit %(flair_name)s in %(community_name)s', flair_name=flair.flair, community_name=community.display_name()) if flair else _('Add flair in %(community_name)s', community_name=community.display_name()),
+                                   community=community)
+    else:
+        abort(401)
+
+
+@bp.route('/community/<int:community_id>/flair/<int:flair_id>/delete', methods=['GET'])
+@login_required
+def community_flair_delete(community_id, flair_id):
+    community = Community.query.get_or_404(community_id)
+
+    if community.is_moderator() or current_user.is_admin():
+        db.session.execute(text('DELETE FROM "post_flair" WHERE flair_id = :flair_id'), {'flair_id': flair_id})
+        db.session.query(CommunityFlair).filter(CommunityFlair.id == flair_id).delete()
+        db.session.commit()
+        flash(_('Flair deleted.'))
+        return redirect(url_for('community.community_flair', actor=community.link()))
+    else:
+        abort(401)
 
 
 @bp.route('/<actor>/invite', methods=['GET', 'POST'])

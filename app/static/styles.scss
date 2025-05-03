@@ -1721,6 +1721,27 @@ form {
   }
 }
 
+.post_flair {
+  font-size: 73%;
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+
+.post_flair_body {
+  padding-left: 0;
+  .post_flair {
+
+  }
+}
+
+.post_flair_sidepane {
+  .post_flair {
+    font-size: 90%;
+    padding: 2px 4px;
+  }
+  margin-bottom: 17px;
+}
+
 .comment_author {
   a {
 

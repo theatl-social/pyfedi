@@ -48,7 +48,7 @@ from captcha.image import ImageCaptcha
 
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, ActivityPubLog, IpBan, \
     Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
-    File, ModLog, CommunityBlock, Feed, FeedMember
+    File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair
 
 
 # Flask's render_template function, with support for themes added
@@ -1524,6 +1524,21 @@ def languages_for_form():
                 other_languages.append((language.id, language.name))
 
     return used_languages + other_languages
+
+
+def flair_for_form(community_id):
+    result = []
+    for flair in CommunityFlair.query.filter(CommunityFlair.community_id == community_id).order_by(CommunityFlair.flair):
+        result.append((flair.id, flair.flair))
+    return result
+
+
+def find_flair_id(flair: str, community_id: int) -> int | None:
+    flair = CommunityFlair.query.filter(CommunityFlair.community_id == community_id, CommunityFlair.flair == flair.strip()).first()
+    if flair:
+        return flair.id
+    else:
+        return None
 
 
 def english_language_id():

@@ -276,6 +276,11 @@ post_tag = db.Table('post_tag', db.Column('post_id', db.Integer, db.ForeignKey('
                                           db.PrimaryKeyConstraint('post_id', 'tag_id')
                         )
 
+post_flair = db.Table('post_flair', db.Column('post_id', db.Integer, db.ForeignKey('post.id')),
+                                          db.Column('flair_id', db.Integer, db.ForeignKey('community_flair.id')),
+                                          db.PrimaryKeyConstraint('post_id', 'flair_id')
+                        )
+
 
 class File(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -1282,6 +1287,7 @@ class Post(db.Model):
     repeat = db.Column(db.String(20), default='')   # 'daily', 'weekly', 'monthly'. Empty string = no repeat, just post once.
     stop_repeating = db.Column(db.DateTime, index=True)  # No more repeats after this datetime
     tags = db.relationship('Tag', lazy='joined', secondary=post_tag, backref=db.backref('posts', lazy='dynamic'))
+    flair = db.relationship('CommunityFlair', lazy='joined', secondary=post_flair, backref=db.backref('posts', lazy='dynamic'))
 
     ap_id = db.Column(db.String(255), index=True, unique=True)
     ap_create_id = db.Column(db.String(100))
@@ -2942,6 +2948,21 @@ class FeedJoinRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     feed_id = db.Column(db.Integer, db.ForeignKey('feed.id'), index=True)
+
+
+class CommunityFlair(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    community_id = db.Column(db.Integer, db.ForeignKey('community.id'), index=True)
+    flair = db.Column(db.String(50), index=True)
+    text_color = db.Column(db.String(50))
+    background_color = db.Column(db.String(50))
+
+
+class UserFlair(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    community_id = db.Column(db.Integer, db.ForeignKey('community.id'), index=True)
+    flair = db.Column(db.String(50), index=True)
 
 
 class SendQueue(db.Model):

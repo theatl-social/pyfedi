@@ -2024,6 +2024,23 @@ form h5 {
   color: #777;
 }
 
+.post_flair {
+  font-size: 73%;
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+
+.post_flair_body {
+  padding-left: 0;
+}
+.post_flair_sidepane {
+  margin-bottom: 17px;
+}
+.post_flair_sidepane .post_flair {
+  font-size: 90%;
+  padding: 2px 4px;
+}
+
 .low_score .hide_button a, .low_score .comment_author a {
   font-weight: normal;
   color: #777;

@@ -22,6 +22,9 @@
     <a href="/community/{{ community.link() }}/moderate/appeals" class="btn {{ 'btn-primary' if current == 'appeals' else 'btn-outline-secondary' }} disabled" rel="nofollow noindex" >
         {{ _('Appeals') }}
     </a>
+    <a href="/community/{{ community.link() }}/moderate/flair" class="btn {{ 'btn-primary' if current == 'flair' else 'btn-outline-secondary' }}" rel="nofollow noindex" >
+        {{ _('Flair') }}
+    </a>
     <a href="{{ url_for('community.community_modlog', actor=community.link()) }}" class="btn {{ 'btn-primary' if current == 'modlog' else 'btn-outline-secondary' }} " rel="nofollow noindex" >
         {{ _('Mod log') }}
     </a>

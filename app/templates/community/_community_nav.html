@@ -128,16 +128,16 @@
 {% endif %}
 <div class="d-lg-flex justify-content-between d-none">
     <div class="btn-group mt-1 mb-2">
-        <a href="?sort=hot&layout={{ post_layout }}&content_type={{ content_type }}" aria-label="{{ _('Sort by hot') }}" class="btn {{ 'btn-primary' if sort == '' or sort == 'hot' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+        <a href="?sort=hot&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by hot') }}" class="btn {{ 'btn-primary' if sort == '' or sort == 'hot' else 'btn-outline-secondary' }}" rel="nofollow noindex">
             {{ _('Hot') }}
         </a>
-        <a href="?sort=top&layout={{ post_layout }}&content_type={{ content_type }}" aria-label="{{ _('Sort by top') }}" class="btn {{ 'btn-primary' if sort == 'top' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+        <a href="?sort=top&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by top') }}" class="btn {{ 'btn-primary' if sort == 'top' else 'btn-outline-secondary' }}" rel="nofollow noindex">
             {{ _('Top') }}
         </a>
-        <a href="?sort=new&layout={{ post_layout }}&content_type={{ content_type }}" aria-label="{{ _('Sort by new') }}" class="btn {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+        <a href="?sort=new&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by new') }}" class="btn {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex">
             {{ _('New') }}
         </a>
-        <a href="?sort=active&layout={{ post_layout }}&content_type={{ content_type }}" aria-label="{{ _('Sort by active') }}" class="btn {{ 'btn-primary' if sort == 'active' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+        <a href="?sort=active&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by active') }}" class="btn {{ 'btn-primary' if sort == 'active' else 'btn-outline-secondary' }}" rel="nofollow noindex">
             {{ _('Active') }}
         </a>
     </div>
@@ -157,13 +157,13 @@
     </div>
     {% if post_layout != '' and post_layout is not none %}
     <div class="btn-group mt-1 mb-2 layout_switcher">
-        <a href="?layout=list&sort={{ sort }}&content_type={{ content_type }}" class="btn {{ 'btn-primary' if post_layout == '' or post_layout == 'list' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+        <a href="?layout=list&sort={{ sort }}&content_type={{ content_type }}&flair={{ flair }}" class="btn {{ 'btn-primary' if post_layout == '' or post_layout == 'list' else 'btn-outline-secondary' }}" rel="nofollow noindex">
             {{ _('List') }}
         </a>
-        <a href="?layout=masonry&sort={{ sort }}&content_type=posts" class="btn {{ 'btn-primary' if post_layout == 'masonry' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+        <a href="?layout=masonry&sort={{ sort }}&content_type=posts&flair={{ flair }}" class="btn {{ 'btn-primary' if post_layout == 'masonry' else 'btn-outline-secondary' }}" rel="nofollow noindex">
             {{ _('Tile') }}
         </a>
-        <a href="?layout=masonry_wide&sort={{ sort }}&content_type=posts" class="btn {{ 'btn-primary' if post_layout == 'masonry_wide' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+        <a href="?layout=masonry_wide&sort={{ sort }}&content_type=posts&flair={{ flair }}" class="btn {{ 'btn-primary' if post_layout == 'masonry_wide' else 'btn-outline-secondary' }}" rel="nofollow noindex">
             {{ _('Wide tile') }}
         </a>
     </div>

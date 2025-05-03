@@ -40,6 +40,15 @@
                     {{ _('Posts') }}: {{ community.post_count }}<br>
                     {{ _('Comments') }}: {{ community.post_reply_count }}
                 </p>
+                {% if community_flair and len(community_flair) > 0 -%}
+                    <h3>{{ _('Flair') }}</h3>
+                    <div class="post_flair_sidepane">
+                        {% for flair in community_flair -%}
+                            <span class="post_flair" style="color: {{ flair.text_color}}; background-color: {{ flair.background_color }}" title="{{ _('Show only %(flair_name)s', flair_name=flair.flair) }}"><a href="{{ url_for('activitypub.community_profile', actor=community.link(), flair=flair.flair) }}" style="color: {{ flair.text_color}}">{{ flair.flair }}</a></span>
+                        {% endfor -%}
+                    </div>
+
+                {% endif %}
                 {% if len(mods) > 0 and not community.private_mods -%}
                     <h3>Moderators</h3>
                     <ul class="moderator_list">

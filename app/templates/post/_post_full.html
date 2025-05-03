@@ -163,6 +163,15 @@
         </nav>
     {% endif -%}
 
+    {% if len(post.flair) > 0 -%}
+        <nav role="navigation">
+            <h3 class="visually-hidden">{{ _('Flair') }}</h3>
+            {% for flair in post.flair -%}
+                <span class="post_flair" style="color: {{ flair.text_color}}; background-color: {{ flair.background_color }}" title="{{ _('Show only %(flair_name)s', flair_name=flair.flair) }}"><a href="{{ url_for('activitypub.community_profile', actor=post.community.link(), flair=flair.flair) }}" style="color: {{ flair.text_color}}">{{ flair.flair }}</a></span>
+            {% endfor -%}
+        </nav>
+    {% endif -%}
+
     <div class="post_utilities_bar">
         <div class="voting_buttons_new" aria-live="assertive">
             {% include "post/_post_voting_buttons.html" -%}

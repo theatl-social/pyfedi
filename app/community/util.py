@@ -16,7 +16,7 @@ from app.activitypub.signature import post_request, default_context, send_post_r
 from app.activitypub.util import find_actor_or_create, actor_json_to_model, ensure_domains_match, \
     find_hashtag_or_create, create_post, remote_object_to_json
 from app.models import Community, File, BannedInstances, PostReply, Post, utcnow, CommunityMember, Site, \
-    Instance, User, Tag
+    Instance, User, Tag, CommunityFlair
 from app.utils import get_request, gibberish, ensure_directory_exists, ap_datetime, instance_banned, get_task_session, \
     store_files_in_s3, guess_mime_type
 from sqlalchemy import func, desc
@@ -256,6 +256,10 @@ def tags_from_string_old(tags: str) -> List[Tag]:
         if tag_to_append and tag_to_append not in return_value:
             return_value.append(tag_to_append)
     return return_value
+
+
+def flair_from_form(tag_ids) -> List[CommunityFlair]:
+    return CommunityFlair.query.filter(CommunityFlair.id.in_(tag_ids)).all()
 
 
 def delete_post_from_community(post_id):

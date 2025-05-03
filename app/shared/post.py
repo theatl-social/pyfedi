@@ -4,7 +4,7 @@ import mimetypes
 from app import db, cache
 from app.activitypub.util import make_image_sizes, notify_about_post
 from app.constants import *
-from app.community.util import tags_from_string_old, end_poll_date
+from app.community.util import tags_from_string_old, end_poll_date, flair_from_form
 from app.models import File, Notification, NotificationSubscription, Poll, PollChoice, Post, PostBookmark, PostVote, Report, Site, User, utcnow
 from app.shared.tasks import task_selector
 from app.utils import render_template, authorise_api_user, shorten_string, gibberish, ensure_directory_exists, \
@@ -226,6 +226,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         notify_author = input['notify_author']
         language_id = input['language_id']
         tags = []
+        flair = []
     else:
         if not user:
             user = current_user
@@ -243,6 +244,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         notify_author = input.notify_author.data
         language_id = input.language_id.data
         tags = tags_from_string_old(input.tags.data)
+        flair = flair_from_form(input.flair.data)
 
     post.indexable = user.indexable
     post.sticky = False if src == SRC_API else input.sticky.data
@@ -286,6 +288,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
 
         # remove any old tags
         post.tags.clear()
+        post.flair.clear()
 
         post.edited_at = utcnow()
 
@@ -436,8 +439,9 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         if poll.local_only:
             federate = False
 
-    # add tags
+    # add tags & flair
     post.tags = tags
+    post.flair = flair
 
     # Add subscription if necessary
     if notify_author:

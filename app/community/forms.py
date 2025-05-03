@@ -119,6 +119,8 @@ class CreatePostForm(FlaskForm):
     title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])
     body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=50000)], render_kw={'rows': 5})
     tags = StringField(_l('Tags'), validators=[Optional(), Length(min=3, max=5000)])
+    flair = MultiCheckboxField(_l('Flair'), coerce=int, validators=[Optional()],
+                                        render_kw={'class':'form-multicheck-columns'})
     sticky = BooleanField(_l('Sticky'))
     nsfw = BooleanField(_l('NSFW'))
     nsfl = BooleanField(_l('Gore/gross'))
@@ -306,3 +308,10 @@ class MoveCommunityForm(FlaskForm):
     old_community_locked = BooleanField(_l('The old community is locked'), validators=[DataRequired()])
     post_link = StringField(_l('Move notification post in old community'), validators=[DataRequired()])
     submit = SubmitField(_l('Request move'))
+
+
+class EditCommunityFlairForm(FlaskForm):
+    flair = StringField(_l('Flair'), validators=[DataRequired()])
+    text_color = StringField(_l('Text color'), render_kw={"type": "color"})
+    background_color = StringField(_l('Background color'), render_kw={"type": "color"})
+    submit = SubmitField(_l('Save'))
