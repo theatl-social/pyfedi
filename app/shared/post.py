@@ -244,7 +244,10 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         notify_author = input.notify_author.data
         language_id = input.language_id.data
         tags = tags_from_string_old(input.tags.data)
-        flair = flair_from_form(input.flair.data)
+        if input.flair:
+            flair = flair_from_form(input.flair.data)
+        else:
+            flair = []
 
     post.indexable = user.indexable
     post.sticky = False if src == SRC_API else input.sticky.data
