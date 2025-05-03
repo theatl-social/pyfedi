@@ -651,7 +651,7 @@ def post_edit(post_id: int):
             form.sticky.data = post.sticky
             form.language_id.data = post.language_id
             form.tags.data = tags_to_string(post)
-            if hasattr(form, 'flair'):
+            if form.flair:
                 form.flair.data = [flair.id for flair in post.flair]
             if post_type == POST_TYPE_LINK:
                 form.link_url.data = post.url
