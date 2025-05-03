@@ -1251,6 +1251,7 @@ class Post(db.Model):
     domain_id = db.Column(db.Integer, db.ForeignKey('domain.id'), index=True)
     instance_id = db.Column(db.Integer, db.ForeignKey('instance.id'), index=True)
     licence_id = db.Column(db.Integer, db.ForeignKey('licence.id'), index=True)
+    status = db.Column(db.Integer, index=True, default=1)
     slug = db.Column(db.String(255))
     title = db.Column(db.String(255))
     url = db.Column(db.String(2048))
