@@ -450,6 +450,9 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         if poll.local_only:
             federate = False
 
+    if post.status < POST_STATUS_PUBLISHED:
+        federate = False
+
     # add tags & flair
     post.tags = tags
     post.flair = flair
