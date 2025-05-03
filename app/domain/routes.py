@@ -31,10 +31,10 @@ def show_domain(domain_id):
         if domain:
             if current_user.is_anonymous or current_user.ignore_bots == 1:
                 posts = Post.query.join(Community, Community.id == Post.community_id).\
-                    filter(Post.from_bot == False, Post.domain_id == domain.id, Community.banned == False, Post.deleted == False).\
+                    filter(Post.from_bot == False, Post.domain_id == domain.id, Community.banned == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING).\
                     order_by(desc(Post.posted_at))
             else:
-                posts = Post.query.join(Community).filter(Post.domain_id == domain.id, Community.banned == False, Post.deleted == False).order_by(desc(Post.posted_at))
+                posts = Post.query.join(Community).filter(Post.domain_id == domain.id, Community.banned == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.posted_at))
 
             if current_user.is_authenticated:
                 instance_ids = blocked_instances(current_user.id)
@@ -93,7 +93,7 @@ def show_domain_rss(domain_id):
 
             posts = Post.query.join(Community, Community.id == Post.community_id). \
                 filter(Post.from_bot == False, Post.domain_id == domain.id, Community.banned == False,
-                       Post.deleted == False). \
+                       Post.deleted == False, Post.status > POST_STATUS_REVIEWING). \
                 order_by(desc(Post.posted_at)).limit(100)
 
             fg = FeedGenerator()

@@ -18,7 +18,7 @@ from app.inoculation import inoculation
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm, ConfirmationForm, \
     ConfirmationMultiDeleteForm
 from app.community.forms import CreateLinkForm, CreateImageForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm
-from app.constants import NOTIF_REPORT
+from app.constants import NOTIF_REPORT, POST_STATUS_SCHEDULED
 from app.post.util import post_replies, get_comment_branch, tags_to_string, url_needs_archive, \
     generate_archive_link, body_has_no_archive_link
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
@@ -84,8 +84,12 @@ def show_post(post_id: int):
         # handle top-level comments/replies
         form = NewReplyForm()
         form.language_id.choices = languages_for_form() if current_user.is_authenticated else []
-        if current_user.is_authenticated and current_user.verified and form.validate_on_submit():
 
+        if current_user.is_authenticated and (current_user.id == post.user_id or current_user.is_admin() or current_user.is_staff()):
+            if post.status == POST_STATUS_SCHEDULED:
+                flash(_('This post is scheduled to be published at %(when)s', when=str(post.scheduled_for)))    # todo: convert into current_user.timezone
+
+        if current_user.is_authenticated and current_user.verified and form.validate_on_submit():
             try:
                 reply = make_reply(form, post, None, SRC_WEB)
             except Exception as ex:
@@ -651,6 +655,8 @@ def post_edit(post_id: int):
             form.sticky.data = post.sticky
             form.language_id.data = post.language_id
             form.tags.data = tags_to_string(post)
+            form.repeat.data = post.repeat
+            form.scheduled_for.data = post.scheduled_for
             if form.flair:
                 form.flair.data = [flair.id for flair in post.flair]
             if post_type == POST_TYPE_LINK:
@@ -701,7 +707,11 @@ def post_delete(post_id: int):
         form = ConfirmationForm()
         if form.validate_on_submit():
             post_delete_post(community, post, current_user.id)
-            return redirect(request.form.get('referrer'))
+            ref = request.form.get('referrer')
+            if '/post/' not in ref:
+                return redirect(ref)
+            else:
+                return redirect(url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not None else community.name))
         else:
             form.referrer.data = referrer(url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not None else community.name))
             return render_template('generic_form.html', title=_('Are you sure you want to delete the post "%(post_title)s"?',

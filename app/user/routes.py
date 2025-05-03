@@ -70,13 +70,13 @@ def show_profile(user):
     subscribed = Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == user.id).all()
     if current_user.is_anonymous or (user.id != current_user.id and not current_user.is_admin()):
         moderates = moderates.filter(Community.private_mods == False)
-        posts = Post.query.filter_by(user_id=user.id).filter(Post.deleted == False).order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=50, error_out=False)
+        posts = Post.query.filter_by(user_id=user.id).filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=50, error_out=False)
         post_replies = PostReply.query.filter_by(user_id=user.id, deleted=False).order_by(desc(PostReply.posted_at)).paginate(page=replies_page, per_page=50, error_out=False)
     elif current_user.is_admin():
         posts = Post.query.filter_by(user_id=user.id).order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=50, error_out=False)
         post_replies = PostReply.query.filter_by(user_id=user.id).order_by(desc(PostReply.posted_at)).paginate(page=replies_page, per_page=50, error_out=False)
     elif current_user.id == user.id:
-        posts = Post.query.filter_by(user_id=user.id).filter(or_(Post.deleted == False, Post.deleted_by == user.id)).order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=50, error_out=False)
+        posts = Post.query.filter_by(user_id=user.id).filter(or_(Post.deleted == False, Post.status > POST_STATUS_REVIEWING, Post.deleted_by == user.id)).order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=50, error_out=False)
         post_replies = PostReply.query.filter_by(user_id=user.id).filter(or_(PostReply.deleted == False, PostReply.deleted_by == user.id)).order_by(desc(PostReply.posted_at)).paginate(page=replies_page, per_page=50, error_out=False)
 
     # profile info
@@ -1139,7 +1139,7 @@ def user_bookmarks():
     page = request.args.get('page', 1, type=int)
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
-    posts = Post.query.filter(Post.deleted == False).join(PostBookmark, PostBookmark.post_id == Post.id).\
+    posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING).join(PostBookmark, PostBookmark.post_id == Post.id).\
         filter(PostBookmark.user_id == current_user.id).order_by(desc(PostBookmark.created_at))
 
     posts = posts.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50,
@@ -1236,7 +1236,7 @@ def user_alerts(type='posts', filter='all'):
                         join(NotificationSubscription, NotificationSubscription.entity_id == Post.id).\
                         filter_by(type=NOTIF_POST, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
         elif filter == 'others':
-            entities = Post.query.filter(Post.deleted == False, Post.user_id != current_user.id).\
+            entities = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING, Post.user_id != current_user.id).\
                         join(NotificationSubscription, NotificationSubscription.entity_id == Post.id).\
                         filter_by(type=NOTIF_POST, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
         else:   # default to 'all' filter
@@ -1297,7 +1297,7 @@ def user_read_posts(sort=None):
     page = request.args.get('page', 1, type=int)
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
-    posts = Post.query.filter(Post.deleted == False)
+    posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
 
     if current_user.ignore_bots == 1:
         posts = posts.filter(Post.from_bot == False)
@@ -1494,7 +1494,7 @@ def show_profile_rss(actor):
         if request_etag_matches(current_etag):
             return return_304(current_etag, 'application/rss+xml')
 
-        posts = user.posts.filter(Post.from_bot == False, Post.deleted == False).order_by(desc(Post.created_at)).limit(100).all()
+        posts = user.posts.filter(Post.from_bot == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.created_at)).limit(100).all()
         description = shorten_string(user.about, 150) if user.about else None
         og_image = user.avatar_image() if user.avatar_id else None
         fg = FeedGenerator()

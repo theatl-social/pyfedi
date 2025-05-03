@@ -34,7 +34,7 @@ def test_api_post_subscriptions(app):
 
         # normal add / remove subscription
         existing_subs = db.session.execute(text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 3'), {"user_id": user_id}).scalars()
-        post = Post.query.filter(Post.id.not_in(existing_subs), Post.deleted == False).first()
+        post = Post.query.filter(Post.id.not_in(existing_subs), Post.deleted == False, Post.status > POST_STATUS_REVIEWING).first()
         assert post is not None and hasattr(post, 'id')
 
         data = {"post_id": post.id, "subscribe": True}
@@ -52,7 +52,7 @@ def test_api_post_subscriptions(app):
 
         # add to existing
         existing_subs = db.session.execute(text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 3'), {"user_id": user_id}).scalars()
-        post = Post.query.filter(Post.id.in_(existing_subs), Post.deleted == False).first()
+        post = Post.query.filter(Post.id.in_(existing_subs), Post.deleted == False, Post.status > POST_STATUS_REVIEWING).first()
         assert post is not None and hasattr(post, 'id')
         if post:
             data = {"post_id": post.id, "subscribe": True}

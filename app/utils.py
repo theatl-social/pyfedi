@@ -1846,7 +1846,7 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
         params = {'community_ids': tuple(community_ids)}
     # filter out nsfw and nsfl if desired
     if current_user.is_anonymous:
-        post_id_where.append('p.from_bot is false AND p.nsfw is false AND p.nsfl is false AND p.deleted is false ')
+        post_id_where.append('p.from_bot is false AND p.nsfw is false AND p.nsfl is false AND p.deleted is false AND p.status > 0 ')
     else:
         if current_user.ignore_bots == 1:
             post_id_where.append('p.from_bot is false ')
@@ -1863,7 +1863,7 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
             post_id_where.append('(p.language_id IN :read_language_ids OR p.language_id is null) ')
             params['read_language_ids'] = tuple(current_user.read_language_ids)
 
-        post_id_where.append('p.deleted is false ')
+        post_id_where.append('p.deleted is false AND p.status > 0 ')
 
         # filter blocked domains and instances
         domains_ids = blocked_domains(current_user.id)

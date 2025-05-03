@@ -2,8 +2,9 @@ from flask import request, g
 from flask_login import current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, TextAreaField, BooleanField, HiddenField, SelectField, FileField, \
-    DateField, DateTimeField
+    DateField
 from wtforms.fields.choices import SelectMultipleField
+from wtforms.fields import DateTimeLocalField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Regexp, Optional
 from flask_babel import _, lazy_gettext as _l
 
@@ -126,7 +127,10 @@ class CreatePostForm(FlaskForm):
     nsfl = BooleanField(_l('Gore/gross'))
     notify_author = BooleanField(_l('Notify about replies'))
     language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
-    scheduled_for = DateTimeField(_l('Scheduled for'), validators=[Optional()])
+    scheduled_for = DateTimeLocalField(_l('Publish at'), validators=[Optional()], format="%Y-%m-%dT%H:%M")
+    repeat = SelectField(_l('Repeat'), validators=[Optional()], choices=[('none', _l('None')), ('daily', _l('Daily')), ('weekly', _l('Weekly')), ('monthly', _l('Monthly'))],
+                         render_kw={'class': 'form-select'})
+    timezone = HiddenField(render_kw={'id': 'timezone'})
     submit = SubmitField(_l('Publish'))
 
     def validate_nsfw(self, field):

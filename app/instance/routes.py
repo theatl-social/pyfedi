@@ -103,10 +103,10 @@ def instance_posts(instance_domain):
         abort(404)
 
     if current_user.is_anonymous:
-        posts = Post.query.filter(Post.instance_id == instance.id, Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False)
+        posts = Post.query.filter(Post.instance_id == instance.id, Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
         content_filters = {}
     else:
-        posts = Post.query.filter(Post.instance_id == instance.id, Post.deleted == False)
+        posts = Post.query.filter(Post.instance_id == instance.id, Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
 
         if current_user.ignore_bots == 1:
             posts = posts.filter(Post.from_bot == False)

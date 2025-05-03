@@ -1198,7 +1198,7 @@ def admin_content():
     show = request.args.get('show', 'trash')
     days = request.args.get('days', 3, type=int)
 
-    posts = Post.query.join(User, User.id == Post.user_id).filter(Post.deleted == False)
+    posts = Post.query.join(User, User.id == Post.user_id).filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
     post_replies = PostReply.query.join(User, User.id == PostReply.user_id).filter(PostReply.deleted == False)
     if show == 'trash':
         title = _('Bad / Most downvoted')

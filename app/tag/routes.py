@@ -25,7 +25,7 @@ def show_tag(tag):
 
         posts = Post.query.join(Community, Community.id == Post.community_id). \
             join(post_tag, post_tag.c.post_id == Post.id).filter(post_tag.c.tag_id == tag.id). \
-            filter(Community.banned == False, Post.deleted == False)
+            filter(Community.banned == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
 
         if current_user.is_anonymous or current_user.ignore_bots == 1:
             posts = posts.filter(Post.from_bot == False)
@@ -74,7 +74,7 @@ def show_tag_rss(tag):
     if tag:
         posts = Post.query.join(Community, Community.id == Post.community_id). \
             join(post_tag, post_tag.c.post_id == Post.id).filter(post_tag.c.tag_id == tag.id). \
-            filter(Community.banned == False, Post.deleted == False)
+            filter(Community.banned == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
 
         if current_user.is_anonymous or current_user.ignore_bots == 1:
             posts = posts.filter(Post.from_bot == False)

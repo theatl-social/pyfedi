@@ -227,6 +227,8 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         language_id = input['language_id']
         tags = []
         flair = []
+        scheduled_for = None
+        repeat = None
     else:
         if not user:
             user = current_user
@@ -248,7 +250,8 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
             flair = flair_from_form(input.flair.data)
         else:
             flair = []
-
+        scheduled_for = input.scheduled_for.data
+        repeat = input.repeat.data
     post.indexable = user.indexable
     post.sticky = False if src == SRC_API else input.sticky.data
     post.nsfw = nsfw
@@ -260,6 +263,11 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
     post.body = piefed_markdown_to_lemmy_markdown(body)
     post.body_html = markdown_to_html(post.body)
     post.type = type
+    post.scheduled_for = scheduled_for
+    post.repeat = repeat
+
+    if post.scheduled_for and post.scheduled_for > utcnow():
+        post.status = POST_STATUS_SCHEDULED
 
     url_changed = False
 

@@ -37,7 +37,7 @@ def run_search():
         posts = None
         db.session.execute(text("SET work_mem = '100MB';"))
         if search_for == 'posts':
-            posts = Post.query.filter(Post.deleted == False)
+            posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
             if current_user.is_authenticated:
                 if current_user.ignore_bots == 1:
                     posts = posts.filter(Post.from_bot == False)
@@ -114,7 +114,7 @@ def run_search():
                 replies = replies.filter(PostReply.nsfl == False)
                 replies = replies.filter(PostReply.nsfw == False)
 
-            replies = replies.join(Post, PostReply.post_id == Post.id).filter(Post.indexable == True, Post.deleted == False)
+            replies = replies.join(Post, PostReply.post_id == Post.id).filter(Post.indexable == True, Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
             if q is not None:
                 replies = replies.search(q, sort=True if sort_by == '' else False)
             if type != 0:
