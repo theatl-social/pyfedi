@@ -11,7 +11,7 @@ from app.api.alpha.utils import get_site, post_site_block, \
                                 get_user, post_user_block, get_user_unread_count, get_user_replies, post_user_mark_all_as_read, put_user_subscribe, put_user_save_user_settings, \
                                 get_private_message_list, \
                                 post_upload_image, post_upload_community_image, post_upload_user_image, \
-                                get_user_notifications, get_user_notifs_no_auth
+                                get_user_notifications, put_user_notification_state
 from app.shared.auth import log_user_in
 
 from flask import current_app, jsonify, request
@@ -563,20 +563,30 @@ def put_alpha_user_save_user_settings():
 
 
 @bp.route('/api/alpha/user/notifications/<status>')
-def get_alpha_notifications(status):
-    # if not enable_api():
-    #     return jsonify({'error': 'alpha api is not enabled'})
-    # try:
-    #     auth = request.headers.get('Authorization')
-    #     data = request.get_json(force=True) or {}
-    #     data['status_request'] = status
-    #     return jsonify(get_user_notifications(auth, data))
-    # except Exception as ex:
-    #     return jsonify({"error": str(ex)}), 400    
-    data = request.get_json(force=True) or {}
-    data['status_request'] = status
-    res = jsonify(get_user_notifs_no_auth(data))
-    return res 
+def get_alpha_user_notifications(status):
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
+    try:
+        auth = request.headers.get('Authorization')
+        data = {}
+        data['status_request'] = status
+        return jsonify(get_user_notifications(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400    
+
+
+@bp.route('/api/alpha/user/notifications/<notif_id>/<read_state>', methods=['PUT'])
+def put_alpha_user_notification_state(notif_id, read_state):
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'})
+    try:
+        auth = request.headers.get('Authorization')
+        data = {}
+        data['notif_id'] = notif_id
+        data['read_state'] = read_state
+        return jsonify(put_user_notification_state(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400    
 
 
 # Upload

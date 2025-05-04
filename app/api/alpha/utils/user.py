@@ -221,8 +221,6 @@ def get_user_notifications(auth, data):
                     notif = _process_notification_item(item)
                     notif['status'] = status
                     items.append(notif)
-                else:
-                    items.append({"notif_type":item.notif_type,"api_support":False})
     # all
     elif status == 'all':
         for item in user_notifications:
@@ -230,8 +228,6 @@ def get_user_notifications(auth, data):
                     notif = _process_notification_item(item)
                     notif['status'] = status
                     items.append(notif)
-                else:
-                    items.append({"notif_type":item.notif_type,"api_support":False})
     # read
     elif status == 'read':
         for item in user_notifications:
@@ -240,69 +236,6 @@ def get_user_notifications(auth, data):
                     notif = _process_notification_item(item)
                     notif['status'] = status
                     items.append(notif)
-                else:
-                    items.append({"notif_type":item.notif_type,"api_support":False})
-
-    # get counts for new/read/all
-    counts = {}
-    counts['total_notifications'] = Notification.query.with_entities(func.count()).where(Notification.user_id == user.id).scalar()
-    counts['new_notifications'] = Notification.query.with_entities(func.count()).where(Notification.user_id == user.id).where(Notification.read == False).scalar()
-    counts['read_notifications'] = counts['total_notifications'] - counts['new_notifications']
-    
-    # make dicts of that and pass back
-    res = {}
-    res['user'] = user.user_name
-    res['status'] = status
-    res['counts'] = counts
-    res['items'] = items
-    return res
-
-
-def get_user_notifs_no_auth(data):
-    # THIS IS FOR TESTING AND WILL BE REMOVED 
-    # ONCE THE API ABOVE IS WORKING
-    #
-    # get the user from data.user_id
-    user = User.query.get(data['user_id'])
-
-    # get the status from data.status_request
-    status = data['status_request']
-
-    # items dict
-    items = []
-
-    # setup the db query/generator all notifications for the user
-    user_notifications = Notification.query.filter_by(user_id=user.id).order_by(desc(Notification.notif_type))
-    
-    # new
-    if status == 'new':
-        for item in user_notifications:
-            if item.read == False:
-                if isinstance(item.subtype,str):
-                    notif = _process_notification_item(item)
-                    notif['status'] = status
-                    items.append(notif)
-                else:
-                    items.append({"notif_type":item.notif_type,"api_support":False})
-    # all
-    elif status == 'all':
-        for item in user_notifications:
-                if isinstance(item.subtype,str):
-                    notif = _process_notification_item(item)
-                    notif['status'] = status
-                    items.append(notif)
-                else:
-                    items.append({"notif_type":item.notif_type,"api_support":False})
-    # read
-    elif status == 'read':
-        for item in user_notifications:
-            if item.read == True:
-                if isinstance(item.subtype,str):
-                    notif = _process_notification_item(item)
-                    notif['status'] = status
-                    items.append(notif)
-                else:
-                    items.append({"notif_type":item.notif_type,"api_support":False})
 
     # get counts for new/read/all
     counts = {}
@@ -434,108 +367,23 @@ def _process_notification_item(item):
     else:
         return {"notif_type":item.notif_type}
 
-# def _migration_process_notification_item(item):
-#     # for a while there will be notifications in the database that are setup the old way
-#     # this can get the info needed from the older notifications 
-#     # after about 90 days from when this merges the old style ones will all fall off
-#     # so this can be removed as a backup function
-#     # JollyRoberts - 03MAY2025
-    
-    
-#     # for the NOTIF_USER
-#     if item.notif_type == NOTIF_USER:
-#         author = User.query.get(item.author_id)
-#         post_id = re.findall(r'\d+', item.url)[0]
-#         post = Post.query.get(post_id)
-#         notification_json = {}
-#         notification_json['notif_type'] = NOTIF_USER
-#         notification_json['notif_type_subtype'] = 'new_post_from_followed_user'
-#         notification_json['author'] = user_view(user=author.id, variant=3)
-#         notification_json['post'] = post_view(post, variant=2)
-#         return notification_json
-#     # for the NOTIF_COMMUNITY
-#     elif item.notif_type == NOTIF_COMMUNITY:
-#         author = User.query.get(item.author_id)
-#         post_id = re.findall(r'\d+', item.url)[0]
-#         post = Post.query.get(post_id)
-#         community = Community.query.get(post.community_id)
-#         notification_json = {}
-#         notification_json['notif_type'] = NOTIF_COMMUNITY
-#         notification_json['notif_type_subtype'] = 'new_post_in_followed_community'
-#         notification_json['author'] = user_view(user=author.id, variant=3)
-#         notification_json['post'] = post_view(post, variant=2)
-#         notification_json['community'] = community_view(community, variant=2)
-#         return notification_json
-#     # for the NOTIF_TOPIC
-#     elif item.notif_type == NOTIF_TOPIC:
-#         author = User.query.get(item.author_id)
-#         post_id = re.findall(r'\d+', item.url)[0]
-#         post = Post.query.get(post_id)
-#         notification_json = {}
-#         notification_json['notif_type'] = NOTIF_TOPIC
-#         notification_json['notif_type_subtype'] = 'new_post_in_followed_topic'
-#         notification_json['author'] = user_view(user=author.id, variant=3)
-#         notification_json['post'] = post_view(post, variant=2)
-#         return notification_json
-#     # for the NOTIF_POST
-#     elif item.notif_type == NOTIF_POST:
-#         author = User.query.get(item.author_id)
-#         # returns a list[] of numbers found, left-to-right in the url string
-#         post_and_comment_ids = re.findall(r'\d+', item.url) 
-#         post = Post.query.get(post_and_comment_ids[0])
-#         comment = PostReply.query.get(post_and_comment_ids[1])
-#         notification_json = {}
-#         notification_json['notif_type'] = NOTIF_POST
-#         notification_json['notif_type_subtype'] = 'top_level_comment_on_followed_post'
-#         notification_json['author'] = user_view(user=author.id, variant=3)
-#         notification_json['post'] = post_view(post, variant=2)
-#         notification_json['comment'] = reply_view(comment, variant=1)
-#         return notification_json
-#     # for the NOTIF_FEED
-#     elif item.notif_type == NOTIF_FEED:
-#         author = User.query.get(item.author_id)
-#         post_id = re.findall(r'\d+', item.url)[0]
-#         post = Post.query.get(post_id)
-#         notification_json = {}
-#         notification_json['notif_type'] = NOTIF_FEED
-#         notification_json['notif_type_subtype'] = 'new_post_in_followed_feed'
-#         notification_json['author'] = user_view(user=author.id, variant=3)
-#         notification_json['post'] = post_view(post, variant=2)
-#         return notification_json        
-#     # for the NOTIF_REPLY
-#     elif item.notif_type == NOTIF_REPLY:
-#         author = User.query.get(item.author_id)
-#         # returns a list[] of numbers found, left-to-right in the url string
-#         post_and_comment_ids = re.findall(r'\d+', item.url) 
-#         post = Post.query.get(post_and_comment_ids[0])
-#         comment = PostReply.query.get(post_and_comment_ids[1])
-#         notification_json = {}
-#         notification_json['notif_type'] = NOTIF_REPLY
-#         notification_json['notif_type_subtype'] = 'new_reply_on_followed_comment'
-#         notification_json['author'] = user_view(user=author.id, variant=3)
-#         notification_json['post'] = post_view(post, variant=2)
-#         notification_json['comment'] = reply_view(comment, variant=1)
-#         return notification_json
-#     # for the NOTIF_MENTION
-#     elif item.notif_type == NOTIF_MENTION:
-#         notification_json = {}
-#         if 'post' in item.url:
-#             author = User.query.get(item.author_id)
-#             post_id = re.findall(r'\d+', item.url)[0]
-#             post = Post.query.get(post_id)
-#             notification_json['author'] = user_view(user=author.id, variant=3)
-#             notification_json['post'] = post_view(post, variant=2)
-#             notification_json['notif_type'] = NOTIF_MENTION
-#             notification_json['notif_type_subtype'] = 'post_mention'
-#             return notification_json
-#         elif 'comment' in item.url:
-#             author = User.query.get(item.author_id)
-#             comment_id = re.findall(r'\d+', item.url)[0]
-#             comment = PostReply.query.get(comment_id)
-#             notification_json['author'] = user_view(user=author.id, variant=3)
-#             notification_json['comment'] = reply_view(comment, variant=1)
-#             notification_json['notif_type'] = NOTIF_MENTION
-#             notification_json['notif_type_subtype'] = 'comment_mention'
-#             return notification_json 
-#     else:
-#         return {"notif_type":item.notif_type}
+
+def put_user_notification_state(auth, data):
+    # get the notification from the data.notif_id
+    notif = Notification.query.get(data['notif_id'])
+
+    # get the read_state from the data.read_state
+    read_state = data['read_state']
+
+    # set the read state for the notification
+    if read_state == 'read':
+        notif.read = True
+    if read_state == 'unread':
+        notif.read = False
+
+    # commit that change to the db
+    db.session.commit()
+
+    # make a json for the specific notification and return that one item
+    res = _process_notification_item(notif)
+    return res
