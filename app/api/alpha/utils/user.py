@@ -273,14 +273,18 @@ def get_user_notifs_no_auth(data):
         for item in user_notifications:
             if item.read == False:
                 if isinstance(item.subtype,str):
-                    items.append(_process_notification_item(item))
+                    notif = _process_notification_item(item)
+                    notif['status'] = status
+                    items.append(notif)
                 else:
                     items.append({"notif_type":item.notif_type,"api_support":False})
     # all
     elif status == 'all':
         for item in user_notifications:
                 if isinstance(item.subtype,str):
-                    items.append(_process_notification_item(item))
+                    notif = _process_notification_item(item)
+                    notif['status'] = status
+                    items.append(notif)
                 else:
                     items.append({"notif_type":item.notif_type,"api_support":False})
     # read
@@ -288,7 +292,9 @@ def get_user_notifs_no_auth(data):
         for item in user_notifications:
             if item.read == True:
                 if isinstance(item.subtype,str):
-                    items.append(_process_notification_item(item))
+                    notif = _process_notification_item(item)
+                    notif['status'] = status
+                    items.append(notif)
                 else:
                     items.append({"notif_type":item.notif_type,"api_support":False})
 
@@ -317,6 +323,7 @@ def _process_notification_item(item):
         notification_json['notif_subtype'] = item.subtype
         notification_json['author'] = user_view(user=author.id, variant=1)
         notification_json['post'] = post_view(post, variant=2)
+        notification_json['notif_body'] = post.body if post.body else ''
         return notification_json
     # for the NOTIF_COMMUNITY
     elif item.notif_type == NOTIF_COMMUNITY:
@@ -329,6 +336,7 @@ def _process_notification_item(item):
         notification_json['author'] = user_view(user=author.id, variant=1)
         notification_json['post'] = post_view(post, variant=2)
         notification_json['community'] = community_view(community, variant=2)
+        notification_json['notif_body'] = post.body if post.body else ''
         return notification_json
     # for the NOTIF_TOPIC
     elif item.notif_type == NOTIF_TOPIC:
@@ -339,6 +347,7 @@ def _process_notification_item(item):
         notification_json['notif_subtype'] = item.subtype
         notification_json['author'] = user_view(user=author.id, variant=1)
         notification_json['post'] = post_view(post, variant=2)
+        notification_json['notif_body'] = post.body if post.body else ''
         return notification_json
     # for the NOTIF_POST
     elif item.notif_type == NOTIF_POST:
@@ -351,6 +360,7 @@ def _process_notification_item(item):
         notification_json['author'] = user_view(user=author.id, variant=1)
         notification_json['post'] = post_view(post, variant=2)
         notification_json['comment'] = reply_view(comment, variant=1)
+        notification_json['notif_body'] = comment.body if comment.body else ''
         return notification_json        
     # for the NOTIF_REPLY
     elif item.notif_type == NOTIF_REPLY:
@@ -363,7 +373,7 @@ def _process_notification_item(item):
         notification_json['author'] = user_view(user=author.id, variant=1)
         notification_json['post'] = post_view(post, variant=2)
         notification_json['comment'] = reply_view(comment, variant=1)
-        print(f'main notif reply: {notification_json}')
+        notification_json['notif_body'] = comment.body if comment.body else ''
         return notification_json
     # for the NOTIF_FEED
     elif item.notif_type == NOTIF_FEED:
@@ -374,6 +384,7 @@ def _process_notification_item(item):
         notification_json['notif_subtype'] = item.subtype
         notification_json['author'] = user_view(user=author.id, variant=1)
         notification_json['post'] = post_view(post, variant=2)
+        notification_json['notif_body'] = post.body if post.body else ''
         return notification_json        
     # for the NOTIF_MENTION
     elif item.notif_type == NOTIF_MENTION:
@@ -385,7 +396,7 @@ def _process_notification_item(item):
             notification_json['post'] = post_view(post, variant=2)
             notification_json['notif_type'] = NOTIF_MENTION
             notification_json['notif_subtype'] = item.subtype
-            print(f'main post mention: {notification_json}')
+            notification_json['notif_body'] = post.body if post.body else ''
             return notification_json
         if item.subtype == 'comment_mention':
             author = User.query.get(item.author_id)
@@ -394,7 +405,7 @@ def _process_notification_item(item):
             notification_json['comment'] = reply_view(comment, variant=1)
             notification_json['notif_type'] = NOTIF_MENTION
             notification_json['notif_subtype'] = item.subtype
-            print(f'main comment mention: {notification_json}')
+            notification_json['notif_body'] = comment.body if comment.body else ''
             return notification_json
     else:
         return {"notif_type":item.notif_type}
