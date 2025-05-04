@@ -19,7 +19,7 @@ from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, Cre
     ReportCommunityForm, \
     DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm, \
     EscalateReportForm, ResolveReportForm, CreateVideoForm, CreatePollForm, EditCommunityWikiPageForm, \
-    InviteCommunityForm, MoveCommunityForm, EditCommunityFlairForm
+    InviteCommunityForm, MoveCommunityForm, EditCommunityFlairForm, SetMyFlairForm
 from app.community.util import search_for_community, actor_to_community, \
     save_icon_file, save_banner_file, \
     delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users
@@ -32,7 +32,7 @@ from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, \
     File, PostVote, utcnow, Report, Notification, ActivityPubLog, Topic, Conversation, PostReply, \
     NotificationSubscription, UserFollower, Instance, Language, Poll, PollChoice, ModLog, CommunityWikiPage, \
-    CommunityWikiPageRevision, read_posts, Feed, FeedItem, CommunityBlock, CommunityFlair, post_flair
+    CommunityWikiPageRevision, read_posts, Feed, FeedItem, CommunityBlock, CommunityFlair, post_flair, UserFlair
 from app.community import bp
 from app.post.util import tags_to_string
 from app.shared.community import invite_with_chat, invite_with_email, subscribe_community
@@ -248,6 +248,12 @@ def show_community(community: Community):
     if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()):
         un_moderated = len(mod_user_ids) == len(inactive_mods)
 
+    # user flair in sidebar
+    user_flair = {}
+    if current_user.is_authenticated:
+        for u_flair in UserFlair.query.filter(UserFlair.community_id == community.id, UserFlair.user_id == current_user.id):
+            user_flair[u_flair.user_id] = u_flair.flair
+
     posts = None
     comments = None
     if content_type == 'posts':
@@ -288,6 +294,7 @@ def show_community(community: Community):
             if blocked_accounts:
                 posts = posts.filter(Post.user_id.not_in(blocked_accounts))
 
+        # Filter by post flair
         if flair:
             flair_id = find_flair_id(flair, community.id)
             if flair_id:
@@ -449,7 +456,7 @@ def show_community(community: Community):
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                            post_layout=post_layout, content_type=content_type, current_app=current_app,
                            user_has_feeds=user_has_feeds, current_feed_id=current_feed_id,
-                           current_feed_title=current_feed_title, )
+                           current_feed_title=current_feed_title, user_flair=user_flair)
 
 
 # RSS feed of the community
@@ -1810,6 +1817,33 @@ def community_moderate_report_ignore(community_id, report_id):
             return redirect(url_for('community.community_moderate', actor=community.link()))
         else:
             abort(404)
+
+
+@bp.route('/<actor>/my_flair', methods=['GET', 'POST'])
+@login_required
+def community_my_flair(actor):
+    community = actor_to_community(actor)
+
+    if community is not None:
+        form = SetMyFlairForm()
+        existing_flair = UserFlair.query.filter(UserFlair.community_id == community.id,
+                                                UserFlair.user_id == current_user.id).first()
+        if form.validate_on_submit():
+            if existing_flair:
+                if form.my_flair.data.strip() == '':
+                    db.session.delete(existing_flair)
+                else:
+                    existing_flair.flair = form.my_flair.data
+            else:
+                db.session.add(UserFlair(community_id=community.id, user_id=current_user.id, flair=form.my_flair.data))
+            db.session.commit()
+            flash(_('Saved'))
+            return redirect(url_for('activitypub.community_profile', actor=community.link()))
+        else:
+            if existing_flair:
+                form.my_flair.data = existing_flair.flair
+            return render_template('generic_form.html', title=_('Set your flair in %(community_name)s', community_name=community.display_name()),
+                                   form=form)
 
 
 @bp.route('/<actor>/moderate/flair', methods=['GET'])

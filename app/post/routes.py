@@ -27,7 +27,7 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_
 from app.models import Post, PostReply, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, Report, Site, Community, \
     Topic, User, Instance, NotificationSubscription, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
-    PostReplyBookmark, CommunityBlock, File, CommunityFlair
+    PostReplyBookmark, CommunityBlock, File, CommunityFlair, UserFlair
 from app.post import bp
 from app.shared.tasks import task_selector
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
@@ -112,6 +112,11 @@ def show_post(post_id: int):
                         if len(cross_posted_replies):
                             more_replies[cross_posted_post.community].extend(cross_posted_replies)
             form.notify_author.data = True
+
+            # user flair
+            user_flair = {}
+            for u_flair in UserFlair.query.filter(UserFlair.community_id == community.id):
+                user_flair[u_flair.user_id] = u_flair.flair
 
         og_image = post.image.source_url if post.image_id else None
         description = shorten_string(markdown_to_text(post.body), 150) if post.body else None
@@ -207,7 +212,7 @@ def show_post(post_id: int):
                                community=post.community, community_flair=community_flair,
                                breadcrumbs=breadcrumbs, related_communities=related_communities, mods=mod_list,
                                poll_form=poll_form, poll_results=poll_results, poll_data=poll_data, poll_choices=poll_choices, poll_total_votes=poll_total_votes,
-                               canonical=post.ap_id, form=form, replies=replies, more_replies=more_replies,
+                               canonical=post.ap_id, form=form, replies=replies, more_replies=more_replies, user_flair=user_flair,
                                THREAD_CUTOFF_DEPTH=constants.THREAD_CUTOFF_DEPTH,
                                description=description, og_image=og_image,
                                autoplay=request.args.get('autoplay', False), archive_link=archive_link,
@@ -534,7 +539,13 @@ def add_reply_inline(post_id: int, comment_id: int):
         # Federate the reply
         task_selector('make_reply', reply_id=reply.id, parent_id=in_reply_to.id)
 
-        return render_template('post/add_reply_inline_result.html', post_reply=reply)
+        user_flair = {}
+        if current_user.is_authenticated:
+            for u_flair in UserFlair.query.filter(UserFlair.community_id == post.community_id,
+                                                  UserFlair.user_id == current_user.id):
+                user_flair[u_flair.user_id] = u_flair.flair
+
+        return render_template('post/add_reply_inline_result.html', post_reply=reply, user_flair=user_flair)
 
 
 @bp.route('/post/<int:post_id>/options_menu', methods=['GET'])

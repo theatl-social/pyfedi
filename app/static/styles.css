@@ -2041,6 +2041,16 @@ form h5 {
   padding: 2px 4px;
 }
 
+.user_flair {
+  font-size: 87%;
+  background-color: #eee;
+  border-radius: 3px;
+  border: solid 1px #bbb;
+  color: #424549;
+  padding: 0px 3px 0px 3px;
+  display: inline-block;
+}
+
 .low_score .hide_button a, .low_score .comment_author a {
   font-weight: normal;
   color: #777;

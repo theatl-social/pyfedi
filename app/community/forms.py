@@ -294,6 +294,11 @@ class ReportCommunityForm(FlaskForm):
         return ', '.join(result)
 
 
+class SetMyFlairForm(FlaskForm):
+    my_flair = StringField(_l('Flair'), validators=[Optional(), Length(min=0, max=50)])
+    submit = SubmitField(_l('Save'))
+
+
 class DeleteCommunityForm(FlaskForm):
     submit = SubmitField(_l('Delete community'))
 

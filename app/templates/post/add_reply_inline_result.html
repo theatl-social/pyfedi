@@ -24,6 +24,9 @@
         {% if user.bot -%}
             <span class="fe fe-bot-account" title="Bot account"> </span>
         {% endif -%}
+        {% if user_flair and user.id in user_flair %}
+            <span class="user_flair">{{ user_flair[user.id] }}</span>
+        {% endif %}
         {% if user.id != current_user.id -%}
             {% if user.reputation < -10 -%}
                 <span class="fe fe-warning red" title="Very low reputation. Beware."> </span>

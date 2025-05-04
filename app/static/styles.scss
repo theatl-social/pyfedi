@@ -1742,6 +1742,16 @@ form {
   margin-bottom: 17px;
 }
 
+.user_flair {
+  font-size: 87%;
+  background-color: $lightest-grey;
+  border-radius: 3px;
+  border: solid 1px $grey;
+  color: $super-dark-grey;
+  padding: 0px 3px 0px 3px;
+  display: inline-block;
+}
+
 .comment_author {
   a {
 
