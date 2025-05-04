@@ -7,6 +7,7 @@ from flask_login import login_user, logout_user, current_user, login_required
 from flask_babel import _
 
 from app import db, constants, cache, limiter
+from app.constants import POST_STATUS_REVIEWING
 from app.inoculation import inoculation
 from app.models import Post, Domain, Community, DomainBlock, read_posts
 from app.domain import bp

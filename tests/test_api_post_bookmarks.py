@@ -1,6 +1,7 @@
 import pytest
 from flask import Flask
 from app import create_app, db
+from app.constants import POST_STATUS_REVIEWING
 from config import Config
 from app.models import User, Post
 from sqlalchemy import text

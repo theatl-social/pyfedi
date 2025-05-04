@@ -8,7 +8,8 @@ from app import db
 from app.models import PostReply, Post, Community
 from app.utils import blocked_instances, blocked_users, is_video_hosting_site
 
-from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_ARTICLE, POST_TYPE_VIDEO
+from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_ARTICLE, POST_TYPE_VIDEO, POST_TYPE_POLL
+
 
 # replies to a post, in a tree, sorted by a variety of methods
 def post_replies(community: Community, post_id: int, sort_by: str, show_first: int = 0) -> List[PostReply]:

@@ -4,6 +4,7 @@ from flask_babel import _
 from sqlalchemy import or_, desc, text
 
 from app import limiter, db
+from app.constants import POST_STATUS_REVIEWING
 from app.models import Post, Language, Community, Instance, PostReply
 from app.search import bp
 from app.utils import moderating_communities, joined_communities, render_template, blocked_domains, blocked_instances, \

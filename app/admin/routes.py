@@ -24,7 +24,7 @@ from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_
     topics_for_form, move_community_images_to_here
 from app.community.util import save_icon_file, save_banner_file, search_for_community
 from app.community.routes import do_subscribe
-from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED
+from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED, POST_STATUS_REVIEWING
 from app.email import send_welcome_email
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission, Domain, \
