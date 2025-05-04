@@ -218,14 +218,18 @@ def get_user_notifications(auth, data):
         for item in user_notifications:
             if item.read == False:
                 if isinstance(item.subtype,str):
-                    items.append(_process_notification_item(item))
+                    notif = _process_notification_item(item)
+                    notif['status'] = status
+                    items.append(notif)
                 else:
                     items.append({"notif_type":item.notif_type,"api_support":False})
     # all
     elif status == 'all':
         for item in user_notifications:
                 if isinstance(item.subtype,str):
-                    items.append(_process_notification_item(item))
+                    notif = _process_notification_item(item)
+                    notif['status'] = status
+                    items.append(notif)
                 else:
                     items.append({"notif_type":item.notif_type,"api_support":False})
     # read
@@ -233,7 +237,9 @@ def get_user_notifications(auth, data):
         for item in user_notifications:
             if item.read == True:
                 if isinstance(item.subtype,str):
-                    items.append(_process_notification_item(item))
+                    notif = _process_notification_item(item)
+                    notif['status'] = status
+                    items.append(notif)
                 else:
                     items.append({"notif_type":item.notif_type,"api_support":False})
 
@@ -319,10 +325,12 @@ def _process_notification_item(item):
         author = User.query.get(item.author_id)
         post = Post.query.get(item.targets['post_id'])
         notification_json = {}
+        notification_json['notif_id'] = item.id
         notification_json['notif_type'] = NOTIF_USER
         notification_json['notif_subtype'] = item.subtype
         notification_json['author'] = user_view(user=author.id, variant=1)
         notification_json['post'] = post_view(post, variant=2)
+        notification_json['post_id'] = post.id
         notification_json['notif_body'] = post.body if post.body else ''
         return notification_json
     # for the NOTIF_COMMUNITY
@@ -331,10 +339,12 @@ def _process_notification_item(item):
         post = Post.query.get(item.targets['post_id'])
         community = Community.query.get(item.targets['community_id'])
         notification_json = {}
+        notification_json['notif_id'] = item.id
         notification_json['notif_type'] = NOTIF_COMMUNITY
         notification_json['notif_subtype'] = item.subtype
         notification_json['author'] = user_view(user=author.id, variant=1)
         notification_json['post'] = post_view(post, variant=2)
+        notification_json['post_id'] = post.id
         notification_json['community'] = community_view(community, variant=2)
         notification_json['notif_body'] = post.body if post.body else ''
         return notification_json
@@ -343,10 +353,12 @@ def _process_notification_item(item):
         author = User.query.get(item.author_id)
         post = Post.query.get(item.targets['post_id'])
         notification_json = {}
+        notification_json['notif_id'] = item.id
         notification_json['notif_type'] = NOTIF_TOPIC
         notification_json['notif_subtype'] = item.subtype
         notification_json['author'] = user_view(user=author.id, variant=1)
         notification_json['post'] = post_view(post, variant=2)
+        notification_json['post_id'] = post.id
         notification_json['notif_body'] = post.body if post.body else ''
         return notification_json
     # for the NOTIF_POST
@@ -355,11 +367,14 @@ def _process_notification_item(item):
         post = Post.query.get(item.targets['post_id'])
         comment = PostReply.query.get(item.targets['comment_id'])
         notification_json = {}
+        notification_json['notif_id'] = item.id
         notification_json['notif_type'] = NOTIF_POST
         notification_json['notif_subtype'] = item.subtype
         notification_json['author'] = user_view(user=author.id, variant=1)
         notification_json['post'] = post_view(post, variant=2)
+        notification_json['post_id'] = post.id
         notification_json['comment'] = reply_view(comment, variant=1)
+        notification_json['comment_id'] = comment.id
         notification_json['notif_body'] = comment.body if comment.body else ''
         return notification_json        
     # for the NOTIF_REPLY
@@ -368,11 +383,14 @@ def _process_notification_item(item):
         post = Post.query.get(item.targets['post_id'])
         comment = PostReply.query.get(item.targets['comment_id'])
         notification_json = {}
+        notification_json['notif_id'] = item.id
         notification_json['notif_type'] = NOTIF_REPLY
         notification_json['notif_subtype'] = item.subtype
         notification_json['author'] = user_view(user=author.id, variant=1)
         notification_json['post'] = post_view(post, variant=2)
+        notification_json['post_id'] = post.id
         notification_json['comment'] = reply_view(comment, variant=1)
+        notification_json['comment_id'] = comment.id
         notification_json['notif_body'] = comment.body if comment.body else ''
         return notification_json
     # for the NOTIF_FEED
@@ -380,10 +398,12 @@ def _process_notification_item(item):
         author = User.query.get(item.author_id)
         post = Post.query.get(item.targets['post_id'])
         notification_json = {}
+        notification_json['notif_id'] = item.id
         notification_json['notif_type'] = NOTIF_FEED
         notification_json['notif_subtype'] = item.subtype
         notification_json['author'] = user_view(user=author.id, variant=1)
         notification_json['post'] = post_view(post, variant=2)
+        notification_json['post_id'] = post.id
         notification_json['notif_body'] = post.body if post.body else ''
         return notification_json        
     # for the NOTIF_MENTION
@@ -394,6 +414,8 @@ def _process_notification_item(item):
             post = Post.query.get(item.targets['post_id'])
             notification_json['author'] = user_view(user=author.id, variant=1)
             notification_json['post'] = post_view(post, variant=2)
+            notification_json['post_id'] = post.id
+            notification_json['notif_id'] = item.id
             notification_json['notif_type'] = NOTIF_MENTION
             notification_json['notif_subtype'] = item.subtype
             notification_json['notif_body'] = post.body if post.body else ''
@@ -403,6 +425,8 @@ def _process_notification_item(item):
             comment = PostReply.query.get(item.targets['comment_id'])
             notification_json['author'] = user_view(user=author.id, variant=1)
             notification_json['comment'] = reply_view(comment, variant=1)
+            notification_json['comment_id'] = comment.id
+            notification_json['notif_id'] = item.id
             notification_json['notif_type'] = NOTIF_MENTION
             notification_json['notif_subtype'] = item.subtype
             notification_json['notif_body'] = comment.body if comment.body else ''
