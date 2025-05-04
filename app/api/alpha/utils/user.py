@@ -315,7 +315,7 @@ def _process_notification_item(item):
         notification_json = {}
         notification_json['notif_type'] = NOTIF_USER
         notification_json['notif_subtype'] = item.subtype
-        notification_json['author'] = user_view(user=author.id, variant=3)
+        notification_json['author'] = user_view(user=author.id, variant=1)
         notification_json['post'] = post_view(post, variant=2)
         return notification_json
     # for the NOTIF_COMMUNITY
@@ -326,7 +326,7 @@ def _process_notification_item(item):
         notification_json = {}
         notification_json['notif_type'] = NOTIF_COMMUNITY
         notification_json['notif_subtype'] = item.subtype
-        notification_json['author'] = user_view(user=author.id, variant=3)
+        notification_json['author'] = user_view(user=author.id, variant=1)
         notification_json['post'] = post_view(post, variant=2)
         notification_json['community'] = community_view(community, variant=2)
         return notification_json
@@ -337,7 +337,7 @@ def _process_notification_item(item):
         notification_json = {}
         notification_json['notif_type'] = NOTIF_TOPIC
         notification_json['notif_subtype'] = item.subtype
-        notification_json['author'] = user_view(user=author.id, variant=3)
+        notification_json['author'] = user_view(user=author.id, variant=1)
         notification_json['post'] = post_view(post, variant=2)
         return notification_json
     # for the NOTIF_POST
@@ -348,7 +348,7 @@ def _process_notification_item(item):
         notification_json = {}
         notification_json['notif_type'] = NOTIF_POST
         notification_json['notif_subtype'] = item.subtype
-        notification_json['author'] = user_view(user=author.id, variant=3)
+        notification_json['author'] = user_view(user=author.id, variant=1)
         notification_json['post'] = post_view(post, variant=2)
         notification_json['comment'] = reply_view(comment, variant=1)
         return notification_json        
@@ -360,7 +360,7 @@ def _process_notification_item(item):
         notification_json = {}
         notification_json['notif_type'] = NOTIF_REPLY
         notification_json['notif_subtype'] = item.subtype
-        notification_json['author'] = user_view(user=author.id, variant=3)
+        notification_json['author'] = user_view(user=author.id, variant=1)
         notification_json['post'] = post_view(post, variant=2)
         notification_json['comment'] = reply_view(comment, variant=1)
         print(f'main notif reply: {notification_json}')
@@ -372,7 +372,7 @@ def _process_notification_item(item):
         notification_json = {}
         notification_json['notif_type'] = NOTIF_FEED
         notification_json['notif_subtype'] = item.subtype
-        notification_json['author'] = user_view(user=author.id, variant=3)
+        notification_json['author'] = user_view(user=author.id, variant=1)
         notification_json['post'] = post_view(post, variant=2)
         return notification_json        
     # for the NOTIF_MENTION
@@ -381,7 +381,7 @@ def _process_notification_item(item):
         if item.subtype == 'post_mention':
             author = User.query.get(item.author_id)
             post = Post.query.get(item.targets['post_id'])
-            notification_json['author'] = user_view(user=author.id, variant=3)
+            notification_json['author'] = user_view(user=author.id, variant=1)
             notification_json['post'] = post_view(post, variant=2)
             notification_json['notif_type'] = NOTIF_MENTION
             notification_json['notif_subtype'] = item.subtype
@@ -390,7 +390,7 @@ def _process_notification_item(item):
         if item.subtype == 'comment_mention':
             author = User.query.get(item.author_id)
             comment = PostReply.query.get(item.targets['comment_id'])
-            notification_json['author'] = user_view(user=author.id, variant=3)
+            notification_json['author'] = user_view(user=author.id, variant=1)
             notification_json['comment'] = reply_view(comment, variant=1)
             notification_json['notif_type'] = NOTIF_MENTION
             notification_json['notif_subtype'] = item.subtype
