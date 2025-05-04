@@ -248,11 +248,10 @@ def show_community(community: Community):
     if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()):
         un_moderated = len(mod_user_ids) == len(inactive_mods)
 
-    # user flair in sidebar
+    # user flair in sidebar and teasers
     user_flair = {}
-    if current_user.is_authenticated:
-        for u_flair in UserFlair.query.filter(UserFlair.community_id == community.id, UserFlair.user_id == current_user.id):
-            user_flair[u_flair.user_id] = u_flair.flair
+    for u_flair in UserFlair.query.filter(UserFlair.community_id == community.id):
+        user_flair[u_flair.user_id] = u_flair.flair
 
     posts = None
     comments = None
