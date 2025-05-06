@@ -207,11 +207,15 @@ def get_user_notifications(auth, data):
     # get the status from data.status_request
     status = data['status_request']
 
+    # get the page for pagination from the data.page
+    page = int(data['page']) if data and 'page' in data else 1
+    limit = int(data['limit']) if data and 'limit' in data else 10
+
     # items dict
     items = []
 
     # setup the db query/generator all notifications for the user
-    user_notifications = Notification.query.filter_by(user_id=user.id).order_by(desc(Notification.notif_type))
+    user_notifications = Notification.query.filter_by(user_id=user.id).order_by(desc(Notification.created_at)).paginate(page=page, per_page=limit, error_out=False)
     
     # new
     if status == 'new':
@@ -372,13 +376,18 @@ def put_user_notification_state(auth, data):
     # get the notification from the data.notif_id
     notif = Notification.query.get(data['notif_id'])
 
+    # make sure the notif belongs to the user
+    user = authorise_api_user(auth, return_type='model')
+    if notif.user_id != user.id:
+        raise Exception('Notification does not belong to provided User.')
+
     # get the read_state from the data.read_state
     read_state = data['read_state']
 
     # set the read state for the notification
-    if read_state == 'read':
+    if read_state == 'true':
         notif.read = True
-    if read_state == 'unread':
+    if read_state == 'false':
         notif.read = False
 
     # commit that change to the db

@@ -562,28 +562,29 @@ def put_alpha_user_save_user_settings():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/user/notifications/<status>')
-def get_alpha_user_notifications(status):
+@bp.route('/api/alpha/user/notifications')
+def get_alpha_user_notifications():
     if not enable_api():
         return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = {}
-        data['status_request'] = status
+        data['status_request'] = request.args.get('status_request','all')
+        data['page'] = request.args.get('page','1')
         return jsonify(get_user_notifications(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400    
 
 
-@bp.route('/api/alpha/user/notifications/<notif_id>/<read_state>', methods=['PUT'])
-def put_alpha_user_notification_state(notif_id, read_state):
+@bp.route('/api/alpha/user/notification_state', methods=['PUT'])
+def put_alpha_user_notification_state():
     if not enable_api():
         return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = {}
-        data['notif_id'] = notif_id
-        data['read_state'] = read_state
+        data['notif_id'] = request.args.get('notif_id')
+        data['read_state'] = request.args.get('read_state')
         return jsonify(put_user_notification_state(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400    
