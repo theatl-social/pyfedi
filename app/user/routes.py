@@ -887,7 +887,6 @@ def notifications():
         if notification.notif_type != NOTIF_DEFAULT:
             if notification.read:
                 notification_types[notif_id_to_string(notification.notif_type)] += 0
-
             else:
                 notification_types[notif_id_to_string(notification.notif_type)] += 1
             notification_links[notif_id_to_string(notification.notif_type)].add(notification.notif_type)
@@ -932,11 +931,17 @@ def notification_delete(notification_id):
 @bp.route('/notifications/all_read', methods=['GET', 'POST'])
 @login_required
 def notifications_all_read():
-    db.session.execute(text('UPDATE notification SET read=true WHERE user_id = :user_id'), {'user_id': current_user.id})
-    current_user.unread_notifications = 0
+    notif_type = request.args.get('type', '')
+    original_notif_type = notif_type
+    if notif_type == '':
+        db.session.execute(text('UPDATE notification SET read=true WHERE user_id = :user_id'), {'user_id': current_user.id})
+    else:
+        notif_type = tuple(int(x.strip()) for x in notif_type.strip('{}').split(','))  # convert '{41, 10}' to a tuple containing 41 and 10
+        db.session.execute(text('UPDATE notification SET read=true WHERE notif_type IN :notif_type AND user_id = :user_id'),
+                           {'notif_type': notif_type, 'user_id': current_user.id})
     db.session.commit()
     flash(_('All notifications marked as read.'))
-    return redirect(url_for('user.notifications'))
+    return redirect(url_for('user.notifications', type=original_notif_type))
 
 
 def import_settings(filename):
