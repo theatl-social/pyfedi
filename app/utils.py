@@ -1987,15 +1987,15 @@ def notif_id_to_string(notif_id) -> str:
     if notif_id == NOTIF_USER:
         return _('User')
     if notif_id == NOTIF_COMMUNITY:
-        return _('Community post')
+        return _('Community')
     if notif_id == NOTIF_TOPIC:
-        return _('Topic/feed post')
+        return _('Topic/feed')
     if notif_id == NOTIF_POST:
         return _('Comment')
     if notif_id == NOTIF_REPLY:
         return _('Comment')
     if notif_id == NOTIF_FEED:
-        return _('Topic/feed post')
+        return _('Topic/feed')
     if notif_id == NOTIF_MENTION:
         return _('Comment')
     if notif_id == NOTIF_MESSAGE:
