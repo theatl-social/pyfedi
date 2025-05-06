@@ -1999,7 +1999,7 @@ def notif_id_to_string(notif_id) -> str:
     if notif_id == NOTIF_MENTION:
         return _('Comment')
     if notif_id == NOTIF_MESSAGE:
-        return _('PM')
+        return _('Chat')
     if notif_id == NOTIF_BAN:
         return _('Admin')
     if notif_id == NOTIF_UNBAN:
