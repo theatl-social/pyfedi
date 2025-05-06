@@ -396,3 +396,28 @@ def put_user_notification_state(auth, data):
     # make a json for the specific notification and return that one item
     res = _process_notification_item(notif)
     return res
+
+
+def get_user_notifications_count(auth):
+    # get the user
+    user = authorise_api_user(auth, return_type='model')
+    # get the user's unread notifications count
+    unread_notifs_count = Notification.query.with_entities(func.count()).where(Notification.user_id == user.id).where(Notification.read == False).scalar()
+    # make the dict and add that info, then return it
+    res = {}
+    res['count'] = unread_notifs_count
+    return res
+
+def put_user_mark_all_notifications_read(auth):
+    # get the user
+    user = authorise_api_user(auth, return_type='model')
+    # get the unread notifs
+    unread_notifications = Notification.query.filter_by(user_id=user.id,read=False)
+    # set them all as read
+    for n in unread_notifications:
+        n.read = True 
+    # save the changes to the db
+    db.session.commit()
+    # return a message, though it may not be used by the client
+    res = {"mark_all_notifications_as_read":"complete"}
+    return res
