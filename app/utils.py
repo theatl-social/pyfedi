@@ -29,7 +29,6 @@ from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_TRUSTED, DOWNVOTE
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 import os
 from furl import furl
-import boto3
 from flask import current_app, json, redirect, url_for, request, make_response, Response, g, flash, abort
 from flask_babel import _, lazy_gettext as _l
 from flask_login import current_user, logout_user
@@ -40,6 +39,7 @@ from wtforms.widgets import Select, html_params, ListWidget, CheckboxInput, Text
 from wtforms.validators import ValidationError
 from markupsafe import Markup
 from app import db, cache, httpx_client, celery
+from app.constants import *
 import re
 from PIL import Image, ImageOps
 
@@ -1981,3 +1981,42 @@ def move_file_to_s3(file_id, s3):
                     file.source_url = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
                     db.session.commit()
 
+
+def notif_id_to_string(notif_id) -> str:
+    # -- user level ---
+    if notif_id == NOTIF_USER:
+        return _('User')
+    if notif_id == NOTIF_COMMUNITY:
+        return _('Community post')
+    if notif_id == NOTIF_TOPIC:
+        return _('Topic/feed post')
+    if notif_id == NOTIF_POST:
+        return _('Comment')
+    if notif_id == NOTIF_REPLY:
+        return _('Comment')
+    if notif_id == NOTIF_FEED:
+        return _('Topic/feed post')
+    if notif_id == NOTIF_MENTION:
+        return _('Comment')
+    if notif_id == NOTIF_MESSAGE:
+        return _('PM')
+    if notif_id == NOTIF_BAN:
+        return _('Admin')
+    if notif_id == NOTIF_UNBAN:
+        return _('Admin')
+    if notif_id == NOTIF_NEW_MOD:
+        return _('Admin')
+
+    # --- mod/admin level ---
+    if notif_id == NOTIF_REPORT:
+        return _('Admin')
+
+    # --- admin level ---
+    if notif_id == NOTIF_REPORT_ESCALATION:
+        return _('Admin')
+    if notif_id == NOTIF_REGISTRATION:
+        return _('Admin')
+
+    # --model/db default--
+    if notif_id == NOTIF_DEFAULT:
+        return _('All')

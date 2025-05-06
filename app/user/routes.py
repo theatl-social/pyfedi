@@ -1,5 +1,5 @@
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
-from time import sleep
 from random import randint
 from io import BytesIO
 
@@ -25,10 +25,10 @@ from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportU
 from app.user.utils import purge_user_then_delete, unsubscribe_from_community, search_for_user
 from app.utils import render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     gibberish, file_get_contents, community_membership, user_filters_home, \
-    user_filters_posts, user_filters_replies, moderating_communities, joined_communities, theme_list, blocked_instances, \
-    blocked_users, menu_topics, add_to_modlog, \
-    blocked_communities, piefed_markdown_to_lemmy_markdown, menu_instance_feeds, menu_my_feeds, languages_for_form, \
-    read_language_choices, request_etag_matches, return_304, mimetype_from_url
+    user_filters_posts, user_filters_replies, theme_list, \
+    blocked_users, add_to_modlog, \
+    blocked_communities, piefed_markdown_to_lemmy_markdown, \
+    read_language_choices, request_etag_matches, return_304, mimetype_from_url, notif_id_to_string
 from sqlalchemy import desc, or_, text, asc
 from sqlalchemy.orm.exc import NoResultFound
 import os
@@ -875,11 +875,31 @@ def notifications():
     current_user.unread_notifications = Notification.query.filter_by(user_id=current_user.id, read=False).count()
     db.session.commit()
 
-    notification_list = Notification.query.filter_by(user_id=current_user.id).order_by(desc(Notification.created_at)).all()
+    type = request.args.get('type', '')
+    current_filter = type
+    has_notifications = False
 
-    return render_template('user/notifications.html', title=_('Notifications'), notifications=notification_list, user=current_user,
-                           site=g.site,
-                           
+    notification_types = defaultdict(int)
+    notification_links = defaultdict(set)
+    notification_list = Notification.query.filter_by(user_id=current_user.id).order_by(desc(Notification.created_at)).all()
+    for notification in notification_list:
+        has_notifications = True
+        if notification.notif_type != NOTIF_DEFAULT:
+            if notification.read:
+                notification_types[notif_id_to_string(notification.notif_type)] += 0
+
+            else:
+                notification_types[notif_id_to_string(notification.notif_type)] += 1
+            notification_links[notif_id_to_string(notification.notif_type)].add(notification.notif_type)
+
+    if type:
+        type = tuple(int(x.strip()) for x in type.strip('{}').split(','))   # convert '{41, 10}' to a tuple containing 41 and 10
+        notification_list = Notification.query.filter_by(user_id=current_user.id).filter(Notification.notif_type.in_(type)).order_by(desc(Notification.created_at)).all()
+
+    return render_template('user/notifications.html', title=_('Notifications'), notifications=notification_list,
+                           notification_types=notification_types, has_notifications=has_notifications,
+                           user=current_user, notification_links=notification_links, current_filter=current_filter,
+                           site=g.site
                            )
 
 
