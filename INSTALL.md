@@ -412,8 +412,9 @@ Inspect log files at:
 * `/var/log/nginx/*`
 * `/your_piefed_installation/logs/pyfedi.log`
 
+### Reverse Proxies
 
-### Nginx
+#### Nginx
 
 You need a reverse proxy that sends all traffic to port 5000. Something like:
 
@@ -461,6 +462,21 @@ server {
 
 **_The above is not a complete configuration_** - you will want to add more settings for SSL, etc. See also
 https://codeberg.org/rimu/pyfedi/issues/136#issuecomment-1726739
+
+#### Caddy
+
+```
+piefed.social {
+        # Serve static files directly with caddy
+        handle_path /static/* {
+                root * /whatever/app/static/
+                file_server
+                header Cache-Control "max-age=31536000"
+        }
+
+        reverse_proxy :5000
+}
+```
 
 ### Cron tasks
 
