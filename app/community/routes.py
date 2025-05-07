@@ -839,7 +839,7 @@ def community_edit(community_id: int):
         return show_ban_message()
     community = Community.query.get_or_404(community_id)
     old_topic_id = community.topic_id if community.topic_id else None
-    if community.is_owner() or current_user.is_admin():
+    if community.is_owner() or current_user.is_admin() or community.is_moderator():
         form = EditCommunityForm()
         form.topic.choices = topics_for_form(0)
         form.languages.choices = languages_for_form()
