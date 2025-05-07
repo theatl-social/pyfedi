@@ -29,7 +29,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     feed_tree_public, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, html_to_text, \
     get_redis_connection, subscribed_feeds
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
-    Notification, Language, community_language, ModLog, read_posts, Feed, FeedItem
+    Notification, Language, community_language, ModLog, read_posts, Feed, FeedItem, CommunityFlair
 
 
 @bp.route('/', methods=['HEAD', 'GET', 'POST'])

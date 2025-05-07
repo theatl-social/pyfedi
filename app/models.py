@@ -1,5 +1,4 @@
 import html
-import json
 from datetime import datetime, timedelta, date, timezone
 from time import time
 from typing import List, Union, Type
@@ -13,7 +12,6 @@ from sqlalchemy import or_, text, desc, Index
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_babel import _, lazy_gettext as _l
-from sqlalchemy.orm import backref
 from sqlalchemy_utils.types import TSVectorType # https://sqlalchemy-searchable.readthedocs.io/en/latest/installation.html
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.mutable import MutableList
@@ -536,6 +534,7 @@ class Community(db.Model):
     icon = db.relationship('File', foreign_keys=[icon_id], single_parent=True, backref='community', cascade="all, delete-orphan")
     image = db.relationship('File', foreign_keys=[image_id], single_parent=True, cascade="all, delete-orphan")
     languages = db.relationship('Language', lazy='dynamic', secondary=community_language, backref=db.backref('communities', lazy='dynamic'))
+    flair = db.relationship('CommunityFlair', backref=db.backref('community'), cascade="all, delete-orphan")
 
     __table_args__ = (
         db.Index(
@@ -719,6 +718,17 @@ class Community(db.Model):
             return 1
         else:
             return 0
+
+    def flair_for_ap(self):
+        result = []
+        for flair in self.flair:
+            result.append({'type': 'lemmy:CommunityTag',
+                           'id': f'https://{current_app.config["SERVER_NAME"]}/c/{self.link()}/tag/{flair.id}',
+                           'display_name': flair.flair,
+                           'text_color': flair.text_color,
+                           'background_color': flair.background_color
+                           })
+        return result
 
     def delete_dependencies(self):
         for post in self.posts:
@@ -1338,7 +1348,7 @@ class Post(db.Model):
     @classmethod
     def new(cls, user: User, community: Community, request_json: dict, announce_id=None):
         from app.activitypub.util import instance_weight, find_language_or_create, find_language, find_hashtag_or_create, \
-            find_licence_or_create, make_image_sizes, notify_about_post
+            find_licence_or_create, make_image_sizes, notify_about_post, find_flair_or_create
         from app.utils import allowlist_html, markdown_to_html, html_to_text, microblog_content_to_title, blocked_phrases, \
             is_image_url, is_video_url, domain_from_url, opengraph_parse, shorten_string, fixup_url, \
             is_video_hosting_site, communities_banned_from, recently_upvoted_posts, blocked_users
@@ -1531,6 +1541,10 @@ class Post(db.Model):
                             hashtag = find_hashtag_or_create(json_tag['name'])
                             if hashtag:
                                 post.tags.append(hashtag)
+                    if json_tag and json_tag['type'] == 'lemmy:CommunityTag':
+                        flair = find_flair_or_create(json_tag, post.community_id)
+                        if flair:
+                            post.flair.append(flair)
             if 'searchableBy' in request_json['object'] and request_json['object']['searchableBy'] != 'https://www.w3.org/ns/activitystreams#Public':
                 post.indexable = False
 
@@ -1755,6 +1769,12 @@ class Post(db.Model):
 
     def tags_for_activitypub(self):
         return_value = []
+        for flair in self.flair:
+            return_value.append({'type': 'lemmy:CommunityTag',
+                                 'id': f'https://{current_app.config["SERVER_NAME"]}/c/{self.community.link()}/tag/{flair.id}',
+                                 'display_name': flair.flair,
+                                 'text_color': flair.text_color,
+                                 'background_color': flair.background_color})
         for tag in self.tags:
             return_value.append({'type': 'Hashtag',
                                  'href': f'https://{current_app.config["SERVER_NAME"]}/tag/{tag.name}',

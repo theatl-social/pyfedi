@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import html
 import os
-import re
 from datetime import timedelta, datetime, timezone
 from json import JSONDecodeError
 from random import randint
@@ -20,7 +18,7 @@ from app import db, cache, constants, celery
 from app.models import User, Post, Community, BannedInstances, File, PostReply, AllowedInstances, Instance, utcnow, \
     PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation, \
     Language, Tag, Poll, PollChoice, UserFollower, CommunityBan, CommunityJoinRequest, NotificationSubscription, \
-    Licence, UserExtraField, Feed, FeedMember, FeedItem
+    Licence, UserExtraField, Feed, FeedMember, FeedItem, CommunityFlair
 from app.activitypub.signature import signed_get_request, post_request
 import time
 from app.constants import *
@@ -330,6 +328,16 @@ def find_hashtag_or_create(hashtag: str) -> Tag:
         return new_tag
 
 
+def find_flair_or_create(flair: dict, community_id: int) -> CommunityFlair:
+    existing_flair = CommunityFlair.query.filter(CommunityFlair.flair == flair['display_name'].strip(), CommunityFlair.community_id == community_id).first()
+    if existing_flair:
+        return existing_flair
+    else:
+        new_flair = CommunityFlair(flair=flair['display_name'].strip(), community_id=community_id,
+                                   text_color=flair['text_color'], background_color=flair['background_color'])
+        return new_flair
+
+
 def extract_domain_and_actor(url_string: str):
     # Parse the URL
     if url_string.endswith('/'):              # WordPress
@@ -587,6 +595,17 @@ def refresh_community_profile_task(community_id, activity_json):
             if instance and instance.software == 'peertube':
                 community.restricted_to_mods = True
             session.commit()
+
+            if 'lemmy:tagsForPosts' in activity_json and isinstance(activity_json['lemmy:tagsForPosts'], list):
+                if community.flair.count() == 0:    # for now, all we do is populate community flair if there is not yet any. simpler.
+                    for flair in activity_json['lemmy:tagsForPosts']:
+                        flair_dict = {'display_name': flair['display_name']}
+                        if 'text_color' in flair:
+                            flair_dict['text_color'] = flair['text_color']
+                        if 'background_color' in flair:
+                            flair_dict['background_color'] = flair['background_color']
+                        community.flair.append(find_flair_or_create(flair_dict, community.id))
+                    session.commit()
 
             if community.icon_id and icon_changed:
                 make_image_sizes(community.icon_id, 60, 250, 'communities')
@@ -958,6 +977,15 @@ def actor_json_to_model(activity_json, address, server):
         except IntegrityError:
             db.session.rollback()
             return Community.query.filter_by(ap_profile_id=activity_json['id'].lower()).one()
+        if 'lemmy:tagsForPosts' in activity_json and isinstance(activity_json['lemmy:tagsForPosts'], list):
+            for flair in activity_json['lemmy:tagsForPosts']:
+                flair_dict = {'display_name': flair['display_name']}
+                if 'text_color' in flair:
+                    flair_dict['text_color'] = flair['text_color']
+                if 'background_color' in flair:
+                    flair_dict['background_color'] = flair['background_color']
+                community.flair.append(find_flair_or_create(flair_dict, community.id))
+            db.session.commit()
         if community.icon_id:
             make_image_sizes(community.icon_id, 60, 250, 'communities')
         if community.image_id:
@@ -2088,6 +2116,10 @@ def update_post_from_activity(post: Post, request_json: dict):
                     hashtag = find_hashtag_or_create(json_tag['name'])
                     if hashtag:
                         post.tags.append(hashtag)
+            if json_tag['type'] == 'lemmy:CommunityTag':
+                flair = find_flair_or_create(json_tag, post.community_id)
+                if flair:
+                    post.flair.append(flair)
             if 'type' in json_tag and json_tag['type'] == 'Mention':
                 profile_id = json_tag['href'] if 'href' in json_tag else None
                 if profile_id and isinstance(profile_id, str) and profile_id.startswith('https://' + current_app.config['SERVER_NAME']):

@@ -450,6 +450,7 @@ def community_profile(actor):
                 },
                 "published": ap_datetime(community.created_at),
                 "updated": ap_datetime(community.last_active),
+                "lemmy:tagsForPosts": community.flair_for_ap()
             }
             if community.description_html:
                 actor_data["summary"] = community.description_html
