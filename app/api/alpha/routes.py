@@ -570,7 +570,7 @@ def get_alpha_user_notifications():
     try:
         auth = request.headers.get('Authorization')
         data = {}
-        data['status_request'] = request.args.get('status_request','all')
+        data['status_request'] = request.args.get('status_request','All')
         data['page'] = request.args.get('page','1')
         return jsonify(get_user_notifications(auth, data))
     except Exception as ex:
@@ -583,9 +583,10 @@ def put_alpha_user_notification_state():
         return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
-        data = {}
-        data['notif_id'] = request.args.get('notif_id')
-        data['read_state'] = request.args.get('read_state')
+        # data = {}
+        # data['notif_id'] = request.args.get('notif_id')
+        # data['read_state'] = request.args.get('read_state')
+        data = request.get_json(force=True) or {}
         return jsonify(put_user_notification_state(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400    

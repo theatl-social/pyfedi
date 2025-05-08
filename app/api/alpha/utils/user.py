@@ -218,7 +218,7 @@ def get_user_notifications(auth, data):
     user_notifications = Notification.query.filter_by(user_id=user.id).order_by(desc(Notification.created_at)).paginate(page=page, per_page=limit, error_out=False)
     
     # new
-    if status == 'new':
+    if status == 'New':
         for item in user_notifications:
             if item.read == False:
                 if isinstance(item.subtype,str):
@@ -226,14 +226,14 @@ def get_user_notifications(auth, data):
                     notif['status'] = status
                     items.append(notif)
     # all
-    elif status == 'all':
+    elif status == 'All':
         for item in user_notifications:
                 if isinstance(item.subtype,str):
                     notif = _process_notification_item(item)
                     notif['status'] = status
                     items.append(notif)
     # read
-    elif status == 'read':
+    elif status == 'Read':
         for item in user_notifications:
             if item.read == True:
                 if isinstance(item.subtype,str):
@@ -373,22 +373,19 @@ def _process_notification_item(item):
 
 
 def put_user_notification_state(auth, data):
+    user = authorise_api_user(auth, return_type='model')
+    notif_id = data['notif_id'] if 'notif_id' in data else None
+    read_state = data['read_state'] if 'read_state' in data else None
+    
     # get the notification from the data.notif_id
-    notif = Notification.query.get(data['notif_id'])
+    notif = Notification.query.get(notif_id)
 
     # make sure the notif belongs to the user
-    user = authorise_api_user(auth, return_type='model')
     if notif.user_id != user.id:
         raise Exception('Notification does not belong to provided User.')
 
-    # get the read_state from the data.read_state
-    read_state = data['read_state']
-
     # set the read state for the notification
-    if read_state == 'true':
-        notif.read = True
-    if read_state == 'false':
-        notif.read = False
+    notif.read = read_state
 
     # commit that change to the db
     db.session.commit()
