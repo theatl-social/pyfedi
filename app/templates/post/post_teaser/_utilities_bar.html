@@ -41,7 +41,7 @@
     {% if not embed -%}
         <div class="post_options_link pull-right">
             {% if current_user.is_authenticated and joined_communities and post.community_id not in joined_communities %}
-                <a class="small" rel="nofollow" aria-label="{{ _('Join') }}" href="{{ url_for('community.subscribe', actor=post.community.link()) }}">{{ _('Join') }}</a>
+                <a class="small" rel="nofollow" title="{{ _('Join this community') }}" aria-label="{{ _('Join this community') }}" href="{{ url_for('community.subscribe', actor=post.community.link()) }}">{{ _('Join') }}</a>
             {% endif -%}
             <div class="dropdown" id="post_options_dropdown_{{ post.id }}">
                 <a href="{{ url_for('post.post_options', post_id=post.id) if low_bandwidth else '#' }}"
