@@ -1730,12 +1730,19 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
         # set depth to +1 of the parent depth
         if parent_comment_id:
             parent_comment = PostReply.query.get(parent_comment_id)
+            if parent_comment.author.has_blocked_user(user.id) or parent_comment.author.has_blocked_instance(user.instance_id):
+                log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Parent comment author blocked replier')
+                return None
         else:
             parent_comment = None
         if post_id is None:
             log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Could not find parent post')
             return None
         post = Post.query.get(post_id)
+
+        if post.author.has_blocked_user(user.id) or post.author.has_blocked_instance(user.instance_id):
+            log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Post author blocked replier')
+            return None
 
         body = body_html = ''
         if 'content' in request_json['object']:   # Kbin, Mastodon, etc provide their posts as html

@@ -149,8 +149,13 @@ def make_reply(input, post, parent_id, src, auth=None):
 
     if parent_id:
         parent_reply = PostReply.query.filter_by(id=parent_id).one()
+        if parent_reply.author.has_blocked_user(user.id) or parent_reply.author.has_blocked_instance(user.instance_id):
+            raise Exception('The author of the parent reply has blocked the author or instance of the new reply.')
     else:
         parent_reply = None
+
+    if post.author.has_blocked_user(user.id) or post.author.has_blocked_instance(user.instance_id):
+        raise Exception('The author of the parent post has blocked the author or instance of the new reply.')
 
     if not can_create_post_reply(user, post.community):
         raise Exception('You are not permitted to comment in this community')
