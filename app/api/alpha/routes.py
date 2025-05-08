@@ -594,7 +594,7 @@ def put_alpha_user_notification_state():
 @bp.route('/api/alpha/user/notifications_count')
 def get_alpha_user_notifications_count():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         return jsonify(get_user_notifications_count(auth))
@@ -605,7 +605,7 @@ def get_alpha_user_notifications_count():
 @bp.route('/api/alpha/user/mark_all_notifications_read', methods=['PUT'])
 def put_alpha_user_notifications_read():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         return jsonify(put_user_mark_all_notifications_read(auth))
