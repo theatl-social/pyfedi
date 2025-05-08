@@ -23,7 +23,7 @@ from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markd
     joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, validation_required, feed_membership, \
     gibberish, get_task_session, instance_banned, menu_subscribed_feeds, referrer, community_membership, \
     paginate_post_ids, get_deduped_post_ids, get_request, post_ids_to_models, recently_upvoted_posts, \
-    recently_downvoted_posts
+    recently_downvoted_posts, joined_or_modding_communities
 from collections import namedtuple
 from sqlalchemy import desc, or_, text
 from slugify import slugify
@@ -717,7 +717,7 @@ def show_feed(feed):
                                sub_feeds=sub_feeds, feed_path=feed.path(), breadcrumbs=breadcrumbs,
                                rss_feed=f"https://{current_app.config['SERVER_NAME']}/f/{feed.path()}.rss",
                                rss_feed_name=f"{current_feed.name} on {g.site.name}",
-                               show_post_community=True,
+                               show_post_community=True, joined_communities=joined_or_modding_communities(current_user.get_id()),
                                recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                                POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,

@@ -1113,6 +1113,13 @@ def joined_communities(user_id):
         filter(CommunityMember.user_id == user_id).order_by(Community.title).all()
 
 
+def joined_or_modding_communities(user_id):
+    if user_id is None or user_id == 0:
+        return []
+    return db.session.execute(text('SELECT c.id FROM "community" as c INNER JOIN "community_member" as cm on c.id = cm.community_id WHERE c.banned = false AND cm.user_id = :user_id'),
+                              {'user_id': user_id}).scalars().all()
+
+
 @cache.memoize(timeout=3000)
 def menu_topics():
     return Topic.query.filter(Topic.parent_id == None).order_by(Topic.name).all()

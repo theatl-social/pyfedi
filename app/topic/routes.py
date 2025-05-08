@@ -22,7 +22,7 @@ from app.utils import render_template, user_filters_posts, moderating_communitie
     validation_required, mimetype_from_url, \
     menu_topics, menu_instance_feeds, \
     menu_my_feeds, menu_subscribed_feeds, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, \
-    recently_upvoted_posts, recently_downvoted_posts, blocked_instances, blocked_users
+    recently_upvoted_posts, recently_downvoted_posts, blocked_instances, blocked_users, joined_or_modding_communities
 
 
 @bp.route('/topic/<path:topic_path>', methods=['GET'])
@@ -140,6 +140,7 @@ def show_topic(topic_path):
                                page=page, post_layout=post_layout, next_url=next_url, prev_url=prev_url, comments=comments,
                                topic_communities=topic_communities, content_filters=user_filters_posts(current_user.id) if current_user.is_authenticated else {},
                                sub_topics=sub_topics, topic_path=topic_path, breadcrumbs=breadcrumbs,
+                               joined_communities=joined_or_modding_communities(current_user.get_id()),
                                rss_feed=f"https://{current_app.config['SERVER_NAME']}/topic/{topic_path}.rss",
                                rss_feed_name=f"{current_topic.name} on {g.site.name}", content_type=content_type,
                                show_post_community=True, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,

@@ -27,7 +27,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     menu_topics, blocked_communities, \
     permission_required, debug_mode_only, ip_address, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, \
     feed_tree_public, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, html_to_text, \
-    get_redis_connection, subscribed_feeds
+    get_redis_connection, subscribed_feeds, joined_or_modding_communities
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, read_posts, Feed, FeedItem, CommunityFlair
 
@@ -134,7 +134,7 @@ def home_page(sort, view_filter):
                            description=shorten_string(html_to_text(g.site.sidebar), 150),
                            content_filters=content_filters, sort=sort, view_filter=view_filter,
                            announcement=allowlist_html(get_setting('announcement', '')),
-                           site=g.site,
+                           site=g.site, joined_communities=joined_or_modding_communities(current_user.get_id()),
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
                            )
 
