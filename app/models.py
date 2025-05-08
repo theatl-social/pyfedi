@@ -1804,6 +1804,9 @@ class Post(db.Model):
         return round(sign * order + seconds / 45000, 7)
 
     def vote(self, user: User, vote_direction: str):
+        if vote_direction == 'downvote':
+            if self.author.has_blocked_user(user.id) or self.author.has_blocked_instance(user.instance_id):
+                return None
         existing_vote = PostVote.query.filter_by(user_id=user.id, post_id=self.id).first()
         if existing_vote and vote_direction == 'reversal':                            # api sends '1' for upvote, '-1' for downvote, and '0' for reversal
             if existing_vote.effect == 1:
