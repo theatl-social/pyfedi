@@ -247,20 +247,13 @@ def get_user_notifications(auth, data):
     counts['new_notifications'] = Notification.query.with_entities(func.count()).where(Notification.user_id == user.id).where(Notification.read == False).scalar()
     counts['read_notifications'] = counts['total_notifications'] - counts['new_notifications']
     
-    # pagination info
-    pagination_json = {}
-    pagination_json['count']  = counts['total_notifications']
-    pagination_json['currentPage'] = user_notifications.page
-    pagination_json['maxPage'] = user_notifications.pages
-    pagination_json['perPage'] = user_notifications.per_page
-
     # make dicts of that and pass back
     res = {}
     res['user'] = user.user_name
     res['status'] = status
     res['counts'] = counts
     res['items'] = items
-    res['pagination'] = pagination_json
+    res['next_page'] = str(user_notifications.next_num)
     return res
 
 
