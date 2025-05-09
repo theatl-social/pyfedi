@@ -11,14 +11,14 @@ from app.constants import POST_STATUS_REVIEWING
 from app.inoculation import inoculation
 from app.models import Post, Domain, Community, DomainBlock, read_posts
 from app.domain import bp
-from app.utils import render_template, permission_required, joined_communities, moderating_communities, \
-    user_filters_posts, blocked_domains, blocked_instances, menu_topics, menu_instance_feeds, menu_my_feeds, \
-    menu_subscribed_feeds, recently_upvoted_posts, recently_downvoted_posts, mimetype_from_url, request_etag_matches, \
-    return_304, joined_or_modding_communities
+from app.utils import render_template, permission_required, user_filters_posts, blocked_domains, blocked_instances, \
+    recently_upvoted_posts, recently_downvoted_posts, mimetype_from_url, request_etag_matches, \
+    return_304, joined_or_modding_communities, login_required_if_private_instance
 from sqlalchemy import desc, or_
 
 
 @bp.route('/d/<domain_id>', methods=['GET'])
+@login_required_if_private_instance
 def show_domain(domain_id):
     with limiter.limit('60/minute'):
         page = request.args.get('page', 1, type=int)

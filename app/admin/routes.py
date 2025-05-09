@@ -162,6 +162,7 @@ def admin_misc():
         site.default_theme = form.default_theme.data
         site.additional_css = form.additional_css.data
         site.default_filter = form.default_filter.data
+        site.private_instance = form.private_instance.data
         if site.id is None:
             db.session.add(site)
         db.session.commit()
@@ -192,6 +193,7 @@ def admin_misc():
         form.email_verification.data = get_setting('email_verification', True)
         form.choose_topics.data = get_setting('choose_topics', True)
         form.filter_selection.data = get_setting('filter_selection', True)
+        form.private_instance.data = site.private_instance
     return render_template('admin/misc.html', title=_('Misc settings'), form=form,
                            
                            site=g.site, )

@@ -27,7 +27,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     menu_topics, blocked_communities, \
     permission_required, debug_mode_only, ip_address, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, \
     feed_tree_public, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, html_to_text, \
-    get_redis_connection, subscribed_feeds, joined_or_modding_communities
+    get_redis_connection, subscribed_feeds, joined_or_modding_communities, login_required_if_private_instance
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, read_posts, Feed, FeedItem, CommunityFlair
 
@@ -36,6 +36,7 @@ from app.models import Community, CommunityMember, Post, Site, User, utcnow, Top
 @bp.route('/home', methods=['GET', 'POST'])
 @bp.route('/home/<sort>', methods=['GET', 'POST'])
 @bp.route('/home/<sort>/<view_filter>', methods=['GET', 'POST'])
+@login_required_if_private_instance
 def index(sort=None, view_filter=None):
     if 'application/ld+json' in request.headers.get('Accept', '') or 'application/activity+json' in request.headers.get(
             'Accept', ''):
@@ -140,6 +141,7 @@ def home_page(sort, view_filter):
 
 
 @bp.route('/topics', methods=['GET'])
+@login_required_if_private_instance
 def list_topics():
     verification_warning()
     topics = topic_tree()
@@ -151,6 +153,7 @@ def list_topics():
 
 
 @bp.route('/communities', methods=['GET'])
+@login_required_if_private_instance
 def list_communities():
     verification_warning()
     search_param = request.args.get('search', '')
@@ -821,6 +824,7 @@ def static_manifest():
     
 
 @bp.route('/feeds', methods=['GET','POST'])
+@login_required_if_private_instance
 def list_feeds():
     # default to no public feeds
     server_has_feeds = False

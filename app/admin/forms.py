@@ -51,6 +51,7 @@ class SiteMiscForm(FlaskForm):
                                  render_kw={'class': 'form-select'})
     log_activitypub_json = BooleanField(_l('Log ActivityPub JSON for debugging'))
     public_modlog = BooleanField(_l('Show moderation actions publicly'))
+    private_instance = BooleanField(_l('Private instance - require login to browse'))
     show_inoculation_block = BooleanField(_l('Show Rational Discourse Toolkit in sidebar'))
 
     submit = SubmitField(_l('Save'))

@@ -43,7 +43,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     community_moderators, communities_banned_from, show_ban_message, recently_upvoted_posts, recently_downvoted_posts, \
     blocked_users, languages_for_form, menu_topics, add_to_modlog, \
     blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, \
-    instance_software, domain_from_email, referrer, flair_for_form, find_flair_id
+    instance_software, domain_from_email, referrer, flair_for_form, find_flair_id, login_required_if_private_instance
 from app.shared.post import make_post
 from app.shared.tasks import task_selector
 from feedgen.feed import FeedGenerator
@@ -184,6 +184,7 @@ def _make_community_results_datalist_html(community_name):
 
 
 # @bp.route('/c/<actor>', methods=['GET']) - defined in activitypub/routes.py, which calls this function for user requests. A bit weird.
+@login_required_if_private_instance
 def show_community(community: Community):
 
     if community.banned:

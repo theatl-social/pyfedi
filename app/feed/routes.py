@@ -23,7 +23,7 @@ from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markd
     joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, validation_required, feed_membership, \
     gibberish, get_task_session, instance_banned, menu_subscribed_feeds, referrer, community_membership, \
     paginate_post_ids, get_deduped_post_ids, get_request, post_ids_to_models, recently_upvoted_posts, \
-    recently_downvoted_posts, joined_or_modding_communities
+    recently_downvoted_posts, joined_or_modding_communities, login_required_if_private_instance
 from collections import namedtuple
 from sqlalchemy import desc, or_, text
 from slugify import slugify
@@ -629,6 +629,7 @@ def feed_list():
 
 
 # @bp.route('/f/<actor>', methods=['GET']) - defined in activitypub/routes.py, which calls this function for user requests. A bit weird.
+@login_required_if_private_instance
 def show_feed(feed):
     # if the feed is private abort, unless the logged in user is the owner of the feed
     if not feed.public:

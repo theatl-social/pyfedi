@@ -39,7 +39,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     languages_for_form, menu_topics, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown, \
     permission_required, blocked_users, get_request, is_local_image_url, is_video_url, can_upvote, can_downvote, \
     referrer, can_create_post_reply, communities_banned_from, \
-    block_bots, flair_for_form
+    block_bots, flair_for_form, login_required_if_private_instance
 from app.post.util import post_type_to_form_url_type
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, \
     delete_reply, mod_remove_reply, vote_for_reply
@@ -48,6 +48,7 @@ from app.shared.post import edit_post, sticky_post, lock_post, bookmark_post, re
 from app.shared.site import block_remote_instance
 
 
+@login_required_if_private_instance
 def show_post(post_id: int):
     with limiter.limit('30/minute'):
         post = Post.query.get_or_404(post_id)
@@ -404,6 +405,7 @@ def poll_vote(post_id):
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>')
+@login_required_if_private_instance
 def continue_discussion(post_id, comment_id):
     post = Post.query.get_or_404(post_id)
     comment = PostReply.query.get_or_404(comment_id)

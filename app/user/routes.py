@@ -28,7 +28,8 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     user_filters_posts, user_filters_replies, theme_list, \
     blocked_users, add_to_modlog, \
     blocked_communities, piefed_markdown_to_lemmy_markdown, \
-    read_language_choices, request_etag_matches, return_304, mimetype_from_url, notif_id_to_string
+    read_language_choices, request_etag_matches, return_304, mimetype_from_url, notif_id_to_string, \
+    login_required_if_private_instance
 from sqlalchemy import desc, or_, text, asc
 from sqlalchemy.orm.exc import NoResultFound
 import os
@@ -44,11 +45,13 @@ def show_people():
 
 
 @bp.route('/user/<int:user_id>', methods=['GET'])
+@login_required_if_private_instance
 def show_profile_by_id(user_id):
     user = User.query.get_or_404(user_id)
     return show_profile(user)
 
 
+@login_required_if_private_instance
 def show_profile(user):
     if (user.deleted or user.banned) and current_user.is_anonymous:
         abort(404)

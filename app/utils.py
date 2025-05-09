@@ -733,6 +733,16 @@ def validation_required(func):
     return decorated_view
 
 
+def login_required_if_private_instance(func):
+    @wraps(func)
+    def decorated_view(*args, **kwargs):
+        if (g.site.private_instance and current_user.is_authenticated) or g.site.private_instance is False:
+            return func(*args, **kwargs)
+        else:
+            return redirect(url_for('auth.login'))
+    return decorated_view
+
+
 def permission_required(permission):
     def decorator(func):
         @wraps(func)
