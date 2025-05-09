@@ -48,7 +48,7 @@ from captcha.image import ImageCaptcha
 
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, ActivityPubLog, IpBan, \
     Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
-    File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair
+    File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest
 
 
 # Flask's render_template function, with support for themes added
@@ -1128,6 +1128,15 @@ def joined_or_modding_communities(user_id):
         return []
     return db.session.execute(text('SELECT c.id FROM "community" as c INNER JOIN "community_member" as cm on c.id = cm.community_id WHERE c.banned = false AND cm.user_id = :user_id'),
                               {'user_id': user_id}).scalars().all()
+
+
+def pending_communities(user_id):
+    if user_id is None or user_id == 0:
+        return []
+    result = []
+    for join_request in CommunityJoinRequest.query.filter_by(user_id=user_id).all():
+        result.append(join_request.community_id)
+    return result
 
 
 @cache.memoize(timeout=3000)

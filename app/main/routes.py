@@ -27,7 +27,8 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     menu_topics, blocked_communities, \
     permission_required, debug_mode_only, ip_address, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, \
     feed_tree_public, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, html_to_text, \
-    get_redis_connection, subscribed_feeds, joined_or_modding_communities, login_required_if_private_instance
+    get_redis_connection, subscribed_feeds, joined_or_modding_communities, login_required_if_private_instance, \
+    pending_communities
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, read_posts, Feed, FeedItem, CommunityFlair
 
@@ -221,6 +222,8 @@ def list_communities():
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                            next_url=next_url, prev_url=prev_url, current_user=current_user,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
+                           joined_communities=joined_or_modding_communities(current_user.get_id()),
+                           pending_communities=pending_communities(current_user.get_id()),
                            low_bandwidth=low_bandwidth,
                            site=g.site, feed_id=feed_id,
                            server_has_feeds=server_has_feeds, public_feeds=public_feeds,
