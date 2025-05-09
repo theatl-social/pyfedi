@@ -410,13 +410,8 @@ def get_user_notifications_count(auth):
 def put_user_mark_all_notifications_read(auth):
     # get the user
     user = authorise_api_user(auth, return_type='model')
-    # get the unread notifs
-    # unread_notifications = Notification.query.filter_by(user_id=user.id,read=False)
-    # set them all as read
+    # set all the user's notifs as read
     db.session.execute(text('UPDATE notification SET read=true WHERE user_id = :user_id'), {'user_id': user.id})
-    # for n in unread_notifications:
-        # n.read = True 
-
     # save the changes to the db
     db.session.commit()
     # return a message, though it may not be used by the client
