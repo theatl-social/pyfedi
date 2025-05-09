@@ -26,7 +26,7 @@ def enable_api():
 @bp.route('/api/alpha/site', methods=['GET'])
 def get_alpha_site():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         return jsonify(get_site(auth))
@@ -37,7 +37,7 @@ def get_alpha_site():
 @bp.route('/api/alpha/site/block', methods=['POST'])
 def get_alpha_site_block():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -50,7 +50,7 @@ def get_alpha_site_block():
 @bp.route('/api/alpha/search', methods=['GET'])
 def get_alpha_search():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
@@ -63,7 +63,7 @@ def get_alpha_search():
 @bp.route('/api/alpha/community', methods=['GET'])
 def get_alpha_community():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
@@ -75,7 +75,7 @@ def get_alpha_community():
 @bp.route('/api/alpha/community/list', methods=['GET'])
 def get_alpha_community_list():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
@@ -87,7 +87,7 @@ def get_alpha_community_list():
 @bp.route('/api/alpha/community/follow', methods=['POST'])
 def post_alpha_community_follow():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -99,7 +99,7 @@ def post_alpha_community_follow():
 @bp.route('/api/alpha/community/block', methods=['POST'])
 def post_alpha_community_block():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -111,7 +111,7 @@ def post_alpha_community_block():
 @bp.route('/api/alpha/community', methods=['POST'])
 def post_alpha_community():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         with limiter.limit('1/day'):
             auth = request.headers.get('Authorization')
@@ -126,7 +126,7 @@ def post_alpha_community():
 @bp.route('/api/alpha/community', methods=['PUT'])
 def put_alpha_community():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -138,7 +138,7 @@ def put_alpha_community():
 @bp.route('/api/alpha/community/subscribe', methods=['PUT'])
 def put_alpha_community_subscribe():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -152,7 +152,7 @@ def put_alpha_community_subscribe():
 @bp.route('/api/alpha/community/delete', methods=['POST'])
 def post_alpha_community_delete():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -165,7 +165,7 @@ def post_alpha_community_delete():
 @bp.route('/api/alpha/post/list', methods=['GET'])
 def get_alpha_post_list():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
@@ -177,7 +177,7 @@ def get_alpha_post_list():
 @bp.route('/api/alpha/post', methods=['GET'])
 def get_alpha_post():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
@@ -189,7 +189,7 @@ def get_alpha_post():
 @bp.route('/api/alpha/post/like', methods=['POST'])
 def post_alpha_post_like():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -201,7 +201,7 @@ def post_alpha_post_like():
 @bp.route('/api/alpha/post/save', methods=['PUT'])
 def put_alpha_post_save():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -215,7 +215,7 @@ def put_alpha_post_save():
 @bp.route('/api/alpha/post/subscribe', methods=['PUT'])
 def put_alpha_post_subscribe():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -229,7 +229,7 @@ def put_alpha_post_subscribe():
 @bp.route('/api/alpha/post', methods=['POST'])
 def post_alpha_post():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         with limiter.limit('1/minute, 10/hour, 50/day'):
             auth = request.headers.get('Authorization')
@@ -244,7 +244,7 @@ def post_alpha_post():
 @bp.route('/api/alpha/post', methods=['PUT'])
 def put_alpha_post():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -256,7 +256,7 @@ def put_alpha_post():
 @bp.route('/api/alpha/post/delete', methods=['POST'])
 def post_alpha_post_delete():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -268,7 +268,7 @@ def post_alpha_post_delete():
 @bp.route('/api/alpha/post/report', methods=['POST'])
 def post_alpha_post_report():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -280,7 +280,7 @@ def post_alpha_post_report():
 @bp.route('/api/alpha/post/lock', methods=['POST'])
 def post_alpha_post_lock():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -292,7 +292,7 @@ def post_alpha_post_lock():
 @bp.route('/api/alpha/post/feature', methods=['POST'])
 def post_alpha_post_feature():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -304,7 +304,7 @@ def post_alpha_post_feature():
 @bp.route('/api/alpha/post/remove', methods=['POST'])
 def post_alpha_post_remove():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -317,7 +317,7 @@ def post_alpha_post_remove():
 @bp.route('/api/alpha/comment/list', methods=['GET'])
 def get_alpha_comment_list():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
@@ -329,7 +329,7 @@ def get_alpha_comment_list():
 @bp.route('/api/alpha/comment/like', methods=['POST'])
 def post_alpha_comment_like():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -341,7 +341,7 @@ def post_alpha_comment_like():
 @bp.route('/api/alpha/comment/save', methods=['PUT'])
 def put_alpha_comment_save():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -355,7 +355,7 @@ def put_alpha_comment_save():
 @bp.route('/api/alpha/comment/subscribe', methods=['PUT'])
 def put_alpha_comment_subscribe():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -369,7 +369,7 @@ def put_alpha_comment_subscribe():
 @bp.route('/api/alpha/comment', methods=['POST'])
 def post_alpha_comment():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         with limiter.limit('1/minute, 10/hour, 50/day'):
             auth = request.headers.get('Authorization')
@@ -384,7 +384,7 @@ def post_alpha_comment():
 @bp.route('/api/alpha/comment', methods=['PUT'])
 def put_alpha_comment():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -396,7 +396,7 @@ def put_alpha_comment():
 @bp.route('/api/alpha/comment/delete', methods=['POST'])
 def post_alpha_comment_delete():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -408,7 +408,7 @@ def post_alpha_comment_delete():
 @bp.route('/api/alpha/comment/report', methods=['POST'])
 def post_alpha_comment_report():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -420,7 +420,7 @@ def post_alpha_comment_report():
 @bp.route('/api/alpha/comment/remove', methods=['POST'])
 def post_alpha_comment_remove():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -432,7 +432,7 @@ def post_alpha_comment_remove():
 @bp.route('/api/alpha/comment/mark_as_read', methods=['POST'])
 def post_alpha_comment_mark_as_read():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -444,7 +444,7 @@ def post_alpha_comment_mark_as_read():
 @bp.route('/api/alpha/comment', methods=['GET'])
 def get_alpha_comment():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
@@ -456,7 +456,7 @@ def get_alpha_comment():
 @bp.route('/api/alpha/private_message/list', methods=['GET'])
 def get_alpha_private_message_list():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
@@ -469,7 +469,7 @@ def get_alpha_private_message_list():
 @bp.route('/api/alpha/user', methods=['GET'])
 def get_alpha_user():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
@@ -481,7 +481,7 @@ def get_alpha_user():
 @bp.route('/api/alpha/user/login', methods=['POST'])
 def post_alpha_user_login():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         data = request.get_json(force=True) or {}
         return jsonify(log_user_in(data, SRC_API))
@@ -492,7 +492,7 @@ def post_alpha_user_login():
 @bp.route('/api/alpha/user/unread_count', methods=['GET'])
 def get_alpha_user_unread_count():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         return jsonify(get_user_unread_count(auth))
@@ -503,7 +503,7 @@ def get_alpha_user_unread_count():
 @bp.route('/api/alpha/user/replies', methods=['GET'])
 def get_alpha_user_replies():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
@@ -515,7 +515,7 @@ def get_alpha_user_replies():
 @bp.route('/api/alpha/user/block', methods=['POST'])
 def post_alpha_user_block():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -527,7 +527,7 @@ def post_alpha_user_block():
 @bp.route('/api/alpha/user/mark_all_as_read', methods=['POST'])
 def post_alpha_user_mark_all_as_read():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         return jsonify(post_user_mark_all_as_read(auth))
@@ -538,7 +538,7 @@ def post_alpha_user_mark_all_as_read():
 @bp.route('/api/alpha/user/subscribe', methods=['PUT'])
 def put_alpha_user_subscribe():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -553,7 +553,7 @@ def put_alpha_user_subscribe():
 @bp.route('/api/alpha/user/save_user_settings', methods=['PUT'])
 def put_alpha_user_save_user_settings():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
@@ -565,7 +565,7 @@ def put_alpha_user_save_user_settings():
 @bp.route('/api/alpha/user/notifications/<status>')
 def get_alpha_user_notifications(status):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = {}
@@ -578,7 +578,7 @@ def get_alpha_user_notifications(status):
 @bp.route('/api/alpha/user/notifications/<notif_id>/<read_state>', methods=['PUT'])
 def put_alpha_user_notification_state(notif_id, read_state):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
         data = {}
@@ -593,7 +593,7 @@ def put_alpha_user_notification_state(notif_id, read_state):
 @bp.route('/api/alpha/upload/image', methods=['POST'])
 def post_alpha_upload_image():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         with limiter.limit('5/hour'):
             auth = request.headers.get('Authorization')
@@ -608,7 +608,7 @@ def post_alpha_upload_image():
 @bp.route('/api/alpha/upload/community_image', methods=['POST'])
 def post_alpha_upload_community_image():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         with limiter.limit('3/day'):
             auth = request.headers.get('Authorization')
@@ -623,7 +623,7 @@ def post_alpha_upload_community_image():
 @bp.route('/api/alpha/upload/user_image', methods=['POST'])
 def post_alpha_upload_user_image():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'})
+        return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         with limiter.limit('3/day'):
             auth = request.headers.get('Authorization')
