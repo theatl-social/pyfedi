@@ -207,14 +207,18 @@ def get_user_notifications(auth, data):
     # get the status from data.status_request
     status = data['status_request']
 
+    # get the page for pagination from the data.page
+    page = int(data['page']) if data and 'page' in data else 1
+    limit = int(data['limit']) if data and 'limit' in data else 10
+
     # items dict
     items = []
 
     # setup the db query/generator all notifications for the user
-    user_notifications = Notification.query.filter_by(user_id=user.id).order_by(desc(Notification.notif_type))
-    
+    user_notifications = Notification.query.filter_by(user_id=user.id).order_by(desc(Notification.created_at)).paginate(page=page, per_page=limit, error_out=False)
+
     # new
-    if status == 'new':
+    if status == 'New':
         for item in user_notifications:
             if item.read == False:
                 if isinstance(item.subtype,str):
@@ -222,14 +226,14 @@ def get_user_notifications(auth, data):
                     notif['status'] = status
                     items.append(notif)
     # all
-    elif status == 'all':
+    elif status == 'All':
         for item in user_notifications:
                 if isinstance(item.subtype,str):
                     notif = _process_notification_item(item)
                     notif['status'] = status
                     items.append(notif)
     # read
-    elif status == 'read':
+    elif status == 'Read':
         for item in user_notifications:
             if item.read == True:
                 if isinstance(item.subtype,str):
@@ -249,6 +253,7 @@ def get_user_notifications(auth, data):
     res['status'] = status
     res['counts'] = counts
     res['items'] = items
+    res['next_page'] = str(user_notifications.next_num)
     return res
 
 
@@ -369,21 +374,46 @@ def _process_notification_item(item):
 
 
 def put_user_notification_state(auth, data):
+    user = authorise_api_user(auth, return_type='model')
+    notif_id = data['notif_id'] if 'notif_id' in data else None
+    read_state = data['read_state'] if 'read_state' in data else None
+    
     # get the notification from the data.notif_id
-    notif = Notification.query.get(data['notif_id'])
+    notif = Notification.query.get(notif_id)
 
-    # get the read_state from the data.read_state
-    read_state = data['read_state']
+    # make sure the notif belongs to the user
+    if notif.user_id != user.id:
+        raise Exception('Notification does not belong to provided User.')
 
     # set the read state for the notification
-    if read_state == 'read':
-        notif.read = True
-    if read_state == 'unread':
-        notif.read = False
+    notif.read = read_state
 
     # commit that change to the db
     db.session.commit()
 
     # make a json for the specific notification and return that one item
     res = _process_notification_item(notif)
+    return res
+
+
+def get_user_notifications_count(auth):
+    # get the user
+    user = authorise_api_user(auth, return_type='model')
+    # get the user's unread notifications count
+    unread_notifs_count = Notification.query.with_entities(func.count()).where(Notification.user_id == user.id).where(Notification.read == False).scalar()
+    # make the dict and add that info, then return it
+    res = {}
+    res['count'] = unread_notifs_count
+    return res
+
+
+def put_user_mark_all_notifications_read(auth):
+    # get the user
+    user = authorise_api_user(auth, return_type='model')
+    # set all the user's notifs as read
+    db.session.execute(text('UPDATE notification SET read=true WHERE user_id = :user_id'), {'user_id': user.id})
+    # save the changes to the db
+    db.session.commit()
+    # return a message, though it may not be used by the client
+    res = {"mark_all_notifications_as_read":"complete"}
     return res
