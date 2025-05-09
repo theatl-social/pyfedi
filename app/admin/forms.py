@@ -153,6 +153,7 @@ class EditInstanceForm(FlaskForm):
     gone_forever = BooleanField(_l('Gone forever'))
     trusted = BooleanField(_l('Trusted'))
     posting_warning = TextAreaField(_l('Posting warning'))
+    inbox = StringField(_l('Inbox'))
     submit = SubmitField(_l('Save'))
 
 
