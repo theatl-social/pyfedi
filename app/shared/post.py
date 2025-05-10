@@ -450,8 +450,6 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         if poll.local_only:
             federate = False
 
-    if post.status < POST_STATUS_PUBLISHED:
-        federate = False
 
     # add tags & flair
     post.tags = tags
@@ -463,6 +461,9 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         db.session.add(new_notification)
 
     db.session.commit()
+
+    if post.status < POST_STATUS_PUBLISHED:
+        federate = False
 
     if from_scratch:
         if federate:

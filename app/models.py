@@ -24,7 +24,8 @@ import math
 
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER, \
     SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER, NOTIF_COMMUNITY, NOTIF_TOPIC, NOTIF_POST, NOTIF_REPLY, \
-    ROLE_ADMIN, ROLE_STAFF, NOTIF_FEED, NOTIF_DEFAULT, NOTIF_REPORT, NOTIF_MENTION, POST_STATUS_REVIEWING
+    ROLE_ADMIN, ROLE_STAFF, NOTIF_FEED, NOTIF_DEFAULT, NOTIF_REPORT, NOTIF_MENTION, POST_STATUS_REVIEWING, \
+    POST_STATUS_PUBLISHED
 
 
 # datetime.utcnow() is depreciated in Python 3.12 so it will need to be swapped out eventually
@@ -1605,7 +1606,7 @@ class Post(db.Model):
             if post.url:
                 post.calculate_cross_posts()
 
-            if post.community_id not in communities_banned_from(user.id):
+            if post.community_id not in communities_banned_from(user.id) and post.status == POST_STATUS_PUBLISHED:
                 notify_about_post(post)
 
             # attach initial upvote to author
@@ -1627,7 +1628,7 @@ class Post(db.Model):
             return
 
         if self.cross_posts and (url_changed or delete_only):
-            old_cross_posts = Post.query.filter(Post.id.in_(self.cross_posts)).all()
+            old_cross_posts = Post.query.filter(Post.id.in_(self.cross_posts), Post.status == POST_STATUS_PUBLISHED).all()
             self.cross_posts.clear()
             for ocp in old_cross_posts:
                 if ocp.cross_posts and self.id in ocp.cross_posts:

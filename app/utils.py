@@ -2008,6 +2008,17 @@ def move_file_to_s3(file_id, s3):
                     db.session.commit()
 
 
+def find_next_occurrence(post: Post) -> timedelta:
+    if post.repeat is not None and post.repeat != 'none':
+        if post.repeat == 'daily':
+            return timedelta(days=1)
+        elif post.repeat == 'weekly':
+            return timedelta(days=7)
+        elif post.repeat == 'monthly':
+            return timedelta(days=28)
+    return timedelta(seconds=0)
+
+
 def notif_id_to_string(notif_id) -> str:
     # -- user level ---
     if notif_id == NOTIF_USER:

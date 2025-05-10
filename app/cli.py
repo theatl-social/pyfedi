@@ -16,18 +16,20 @@ import click
 import os
 
 from app.activitypub.signature import RsaKeys, send_post_request
-from app.activitypub.util import find_actor_or_create, extract_domain_and_actor
+from app.activitypub.util import find_actor_or_create, extract_domain_and_actor, notify_about_post
 from app.auth.util import random_token
-from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY
+from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED
 from app.email import send_email
 from app.models import Settings, BannedInstances, Role, User, RolePermission, Domain, ActivityPubLog, \
     utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply, Language, \
     Tag, InstanceRole, Community, DefederationSubscription, SendQueue
 from app.post.routes import post_delete_post
+from app.shared.post import edit_post
+from app.shared.tasks import task_selector
 from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
     shorten_string, get_request, blocked_communities, gibberish, get_request_instance, \
     instance_banned, recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, download_defeds, \
-    get_setting, set_setting, get_redis_connection, instance_online, instance_gone_forever
+    get_setting, set_setting, get_redis_connection, instance_online, instance_gone_forever, find_next_occurrence
 
 
 def register(app):
@@ -471,6 +473,33 @@ def register(app):
                 raise e
             finally:
                 set_setting('send-queue-running', False)
+
+    @app.cli.command('publish-scheduled-posts')
+    def public_scheduled_posts():
+        # for dev/debug purposes this is it's own separate cli command but once it's finished we'll want to move it into send-queue (above)
+        # so that instance admins don't need to set up another cron job
+        with app.app_context():
+            for post in Post.query.filter(Post.status == POST_STATUS_SCHEDULED, Post.scheduled_for < utcnow(),
+                                          Post.deleted == False):
+                post.status = POST_STATUS_PUBLISHED
+                if post.repeat and post.repeat != 'none':
+                    next_occurrence = post.scheduled_for + find_next_occurrence(post)
+                else:
+                    next_occurrence = None
+                post.scheduled_for = None
+                post.posted_at = utcnow()
+                post.edited_at = None
+                db.session.commit()
+
+                # Federate post
+                task_selector('make_post', post_id=post.id)
+
+                # create Notification()s for all the people subscribed to this post.community, post.author, post.topic_id and feed
+                notify_about_post(post)
+
+                if next_occurrence:
+                    # create new post with new_post.scheduled_for = next_occurrence and new_post.repeat = post.repeat. Call Post.new()
+                    ...
 
     @app.cli.command('move-files-to-s3')
     def move_files_to_s3():
