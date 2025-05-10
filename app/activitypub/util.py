@@ -218,7 +218,8 @@ def comment_model_to_json(reply: PostReply) -> dict:
         'language': {
             'identifier': reply.language_code(),
             'name': reply.language_name()
-        }
+        },
+        'flair': reply.author.community_flair(reply.community_id)
     }
     if reply.edited_at:
         reply_data['updated'] = ap_datetime(reply.edited_at)
@@ -1801,6 +1802,9 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
                         if profile_id != reply_parent.author.ap_profile_id:
                             local_users_to_notify.append(profile_id)
 
+        if 'flair' in request_json['object'] and request_json['object']['flair']:
+            db.session.execute(text('UPDATE "user_flair" SET flair = :flair WHERE user_id = :user_id AND community_id = :community_id'),
+                               {'flair': request_json['object']['flair'].strip(), 'user_id': user.id, 'community_id': community.id})
         try:
             post_reply = PostReply.new(user, post, parent_comment, notify_author=False, body=body, body_html=body_html,
                                        language_id=language_id, request_json=request_json, announce_id=announce_id)

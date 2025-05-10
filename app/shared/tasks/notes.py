@@ -151,6 +151,7 @@ def send_reply(reply_id, parent_id, edit=False):
       'language': language,
       'contentMap': content_map,
       'distinguished': False,
+      'flair': user.community_flair(reply.community_id)
     }
     if edit:
         note['updated'] = ap_datetime(utcnow())

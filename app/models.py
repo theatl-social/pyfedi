@@ -934,6 +934,10 @@ class User(UserMixin, db.Model):
     def vote_privately(self):
         return self.alt_user_name is not None and self.alt_user_name != ''
 
+    def community_flair(self, community_id: int):
+        user_flair = UserFlair.query.filter(UserFlair.community_id == community_id, UserFlair.user_id == self.id).first()
+        return user_flair.flair.strip() if user_flair else ''
+
     def num_content(self):
         content = 0
         content += db.session.execute(text('SELECT COUNT(id) as c FROM "post" WHERE user_id = :user_id'), {'user_id': self.id}).scalar()
