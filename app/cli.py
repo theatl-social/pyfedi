@@ -468,6 +468,9 @@ def register(app):
                 if len(to_be_deleted):
                     db.session.execute(text('DELETE FROM "send_queue" WHERE id IN :to_be_deleted'), {'to_be_deleted': tuple(to_be_deleted)})
                     db.session.commit()
+
+                publish_scheduled_posts()
+
             except Exception as e:
                 set_setting('send-queue-running', False)
                 raise e
@@ -475,8 +478,8 @@ def register(app):
                 set_setting('send-queue-running', False)
 
     @app.cli.command('publish-scheduled-posts')
-    def public_scheduled_posts():
-        # for dev/debug purposes this is it's own separate cli command but once it's finished we'll want to move it into send-queue (above)
+    def publish_scheduled_posts():
+        # for dev/debug purposes this is it's own separate cli command but once it's finished we'll want to remove the @app.cli.command decorator
         # so that instance admins don't need to set up another cron job
         with app.app_context():
             for post in Post.query.filter(Post.status == POST_STATUS_SCHEDULED, Post.scheduled_for < utcnow(),
