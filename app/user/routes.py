@@ -1252,6 +1252,12 @@ def user_alerts(type='posts', filter='all'):
                         filter_by(type=NOTIF_TOPIC, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
         title = _('Topic Alerts')
 
+    elif type == 'feeds':
+        # ignore filter
+        entities = Feed.query.join(NotificationSubscription, NotificationSubscription.entity_id == Feed.id).\
+                        filter_by(type=NOTIF_FEED, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+        title = _('Feed Alerts')
+
     elif type == 'users':
         # ignore filter
         entities = User.query.join(NotificationSubscription, NotificationSubscription.entity_id == User.id).\
