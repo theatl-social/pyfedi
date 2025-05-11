@@ -378,16 +378,12 @@ def put_user_notification_state(auth, data):
     integer_expected(['notif_id'], data)
     boolean_expected(['read_state'], data)
 
-    user = authorise_api_user(auth, return_type='model')
+    user_id = authorise_api_user(auth)
     notif_id = data['notif_id']
     read_state = data['read_state']
 
     # get the notification from the data.notif_id
-    notif = Notification.query.get(notif_id)
-
-    # make sure the notif belongs to the user
-    if notif.user_id != user.id:
-        raise Exception('Notification does not belong to provided User.')
+    notif = Notification.query.filter_by(id=notif_id, user_id=user_id).one()
 
     # set the read state for the notification
     notif.read = read_state
