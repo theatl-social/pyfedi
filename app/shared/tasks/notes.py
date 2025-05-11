@@ -1,5 +1,7 @@
+import json
 from app import cache, celery, db
 from app.activitypub.signature import default_context, post_request, send_post_request
+from app.constants import NOTIF_MENTION
 from app.models import Community, CommunityBan, CommunityJoinRequest, CommunityMember, Notification, Post, PostReply, utcnow
 from app.user.utils import search_for_user
 from app.utils import community_membership, gibberish, joined_communities, instance_banned, ap_datetime, \
@@ -103,9 +105,12 @@ def send_reply(reply_id, parent_id, edit=False):
             else:
                 existing_notification = None
             if not existing_notification:
+                targets_data = {'post_id':reply.post_id,'comment_id': reply.id}
                 notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in comment {reply.id}"),
                                             url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
-                                            author_id=user.id)
+                                            author_id=user.id, notif_type=NOTIF_MENTION,
+                                            subtype='comment_mention',
+                                            targets=targets_data)
                 recipient.unread_notifications += 1
                 db.session.add(notification)
                 db.session.commit()
@@ -146,6 +151,7 @@ def send_reply(reply_id, parent_id, edit=False):
       'language': language,
       'contentMap': content_map,
       'distinguished': False,
+      'flair': user.community_flair(reply.community_id)
     }
     if edit:
         note['updated'] = ap_datetime(utcnow())

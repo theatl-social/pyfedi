@@ -45,7 +45,6 @@
                <th title="{{ _('Known Communities') }}">{{ _('Communities') }}</th>
                <th title="{{ _('Known Users') }}">{{ _('Users') }}</th>
                <th>{{ _('Posts') }}</th>
-               <th>{{ _('Post Replies') }}</th>
                <th>
                    <button form="searchInstances" name="sort_by" value="vote_weight{{' ASC' if sort_by == 'vote_weight DESC' else ' DESC' }}" class="btn" title="{{ _('Vote Weight') }}">
                        {{ _('Vote Weight') }}
@@ -92,7 +91,6 @@
                     <td><span title="{{ _('Known Communities') }}">{{ instance.known_communities_count()  }}</span></td>
                     <td><span title="{{ _('Known Users') }}">{{ instance.known_users_count()  }}</span></td>
                     <td><span title="{{ _('Posts') }}">{{ instance.post_count()  }}</span></td>
-                    <td><span title="{{ _('Post Replies') }}">{{ instance.post_replies_count()  }}</span></td>
                     <td><span title="{{ _('Vote Weight') }}">{{ instance.vote_weight  }}</span></td>
                     <td><span title="{{ _('Trusted') }}">{{ _('Yes') if instance.trusted }}</span></td>
                     <td><span title="{{ _('Last Seen') }}: {{ instance.last_seen }}">{{ arrow.get(instance.last_seen).humanize(locale=locale) if instance.last_seen }}</span></td>

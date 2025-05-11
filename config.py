@@ -61,3 +61,25 @@ class Config(object):
 
     LOG_ACTIVITYPUB_TO_DB = os.environ.get('LOG_ACTIVITYPUB_TO_DB') or False
     LOG_ACTIVITYPUB_TO_FILE = os.environ.get('LOG_ACTIVITYPUB_TO_FILE') or False
+
+    STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY') or ''
+    STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY') or ''
+    STRIPE_MONTHLY_SMALL = os.environ.get('STRIPE_MONTHLY_SMALL') or ''
+    STRIPE_MONTHLY_BIG = os.environ.get('STRIPE_MONTHLY_BIG') or ''
+    STRIPE_MONTHLY_SMALL_TEXT = os.environ.get('STRIPE_MONTHLY_SMALL_TEXT') or ''
+    STRIPE_MONTHLY_BIG_TEXT = os.environ.get('STRIPE_MONTHLY_BIG_TEXT') or ''
+    WEBHOOK_SIGNING_SECRET = os.environ.get('WEBHOOK_SIGNING_SECRET') or ''
+
+    S3_REGION = os.environ.get('S3_REGION') or ''
+    S3_ENDPOINT = os.environ.get('S3_ENDPOINT') or ''
+    S3_BUCKET = os.environ.get('S3_BUCKET') or ''
+    S3_ACCESS_KEY = os.environ.get('S3_ACCESS_KEY') or ''
+    S3_ACCESS_SECRET = os.environ.get('S3_ACCESS_SECRET') or ''
+    S3_PUBLIC_URL = os.environ.get('S3_PUBLIC_URL') or ''
+
+    GOOGLE_OAUTH_CLIENT_ID = os.environ.get('GOOGLE_OAUTH_CLIENT_ID') or ''
+    GOOGLE_OAUTH_SECRET = os.environ.get('GOOGLE_OAUTH_SECRET') or ''
+
+    # enable the aplha api
+    ENABLE_ALPHA_API = os.environ.get('ENABLE_ALPHA_API') or False
+

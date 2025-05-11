@@ -78,6 +78,7 @@ sudo nano /etc/cron.d/piefed
 5 2 * * * <USERNAME> docker exec piefed_app1 bash -c "cd /app && ./daily.sh"
 5 4 * * 1 <USERNAME> docker exec piefed_app1 bash -c "cd /app && ./remove_orphan_files.sh"
 1 */6 * * * <USERNAME> docker exec piefed_app1 bash -c "cd /app && ./email_notifs.sh"
+*/5 * * * * <USERNAME> docker exec piefed_app1 bash -c "cd /app && ./send_queue.sh"
 ```
 
 #### UPDATING & RESTARTING PIEFED

@@ -17,12 +17,20 @@
         </nav>
         <h1 class="mt-2">{{ _('Notifications') }}</h1>
 
-        {% if notifications %}
+        {% if has_notifications %}
+            <div class="nav nav-tabs nav-justified" id="typeTab" role="tablist" aria-label="{{ _('Filter notifications') }}">
+                <a class="nav-link{% if current_filter == ''%} active{% endif %}" type="button" role="tab" href='/notifications'>{{ _('All') }}</a>
+                {% for notification_type, new_notifications in notification_types.items() %}
+                    <a class="nav-link{% if current_filter == str(notification_links[notification_type]) %} active{% endif %}"
+                       id="notif_type_{{ notification_type }}" type="button" role="tab" href="?type={{ notification_links[notification_type] }}"
+                       style="view-transition-name: site">{{ notification_type }} {% if new_notifications %}({{ new_notifications }}){% endif %}</a>
+                {% endfor -%}
+            </div>
             <table class="table table-striped">
                 <tr>
                     <th>Notification</th>
                     <th>When</th>
-                    <th><a href="{{ url_for('user.notifications_all_read') }}" class="btn btn-primary btn-sm">{{ _('Mark all as read') }}</a></th>
+                    <th><a href="{{ url_for('user.notifications_all_read', type=current_filter) }}" class="btn btn-primary btn-sm">{{ _('Mark all as read') }}</a></th>
                 </tr>
                 {% for notification in notifications %}
                     <tr>

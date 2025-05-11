@@ -11,14 +11,38 @@
         <h1>{{ _('Search results for') }} <form method="get" class="redo_search"><input type="search" name="q" value="{{ q }}" class="form-control">
         <input type="hidden" name="community" value="{{ community_id }}">
         <input type="hidden" name="language" value="{{ language_id }}">
+        <input type="hidden" name="search_for" value="{{ search_for }}">
         </form></h1>
-        <div class="post_list">
-            {% for post in posts.items %}
-                {% include 'post/_post_teaser.html' %}
-            {% else %}
-                <p>{{ _('No posts match your search.') }}</p>
-            {% endfor %}
-        </div>
+        {% if posts -%}
+            <div class="post_list">
+                {% for post in posts.items %}
+                    {% include 'post/_post_teaser.html' %}
+                {% else %}
+                    <p>{{ _('No posts match your search.') }}</p>
+                {% endfor %}
+            </div>
+        {% endif -%}
+        {% if replies -%}
+            <div class="post_list comments">
+                {% for post_reply in replies.items %}
+                    {% with teaser=True %}
+                        {% include 'post/_post_reply_teaser.html' %}
+                    {% endwith %}
+                {% endfor %}
+            </div>
+        {% endif -%}
+
+        {% if community_results -%}
+            <div class="community_list">
+                <ul class="list-group list-group-flush">
+                    {% for community in community_results -%}
+                        <li class="list-group-item">
+                            {{ render_communityname(community) }}
+                        </li>
+                    {% endfor -%}
+                </ul>
+            </div>
+        {% endif -%}
 
         <nav aria-label="Pagination" class="mt-4" role="navigation">
                 {% if prev_url %}

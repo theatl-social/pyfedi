@@ -5,13 +5,13 @@ from typing import List, Union, Type
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 import arrow
+import boto3
 from flask import current_app, escape, url_for, render_template_string
 from flask_login import UserMixin, current_user
-from sqlalchemy import or_, text, desc
+from sqlalchemy import or_, text, desc, Index
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_babel import _, lazy_gettext as _l
-from sqlalchemy.orm import backref
 from sqlalchemy_utils.types import TSVectorType # https://sqlalchemy-searchable.readthedocs.io/en/latest/installation.html
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.mutable import MutableList
@@ -24,7 +24,8 @@ import math
 
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER, \
     SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER, NOTIF_COMMUNITY, NOTIF_TOPIC, NOTIF_POST, NOTIF_REPLY, \
-    ROLE_ADMIN, ROLE_STAFF, NOTIF_FEED
+    ROLE_ADMIN, ROLE_STAFF, NOTIF_FEED, NOTIF_DEFAULT, NOTIF_REPORT, NOTIF_MENTION, POST_STATUS_REVIEWING, \
+    POST_STATUS_PUBLISHED
 
 
 # datetime.utcnow() is depreciated in Python 3.12 so it will need to be swapped out eventually
@@ -69,11 +70,11 @@ class Instance(db.Model):
     updated_at = db.Column(db.DateTime, default=utcnow)
     last_seen = db.Column(db.DateTime, default=utcnow)      # When an Activity was received from them
     last_successful_send = db.Column(db.DateTime)           # When we successfully sent them an Activity
-    failures = db.Column(db.Integer, default=0)             # How many times we failed to send (reset to 0 after every successful send)
+    failures = db.Column(db.Integer, default=0)             # How many days that we have been unable to send (reset to 0 after every successful send)
     most_recent_attempt = db.Column(db.DateTime)            # When the most recent failure was
-    dormant = db.Column(db.Boolean, default=False)          # True once this instance is considered offline and not worth sending to any more
-    start_trying_again = db.Column(db.DateTime)             # When to start trying again. Should grow exponentially with each failure.
-    gone_forever = db.Column(db.Boolean, default=False)     # True once this instance is considered offline forever - never start trying again
+    dormant = db.Column(db.Boolean, default=False)          # True once this instance is considered offline and not worth sending to any more (5 days offline)
+    start_trying_again = db.Column(db.DateTime)             # When to start trying again.
+    gone_forever = db.Column(db.Boolean, default=False)     # True once this instance is considered offline forever - never start trying again (12 days offline)
     ip_address = db.Column(db.String(50))
     trusted = db.Column(db.Boolean, default=False, index=True)
     posting_warning = db.Column(db.String(512))
@@ -274,6 +275,11 @@ post_tag = db.Table('post_tag', db.Column('post_id', db.Integer, db.ForeignKey('
                                           db.PrimaryKeyConstraint('post_id', 'tag_id')
                         )
 
+post_flair = db.Table('post_flair', db.Column('post_id', db.Integer, db.ForeignKey('post.id')),
+                                          db.Column('flair_id', db.Integer, db.ForeignKey('community_flair.id')),
+                                          db.PrimaryKeyConstraint('post_id', 'flair_id')
+                        )
+
 
 class File(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -286,6 +292,7 @@ class File(db.Model):
     thumbnail_path = db.Column(db.String(255))
     thumbnail_width = db.Column(db.Integer)
     thumbnail_height = db.Column(db.Integer)
+    hash = db.Column(db.String(64), index=True)
 
     def view_url(self, resize=False):
         if self.source_url:
@@ -294,6 +301,8 @@ class File(db.Model):
             else:
                 return self.source_url
         elif self.file_path:
+            if self.file_path.startswith('https://'):
+                return self.file_path
             file_path = self.file_path[4:] if self.file_path.startswith('app/') else self.file_path
             scheme = 'http' if current_app.config['SERVER_NAME'] == '127.0.0.1:5000' else 'https'
             return f"{scheme}://{current_app.config['SERVER_NAME']}/{file_path}"
@@ -303,6 +312,8 @@ class File(db.Model):
     def medium_url(self):
         if self.file_path is None:
             return self.thumbnail_url()
+        if self.file_path.startswith('https://'):
+            return self.file_path
         file_path = self.file_path[4:] if self.file_path.startswith('app/') else self.file_path
         scheme = 'http' if current_app.config['SERVER_NAME'] == '127.0.0.1:5000' else 'https'
         return f"{scheme}://{current_app.config['SERVER_NAME']}/{file_path}"
@@ -313,31 +324,65 @@ class File(db.Model):
                 return self.source_url
             else:
                 return ''
+        if self.thumbnail_path.startswith('https://'):
+            return self.thumbnail_path
         thumbnail_path = self.thumbnail_path[4:] if self.thumbnail_path.startswith('app/') else self.thumbnail_path
         scheme = 'http' if current_app.config['SERVER_NAME'] == '127.0.0.1:5000' else 'https'
         return f"{scheme}://{current_app.config['SERVER_NAME']}/{thumbnail_path}"
 
     def delete_from_disk(self):
         purge_from_cache = []
-        if self.file_path and os.path.isfile(self.file_path):
-            try:
-                os.unlink(self.file_path)
-            except FileNotFoundError:
-                ...
-            purge_from_cache.append(self.file_path.replace('app/', f"https://{current_app.config['SERVER_NAME']}/"))
-        if self.thumbnail_path and os.path.isfile(self.thumbnail_path):
-            try:
-                os.unlink(self.thumbnail_path)
-            except FileNotFoundError:
-                ...
-            purge_from_cache.append(self.thumbnail_path.replace('app/', f"https://{current_app.config['SERVER_NAME']}/"))
-        if self.source_url and self.source_url.startswith('http') and current_app.config['SERVER_NAME'] in self.source_url:
-            # self.source_url is always a url rather than a file path, which makes deleting the file a bit fiddly
-            try:
-                os.unlink(self.source_url.replace(f"https://{current_app.config['SERVER_NAME']}/", 'app/'))
-            except FileNotFoundError:
-                ...
-            purge_from_cache.append(self.source_url) # otoh it makes purging the cdn cache super easy.
+        s3_files_to_delete = []
+        if self.file_path:
+            if self.file_path.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}') and _store_files_in_s3():
+                s3_path = self.file_path.replace(f'https://{current_app.config["S3_PUBLIC_URL"]}/', '')
+                s3_files_to_delete.append(s3_path)
+                purge_from_cache.append(self.file_path)
+            elif os.path.isfile(self.file_path):
+                try:
+                    os.unlink(self.file_path)
+                except FileNotFoundError:
+                    ...
+                purge_from_cache.append(self.file_path.replace('app/', f"https://{current_app.config['SERVER_NAME']}/"))
+
+        if self.thumbnail_path:
+            if self.thumbnail_path.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}') and _store_files_in_s3():
+                s3_path = self.thumbnail_path.replace(f'https://{current_app.config["S3_PUBLIC_URL"]}/', '')
+                s3_files_to_delete.append(s3_path)
+                purge_from_cache.append(self.thumbnail_path)
+            elif os.path.isfile(self.thumbnail_path):
+                try:
+                    os.unlink(self.thumbnail_path)
+                except FileNotFoundError:
+                    ...
+                purge_from_cache.append(self.thumbnail_path.replace('app/', f"https://{current_app.config['SERVER_NAME']}/"))
+        if self.source_url:
+            if self.source_url.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}') and _store_files_in_s3():
+                s3_path = self.source_url.replace(f'https://{current_app.config["S3_PUBLIC_URL"]}/', '')
+                s3_files_to_delete.append(s3_path)
+                purge_from_cache.append(self.source_url)
+            elif self.source_url.startswith('http') and current_app.config['SERVER_NAME'] in self.source_url:
+                try:
+                    os.unlink(self.source_url.replace(f"https://{current_app.config['SERVER_NAME']}/", 'app/'))
+                except FileNotFoundError:
+                    ...
+                purge_from_cache.append(self.source_url)
+
+        if len(s3_files_to_delete) > 0:
+            delete_payload = {
+                'Objects': [{'Key': key} for key in s3_files_to_delete],
+                'Quiet': True  # Optional: if True, successful deletions are not returned
+            }
+            boto3_session = boto3.session.Session()
+            s3 = boto3_session.client(
+                service_name='s3',
+                region_name=current_app.config['S3_REGION'],
+                endpoint_url=current_app.config['S3_ENDPOINT'],
+                aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+            )
+            s3.delete_objects(Bucket=current_app.config['S3_BUCKET'], Delete=delete_payload)
+            s3.close()
 
         if purge_from_cache:
             flush_cdn_cache(purge_from_cache)
@@ -363,36 +408,38 @@ def flush_cdn_cache(url: Union[str, List[str]]):
 
 @celery.task
 def flush_cdn_cache_task(to_purge: Union[str, List[str]]):
-    zone_id = current_app.config['CLOUDFLARE_ZONE_ID']
-    token = current_app.config['CLOUDFLARE_API_TOKEN']
-    headers = {
-        'Authorization': f"Bearer {token}",
-        'Content-Type': 'application/json'
-    }
-    # url can be a string or a list of strings
-    body = ''
-    if isinstance(to_purge, str) and to_purge == 'all':
-        body = {
-            'purge_everything': True
-        }
-    else:
-        if isinstance(to_purge, str):
-            body = {
-                'files': [to_purge]
+    with current_app.app_context():
+        zone_id = current_app.config['CLOUDFLARE_ZONE_ID']
+        token = current_app.config['CLOUDFLARE_API_TOKEN']
+        if zone_id and token:
+            headers = {
+                'Authorization': f"Bearer {token}",
+                'Content-Type': 'application/json'
             }
-        elif isinstance(to_purge, list):
-            body = {
-                'files': to_purge
-            }
+            # url can be a string or a list of strings
+            body = ''
+            if isinstance(to_purge, str) and to_purge == 'all':
+                body = {
+                    'purge_everything': True
+                }
+            else:
+                if isinstance(to_purge, str):
+                    body = {
+                        'files': [to_purge]
+                    }
+                elif isinstance(to_purge, list):
+                    body = {
+                        'files': to_purge
+                    }
 
-    if body:
-        httpx_client.request(
-            'POST',
-            f'https://api.cloudflare.com/client/v4/zones/{zone_id}/purge_cache',
-            headers=headers,
-            json=body,
-            timeout=5,
-        )
+            if body:
+                httpx_client.request(
+                    'POST',
+                    f'https://api.cloudflare.com/client/v4/zones/{zone_id}/purge_cache',
+                    headers=headers,
+                    json=body,
+                    timeout=5,
+                )
 
 
 class Topic(db.Model):
@@ -488,6 +535,15 @@ class Community(db.Model):
     icon = db.relationship('File', foreign_keys=[icon_id], single_parent=True, backref='community', cascade="all, delete-orphan")
     image = db.relationship('File', foreign_keys=[image_id], single_parent=True, cascade="all, delete-orphan")
     languages = db.relationship('Language', lazy='dynamic', secondary=community_language, backref=db.backref('communities', lazy='dynamic'))
+    flair = db.relationship('CommunityFlair', backref=db.backref('community'), cascade="all, delete-orphan")
+
+    __table_args__ = (
+        db.Index(
+            'idx_community_fts',
+            'search_vector',
+            postgresql_using='gin'
+        ),
+    )
 
     def language_ids(self):
         return [language.id for language in self.languages.all()]
@@ -664,10 +720,22 @@ class Community(db.Model):
         else:
             return 0
 
+    def flair_for_ap(self):
+        result = []
+        for flair in self.flair:
+            result.append({'type': 'lemmy:CommunityTag',
+                           'id': f'https://{current_app.config["SERVER_NAME"]}/c/{self.link()}/tag/{flair.id}',
+                           'display_name': flair.flair,
+                           'text_color': flair.text_color,
+                           'background_color': flair.background_color
+                           })
+        return result
+
     def delete_dependencies(self):
         for post in self.posts:
             post.delete_dependencies()
             db.session.delete(post)
+        db.session.query(FeedItem).filter(FeedItem.community_id == self.id).delete()
         db.session.query(CommunityBan).filter(CommunityBan.community_id == self.id).delete()
         db.session.query(CommunityBlock).filter(CommunityBlock.community_id == self.id).delete()
         db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == self.id).delete()
@@ -743,7 +811,7 @@ class User(UserMixin, db.Model):
     default_filter = db.Column(db.String(25), default='subscribed')
     theme = db.Column(db.String(20), default='')
     referrer = db.Column(db.String(256))
-    markdown_editor = db.Column(db.Boolean, default=False)
+    markdown_editor = db.Column(db.Boolean, default=True)
     interface_language = db.Column(db.String(10))           # a locale that the translation system understands e.g. 'en' or 'en-us'. If empty, use browser default
     language_id = db.Column(db.Integer, db.ForeignKey('language.id'))   # the default choice in the language dropdown when composing posts & comments. NOT UI language
     read_language_ids = db.Column(MutableList.as_mutable(ARRAY(db.Integer)))
@@ -751,6 +819,8 @@ class User(UserMixin, db.Model):
     reply_hide_threshold = db.Column(db.Integer, default=-20)
     feed_auto_follow = db.Column(db.Boolean, default=True)  # does the user want to auto-follow feed communities
     feed_auto_leave = db.Column(db.Boolean, default=True)   # does the user want to auto-leave feed communities
+    accept_private_messages = db.Column(db.Integer, default=1)         # None or 0 = do not accept, 1 = This instance, 2 = Trusted instances, 3 = All instances
+    google_oauth_id = db.Column(db.String(64), unique=True, index=True)
 
     avatar = db.relationship('File', lazy='joined', foreign_keys=[avatar_id], single_parent=True, cascade="all, delete-orphan")
     cover = db.relationship('File', lazy='joined', foreign_keys=[cover_id], single_parent=True, cascade="all, delete-orphan")
@@ -864,6 +934,10 @@ class User(UserMixin, db.Model):
     def vote_privately(self):
         return self.alt_user_name is not None and self.alt_user_name != ''
 
+    def community_flair(self, community_id: int):
+        user_flair = UserFlair.query.filter(UserFlair.community_id == community_id, UserFlair.user_id == self.id).first()
+        return user_flair.flair.strip() if user_flair else ''
+
     def num_content(self):
         content = 0
         content += db.session.execute(text('SELECT COUNT(id) as c FROM "post" WHERE user_id = :user_id'), {'user_id': self.id}).scalar()
@@ -964,30 +1038,56 @@ class User(UserMixin, db.Model):
         return self.expires < datetime(2019, 9, 1)
 
     def recalculate_attitude(self):
-        upvotes = downvotes = 0
-        with db.session.no_autoflush:  # Avoid StaleDataError exception
-            last_50_votes = PostVote.query.filter(PostVote.user_id == self.id).order_by(-PostVote.id).limit(50)
-            for vote in last_50_votes:
-                if vote.effect > 0:
-                    upvotes += 1
-                if vote.effect < 0:
-                    downvotes += 1
-
-            comment_upvotes = comment_downvotes = 0
-            last_50_votes = PostReplyVote.query.filter(PostReplyVote.user_id == self.id).order_by(-PostReplyVote.id).limit(50)
-            for vote in last_50_votes:
-                if vote.effect > 0:
-                    comment_upvotes += 1
-                if vote.effect < 0:
-                    comment_downvotes += 1
+        # Use direct SQL queries to avoid potential ORM-related deadlocks
+        # Count post upvotes and downvotes
+        post_votes_result = db.session.execute(text("""
+            SELECT 
+                COUNT(CASE WHEN effect > 0 THEN 1 END) AS upvotes,
+                COUNT(CASE WHEN effect < 0 THEN 1 END) AS downvotes
+            FROM (
+                SELECT effect
+                FROM post_vote
+                WHERE user_id = :user_id
+                ORDER BY id DESC
+                LIMIT 50
+            ) AS recent_votes
+        """), {"user_id": self.id}).fetchone()
+        
+        upvotes = post_votes_result[0] or 0
+        downvotes = post_votes_result[1] or 0
+        
+        # Count comment upvotes and downvotes
+        comment_votes_result = db.session.execute(text("""
+            SELECT 
+                COUNT(CASE WHEN effect > 0 THEN 1 END) AS upvotes,
+                COUNT(CASE WHEN effect < 0 THEN 1 END) AS downvotes
+            FROM (
+                SELECT effect
+                FROM post_reply_vote
+                WHERE user_id = :user_id
+                ORDER BY id DESC
+                LIMIT 50
+            ) AS recent_votes
+        """), {"user_id": self.id}).fetchone()
+        
+        comment_upvotes = comment_votes_result[0] or 0
+        comment_downvotes = comment_votes_result[1] or 0
 
         total_upvotes = upvotes + comment_upvotes
         total_downvotes = downvotes + comment_downvotes
 
-        if total_upvotes + total_downvotes > 2:  # Only calculate attitude if they've done 3 or more votes as anything less than this could be an outlier and not representative of their overall attitude (also guard against division by zero)
-            self.attitude = (total_upvotes - total_downvotes) / (total_upvotes + total_downvotes)
+        # Calculate the new attitude value
+        if total_upvotes + total_downvotes > 2:  # Only calculate attitude if they've done 3 or more votes
+            new_attitude = (total_upvotes - total_downvotes) / (total_upvotes + total_downvotes)
         else:
-            self.attitude = None
+            new_attitude = None
+        
+        # Update attitude with direct SQL query to avoid deadlocks
+        db.session.execute(text("""
+            UPDATE "user" 
+            SET attitude = :attitude
+            WHERE id = :user_id
+        """), {"attitude": new_attitude, "user_id": self.id})
 
     def get_num_upvotes(self):
         post_votes = db.session.execute(text('SELECT COUNT(*) FROM "post_vote" WHERE user_id = :user_id AND effect > 0'), {'user_id': self.id}).scalar()
@@ -1166,6 +1266,7 @@ class Post(db.Model):
     domain_id = db.Column(db.Integer, db.ForeignKey('domain.id'), index=True)
     instance_id = db.Column(db.Integer, db.ForeignKey('instance.id'), index=True)
     licence_id = db.Column(db.Integer, db.ForeignKey('licence.id'), index=True)
+    status = db.Column(db.Integer, index=True, default=1)       # see POST_STATUS_* in constants.py
     slug = db.Column(db.String(255))
     title = db.Column(db.String(255))
     url = db.Column(db.String(2048))
@@ -1182,7 +1283,7 @@ class Post(db.Model):
     score = db.Column(db.Integer, default=0, index=True)                # used for 'top' ranking
     nsfw = db.Column(db.Boolean, default=False, index=True)
     nsfl = db.Column(db.Boolean, default=False, index=True)
-    sticky = db.Column(db.Boolean, default=False)
+    sticky = db.Column(db.Boolean, default=False, index=True)
     notify_author = db.Column(db.Boolean, default=True)
     indexable = db.Column(db.Boolean, default=True)
     from_bot = db.Column(db.Boolean, default=False, index=True)
@@ -1198,7 +1299,11 @@ class Post(db.Model):
     reports = db.Column(db.Integer, default=0)                          # how many times this post has been reported. Set to -1 to ignore reports
     language_id = db.Column(db.Integer, db.ForeignKey('language.id'), index=True)
     cross_posts = db.Column(MutableList.as_mutable(ARRAY(db.Integer)))
+    scheduled_for = db.Column(db.DateTime, index=True)  # The first (or only) occurrence of this post
+    repeat = db.Column(db.String(20), default='')   # 'daily', 'weekly', 'monthly'. Empty string = no repeat, just post once.
+    stop_repeating = db.Column(db.DateTime, index=True)  # No more repeats after this datetime
     tags = db.relationship('Tag', lazy='joined', secondary=post_tag, backref=db.backref('posts', lazy='dynamic'))
+    flair = db.relationship('CommunityFlair', lazy='joined', secondary=post_flair, backref=db.backref('posts', lazy='dynamic'))
 
     ap_id = db.Column(db.String(255), index=True, unique=True)
     ap_create_id = db.Column(db.String(100))
@@ -1220,6 +1325,24 @@ class Post(db.Model):
     # read_post is the corresponding User object variable
     read_by = db.relationship('User', secondary=read_posts, back_populates='read_post', lazy='dynamic')
 
+    __table_args__ = (
+        db.Index(
+            'ix_post_user_id_not_deleted',
+            'user_id',
+            postgresql_where=db.text('deleted = false')
+        ),
+        db.Index(
+            'ix_post_community_id_not_deleted',
+            'community_id',
+            postgresql_where=db.text('deleted = false')
+        ),
+        db.Index(
+            'idx_post_fts',
+            'search_vector',
+            postgresql_using='gin'
+        ),
+    )
+
     def is_local(self):
         return self.ap_id is None or self.ap_id.startswith('https://' + current_app.config['SERVER_NAME'])
 
@@ -1230,7 +1353,7 @@ class Post(db.Model):
     @classmethod
     def new(cls, user: User, community: Community, request_json: dict, announce_id=None):
         from app.activitypub.util import instance_weight, find_language_or_create, find_language, find_hashtag_or_create, \
-            find_licence_or_create, make_image_sizes, notify_about_post
+            find_licence_or_create, make_image_sizes, notify_about_post, find_flair_or_create
         from app.utils import allowlist_html, markdown_to_html, html_to_text, microblog_content_to_title, blocked_phrases, \
             is_image_url, is_video_url, domain_from_url, opengraph_parse, shorten_string, fixup_url, \
             is_video_hosting_site, communities_banned_from, recently_upvoted_posts, blocked_users
@@ -1354,18 +1477,24 @@ class Post(db.Model):
             # notify about links to banned websites.
             already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
             if domain.notify_mods:
+                targets_data = {'post_id': post.id}
                 for community_member in post.community.moderators():
                     notify = Notification(title='Suspicious content', url=post.ap_id,
                                           user_id=community_member.user_id,
-                                          author_id=user.id)
+                                          author_id=user.id, notif_type=NOTIF_REPORT,
+                                          subtype='post_from_suspicious_domain',
+                                          targets=targets_data)
                     db.session.add(notify)
                     already_notified.add(community_member.user_id)
             if domain.notify_admins:
+                targets_data = {'post_id': post.id}
                 for admin in Site.admins():
                     if admin.id not in already_notified:
                         notify = Notification(title='Suspicious content',
                                               url=post.ap_id, user_id=admin.id,
-                                              author_id=user.id)
+                                              author_id=user.id, notif_type=NOTIF_REPORT,
+                                              subtype='post_from_suspicious_domain',
+                                              targets=targets_data)
                         db.session.add(notify)
             if domain.banned or domain.name.endswith('.pages.dev'):
                 raise Exception(domain.name + ' is blocked by admin')
@@ -1417,6 +1546,10 @@ class Post(db.Model):
                             hashtag = find_hashtag_or_create(json_tag['name'])
                             if hashtag:
                                 post.tags.append(hashtag)
+                    if json_tag and json_tag['type'] == 'lemmy:CommunityTag':
+                        flair = find_flair_or_create(json_tag, post.community_id)
+                        if flair:
+                            post.flair.append(flair)
             if 'searchableBy' in request_json['object'] and request_json['object']['searchableBy'] != 'https://www.w3.org/ns/activitystreams#Public':
                 post.indexable = False
 
@@ -1444,9 +1577,12 @@ class Post(db.Model):
                             if recipient:
                                 blocked_senders = blocked_users(recipient.id)
                                 if post.user_id not in blocked_senders:
+                                    targets_data = {'post_id': post.id}
                                     notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in post {post.id}"),
                                                                 url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
-                                                                author_id=post.user_id)
+                                                                author_id=post.user_id, notif_type=NOTIF_MENTION,
+                                                                subtype='post_mention',
+                                                                targets=targets_data)
                                     recipient.unread_notifications += 1
                                     db.session.add(notification)
                                     db.session.commit()
@@ -1474,7 +1610,7 @@ class Post(db.Model):
             if post.url:
                 post.calculate_cross_posts()
 
-            if post.community_id not in communities_banned_from(user.id):
+            if post.community_id not in communities_banned_from(user.id) and post.status == POST_STATUS_PUBLISHED:
                 notify_about_post(post)
 
             # attach initial upvote to author
@@ -1496,7 +1632,7 @@ class Post(db.Model):
             return
 
         if self.cross_posts and (url_changed or delete_only):
-            old_cross_posts = Post.query.filter(Post.id.in_(self.cross_posts)).all()
+            old_cross_posts = Post.query.filter(Post.id.in_(self.cross_posts), Post.status == POST_STATUS_PUBLISHED).all()
             self.cross_posts.clear()
             for ocp in old_cross_posts:
                 if ocp.cross_posts and self.id in ocp.cross_posts:
@@ -1515,7 +1651,7 @@ class Post(db.Model):
             return
 
         limit = 9
-        new_cross_posts = Post.query.filter(Post.id != self.id, Post.url == self.url, Post.deleted == False).order_by(desc(Post.id)).limit(limit)
+        new_cross_posts = Post.query.filter(Post.id != self.id, Post.url == self.url, Post.deleted == False, Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.id)).limit(limit)
 
         # other posts: update their cross_posts field with this post.id if they have less than the limit
         for ncp in new_cross_posts:
@@ -1638,6 +1774,12 @@ class Post(db.Model):
 
     def tags_for_activitypub(self):
         return_value = []
+        for flair in self.flair:
+            return_value.append({'type': 'lemmy:CommunityTag',
+                                 'id': f'https://{current_app.config["SERVER_NAME"]}/c/{self.community.link()}/tag/{flair.id}',
+                                 'display_name': flair.flair,
+                                 'text_color': flair.text_color,
+                                 'background_color': flair.background_color})
         for tag in self.tags:
             return_value.append({'type': 'Hashtag',
                                  'href': f'https://{current_app.config["SERVER_NAME"]}/tag/{tag.name}',
@@ -1667,6 +1809,9 @@ class Post(db.Model):
         return round(sign * order + seconds / 45000, 7)
 
     def vote(self, user: User, vote_direction: str):
+        if vote_direction == 'downvote':
+            if self.author.has_blocked_user(user.id) or self.author.has_blocked_instance(user.instance_id):
+                return None
         existing_vote = PostVote.query.filter_by(user_id=user.id, post_id=self.id).first()
         if existing_vote and vote_direction == 'reversal':                            # api sends '1' for upvote, '-1' for downvote, and '0' for reversal
             if existing_vote.effect == 1:
@@ -1737,16 +1882,37 @@ class Post(db.Model):
             # upvotes do not increase reputation in low quality communities
             if self.community.low_quality and effect > 0:
                 effect = 0
-            self.author.reputation += effect
+            with db.session.begin_nested():
+                db.session.execute(text('UPDATE "user" SET reputation = reputation + :effect WHERE id = :user_id'),
+                                   {'effect': effect, 'user_id': self.user_id})
             db.session.add(vote)
 
-        user.last_seen = utcnow()
         db.session.commit()
-        if not user.banned:
-            self.ranking = self.post_ranking(self.score, self.created_at)
-            self.ranking_scaled = int(self.ranking + self.community.scale_by())
+            
+        # Update user's last_seen in a separate transaction to avoid deadlocks
+        with db.session.begin_nested():
+            db.session.execute(text('UPDATE "user" SET last_seen=:last_seen WHERE id=:user_id'),
+                             {"last_seen": utcnow(), "user_id": user.id})
+        db.session.commit()
+        
+        # Calculate new ranking values
+        new_ranking = self.post_ranking(self.score, self.created_at)
+        new_ranking_scaled = int(new_ranking + self.community.scale_by())
+        
+        # Update post ranking in a separate transaction to avoid deadlocks
+        with db.session.begin_nested():
+            db.session.execute(text("""UPDATE "post" 
+                               SET ranking=:ranking, ranking_scaled=:ranking_scaled 
+                               WHERE id=:post_id"""),
+                             {"ranking": new_ranking, 
+                              "ranking_scaled": new_ranking_scaled, 
+                              "post_id": self.id})
+        
+        # Update user's attitude in another separate transaction
+        with db.session.begin_nested():
             user.recalculate_attitude()
-            db.session.commit()
+        
+        db.session.commit()
         return undo
 
 
@@ -1768,15 +1934,15 @@ class PostReply(db.Model):
     body_html = db.Column(db.Text)
     body_html_safe = db.Column(db.Boolean, default=False)
     score = db.Column(db.Integer, default=0, index=True)    # used for 'top' sorting
-    nsfw = db.Column(db.Boolean, default=False)
-    nsfl = db.Column(db.Boolean, default=False)
+    nsfw = db.Column(db.Boolean, default=False, index=True)
+    nsfl = db.Column(db.Boolean, default=False, index=True)
     notify_author = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, index=True, default=utcnow)
     posted_at = db.Column(db.DateTime, index=True, default=utcnow)
     deleted = db.Column(db.Boolean, default=False, index=True)
     deleted_by = db.Column(db.Integer, index=True)
     ip = db.Column(db.String(50))
-    from_bot = db.Column(db.Boolean, default=False)
+    from_bot = db.Column(db.Boolean, default=False, index=True)
     up_votes = db.Column(db.Integer, default=0)
     down_votes = db.Column(db.Integer, default=0)
     ranking = db.Column(db.Float, default=0.0, index=True)  # used for 'hot' sorting
@@ -1794,6 +1960,24 @@ class PostReply(db.Model):
     author = db.relationship('User', lazy='joined', foreign_keys=[user_id], single_parent=True, overlaps="post_replies")
     community = db.relationship('Community', lazy='joined', overlaps='replies', foreign_keys=[community_id])
     language = db.relationship('Language', foreign_keys=[language_id], lazy='joined')
+
+    __table_args__ = (
+        db.Index(
+            'ix_post_reply_community_id_not_deleted',
+            'community_id',
+            postgresql_where=db.text('deleted = false')
+        ),
+        db.Index(
+            'idx_post_reply_fts',
+            'search_vector',
+            postgresql_using='gin'
+        ),
+        db.Index(
+            'idx_post_reply_path',
+            'path',
+            postgresql_using='gin'
+        ),
+    )
 
     @classmethod
     def new(cls, user: User, post: Post, in_reply_to, body, body_html, notify_author, language_id, request_json: dict = None, announce_id=None):
@@ -2070,14 +2254,59 @@ class PostReply(db.Model):
             self.score += effect
             vote = PostReplyVote(user_id=user.id, post_reply_id=self.id, author_id=self.author.id,
                                  effect=effect)
-            self.author.reputation += effect
+            with db.session.begin_nested():
+                db.session.execute(text('UPDATE "user" SET reputation = reputation + :effect WHERE id = :user_id'),
+                                   {'effect': effect, 'user_id': self.user_id})
             db.session.add(vote)
         db.session.commit()
-        user.last_seen = utcnow()
-        self.ranking = PostReply.confidence(self.up_votes, self.down_votes)
-        user.recalculate_attitude()
+        
+        # Update user and ranking in separate transactions to avoid deadlocks
+        with db.session.begin_nested():
+            db.session.execute(text('UPDATE "user" SET last_seen=:last_seen WHERE id=:user_id'),
+                             {"last_seen": utcnow(), "user_id": user.id})
+        db.session.commit()
+        
+        # Calculate the new ranking value
+        new_ranking = PostReply.confidence(self.up_votes, self.down_votes)
+        
+        # Update ranking in a separate transaction to avoid deadlocks
+        with db.session.begin_nested():
+            db.session.execute(text("UPDATE post_reply SET ranking=:ranking WHERE id=:post_reply_id"),
+                             {"ranking": new_ranking, "post_reply_id": self.id})
+        
+        # Update user's attitude in another separate transaction
+        with db.session.begin_nested():
+            user.recalculate_attitude()
+        
         db.session.commit()
         return undo
+
+
+class ScheduledPost(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    community_id = db.Column(db.Integer, db.ForeignKey('community.id'), index=True)
+    image_id = db.Column(db.Integer, db.ForeignKey('file.id'), index=True)
+    domain_id = db.Column(db.Integer, db.ForeignKey('domain.id'), index=True)
+    licence_id = db.Column(db.Integer, db.ForeignKey('licence.id'), index=True)
+    title = db.Column(db.String(255))
+    url = db.Column(db.String(2048))
+    body = db.Column(db.Text)
+    microblog = db.Column(db.Boolean, default=False)
+    nsfw = db.Column(db.Boolean, default=False, index=True)
+    nsfl = db.Column(db.Boolean, default=False, index=True)
+    sticky = db.Column(db.Boolean, default=False, index=True)
+    indexable = db.Column(db.Boolean, default=True)
+    from_bot = db.Column(db.Boolean, default=False, index=True)
+    created_at = db.Column(db.DateTime, index=True, default=utcnow)
+    language_id = db.Column(db.Integer, db.ForeignKey('language.id'), index=True)
+    scheduled_for = db.Column(db.DateTime, index=True)  # The first (or only) occurrence of this post
+    repeat = db.Column(db.String(20), default='')   # 'daily', 'weekly', 'monthly'. Empty string = no repeat, just post once.
+
+    @classmethod
+    def new(cls, user, community: Community, request_json: dict):
+        ...
+        # use Post.new() for inspiration
 
 
 class Domain(db.Model):
@@ -2254,6 +2483,10 @@ class PostVote(db.Model):
     created_at = db.Column(db.DateTime, default=utcnow)
     post = db.relationship('Post', foreign_keys=[post_id])
 
+    __table_args__ = (
+        Index('ix_post_vote_user_id_id_desc', 'user_id', desc('id')),
+    )
+
 
 class PostReplyVote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -2262,6 +2495,10 @@ class PostReplyVote(db.Model):
     post_reply_id = db.Column(db.Integer, db.ForeignKey('post_reply.id'), index=True)
     effect = db.Column(db.Float)
     created_at = db.Column(db.DateTime, default=utcnow)
+
+    __table_args__ = (
+        Index('ix_post_reply_vote_user_id_id_desc', 'user_id', desc('id')),
+    )
 
 
 # save every activity to a log, to aid debugging
@@ -2308,12 +2545,15 @@ class RolePermission(db.Model):
 
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(50))
+    title = db.Column(db.String(150))
     url = db.Column(db.String(512))
     read = db.Column(db.Boolean, default=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)       # who the notification should go to
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'))     # the person who caused the notification to happen
     created_at = db.Column(db.DateTime, default=utcnow)
+    notif_type = db.Column(db.Integer, default=NOTIF_DEFAULT, index=True)   # see constants.py for possible values: NOTIF_*
+    subtype = db.Column(db.String(50), index=True)
+    targets = db.Column(db.JSON)
 
 
 class Report(db.Model):
@@ -2496,6 +2736,8 @@ class Site(db.Model):
     logo_32 = db.Column(db.String(40), default='')
     logo_16 = db.Column(db.String(40), default='')
     show_inoculation_block = db.Column(db.Boolean, default=True)
+    additional_css = db.Column(db.Text)
+    private_instance = db.Column(db.Boolean, default=False)
 
     @staticmethod
     def admins() -> List[User]:
@@ -2542,9 +2784,9 @@ class Feed(db.Model):
     query_class = FullTextSearchQuery
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
-    title = db.Column(db.String(256))
-    name = db.Column(db.String(256), index=True, unique=True)
-    machine_name = db.Column(db.String(50), index=True)
+    title = db.Column(db.String(256))                           # Human name
+    name = db.Column(db.String(256), index=True, unique=True)   # url
+    machine_name = db.Column(db.String(50), index=True)         # url also?!
     description = db.Column(db.Text)        # markdown
     description_html = db.Column(db.Text)   # html equivalent of above markdown
     nsfw = db.Column(db.Boolean, default=False)
@@ -2738,6 +2980,35 @@ class FeedJoinRequest(db.Model):
     feed_id = db.Column(db.Integer, db.ForeignKey('feed.id'), index=True)
 
 
+class CommunityFlair(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    community_id = db.Column(db.Integer, db.ForeignKey('community.id'), index=True)
+    flair = db.Column(db.String(50), index=True)
+    text_color = db.Column(db.String(50))
+    background_color = db.Column(db.String(50))
+
+
+class UserFlair(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    community_id = db.Column(db.Integer, db.ForeignKey('community.id'), index=True)
+    flair = db.Column(db.String(50), index=True)
+
+
+class SendQueue(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    destination_domain = db.Column(db.String(255), index=True)
+    destination = db.Column(db.String(1024))
+    actor = db.Column(db.String(255), index=True)
+    private_key = db.Column(db.String(2000))
+    payload = db.Column(db.Text)
+    retries = db.Column(db.Integer, default=0)
+    max_retries = db.Column(db.Integer, default=20)
+    retry_reason = db.Column(db.String(255))
+    created = db.Column(db.DateTime, default=utcnow)
+    send_after = db.Column(db.DateTime, default=utcnow, index=True)
+
+
 def _large_community_subscribers() -> float:
     # average number of subscribers in the top 15% communities
 
@@ -2754,3 +3025,7 @@ def _large_community_subscribers() -> float:
         result = db.session.execute(text(sql)).scalar()
         cache.set('large_community_subscribers', result, timeout=3600)
     return result
+
+
+def _store_files_in_s3():
+    return current_app.config['S3_ACCESS_KEY'] != '' and current_app.config['S3_ACCESS_SECRET'] != '' and current_app.config['S3_ENDPOINT'] != ''

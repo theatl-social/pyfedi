@@ -35,12 +35,14 @@ class SiteMiscForm(FlaskForm):
     types = [('Open', _l('Open')), ('RequireApplication', _l('Require application')), ('Closed', _l('Closed'))]
     registration_mode = SelectField(_l('Registration mode'), choices=types, default=1, coerce=str, render_kw={'class': 'form-select'})
     application_question = TextAreaField(_l('Question to ask people applying for an account'))
+    registration_approved_email = TextAreaField(_l('Registration approved email'), render_kw={'rows': '5'})
 
     choose_topics = BooleanField(_l('Provide a list of topics to subscribe to'))
     filter_selection = BooleanField(_l('Trump Musk filter setup'))
     auto_decline_countries = TextAreaField(_l('Ignore registrations from these countries'))
     auto_decline_referrers = TextAreaField(_l('Block registrations from these referrers (one per line)'))
     default_theme = SelectField(_l('Default theme'), coerce=str, render_kw={'class': 'form-select'})
+    additional_css = TextAreaField(_l('Additional CSS'))
     filters = [('subscribed', _l('Subscribed')),
                ('local', _l('Local')),
                ('popular', _l('Popular')),
@@ -50,6 +52,7 @@ class SiteMiscForm(FlaskForm):
                                  render_kw={'class': 'form-select'})
     log_activitypub_json = BooleanField(_l('Log ActivityPub JSON for debugging'))
     public_modlog = BooleanField(_l('Show moderation actions publicly'))
+    private_instance = BooleanField(_l('Private instance - require login to browse'))
     show_inoculation_block = BooleanField(_l('Show Rational Discourse Toolkit in sidebar'))
 
     submit = SubmitField(_l('Save'))
@@ -151,6 +154,7 @@ class EditInstanceForm(FlaskForm):
     gone_forever = BooleanField(_l('Gone forever'))
     trusted = BooleanField(_l('Trusted'))
     posting_warning = TextAreaField(_l('Posting warning'))
+    inbox = StringField(_l('Inbox'))
     submit = SubmitField(_l('Save'))
 
 
@@ -256,3 +260,14 @@ class SendNewsletterForm(FlaskForm):
     body_html = TextAreaField(_l('Body (html)'), render_kw={"rows": 20}, validators=[DataRequired()])
     test = BooleanField(_l('Test mode'), render_kw={'checked': True})
     submit = SubmitField(_l('Send newsletter'))
+
+
+class MoveCommunityForm(FlaskForm):
+    new_url = StringField(_l('New url'), validators=[DataRequired()])
+    new_owner = BooleanField(_l('Set new owner'))
+    submit = SubmitField(_l('Submit'))
+
+    def validate_new_url(self, new_url):
+        existing_community = Community.query.filter(Community.ap_id == None, Community.name == new_url.data.lower()).first()
+        if existing_community:
+            raise ValidationError(_l('A local community at that url already exists'))

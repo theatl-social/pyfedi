@@ -1,0 +1,10 @@
+<p><a href="https://piefed.social/"><img src="https://piefed.social/static/images/piefed_logo_icon_t_75.png" style="max-width: 100%; margin-bottom: 20px;" width="50" height="50" alt="PieFed logo" /></a></p>
+<p>{{ current_user.display_name() }} has requested to move {{ community.link() }} from it's current instance to {{ home_domain }}.</p>
+<p>Checklist: </p>
+    <ol>
+        <li><p><a href="{{ community.public_url() }}">The old community</a> has been set to 'moderators only'.</p></li>
+        <li><p>If the post at {{ post_url }} is a valid announcement of the impending move.</p></li>
+        <li><p>The person requesting the move is a moderator of the old community.</p></li>
+    </ol>
+
+<p>If all is well then <strong><a href="https://{{ home_domain }}/admin/community/{{ community.id }}/move/{{ current_user.id }}">Make the community local</a></strong>.</p>

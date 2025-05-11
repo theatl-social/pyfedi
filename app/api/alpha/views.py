@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from app import cache, db
 from app.constants import *
-from app.models import ChatMessage, Community, CommunityMember, Instance, Post, PostReply, PostVote, User
-from app.utils import blocked_communities
+from app.models import ChatMessage, Community, CommunityMember, Language, Instance, Post, PostReply, PostVote, User
+from app.utils import blocked_communities, blocked_instances, blocked_users
+
+from flask import current_app, g
 
 from sqlalchemy import text
 
@@ -165,6 +167,44 @@ def user_view(user: User | int, variant, stub=False, user_id=None):
     if variant == 5:
         v5 = {'person_view': user_view(user=user, variant=2, user_id=user_id)}
         return v5
+
+    # Variant 6 - User Settings - api/user.dart saveUserSettings
+    if variant == 6:
+        v6 = {
+          "local_user_view": {
+            "local_user": {
+              "show_nsfw": not user.hide_nsfw == 1,
+              "default_sort_type": user.default_sort.capitalize(),
+              "default_listing_type": user.default_filter.capitalize(),
+              "show_scores": True,
+              "show_bot_accounts": not user.ignore_bots == 1,
+              "show_read_posts": not user.hide_read_posts == True
+            },
+            "person": {
+              "id": user.id,
+              "user_name": user.user_name,
+              "banned": user.banned,
+              "published": user.created.isoformat() + 'Z',
+              "actor_id": user.public_url()[8:],
+              "local": True,
+              "deleted": user.deleted,
+              "bot": user.bot,
+              "instance_id": 1
+            },
+            "counts": {
+              "person_id": user.id,
+              "post_count": user.post_count,
+             "comment_count": user.post_reply_count
+            }
+          },
+          "moderates": [], # moderating_communities(user),
+          "follows": [], # joined_communities(user),
+          "community_blocks": blocked_communities_view(user),
+          "instance_blocks": blocked_instances_view(user),
+          "person_blocks": blocked_people_view(user),
+          "discussion_languages": []        # TODO
+        }
+        return v6
 
 
 def community_view(community: Community | int | str, variant, stub=False, user_id=None):
@@ -508,6 +548,38 @@ def private_message_view(cm: ChatMessage, user_id, ap_id):
     return v1
 
 
+def site_view(user):
+    logo = g.site.logo if g.site.logo else '/static/images/piefed_logo_icon_t_75.png'
+    site = {
+      "enable_downvotes": g.site.enable_downvotes,
+      "icon": f"https://{current_app.config['SERVER_NAME']}{logo}",
+      "registration_mode": g.site.registration_mode,
+      "name": g.site.name,
+      "actor_id": f"https://{current_app.config['SERVER_NAME']}/",
+      "user_count": users_total(),
+      "all_languages": []
+    }
+    if g.site.sidebar:
+        site['sidebar'] = g.site.sidebar
+    if g.site.description:
+        site['description'] = g.site.description
+    for language in Language.query.all():
+        site["all_languages"].append({
+            "id": language.id,
+            "code": language.code,
+            "name": language.name
+        })
+
+    v1 = {
+      "version": "1.0.0",
+      "site": site
+    }
+    if user:
+        v1['my_user'] = user_view(user=user, variant=6)
+
+    return v1
+
+
 @cache.memoize(timeout=86400)
 def cached_modlist_for_community(community_id):
     moderator_ids = db.session.execute(text('SELECT user_id FROM "community_member" WHERE community_id = :community_id and is_moderator = True'), {'community_id': community_id}).scalars()
@@ -532,3 +604,58 @@ def cached_modlist_for_user(user):
         }
         modlist.append(entry)
     return modlist
+
+
+@cache.memoize(timeout=86400)
+def users_total():
+    return db.session.execute(text(
+        'SELECT COUNT(id) as c FROM "user" WHERE ap_id is null AND verified is true AND banned is false AND deleted is false')).scalar()
+
+
+"""
+@cache.memoize(timeout=86400)
+def moderating_communities(user):
+    cms = CommunityMember.query.filter_by(user_id=user.id, is_moderator=True)
+    moderates = []
+    for cm in cms:
+        moderates.append({'community': community_view(cm.community_id, variant=1, stub=True), 'moderator': user_view(user, variant=1, stub=True)})
+    return moderates
+"""
+
+"""
+@cache.memoize(timeout=86400)
+def joined_communities(user):
+    cms = CommunityMember.query.filter_by(user_id=user.id, is_banned=False)
+    follows = []
+    for cm in cms:
+        follows.append({'community': community_view(cm.community_id, variant=1, stub=True), 'follower': user_view(user, variant=1, stub=True)})
+    return follows
+"""
+
+
+# @cache.memoize(timeout=86400)
+def blocked_people_view(user):
+    blocked_ids = blocked_users(user.id)
+    blocked = []
+    for blocked_id in blocked_ids:
+        blocked.append({'person': user_view(user, variant=1, stub=True), 'target': user_view(blocked_id, variant=1, stub=True)})
+    return blocked
+
+
+# @cache.memoize(timeout=86400)
+def blocked_communities_view(user):
+    blocked_ids = blocked_communities(user.id)
+    blocked = []
+    for blocked_id in blocked_ids:
+        blocked.append({'person': user_view(user, variant=1, stub=True), 'community': community_view(blocked_id, variant=1, stub=True)})
+    return blocked
+
+
+# @cache.memoize(timeout=86400)
+def blocked_instances_view(user):
+    blocked_ids = blocked_instances(user.id)
+    blocked = []
+    for blocked_id in blocked_ids:
+        blocked.append({'person': user_view(user, variant=1, stub=True), 'instance': instance_view(blocked_id, variant=1)})
+    return blocked
+

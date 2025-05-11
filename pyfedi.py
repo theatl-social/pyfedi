@@ -14,7 +14,8 @@ from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_ARTICLE, PO
 from app.models import Site
 from app.utils import getmtime, gibberish, shorten_string, shorten_url, digits, user_access, community_membership, \
     can_create_post, can_upvote, can_downvote, shorten_number, ap_datetime, current_theme, community_link_to_href, \
-    in_sorted_list, role_access, first_paragraph, person_link_to_href, feed_membership, html_to_text, remove_images
+    in_sorted_list, role_access, first_paragraph, person_link_to_href, feed_membership, html_to_text, remove_images, \
+    notif_id_to_string
 
 app = create_app()
 cli.register(app)
@@ -24,7 +25,7 @@ cli.register(app)
 def app_context_processor():
     return dict(getmtime=getmtime, instance_domain=current_app.config['SERVER_NAME'], debug_mode=current_app.debug,
                 arrow=arrow, locale=g.locale if hasattr(g, 'locale') else None,
-                POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
+                POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE, notif_id_to_string=notif_id_to_string,
                 POST_TYPE_ARTICLE=POST_TYPE_ARTICLE, POST_TYPE_VIDEO=POST_TYPE_VIDEO, POST_TYPE_POLL=POST_TYPE_POLL,
                 SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                 SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING)
@@ -83,5 +84,6 @@ def after_request(response):
         response.headers['Content-Security-Policy'] = f"script-src 'self' 'nonce-{session['nonce']}'"
         response.headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains; preload'
         response.headers['X-Content-Type-Options'] = 'nosniff'
-        response.headers['X-Frame-Options'] = 'DENY'
+        if '/embed' not in request.path:
+            response.headers['X-Frame-Options'] = 'DENY'
     return response

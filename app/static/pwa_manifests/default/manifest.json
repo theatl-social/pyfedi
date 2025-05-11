@@ -6,13 +6,13 @@
             "src": "/static/images/piefed_logo_icon_t_192.png",
             "sizes": "192x192",
             "type": "image/png",
-            "purpose": "maskable"
+            "purpose": "any maskable"
         },
         {
             "src": "/static/images/piefed_logo_icon_t_512.png",
             "sizes": "512x512",
             "type": "image/png",
-            "purpose": "maskable"
+            "purpose": "any maskable"
         }
     ],
     "theme_color": "#c6e2ffff",
@@ -20,5 +20,6 @@
     "display": "minimal-ui",
     "start_url": "/",
     "scope": "/",
-    "piefed_manifest_version": "default" 
+    "piefed_manifest_version": "default",
+    "prefer_related_applications": false
 }

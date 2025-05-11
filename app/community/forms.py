@@ -4,6 +4,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, TextAreaField, BooleanField, HiddenField, SelectField, FileField, \
     DateField
 from wtforms.fields.choices import SelectMultipleField
+from wtforms.fields import DateTimeLocalField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Regexp, Optional
 from flask_babel import _, lazy_gettext as _l
 
@@ -119,11 +120,17 @@ class CreatePostForm(FlaskForm):
     title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])
     body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=50000)], render_kw={'rows': 5})
     tags = StringField(_l('Tags'), validators=[Optional(), Length(min=3, max=5000)])
+    flair = MultiCheckboxField(_l('Flair'), coerce=int, validators=[Optional()],
+                                        render_kw={'class':'form-multicheck-columns'})
     sticky = BooleanField(_l('Sticky'))
     nsfw = BooleanField(_l('NSFW'))
     nsfl = BooleanField(_l('Gore/gross'))
     notify_author = BooleanField(_l('Notify about replies'))
     language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
+    scheduled_for = DateTimeLocalField(_l('Publish at'), validators=[Optional()], format="%Y-%m-%dT%H:%M")
+    repeat = SelectField(_l('Repeat'), validators=[Optional()], choices=[('none', _l('None')), ('daily', _l('Daily')), ('weekly', _l('Weekly')), ('monthly', _l('Monthly'))],
+                         render_kw={'class': 'form-select'})
+    timezone = HiddenField(render_kw={'id': 'timezone'})
     submit = SubmitField(_l('Publish'))
 
     def validate_nsfw(self, field):
@@ -138,6 +145,12 @@ class CreatePostForm(FlaskForm):
             if field.data:
                 self.nsfl.errors.append(_l('NSFL posts are not allowed.'))
                 return False
+        return True
+
+    def validate_scheduled_for(self, field):
+        if field.data and field.data < utcnow():
+            self.scheduled_for.errors.append(_l('Choose a time in the future.'))
+            return False
         return True
 
 
@@ -281,6 +294,11 @@ class ReportCommunityForm(FlaskForm):
         return ', '.join(result)
 
 
+class SetMyFlairForm(FlaskForm):
+    my_flair = StringField(_l('Flair'), validators=[Optional(), Length(min=0, max=50)])
+    submit = SubmitField(_l('Save'))
+
+
 class DeleteCommunityForm(FlaskForm):
     submit = SubmitField(_l('Delete community'))
 
@@ -293,3 +311,16 @@ class RetrieveRemotePost(FlaskForm):
 class InviteCommunityForm(FlaskForm):
     to = TextAreaField(_l('To'), validators=[DataRequired()], render_kw={'placeholder': _l('Email addresses or fediverse handles, one per line'), 'autofocus': True})
     submit = SubmitField(_l('Invite'))
+
+
+class MoveCommunityForm(FlaskForm):
+    old_community_locked = BooleanField(_l('The old community is locked'), validators=[DataRequired()])
+    post_link = StringField(_l('Move notification post in old community'), validators=[DataRequired()])
+    submit = SubmitField(_l('Request move'))
+
+
+class EditCommunityFlairForm(FlaskForm):
+    flair = StringField(_l('Flair'), validators=[DataRequired()])
+    text_color = StringField(_l('Text color'), render_kw={"type": "color"})
+    background_color = StringField(_l('Background color'), render_kw={"type": "color"})
+    submit = SubmitField(_l('Save'))

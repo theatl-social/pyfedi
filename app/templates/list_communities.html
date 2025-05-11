@@ -18,7 +18,7 @@
 </div>
 <div class="row">
     <div class="col-12">
-        <fieldset id="community_filters" class="mt-4 mb-1 pb-3 coolfieldset  {{ 'collapsed' if request.cookies.get('fieldset_community_filters_state', 'collapsed') == 'collapsed' }}">
+        <fieldset id="community_filters" class="mt-4 mb-1 pb-3 coolfieldset  {{ 'collapsed' if request.cookies.get('fieldset_community_filters_state', 'collapsed') == 'collapsed' and request.args.get('search', '') == '' }}">
             <legend class="w-auto">{{ _('Filters') }}</legend>
             <div class="row mb-3">
                 <div class="col-auto">
@@ -93,7 +93,7 @@
         </fieldset>
     </div>
 </div>
-{% if communities -%}
+{% if communities and communities.items -%}
     <div class="table-responsive-md">
         <table class="communities_table table table-striped table-hover w-100">
             <caption class="visually-hidden">{{ _('Communities') }}</caption>
@@ -162,10 +162,10 @@
                                         or (current_user.hide_nsfl == 2 and community.nsfl) -%}
                     <tr class="{{ 'blocked' if content_blocked }}{{ 'blur' if blur_content }}">
                         <td width="70">{% if current_user.is_authenticated -%}
-                                {% if community_membership(current_user, community) in [SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER] -%}
-                                    <a class="btn btn-primary btn-sm" href="/community/{{ community.link() }}/unsubscribe" rel="nofollow" aria-label="{{ _('Leave %(name)s', name=community.display_name()) }}">{{ _('Leave') }}</a>
-                                {% elif community_membership(current_user, community) == SUBSCRIPTION_PENDING -%}
+                                {% if community.id in pending_communities and community.id not in joined_communities -%}
                                     <a class="btn btn-outline-secondary btn-sm" href="/community/{{ community.link() }}/unsubscribe" rel="nofollow">{{ _('Pending') }}</a>
+                                {% elif community.id in joined_communities -%}
+                                    <a class="btn btn-primary btn-sm" href="/community/{{ community.link() }}/unsubscribe" rel="nofollow" aria-label="{{ _('Leave %(name)s', name=community.display_name()) }}">{{ _('Leave') }}</a>
                                 {% else -%}
                                     <a class="btn btn-primary btn-sm" href="/community/{{ community.link() }}/subscribe" rel="nofollow" aria-label="{{ _('Join %(name)s', name=community.display_name()) }}">{{ _('Join') }}</a>
                                 {% endif -%}
@@ -199,7 +199,11 @@
             {% endif -%}
     </nav>
 {% else -%}
-<p>{{ _('There are no communities yet.') }}</p>
+    {% if request.args.get('search', '') == '' -%}
+        <p class="mt-4">{{ _('There are no communities yet.') }}</p>
+    {% else -%}
+        <p class="mt-4">{{ _('No communities match your search.') }}</p>
+    {% endif -%}
 {% endif -%}
 <p class="mt-4"><a href="/topics" class="btn btn-primary">{{ _('Browse topics') }}</a></p>
 {% endblock -%}

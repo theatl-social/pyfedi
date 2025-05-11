@@ -75,9 +75,9 @@ def purge_user_then_delete_task(user_id):
                 instances = Instance.query.all()
                 payload = {
                     "@context": default_context(),
-                    "actor": user.ap_profile_id,
-                    "id": f"{user.ap_profile_id}#delete",
-                    "object": user.ap_profile_id,
+                    "actor": user.public_url(),
+                    "id": f"http://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+                    "object": user.public_url(),
                     "to": [
                         "https://www.w3.org/ns/activitystreams#Public"
                     ],
@@ -87,7 +87,6 @@ def purge_user_then_delete_task(user_id):
                     if instance.inbox and instance.online() and instance.id != 1:
                         send_post_request(instance.inbox, payload, user.private_key, user.public_url() + '#main-key')
 
-            sleep(100)                                  # wait a while for any related activitypub traffic to die down.
             user.deleted = True
             user.delete_dependencies()
             user.purge_content()
@@ -95,7 +94,7 @@ def purge_user_then_delete_task(user_id):
 
 
 def unsubscribe_from_community(community, user):
-    if community.instance.gone_forever:
+    if community.instance.gone_forever or community.instance.dormant:
         return
 
     undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)

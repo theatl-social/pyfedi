@@ -7,7 +7,7 @@
             [deleted]
         {% endif -%}
     {% else -%}
-        <a href="/u/{{ user.link() }}" aria-label="{{ _('Author') }}" class="author_link" title="" rel="author">
+        <a href="/u/{{ user.link() }}" aria-label="{{ _('Author') }}" class="author_link {{ 'donor' if user.stripe_subscription_id }}" title="" rel="author">
             {% if user.avatar_id and not low_bandwidth and not collapsed -%}
                 <img src="{{ user.avatar_thumbnail() }}" alt="" loading="lazy" />
             {% endif -%}
@@ -29,6 +29,9 @@
         {% if user.bot -%}
             <span class="fe fe-bot-account" title="Bot account"> </span>
         {% endif -%}
+        {% if user_flair and user.id in user_flair %}
+            <span class="user_flair">{{ user_flair[user.id] }}</span>
+        {% endif %}
         {% if user.id != current_user.id -%}
             {% if user.reputation < -10 -%}
                 <span class="fe fe-warning red" title="Very low reputation. Beware."> </span>
@@ -122,13 +125,21 @@
         {% if noindex -%}
             <meta name="robots" content="noindex">
         {% endif -%}
+        {% if post -%}
+            <link rel="alternate" type="application/json+oembed" href="{{ url_for('post.post_oembed', post_id=post.id, _external=True) }}" title="{{ post.title }}" />
+        {% endif -%}
       {% if preconnect and not low_bandwidth -%}
         <link rel="preconnect" href='{{ preconnect }}'>
+      {% endif -%}
+      {% if g.site.additional_css -%}
+      <style>
+          {{ g.site.additional_css }}
+      </style>
       {% endif -%}
     {% endblock -%}
     <script src="/static/js/set_theme.js" type="text/javascript"></script>
   </head>
-  <body class="d-flex flex-column{{ ' low_bandwidth' if low_bandwidth }}">
+  <body class="d-flex flex-column{{ ' low_bandwidth' if low_bandwidth }} {{ session.get('compact_level', '') }}">
     <a href="#outer_container" class="skip-link" role="navigation" aria-label="Skip main navigation" tabindex="">Skip to main content</a>
     <a href="#side_pane" class="skip-link" role="navigation" aria-label="Go to side pane" tabindex="">Go to side pane</a>
     <!-- Page content -->
@@ -187,57 +198,11 @@
                         {% else %}
                             <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %}">
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/topics"  aria-haspopup="true" aria-expanded="false">{{ _('Topics') }}</a>
-                                <ul class="dropdown-menu">
-                                  {% if menu_topics -%}
-                                       {% for topic_menu_item in menu_topics -%}
-                                            <li><a class="dropdown-item{% if topic and topic.id == topic_menu_item.id%} active{% endif %}" href="/topic/{{ topic_menu_item.path() }}">{{ topic_menu_item.name }}</a></li>
-                                       {% endfor -%}
-                                       <li><hr class="dropdown-divider"></li>
-                                       <li><a class="dropdown-item{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('More topics') }}</a></li>
-                                  {% else -%}
-                                    <li><a class="dropdown-item{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('Browse by topic') }}</a></li>
-                                  {% endif -%}
-                                  <li><a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a></li>
-                                  {% if moderating_communities %}
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><h6 class="dropdown-header">{{ _('Moderating') }}</h6></li>
-                                    {% for community_menu_item in moderating_communities -%}
-                                        <li class="pl-2"><a class="dropdown-item{% if community and community.id == community_menu_item.id%} active{% endif %}" href="/c/{{ community_menu_item.link() }}">{{ community_menu_item.title }}</a></li>
-                                    {% endfor -%}
-                                  {% endif %}
-                                  {% if joined_communities %}
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><h6 class="dropdown-header">{{ _('Joined communities') }}</h6></li>
-                                    {% for community_menu_item in joined_communities -%}
-                                        <li class="pl-2"><a class="dropdown-item{% if community and community.id == community_menu_item.id%} active{% endif %}" href="/c/{{ community_menu_item.link() }}">{{ community_menu_item.title }}</a></li>
-                                    {% endfor -%}
-                                  {% endif %}
-                                </ul>
+                                <div class="dropdown-menu topics_menu" hx-get="{{ url_for('main.topics_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
                             </li>
                             <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %}">
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/u/myfeeds"  aria-haspopup="true" aria-expanded="false">{{ _('Feeds') }}</a>
-                                <ul class="dropdown-menu">
-                                  {% if menu_instance_feeds -%}
-                                       {% for feed_menu_item in menu_instance_feeds -%}
-                                            <li><a class="dropdown-item{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a></li>
-                                       {% endfor -%}
-                                       <li><hr class="dropdown-divider"></li>
-                                  {% endif -%}
-                                  {% if menu_my_feeds or menu_subscribed_feeds -%}
-                                       <li><a class="dropdown-item{% if active_child == 'user_feeds' %} active{% endif %}" href="/u/myfeeds">{{ _('My Feeds') }}</a></li>
-                                       {% for feed_menu_item in menu_my_feeds -%}
-                                            <li><a class="dropdown-item{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a></li>
-                                       {% endfor -%}
-                                       {% for feed_menu_item in menu_subscribed_feeds -%}
-                                            <li><a class="dropdown-item{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a></li>
-                                       {% endfor -%}
-                                       <li><hr class="dropdown-divider"></li>
-                                       <li><a class="dropdown-item{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></li>
-                                  {% else -%}
-                                    <li><a class="dropdown-item{% if active_child == 'user_feeds' %} active{% endif %}" href="/u/myfeeds">{{ _('My Feeds') }}</a></li>
-                                    <li><a class="dropdown-item{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></li>
-                                  {% endif -%}
-                                </ul>
+                                <div class="dropdown-menu feeds_menu" hx-get="{{ url_for('main.feeds_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
                             </li>                            
                             <li class="nav-item dropdown{% if active_parent == 'account' %} active{% endif %}">
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/u/{{ current_user.link() }}" aria-haspopup="true" aria-expanded="false">{{ _('Account') }}</a>
@@ -248,6 +213,9 @@
                                   <li><a class="dropdown-item{% if active_child == 'bookmarks' %} active{% endif %}" href="/bookmarks">{{ _('Bookmarks') }}</a></li>
                                   <li><a class="dropdown-item{% if active_child == 'alerts' %} active{% endif %}" href="/alerts">{{ _('Activity Alerts') }}</a></li>
                                   {% if current_user.is_authenticated -%}
+                                    {% if current_user.stripe_subscription_id -%}
+                                        <li><a class="dropdown-item{% if active_child == 'donate' %} active{% endif %}" href="/donate">{{ _('Manage donations') }}</a></li>
+                                    {% endif -%}
                                     {% if current_user.hide_read_posts -%}
                                         <li><a class="dropdown-item{% if active_child == 'read_posts' %} active{% endif %}" href="/read-posts">{{ _('Read Posts') }}</a></li>
                                     {% endif -%}
@@ -302,12 +270,13 @@
             {% block app_content %}{% endblock %}
         </div>
         <footer class="footer mt-auto" role="contentinfo">
-            <p role="timer" id="timeSpent" class="text-center mt-4" title="This is how long you have spent using PieFed during this month. We hope this use of your time aligns with your priorities and values."></p>
+            <p class="text-center mt-4"><button class="btn btn-primary" style="display: none;" id="btn_add_home_screen">{{ _('Install PieFed app') }}</button></p>
             <p class="text-center"><a href="/donate">{{ _('Donate') }}</a></p>
             <p class="text-center"><a href="/about">{{ _('About') }}</a></p>
             <p class="text-center"><a href="/keyboard_shortcuts">{{ _('Keyboard shortcuts') }}</a></p>
             <p class="text-center"><a href="https://codeberg.org/rimu/pyfedi">PieFed is free and open source</a>.<br />Please <a href="https://codeberg.org/rimu/pyfedi/issues">report bugs</a> or <a href="https://join.piefed.social/get-involved/">get involved</a>.</p>
             <p class="text-center"><a href="/privacy">Privacy policy</a></p>
+            <p role="timer" id="timeSpent" class="text-center mt-4" title="This is how long you have spent using PieFed during this month. We hope this use of your time aligns with your priorities and values."></p>
         </footer>
     {% endblock -%}
 

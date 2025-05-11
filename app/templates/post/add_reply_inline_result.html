@@ -24,6 +24,9 @@
         {% if user.bot -%}
             <span class="fe fe-bot-account" title="Bot account"> </span>
         {% endif -%}
+        {% if user_flair and user.id in user_flair %}
+            <span class="user_flair">{{ user_flair[user.id] }}</span>
+        {% endif %}
         {% if user.id != current_user.id -%}
             {% if user.reputation < -10 -%}
                 <span class="fe fe-warning red" title="Very low reputation. Beware."> </span>
@@ -81,7 +84,7 @@
                    hx-get="{{ url_for('post.add_reply_inline', post_id=post_reply.post.id, comment_id=post_reply.id) }}"
                    hx-target="#reply_to_{{ post_reply.id }}"
                    hx-swap="innerHTML"
-                   rel="nofollow noindex"><span class="fe fe-reply"></span> reply</a>
+                   rel="nofollow noindex"><span class="fe fe-reply"></span><span class="hide_skinny_mobile">reply</span></a>
             </div>
             <div class="voting_buttons_new">
                 {% with comment=post_reply, community=post_reply.post.community -%}

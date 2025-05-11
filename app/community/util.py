@@ -16,8 +16,9 @@ from app.activitypub.signature import post_request, default_context, send_post_r
 from app.activitypub.util import find_actor_or_create, actor_json_to_model, ensure_domains_match, \
     find_hashtag_or_create, create_post, remote_object_to_json
 from app.models import Community, File, BannedInstances, PostReply, Post, utcnow, CommunityMember, Site, \
-    Instance, User, Tag
-from app.utils import get_request, gibberish, ensure_directory_exists, ap_datetime, instance_banned, get_task_session
+    Instance, User, Tag, CommunityFlair
+from app.utils import get_request, gibberish, ensure_directory_exists, ap_datetime, instance_banned, get_task_session, \
+    store_files_in_s3, guess_mime_type
 from sqlalchemy import func, desc
 import os
 
@@ -31,8 +32,7 @@ def search_for_community(address: str) -> Community | None:
 
         banned = BannedInstances.query.filter_by(domain=server).first()
         if banned:
-            reason = f" Reason: {banned.reason}" if banned.reason is not None else ''
-            raise Exception(f"{server} is blocked.{reason}")  # todo: create custom exception class hierarchy
+            return None
 
         if current_app.config['SERVER_NAME'] == server:
             already_exists = Community.query.filter_by(name=name, ap_id=None).first()
@@ -180,6 +180,8 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                             post.posted_at = activity['published']
                             post.last_active = activity['published']
                             db.session.commit()
+
+                            # todo: create post_replies based on activity['replies'], if it exists
                     activities_processed += 1
                     if activities_processed >= max:
                         break
@@ -254,6 +256,10 @@ def tags_from_string_old(tags: str) -> List[Tag]:
         if tag_to_append and tag_to_append not in return_value:
             return_value.append(tag_to_append)
     return return_value
+
+
+def flair_from_form(tag_ids) -> List[CommunityFlair]:
+    return CommunityFlair.query.filter(CommunityFlair.id.in_(tag_ids)).all()
 
 
 def delete_post_from_community(post_id):
@@ -377,12 +383,16 @@ def save_icon_file(icon_file, directory='communities') -> File:
     new_filename = gibberish(15)
 
     # set up the storage directory
-    directory = f'app/static/media/{directory}/' + new_filename[0:2] + '/' + new_filename[2:4]
-    ensure_directory_exists(directory)
+    if store_files_in_s3():
+        local_directory = 'app/static/tmp'
+    else:
+        local_directory = f'app/static/media/{directory}/{new_filename[0:2]}/{new_filename[2:4]}'
+    ensure_directory_exists(local_directory)
 
     # save the file
-    final_place = os.path.join(directory, new_filename + file_ext)
-    final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail.webp')
+    s3_directory = f'{directory}/{new_filename[0:2]}/{new_filename[2:4]}'
+    final_place = os.path.join(local_directory, new_filename + file_ext)
+    final_place_thumbnail = os.path.join(local_directory, new_filename + '_thumbnail.webp')
     icon_file.save(final_place)
 
     if file_ext.lower() == '.heic':
@@ -395,7 +405,25 @@ def save_icon_file(icon_file, directory='communities') -> File:
         if file_ext.lower() == '.svg':  # svgs don't need to be resized
             file = File(file_path=final_place, file_name=new_filename + file_ext, alt_text=f'{directory} icon',
                         thumbnail_path=final_place)
+            # Move uploaded file to S3 if needed
+            if store_files_in_s3():
+                import boto3
+                session = boto3.session.Session()
+                s3 = session.client(
+                    service_name='s3',
+                    region_name=current_app.config['S3_REGION'],
+                    endpoint_url=current_app.config['S3_ENDPOINT'],
+                    aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                    aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+                )
+                s3_path = f'{s3_directory}/{new_filename}{file_ext}'
+                s3.upload_file(final_place, current_app.config['S3_BUCKET'], s3_path, ExtraArgs={'ContentType': guess_mime_type(final_place)})
+                file.file_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_path}"
+                file.thumbnail_path = file.file_path
+                s3.close()
+                os.unlink(final_place)
             db.session.add(file)
+                
             return file
         else:
             Image.MAX_IMAGE_PIXELS = 89478485
@@ -418,6 +446,32 @@ def save_icon_file(icon_file, directory='communities') -> File:
                         width=img_width, height=img_height, thumbnail_width=thumbnail_width,
                         thumbnail_height=thumbnail_height, thumbnail_path=final_place_thumbnail)
             db.session.add(file)
+            
+            # Move uploaded files to S3 if needed
+            if store_files_in_s3():
+                import boto3
+                session = boto3.session.Session()
+                s3 = session.client(
+                    service_name='s3',
+                    region_name=current_app.config['S3_REGION'],
+                    endpoint_url=current_app.config['S3_ENDPOINT'],
+                    aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                    aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+                )
+                # Upload main image
+                s3_path = f'{s3_directory}/{new_filename}{file_ext}'
+                s3.upload_file(final_place, current_app.config['S3_BUCKET'], s3_path, ExtraArgs={'ContentType': guess_mime_type(final_place)})
+                file.file_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_path}"
+                
+                # Upload thumbnail
+                s3_thumbnail_path = f'{s3_directory}/{new_filename}_thumbnail.webp'
+                s3.upload_file(final_place_thumbnail, current_app.config['S3_BUCKET'], s3_thumbnail_path, ExtraArgs={'ContentType': guess_mime_type(final_place_thumbnail)})
+                file.thumbnail_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_thumbnail_path}"
+                
+                s3.close()
+                os.unlink(final_place)
+                os.unlink(final_place_thumbnail)
+                
             return file
     else:
         abort(400)
@@ -431,12 +485,17 @@ def save_banner_file(banner_file, directory='communities') -> File:
     new_filename = gibberish(15)
 
     # set up the storage directory
-    directory = f'app/static/media/{directory}/' + new_filename[0:2] + '/' + new_filename[2:4]
-    ensure_directory_exists(directory)
+    if store_files_in_s3():
+        local_directory = 'app/static/tmp'
+        s3_directory = f'media/{directory}/{new_filename[0:2]}/{new_filename[2:4]}'
+    else:
+        local_directory = f'app/static/media/{directory}/{new_filename[0:2]}/{new_filename[2:4]}'
+        
+    ensure_directory_exists(local_directory)
 
     # save the file
-    final_place = os.path.join(directory, new_filename + file_ext)
-    final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail.webp')
+    final_place = os.path.join(local_directory, new_filename + file_ext)
+    final_place_thumbnail = os.path.join(local_directory, new_filename + '_thumbnail.webp')
     banner_file.save(final_place)
 
     if file_ext.lower() == '.heic':
@@ -467,6 +526,32 @@ def save_banner_file(banner_file, directory='communities') -> File:
                     width=img_width, height=img_height, thumbnail_path=final_place_thumbnail,
                     thumbnail_width=thumbnail_width, thumbnail_height=thumbnail_height)
         db.session.add(file)
+        
+        # Move uploaded files to S3 if needed
+        if store_files_in_s3():
+            import boto3
+            session = boto3.session.Session()
+            s3 = session.client(
+                service_name='s3',
+                region_name=current_app.config['S3_REGION'],
+                endpoint_url=current_app.config['S3_ENDPOINT'],
+                aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+            )
+            # Upload main image
+            s3_path = f'{s3_directory}/{new_filename}{file_ext}'
+            s3.upload_file(final_place, current_app.config['S3_BUCKET'], s3_path, ExtraArgs={'ContentType': guess_mime_type(final_place)})
+            file.file_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_path}"
+            
+            # Upload thumbnail
+            s3_thumbnail_path = f'{s3_directory}/{new_filename}_thumbnail.webp'
+            s3.upload_file(final_place_thumbnail, current_app.config['S3_BUCKET'], s3_thumbnail_path, ExtraArgs={'ContentType': guess_mime_type(final_place_thumbnail)})
+            file.thumbnail_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_thumbnail_path}"
+            
+            s3.close()
+            os.unlink(final_place)
+            os.unlink(final_place_thumbnail)
+            
         return file
     else:
         abort(400)

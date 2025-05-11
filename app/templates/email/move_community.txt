@@ -1,0 +1,10 @@
+{{ current_user.display_name() }} has requested to move {{ community.link }} from it's current instance to {{ home_domain }}.
+
+Checklist:
+    1. The old community has been set to 'moderators only'.</p></li>
+    2. If the post at {{ post_url }} is a valid announcement of the impending move.
+    3. The person requesting the move is a moderator of the old community.
+
+If all is well then make the community local by using this link:
+
+https://{{ home_domain }}/admin/community/{{ community.id }}/move/{{ current_user.id }}

@@ -1,40 +1,40 @@
 {% if current_user.is_authenticated -%}
     {% if post.user_id == current_user.id -%}
-        <li><a href="{{ url_for('post.post_edit', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-edit"></span>
+        <li><a href="{{ url_for('post.post_edit', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-edit"></span>
             {{ _('Edit') }}</a></li>
     {% endif -%}
     {% if post.user_id == current_user.id or post.community.is_moderator() or post.community.is_owner() or current_user.is_admin() -%}
         {% if post.deleted -%}
-            <li><a href="{{ url_for('post.post_restore', post_id=post.id) }}" hx-get="{{ url_for('post.post_restore', post_id=post.id) }}" hx-confirm="Are you sure?" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-arrow-up"></span>
+            <li><a href="{{ url_for('post.post_restore', post_id=post.id) }}" hx-get="{{ url_for('post.post_restore', post_id=post.id) }}" hx-confirm="Are you sure?" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-arrow-up"></span>
                 {{ _('Restore') }}</a></li>
-            <li><a href="{{ url_for('post.post_purge', post_id=post.id) }}" hx-get="{{ url_for('post.post_purge', post_id=post.id) }}" hx-confirm="Are you sure?" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-delete red"></span>
+            <li><a href="{{ url_for('post.post_purge', post_id=post.id) }}" hx-get="{{ url_for('post.post_purge', post_id=post.id) }}" hx-confirm="Are you sure?" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-delete red"></span>
                 {{ _('Purge') }}</a></li>
         {% else -%}
-            <li><a href="{{ url_for('post.post_delete', post_id=post.id) }}" hx-get="{{ url_for('post.post_delete', post_id=post.id) }}" hx-confirm="Are you sure?" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-delete"></span>
+            <li><a href="{{ url_for('post.post_delete', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-delete"></span>
                 {{ _('Delete') }}</a></li>
         {% endif -%}
     {% endif -%}
     {% if post.community.is_moderator() or post.community.is_owner() or current_user.is_admin() -%}
         {% if post.sticky -%}
-            <li><a href="{{ url_for('post.post_sticky', post_id=post.id, mode='no') }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-unsticky"></span>
+            <li><a href="{{ url_for('post.post_sticky', post_id=post.id, mode='no') }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-unsticky"></span>
                 {{ _('Un-sticky') }}</a></li>
         {% else -%}
-            <li><a href="{{ url_for('post.post_sticky', post_id=post.id, mode='yes') }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-sticky"></span>
+            <li><a href="{{ url_for('post.post_sticky', post_id=post.id, mode='yes') }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-sticky"></span>
                 {{ _('Sticky') }}</a></li>
         {% endif -%}
         {% if post.comments_enabled -%}
-            <li><a href="{{ url_for('post.post_lock', post_id=post.id, mode='yes') }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-lock"></span>
+            <li><a href="{{ url_for('post.post_lock', post_id=post.id, mode='yes') }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-lock"></span>
                 {{ _('Lock') }}</a></li>
         {% else -%}
-            <li><a href="{{ url_for('post.post_lock', post_id=post.id, mode='no') }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-unlock"></span>
+            <li><a href="{{ url_for('post.post_lock', post_id=post.id, mode='no') }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-unlock"></span>
                 {{ _('Unlock') }}</a></li>
         {% endif -%}
     {% endif -%}
     {% if existing_bookmark -%}
-        <li><a href="{{ url_for('post.post_remove_bookmark', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-bookmark"></span>
+        <li><a href="{{ url_for('post.post_remove_bookmark', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-bookmark"></span>
                 {{ _('Remove bookmark') }}</a></li>
     {% else -%}
-        <li><a href="{{ url_for('post.post_bookmark', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-bookmark"></span>
+        <li><a href="{{ url_for('post.post_bookmark', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-bookmark"></span>
                 {{ _('Bookmark') }}</a></li>
     {% endif -%}
     {% if post.user_id == current_user.id and not post.mea_culpa -%}
@@ -65,14 +65,16 @@
     {% endif -%}
 {% endif -%}
 {% if post.ap_id -%}
-    <li><a href="{{ post.ap_id }}" style="white-space: normal" rel="nofollow" class="dropdown-item no-underline"><span class="fe fe-external"></span>
+    <li><a href="{{ post.ap_id }}" style="white-space: normal" rel="nofollow noindex" class="dropdown-item no-underline"><span class="fe fe-external"></span>
         {{ _('View original on %(domain)s', domain=post.instance.domain) }}</a></li>
 {% endif -%}
-<li><a href="{{ url_for('post.post_report', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-report"></span>
+<li><a href="{{ url_for('post.post_report', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-report"></span>
         {{ _('Report to moderators') }}</a></li>
+<li><a href="{{ url_for('post.post_embed_code', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-embed"></span>
+        {{ _('Get embed code') }}</a></li>
 {% if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()) -%}
-    <li><a href="{{ url_for('post.post_view_voting_activity', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-sticky-left"></span>
+    <li><a href="{{ url_for('post.post_view_voting_activity', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-sticky-left"></span>
                 {{ _('View Voting Activity') }}</a></li>
-    <li><a href="{{ url_for('post.post_fixup_from_remote', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-sticky-right"></span>
+    <li><a href="{{ url_for('post.post_fixup_from_remote', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-sticky-right"></span>
                 {{ _('Fixup from remote') }}</a></li>
 {% endif -%}

@@ -100,6 +100,10 @@
   content: "\ea03";
 }
 
+.fe-embed::before {
+  content: "\e940";
+}
+
 .fe-external::before {
   content: "\e95b";
 }
@@ -507,6 +511,15 @@ fieldset legend {
 body {
   font-size: 0.95rem;
 }
+body.embed .post_teaser_body h3 {
+  font-size: 1.2rem !important;
+  margin-bottom: 2px;
+}
+body.embed .embed_logo {
+  float: right;
+  width: 40px;
+  margin-right: 10px;
+}
 
 a {
   text-decoration: none;
@@ -653,6 +666,18 @@ div.navbar {
   background-color: #0071CE;
 }
 
+.dropdown-divider {
+  margin-right: 10px;
+}
+
+.topics_menu ul, .feeds_menu ul {
+  margin-left: 0;
+  list-style-type: none;
+  padding-left: 0;
+}
+.topics_menu ul .dropdown-header, .feeds_menu ul .dropdown-header {
+  padding-left: 6px;
+}
 #outer_container {
   margin-top: -1px;
 }
@@ -806,6 +831,15 @@ div.navbar {
   display: inherit;
 }
 
+ul.form-multicheck-columns {
+  display: flex;
+  list-style: none;
+  max-height: 12rem;
+  flex-direction: column;
+  flex-wrap: wrap;
+  overflow-y: auto;
+}
+
 .add_reply .form-control-label {
   display: none;
 }
@@ -939,6 +973,9 @@ div.navbar {
 }
 .post_list .post_teaser .post_teaser_clickable {
   cursor: pointer;
+}
+.post_list .post_teaser .post_teaser_image_preview img.blur {
+  filter: blur(3px);
 }
 
 .post_teaser_body {
@@ -1088,6 +1125,9 @@ time {
 }
 #masonry .item .masonry_thumb a, #masonry .item .masonry_thumb a:active {
   border: none;
+}
+#masonry .item .masonry_thumb a img.blur, #masonry .item .masonry_thumb a:active img.blur {
+  filter: blur(3px);
 }
 #masonry .item .masonry_info {
   position: absolute;
@@ -1984,6 +2024,34 @@ form h5 {
   color: #777;
 }
 
+.post_flair {
+  font-size: 73%;
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+
+.post_flair_body {
+  padding-left: 0;
+}
+.post_flair_sidepane {
+  margin-bottom: 17px;
+}
+.post_flair_sidepane .post_flair {
+  font-size: 90%;
+  padding: 2px 4px;
+  line-height: 27px;
+}
+
+.user_flair {
+  font-size: 87%;
+  background-color: #eee;
+  border-radius: 3px;
+  border: solid 1px #bbb;
+  color: #424549;
+  padding: 0px 3px 0px 3px;
+  display: inline-block;
+}
+
 .low_score .hide_button a, .low_score .comment_author a {
   font-weight: normal;
   color: #777;
@@ -2041,6 +2109,10 @@ form h5 {
 
 .reported {
   background-color: antiquewhite;
+}
+
+.post_type_image.reported img, .post_teaser_body.reported img, .masonry_thumb.reported img {
+  filter: grayscale(100%) blur(6px) !important;
 }
 
 .dropdown-header {
@@ -2132,6 +2204,9 @@ form h5 {
 }
 .render_username .author_link {
   display: inline-block;
+}
+.render_username .author_link.donor img {
+  box-shadow: rgba(0, 0, 0, 0.3) 0px 2px 6px;
 }
 .render_username .author_link + .user_preview {
   position: absolute;
@@ -2255,6 +2330,80 @@ form h5 {
 
 [data-bs-theme=dark] .dropdown-header {
   color: white;
+}
+
+:root {
+  --bs-gutter-x-reduced: calc(var(--bs-gutter-x) * 0.95);
+}
+
+body.compact-min .btn {
+  padding: 4px 8px;
+  font-size: 93%;
+}
+body.compact-min .post_teaser .post_teaser_article_preview,
+body.compact-min .post_teaser .post_teaser_link_preview,
+body.compact-min .post_teaser .post_teaser_image_preview,
+body.compact-min .post_teaser .post_teaser_video_preview {
+  display: none;
+}
+body.compact-min .community_icon {
+  width: 15vw;
+  height: 15vw;
+  max-width: 20px !important;
+  max-height: 20px;
+  min-width: 10px;
+  min-height: 10px;
+}
+body.compact-min .side_pane h2 {
+  margin-bottom: 0;
+  font-size: 1.5rem;
+}
+body.compact-min div.navbar {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+body.compact-min #outer_container {
+  margin-top: 0.6rem;
+}
+body.compact-min .table > :not(caption) > * > * {
+  padding: 0.3rem 0.3rem;
+}
+body.compact-min .mt-4 {
+  margin-top: 1.3rem !important;
+}
+body.compact-min .communities_table tbody tr th a {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+body.compact-min .form-control {
+  padding: 0.275rem 0.55rem;
+}
+body.compact-min .form-select {
+  padding: 0.275rem 2rem 0.275rem 0.55rem;
+}
+
+body.compact-max .post_teaser {
+  border-bottom-width: 1px;
+  padding-top: 4px;
+}
+body.compact-max .post_teaser img, body.compact-max .post_teaser .thumbnail {
+  display: none;
+}
+body.compact-max .post_teaser .post_utilities_bar {
+  min-height: 30px;
+  font-size: 93%;
+}
+body.compact-max .post_teaser .post_utilities_bar div {
+  height: 30px;
+  line-height: 30px;
+  min-width: 30px;
+}
+body.compact-max .post_teaser .post_utilities_bar .voting_buttons_new .upvote_button, body.compact-max .post_teaser .post_utilities_bar .voting_buttons_new .downvote_button {
+  min-width: 30px;
+  min-height: 30px;
+}
+body.compact-max .post_teaser .post_utilities_bar .voting_buttons_new .upvote_button span, body.compact-max .post_teaser .post_utilities_bar .voting_buttons_new .downvote_button span {
+  line-height: 30px;
 }
 
 @media print {

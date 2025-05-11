@@ -1,0 +1,98 @@
+:root {
+  --bs-gutter-x-reduced: calc(var(--bs-gutter-x) * 0.95);
+}
+
+body.compact-min {
+
+  .btn {
+    padding: 4px 8px;
+    font-size: 93%;
+  }
+  .post_teaser {
+    .post_teaser_article_preview,
+    .post_teaser_link_preview,
+    .post_teaser_image_preview,
+    .post_teaser_video_preview {
+      display: none;
+    }
+  }
+
+  .community_icon {
+    width: 15vw;
+    height: 15vw;
+    max-width: 20px !important;
+    max-height: 20px;
+    min-width: 10px;
+    min-height: 10px;
+  }
+
+  .side_pane {
+    h2 {
+      margin-bottom: 0;
+      font-size: 1.5rem;
+    }
+  }
+
+  div.navbar {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  #outer_container {
+    margin-top: 0.6rem;
+  }
+
+  .table > :not(caption) > * > * {
+    padding: .3rem .3rem;
+  }
+
+  .mt-4 {
+    margin-top: 1.3rem!important;
+  }
+
+  .communities_table tbody tr th a {
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+
+  .form-control {
+    padding: 0.275rem 0.55rem
+  }
+
+  .form-select {
+    padding: .275rem 2rem .275rem .55rem
+  }
+
+}
+
+body.compact-max {
+  .post_teaser {
+
+    border-bottom-width: 1px;
+    padding-top: 4px;
+
+    img, .thumbnail {
+      display: none;
+    }
+
+    .post_utilities_bar {
+      min-height: 30px;
+      font-size: 93%;
+
+      div {
+        height: 30px;
+        line-height: 30px;
+        min-width: 30px;
+      }
+
+      .voting_buttons_new .upvote_button, .voting_buttons_new .downvote_button {
+        min-width: 30px;
+        min-height: 30px;
+
+        span {
+          line-height: 30px;
+        }
+      }
+    }
+  }
+}

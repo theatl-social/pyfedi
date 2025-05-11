@@ -34,7 +34,7 @@ def find_local_user(actor_url: str) -> User:
 def validate_remote_actor(actor_url, actor=None):
     """Validate if a remote actor is allowed."""
     server, _ = extract_domain_and_actor(actor_url)
-    
+
     # Check if instance is allowed/banned
     if get_setting('use_allowlist', False):
         if not instance_allowed(server):
@@ -42,11 +42,11 @@ def validate_remote_actor(actor_url, actor=None):
     else:
         if instance_banned(server):
             return False
-            
+
     # Check for blocked words
     if actor_contains_blocked_words(actor_url):
         return False
-        
+
     # If we have the actor object, check more conditions
     if actor:
         if actor.banned:
@@ -62,9 +62,7 @@ def find_remote_actor(actor_url):
     """Find a remote actor in the database."""
     # Look for a remote user
     actor = User.query.filter(User.ap_profile_id == actor_url).first()
-    if actor and (actor.banned or actor.deleted or actor_profile_contains_blocked_words(actor)):
-        return None
-    
+
     # Look for a remote community if not found as user
     if actor is None:
         actor = Community.query.filter(Community.ap_profile_id == actor_url).first()
@@ -74,11 +72,11 @@ def find_remote_actor(actor_url):
             if unbanned_actor is None:
                 return None
             actor = unbanned_actor
-    
+
     # Look for a remote feed if not found as user or community
     if actor is None:
         actor = Feed.query.filter(Feed.ap_profile_id == actor_url).first()
-    
+
     return actor
 
 
@@ -88,7 +86,7 @@ def schedule_actor_refresh(actor):
         refresh_in_progress = cache.get(f'refreshing_{actor.id}')
         if not refresh_in_progress:
             cache.set(f'refreshing_{actor.id}', True, timeout=300)
-            
+
             if isinstance(actor, User):
                 refresh_user_profile(actor.id)
             elif isinstance(actor, Community):
@@ -143,11 +141,11 @@ def fetch_actor_from_webfinger(address: str, server: str):
             webfinger_data = get_request(f"https://{server}/.well-known/webfinger", params={'resource': f"acct:{address}@{server}"})
         except Exception:
             return None
-    
+
     if webfinger_data.status_code == 200:
         webfinger_json = webfinger_data.json()
         webfinger_data.close()
-        
+
         for link in webfinger_json.get('links', []):
             if link.get('rel') == 'self':
                 type_header = link.get('type', 'application/activity+json')
@@ -159,7 +157,7 @@ def fetch_actor_from_webfinger(address: str, server: str):
                         actor_data = get_request(link['href'], headers={'Accept': type_header})
                     except Exception:
                         return None
-                
+
                 if actor_data.status_code == 200:
                     try:
                         actor_json = actor_data.json()
@@ -167,7 +165,7 @@ def fetch_actor_from_webfinger(address: str, server: str):
                         return actor_json
                     except Exception:
                         actor_data.close()
-    
+
     return None
 
 
@@ -190,15 +188,16 @@ def create_actor_from_remote(actor_address: str, community_only=False, feed_only
             return None
 
         return actor_model
-    
+
     return None
 
 
 def find_actor_by_url(actor_url, community_only=False, feed_only=False):
     """Find an actor by URL without creating it."""
+    """Warning: this function returns None if not found, False if found and banned/deleted"""
     actor_url = actor_url.strip().lower()
     server_name = current_app.config['SERVER_NAME']
-    
+
     # Check for local actors first
     if f"{server_name}/c/" in actor_url:
         actor = find_local_community(actor_url)
@@ -207,7 +206,7 @@ def find_actor_by_url(actor_url, community_only=False, feed_only=False):
         elif actor and not community_only:
             return actor
         return None
-        
+
     if f"{server_name}/f/" in actor_url:
         actor = find_local_feed(actor_url)
         if actor and feed_only:
@@ -215,29 +214,25 @@ def find_actor_by_url(actor_url, community_only=False, feed_only=False):
         elif actor and not feed_only:
             return actor
         return None
-        
+
     if f"{server_name}/u/" in actor_url:
         actor = find_local_user(actor_url)
         if actor and not community_only and not feed_only:
             return actor
         return None
-    
+
     # For remote actors
     if actor_url.startswith('https://'):
-        if not validate_remote_actor(actor_url):
-            return None
-            
         actor = find_remote_actor(actor_url)
-        
+
         if actor:
             if not validate_remote_actor(actor_url, actor):
-                return None
-
+                return False    # banned actor found
             if community_only and not isinstance(actor, Community):
                 return None
             if feed_only and not isinstance(actor, Feed):
                 return None
-                
+
             return actor
-    
+
     return None

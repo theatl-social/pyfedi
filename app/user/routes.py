@@ -1,8 +1,9 @@
-from datetime import datetime, timedelta
-from time import sleep
+from collections import defaultdict
+from datetime import datetime, timedelta, timezone
 from random import randint
 from io import BytesIO
 
+from feedgen.feed import FeedGenerator
 from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, json, g, send_file
 from flask_login import logout_user, current_user, login_required
 from flask_babel import _, lazy_gettext as _l
@@ -24,13 +25,17 @@ from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportU
 from app.user.utils import purge_user_then_delete, unsubscribe_from_community, search_for_user
 from app.utils import render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     gibberish, file_get_contents, community_membership, user_filters_home, \
-    user_filters_posts, user_filters_replies, moderating_communities, joined_communities, theme_list, blocked_instances, \
-    blocked_users, menu_topics, add_to_modlog, \
-    blocked_communities, piefed_markdown_to_lemmy_markdown, menu_instance_feeds, menu_my_feeds, languages_for_form, \
-    read_language_choices
+    user_filters_posts, user_filters_replies, theme_list, \
+    blocked_users, add_to_modlog, \
+    blocked_communities, piefed_markdown_to_lemmy_markdown, \
+    read_language_choices, request_etag_matches, return_304, mimetype_from_url, notif_id_to_string, \
+    login_required_if_private_instance
 from sqlalchemy import desc, or_, text, asc
+from sqlalchemy.orm.exc import NoResultFound
 import os
 import json as python_json
+from app.shared.user import subscribe_user
+from app.shared.site import block_remote_instance
 
 
 @bp.route('/people', methods=['GET', 'POST'])
@@ -40,11 +45,13 @@ def show_people():
 
 
 @bp.route('/user/<int:user_id>', methods=['GET'])
+@login_required_if_private_instance
 def show_profile_by_id(user_id):
     user = User.query.get_or_404(user_id)
     return show_profile(user)
 
 
+@login_required_if_private_instance
 def show_profile(user):
     if (user.deleted or user.banned) and current_user.is_anonymous:
         abort(404)
@@ -66,14 +73,14 @@ def show_profile(user):
     subscribed = Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == user.id).all()
     if current_user.is_anonymous or (user.id != current_user.id and not current_user.is_admin()):
         moderates = moderates.filter(Community.private_mods == False)
-        posts = Post.query.filter_by(user_id=user.id).filter(Post.deleted == False).order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=50, error_out=False)
-        post_replies = PostReply.query.filter_by(user_id=user.id, deleted=False).order_by(desc(PostReply.posted_at)).paginate(page=replies_page, per_page=50, error_out=False)
+        posts = Post.query.filter_by(user_id=user.id).filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=20, error_out=False)
+        post_replies = PostReply.query.filter_by(user_id=user.id, deleted=False).order_by(desc(PostReply.posted_at)).paginate(page=replies_page, per_page=20, error_out=False)
     elif current_user.is_admin():
-        posts = Post.query.filter_by(user_id=user.id).order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=50, error_out=False)
-        post_replies = PostReply.query.filter_by(user_id=user.id).order_by(desc(PostReply.posted_at)).paginate(page=replies_page, per_page=50, error_out=False)
+        posts = Post.query.filter_by(user_id=user.id).order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=20, error_out=False)
+        post_replies = PostReply.query.filter_by(user_id=user.id).order_by(desc(PostReply.posted_at)).paginate(page=replies_page, per_page=20, error_out=False)
     elif current_user.id == user.id:
-        posts = Post.query.filter_by(user_id=user.id).filter(or_(Post.deleted == False, Post.deleted_by == user.id)).order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=50, error_out=False)
-        post_replies = PostReply.query.filter_by(user_id=user.id).filter(or_(PostReply.deleted == False, PostReply.deleted_by == user.id)).order_by(desc(PostReply.posted_at)).paginate(page=replies_page, per_page=50, error_out=False)
+        posts = Post.query.filter_by(user_id=user.id).filter(or_(Post.deleted == False, Post.status > POST_STATUS_REVIEWING, Post.deleted_by == user.id)).order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=20, error_out=False)
+        post_replies = PostReply.query.filter_by(user_id=user.id).filter(or_(PostReply.deleted == False, PostReply.deleted_by == user.id)).order_by(desc(PostReply.posted_at)).paginate(page=replies_page, per_page=20, error_out=False)
 
     # profile info
     canonical = user.ap_public_url if user.ap_public_url else None
@@ -105,13 +112,12 @@ def show_profile(user):
                            post_next_url=post_next_url, post_prev_url=post_prev_url,
                            replies_next_url=replies_next_url, replies_prev_url=replies_prev_url,
                            noindex=not user.indexable, show_post_community=True, hide_vote_buttons=True,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site,
+                           site=g.site,
+                           rss_feed=f"https://{current_app.config['SERVER_NAME']}/u/{user.link()}/feed" if user.post_count > 0 else None,
+                           rss_feed_name=f"{user.display_name()} on {g.site.name}" if user.post_count > 0 else None,
                            user_has_public_feeds=user_has_public_feeds,
                            user_public_feeds=user_public_feeds,
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           
                            )
 
 
@@ -143,6 +149,7 @@ def edit_profile(actor):
         current_user.about_html = markdown_to_html(form.about.data)
         current_user.matrix_user_id = form.matrixuserid.data
         current_user.extra_fields = []
+        current_user.timezone = form.timezone.data
         if form.extra_label_1.data.strip() != '' and form.extra_text_1.data.strip() != '':
             current_user.extra_fields.append(UserExtraField(label=form.extra_label_1.data.strip(), text=form.extra_text_1.data.strip()))
         if form.extra_label_2.data.strip() != '' and form.extra_text_2.data.strip() != '':
@@ -202,11 +209,8 @@ def edit_profile(actor):
 
     return render_template('user/edit_profile.html', title=_('Edit profile'), form=form, user=current_user,
                            markdown_editor=current_user.markdown_editor,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site,
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           site=g.site,
+                           
                            )
 
 
@@ -418,7 +422,9 @@ def user_settings():
         current_user.feed_auto_follow = form.feed_auto_follow.data
         current_user.feed_auto_leave = form.feed_auto_leave.data
         current_user.read_language_ids = form.read_languages.data
+        current_user.accept_private_messages = form.accept_private_messages.data
         session['ui_language'] = form.interface_language.data
+        session['compact_level'] = form.compaction.data
         if form.vote_privately.data:
             if current_user.alt_user_name is None or current_user.alt_user_name == '':
                 current_user.alt_user_name = gibberish(randint(8, 20))
@@ -448,13 +454,12 @@ def user_settings():
         form.feed_auto_follow.data = current_user.feed_auto_follow
         form.feed_auto_leave.data = current_user.feed_auto_leave
         form.read_languages.data = current_user.read_language_ids
+        form.compaction.data = session.get('compact_level', '')
+        form.accept_private_messages.data = current_user.accept_private_messages
 
     return render_template('user/edit_settings.html', title=_('Edit profile'), form=form, user=current_user,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site,
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           site=g.site,
+                           
                            )
 
 
@@ -504,33 +509,18 @@ def user_settings_import_export():
         return redirect(url_for('user.user_settings_import_export'))
 
     return render_template('user/import_export.html', title=_('Import & Export'), form=form, user=current_user,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site,
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           site=g.site,
+                           
                            )
 
 
 @bp.route('/user/<int:user_id>/notification', methods=['GET', 'POST'])
 @login_required
 def user_notification(user_id: int):
-    # Toggle whether the current user is subscribed to notifications about this user's posts or not
-    user = User.query.get_or_404(user_id)
-    existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == user.id,
-                                                                  NotificationSubscription.user_id == current_user.id,
-                                                                  NotificationSubscription.type == NOTIF_USER).first()
-    if existing_notification:
-        db.session.delete(existing_notification)
-        db.session.commit()
-    else:   # no subscription yet, so make one
-        if user.id != current_user.id and not user.has_blocked_user(current_user.id):
-            new_notification = NotificationSubscription(name=user.display_name(), user_id=current_user.id,
-                                                        entity_id=user.id, type=NOTIF_USER)
-            db.session.add(new_notification)
-            db.session.commit()
-
-    return render_template('user/_notification_toggle.html', user=user)
+    try:
+        return subscribe_user(user_id, None, SRC_WEB)
+    except NoResultFound:
+        abort(404)
 
 
 @bp.route('/u/<actor>/ban', methods=['GET'])
@@ -627,21 +617,11 @@ def block_profile(actor):
 @login_required
 def user_block_instance(actor):
     actor = actor.strip()
-    user = User.query.filter_by(user_name=actor, deleted=False).first()
+    user = User.query.filter_by(ap_id=actor, deleted=False).first()
     if user is None:
-        user = User.query.filter_by(ap_id=actor, deleted=False).first()
-        if user is None:
-            abort(404)
-
-    if user.instance_id == 1:
-        flash(_('You cannot block your instance.'), 'error')
-    else:
-        existing = InstanceBlock.query.filter_by(user_id=current_user.id, instance_id=user.instance_id).first()
-        if not existing:
-            db.session.add(InstanceBlock(user_id=current_user.id, instance_id=user.instance_id))
-            db.session.commit()
-            cache.delete_memoized(blocked_instances, current_user.id)
-        flash(_('Content from %(name)s will be hidden.', name=user.ap_domain))
+        abort(404)
+    block_remote_instance(user.instance_id, SRC_WEB)
+    flash(_('Content from %(name)s will be hidden.', name=user.ap_domain))
     goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
     return redirect(goto)
 
@@ -701,9 +681,13 @@ def report_profile(actor):
 
             # Notify site admin
             already_notified = set()
+            targets_data = {'suspect_user_id': user.id,'reporter_id':current_user.id}
             for admin in Site.admins():
                 if admin.id not in already_notified:
-                    notify = Notification(title='Reported user', url='/admin/reports', user_id=admin.id, author_id=current_user.id)
+                    notify = Notification(title='Reported user', url='/admin/reports', user_id=admin.id, 
+                                          author_id=current_user.id, notif_type=NOTIF_REPORT,
+                                          subtype='user_reported',
+                                          targets=targets_data)
                     db.session.add(notify)
                     admin.unread_notifications += 1
             user.reports += 1
@@ -719,13 +703,7 @@ def report_profile(actor):
         elif request.method == 'GET':
             form.report_remote.data = True
 
-    return render_template('user/user_report.html', title=_('Report user'), form=form, user=user,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics = menu_topics(), site=g.site,
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
-                           )
+    return render_template('user/user_report.html', title=_('Report user'), form=form, user=user, site=g.site)
 
 
 @bp.route('/u/<actor>/delete', methods=['GET'])
@@ -792,7 +770,6 @@ def delete_account():
             current_user.cover.delete_from_disk()
             current_user.cover.source_url = ''
 
-        # to verify the deletes, remote servers will GET /u/<actor> so we can't fully delete the account until the POSTs are done
         current_user.banned = True
         current_user.email = f'deleted_{current_user.id}@deleted.com'
         current_user.deleted_by = current_user.id
@@ -810,11 +787,8 @@ def delete_account():
         ...
 
     return render_template('user/delete_account.html', title=_('Delete my account'), form=form, user=current_user,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site,
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           site=g.site,
+                           
                            )
 
 
@@ -828,22 +802,21 @@ def send_deletion_requests(user_id):
             community = Community.query.get(membership.community_id)
             unsubscribe_from_community(community, user)
 
-        instances = Instance.query.filter(Instance.dormant == False).all()
+        instances = Instance.query.filter(Instance.dormant == False, Instance.gone_forever == False).all()
         payload = {
             "@context": default_context(),
             "actor": user.public_url(),
-            "id": f"{user.public_url()}#delete",
+            "id": f"http://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
             "object": user.public_url(),
             "to": [
                 "https://www.w3.org/ns/activitystreams#Public"
             ],
+            "removeData": True,
             "type": "Delete"
         }
         for instance in instances:
             if instance.inbox and instance.online() and instance.id != 1: # instance id 1 is always the current instance
                 send_post_request(instance.inbox, payload, user.private_key, f"{user.public_url()}#main-key")
-
-        sleep(5)
 
         user.banned = True
         user.deleted = True
@@ -866,7 +839,6 @@ def ban_purge_profile(actor):
             flash(_('You cannot purge yourself.'), 'error')
         else:
             user.banned = True
-            # user.deleted = True # DO NOT set user.deleted until the deletion of their posts has been federated
             db.session.commit()
 
             # todo: empty relevant caches
@@ -901,23 +873,35 @@ def ban_purge_profile(actor):
 @bp.route('/notifications', methods=['GET', 'POST'])
 @login_required
 def notifications():
-    """Remove notifications older than 90 days"""
-    db.session.query(Notification).filter(
-        Notification.created_at < utcnow() - timedelta(days=90)).delete()
-    db.session.commit()
 
     # Update unread notifications count, just to be sure
     current_user.unread_notifications = Notification.query.filter_by(user_id=current_user.id, read=False).count()
     db.session.commit()
 
-    notification_list = Notification.query.filter_by(user_id=current_user.id).order_by(desc(Notification.created_at)).all()
+    type = request.args.get('type', '')
+    current_filter = type
+    has_notifications = False
 
-    return render_template('user/notifications.html', title=_('Notifications'), notifications=notification_list, user=current_user,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site,
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+    notification_types = defaultdict(int)
+    notification_links = defaultdict(set)
+    notification_list = Notification.query.filter_by(user_id=current_user.id).order_by(desc(Notification.created_at)).all()
+    for notification in notification_list:
+        has_notifications = True
+        if notification.notif_type != NOTIF_DEFAULT:
+            if notification.read:
+                notification_types[notif_id_to_string(notification.notif_type)] += 0
+            else:
+                notification_types[notif_id_to_string(notification.notif_type)] += 1
+            notification_links[notif_id_to_string(notification.notif_type)].add(notification.notif_type)
+
+    if type:
+        type = tuple(int(x.strip()) for x in type.strip('{}').split(','))   # convert '{41, 10}' to a tuple containing 41 and 10
+        notification_list = Notification.query.filter_by(user_id=current_user.id).filter(Notification.notif_type.in_(type)).order_by(desc(Notification.created_at)).all()
+
+    return render_template('user/notifications.html', title=_('Notifications'), notifications=notification_list,
+                           notification_types=notification_types, has_notifications=has_notifications,
+                           user=current_user, notification_links=notification_links, current_filter=current_filter,
+                           site=g.site
                            )
 
 
@@ -950,11 +934,17 @@ def notification_delete(notification_id):
 @bp.route('/notifications/all_read', methods=['GET', 'POST'])
 @login_required
 def notifications_all_read():
-    db.session.execute(text('UPDATE notification SET read=true WHERE user_id = :user_id'), {'user_id': current_user.id})
-    current_user.unread_notifications = 0
+    notif_type = request.args.get('type', '')
+    original_notif_type = notif_type
+    if notif_type == '':
+        db.session.execute(text('UPDATE notification SET read=true WHERE user_id = :user_id'), {'user_id': current_user.id})
+    else:
+        notif_type = tuple(int(x.strip()) for x in notif_type.strip('{}').split(','))  # convert '{41, 10}' to a tuple containing 41 and 10
+        db.session.execute(text('UPDATE notification SET read=true WHERE notif_type IN :notif_type AND user_id = :user_id'),
+                           {'notif_type': notif_type, 'user_id': current_user.id})
     db.session.commit()
     flash(_('All notifications marked as read.'))
-    return redirect(url_for('user.notifications'))
+    return redirect(url_for('user.notifications', type=original_notif_type))
 
 
 def import_settings(filename):
@@ -993,7 +983,6 @@ def import_settings_task(user_id, filename):
                             member = CommunityMember(user_id=user.id, community_id=community.id)
                             db.session.add(member)
                             db.session.commit()
-                        success = True
                         if not community.instance.gone_forever:
                             follow = {
                               "actor": user.public_url(),
@@ -1070,11 +1059,8 @@ def user_settings_filters():
     return render_template('user/filters.html', form=form, filters=filters, user=current_user,
                            blocked_users=blocked_users, blocked_communities=blocked_communities,
                            blocked_domains=blocked_domains, blocked_instances=blocked_instances,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site,
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           site=g.site,
+                           
                            )
 
 
@@ -1097,11 +1083,8 @@ def user_settings_filters_add():
         return redirect(url_for('user.user_settings_filters'))
 
     return render_template('user/edit_filters.html', title=_('Add filter'), form=form, user=current_user,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site,
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           site=g.site,
+                           
                            )
 
 
@@ -1140,11 +1123,8 @@ def user_settings_filters_edit(filter_id):
         form.expire_after.data = content_filter.expire_after
 
     return render_template('user/edit_filters.html', title=_('Edit filter'), form=form, content_filter=content_filter, user=current_user,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site,
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           site=g.site,
+                           
                            )
 
 
@@ -1187,7 +1167,7 @@ def user_bookmarks():
     page = request.args.get('page', 1, type=int)
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
-    posts = Post.query.filter(Post.deleted == False).join(PostBookmark, PostBookmark.post_id == Post.id).\
+    posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING).join(PostBookmark, PostBookmark.post_id == Post.id).\
         filter(PostBookmark.user_id == current_user.id).order_by(desc(PostBookmark.created_at))
 
     posts = posts.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50,
@@ -1197,12 +1177,9 @@ def user_bookmarks():
 
     return render_template('user/bookmarks.html', title=_('Bookmarks'), posts=posts, show_post_community=True,
                            low_bandwidth=low_bandwidth, user=current_user,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site,
+                           site=g.site,
                            next_url=next_url, prev_url=prev_url,
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           
                            )
 
 
@@ -1222,12 +1199,9 @@ def user_bookmarks_comments():
 
     return render_template('user/bookmarks_comments.html', title=_('Comment bookmarks'), post_replies=post_replies, show_post_community=True,
                            low_bandwidth=low_bandwidth, user=current_user,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site,
+                           site=g.site,
                            next_url=next_url, prev_url=prev_url,
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           
                            )
 
 
@@ -1290,7 +1264,7 @@ def user_alerts(type='posts', filter='all'):
                         join(NotificationSubscription, NotificationSubscription.entity_id == Post.id).\
                         filter_by(type=NOTIF_POST, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
         elif filter == 'others':
-            entities = Post.query.filter(Post.deleted == False, Post.user_id != current_user.id).\
+            entities = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING, Post.user_id != current_user.id).\
                         join(NotificationSubscription, NotificationSubscription.entity_id == Post.id).\
                         filter_by(type=NOTIF_POST, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
         else:   # default to 'all' filter
@@ -1305,12 +1279,9 @@ def user_alerts(type='posts', filter='all'):
 
     return render_template('user/alerts.html', title=title, entities=entities,
                            low_bandwidth=low_bandwidth, user=current_user, type=type, filter=filter,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site,
+                           site=g.site,
                            next_url=next_url, prev_url=prev_url,
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           
                            )
 
 
@@ -1354,7 +1325,7 @@ def user_read_posts(sort=None):
     page = request.args.get('page', 1, type=int)
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
-    posts = Post.query.filter(Post.deleted == False)
+    posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
 
     if current_user.ignore_bots == 1:
         posts = posts.filter(Post.from_bot == False)
@@ -1386,12 +1357,9 @@ def user_read_posts(sort=None):
 
     return render_template('user/read_posts.html', title=_('Read posts'), posts=posts, show_post_community=True,
                            sort=sort, low_bandwidth=low_bandwidth, user=current_user,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site,
+                           site=g.site,
                            next_url=next_url, prev_url=prev_url,
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           
                            )
 
 
@@ -1439,8 +1407,7 @@ def edit_user_note(actor):
         form.note.data = user.get_note(current_user)
 
     return render_template('user/edit_note.html', title=_('Edit note'), form=form, user=user, return_to=return_to,
-                           menu_topics=menu_topics(), site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None)
+                           site=g.site, )
 
 
 @bp.route('/user/<int:user_id>/preview')
@@ -1502,15 +1469,13 @@ def user_myfeeds():
 
     # this is for feeds the user is subscribed to
     user_has_feed_subscriptions = False
-    if current_user.is_authenticated and len(Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter_by(user_id=current_user.id).all()) > 0:
+    if current_user.is_authenticated and len(Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter(FeedMember.user_id == current_user.id).all()) > 0:
         user_has_feed_subscriptions = True
-    subbed_feeds = Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter_by(user_id=current_user.id).filter_by(is_owner=False)
+    subbed_feeds = Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter(FeedMember.user_id == current_user.id).filter_by(is_owner=False)
     
     return render_template('user/user_feeds.html', user_has_feeds=user_has_feeds, user_feeds_list=current_user_feeds,
                            user_has_feed_subscriptions=user_has_feed_subscriptions,
                            subbed_feeds=subbed_feeds,
-                           menu_topics=menu_topics(), menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
                            )
 
 
@@ -1534,8 +1499,68 @@ def user_feeds(actor):
         user_has_public_feeds = True
 
     return render_template('user/user_public_feeds.html', user_has_public_feeds=user_has_public_feeds, 
-                           creator_name=user.user_name, user_feeds_list=user_public_feeds,
-                           menu_topics=menu_topics(), menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None
+                           creator_name=user.user_name, user_feeds_list=user_public_feeds
                            )
 
+
+# RSS feed of the community
+@bp.route('/u/<actor>/feed', methods=['GET'])
+@cache.cached(timeout=600)
+def show_profile_rss(actor):
+    actor = actor.strip()
+    if '@' in actor:
+        user: User = User.query.filter_by(ap_id=actor.lower()).first()
+    else:
+        user: User = User.query.filter(User.user_name == actor).filter_by(ap_id=None).first()
+        if user is None:
+            user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor.lower()}',
+                                        ap_id=None).first()
+
+    if user is not None:
+        # If nothing has changed since their last visit, return HTTP 304
+        current_etag = f"{user.id}_{hash(user.last_seen)}"
+        if request_etag_matches(current_etag):
+            return return_304(current_etag, 'application/rss+xml')
+
+        posts = user.posts.filter(Post.from_bot == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.created_at)).limit(100).all()
+        description = shorten_string(user.about, 150) if user.about else None
+        og_image = user.avatar_image() if user.avatar_id else None
+        fg = FeedGenerator()
+        fg.id(f"https://{current_app.config['SERVER_NAME']}/c/{actor}")
+        fg.title(f'{user.display_name()} on {g.site.name}')
+        fg.link(href=f"https://{current_app.config['SERVER_NAME']}/c/{actor}", rel='alternate')
+        if og_image:
+            fg.logo(og_image)
+        else:
+            fg.logo(f"https://{current_app.config['SERVER_NAME']}/static/images/apple-touch-icon.png")
+        if description:
+            fg.subtitle(description)
+        else:
+            fg.subtitle(' ')
+        fg.link(href=f"https://{current_app.config['SERVER_NAME']}/c/{actor}/feed", rel='self')
+        fg.language('en')
+
+        already_added = set()
+        for post in posts:
+            fe = fg.add_entry()
+            fe.title(post.title)
+            fe.link(href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}")
+            if post.url:
+                if post.url in already_added:
+                    continue
+                type = mimetype_from_url(post.url)
+                if type and not type.startswith('text/'):
+                    fe.enclosure(post.url, type=type)
+                already_added.add(post.url)
+            fe.description(post.body_html)
+            fe.guid(post.profile_id(), permalink=True)
+            fe.author(name=post.author.user_name)
+            fe.pubDate(post.created_at.replace(tzinfo=timezone.utc))
+
+        response = make_response(fg.rss_str())
+        response.headers.set('Content-Type', 'application/rss+xml')
+        response.headers.add_header('ETag', f"{user.id}_{hash(user.last_seen)}")
+        response.headers.add_header('Cache-Control', 'no-cache, max-age=600, must-revalidate')
+        return response
+    else:
+        abort(404)

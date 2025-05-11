@@ -2,7 +2,7 @@ from app import db, cache
 from app.constants import ROLE_STAFF, ROLE_ADMIN
 from app.models import UserBlock, NotificationSubscription, User
 from app.constants import *
-from app.utils import authorise_api_user, blocked_users
+from app.utils import authorise_api_user, blocked_users, render_template
 
 from flask import flash
 from flask_babel import _
@@ -82,29 +82,54 @@ def unblock_another_user(person_id, src, auth=None):
         return              # let calling function handle confirmation flash message and redirect
 
 
-def toggle_user_notification(person_id: int, src, auth=None):
-    # Toggle whether the current user is subscribed to notifications for activity from another user
-    if src == SRC_API:
-        user_id = authorise_api_user(auth)
+def subscribe_user(person_id: int, subscribe, src, auth=None):
+    user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
+    person = User.query.filter_by(id=person_id, banned=False).one()
+
+    if src == SRC_WEB:
+        subscribe = False if person.notify_new_posts(user_id) else True
+
+    existing_notification = NotificationSubscription.query.filter_by(entity_id=person_id, user_id=user_id,
+                                                                     type=NOTIF_USER).first()
+    if subscribe == False:
+        if existing_notification:
+            db.session.delete(existing_notification)
+            db.session.commit()
+        else:
+            msg = 'A subscription for this user did not exist.'
+            if src == SRC_API:
+                raise Exception(msg)
+            else:
+                flash(_(msg))
+
     else:
-        user_id = current_user.id
-
-    person = User.query.filter_by(id=person_id).one()
-
-    existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == person.id,
-                                                                  NotificationSubscription.user_id == user_id,
-                                                                  NotificationSubscription.type == NOTIF_USER).first()
-    if existing_notification:
-        db.session.delete(existing_notification)
-        db.session.commit()
-    else:   # no subscription yet, so make one
-        if person.id != user_id and not person.has_blocked_user(user_id):
+        if existing_notification:
+            msg = 'A subscription for this user already existed.'
+            if src == SRC_API:
+                raise Exception(msg)
+            else:
+                flash(_(msg))
+        else:
+            if person.id == user_id:
+                msg = 'Target must be a another user.'
+                if src == SRC_API:
+                    raise Exception(msg)
+                else:
+                    flash(_(msg))
+            if person.has_blocked_user(user_id):
+                msg = 'This user has blocked you.'
+                if src == SRC_API:
+                    raise Exception(msg)
+                else:
+                    flash(_(msg))
             new_notification = NotificationSubscription(name=person.display_name(), user_id=user_id,
-                                                        entity_id=person.id, type=NOTIF_USER)
+                                                        entity_id=person_id, type=NOTIF_USER)
             db.session.add(new_notification)
             db.session.commit()
 
     if src == SRC_API:
         return user_id
     else:
-        return render_template('user/_notification_toggle.html', user=user)
+        return render_template('user/_notification_toggle.html', user=person)
+
+

@@ -8,10 +8,12 @@ from sqlalchemy.sql.operators import or_, and_
 from ua_parser import parse as uaparse
 
 from app import db, cache
-from app.activitypub.util import users_total, active_month, local_posts, local_communities
+from app.activitypub.util import users_total, active_month, local_posts, local_communities, find_actor_or_create, \
+    lemmy_site_data, is_activitypub_request
 from app.activitypub.signature import default_context, LDSignature
-from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR
-from app.email import send_email
+from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, \
+    POST_STATUS_REVIEWING
+from app.email import send_email, send_registration_approved_email
 from app.inoculation import inoculation
 from app.main import bp
 from flask import g, session, flash, request, current_app, url_for, redirect, make_response, jsonify
@@ -24,15 +26,18 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
     menu_topics, blocked_communities, \
     permission_required, debug_mode_only, ip_address, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, \
-    feed_tree_public, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, html_to_text
+    feed_tree_public, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, html_to_text, \
+    get_redis_connection, subscribed_feeds, joined_or_modding_communities, login_required_if_private_instance, \
+    pending_communities
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
-    Notification, Language, community_language, ModLog, read_posts, Feed, FeedItem
+    Notification, Language, community_language, ModLog, read_posts, Feed, FeedItem, CommunityFlair
 
 
 @bp.route('/', methods=['HEAD', 'GET', 'POST'])
 @bp.route('/home', methods=['GET', 'POST'])
 @bp.route('/home/<sort>', methods=['GET', 'POST'])
 @bp.route('/home/<sort>/<view_filter>', methods=['GET', 'POST'])
+@login_required_if_private_instance
 def index(sort=None, view_filter=None):
     if 'application/ld+json' in request.headers.get('Accept', '') or 'application/activity+json' in request.headers.get(
             'Accept', ''):
@@ -131,33 +136,25 @@ def home_page(sort, view_filter):
                            description=shorten_string(html_to_text(g.site.sidebar), 150),
                            content_filters=content_filters, sort=sort, view_filter=view_filter,
                            announcement=allowlist_html(get_setting('announcement', '')),
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           site=g.site,
+                           site=g.site, joined_communities=joined_or_modding_communities(current_user.get_id()),
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
                            )
 
 
 @bp.route('/topics', methods=['GET'])
+@login_required_if_private_instance
 def list_topics():
     verification_warning()
     topics = topic_tree()
 
     return render_template('list_topics.html', topics=topics, title=_('Browse by topic'),
                            low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site,
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                           site=g.site,
                            )
 
 
 @bp.route('/communities', methods=['GET'])
+@login_required_if_private_instance
 def list_communities():
     verification_warning()
     search_param = request.args.get('search', '')
@@ -215,7 +212,7 @@ def list_communities():
     communities = communities.order_by(text('community.' + sort_by))
 
     # Pagination
-    communities = communities.paginate(page=page, per_page=250 if current_user.is_authenticated and not low_bandwidth else 50,
+    communities = communities.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50,
                            error_out=False)
     next_url = url_for('main.list_communities', page=communities.next_num, sort_by=sort_by, language_id=language_id) if communities.has_next else None
     prev_url = url_for('main.list_communities', page=communities.prev_num, sort_by=sort_by, language_id=language_id) if communities.has_prev and page != 1 else None
@@ -225,12 +222,11 @@ def list_communities():
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                            next_url=next_url, prev_url=prev_url, current_user=current_user,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
-                           low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site, feed_id=feed_id,
+                           joined_communities=joined_or_modding_communities(current_user.get_id()),
+                           pending_communities=pending_communities(current_user.get_id()),
+                           low_bandwidth=low_bandwidth,
+                           site=g.site, feed_id=feed_id,
                            server_has_feeds=server_has_feeds, public_feeds=public_feeds,
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                            )
 
 
@@ -299,12 +295,11 @@ def list_local_communities():
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                            next_url=next_url, prev_url=prev_url, current_user=current_user,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
-                           low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site,
+                           joined_communities=joined_or_modding_communities(current_user.get_id()),
+                           pending_communities=pending_communities(current_user.get_id()),
+                           low_bandwidth=low_bandwidth,
+                           site=g.site,
                            feed_id=feed_id, server_has_feeds=server_has_feeds, public_feeds=public_feeds,
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                            )
 
 
@@ -380,12 +375,11 @@ def list_subscribed_communities():
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                            next_url=next_url, prev_url=prev_url, current_user=current_user,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
-                           low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site, feed_id=feed_id,
+                           joined_communities=joined_or_modding_communities(current_user.get_id()),
+                           pending_communities=pending_communities(current_user.get_id()),
+                           low_bandwidth=low_bandwidth,
+                           site=g.site, feed_id=feed_id,
                            server_has_feeds=server_has_feeds, public_feeds=public_feeds,
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                            )
 
 
@@ -462,12 +456,11 @@ def list_not_subscribed_communities():
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                            next_url=next_url, prev_url=prev_url, current_user=current_user,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
-                           low_bandwidth=low_bandwidth, moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_or_modding_communities(current_user.get_id()),
+                           pending_communities=pending_communities(current_user.get_id()),
+                           low_bandwidth=low_bandwidth,
                            feed_id=feed_id, server_has_feeds=server_has_feeds, public_feeds=public_feeds,
-                           menu_topics=menu_topics(), site=g.site,
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                           site=g.site,
                            )
 
 
@@ -495,19 +488,9 @@ def modlog():
     return render_template('modlog.html',
                            title=_('Moderation Log'), modlog_entries=modlog_entries, can_see_names=can_see_names,
                            next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site,
+                           site=g.site,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                            )
-
-
-@bp.route('/donate')
-def donate():
-    return render_template('donate.html')
 
 
 @bp.route('/about')
@@ -548,7 +531,7 @@ def robots():
 @bp.route('/sitemap.xml')
 @cache.cached(timeout=6000)
 def sitemap():
-    posts = Post.query.filter(Post.from_bot == False, Post.deleted == False, Post.instance_id == 1, Post.indexable == True)
+    posts = Post.query.filter(Post.from_bot == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING, Post.instance_id == 1, Post.indexable == True)
     posts = posts.order_by(desc(Post.posted_at)).limit(500)
 
     resp = make_response(render_template('sitemap.xml', posts=posts, current_app=current_app))
@@ -591,6 +574,16 @@ def replay_inbox():
 @bp.route('/test')
 @debug_mode_only
 def test():
+    user = User.query.get(1)
+    send_registration_approved_email(user)
+
+    markdown = """What light novels have you read in the past week? Something good? Bad? Let us know about it. 
+
+And if you want to add your score to the database to help your fellow Bookworms find new reading materials you can use the following template:
+
+><Book Title and Volume> Review Goes Here [5/10]"""
+
+    return markdown_to_html(markdown)
 
 
     return ip_address()
@@ -666,8 +659,23 @@ def test():
             user.email_unread_sent = True
             db.session.commit()
 
-
     return 'ok'
+
+
+@bp.route('/topics_menu')
+def topics_menu():
+    return render_template('topics_menu.html', menu_topics=menu_topics(),
+                           moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.get_id()))
+
+
+@bp.route('/feeds_menu')
+def feeds_menu():
+    return render_template('feeds_menu.html',
+                           menu_instance_feeds=menu_instance_feeds(),
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                           )
 
 
 @bp.route('/test_email')
@@ -681,6 +689,33 @@ def test_email():
                'This is a test email. If you received this, email sending is working!',
                '<p>This is a test email. If you received this, email sending is working!</p>')
     return f'Email sent to {email}.'
+
+
+@bp.route('/test_redis')
+@debug_mode_only
+def test_redis():
+    redis = get_redis_connection()
+    if redis and redis.memory_stats():
+        return 'Redis connection is ok'
+    else:
+        return 'Redis error'
+
+
+@bp.route('/test_s3')
+@debug_mode_only
+def test_s3():
+    import boto3
+    session = boto3.session.Session()
+    s3 = session.client(
+        service_name='s3',
+        region_name=current_app.config['S3_REGION'],
+        endpoint_url=current_app.config['S3_ENDPOINT'],
+        aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+        aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+    )
+    s3.upload_file('babel.cfg', current_app.config['S3_BUCKET'], 'babel.cfg')
+    s3.delete_object(Bucket=current_app.config['S3_BUCKET'], Key='babel.cfg')
+    return 'Ok'
 
 
 @bp.route('/find_voters')
@@ -800,6 +835,7 @@ def static_manifest():
     
 
 @bp.route('/feeds', methods=['GET','POST'])
+@login_required_if_private_instance
 def list_feeds():
     # default to no public feeds
     server_has_feeds = False
@@ -810,12 +846,20 @@ def list_feeds():
     if len(public_feeds) > 0:
         server_has_feeds = True
 
-    # render the page
-    return render_template('feed/public_feeds.html', server_has_feeds=server_has_feeds, public_feeds_list=public_feeds,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+    # respond with json collection of public feeds for curl/AP requests
+    if is_activitypub_request():
+        site_data = lemmy_site_data()
+        feeds_list = []
+        for f in public_feeds:
+            if f['feed'].is_local():
+                feeds_list.append(f"https://{current_app.config['SERVER_NAME']}/f/{f['feed'].machine_name}")
+        site_data['site_view']['public_feeds'] = feeds_list
+        site_data['site_view']['counts']['public_feeds'] = len(feeds_list)
+        resp = jsonify(site_data)
+        resp.content_type = 'application/activity+json'
+        return resp
+    else:
+        # render the page
+        return render_template('feed/public_feeds.html', server_has_feeds=server_has_feeds, public_feeds_list=public_feeds,
+                            subscribed_feeds=subscribed_feeds(current_user.get_id()),
+                            )

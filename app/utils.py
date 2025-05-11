@@ -7,9 +7,11 @@ import random
 import urllib
 from collections import defaultdict
 from datetime import datetime, timedelta, date
+from json import JSONDecodeError
 from time import sleep
 from typing import List, Literal, Union
 
+import app
 import redis
 import httpx
 import markdown2
@@ -37,6 +39,7 @@ from wtforms.widgets import Select, html_params, ListWidget, CheckboxInput, Text
 from wtforms.validators import ValidationError
 from markupsafe import Markup
 from app import db, cache, httpx_client, celery
+from app.constants import *
 import re
 from PIL import Image, ImageOps
 
@@ -45,7 +48,7 @@ from captcha.image import ImageCaptcha
 
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, ActivityPubLog, IpBan, \
     Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
-    File, ModLog, CommunityBlock, Feed, FeedMember
+    File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest
 
 
 # Flask's render_template function, with support for themes added
@@ -157,7 +160,10 @@ def get_setting(name: str, default=None):
     if setting is None:
         return default
     else:
-        return json.loads(setting.value)
+        try:
+            return json.loads(setting.value)
+        except JSONDecodeError:
+            return default
 
 
 # retrieves arbitrary object from persistent key-value store
@@ -209,7 +215,7 @@ def is_local_image_url(url):
     if not is_image_url(url):
         return False
     f = furl(url)
-    return f.host in ["127.0.0.1", current_app.config["SERVER_NAME"]]
+    return f.host in ["127.0.0.1", current_app.config["SERVER_NAME"], current_app.config['S3_PUBLIC_URL']]
 
 
 def is_video_url(url: str) -> bool:
@@ -255,13 +261,15 @@ def mime_type_using_head(url):
         return ''
 
 
+allowed_tags = ['p', 'strong', 'a', 'ul', 'ol', 'li', 'em', 'blockquote', 'cite', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre',
+                'code', 'img', 'details', 'summary', 'table', 'tr', 'td', 'th', 'tbody', 'thead', 'hr', 'span', 'small', 'sub', 'sup',
+                's']
+
 # sanitise HTML using an allow list
 def allowlist_html(html: str, a_target='_blank') -> str:
     if html is None or html == '':
         return ''
-    allowed_tags = ['p', 'strong', 'a', 'ul', 'ol', 'li', 'em', 'blockquote', 'cite', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre',
-                    'code', 'img', 'details', 'summary', 'table', 'tr', 'td', 'th', 'tbody', 'thead', 'hr', 'span', 'small', 'sub', 'sup',
-                    's']
+
     # Parse the HTML using BeautifulSoup
     soup = BeautifulSoup(html, 'html.parser')
 
@@ -353,10 +361,45 @@ def allowlist_html(html: str, a_target='_blank') -> str:
     return clean_html
 
 
+def escape_non_html_angle_brackets(text: str) -> str:
+    # Step 1: Extract inline and block code, replacing with placeholders
+    code_snippets = []
+
+    def store_code(match):
+        code_snippets.append(match.group(0))
+        return f"__CODE_PLACEHOLDER_{len(code_snippets) - 1}__"
+
+    # Fenced code blocks (```...```)
+    text = re.sub(r'```[\s\S]*?```', store_code, text)
+    # Inline code (`...`)
+    text = re.sub(r'`[^`\n]+`', store_code, text)
+
+    # Step 2: Escape <...> unless they look like valid HTML tags
+    def escape_tag(match):
+        tag_content = match.group(1).strip().lower()
+        tag_name = re.split(r'\s|/', tag_content)[0]
+        if tag_name in allowed_tags:
+            return match.group(0)
+        else:
+            return f"&lt;{match.group(1)}&gt;"
+
+    text = re.sub(r'<([^<>]+?)>', escape_tag, text)
+
+    # Step 3: Restore code blocks
+    for i, code in enumerate(code_snippets):
+        text = text.replace(f"__CODE_PLACEHOLDER_{i}__", code)
+
+    return text
+
+
 # use this for Markdown irrespective of origin, as it can deal with both soft break newlines ('\n' used by PieFed) and hard break newlines ('  \n' or ' \\n')
 # ' \\n' will create <br /><br /> instead of just <br />, but hopefully that's acceptable.
 def markdown_to_html(markdown_text, anchors_new_tab=True) -> str:
     if markdown_text:
+
+        # Escape <...> if it’s not a real HTML tag
+        markdown_text = escape_non_html_angle_brackets(markdown_text)   # To handle situations like https://ani.social/comment/9666667
+
         try:
             raw_html = markdown2.markdown(markdown_text,
                         extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True,
@@ -690,6 +733,16 @@ def validation_required(func):
     return decorated_view
 
 
+def login_required_if_private_instance(func):
+    @wraps(func)
+    def decorated_view(*args, **kwargs):
+        if (g.site.private_instance and current_user.is_authenticated) or g.site.private_instance is False:
+            return func(*args, **kwargs)
+        else:
+            return redirect(url_for('auth.login'))
+    return decorated_view
+
+
 def permission_required(permission):
     def decorator(func):
         @wraps(func)
@@ -714,6 +767,26 @@ def debug_mode_only(func):
             return abort(403, description="Not available in production mode. Set the FLASK_DEBUG environment variable to 1.")
 
     return decorated_function
+
+
+def block_bots(func):
+    @wraps(func)
+    def decorated_function(*args, **kwargs):
+        if not is_bot(request.user_agent.string):
+            return func(*args, **kwargs)
+        else:
+            return abort(403, description="Do not index this.")
+
+    return decorated_function
+
+
+def is_bot(user_agent) -> bool:
+    user_agent = user_agent.lower()
+    if 'bot' in user_agent:
+        return True
+    if 'meta-externalagent' in user_agent:
+        return True
+    return False
 
 
 # sends the user back to where they came from
@@ -769,6 +842,34 @@ def instance_banned(domain: str) -> bool:   # see also activitypub.util.instance
     return any(pattern.match(domain) for pattern in regex_patterns)
 
 
+@cache.memoize(timeout=150)
+def instance_online(domain: str) -> bool:
+    if domain is None or domain == '':
+        return False
+    domain = domain.lower().strip()
+    if 'https://' in domain or 'http://' in domain:
+        domain = urlparse(domain).hostname
+    instance = Instance.query.filter_by(domain=domain).first()
+    if instance is not None:
+        return instance.online()
+    else:
+        return False
+
+
+@cache.memoize(timeout=150)
+def instance_gone_forever(domain: str) -> bool:
+    if domain is None or domain == '':
+        return False
+    domain = domain.lower().strip()
+    if 'https://' in domain or 'http://' in domain:
+        domain = urlparse(domain).hostname
+    instance = Instance.query.filter_by(domain=domain).first()
+    if instance is not None:
+        return instance.gone_forever
+    else:
+        return True
+
+
 def user_cookie_banned() -> bool:
     cookie = request.cookies.get('sesion', None)
     return cookie is not None
@@ -778,6 +879,19 @@ def user_cookie_banned() -> bool:
 def banned_ip_addresses() -> List[str]:
     ips = IpBan.query.all()
     return [ip.ip_address for ip in ips]
+
+
+def guess_mime_type(file_path: str) -> str:
+    content_type = mimetypes.guess_type(file_path)
+    if content_type is None:
+        ext = os.path.splitext(file_path)[1].lower().lstrip('.')  # get extension without dot
+        content_type = f'image/{ext}' if ext else 'application/octet-stream'
+    else:
+        if content_type[0] is None:
+            ext = os.path.splitext(file_path)[1].lower().lstrip('.')  # get extension without dot
+            return f'image/{ext}' if ext else 'application/octet-stream'
+        content_type = content_type[0]
+    return content_type
 
 
 def can_downvote(user, community: Community, site=None) -> bool:
@@ -1009,6 +1123,22 @@ def joined_communities(user_id):
         filter(CommunityMember.user_id == user_id).order_by(Community.title).all()
 
 
+def joined_or_modding_communities(user_id):
+    if user_id is None or user_id == 0:
+        return []
+    return db.session.execute(text('SELECT c.id FROM "community" as c INNER JOIN "community_member" as cm on c.id = cm.community_id WHERE c.banned = false AND cm.user_id = :user_id'),
+                              {'user_id': user_id}).scalars().all()
+
+
+def pending_communities(user_id):
+    if user_id is None or user_id == 0:
+        return []
+    result = []
+    for join_request in CommunityJoinRequest.query.filter_by(user_id=user_id).all():
+        result.append(join_request.community_id)
+    return result
+
+
 @cache.memoize(timeout=3000)
 def menu_topics():
     return Topic.query.filter(Topic.parent_id == None).order_by(Topic.name).all()
@@ -1024,9 +1154,16 @@ def menu_my_feeds(user_id):
     return Feed.query.filter(Feed.parent_feed_id == None).filter(Feed.user_id == user_id).order_by(Feed.name).all()
 
 
-# @cache.memoize(timeout=3000)
+@cache.memoize(timeout=3000)
 def menu_subscribed_feeds(user_id):
-    return Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter_by(user_id=user_id).filter_by(is_owner=False)
+    return Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter(FeedMember.user_id == user_id).filter_by(is_owner=False).all()
+
+
+# @cache.memoize(timeout=3000)
+def subscribed_feeds(user_id: int) -> List[int]:
+    if user_id is None or user_id == 0:
+        return []
+    return [feed.id for feed in Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter(FeedMember.user_id == user_id)]
 
 
 @cache.memoize(timeout=300)
@@ -1126,6 +1263,9 @@ def url_to_thumbnail_file(filename) -> File:
         content_type = response.headers.get('content-type')
         if content_type and content_type.startswith('image'):
             # Generate file extension from mime type
+            if ';' in content_type:
+                content_type_parts = content_type.split(';')
+                content_type = content_type_parts[0]
             content_type_parts = content_type.split('/')
             if content_type_parts:
                 file_extension = '.' + content_type_parts[-1]
@@ -1410,6 +1550,21 @@ def languages_for_form():
                 other_languages.append((language.id, language.name))
 
     return used_languages + other_languages
+
+
+def flair_for_form(community_id):
+    result = []
+    for flair in CommunityFlair.query.filter(CommunityFlair.community_id == community_id).order_by(CommunityFlair.flair):
+        result.append((flair.id, flair.flair))
+    return result
+
+
+def find_flair_id(flair: str, community_id: int) -> int | None:
+    flair = CommunityFlair.query.filter(CommunityFlair.community_id == community_id, CommunityFlair.flair == flair.strip()).first()
+    if flair:
+        return flair.id
+    else:
+        return None
 
 
 def english_language_id():
@@ -1717,7 +1872,7 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
         params = {'community_ids': tuple(community_ids)}
     # filter out nsfw and nsfl if desired
     if current_user.is_anonymous:
-        post_id_where.append('p.from_bot is false AND p.nsfw is false AND p.nsfl is false AND p.deleted is false ')
+        post_id_where.append('p.from_bot is false AND p.nsfw is false AND p.nsfl is false AND p.deleted is false AND p.status > 0 ')
     else:
         if current_user.ignore_bots == 1:
             post_id_where.append('p.from_bot is false ')
@@ -1734,7 +1889,7 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
             post_id_where.append('(p.language_id IN :read_language_ids OR p.language_id is null) ')
             params['read_language_ids'] = tuple(current_user.read_language_ids)
 
-        post_id_where.append('p.deleted is false ')
+        post_id_where.append('p.deleted is false AND p.status > 0 ')
 
         # filter blocked domains and instances
         domains_ids = blocked_domains(current_user.id)
@@ -1812,3 +1967,93 @@ def post_ids_to_models(post_ids: List[int], sort: str):
     elif sort == 'active':
         posts = posts.order_by(desc(Post.last_active))
     return posts
+
+
+def store_files_in_s3():
+    return current_app.config['S3_ACCESS_KEY'] != '' and current_app.config['S3_ACCESS_SECRET'] != '' and current_app.config['S3_ENDPOINT'] != ''
+
+
+def move_file_to_s3(file_id, s3):
+    if store_files_in_s3():
+        file: File = File.query.get(file_id)
+        if file:
+            if file.thumbnail_path and not file.thumbnail_path.startswith('http') and file.thumbnail_path.startswith(
+                    'app/static/media'):
+                if os.path.isfile(file.thumbnail_path):
+                    content_type = guess_mime_type(file.thumbnail_path)
+                    new_path = file.thumbnail_path.replace('app/static/media/', f"")
+                    s3.upload_file(file.thumbnail_path, current_app.config['S3_BUCKET'], new_path, ExtraArgs={'ContentType': content_type})
+                    os.unlink(file.thumbnail_path)
+                    file.thumbnail_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
+                    db.session.commit()
+
+            if file.file_path and not file.file_path.startswith('http') and file.file_path.startswith(
+                    'app/static/media'):
+                if os.path.isfile(file.file_path):
+                    content_type = guess_mime_type(file.file_path)
+                    new_path = file.file_path.replace('app/static/media/', f"")
+                    s3.upload_file(file.file_path, current_app.config['S3_BUCKET'], new_path, ExtraArgs={'ContentType': content_type})
+                    os.unlink(file.file_path)
+                    file.file_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
+                    db.session.commit()
+
+            if file.source_url and not file.source_url.startswith('http') and file.source_url.startswith(
+                    'app/static/media'):
+                if os.path.isfile(file.source_url):
+                    content_type = guess_mime_type(file.source_url)
+                    new_path = file.source_url.replace('app/static/media/', f"")
+                    s3.upload_file(file.source_url, current_app.config['S3_BUCKET'], new_path, ExtraArgs={'ContentType': content_type})
+                    os.unlink(file.source_url)
+                    file.source_url = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
+                    db.session.commit()
+
+
+def find_next_occurrence(post: Post) -> timedelta:
+    if post.repeat is not None and post.repeat != 'none':
+        if post.repeat == 'daily':
+            return timedelta(days=1)
+        elif post.repeat == 'weekly':
+            return timedelta(days=7)
+        elif post.repeat == 'monthly':
+            return timedelta(days=28)
+    return timedelta(seconds=0)
+
+
+def notif_id_to_string(notif_id) -> str:
+    # -- user level ---
+    if notif_id == NOTIF_USER:
+        return _('User')
+    if notif_id == NOTIF_COMMUNITY:
+        return _('Community')
+    if notif_id == NOTIF_TOPIC:
+        return _('Topic/feed')
+    if notif_id == NOTIF_POST:
+        return _('Comment')
+    if notif_id == NOTIF_REPLY:
+        return _('Comment')
+    if notif_id == NOTIF_FEED:
+        return _('Topic/feed')
+    if notif_id == NOTIF_MENTION:
+        return _('Comment')
+    if notif_id == NOTIF_MESSAGE:
+        return _('Chat')
+    if notif_id == NOTIF_BAN:
+        return _('Admin')
+    if notif_id == NOTIF_UNBAN:
+        return _('Admin')
+    if notif_id == NOTIF_NEW_MOD:
+        return _('Admin')
+
+    # --- mod/admin level ---
+    if notif_id == NOTIF_REPORT:
+        return _('Admin')
+
+    # --- admin level ---
+    if notif_id == NOTIF_REPORT_ESCALATION:
+        return _('Admin')
+    if notif_id == NOTIF_REGISTRATION:
+        return _('Admin')
+
+    # --model/db default--
+    if notif_id == NOTIF_DEFAULT:
+        return _('All')

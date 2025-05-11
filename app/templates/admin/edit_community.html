@@ -52,7 +52,16 @@
             {% if not community.is_local() %}
             </fieldset>
             {% endif %}
-            {{ render_field(form.submit) }}
+            <div class="row">
+                <div class="col-auto">
+                    {{ render_field(form.submit) }}
+                </div>
+                {% if not community.is_local() -%}
+                <div class="col-auto">
+                    <p class="mt-2"><a href="{{ url_for('admin.admin_community_move', community_id=community.id, new_owner=current_user.id) }}">{{ _('Convert to local community') }}</a></p>
+                </div>
+                {% endif -%}
+            </div>
         </form>
     </div>
 </div>

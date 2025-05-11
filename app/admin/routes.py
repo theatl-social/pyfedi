@@ -15,24 +15,25 @@ from urllib.parse import urlparse
 
 from app import db, celery, cache
 from app.activitypub.routes import process_inbox_request, process_delete_request, replay_inbox_request
-from app.activitypub.signature import post_request, default_context
+from app.activitypub.signature import post_request, default_context, RsaKeys
 from app.activitypub.util import instance_allowed, extract_domain_and_actor
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm, \
-    EditInstanceForm, RemoteInstanceScanForm
+    EditInstanceForm, RemoteInstanceScanForm, MoveCommunityForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
-    topics_for_form
+    topics_for_form, move_community_images_to_here
 from app.community.util import save_icon_file, save_banner_file, search_for_community
 from app.community.routes import do_subscribe
-from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED
-from app.email import send_welcome_email
+from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED, POST_STATUS_REVIEWING
+from app.email import send_registration_approved_email
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission, Domain, \
     Tag, DefederationSubscription
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
     topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents, \
-    download_defeds, instance_banned, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, referrer
+    download_defeds, instance_banned, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, referrer, \
+    community_membership
 from app.admin import bp
 
 
@@ -40,11 +41,8 @@ from app.admin import bp
 @login_required
 @permission_required('change instance settings')
 def admin_home():
-    return render_template('admin/home.html', title=_('Admin'), moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None)
+    return render_template('admin/home.html', title=_('Admin'), 
+                           site=g.site)
 
 
 @bp.route('/site', methods=['GET', 'POST'])
@@ -133,13 +131,8 @@ def admin_site():
         form.contact_email.data = site.contact_email
         form.announcement.data = get_setting('announcement', '')
     return render_template('admin/site.html', title=_('Site profile'), form=form,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+                           
+                           site=g.site, )
 
 
 @bp.route('/misc', methods=['GET', 'POST'])
@@ -167,7 +160,9 @@ def admin_misc():
         site.show_inoculation_block = form.show_inoculation_block.data
         site.updated = utcnow()
         site.default_theme = form.default_theme.data
+        site.additional_css = form.additional_css.data
         site.default_filter = form.default_filter.data
+        site.private_instance = form.private_instance.data
         if site.id is None:
             db.session.add(site)
         db.session.commit()
@@ -176,6 +171,7 @@ def admin_misc():
         set_setting('email_verification', form.email_verification.data)
         set_setting('choose_topics', form.choose_topics.data)
         set_setting('filter_selection', form.filter_selection.data)
+        set_setting('registration_approved_email', form.registration_approved_email.data)
         flash(_('Settings saved.'))
     elif request.method == 'GET':
         form.enable_downvotes.data = site.enable_downvotes
@@ -192,19 +188,17 @@ def admin_misc():
         form.log_activitypub_json.data = site.log_activitypub_json
         form.show_inoculation_block.data = site.show_inoculation_block
         form.default_theme.data = site.default_theme if site.default_theme is not None else ''
+        form.additional_css.data = site.additional_css if site.additional_css is not None else ''
         form.default_filter.data = site.default_filter if site.default_filter else 'popular'
         form.public_modlog.data = get_setting('public_modlog', False)
         form.email_verification.data = get_setting('email_verification', True)
         form.choose_topics.data = get_setting('choose_topics', True)
         form.filter_selection.data = get_setting('filter_selection', True)
+        form.private_instance.data = site.private_instance
+        form.registration_approved_email.data = get_setting('registration_approved_email', '')
     return render_template('admin/misc.html', title=_('Misc settings'), form=form,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+                           
+                           site=g.site, )
 
 
 @bp.route('/federation', methods=['GET', 'POST'])
@@ -723,13 +717,8 @@ def admin_federation():
     return render_template('admin/federation.html', title=_('Federation settings'), 
                            form=form, preload_form=preload_form, ban_lists_form=ban_lists_form,
                            remote_scan_form=remote_scan_form, current_app_debug=current_app.debug,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+                           
+                           site=g.site, )
 
 
 @celery.task
@@ -878,10 +867,7 @@ def admin_activities():
 
     return render_template('admin/activities.html', title=_('ActivityPub Log'), next_url=next_url, prev_url=prev_url,
                            activities=activities,
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+                           site=g.site, )
 
 
 @bp.route('/activity_json/<int:activity_id>')
@@ -892,10 +878,7 @@ def activity_json(activity_id):
     return render_template('admin/activity_json.html', title=_('Activity JSON'),
                            activity_json_data=activity.activity_json, activity=activity,
                            current_app=current_app,
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+                           site=g.site, )
 
 
 @bp.route('/activity_json/<int:activity_id>/replay')
@@ -930,13 +913,8 @@ def admin_communities():
     return render_template('admin/communities.html', title=_('Communities'), next_url=next_url, prev_url=prev_url,
                            communities=communities,
                            search=search, sort_by=sort_by,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+                           
+                           site=g.site, )
 
 
 @bp.route('/communities/no-topic', methods=['GET'])
@@ -956,13 +934,8 @@ def admin_communities_no_topic():
     prev_url = url_for('admin.admin_communities_no_topic', page=communities.prev_num) if communities.has_prev and page != 1 else None
 
     return render_template('admin/communities.html', title=_('Communities with no topic'), next_url=next_url, prev_url=prev_url,
-                           communities=communities, moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+                           communities=communities, 
+                           site=g.site, )
 
 
 @bp.route('/community/<int:community_id>/edit', methods=['GET', 'POST'])
@@ -1052,13 +1025,8 @@ def admin_community_edit(community_id):
         form.languages.data = community.language_ids()
         form.ignore_remote_language.data = community.ignore_remote_language
     return render_template('admin/edit_community.html', title=_('Edit community'), form=form, community=community,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+                           
+                           site=g.site, )
 
 
 @bp.route('/community/<int:community_id>/delete', methods=['GET'])
@@ -1112,13 +1080,8 @@ def unsubscribe_everyone_then_delete_task(community_id):
 def admin_topics():
     topics = topic_tree()
     return render_template('admin/topics.html', title=_('Topics'), topics=topics,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+                           
+                           site=g.site, )
 
 
 @bp.route('/topic/add', methods=['GET', 'POST'])
@@ -1142,13 +1105,8 @@ def admin_topic_add():
         return redirect(url_for('admin.admin_topics'))
 
     return render_template('admin/edit_topic.html', title=_('Add topic'), form=form,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+                           
+                           site=g.site, )
 
 @bp.route('/topic/<int:topic_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -1160,7 +1118,7 @@ def admin_topic_edit(topic_id):
     if form.validate_on_submit():
         topic.name = form.name.data
         topic.num_communities = topic.communities.count()
-        topic.machine_name = form.machine_name.data
+        topic.machine_name = slugify(form.machine_name.data.strip())
         topic.show_posts_in_children = form.show_posts_in_children.data
         if form.parent_id.data:
             topic.parent_id = form.parent_id.data
@@ -1176,13 +1134,8 @@ def admin_topic_edit(topic_id):
         form.parent_id.data = topic.parent_id
         form.show_posts_in_children.data = topic.show_posts_in_children
     return render_template('admin/edit_topic.html', title=_('Edit topic'), form=form, topic=topic,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+                           
+                           site=g.site, )
 
 
 @bp.route('/topic/<int:topic_id>/delete', methods=['GET'])
@@ -1235,13 +1188,8 @@ def admin_users():
 
     return render_template('admin/users.html', title=_('Users'), next_url=next_url, prev_url=prev_url, users=users,
                            local_remote=local_remote, search=search, sort_by=sort_by, last_seen=last_seen,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+                           
+                           site=g.site, )
 
 
 @bp.route('/content', methods=['GET'])
@@ -1254,7 +1202,7 @@ def admin_content():
     show = request.args.get('show', 'trash')
     days = request.args.get('days', 3, type=int)
 
-    posts = Post.query.join(User, User.id == Post.user_id).filter(Post.deleted == False)
+    posts = Post.query.join(User, User.id == Post.user_id).filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
     post_replies = PostReply.query.join(User, User.id == PostReply.user_id).filter(PostReply.deleted == False)
     if show == 'trash':
         title = _('Bad / Most downvoted')
@@ -1307,13 +1255,8 @@ def admin_content():
                            next_url_replies=next_url_replies, prev_url_replies=prev_url_replies,
                            posts=posts, post_replies=post_replies,
                            posts_replies=posts_replies, show=show, days=days,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+                           
+                           site=g.site, )
 
 
 @bp.route('/approve_registrations', methods=['GET'])
@@ -1325,10 +1268,7 @@ def admin_approve_registrations():
     return render_template('admin/approve_registrations.html',
                            registrations=registrations,
                            recently_approved=recently_approved,
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+                           site=g.site, )
 
 
 @bp.route('/approve_registrations/<int:user_id>/approve', methods=['GET'])
@@ -1344,7 +1284,7 @@ def admin_approve_registrations_approve(user_id):
         db.session.commit()
         if user.verified:
             finalize_user_setup(user)
-            send_welcome_email(user, True)
+            send_registration_approved_email(user)
 
         flash(_('Registration approved.'))
 
@@ -1403,13 +1343,8 @@ def admin_user_edit(user_id):
             form.role.data = user.roles[0].id
 
     return render_template('admin/edit_user.html', title=_('Edit user'), form=form, user=user,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+                           
+                           site=g.site, )
 
 
 @bp.route('/users/add', methods=['GET', 'POST'])
@@ -1468,13 +1403,8 @@ def admin_users_add():
         return redirect(url_for('admin.admin_users', local_remote='local'))
 
     return render_template('admin/add_user.html', title=_('Add user'), form=form, user=user,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+                           
+                           site=g.site, )
 
 
 @bp.route('/user/<int:user_id>/delete', methods=['GET'])
@@ -1527,13 +1457,8 @@ def admin_reports():
 
     return render_template('admin/reports.html', title=_('Reports'), next_url=next_url, prev_url=prev_url, reports=reports,
                            local_remote=local_remote, search=search,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+                           
+                           site=g.site, )
 
 
 @bp.route('/newsletter', methods=['GET', 'POST'])
@@ -1547,13 +1472,8 @@ def newsletter():
         return redirect(url_for('admin.newsletter'))
 
     return render_template("admin/newsletter.html", form=form, title=_('Send newsletter'),
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+                           
+                           site=g.site, )
 
 
 @bp.route('/permissions', methods=['GET', 'POST'])
@@ -1577,13 +1497,8 @@ def admin_permissions():
 
     return render_template('admin/permissions.html', title=_('Role permissions'), roles=roles,
                            permissions=permissions,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+                           
+                           site=g.site, )
 
 
 @bp.route('/instances', methods=['GET', 'POST'])
@@ -1618,9 +1533,7 @@ def admin_instances():
             instances = instances.join(BannedInstances, BannedInstances.domain == Instance.domain)
 
     instances = instances.order_by(text('"instance".' + sort_by))
-    instances = instances.paginate(page=page,
-                                       per_page=250 if current_user.is_authenticated and not low_bandwidth else 50,
-                                       error_out=False)
+    instances = instances.paginate(page=page, per_page=50, error_out=False)
     next_url = url_for('admin.admin_instances', page=instances.next_num, search=search, filter=filter, sort_by=sort_by) if instances.has_next else None
     prev_url = url_for('admin.admin_instances', page=instances.prev_num, search=search, filter=filter, sort_by=sort_by) if instances.has_prev and page != 1 else None
 
@@ -1628,12 +1541,7 @@ def admin_instances():
                            title=_(title), search=search, filter=filter, sort_by=sort_by,
                            next_url=next_url, prev_url=prev_url,
                            low_bandwidth=low_bandwidth, 
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(), site=g.site,
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                           site=g.site,
                            )
 
 
@@ -1649,6 +1557,7 @@ def admin_instance_edit(instance_id):
         instance.gone_forever = form.gone_forever.data
         instance.trusted = form.trusted.data
         instance.posting_warning = form.posting_warning.data
+        instance.inbox = form.inbox.data
 
         db.session.commit()
 
@@ -1660,12 +1569,56 @@ def admin_instance_edit(instance_id):
         form.gone_forever.data = instance.gone_forever
         form.trusted.data = instance.trusted
         form.posting_warning.data = instance.posting_warning
+        form.inbox.data = instance.inbox
 
     return render_template('admin/edit_instance.html', title=_('Edit instance'), form=form, instance=instance,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+                           
+                           site=g.site, )
+
+
+@bp.route('/community/<int:community_id>/move/<int:new_owner>', methods=['GET', 'POST'])
+@login_required
+@permission_required('change instance settings')
+def admin_community_move(community_id, new_owner):
+    community = Community.query.get_or_404(community_id)
+    new_owner_user = User.query.get_or_404(new_owner)
+    form = MoveCommunityForm()
+
+    form.new_owner.label.text = _('Set community owner to %(user_name)s', user_name=new_owner_user.link())
+
+    if form.validate_on_submit():
+        old_name = community.link()
+        community.ap_id = None
+        private_key, public_key = RsaKeys.generate_keypair()
+        community.name = form.new_url.data.lower()
+        community.private_key = private_key
+        community.public_key = public_key
+        community.ap_profile_id = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data.lower()
+        community.ap_public_url = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data
+        community.ap_followers_url = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data + '/followers'
+        community.ap_domain = current_app.config['SERVER_NAME']
+        community.instance_id = 1
+        db.session.execute(text('UPDATE "post" SET instance_id = 1 WHERE community_id = :community_id'), {'community_id': community.id})
+        db.session.execute(text('UPDATE "post_reply" SET instance_id = 1 WHERE community_id = :community_id'), {'community_id': community.id})
+        if form.new_owner.data:
+            community.user_id = new_owner_user.id
+        db.session.commit()
+
+        cache.delete_memoized(community_membership, new_owner_user, community)
+        cache.delete_memoized(joined_communities, new_owner_user.id)
+        cache.delete_memoized(moderating_communities, new_owner_user.id)
+
+        if current_app.debug:
+            move_community_images_to_here(community.id)
+        else:
+            move_community_images_to_here.delay(community.id)
+
+        new_url = f'https://{current_app.config["SERVER_NAME"]}/c/{community.link()}'
+        flash(_('%(community_name)s is now %(new_url)s. Contact the initiator of this request to let them know.', community_name=old_name, new_url=new_url))
+
+        flash(_('Ensure this community has the right moderators.'))
+        return redirect(url_for('community.community_mod_list', community_id=community.id))
+
+    form.new_url.data = community.name
+
+    return render_template('admin/community_move.html', title=_('Move community'), form=form, community=community, site=g.site)

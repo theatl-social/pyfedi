@@ -33,10 +33,7 @@ def trump_musk():
             if existing_filters is not None:
                 return redirect(url_for('auth.choose_topics'))
 
-            return render_template('auth/trump_musk.html', form=form,
-                                   moderating_communities=moderating_communities(current_user.get_id()),
-                                   joined_communities=joined_communities(current_user.get_id()),
-                                   menu_topics=menu_topics(), site=g.site,
+            return render_template('auth/trump_musk.html', form=form,site=g.site,
                                    )
     else:
         return redirect(url_for('auth.choose_topics'))
@@ -59,10 +56,7 @@ def choose_topics():
                 flash(_('You did not choose any topics. Would you like to choose individual communities instead?'))
                 return redirect(url_for('main.list_communities'))
         else:
-            return render_template('auth/choose_topics.html', form=form,
-                                   moderating_communities=moderating_communities(current_user.get_id()),
-                                   joined_communities=joined_communities(current_user.get_id()),
-                                   menu_topics=menu_topics(), site=g.site,
+            return render_template('auth/choose_topics.html', form=form,site=g.site,
                                    )
     else:
         flash(_('Please join some communities you\'re interested in and then go to the home page by clicking on the logo above.'))

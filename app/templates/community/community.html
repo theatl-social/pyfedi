@@ -71,7 +71,7 @@
             <p class="text-muted">{{ community.lemmy_link() }}</p>
         {% endif -%}
         {% include "community/_community_nav.html" -%}
-        {% if post_layout == 'masonry' or post_layout == 'masonry_wide' -%}
+        {% if content_type == 'posts' and (post_layout == 'masonry' or post_layout == 'masonry_wide') -%}
             <div class="masonry" id="masonry">
               <!-- Masonry columns will be added here -->
             </div>
@@ -87,13 +87,23 @@
               });
             </script>
         {% else -%}
-            <div class="post_list">
-                {% for post in posts.items -%}
-                    {% include 'post/_post_teaser.html' -%}
-                {% else -%}
-                    <p>{{ _('No posts in this community yet.') }}</p>
-                {% endfor -%}
-            </div>
+            {% if posts %}
+                <div class="post_list">
+                    {% for post in posts.items -%}
+                        {% include 'post/_post_teaser.html' -%}
+                    {% else -%}
+                        <p>{{ _('No posts in this community yet.') }}</p>
+                    {% endfor -%}
+                </div>
+            {% elif comments %}
+                <div class="post_list comments">
+                    {% for post_reply in comments.items %}
+                        {% with teaser=True %}
+                            {% include 'post/_post_reply_teaser.html' %}
+                        {% endwith %}
+                    {% endfor %}
+                </div>
+            {% endif -%}
         {% endif -%}
 
         <nav aria-label="Pagination" class="mt-4" role="navigation">

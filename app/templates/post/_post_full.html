@@ -1,5 +1,5 @@
 <div class="row position-relative post_full">
-        <div class="col post_col {% if post.type == POST_TYPE_IMAGE %}post_col post_type_image{% else %}post_type_normal{% endif %}">
+        <div class="col post_col {% if post.type == POST_TYPE_IMAGE %}post_col post_type_image{% else %}post_type_normal{% endif %} {{ 'reported' if post.reports and post.reports != -1 }}">
             {% include "post/_breadcrumb_nav.html" %}
             <h1 class="mt-2 post_title" lang="{{ post.language_code() }}">{{ post.title }}
                 {% if post.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif -%}
@@ -18,7 +18,7 @@
                 {% if post.edited_at -%} edited <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post.edited_at).humanize(locale=locale) }}</time>{% endif -%}</small>
             </div>
             {% if post.type == POST_TYPE_IMAGE -%}
-            <p class="mt-2"><a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="Go to image">{{ post.url|shorten_url }}
+            <p class="mt-2"><a href="{{ post.image.view_url() if post.image_id else post.url }}" rel="nofollow ugc" target="_blank" aria-label="Go to image">{{ post.image.view_url() if post.image_id else post.url|shorten_url }}
                     <span class="fe fe-external"></span></a></p>
                 <div class="post_image">
                     {% if post.image_id -%}
@@ -163,6 +163,15 @@
         </nav>
     {% endif -%}
 
+    {% if len(post.flair) > 0 -%}
+        <nav role="navigation">
+            <h3 class="visually-hidden">{{ _('Flair') }}</h3>
+            {% for flair in post.flair -%}
+                <span class="post_flair" style="color: {{ flair.text_color}}; background-color: {{ flair.background_color }}" title="{{ _('Show only %(flair_name)s', flair_name=flair.flair) }}"><a href="{{ url_for('activitypub.community_profile', actor=post.community.link(), flair=flair.flair) }}" style="color: {{ flair.text_color}}">{{ flair.flair }}</a></span>
+            {% endfor -%}
+        </nav>
+    {% endif -%}
+
     <div class="post_utilities_bar">
         <div class="voting_buttons_new" aria-live="assertive">
             {% include "post/_post_voting_buttons.html" -%}
@@ -186,7 +195,7 @@
             </div>
         </div>
         {% endif -%}
-        {% if current_user.is_authenticated and post.type == POST_TYPE_LINK -%}
+        {% if current_user.is_authenticated and post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO -%}
             <div class="post_cross_post_link">
                 <a rel="nofollow" aria-label="{{ _('Cross-post') }}" title="{{ _('Cross-post') }}" href="{{ url_for('post.post_cross_post', post_id=post.id) }}"><span class="fe fe-cross-post"></span></a>
             </div>

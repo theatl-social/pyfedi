@@ -8,6 +8,8 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+from app.utils import get_setting, html_to_text, markdown_to_html, markdown_to_text
+
 CHARSET = "UTF-8"
 
 
@@ -30,13 +32,18 @@ def send_verification_email(user):
                html_body=render_template('email/verification.html', user=user))
 
 
-def send_welcome_email(user, application_required):
-    subject = _('Your application has been approved - welcome to PieFed') if application_required else _('Welcome to PieFed')
+def send_registration_approved_email(user):
+    subject = _('Your application has been approved - welcome to PieFed')
+    body = get_setting('registration_approved_email', '')
+    if body:
+        body = render_template('email/welcome.html', user=user, email_body=markdown_to_html(body))
+    else:
+        body = render_template('email/welcome.html', user=user, email_body=markdown_to_html(f'\n\nYour account at https://{current_app.config["SERVER_NAME"]} has been approved. Welcome!\n\n'))
     send_email(subject,
-               sender=f'{g.site.name} <{current_app.config["MAIL_FROM"]}>',
+               sender=f'{g.site.name} <{g.site.contact_email}>',
                recipients=[user.email],
-               text_body=render_template('email/welcome.txt', user=user, application_required=application_required),
-               html_body=render_template('email/welcome.html', user=user, application_required=application_required))
+               text_body=markdown_to_text(body),
+               html_body=body)
 
 
 def send_topic_suggestion(communities_for_topic, user, recipients, subject, topic_name):

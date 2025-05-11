@@ -1,28 +1,26 @@
+import json
+import os
+import mimetypes
 from app import db, cache
 from app.activitypub.util import make_image_sizes, notify_about_post
 from app.constants import *
-from app.community.util import tags_from_string_old, end_poll_date
+from app.community.util import tags_from_string_old, end_poll_date, flair_from_form
 from app.models import File, Notification, NotificationSubscription, Poll, PollChoice, Post, PostBookmark, PostVote, Report, Site, User, utcnow
 from app.shared.tasks import task_selector
 from app.utils import render_template, authorise_api_user, shorten_string, gibberish, ensure_directory_exists, \
-                      piefed_markdown_to_lemmy_markdown, markdown_to_html, fixup_url, domain_from_url, \
-                      opengraph_parse, url_to_thumbnail_file, can_create_post, is_video_hosting_site, recently_upvoted_posts, \
-                      is_image_url, add_to_modlog_activitypub
+    piefed_markdown_to_lemmy_markdown, markdown_to_html, fixup_url, domain_from_url, \
+    opengraph_parse, url_to_thumbnail_file, can_create_post, is_video_hosting_site, recently_upvoted_posts, \
+    is_image_url, add_to_modlog_activitypub, store_files_in_s3, guess_mime_type
 
 from flask import abort, flash, redirect, request, url_for, current_app, g
 from flask_babel import _
 from flask_login import current_user
-
+import boto3
 from pillow_heif import register_heif_opener
 from PIL import Image, ImageOps
 
 from sqlalchemy import text
 
-import os
-
-
-# function can be shared between WEB and API (only API calls it for now)
-# post_vote in app/post/routes would just need to do 'return vote_for_post(post_id, vote_direction, SRC_WEB)'
 
 def vote_for_post(post_id: int, vote_direction, src, auth=None):
     if src == SRC_API:
@@ -33,6 +31,9 @@ def vote_for_post(post_id: int, vote_direction, src, auth=None):
         user = current_user
 
     undo = post.vote(user, vote_direction)
+
+    # mark the post as read for the user
+    user.mark_post_as_read(post)
 
     task_selector('vote_for_post', user_id=user.id, post_id=post_id, vote_to_undo=undo, vote_direction=vote_direction)
 
@@ -51,84 +52,80 @@ def vote_for_post(post_id: int, vote_direction, src, auth=None):
                                recently_downvoted=recently_downvoted)
 
 
-# function can be shared between WEB and API (only API calls it for now)
-# post_bookmark in app/post/routes would just need to do 'return bookmark_the_post(post_id, SRC_WEB)'
-def bookmark_the_post(post_id: int, src, auth=None):
-    if src == SRC_API:
-        post = Post.query.filter_by(id=post_id, deleted=False).one()
-        user_id = authorise_api_user(auth)
-    else:
-        post = Post.query.get_or_404(post_id)
-        if post.deleted:
-            abort(404)
-        user_id = current_user.id
+def bookmark_post(post_id: int, src, auth=None):
+    Post.query.filter_by(id=post_id, deleted=False).one()
+    user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
-    existing_bookmark = PostBookmark.query.filter(PostBookmark.post_id == post_id, PostBookmark.user_id == user_id).first()
+    existing_bookmark = PostBookmark.query.filter_by(post_id=post_id, user_id=user_id).first()
     if not existing_bookmark:
         db.session.add(PostBookmark(post_id=post_id, user_id=user_id))
         db.session.commit()
         if src == SRC_WEB:
             flash(_('Bookmark added.'))
     else:
-        if src == SRC_WEB:
-            flash(_('This post has already been bookmarked.'))
+        msg = 'This post has already been bookmarked.'
+        if src == SRC_API:
+            raise Exception(msg)
+        else:
+            flash(_(msg))
 
     if src == SRC_API:
         return user_id
-    else:
-        return redirect(url_for('activitypub.post_ap', post_id=post.id))
 
 
-# function can be shared between WEB and API (only API calls it for now)
-# post_remove_bookmark in app/post/routes would just need to do 'return remove_the_bookmark_from_post(post_id, SRC_WEB)'
-def remove_the_bookmark_from_post(post_id: int, src, auth=None):
-    if src == SRC_API:
-        post = Post.query.filter_by(id=post_id, deleted=False).one()
-        user_id = authorise_api_user(auth)
-    else:
-        post = Post.query.get_or_404(post_id)
-        if post.deleted:
-            abort(404)
-        user_id = current_user.id
+def remove_bookmark_post(post_id: int, src, auth=None):
+    Post.query.filter_by(id=post_id, deleted=False).one()
+    user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
-    existing_bookmark = PostBookmark.query.filter(PostBookmark.post_id == post_id, PostBookmark.user_id == user_id).first()
+    existing_bookmark = PostBookmark.query.filter_by(post_id=post_id, user_id=user_id).first()
     if existing_bookmark:
         db.session.delete(existing_bookmark)
         db.session.commit()
         if src == SRC_WEB:
             flash(_('Bookmark has been removed.'))
+    else:
+        msg = 'This post was not bookmarked.'
+        if src == SRC_API:
+            raise Exception(msg)
+        else:
+            flash(_(msg))
 
     if src == SRC_API:
         return user_id
+
+
+def subscribe_post(post_id: int, subscribe, src, auth=None):
+    post = Post.query.filter_by(id=post_id, deleted=False).one()
+    user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
+
+    if src == SRC_WEB:
+        subscribe = False if post.notify_new_replies(user_id) else True
+
+    existing_notification = NotificationSubscription.query.filter_by(entity_id=post_id, user_id=user_id,
+                                                                         type=NOTIF_POST).first()
+    if subscribe == False:
+        if existing_notification:
+            db.session.delete(existing_notification)
+            db.session.commit()
+        else:
+            msg = 'A subscription for this post did not exist.'
+            if src == SRC_API:
+                raise Exception(msg)
+            else:
+                flash(_(msg))
+
     else:
-        return redirect(url_for('activitypub.post_ap', post_id=post.id))
-
-
-
-# function can be shared between WEB and API (only API calls it for now)
-# post_notification in app/post/routes would just need to do 'return toggle_post_notification(post_id, SRC_WEB)'
-def toggle_post_notification(post_id: int, src, auth=None):
-    # Toggle whether the current user is subscribed to notifications about top-level replies to this post or not
-    if src == SRC_API:
-        post = Post.query.filter_by(id=post_id, deleted=False).one()
-        user_id = authorise_api_user(auth)
-    else:
-        post = Post.query.get_or_404(post_id)
-        if post.deleted:
-            abort(404)
-        user_id = current_user.id
-
-    existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == post.id,
-                                                                  NotificationSubscription.user_id == user_id,
-                                                                  NotificationSubscription.type == NOTIF_POST).first()
-    if existing_notification:
-        db.session.delete(existing_notification)
-        db.session.commit()
-    else:  # no subscription yet, so make one
-        new_notification = NotificationSubscription(name=shorten_string(_('Replies to my post %(post_title)s', post_title=post.title)),
-                                                    user_id=user_id, entity_id=post.id, type=NOTIF_POST)
-        db.session.add(new_notification)
-        db.session.commit()
+        if existing_notification:
+            msg = 'A subscription for this post already existed.'
+            if src == SRC_API:
+                raise Exception(msg)
+            else:
+                flash(_(msg))
+        else:
+            new_notification = NotificationSubscription(name=shorten_string(_('Replies to my post %(post_title)s', post_title=post.title)),
+                                                        user_id=user_id, entity_id=post_id, type=NOTIF_POST)
+            db.session.add(new_notification)
+            db.session.commit()
 
     if src == SRC_API:
         return user_id
@@ -229,6 +226,9 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         notify_author = input['notify_author']
         language_id = input['language_id']
         tags = []
+        flair = []
+        scheduled_for = None
+        repeat = None
     else:
         if not user:
             user = current_user
@@ -246,7 +246,12 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         notify_author = input.notify_author.data
         language_id = input.language_id.data
         tags = tags_from_string_old(input.tags.data)
-
+        if input.flair:
+            flair = flair_from_form(input.flair.data)
+        else:
+            flair = []
+        scheduled_for = input.scheduled_for.data
+        repeat = input.repeat.data
     post.indexable = user.indexable
     post.sticky = False if src == SRC_API else input.sticky.data
     post.nsfw = nsfw
@@ -258,6 +263,11 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
     post.body = piefed_markdown_to_lemmy_markdown(body)
     post.body_html = markdown_to_html(post.body)
     post.type = type
+    post.scheduled_for = scheduled_for
+    post.repeat = repeat
+
+    if post.scheduled_for and post.scheduled_for > utcnow():
+        post.status = POST_STATUS_SCHEDULED
 
     url_changed = False
 
@@ -289,6 +299,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
 
         # remove any old tags
         post.tags.clear()
+        post.flair.clear()
 
         post.edited_at = utcnow()
 
@@ -303,7 +314,10 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
 
         new_filename = gibberish(15)
         # set up the storage directory
-        directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
+        if store_files_in_s3():
+            directory = 'app/static/tmp'
+        else:
+            directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
         ensure_directory_exists(directory)
 
         # save the file
@@ -326,12 +340,29 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
 
                 img.thumbnail((2000, 2000))
                 img.save(final_place)
-
-                url = f"https://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
             else:
                 raise Exception('filetype not allowed')
-        else:
-            url = f"https://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
+
+        url = f"https://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
+
+        # Move uploaded file to S3
+        if store_files_in_s3():
+            session = boto3.session.Session()
+            s3 = session.client(
+                service_name='s3',
+                region_name=current_app.config['S3_REGION'],
+                endpoint_url=current_app.config['S3_ENDPOINT'],
+                aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+            )
+            s3.upload_file(final_place, current_app.config['S3_BUCKET'], 'posts/' +
+                           new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + file_ext,
+                           ExtraArgs={'ContentType': guess_mime_type(final_place)})
+            url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/" + \
+                  new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + file_ext
+            s3.close()
+            os.unlink(final_place)
+
 
     if url and (from_scratch or url_changed):
         domain = domain_from_url(url)
@@ -341,16 +372,25 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
             post.domain = domain
             domain.post_count += 1
             already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
+            targets_data = {'post_id': post.id}
             if domain.notify_mods:
                 for community_member in post.community.moderators():
                     if community_member.is_local():
-                        notify = Notification(title='Suspicious content', url=post.ap_id, user_id=community_member.user_id, author_id=user.id)
+                        notify = Notification(title='Suspicious content', url=post.ap_id, 
+                                              user_id=community_member.user_id, author_id=user.id,
+                                              notif_type=NOTIF_REPORT,
+                                              subtype='post_from_suspicious_domain',
+                                              targets=targets_data)
                         db.session.add(notify)
                         already_notified.add(community_member.user_id)
             if domain.notify_admins:
                 for admin in Site.admins():
                     if admin.id not in already_notified:
-                        notify = Notification(title='Suspicious content', url=post.ap_id, user_id=admin.id, author_id=user.id)
+                        notify = Notification(title='Suspicious content', url=post.ap_id, 
+                                              user_id=admin.id, author_id=user.id,
+                                              notif_type=NOTIF_REPORT,
+                                              subtype='post_from_suspicious_domain',
+                                              targets=targets_data)
                         db.session.add(notify)
 
         thumbnail_url, embed_url = fixup_url(url)
@@ -384,6 +424,8 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
                 post.type = POST_TYPE_LINK
 
         post.calculate_cross_posts(url_changed=url_changed)
+    elif url and is_video_hosting_site(url):
+        post.type = POST_TYPE_VIDEO
 
     federate = True
     if type == POST_TYPE_POLL:
@@ -408,8 +450,10 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         if poll.local_only:
             federate = False
 
-    # add tags
+
+    # add tags & flair
     post.tags = tags
+    post.flair = flair
 
     # Add subscription if necessary
     if notify_author:
@@ -417,6 +461,9 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         db.session.add(new_notification)
 
     db.session.commit()
+
+    if post.status < POST_STATUS_PUBLISHED:
+        federate = False
 
     if from_scratch:
         if federate:
@@ -513,19 +560,25 @@ def report_post(post_id, input, src, auth=None):
 
     # Notify moderators
     already_notified = set()
+    targets_data = {'suspect_post_id':post.id,'suspect_user_id':post.user_id,'reporter_id':user_id}
     for mod in post.community.moderators():
         moderator = User.query.get(mod.user_id)
         if moderator and moderator.is_local():
             notification = Notification(user_id=mod.user_id, title=_('A post has been reported'),
                                         url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
-                                        author_id=user_id)
+                                        author_id=user_id, notif_type=NOTIF_REPORT,
+                                        subtype='post_reported',
+                                        targets=targets_data)
             db.session.add(notification)
             already_notified.add(mod.user_id)
     post.reports += 1
     # todo: only notify admins for certain types of report
     for admin in Site.admins():
         if admin.id not in already_notified:
-            notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, author_id=user_id)
+            notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, 
+                                  author_id=user_id, notif_type=NOTIF_REPORT,
+                                  subtype='post_reported',
+                                  targets=targets_data)
             db.session.add(notify)
             admin.unread_notifications += 1
     db.session.commit()
@@ -669,5 +722,3 @@ def mod_restore_post(post_id, reason, src, auth):
         return user.id, post
     else:
         return
-
-

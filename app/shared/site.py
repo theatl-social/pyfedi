@@ -9,17 +9,14 @@ from flask_login import current_user
 
 
 def block_remote_instance(instance_id, src, auth=None):
-    if src == SRC_API:
-        user_id = authorise_api_user(auth)
-    else:
-        user_id = current_user.id
+    user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
     if instance_id == 1:
+        msg = 'You cannot block the local instance.'
         if src == SRC_API:
-            raise Exception('cannot_block_local_instance')
+            raise Exception(msg)
         else:
-            flash(_('You cannot block the local instance.'), 'error')
-            return
+            flash(_(msg), 'error')
 
     existing = InstanceBlock.query.filter_by(user_id=user_id, instance_id=instance_id).first()
     if not existing:
@@ -35,10 +32,7 @@ def block_remote_instance(instance_id, src, auth=None):
 
 
 def unblock_remote_instance(instance_id, src, auth=None):
-    if src == SRC_API:
-        user_id = authorise_api_user(auth)
-    else:
-        user_id = current_user.id
+    user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
     existing = InstanceBlock.query.filter_by(user_id=user_id, instance_id=instance_id).first()
     if existing:

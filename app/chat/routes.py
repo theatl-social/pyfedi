@@ -6,11 +6,13 @@ from sqlalchemy import desc, or_, and_, text
 from app import db, celery
 from app.chat.forms import AddReply, ReportConversationForm
 from app.chat.util import send_message
-from app.models import Site, User, Report, ChatMessage, Notification, InstanceBlock, Conversation, conversation_member, CommunityBan, ModLog
+from app.constants import NOTIF_REPORT, SRC_WEB
+from app.models import Site, User, Report, ChatMessage, Notification, Conversation, conversation_member, CommunityBan, ModLog
 from app.user.forms import ReportUserForm
 from app.utils import render_template, moderating_communities, joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, \
     menu_subscribed_feeds
 from app.chat import bp
+from app.shared.site import block_remote_instance
 
 
 @bp.route('/chat', methods=['GET', 'POST'])
@@ -53,12 +55,7 @@ def chat_home(conversation_id=None):
                                    title=_('Chat with %(name)s', name=conversation.member_names(current_user.id)),
                                    conversations=conversations, messages=messages, form=form,
                                    current_conversation=conversation_id, conversation=conversation,
-                                   moderating_communities=moderating_communities(current_user.get_id()),
-                                   joined_communities=joined_communities(current_user.get_id()),
-                                   menu_topics=menu_topics(),
-                                   site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                                   menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                                   menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                                   site=g.site,
                                    )
 
 
@@ -86,12 +83,8 @@ def new_message(to):
     else:
         return render_template('chat/new_message.html', form=form, title=_('New message to "%(recipient_name)s"', recipient_name=recipient.link()),
                                recipient=recipient,
-                               moderating_communities=moderating_communities(current_user.get_id()),
-                               joined_communities=joined_communities(current_user.get_id()),
-                               menu_topics=menu_topics(),
-                               site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                               menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                               
+                               site=g.site,
                                )
 
 
@@ -132,13 +125,8 @@ def chat_options(conversation_id):
     conversation = Conversation.query.get_or_404(conversation_id)
     if current_user.is_admin() or conversation.is_member(current_user):
         return render_template('chat/chat_options.html', conversation=conversation,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+                           
+                           site=g.site, )
 
 
 @bp.route('/chat/<int:conversation_id>/delete', methods=['GET', 'POST'])
@@ -156,10 +144,7 @@ def chat_delete(conversation_id):
 @bp.route('/chat/<int:instance_id>/block_instance', methods=['GET', 'POST'])
 @login_required
 def block_instance(instance_id):
-    existing = InstanceBlock.query.filter_by(user_id=current_user.id, instance_id=instance_id).first()
-    if not existing:
-        db.session.add(InstanceBlock(user_id=current_user.id, instance_id=instance_id))
-        db.session.commit()
+    block_remote_instance(instance_id, SRC_WEB)
     flash(_('Instance blocked.'))
     return redirect(url_for('chat.chat_home'))
 
@@ -178,10 +163,13 @@ def chat_report(conversation_id):
 
             # Notify site admin
             already_notified = set()
+            targets_data = {'suspect_conversation_id':conversation.id,'reporter_id':current_user.id}
             for admin in Site.admins():
                 if admin.id not in already_notified:
                     notify = Notification(title='Reported conversation with user', url='/admin/reports', user_id=admin.id,
-                                          author_id=current_user.id)
+                                          author_id=current_user.id, notif_type=NOTIF_REPORT,
+                                          subtype='chat_conversation_reported',
+                                          targets=targets_data)
                     db.session.add(notify)
                     admin.unread_notifications += 1
             db.session.commit()
@@ -196,10 +184,6 @@ def chat_report(conversation_id):
             form.report_remote.data = True
 
         return render_template('chat/report.html', title=_('Report conversation'), form=form, conversation=conversation,
-                               moderating_communities=moderating_communities(current_user.get_id()),
-                               joined_communities=joined_communities(current_user.get_id()),
-                               menu_topics=menu_topics(),
-                               site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                               menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                               
+                               site=g.site, 
                                )

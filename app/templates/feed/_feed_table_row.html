@@ -25,11 +25,7 @@
         <td>
             {% if current_user.id == feed.user_id %}
                 <a href="/feed/{{ feed.id }}/edit?next=/u/myfeeds">{{ _('Edit') }}</a> |
-                {% if feed.num_communities == 0 %}
-                    <a href="/feed/{{ feed.id }}/delete?user_id={{ current_user.id }}" class="confirm_first">{{ _('Delete') }}</a>
-                {% else %}
-                    Delete
-                {% endif %}
+                <a href="/feed/{{ feed.id }}/delete?user_id={{ current_user.id }}" class="confirm_first">{{ _('Delete') }}</a>
             {% elif feed.subscribed(current_user.id) == 1 %}
                 <a href="/feed/{{ feed.id }}/copy">Copy</a> | <a href="{{ url_for('feed.feed_unsubscribe', actor=feed.ap_id if feed.ap_id else feed.name) }}">Unsubscribe</a>
             {% endif %}

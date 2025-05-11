@@ -15,18 +15,21 @@ from app import db
 import click
 import os
 
-from app.activitypub.signature import RsaKeys
-from app.activitypub.util import find_actor_or_create, extract_domain_and_actor
+from app.activitypub.signature import RsaKeys, send_post_request
+from app.activitypub.util import find_actor_or_create, extract_domain_and_actor, notify_about_post
 from app.auth.util import random_token
-from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY
+from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED
 from app.email import send_email
 from app.models import Settings, BannedInstances, Role, User, RolePermission, Domain, ActivityPubLog, \
     utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply, Language, \
-    Tag, InstanceRole, Community, DefederationSubscription
+    Tag, InstanceRole, Community, DefederationSubscription, SendQueue
 from app.post.routes import post_delete_post
+from app.shared.post import edit_post
+from app.shared.tasks import task_selector
 from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
     shorten_string, get_request, blocked_communities, gibberish, get_request_instance, \
-    instance_banned, recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, download_defeds
+    instance_banned, recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, download_defeds, \
+    get_setting, set_setting, get_redis_connection, instance_online, instance_gone_forever, find_next_occurrence
 
 
 def register(app):
@@ -173,6 +176,14 @@ def register(app):
     @app.cli.command('daily-maintenance')
     def daily_maintenance():
         with app.app_context():
+            # Remove notifications older than 90 days
+            db.session.query(Notification).filter(Notification.created_at < utcnow() - timedelta(days=90)).delete()
+            db.session.commit()
+
+            # Remove SendQueue older than 7 days
+            db.session.query(SendQueue).filter(SendQueue.created < utcnow() - timedelta(days=7)).delete()
+            db.session.commit()
+
             # Remove old content from communities
             print(f'Start removing old content from communities {datetime.now()}')
             communities = Community.query.filter(Community.content_retention > 0).all()
@@ -182,7 +193,7 @@ def register(app):
                 for post in old_posts:
                     post_delete_post(community, post, post.user_id, federate_all_communities=False)
                     community.post_count -= 1
-
+            db.session.commit()
 
             # Ensure accurate count of posts associated with each hashtag
             print(f'Ensure accurate count of posts associated with each hashtag {datetime.now()}')
@@ -295,6 +306,7 @@ def register(app):
                                     nodeinfo.close()
                     except Exception as e:
                         db.session.rollback()
+                        instance.failures += 1
                         current_app.logger.error(f"Error rechecking dormant instance {instance.domain}: {e}")
                 
                 db.session.commit()
@@ -329,7 +341,7 @@ def register(app):
                                         break
                                     else:
                                         instance.failures += 1
-                            elif nodeinfo.status_code >= 400:
+                            elif nodeinfo.status_code >= 300:
                                 current_app.logger.info(f"{instance.domain} has no well-known/nodeinfo response")
                                 instance.failures += 1
                         except Exception:
@@ -350,7 +362,7 @@ def register(app):
                                     instance.failures = 0
                                     instance.dormant = False
                                     instance.gone_forever = False
-                            elif node.status_code >= 400:
+                            elif node.status_code >= 300:
                                 instance.nodeinfo_href = None
                                 instance.failures += 1
                                 instance.most_recent_attempt = utcnow()
@@ -364,9 +376,20 @@ def register(app):
                             if instance.failures > 5:
                                 instance.dormant = True
                                 instance.start_trying_again = utcnow() + timedelta(days=5)
+                            if instance.failures > 12:
+                                instance.gone_forever = True
                         finally:
                             node.close()
 
+                        db.session.commit()
+                    else:
+                        instance.failures += 1
+                        instance.most_recent_attempt = utcnow()
+                        if instance.failures > 5:
+                            instance.dormant = True
+                            instance.start_trying_again = utcnow() + timedelta(days=5)
+                        if instance.failures > 12:
+                            instance.gone_forever = True
                         db.session.commit()
 
                     # Handle admin roles
@@ -404,15 +427,157 @@ def register(app):
                 db.session.rollback()
                 current_app.logger.error(f"Error in daily maintenance: {e}")
 
-                                # remove any InstanceRoles that are no longer part of instance-data['admins']
-                                #for instance_admin in InstanceRole.query.filter_by(instance_id=instance.id):
-                                #    if instance_admin.user.profile_id() not in admin_profile_ids:
-                                #        db.session.query(InstanceRole).filter(
-                                #            InstanceRole.user_id == instance_admin.user.id,
-                                #            InstanceRole.instance_id == instance.id,
-                                #            InstanceRole.role == 'admin').delete()
-                                #        db.session.commit()
             print(f'Done {datetime.now()}')
+
+    @app.cli.command('send-queue')
+    def send_queue():
+        with app.app_context():
+            # Semaphore to avoid parallel runs of this task
+            if get_setting('send-queue-running', False):
+                print('Send queue is still running - stopping this process to avoid duplication.')
+                return
+            set_setting('send-queue-running', True)
+
+            # Check size of redis memory. Abort if > 200 MB used
+            try:
+                redis = get_redis_connection()
+                try:
+                    if redis and redis.memory_stats()['total.allocated'] > 200000000:
+                        print('Redis memory is quite full - stopping send queue to avoid making it worse.')
+                        set_setting('send-queue-running', False)
+                        return
+                except: # retrieving memory stats fails on recent versions of redis. Once the redis package is fixed this problem should go away.
+                    ...
+            except:
+                print('Could not connect to redis')
+                set_setting('send-queue-running', False)
+                return
+
+            to_be_deleted = []
+            try:
+                # Send all waiting Activities that are due to be sent
+                for to_send in SendQueue.query.filter(SendQueue.send_after < utcnow()):
+                    if instance_online(to_send.destination_domain):
+                        if to_send.retries <= to_send.max_retries:
+                            send_post_request(to_send.destination, json.loads(to_send.payload), to_send.private_key, to_send.actor,
+                                              retries=to_send.retries + 1)
+                        to_be_deleted.append(to_send.id)
+                    elif instance_gone_forever(to_send.destination_domain):
+                        to_be_deleted.append(to_send.id)
+                # Remove them once sent - send_post_request will have re-queued them if they failed
+                if len(to_be_deleted):
+                    db.session.execute(text('DELETE FROM "send_queue" WHERE id IN :to_be_deleted'), {'to_be_deleted': tuple(to_be_deleted)})
+                    db.session.commit()
+
+                publish_scheduled_posts()
+
+            except Exception as e:
+                set_setting('send-queue-running', False)
+                raise e
+            finally:
+                set_setting('send-queue-running', False)
+
+    @app.cli.command('publish-scheduled-posts')
+    def publish_scheduled_posts_command():
+        # for dev/debug purposes this is it's own separate cli command but once it's finished we'll want to remove the @app.cli.command decorator
+        # so that instance admins don't need to set up another cron job
+        publish_scheduled_posts()
+
+    def publish_scheduled_posts():
+        with app.app_context():
+            for post in Post.query.filter(Post.status == POST_STATUS_SCHEDULED, Post.scheduled_for < utcnow(),
+                                          Post.deleted == False):
+                post.status = POST_STATUS_PUBLISHED
+                if post.repeat and post.repeat != 'none':
+                    next_occurrence = post.scheduled_for + find_next_occurrence(post)
+                else:
+                    next_occurrence = None
+                post.scheduled_for = None
+                post.posted_at = utcnow()
+                post.edited_at = None
+                db.session.commit()
+
+                # Federate post
+                task_selector('make_post', post_id=post.id)
+
+                # create Notification()s for all the people subscribed to this post.community, post.author, post.topic_id and feed
+                notify_about_post(post)
+
+                if next_occurrence:
+                    # create new post with new_post.scheduled_for = next_occurrence and new_post.repeat = post.repeat. Call Post.new()
+                    ...
+
+    @app.cli.command('move-files-to-s3')
+    def move_files_to_s3():
+        with app.app_context():
+            from app.utils import move_file_to_s3
+            import boto3
+
+            print('This will run for a long time, you should run it in a tmux session. Hit Ctrl+C now if not using tmux.')
+            sleep(5.0)
+            boto3_session = boto3.session.Session()
+            s3 = boto3_session.client(
+                service_name='s3',
+                region_name=current_app.config['S3_REGION'],
+                endpoint_url=current_app.config['S3_ENDPOINT'],
+                aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+            )
+            for community in Community.query.filter(Community.banned == False):
+                did_something = False
+                if community.icon_id:
+                    did_something = True
+                    move_file_to_s3(community.icon_id, s3)
+                if community.image_id:
+                    did_something = True
+                    move_file_to_s3(community.image_id, s3)
+                if did_something:
+                    print(f'Moved image for community {community.link()}')
+
+            for user in User.query.filter(User.deleted == False, User.banned == False, User.last_seen > utcnow() - timedelta(days=180)):
+                did_something = False
+                if user.avatar_id:
+                    did_something = True
+                    move_file_to_s3(user.avatar_id, s3)
+                if user.cover_id:
+                    did_something = True
+                    move_file_to_s3(user.cover_id, s3)
+                if did_something:
+                    print(f'Moved image for user {user.link()}')
+            s3.close()
+            print('Done')
+
+    @app.cli.command('move-post-images-to-s3')
+    def move_post_images_to_s3():
+        with app.app_context():
+            from app.utils import move_file_to_s3
+            import boto3
+            processed = 0
+            print(f'Beginning move of post images... this could take a long time. Use tmux.')
+            local_post_image_ids = list(db.session.execute(text('SELECT image_id FROM "post" WHERE deleted is false and image_id is not null and instance_id = 1 ORDER BY id DESC')).scalars())
+            remote_post_image_ids = list(db.session.execute(text('SELECT image_id FROM "post" WHERE deleted is false and image_id is not null and instance_id != 1 ORDER BY id DESC')).scalars())
+            boto3_session = boto3.session.Session()
+            s3 = boto3_session.client(
+                service_name='s3',
+                region_name=current_app.config['S3_REGION'],
+                endpoint_url=current_app.config['S3_ENDPOINT'],
+                aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+            )
+            for post_image_id in local_post_image_ids:
+                move_file_to_s3(post_image_id, s3)
+                processed += 1
+                if processed % 5:
+                    print(processed)
+
+            print('Finished moving local post images, doing remote ones now...')
+            for post_image_id in remote_post_image_ids:
+                move_file_to_s3(post_image_id, s3)
+                processed += 1
+                if processed % 5:
+                    print(processed)
+            s3.close()
+            print('Done')
 
     @app.cli.command("spaceusage")
     def spaceusage():

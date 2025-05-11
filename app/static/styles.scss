@@ -19,6 +19,19 @@ html {
 
 body {
   font-size: 0.95rem;
+
+  &.embed {
+    .post_teaser_body h3 {
+      font-size: 1.2rem!important;
+      margin-bottom: 2px;
+    }
+
+    .embed_logo {
+      float: right;
+      width: 40px;
+      margin-right: 10px;
+    }
+  }
 }
 
 a {
@@ -172,6 +185,25 @@ div.navbar {
 .dropdown-menu {
   .dropdown-item.active {
     background-color: $primary-colour;
+  }
+}
+
+.dropdown-divider {
+  margin-right: 10px;
+}
+
+.topics_menu, .feeds_menu {
+  ul {
+    margin-left: 0;
+    list-style-type: none;
+    padding-left: 0;
+
+    .dropdown-header {
+      padding-left: 6px;
+    }
+    li {
+
+    }
   }
 }
 
@@ -346,6 +378,15 @@ div.navbar {
   }
 }
 
+ul.form-multicheck-columns {
+  display: flex;
+  list-style: none;
+  max-height: 12rem;
+  flex-direction: column;
+  flex-wrap: wrap;
+  overflow-y: auto;
+}
+
 .add_reply {
   .form-control-label {
     display: none;
@@ -496,6 +537,12 @@ div.navbar {
 
     .post_teaser_clickable {
       cursor: pointer;
+    }
+
+    .post_teaser_image_preview {
+      img.blur {
+        filter: blur(3px);
+      }
     }
   }
 }
@@ -656,6 +703,10 @@ time {
 
     .masonry_thumb a, .masonry_thumb a:active {
       border: none;
+
+      img.blur {
+        filter: blur(3px);
+      }
     }
 
     .masonry_info {
@@ -1670,6 +1721,38 @@ form {
   }
 }
 
+.post_flair {
+  font-size: 73%;
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+
+.post_flair_body {
+  padding-left: 0;
+  .post_flair {
+
+  }
+}
+
+.post_flair_sidepane {
+  .post_flair {
+    font-size: 90%;
+    padding: 2px 4px;
+    line-height: 27px;
+  }
+  margin-bottom: 17px;
+}
+
+.user_flair {
+  font-size: 87%;
+  background-color: $lightest-grey;
+  border-radius: 3px;
+  border: solid 1px $grey;
+  color: $super-dark-grey;
+  padding: 0px 3px 0px 3px;
+  display: inline-block;
+}
+
 .comment_author {
   a {
 
@@ -1743,6 +1826,12 @@ form {
 
 .reported {
   background-color: antiquewhite;
+}
+
+.post_type_image.reported, .post_teaser_body.reported, .masonry_thumb.reported {
+  img {
+    filter: grayscale(100%) blur(6px)!important;
+  }
 }
 
 .dropdown-header {
@@ -1837,6 +1926,12 @@ form {
 
   .author_link {
     display: inline-block;
+
+    &.donor {
+      img {
+        box-shadow: rgba(0, 0, 0, 0.3) 0px 2px 6px;
+      }
+    }
   }
 
   .author_link + .user_preview {
@@ -1897,4 +1992,5 @@ form {
   color: white;
 }
 
+@import "scss/compact";
 @import "scss/print";

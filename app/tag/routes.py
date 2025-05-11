@@ -7,6 +7,7 @@ from flask_login import login_user, logout_user, current_user, login_required
 from flask_babel import _
 
 from app import db, constants, cache
+from app.constants import POST_STATUS_REVIEWING
 from app.inoculation import inoculation
 from app.models import Post, Community, Tag, post_tag
 from app.tag import bp
@@ -25,7 +26,7 @@ def show_tag(tag):
 
         posts = Post.query.join(Community, Community.id == Post.community_id). \
             join(post_tag, post_tag.c.post_id == Post.id).filter(post_tag.c.tag_id == tag.id). \
-            filter(Community.banned == False, Post.deleted == False)
+            filter(Community.banned == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
 
         if current_user.is_anonymous or current_user.ignore_bots == 1:
             posts = posts.filter(Post.from_bot == False)
@@ -62,13 +63,7 @@ def show_tag(tag):
                                content_filters=content_filters,
                                rss_feed=f"https://{current_app.config['SERVER_NAME']}/tag/{tag.name}/feed",
                                rss_feed_name=f"#{tag.display_as} on {g.site.name}",
-                               moderating_communities=moderating_communities(current_user.get_id()),
-                               joined_communities=joined_communities(current_user.get_id()),
-                               menu_topics=menu_topics(),
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                               menu_instance_feeds=menu_instance_feeds(), 
-                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                               menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                                )
     else:
         abort(404)
@@ -80,7 +75,7 @@ def show_tag_rss(tag):
     if tag:
         posts = Post.query.join(Community, Community.id == Post.community_id). \
             join(post_tag, post_tag.c.post_id == Post.id).filter(post_tag.c.tag_id == tag.id). \
-            filter(Community.banned == False, Post.deleted == False)
+            filter(Community.banned == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
 
         if current_user.is_anonymous or current_user.ignore_bots == 1:
             posts = posts.filter(Post.from_bot == False)

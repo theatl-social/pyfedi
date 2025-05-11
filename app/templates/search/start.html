@@ -10,8 +10,18 @@
             <div class="col mx-auto">
                 <div class="card mt-5" style="width: 500px; max-width: 100%;">
                     <div class="card-body p-6">
-                        <div class="card-title">{{ _('Search for posts') }}</div>
+                        <div class="card-title">{{ _('Search for...') }}</div>
                         <form action="" method="get" class="form" role="form">
+                            <div class="sort_methods btn-group mt-0 mb-4" aria-label="{{ _('What to search for: ') }}">
+                                <input type="radio" name="search_for" class="btn-check" id="btncheck1" autocomplete="off" value="posts">
+                                <label class="btn btn-outline-primary" for="btncheck1">{{ _('Posts') }}</label>
+
+                                <input type="radio" name="search_for" class="btn-check" id="btncheck2" autocomplete="off" value="comments">
+                                <label class="btn btn-outline-primary" for="btncheck2">{{ _('Comments') }}</label>
+
+                                <input type="radio" name="search_for" class="btn-check" id="btncheck3" autocomplete="off" value="communities">
+                                <label class="btn btn-outline-primary" for="btncheck3">{{ _('Communities') }}</label>
+                            </div>
                             <div class="form-group"><label class="form-control-label" for="search_term" aria-label="Search here">{{ _('Keyword') }} ({{ _('optional') }})</label>
                                 <input autofocus="" class="form-control" id="search_term" name="q" type="search" value="">
                             </div>

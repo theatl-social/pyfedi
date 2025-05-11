@@ -41,6 +41,10 @@
   content: "\ea03";
 }
 
+.fe-embed::before {
+  content: "\e940";
+}
+
 .fe-external::before {
   content: "\e95b";
 }

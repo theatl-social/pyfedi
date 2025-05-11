@@ -5,7 +5,7 @@ A Lemmy/Mbin alternative written in Python with Flask.
  - Clean, simple code that is easy to understand and contribute to. No fancy design patterns or algorithms.
  - Easy setup, easy to manage - few dependencies and extra software required.
  - AGPL.
- - First class moderation tools.
+ - [First class moderation tools](https://join.piefed.social/2024/06/22/piefed-features-for-growing-healthy-communities/).
 
 ## Project goals
 

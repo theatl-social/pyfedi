@@ -73,7 +73,15 @@
         {% endif %}
         <div class="profile_action_buttons">
         {% if current_user.is_authenticated and current_user != user %}
-                <a class="btn btn-primary" href="{{ url_for('chat.new_message', to=user.id) }}" rel="nofollow" aria-label="{{ _('Send message') }}">{{ _('Send message') }}</a>
+                {% if user.accept_private_messages -%}
+                    {% if user.is_local() -%}
+                        <a class="btn btn-primary" href="{{ url_for('chat.new_message', to=user.id) }}" rel="nofollow" aria-label="{{ _('Send message') }}">{{ _('Send message') }}</a>
+                    {% else -%}
+                        {% if user.accept_private_messages >= 2 -%}
+                            <a class="btn btn-primary" href="{{ url_for('chat.new_message', to=user.id) }}" rel="nofollow" aria-label="{{ _('Send message') }}">{{ _('Send message') }}</a>
+                        {% endif -%}
+                    {% endif -%}
+                {% endif -%}
                 {% if user.matrix_user_id %}
                     <a class="btn btn-primary" href="https://matrix.to/#/{{ user.matrix_user_id }}" rel="nofollow" aria-label="{{ _('Send message with matrix chat') }}">{{ _('Send message using Matrix') }}</a>
                 {% endif %}
@@ -122,6 +130,7 @@
                 {% if user.referrer %}{{ _('Referer') }}: <span title="{{ _('Which website linked to PieFed when the user initially registered.') }}">{{ user.referrer }}</span><br />{% endif %}
                 {% if user.ip_address %}{{ _('IP and country code') }}: <span title="{{ _('IP address of last interaction.') }}">{{ user.ip_address }} ({{ user.ip_address_country if user.ip_address_country }})</span><br />{% endif %}
                 {% if user.last_seen %}{{ _('Active') }}: {{ arrow.get(user.last_seen).humanize(locale=locale) }}<br />{% endif %}
+                {% if user.stripe_subscription_id %}<strong>{{ _('Donor') }}</strong><br />{% endif %}
             {% endif -%}
         </p>
         <div class="profile_bio">
@@ -143,6 +152,11 @@
             </ul>
         {% endif -%}
         {% if posts %}
+            {% if rss_feed -%}
+                <p class="mt-4 d-block" style="float: right;">
+                    <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
+                </p>
+            {% endif -%}
             <h2 class="mt-4">Posts</h2>
             <div class="post_list">
                 {% for post in posts.items %}

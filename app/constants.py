@@ -6,6 +6,11 @@ POST_TYPE_IMAGE = 3
 POST_TYPE_VIDEO = 4
 POST_TYPE_POLL = 5
 
+POST_STATUS_SCHEDULED = -2
+POST_STATUS_DRAFT = -1
+POST_STATUS_REVIEWING = 0
+POST_STATUS_PUBLISHED = 1
+
 DATETIME_MS_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 # Community subscription levels
@@ -26,12 +31,33 @@ REPORT_STATE_DISCARDED = -1
 
 # different types of content notification that people can have. e.g. when a new post is made by a user or in a community.
 # see NotificationSubscription in models.py
-NOTIF_USER = 0
-NOTIF_COMMUNITY = 1
-NOTIF_TOPIC = 2
-NOTIF_POST = 3
-NOTIF_REPLY = 4
-NOTIF_FEED = 5
+
+# -- user level ---
+NOTIF_USER = 0                 # if I am following userA I get notified if that user posts something
+NOTIF_COMMUNITY = 1            # if I elect to get notified about new posts in a community
+NOTIF_TOPIC = 2                # if I elect to get notified about new posts in communities in a topic
+NOTIF_POST = 3                 # this is new top-level comments on a post I am subscribed to
+                               # I am auto subscribed to my posts, but I can elect to sub to other posts
+NOTIF_REPLY = 4                # replies to a comment I made, or one I subscribed to
+NOTIF_FEED = 5                 # not actually used anywhere yet, but will be the same as NOTIF_TOPIC
+                               # but for communities in a feed
+NOTIF_MENTION = 6              # I have been mentioned in a post or comment
+NOTIF_MESSAGE = 7              # I have a new chat message
+NOTIF_BAN = 8                  # I have been banned from a community
+NOTIF_UNBAN = 9                # I have been un-banned from a community
+NOTIF_NEW_MOD = 10             # I have been made a moderator for a community
+
+# --- mod/admin level ---
+NOTIF_REPORT = 20              # a user, post, comment, or community have been reported
+
+# --- admin level ---
+NOTIF_REPORT_ESCALATION = 40   # a USER, POST, or COMMENT report has been escalated from mods to admins
+NOTIF_REGISTRATION = 41        # a new registration / sign up has been generated
+
+# --model/db default--
+NOTIF_DEFAULT = 999            # default entry
+
+
 
 ROLE_STAFF = 3
 ROLE_ADMIN = 4

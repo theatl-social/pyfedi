@@ -37,6 +37,14 @@ document.addEventListener("DOMContentLoaded", function () {
     setupPostTypeSwitcher();
     setupSelectNavigation();
     setupUserPopup();
+    preventDoubleFormSubmissions();
+
+    // save user timezone into a timezone field, if it exists
+    const timezoneField = document.getElementById('timezone');
+    if(timezoneField && timezoneField.type === 'hidden') {
+        timezoneField.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    }
+
 });
 
 
@@ -673,7 +681,12 @@ function setupKeyboardShortcuts() {
                 }
             } else if (event.key === 'Enter') {
                 if(currentPost && document.activeElement.tagName !== 'a') {
-                    currentPost.querySelector('.post_teaser_title_a').click();
+                    var target_element = currentPost.querySelector('.post_teaser_title_a');
+                    if(target_element == null && (document.activeElement.classList.contains('upvote_button') || document.activeElement.classList.contains('downvote_button'))) {
+                        target_element = document.activeElement;
+                    }
+                    if(target_element)
+                        target_element.click();
                     didSomething = true;
                 }
             } else if (event.key === 'j') {
@@ -735,7 +748,7 @@ function setupKeyboardShortcuts() {
         }
     });
 
-    const votableElements = document.querySelectorAll('.post_teaser, .post_type_image, .post_type_normal');
+    const votableElements = document.querySelectorAll('.post_teaser, .post_full');
     votableElements.forEach(votable => {
         votable.addEventListener('mouseover', event => {
             currentPost = event.currentTarget;
@@ -858,6 +871,17 @@ function setupAddPollChoice() {
     }
 }
 
+function preventDoubleFormSubmissions() {
+    let submitting = false;
+    document.querySelector('form').addEventListener('submit', function (e) {
+      if (submitting) {
+        e.preventDefault();
+      } else {
+        submitting = true;
+      }
+    });
+}
+
 function getCookie(name) {
     var cookies = document.cookie.split(';');
 
@@ -901,3 +925,29 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
+
+
+
+// Add PieFed app button to install PWA
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', function (e) {
+    // Prevent the mini-infobar from appearing on mobile
+    e.preventDefault();
+    // Stash the event so it can be triggered later.
+    deferredPrompt = e;
+    document.getElementById('btn_add_home_screen').style.display = 'inline-block';
+});
+
+document.getElementById('btn_add_home_screen').addEventListener('click', function () {
+    document.getElementById('btn_add_home_screen').style.display = 'none';
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function (choiceResult) {
+        if (choiceResult.outcome === 'accepted') {
+            console.log('User accepted the A2HS prompt');
+        } else {
+            console.log('User dismissed the A2HS prompt');
+        }
+        deferredPrompt = null;
+    });
+});

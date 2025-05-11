@@ -1,3 +1,4 @@
+import json
 from sqlalchemy import text
 
 from app import cache, db
@@ -14,8 +15,6 @@ from flask_babel import _
 from flask_login import current_user
 
 
-# function can be shared between WEB and API (only API calls it for now)
-# comment_vote in app/post/routes would just need to do 'return vote_for_reply(reply_id, vote_direction, SRC_WEB)'
 def vote_for_reply(reply_id: int, vote_direction, src, auth=None):
     if src == SRC_API:
         reply = PostReply.query.filter_by(id=reply_id).one()
@@ -38,97 +37,92 @@ def vote_for_reply(reply_id: int, vote_direction, src, auth=None):
         elif vote_direction == 'downvote' and undo is None:
             recently_downvoted = [reply_id]
 
-        return render_template('post/_reply_voting_buttons.html', comment=reply,
+        return render_template('post/_comment_voting_buttons.html', comment=reply,
                                recently_upvoted_replies=recently_upvoted,
                                recently_downvoted_replies=recently_downvoted,
                                community=reply.community)
 
 
-# function can be shared between WEB and API (only API calls it for now)
-# post_reply_bookmark in app/post/routes would just need to do 'return bookmark_the_post_reply(comment_id, SRC_WEB)'
-def bookmark_the_post_reply(comment_id: int, src, auth=None):
-    if src == SRC_API:
-        post_reply = PostReply.query.filter_by(id=comment_id, deleted=False).one()
-        user_id = authorise_api_user(auth)
-    else:
-        post_reply = PostReply.query.get_or_404(comment_id)
-        if post_reply.deleted:
-            abort(404)
-        user_id = current_user.id
+def bookmark_reply(reply_id: int, src, auth=None):
+    PostReply.query.filter_by(id=reply_id, deleted=False).join(Post, Post.id == PostReply.post_id).filter_by(deleted=False).one()
+    user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
-    existing_bookmark = PostReplyBookmark.query.filter(PostReplyBookmark.post_reply_id == comment_id,
-                                                       PostReplyBookmark.user_id == user_id).first()
+    existing_bookmark = PostReplyBookmark.query.filter_by(post_reply_id=reply_id, user_id=user_id).first()
     if not existing_bookmark:
-        db.session.add(PostReplyBookmark(post_reply_id=comment_id, user_id=user_id))
+        db.session.add(PostReplyBookmark(post_reply_id=reply_id, user_id=user_id))
         db.session.commit()
         if src == SRC_WEB:
             flash(_('Bookmark added.'))
     else:
-        if src == SRC_WEB:
-            flash(_('This comment has already been bookmarked'))
+        msg = 'This comment has already been bookmarked.'
+        if src == SRC_API:
+            raise Exception(msg)
+        else:
+            flash(_(msg))
 
     if src == SRC_API:
         return user_id
-    else:
-        return redirect(url_for('activitypub.post_ap', post_id=post_reply.post_id, _anchor=f'comment_{comment_id}'))
 
 
-# function can be shared between WEB and API (only API calls it for now)
-# post_reply_remove_bookmark in app/post/routes would just need to do 'return remove_the_bookmark_from_post_reply(comment_id, SRC_WEB)'
-def remove_the_bookmark_from_post_reply(comment_id: int, src, auth=None):
-    if src == SRC_API:
-        post_reply = PostReply.query.filter_by(id=comment_id, deleted=False).one()
-        user_id = authorise_api_user(auth)
-    else:
-        post_reply = PostReply.query.get_or_404(comment_id)
-        if post_reply.deleted:
-            abort(404)
-        user_id = current_user.id
+def remove_bookmark_reply(reply_id: int, src, auth=None):
+    PostReply.query.filter_by(id=reply_id, deleted=False).join(Post, Post.id == PostReply.post_id).filter_by(deleted=False).one()
+    user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
-    existing_bookmark = PostReplyBookmark.query.filter(PostReplyBookmark.post_reply_id == comment_id,
-                                                       PostReplyBookmark.user_id == user_id).first()
+    existing_bookmark = PostReplyBookmark.query.filter_by(post_reply_id=reply_id, user_id=user_id).first()
     if existing_bookmark:
         db.session.delete(existing_bookmark)
         db.session.commit()
         if src == SRC_WEB:
             flash(_('Bookmark has been removed.'))
+    else:
+        msg = 'This comment was not bookmarked.'
+        if src == SRC_API:
+            raise Exception(msg)
+        else:
+            flash(_(msg))
+
+    if src == SRC_API:
+        return user_id
+
+
+def subscribe_reply(reply_id: int, subscribe, src, auth=None):
+    reply = PostReply.query.filter_by(id=reply_id, deleted=False).join(Post, Post.id == PostReply.post_id).filter_by(deleted=False).one()
+    user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
+
+    if src == SRC_WEB:
+        subscribe = False if reply.notify_new_replies(user_id) else True
+
+    existing_notification = NotificationSubscription.query.filter_by(entity_id=reply_id, user_id=user_id,
+                                                                     type=NOTIF_REPLY).first()
+    if subscribe == False:
+        if existing_notification:
+            db.session.delete(existing_notification)
+            db.session.commit()
+        else:
+            msg = 'A subscription for this comment did not exist.'
+            if src == SRC_API:
+                raise Exception(msg)
+            else:
+                flash(_(msg))
+
+    else:
+        if existing_notification:
+            msg = 'A subscription for this comment already existed.'
+            if src == SRC_API:
+                raise Exception(msg)
+            else:
+                flash(_(msg))
+        else:
+            new_notification = NotificationSubscription(name=shorten_string(_('Replies to my comment on %(post_title)s',
+                                                        post_title=reply.post.title)), user_id=user_id, entity_id=reply_id,
+                                                        type=NOTIF_REPLY)
+            db.session.add(new_notification)
+            db.session.commit()
 
     if src == SRC_API:
         return user_id
     else:
-        return redirect(url_for('activitypub.post_ap', post_id=post_reply.post_id))
-
-
-# function can be shared between WEB and API (only API calls it for now)
-# post_reply_notification in app/post/routes would just need to do 'return toggle_post_reply_notification(post_reply_id, SRC_WEB)'
-def toggle_post_reply_notification(post_reply_id: int, src, auth=None):
-    # Toggle whether the current user is subscribed to notifications about replies to this reply or not
-    if src == SRC_API:
-        post_reply = PostReply.query.filter_by(id=post_reply_id, deleted=False).one()
-        user_id = authorise_api_user(auth)
-    else:
-        post_reply = PostReply.query.get_or_404(post_reply_id)
-        if post_reply.deleted:
-            abort(404)
-        user_id = current_user.id
-
-    existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == post_reply.id,
-                                                                  NotificationSubscription.user_id == user_id,
-                                                                  NotificationSubscription.type == NOTIF_REPLY).first()
-    if existing_notification:
-        db.session.delete(existing_notification)
-        db.session.commit()
-    else:  # no subscription yet, so make one
-        new_notification = NotificationSubscription(name=shorten_string(_('Replies to my comment on %(post_title)s',
-                                                    post_title=post_reply.post.title)), user_id=user_id, entity_id=post_reply.id,
-                                                    type=NOTIF_REPLY)
-        db.session.add(new_notification)
-        db.session.commit()
-
-    if src == SRC_API:
-        return user_id
-    else:
-        return render_template('post/_reply_notification_toggle.html', comment={'comment': post_reply})
+        return render_template('post/_reply_notification_toggle.html', comment={'comment': reply})
 
 
 def extra_rate_limit_check(user):
@@ -155,8 +149,13 @@ def make_reply(input, post, parent_id, src, auth=None):
 
     if parent_id:
         parent_reply = PostReply.query.filter_by(id=parent_id).one()
+        if parent_reply.author.has_blocked_user(user.id) or parent_reply.author.has_blocked_instance(user.instance_id):
+            raise Exception('The author of the parent reply has blocked the author or instance of the new reply.')
     else:
         parent_reply = None
+
+    if post.author.has_blocked_user(user.id) or post.author.has_blocked_instance(user.instance_id):
+        raise Exception('The author of the parent post has blocked the author or instance of the new reply.')
 
     if not can_create_post_reply(user, post.community):
         raise Exception('You are not permitted to comment in this community')
@@ -231,8 +230,6 @@ def delete_reply(reply_id, src, auth):
         db.session.execute(text('update post_reply set child_count = child_count - 1 where id in :parents'),
                            {'parents': tuple(reply.path[:-1])})
     db.session.commit()
-    if src == SRC_WEB:
-        flash(_('Comment deleted.'))
 
     task_selector('delete_reply', user_id=user_id, reply_id=reply.id)
 
@@ -297,19 +294,25 @@ def report_reply(reply_id, input, src, auth=None):
 
     # Notify moderators
     already_notified = set()
+    targets_data = {'suspect_comment_id':reply.id,'suspect_user_id':reply.author.id,'reporter_id':user_id}
     for mod in reply.community.moderators():
         moderator = User.query.get(mod.user_id)
         if moderator and moderator.is_local():
             notification = Notification(user_id=mod.user_id, title=_('A comment has been reported'),
                                         url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
-                                        author_id=user_id)
+                                        author_id=user_id, notif_type=NOTIF_REPORT,
+                                        subtype='comment_reported',
+                                        targets=targets_data)
             db.session.add(notification)
             already_notified.add(mod.user_id)
     reply.reports += 1
     # todo: only notify admins for certain types of report
     for admin in Site.admins():
         if admin.id not in already_notified:
-            notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, author_id=user_id)
+            notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, 
+                                  author_id=user_id, notif_type=NOTIF_REPORT,
+                                  subtype='comment_reported',
+                                  targets=targets_data)
             db.session.add(notify)
             admin.unread_notifications += 1
     db.session.commit()
@@ -336,7 +339,7 @@ def mod_remove_reply(reply_id, reason, src, auth):
         user = current_user
 
     reply = PostReply.query.filter_by(id=reply_id, deleted=False).one()
-    if not reply.community.is_moderator(user) and not reply.community.is_instance_admin(user):
+    if not reply.community.is_moderator(user) and not reply.community.is_instance_admin(user) and not user.is_admin():
         raise Exception('Does not have permission')
 
     reply.deleted = True
@@ -345,7 +348,7 @@ def mod_remove_reply(reply_id, reason, src, auth):
         reply.post.reply_count -= 1
     reply.author.post_reply_count -= 1
     if reply.path:
-        db.session.execute(text('update post_reply set child_count = child_count - 1 where id in (:parents)'),
+        db.session.execute(text('update post_reply set child_count = child_count - 1 where id in :parents'),
                            {'parents': tuple(reply.path[:-1])})
     db.session.commit()
     if src == SRC_WEB:

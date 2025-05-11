@@ -14,7 +14,7 @@
                 {% endif -%}
             {% endif -%}
         {% else -%}
-            <li><a href="{{ url_for('post.post_reply_delete', post_id=post.id, comment_id=post_reply.id) }}" hx-get="{{ url_for('post.post_reply_delete', post_id=post.id, comment_id=post_reply.id) }}" hx-confirm="Are you sure?" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-delete"></span>
+            <li><a href="{{ url_for('post.post_reply_delete', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-delete"></span>
                 {{ _('Delete') }}</a></li>
         {% endif -%}
     {% endif -%}

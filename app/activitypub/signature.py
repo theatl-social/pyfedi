@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import base64
 import json
+from random import randint
 from typing import Literal, TypedDict, cast
 from urllib.parse import urlparse
 
@@ -40,13 +41,14 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from flask import Request, current_app
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil import parser
+from furl import furl
 from pyld import jsonld
 from email.utils import formatdate
 from app import db, celery, httpx_client
 from app.constants import DATETIME_MS_FORMAT
-from app.models import utcnow, ActivityPubLog, Community, Instance, CommunityMember, User
+from app.models import utcnow, ActivityPubLog, Community, Instance, CommunityMember, User, SendQueue
 from sqlalchemy import text
 
 
@@ -77,21 +79,19 @@ def parse_ld_date(value: str | None) -> datetime | None:
 
 
 def send_post_request(uri: str, body: dict | None, private_key: str, key_id: str, content_type: str = "application/activity+json",
-                      method: Literal["get", "post"] = "post", timeout: int = 10):
+                      method: Literal["get", "post"] = "post", timeout: int = 10, retries: int = 0):
     if current_app.debug:
-        post_request(uri=uri, body=body, private_key=private_key, key_id=key_id, content_type=content_type, method=method, timeout=timeout)
+        return post_request(uri=uri, body=body, private_key=private_key, key_id=key_id, content_type=content_type,
+                            method=method, timeout=timeout, retries=retries)
     else:
-        post_request.delay(uri=uri, body=body, private_key=private_key, key_id=key_id, content_type=content_type, method=method, timeout=timeout)
+        post_request.delay(uri=uri, body=body, private_key=private_key, key_id=key_id, content_type=content_type,
+                           method=method, timeout=timeout, retries=retries)
         return True
 
 
-class RetryLater(Exception):
-    ...
-
-
-@celery.task(autoretry_for=(RetryLater,), retry_backoff=60, max_retries=20, retry_backoff_max=15360, retry_jitter=True)
+@celery.task
 def post_request(uri: str, body: dict | None, private_key: str, key_id: str, content_type: str = "application/activity+json",
-        method: Literal["get", "post"] = "post", timeout: int = 10,):
+        method: Literal["get", "post"] = "post", timeout: int = 10, retries: int = 0):
     if '@context' not in body:  # add a default json-ld context if necessary
         body['@context'] = default_context()
     type = body['type'] if 'type' in body else ''
@@ -114,13 +114,13 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str, con
                 log.exception_message = f'{result.status_code}: {result.text:.100}' + ' - '
                 if 'DOCTYPE html' in result.text:
                     log.result = 'ignored'
-                    log.exception_message = f'{result.status_code}: HTML instead of JSON response - '
-                    log.activity_json += result.text
+                    log.exception_message = f'{result.status_code}: HTML instead of JSON response'
+                    #log.activity_json += result.text[]
                 elif 'community_has_no_followers' in result.text:
                     fix_local_community_membership(uri, private_key)
                 else:
                     current_app.logger.error(f'Response code for post attempt to {uri} was ' +
-                                         str(result.status_code) + ' ' + result.text)
+                                         str(result.status_code) + ' ' + result.text[:50])
             log.exception_message += uri
             if result.status_code == 202:
                 log.exception_message += ' 202'
@@ -139,8 +139,15 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str, con
         return
     else:
         if http_status_code is not None and (http_status_code == 429 or http_status_code >= 500):
-            if celery.current_worker_task:  # Only try to retry if running as a celery task
-                raise RetryLater
+            if content_type == "application/activity+json":
+                # Calculate retry delay with exponential backoff. 1 min, 2 mins, 4 mins, 8 mins, up to 4h
+                backoff = 60 * (2 ** retries)
+                backoff = min(backoff, 15360)
+                db.session.add(SendQueue(destination=uri, destination_domain=furl(uri).host, actor=key_id,
+                                         private_key=private_key, payload=json.dumps(body), retries=retries,
+                                         retry_reason=log.exception_message, send_after=datetime.utcnow() + timedelta(seconds=backoff)))
+                db.session.commit()
+
         return
 
 

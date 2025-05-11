@@ -23,7 +23,7 @@ from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markd
     joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, validation_required, feed_membership, \
     gibberish, get_task_session, instance_banned, menu_subscribed_feeds, referrer, community_membership, \
     paginate_post_ids, get_deduped_post_ids, get_request, post_ids_to_models, recently_upvoted_posts, \
-    recently_downvoted_posts
+    recently_downvoted_posts, joined_or_modding_communities, login_required_if_private_instance
 from collections import namedtuple
 from sqlalchemy import desc, or_, text
 from slugify import slugify
@@ -49,7 +49,7 @@ def feed_new():
             form.url.data = form.url.data[3:]
         form.url.data = slugify(form.url.data.strip(), separator='_').lower()
         private_key, public_key = RsaKeys.generate_keypair()
-        feed = Feed(user_id=current_user.id, title=form.feed_name.data, name=form.url.data, machine_name=form.url.data, 
+        feed = Feed(user_id=current_user.id, title=form.title.data, name=form.url.data, machine_name=form.url.data,
                     description=piefed_markdown_to_lemmy_markdown(form.description.data),
                     description_html=markdown_to_html(form.description.data),
                     show_posts_in_children=form.show_child_posts.data,
@@ -98,15 +98,12 @@ def feed_new():
         community_apids = []
         for community in topic.communities:
             community_apids.append(community.lemmy_link().replace('!', ''))
-        form.feed_name.data = topic.name
+        form.title.data = topic.name
         form.url.data = topic.machine_name
         form.communities.data = '\n'.join(community_apids)
 
     return render_template('feed/feed_new.html', title=_('Create a Feed'), form=form,
-                           current_app=current_app, menu_topics=menu_topics(), menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+                           current_app=current_app, )
 
 
 @bp.route('/feed/add_remote', methods=['GET','POST'])
@@ -145,13 +142,8 @@ def feed_add_remote():
 
     return render_template('feed/add_remote.html',
                            title=_('Add remote feed'), form=form, new_feed=new_feed,
-                           subscribed=feed_membership(current_user, new_feed) >= SUBSCRIPTION_MEMBER, moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           site=g.site, menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )    
+                           subscribed=feed_membership(current_user, new_feed) >= SUBSCRIPTION_MEMBER, 
+                           site=g.site, )    
 
 
 @bp.route('/feed/<int:feed_id>/edit', methods=['GET','POST'])
@@ -166,12 +158,13 @@ def feed_edit(feed_id: int):
         abort(404)
     edit_feed_form = EditFeedForm()
     edit_feed_form.parent_feed_id.choices = feeds_for_form(feed_id, current_user.id)
+    edit_feed_form.feed_id = feed_id
 
     if not current_user.is_admin():
         edit_feed_form.is_instance_feed.render_kw = {'disabled': True}
     
     if edit_feed_form.validate_on_submit():
-        feed_to_edit.title = edit_feed_form.feed_name.data
+        feed_to_edit.title = edit_feed_form.title.data
         feed_to_edit.name = edit_feed_form.url.data
         feed_to_edit.machine_name = edit_feed_form.url.data
         feed_to_edit.description = piefed_markdown_to_lemmy_markdown(edit_feed_form.description.data)
@@ -186,11 +179,13 @@ def feed_edit(feed_id: int):
             file = save_icon_file(icon_file, directory='feeds')
             if file:
                 feed_to_edit.icon = file
+            cache.delete_memoized(Feed.icon_image, feed_to_edit)
         banner_file = request.files['banner_file']
         if banner_file and banner_file.filename != '':
             file = save_banner_file(banner_file, directory='feeds')
             if file:
                 feed_to_edit.image = file
+            cache.delete_memoized(Feed.header_image, feed_to_edit)
         if g.site.enable_nsfw:
             feed_to_edit.nsfw = edit_feed_form.nsfw.data
         if g.site.enable_nsfl:
@@ -218,7 +213,7 @@ def feed_edit(feed_id: int):
         return redirect(referrer())
 
     # add the current data to the form
-    edit_feed_form.feed_name.data = feed_to_edit.title
+    edit_feed_form.title.data = feed_to_edit.title
     edit_feed_form.url.data = feed_to_edit.name
     edit_feed_form.description.data = feed_to_edit.description
     edit_feed_form.communities.data = feed_communities_for_edit(feed_to_edit.id)
@@ -235,10 +230,7 @@ def feed_edit(feed_id: int):
     edit_feed_form.public.data = feed_to_edit.public
     edit_feed_form.is_instance_feed.data = feed_to_edit.is_instance_feed
 
-    return render_template('feed/feed_edit.html', form=edit_feed_form, menu_topics=menu_topics(), menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+    return render_template('feed/feed_edit.html', form=edit_feed_form, )
 
 
 @bp.route('/feed/<int:feed_id>/delete', methods=['GET','POST'])
@@ -269,15 +261,15 @@ def feed_delete(feed_id: int):
     for fm in feed_members.all():
         db.session.delete(fm)
 
-    # delete the feed if its empty
-    if feed.num_communities == 0:
-        db.session.delete(feed)
-        flash(_('Feed deleted'))
-    else:
-        flash(_('Cannot delete feed with communities assigned to it.', 'error'))
+    # delete the feed
+    if feed.num_communities > 0:
+        db.session.query(FeedItem).filter(FeedItem.feed_id == feed.id).delete()
+    db.session.delete(feed)
 
     # commit the  removal changes
     db.session.commit()
+
+    flash(_('Feed deleted'))
 
     # clear instance feeds for dropdown menu cache
     if instance_feed:
@@ -313,7 +305,7 @@ def feed_copy(feed_id: int):
             copy_feed_form.url.data = copy_feed_form.url.data[3:]
         copy_feed_form.url.data = slugify(copy_feed_form.url.data.strip(), separator='_').lower()
         private_key, public_key = RsaKeys.generate_keypair()
-        feed = Feed(user_id=current_user.id, title=copy_feed_form.feed_name.data, name=copy_feed_form.url.data, machine_name=copy_feed_form.url.data, 
+        feed = Feed(user_id=current_user.id, title=copy_feed_form.title.data, name=copy_feed_form.url.data, machine_name=copy_feed_form.url.data, 
                     description=piefed_markdown_to_lemmy_markdown(copy_feed_form.description.data),
                     description_html=markdown_to_html(copy_feed_form.description.data),
                     show_posts_in_children=copy_feed_form.show_child_posts.data,
@@ -376,7 +368,7 @@ def feed_copy(feed_id: int):
         return redirect(url_for('main.index'))        
 
     # add the current data to the form
-    copy_feed_form.feed_name.data = feed_to_copy.title
+    copy_feed_form.title.data = feed_to_copy.title
     copy_feed_form.url.data = feed_to_copy.name
     copy_feed_form.description.data = feed_to_copy.description
     copy_feed_form.show_child_posts.data = feed_to_copy.show_posts_in_children
@@ -391,10 +383,7 @@ def feed_copy(feed_id: int):
     copy_feed_form.public.data = feed_to_copy.public
     copy_feed_form.is_instance_feed.data = feed_to_copy.is_instance_feed
 
-    return render_template('feed/feed_copy.html', form=copy_feed_form, menu_topics=menu_topics(), menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
-                           )
+    return render_template('feed/feed_copy.html', form=copy_feed_form )
 
 
 @bp.route('/feed/<int:feed_id>/notification', methods=['GET', 'POST'])
@@ -640,6 +629,7 @@ def feed_list():
 
 
 # @bp.route('/f/<actor>', methods=['GET']) - defined in activitypub/routes.py, which calls this function for user requests. A bit weird.
+@login_required_if_private_instance
 def show_feed(feed):
     # if the feed is private abort, unless the logged in user is the owner of the feed
     if not feed.public:
@@ -664,25 +654,24 @@ def show_feed(feed):
     
     breadcrumbs = []
     existing_url = '/f'
-    # check the path to see if this is a sub feed of some other feed
-    if '/' in feed.path():
-        feed_url_parts = feed.path().split('/')
-        last_feed_machine_name = feed_url_parts[-1]
-        for url_part in feed_url_parts:
-            breadcrumb_feed = Feed.query.filter(Feed.machine_name == url_part.strip().lower()).first()
-            if breadcrumb_feed:
-                breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
-                breadcrumb.text = breadcrumb_feed.title
-                breadcrumb.url = f"{existing_url}/{breadcrumb_feed.machine_name}" if breadcrumb_feed.machine_name != last_feed_machine_name else ''
-                breadcrumbs.append(breadcrumb)
-                existing_url = breadcrumb.url
-            else:
-                abort(404)
-    else:
+
+    parent_id = feed.parent_feed_id
+    parents = []
+    while parent_id:
+        parent_feed = Feed.query.get(parent_id)
+        parents.append(parent_feed)
+        parent_id = parent_feed.parent_feed_id
+
+    for parent_feed in reversed(parents):
         breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
-        breadcrumb.text = feed.title
-        breadcrumb.url = f"{existing_url}/{feed.machine_name}"
+        breadcrumb.text = parent_feed.title
+        breadcrumb.url = f'{existing_url}/{parent_feed.machine_name}'
         breadcrumbs.append(breadcrumb)
+
+    breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+    breadcrumb.text = feed.title
+    breadcrumb.url = ""
+    breadcrumbs.append(breadcrumb)
 
     current_feed = feed
 
@@ -729,14 +718,9 @@ def show_feed(feed):
                                sub_feeds=sub_feeds, feed_path=feed.path(), breadcrumbs=breadcrumbs,
                                rss_feed=f"https://{current_app.config['SERVER_NAME']}/f/{feed.path()}.rss",
                                rss_feed_name=f"{current_feed.name} on {g.site.name}",
-                               show_post_community=True, moderating_communities=moderating_communities(current_user.get_id()),
+                               show_post_community=True, joined_communities=joined_or_modding_communities(current_user.get_id()),
                                recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
-                               joined_communities=joined_communities(current_user.get_id()),
-                               menu_topics=menu_topics(),
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                               menu_instance_feeds=menu_instance_feeds(), 
-                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                               menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                                POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
                                POST_TYPE_VIDEO=POST_TYPE_VIDEO,
                                SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
@@ -780,12 +764,7 @@ def feed_create_post(feed_name):
         return redirect(url_for('community.join_then_add', actor=community.link()))
     return render_template('feed/feed_create_post.html', communities=communities, sub_communities=sub_communities,
                            feed=feed,
-                           moderating_communities=moderating_communities(current_user.get_id()),
-                           joined_communities=joined_communities(current_user.get_id()),
-                           menu_topics=menu_topics(),
-                           menu_instance_feeds=menu_instance_feeds(), 
-                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                           
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR)
 
 
@@ -872,6 +851,7 @@ def do_feed_subscribe(actor, user_id):
             flash(_(msg_to_user))
 
         cache.delete_memoized(feed_membership, user, feed)
+        cache.delete_memoized(menu_subscribed_feeds, user.id)
         cache.delete_memoized(joined_communities, user.id)
     else:
         abort(404)
@@ -932,6 +912,7 @@ def feed_unsubscribe(actor):
 
                     flash(_('You have left %(feed_title)s', feed_title=feed.title))
                 cache.delete_memoized(feed_membership, current_user, feed)
+                cache.delete_memoized(menu_subscribed_feeds, current_user.id)
                 cache.delete_memoized(joined_communities, current_user.id)
             else:
                 # todo: community deletion

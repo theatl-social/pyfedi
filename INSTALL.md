@@ -11,6 +11,8 @@
 * [Database Management](#database-management)
 * [Keeping your local instance up to date](#keeping-your-local-instance-up-to=date)
 * [Running PieFed in production](#running-piefed-in-production)
+* [Accepting donations through Stripe](#stripe)
+* [Testing and debugging](#testing)
 * [Pre-requisites for Mac OS](#pre-requisites-for-mac-os)
 * [Notes for Windows (WSL2)](#notes-for-windows-wsl2)        
 * [Notes for Pip Package Management](#notes-for-pip-package-management)
@@ -29,7 +31,28 @@ configuration. While it is quicker and easier, it's not to everyone's taste.
 
 ### Hard way: bare metal
 
-Read on
+Doing things this way will give you the ultimate customization that larger instances need. You will need to be more careful about
+whether your OS is compatible with what PieFed needs:
+
+#### Software requirements
+
+ - Python 3.9+
+ - PostgreSQL 13+
+ - Redis 6.x
+
+#### Hardware requirements
+
+It really depends on how many communities you will be subscribing to and how many users you have.
+
+Minimum:
+ - 2 CPU cores
+ - 3 GB of RAM
+
+Recommended:
+ - 4 CPU cores
+ - 5+ GB of RAM
+
+PieFed is quite frugal with storage usage but it will grow over time. After 18 months of operation PieFed.social uses 100 GB of space, for example.
 
 <div id="setup-database"></div>
 
@@ -137,9 +160,11 @@ pip install -r requirements.txt
 * `SERVER_NAME` should be the domain of the site/instance. Use `127.0.0.1:5000` during development unless using ngrok. Just use the bare
 domain name, without https:// on the front or a slash on the end.
 * `CACHE_TYPE` can be `FileSystemCache` or `RedisCache`. `FileSystemCache` is fine during development (set `CACHE_DIR` to `/tmp/piefed` or `/dev/shm/piefed`)
-while `RedisCache` **should** be used in production. If using `RedisCache`, set `CACHE_REDIS_URL` to `redis://localhost:6379/1`. Visit https://yourdomain/testredis to check if your redis url is working.
+while `RedisCache` **should** be used in production. If using `RedisCache`, set `CACHE_REDIS_URL` to `redis://localhost:6379/1` or `unix:///var/run/redis/redis.sock?db=1`. Visit https://yourdomain/testredis to check if your redis url is working.
 
-* `CELERY_BROKER_URL` is similar to `CACHE_REDIS_URL` but with a different number on the end: `redis://localhost:6379/0`
+* `CELERY_BROKER_URL` is similar to `CACHE_REDIS_URL` but with a different number on the end: `redis://localhost:6379/0`.
+ If using unix socket, try something like `CELERY_BROKER_URL='redis+socket:///var/run/redis/redis.sock?virtual_host=0'`
+ Make sure to not have a password set for the default user. (
 
 * `MAIL_*` is for sending email using a SMTP server. Leave `MAIL_SERVER` empty to send email using AWS SES instead.
 
@@ -162,7 +187,7 @@ for bounces, not a inbox you also use for other purposes.
 
 ### Development mode
 
-Setting `FLASK_DEBUG=1` in the `.env` file will enable the `<your-site>/dev/tools` page. It will expose some various testing routes as well.
+Setting `FLASK_DEBUG=1` in the `.env` file will enable the `<your-site>/dev/tools` page. It will expose some various testing routes as well. See the [testing section](#testing).
 
 That page can be accessed from the `Admin` navigation drop down, or nav bar as `Dev Tools`. That page has buttons that can create/delete communities and topics. The communities and topics will all begin with "dev_".
 
@@ -387,8 +412,9 @@ Inspect log files at:
 * `/var/log/nginx/*`
 * `/your_piefed_installation/logs/pyfedi.log`
 
+### Reverse Proxies
 
-### Nginx
+#### Nginx
 
 You need a reverse proxy that sends all traffic to port 5000. Something like:
 
@@ -437,6 +463,21 @@ server {
 **_The above is not a complete configuration_** - you will want to add more settings for SSL, etc. See also
 https://codeberg.org/rimu/pyfedi/issues/136#issuecomment-1726739
 
+#### Caddy
+
+```
+piefed.social {
+        # Serve static files directly with caddy
+        handle_path /static/* {
+                root * /whatever/app/static/
+                file_server
+                header Cache-Control "max-age=31536000"
+        }
+
+        reverse_proxy :5000
+}
+```
+
 ### Cron tasks
 
 
@@ -460,31 +501,12 @@ One per day there are some maintenance tasks that PieFed needs to do:
 5 2 * * * rimu cd /home/rimu/pyfedi && /home/rimu/pyfedi/daily.sh
 ```
 
-If celery is hanging occasionally, put this script in /etc/cron.hourly:
+Every few minutes PieFed will retry federation sending attempts that failed previously:
 
 ```
-#!/bin/bash
-
-# Define the service to restart
-SERVICE="celery.service"
-
-# Get the load average for the last 1 minute
-LOAD=$(awk '{print $1}' /proc/loadavg)
-
-# Check if the load average is less than 0.1
-if (( $(echo "$LOAD < 0.1" | bc -l) )); then
-    # Restart the service
-    systemctl restart $SERVICE
-    # Log the action
-    echo "$(date): Load average is $LOAD. Restarted $SERVICE." >> /var/log/restart_service.log
-else
-    # Log that no action was taken
-    echo "$(date): Load average is $LOAD. No action taken." >> /var/log/restart_service.log
-fi
-
+*/5 * * * * rimu cd /home/rimu/pyfedi && /home/rimu/pyfedi/send_queue.sh
 ```
 
-Adjust the echo "$LOAD < 0.1" to suit your system.
 
 ### Email
 
@@ -514,6 +536,29 @@ PieFed has the capability to automatically remove file copies from the Cloudflar
 - `CLOUDFLARE_API_TOKEN` - go to https://dash.cloudflare.com/profile/api-tokens and create a "Zone.Cache Purge" token.
 - `CLOUDFLARE_ZONE_ID` - this can be found in the right hand column of your Cloudflare dashboard in the API section.
 
+#### S3 (object storage)
+
+Over time images for user profile photos, image posts and link thumbnails will consume quite a lot of storage space so it is a good idea
+to use a cheaper form of storage such as AWS S3 or Cloudflare R2. The S3 API is widely implemented by many providers and PieFed can
+store media in any of them. Cloudflare does not charge egress fees so they are pretty good value. Wasabi is cheaper than Cloudflare
+and AWS - see the [Wasabi setup tips](https://codeberg.org/rimu/pyfedi/src/branch/main/docs/Using%20Wasabi%20S3%20with%20Piefed.md).
+
+To enable S3 storage you need to set these environment variables in your .env file:
+
+ - S3_REGION = 'auto'
+ - S3_BUCKET = 'piefed-media'
+ - S3_ENDPOINT = 'https://something_something.r2.cloudflarestorage.com'
+ - S3_PUBLIC_URL = 'media.piefed.social'
+ - S3_ACCESS_KEY = 'xyz'
+ - S3_ACCESS_SECRET = 'xyzxyz'
+
+Cloudflare does not care about S3_REGION so it can be 'auto' but for AWS you should use something like us-east-1. All the
+other values are shown to you during the setup of the space (often called the "bucket") on your S3 provider.
+
+Test your S3 connection by going to https://yourinstance.tld/test_s3. If it crashes, something is wrong. If you see 'Ok' all is well.
+
+
+
 #### SMTP
 
 To use SMTP you need to set all the `MAIL_*` environment variables in you `.env` file. See `env.sample` for a list of them.
@@ -530,6 +575,43 @@ silently do nothing.
 
 ---
 
+<div id="stripe"></div>
+
+## Accepting donations through Stripe
+
+In env.sample there are all the environment variables you need to add to your .env for Stripe to work.
+
+STRIPE_SECRET_KEY and STRIPE_PUBLISHABLE_KEY can be found on the Stripe dashboard.
+
+STRIPE_MONTHLY_SMALL and STRIPE_MONTHLY_BIG are the Price IDs of two **monthly recurring** products. Find the price ID by editing
+a product you've made and then clicking on the 3 dot button to the right of the price.
+
+Change STRIPE_MONTHLY_SMALL_TEXT and STRIPE_MONTHLY_BIG_TEXT to be the amounts of your product prices.
+
+To get a WEBHOOK_SIGNING_SECRET you need to set up a webhook to send data to https://yourinstance/stripe_webhook, sending the
+checkout.session.completed and customer.subscription.deleted events.
+
+---
+
+<div id="testing"></div>
+
+## Testing and debugging
+
+### Logs
+
+Check these locations for interesting error messages:
+
+ - logs/pyfedi.log
+ - /var/log/celery/*.log
+
+There are a few urls you can go to which will test things out and report a result or log an error. You need the FLASK_DEBUG environment
+variable set to 1 for these to work.
+
+ - https://yourinstance.tld/test_s3 - tests your S3 config
+ - https://yourinstance.tld/test_email - tests email sending
+ - https://yourinstance.tld/test_redis - tests the connection to redis
+
+---
 
 <div id="pre-requisites-for-mac-os"></div>
 

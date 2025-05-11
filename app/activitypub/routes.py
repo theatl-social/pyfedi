@@ -4,7 +4,7 @@ from random import randint
 from flask import request, current_app, abort, jsonify, json, g, url_for, redirect, make_response
 from flask_login import current_user
 from psycopg2 import IntegrityError
-from sqlalchemy import desc, or_
+from sqlalchemy import desc, or_, text
 import werkzeug.exceptions
 
 from app import db, constants, cache, celery
@@ -52,9 +52,13 @@ def testredis_get():
 @bp.route('/.well-known/webfinger')
 def webfinger():
     if request.args.get('resource'):
+        feed = False
         query = request.args.get('resource')  # acct:alice@tada.club
         if 'acct:' in query:
             actor = query.split(':')[1].split('@')[0]  # alice
+            if actor.startswith('~'):
+                feed = True
+                actor = actor[1:]
         elif 'https:' in query or 'http:' in query:
             actor = query.split('/')[-1]
         else:
@@ -82,20 +86,27 @@ def webfinger():
             resp.headers.add_header('Access-Control-Allow-Origin', '*')
             return resp
 
-        # look for the User first, then the Community, then the Feed that matches
-        seperator = 'u'
-        type = 'Person'
-        user = User.query.filter(or_(User.user_name == actor.strip(), User.alt_user_name == actor.strip())).filter_by(deleted=False, banned=False, ap_id=None).first()
-        if user is None:
-            community = Community.query.filter_by(name=actor.strip(), ap_id=None).first()
-            seperator = 'c'
-            type = 'Group'
-            if community is None:
-                feed = Feed.query.filter_by(name=actor.strip(), ap_id=None).first()
-                if feed is None:
-                    return ''
-                seperator = 'f'
-                type = 'Feed'
+        if not feed:
+            # look for the User first, then the Community, then the Feed that matches
+            seperator = 'u'
+            type = 'Person'
+            user = User.query.filter(or_(User.user_name == actor.strip(), User.alt_user_name == actor.strip())).filter_by(deleted=False, banned=False, ap_id=None).first()
+            if user is None:
+                community = Community.query.filter_by(name=actor.strip(), ap_id=None).first()
+                seperator = 'c'
+                type = 'Group'
+                if community is None:
+                    feed = Feed.query.filter_by(name=actor.strip(), ap_id=None).first()
+                    if feed is None:
+                        return ''
+                    seperator = 'f'
+                    type = 'Feed'
+        else:
+            feed = Feed.query.filter_by(name=actor.strip(), ap_id=None).first()
+            if feed is None:
+                return ''
+            seperator = 'f'
+            type = 'Feed'
 
         webfinger_data = {
             "subject": f"acct:{actor}@{current_app.config['SERVER_NAME']}",
@@ -126,12 +137,13 @@ def webfinger():
 @bp.route('/.well-known/nodeinfo')
 @cache.cached(timeout=600)
 def nodeinfo():
-    nodeinfo_data = {"links": [{"rel": "http://nodeinfo.diaspora.software/ns/schema/2.0",
+    nodeinfo_data = {"links": [{"rel": "https://www.w3.org/ns/activitystreams#Application",
+                                "href": f"https://{current_app.config['SERVER_NAME']}"},
+                               {"rel": "http://nodeinfo.diaspora.software/ns/schema/2.0",
                                 "href": f"https://{current_app.config['SERVER_NAME']}/nodeinfo/2.0"},
                                {"rel": "http://nodeinfo.diaspora.software/ns/schema/2.1",
                                 "href": f"https://{current_app.config['SERVER_NAME']}/nodeinfo/2.1"},
-                               {"rel": "https://www.w3.org/ns/activitystreams#Application",
-                                "href": f"https://{current_app.config['SERVER_NAME']}"}]}
+                               ]}
     return jsonify(nodeinfo_data)
 
 
@@ -151,7 +163,7 @@ def nodeinfo2():
     nodeinfo_data = {
                 "version": "2.0",
                 "software": {
-                    "name": "PieFed",
+                    "name": "piefed",
                     "version": "0.1"
                 },
                 "protocols": [
@@ -179,7 +191,7 @@ def nodeinfo21():
     nodeinfo_data = {
                 "version": "2.1",
                 "software": {
-                    "name": "PieFed",
+                    "name": "piefed",
                     "version": "0.1",
                     "repository": "https://codeberg.org/rimu/pyfedi",
                     "homepage": "https://join.piefed.social"
@@ -287,14 +299,14 @@ def user_profile(actor):
         else:
             user: User = User.query.filter(or_(User.user_name == actor, User.alt_user_name == actor)).filter_by(ap_id=None).first()
             if user is None:
-                user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor.lower()}', deleted=False, ap_id=None).first()
+                user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor.lower()}', ap_id=None).first()
     else:
         if '@' in actor:
-            user: User = User.query.filter_by(ap_id=actor.lower(), deleted=False, banned=False).first()
+            user: User = User.query.filter_by(ap_id=actor.lower()).first()
         else:
-            user: User = User.query.filter(or_(User.user_name == actor, User.alt_user_name == actor)).filter_by(deleted=False, ap_id=None).first()
+            user: User = User.query.filter(or_(User.user_name == actor, User.alt_user_name == actor)).filter_by(ap_id=None).first()
             if user is None:
-                user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor.lower()}', deleted=False, ap_id=None).first()
+                user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor.lower()}', ap_id=None).first()
 
     if user is not None:
         main_user_name = True
@@ -318,6 +330,7 @@ def user_profile(actor):
                             "outbox": f"{user.public_url(main_user_name)}/outbox",
                             "discoverable": user.searchable,
                             "indexable": user.indexable,
+                            "acceptPrivateMessages": user.accept_private_messages,
                             "manuallyApprovesFollowers": False if not user.ap_manually_approves_followers else user.ap_manually_approves_followers,
                             "publicKey": {
                                 "id": f"{user.public_url(main_user_name)}#main-key",
@@ -329,20 +342,35 @@ def user_profile(actor):
                             },
                             "published": ap_datetime(user.created),
                         }
+
             if not main_user_name:
                 actor_data['name'] = 'Anonymous'
                 actor_data['published'] = ap_datetime(user.created + timedelta(minutes=randint(-2592000, 0)))
                 actor_data['summary'] = '<p>This is an anonymous alternative account of another account. It has been generated automatically for a Piefed user who chose to keep their interactions private. They cannot reply to your messages using this account, but only upvote (like) or downvote (dislike). For more information about Piefed and this feature see <a href="https://piefed.social/post/205362">https://piefed.social/post/205362</a>.</p>'
             if user.avatar_id is not None and main_user_name:
-                actor_data["icon"] = {
-                    "type": "Image",
-                    "url": f"https://{current_app.config['SERVER_NAME']}{user.avatar_image()}"
-                }
+                avatar_image = user.avatar_image()
+                if avatar_image.startswith('http'):
+                    actor_data["icon"] = {
+                        "type": "Image",
+                        "url": user.avatar_image()
+                    }
+                else:
+                    actor_data["icon"] = {
+                        "type": "Image",
+                        "url": f"https://{current_app.config['SERVER_NAME']}{user.avatar_image()}"
+                    }
             if user.cover_id is not None and main_user_name:
-                actor_data["image"] = {
-                    "type": "Image",
-                    "url": f"https://{current_app.config['SERVER_NAME']}{user.cover_image()}"
-                }
+                cover_image = user.cover_image()
+                if cover_image.startswith('http'):
+                    actor_data["image"] = {
+                        "type": "Image",
+                        "url": user.cover_image()
+                    }
+                else:
+                    actor_data["image"] = {
+                        "type": "Image",
+                        "url": f"https://{current_app.config['SERVER_NAME']}{user.cover_image()}"
+                    }
             if user.about_html and main_user_name:
                 actor_data['summary'] = user.about_html
                 actor_data['source'] = {'content': user.about, 'mediaType': 'text/markdown'}
@@ -422,20 +450,35 @@ def community_profile(actor):
                 },
                 "published": ap_datetime(community.created_at),
                 "updated": ap_datetime(community.last_active),
+                "lemmy:tagsForPosts": community.flair_for_ap()
             }
             if community.description_html:
                 actor_data["summary"] = community.description_html
                 actor_data['source'] = {'content': community.description, 'mediaType': 'text/markdown'}
             if community.icon_id is not None:
-                actor_data["icon"] = {
-                    "type": "Image",
-                    "url": f"https://{current_app.config['SERVER_NAME']}{community.icon_image()}"
-                }
+                icon_image = community.icon_image()
+                if icon_image.startswith('http'):
+                    actor_data["icon"] = {
+                        "type": "Image",
+                        "url": community.icon_image()
+                    }
+                else:
+                    actor_data["icon"] = {
+                        "type": "Image",
+                        "url": f"https://{current_app.config['SERVER_NAME']}{community.icon_image()}"
+                    }
             if community.image_id is not None:
-                actor_data["image"] = {
-                    "type": "Image",
-                    "url": f"https://{current_app.config['SERVER_NAME']}{community.header_image()}"
-                }
+                header_image = community.header_image()
+                if header_image.startswith('http'):
+                    actor_data["image"] = {
+                        "type": "Image",
+                        "url": community.header_image()
+                    }
+                else:
+                    actor_data["image"] = {
+                        "type": "Image",
+                        "url": f"https://{current_app.config['SERVER_NAME']}{community.header_image()}"
+                    }
             resp = jsonify(actor_data)
             resp.content_type = 'application/activity+json'
             resp.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/c/{actor}>; rel="alternate"; type="text/html"')
@@ -455,7 +498,7 @@ def shared_inbox():
         return '', 200
 
     g.site = Site.query.get(1)                      # g.site is not initialized by @app.before_request when request.path == '/inbox'
-    store_ap_json = g.site.log_activitypub_json
+    store_ap_json = g.site.log_activitypub_json or False
     saved_json = request_json if store_ap_json else None
 
     if not 'id' in request_json or not 'type' in request_json or not 'actor' in request_json or not 'object' in request_json:
@@ -526,7 +569,11 @@ def shared_inbox():
             except VerificationError as e:
                 log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Could not verify LD signature: ' + str(e))
                 return '', 400
-        # not HTTP sig, and no LD sig, so reduce the inner object to just its remote ID, and then fetch it and check it in process_inbox_request()
+        elif (actor.ap_profile_id == 'https://fediseer.com/api/v1/user/fediseer' and                   # accept unsigned chat message from fediseer for API key
+              request_json['type'] == 'Create' and isinstance(request_json['object'], dict) and
+              'type' in request_json['object'] and request_json['object']['type'] == 'ChatMessage'):
+            ...
+        # no HTTP sig, and no LD sig, so reduce the inner object to just its remote ID, and then fetch it and check it in process_inbox_request()
         elif ((request_json['type'] == 'Create' or request_json['type'] == 'Update') and
               isinstance(request_json['object'], dict) and 'id' in request_json['object'] and isinstance(request_json['object']['id'], str)):
             request_json['object'] = request_json['object']['id']
@@ -669,7 +716,10 @@ def process_inbox_request(request_json, store_ap_json):
             actor = find_actor_or_create(actor_id, create_if_not_found=False)
             if actor and isinstance(actor, User):
                 user = actor
-                user.last_seen = utcnow()
+                # Update user's last_seen in a separate transaction to avoid deadlocks
+                with db.session.begin_nested():
+                    db.session.execute(text('UPDATE "user" SET last_seen=:last_seen WHERE id = :user_id'),
+                                     {"last_seen": utcnow(), "user_id": user.id})
                 db.session.commit()
             elif actor and isinstance(actor, Community):                  # Process a few activities from NodeBB and a.gup.pe
                 if request_json['type'] == 'Add' or request_json['type'] == 'Remove':
@@ -1007,7 +1057,7 @@ def process_inbox_request(request_json, store_ap_json):
                 ap_id = core_activity['object']['id']  # kbin
             to_delete = find_liked_object(ap_id)                        # Just for Posts and Replies (User deletes go through process_delete_request())
 
-            if to_delete:
+            if to_delete:   # Deleting content. User self-deletes are handled in process_delete_request()
                 if to_delete.deleted:
                     log_incoming_ap(id, APLOG_DELETE, APLOG_IGNORED, saved_json, 'Activity about local content which is already deleted')
                 else:
@@ -1015,8 +1065,6 @@ def process_inbox_request(request_json, store_ap_json):
                     delete_post_or_comment(user, to_delete, store_ap_json, request_json, reason)
                     if not announced:
                         announce_activity_to_followers(to_delete.community, user, request_json)
-            else:
-                log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, saved_json, 'Delete: cannot find ' + ap_id)
             return
 
         if core_activity['type'] == 'Like' or core_activity['type'] == 'EmojiReact':  # Upvote
@@ -1413,17 +1461,14 @@ def process_delete_request(request_json, store_ap_json):
         user_ap_id = request_json['actor']
         user = User.query.filter_by(ap_profile_id=user_ap_id.lower()).first()
         if user:
-            # check that the user really has been deleted, to avoid spoofing attacks
-            if user_removed_from_remote_server(user_ap_id, is_piefed=user.instance.software == 'PieFed'):
-                # soft self-delete
-                user.deleted = True
-                user.deleted_by = user.id
-                db.session.commit()
-                log_incoming_ap(id, APLOG_DELETE, APLOG_SUCCESS, saved_json)
-            else:
-                log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, saved_json, 'User not actually deleted.')
-        # TODO: acknowledge 'removeData' field from Lemmy
-        # TODO: hard-delete in 7 days (should purge avatar and cover images, but keep posts and replies unless already soft-deleted by removeData = True)
+            if 'removeData' in request_json and request_json['removeData'] is True:
+                user.purge_content()
+            user.deleted = True
+            user.deleted_by = user.id
+            user.delete_dependencies()
+            db.session.commit()
+            log_incoming_ap(id, APLOG_DELETE, APLOG_SUCCESS, saved_json)
+
 
 
 def announce_activity_to_followers(community, creator, activity):
@@ -1463,9 +1508,9 @@ def community_outbox(actor):
     actor = actor.strip()
     community = Community.query.filter_by(name=actor, banned=False, ap_id=None).first()
     if community is not None:
-        sticky_posts = community.posts.filter(Post.sticky == True, Post.deleted == False).order_by(desc(Post.posted_at)).limit(50).all()
+        sticky_posts = community.posts.filter(Post.sticky == True, Post.deleted == False, Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.posted_at)).limit(50).all()
         remaining_limit = 50 - len(sticky_posts)
-        remaining_posts = community.posts.filter(Post.sticky == False, Post.deleted == False).order_by(desc(Post.posted_at)).limit(remaining_limit).all()
+        remaining_posts = community.posts.filter(Post.sticky == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.posted_at)).limit(remaining_limit).all()
         posts = sticky_posts + remaining_posts
 
         community_data = {
@@ -1519,9 +1564,13 @@ def community_moderators_route(actor):
         }
 
         for moderator in moderators:
-            community_data['orderedItems'].append(moderator.ap_profile_id)
+            community_data['orderedItems'].append(moderator.public_url())
 
-        return jsonify(community_data)
+        resp = jsonify(community_data)
+        resp.content_type = 'application/activity+json'
+        return resp
+    else:
+        abort(404)
 
 
 @bp.route('/c/<actor>/followers', methods=['GET'])
@@ -1772,11 +1821,20 @@ def process_chat(user, store_ap_json, core_activity):
     recipient_ap_id = core_activity['object']['to'][0]
     recipient = find_actor_or_create(recipient_ap_id, create_if_not_found=False)
     if recipient and recipient.is_local():
-        if sender.created_recently() or sender.reputation <= -10:
+        if sender.ap_profile_id != 'https://fediseer.com/api/v1/user/fediseer' and (sender.created_recently() or sender.reputation <= -10):
             log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender not eligible to send')
             return True
         elif recipient.has_blocked_user(sender.id) or recipient.has_blocked_instance(sender.instance_id):
             log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender blocked by recipient')
+            return True
+        elif recipient.accept_private_messages is None or recipient.accept_private_messages == 0:
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Recipient has turned off PMs')
+            return True
+        elif recipient.accept_private_messages == 1:
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Recipient only accepts local PMs')
+            return True
+        elif recipient.accept_private_messages == 2 and not sender.instance.trusted:
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender from untrusted instance')
             return True
         else:
             blocked_phrases_list = blocked_phrases()
@@ -1805,9 +1863,11 @@ def process_chat(user, store_ap_json, core_activity):
             db.session.commit()
 
             # Notify recipient
+            targets_data = {'conversation_id':existing_conversation.id,'message_id': new_message.id}
             notify = Notification(title=shorten_string('New message from ' + sender.display_name()),
                                   url=f'/chat/{existing_conversation.id}#message_{new_message.id}', user_id=recipient.id,
-                                  author_id=sender.id)
+                                  author_id=sender.id, notif_type=NOTIF_MESSAGE, subtype='chat_message',
+                                  targets=targets_data)
             db.session.add(notify)
             recipient.unread_notifications += 1
             existing_conversation.read = False
@@ -1869,15 +1929,29 @@ def feed_profile(actor):
                 actor_data["summary"] = feed.description_html
                 actor_data['source'] = {'content': feed.description, 'mediaType': 'text/markdown'}
             if feed.icon_id is not None:
-                actor_data["icon"] = {
-                    "type": "Image",
-                    "url": f"https://{current_app.config['SERVER_NAME']}{feed.icon_image()}"
-                }
+                icon_image = feed.icon_image()
+                if icon_image.startswith('http'):
+                    actor_data["icon"] = {
+                        "type": "Image",
+                        "url": feed.icon_image()
+                    }
+                else:
+                    actor_data["icon"] = {
+                        "type": "Image",
+                        "url": f"https://{current_app.config['SERVER_NAME']}{feed.icon_image()}"
+                    }
             if feed.image_id is not None:
-                actor_data["image"] = {
-                    "type": "Image",
-                    "url": f"https://{current_app.config['SERVER_NAME']}{feed.header_image()}"
-                }
+                header_image = feed.header_image()
+                if header_image.startswith('http'):
+                    actor_data["image"] = {
+                        "type": "Image",
+                        "url": feed.header_image()
+                    }
+                else:
+                    actor_data["image"] = {
+                        "type": "Image",
+                        "url": f"https://{current_app.config['SERVER_NAME']}{feed.header_image()}"
+                    }
             resp = jsonify(actor_data)
             resp.content_type = 'application/activity+json'
             resp.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/f/{actor}>; rel="alternate"; type="text/html"')

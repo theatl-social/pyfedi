@@ -186,11 +186,6 @@ def tools():
                                topics_form=topics_form,
                                delete_communities_form=delete_communities_form,
                                delete_topics_form=delete_topics_form,
-                               moderating_communities=moderating_communities(current_user.get_id()),
-                               joined_communities=joined_communities(current_user.get_id()),
-                               menu_topics=menu_topics(), site=g.site,
+                               site=g.site,
                                inoculation=inoculation[random.randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                               menu_instance_feeds=menu_instance_feeds(), 
-                               menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
-                               menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                                )

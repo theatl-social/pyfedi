@@ -16,6 +16,8 @@
             {{ form.csrf_token() }}
             <h3>{{ _('Content settings') }}</h3>
             {{ render_field(form.default_theme) }}
+            {{ render_field(form.additional_css) }}
+            <p class="small field_hint">{{ _('CSS in this field will be added to every page.') }}</p>
             {{ render_field(form.default_filter) }}
             {{ render_field(form.enable_downvotes) }}
             {{ render_field(form.allow_local_image_posts) }}
@@ -34,9 +36,12 @@
             {{ render_field(form.auto_decline_countries) }}
             <p class="small field_hint">{{ _('Use 2-letter country codes, one per line. Requires IPinfo API.') }}</p>
             {{ render_field(form.auto_decline_referrers) }}
+            {{ render_field(form.registration_approved_email) }}
+            <p class="small field_hint">{{ _('This will be sent after their application is approved. Use markdown.') }}</p>
             <hr>
             {{ render_field(form.log_activitypub_json) }}
             {{ render_field(form.public_modlog) }}
+            {{ render_field(form.private_instance) }}
             {{ render_field(form.show_inoculation_block) }}
 
             {{ render_field(form.submit) }}
