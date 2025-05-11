@@ -563,7 +563,7 @@ def put_alpha_user_save_user_settings():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/user/notifications')
+@bp.route('/api/alpha/user/notifications', methods=['GET'])
 def get_alpha_user_notifications():
     if not enable_api():
         return jsonify({'error': 'alpha api is not enabled'}), 400
@@ -589,7 +589,7 @@ def put_alpha_user_notification_state():
         return jsonify({"error": str(ex)}), 400    
 
 
-@bp.route('/api/alpha/user/notifications_count')
+@bp.route('/api/alpha/user/notifications_count', methods=['GET'])
 def get_alpha_user_notifications_count():
     if not enable_api():
         return jsonify({'error': 'alpha api is not enabled'}), 400
