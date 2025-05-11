@@ -374,10 +374,14 @@ def _process_notification_item(item):
 
 
 def put_user_notification_state(auth, data):
+    required(['notif_id', 'read_state'], data)
+    integer_expected(['notif_id'], data)
+    boolean_expected(['read_state'], data)
+
     user = authorise_api_user(auth, return_type='model')
-    notif_id = data['notif_id'] if 'notif_id' in data else None
-    read_state = data['read_state'] if 'read_state' in data else None
-    
+    notif_id = data['notif_id']
+    read_state = data['read_state']
+
     # get the notification from the data.notif_id
     notif = Notification.query.get(notif_id)
 
