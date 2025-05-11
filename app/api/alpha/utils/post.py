@@ -13,7 +13,7 @@ from sqlalchemy import desc, text
 
 def get_post_list(auth, data, user_id=None, search_type='Posts'):
     type = data['type_'] if data and 'type_' in data else "All"
-    sort = data['sort'].lower() if data and 'sort' in data else "hot"
+    sort = data['sort'] if data and 'sort' in data else "Hot"
     page = int(data['page_cursor']) if data and 'page_cursor' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 50
     liked_only = data['liked_only'] if data and 'liked_only' in data else 'false'
@@ -94,15 +94,25 @@ def get_post_list(auth, data, user_id=None, search_type='Posts'):
         u_rp_ids = db.session.execute(text('SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id'), {"user_id": user_id}).scalars()
         posts = posts.filter(Post.id.not_in(u_rp_ids))
 
-    if sort == "hot":
+    if sort == "Hot":
         posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
-    elif sort == "top":
+    elif sort == "Top" or sort == "TopDay":
         posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=1)).order_by(desc(Post.up_votes - Post.down_votes))
-    elif sort == "new":
+    elif sort == "TopHour":
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(hours=1)).order_by(desc(Post.up_votes - Post.down_votes))
+    elif sort == "TopSixHour":
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(hours=6)).order_by(desc(Post.up_votes - Post.down_votes))
+    elif sort == "TopTwelveHour":
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(hours=12)).order_by(desc(Post.up_votes - Post.down_votes))
+    elif sort == "TopWeek":
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=7)).order_by(desc(Post.up_votes - Post.down_votes))
+    elif sort == "TopMonth":
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=28)).order_by(desc(Post.up_votes - Post.down_votes))
+    elif sort == "New":
         posts = posts.order_by(desc(Post.posted_at))
-    elif sort == "scaled":
+    elif sort == "Scaled":
         posts = posts.order_by(desc(Post.ranking_scaled)).order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
-    elif sort == "active":
+    elif sort == "Active":
         posts = posts.order_by(desc(Post.last_active))
 
     posts = posts.paginate(page=page, per_page=limit, error_out=False)
