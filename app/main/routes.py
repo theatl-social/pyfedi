@@ -13,7 +13,7 @@ from app.activitypub.util import users_total, active_month, local_posts, local_c
 from app.activitypub.signature import default_context, LDSignature
 from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, \
     POST_STATUS_REVIEWING
-from app.email import send_email
+from app.email import send_email, send_registration_approved_email
 from app.inoculation import inoculation
 from app.main import bp
 from flask import g, session, flash, request, current_app, url_for, redirect, make_response, jsonify
@@ -574,6 +574,8 @@ def replay_inbox():
 @bp.route('/test')
 @debug_mode_only
 def test():
+    user = User.query.get(1)
+    send_registration_approved_email(user)
 
     markdown = """What light novels have you read in the past week? Something good? Bad? Let us know about it. 
 

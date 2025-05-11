@@ -25,7 +25,7 @@ from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_
 from app.community.util import save_icon_file, save_banner_file, search_for_community
 from app.community.routes import do_subscribe
 from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED, POST_STATUS_REVIEWING
-from app.email import send_welcome_email
+from app.email import send_registration_approved_email
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission, Domain, \
     Tag, DefederationSubscription
@@ -171,6 +171,7 @@ def admin_misc():
         set_setting('email_verification', form.email_verification.data)
         set_setting('choose_topics', form.choose_topics.data)
         set_setting('filter_selection', form.filter_selection.data)
+        set_setting('registration_approved_email', form.registration_approved_email.data)
         flash(_('Settings saved.'))
     elif request.method == 'GET':
         form.enable_downvotes.data = site.enable_downvotes
@@ -194,6 +195,7 @@ def admin_misc():
         form.choose_topics.data = get_setting('choose_topics', True)
         form.filter_selection.data = get_setting('filter_selection', True)
         form.private_instance.data = site.private_instance
+        form.registration_approved_email.data = get_setting('registration_approved_email', '')
     return render_template('admin/misc.html', title=_('Misc settings'), form=form,
                            
                            site=g.site, )
@@ -1282,7 +1284,7 @@ def admin_approve_registrations_approve(user_id):
         db.session.commit()
         if user.verified:
             finalize_user_setup(user)
-            send_welcome_email(user, True)
+            send_registration_approved_email(user)
 
         flash(_('Registration approved.'))
 

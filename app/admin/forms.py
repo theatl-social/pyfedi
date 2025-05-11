@@ -35,6 +35,7 @@ class SiteMiscForm(FlaskForm):
     types = [('Open', _l('Open')), ('RequireApplication', _l('Require application')), ('Closed', _l('Closed'))]
     registration_mode = SelectField(_l('Registration mode'), choices=types, default=1, coerce=str, render_kw={'class': 'form-select'})
     application_question = TextAreaField(_l('Question to ask people applying for an account'))
+    registration_approved_email = TextAreaField(_l('Registration approved email'))
 
     choose_topics = BooleanField(_l('Provide a list of topics to subscribe to'))
     filter_selection = BooleanField(_l('Trump Musk filter setup'))

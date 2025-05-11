@@ -36,6 +36,8 @@
             {{ render_field(form.auto_decline_countries) }}
             <p class="small field_hint">{{ _('Use 2-letter country codes, one per line. Requires IPinfo API.') }}</p>
             {{ render_field(form.auto_decline_referrers) }}
+            {{ render_field(form.registration_approved_email) }}
+            <p class="small field_hint">{{ _('This will be sent after their application is approved. Use markdown.') }}</p>
             <hr>
             {{ render_field(form.log_activitypub_json) }}
             {{ render_field(form.public_modlog) }}
