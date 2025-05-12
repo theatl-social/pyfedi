@@ -235,14 +235,12 @@ def get_user_notifications(auth, data):
             if item.read == False and item.notif_type in supported_notif_types:
                 if isinstance(item.subtype,str):
                     notif = _process_notification_item(item)
-                    notif['status'] = status
                     items.append(notif)
     # all
     elif status == 'All':
         for item in user_notifications:
                 if isinstance(item.subtype,str) and item.notif_type in supported_notif_types:
                     notif = _process_notification_item(item)
-                    notif['status'] = status
                     items.append(notif)
     # read
     elif status == 'Read':
@@ -250,7 +248,6 @@ def get_user_notifications(auth, data):
             if item.read == True and item.notif_type in supported_notif_types:
                 if isinstance(item.subtype,str):
                     notif = _process_notification_item(item)
-                    notif['status'] = status
                     items.append(notif)
 
     # get counts for new/read/all
