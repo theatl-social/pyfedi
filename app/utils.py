@@ -2084,7 +2084,7 @@ def retrieve_image_hash(image_url):
     return fetch_hash(retries_left=2)
 
 
-BINARY_RE = re.compile(r'^[01]+$')
+BINARY_RE = re.compile(r'^[01]+$')  # used in hash_matches_blocked_image()
 
 
 def hash_matches_blocked_image(hash: str) -> bool:
