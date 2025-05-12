@@ -83,3 +83,4 @@ class Config(object):
     # enable the aplha api
     ENABLE_ALPHA_API = os.environ.get('ENABLE_ALPHA_API') or False
 
+    IMAGE_HASHING_ENDPOINT = os.environ.get('IMAGE_HASHING_ENDPOINT') or ''

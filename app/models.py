@@ -17,6 +17,7 @@ from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.mutable import MutableList
 from flask_sqlalchemy import BaseQuery
 from sqlalchemy_searchable import SearchQueryMixin
+from sqlalchemy.dialects.postgresql import BIT
 from app import db, login, cache, celery, httpx_client, constants
 import jwt
 import os
@@ -292,7 +293,7 @@ class File(db.Model):
     thumbnail_path = db.Column(db.String(255))
     thumbnail_width = db.Column(db.Integer)
     thumbnail_height = db.Column(db.Integer)
-    hash = db.Column(db.String(64), index=True)
+    hash = db.Column(BIT(256), index=True)
 
     def view_url(self, resize=False):
         if self.source_url:
@@ -3007,6 +3008,13 @@ class SendQueue(db.Model):
     retry_reason = db.Column(db.String(255))
     created = db.Column(db.DateTime, default=utcnow)
     send_after = db.Column(db.DateTime, default=utcnow, index=True)
+
+
+class BlockedImage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    file_name = db.Column(db.String(255), index=True)
+    note = db.Column(db.String(255))
+    hash = db.Column(BIT(256), index=True)
 
 
 def _large_community_subscribers() -> float:
