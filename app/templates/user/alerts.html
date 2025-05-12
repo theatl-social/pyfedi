@@ -15,8 +15,12 @@
             <li class="breadcrumb-item active">{{ _('Alerts') }}</li>
           </ol>
         </nav>
-        {% include 'user/alerts/_type.html' %}
-        {% include 'user/alerts/_' + type + '.html' %}
+        <div class="row">
+          <div class="col-6">
+            {% include 'user/alerts/_type.html' %}
+          </div>
+          {% include 'user/alerts/_' + type + '.html' %}
+        </div>
 
         <nav aria-label="Pagination" class="mt-4" role="navigation">
                 {% if prev_url %}

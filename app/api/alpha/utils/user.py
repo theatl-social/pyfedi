@@ -374,16 +374,16 @@ def _process_notification_item(item):
 
 
 def put_user_notification_state(auth, data):
-    user = authorise_api_user(auth, return_type='model')
-    notif_id = data['notif_id'] if 'notif_id' in data else None
-    read_state = data['read_state'] if 'read_state' in data else None
-    
-    # get the notification from the data.notif_id
-    notif = Notification.query.get(notif_id)
+    required(['notif_id', 'read_state'], data)
+    integer_expected(['notif_id'], data)
+    boolean_expected(['read_state'], data)
 
-    # make sure the notif belongs to the user
-    if notif.user_id != user.id:
-        raise Exception('Notification does not belong to provided User.')
+    user_id = authorise_api_user(auth)
+    notif_id = data['notif_id']
+    read_state = data['read_state']
+
+    # get the notification from the data.notif_id
+    notif = Notification.query.filter_by(id=notif_id, user_id=user_id).one()
 
     # set the read state for the notification
     notif.read = read_state
