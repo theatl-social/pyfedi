@@ -217,28 +217,37 @@ def get_user_notifications(auth, data):
     # setup the db query/generator all notifications for the user
     user_notifications = Notification.query.filter_by(user_id=user.id).order_by(desc(Notification.created_at)).paginate(page=page, per_page=limit, error_out=False)
 
+    # currently supported notif types
+    supported_notif_types = [
+        NOTIF_USER,
+        NOTIF_COMMUNITY,
+        NOTIF_TOPIC,
+        NOTIF_POST,
+        NOTIF_REPLY,
+        NOTIF_FEED,
+        NOTIF_MENTION
+    ]
+
+
     # new
     if status == 'New':
         for item in user_notifications:
-            if item.read == False:
+            if item.read == False and item.notif_type in supported_notif_types:
                 if isinstance(item.subtype,str):
                     notif = _process_notification_item(item)
-                    notif['status'] = status
                     items.append(notif)
     # all
     elif status == 'All':
         for item in user_notifications:
-                if isinstance(item.subtype,str):
+                if isinstance(item.subtype,str) and item.notif_type in supported_notif_types:
                     notif = _process_notification_item(item)
-                    notif['status'] = status
                     items.append(notif)
     # read
     elif status == 'Read':
         for item in user_notifications:
-            if item.read == True:
+            if item.read == True and item.notif_type in supported_notif_types:
                 if isinstance(item.subtype,str):
                     notif = _process_notification_item(item)
-                    notif['status'] = status
                     items.append(notif)
 
     # get counts for new/read/all
@@ -270,6 +279,7 @@ def _process_notification_item(item):
         notification_json['post'] = post_view(post, variant=2)
         notification_json['post_id'] = post.id
         notification_json['notif_body'] = post.body if post.body else ''
+        notification_json['status'] = 'Read' if item.read else 'Unread'
         return notification_json
     # for the NOTIF_COMMUNITY
     elif item.notif_type == NOTIF_COMMUNITY:
@@ -285,6 +295,7 @@ def _process_notification_item(item):
         notification_json['post_id'] = post.id
         notification_json['community'] = community_view(community, variant=2)
         notification_json['notif_body'] = post.body if post.body else ''
+        notification_json['status'] = 'Read' if item.read else 'Unread'
         return notification_json
     # for the NOTIF_TOPIC
     elif item.notif_type == NOTIF_TOPIC:
@@ -298,6 +309,7 @@ def _process_notification_item(item):
         notification_json['post'] = post_view(post, variant=2)
         notification_json['post_id'] = post.id
         notification_json['notif_body'] = post.body if post.body else ''
+        notification_json['status'] = 'Read' if item.read else 'Unread'
         return notification_json
     # for the NOTIF_POST
     elif item.notif_type == NOTIF_POST:
@@ -314,6 +326,7 @@ def _process_notification_item(item):
         notification_json['comment'] = reply_view(comment, variant=1)
         notification_json['comment_id'] = comment.id
         notification_json['notif_body'] = comment.body if comment.body else ''
+        notification_json['status'] = 'Read' if item.read else 'Unread'
         return notification_json        
     # for the NOTIF_REPLY
     elif item.notif_type == NOTIF_REPLY:
@@ -330,6 +343,7 @@ def _process_notification_item(item):
         notification_json['comment'] = reply_view(comment, variant=1)
         notification_json['comment_id'] = comment.id
         notification_json['notif_body'] = comment.body if comment.body else ''
+        notification_json['status'] = 'Read' if item.read else 'Unread'
         return notification_json
     # for the NOTIF_FEED
     elif item.notif_type == NOTIF_FEED:
@@ -343,6 +357,7 @@ def _process_notification_item(item):
         notification_json['post'] = post_view(post, variant=2)
         notification_json['post_id'] = post.id
         notification_json['notif_body'] = post.body if post.body else ''
+        notification_json['status'] = 'Read' if item.read else 'Unread'
         return notification_json        
     # for the NOTIF_MENTION
     elif item.notif_type == NOTIF_MENTION:
@@ -357,6 +372,7 @@ def _process_notification_item(item):
             notification_json['notif_type'] = NOTIF_MENTION
             notification_json['notif_subtype'] = item.subtype
             notification_json['notif_body'] = post.body if post.body else ''
+            notification_json['status'] = 'Read' if item.read else 'Unread'
             return notification_json
         if item.subtype == 'comment_mention':
             author = User.query.get(item.author_id)
@@ -368,9 +384,8 @@ def _process_notification_item(item):
             notification_json['notif_type'] = NOTIF_MENTION
             notification_json['notif_subtype'] = item.subtype
             notification_json['notif_body'] = comment.body if comment.body else ''
+            notification_json['status'] = 'Read' if item.read else 'Unread'
             return notification_json
-    else:
-        return {"notif_type":item.notif_type}
 
 
 def put_user_notification_state(auth, data):
