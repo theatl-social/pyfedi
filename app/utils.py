@@ -2057,3 +2057,46 @@ def notif_id_to_string(notif_id) -> str:
     # --model/db default--
     if notif_id == NOTIF_DEFAULT:
         return _('All')
+
+
+def retrieve_image_hash(image_url):
+    def fetch_hash(retries_left):
+        try:
+            response = get_request(current_app.config['IMAGE_HASHING_ENDPOINT'], {'image_url': image_url})
+            if response.status_code == 200:
+                result = response.json()
+                if result.get('quality', 0) >= 70:
+                    return result.get('pdq_hash_binary', '')
+            elif response.status_code == 429 and retries_left > 0:
+                sleep(random.uniform(1, 3))
+                return fetch_hash(retries_left - 1)
+        except httpx.HTTPError as e:
+            current_app.logger.warning(f"Error retrieving image hash: {e}")
+        except httpx.ReadError as e:
+            current_app.logger.warning(f"Error retrieving image hash: {e}")
+        finally:
+            try:
+                response.close()
+            except:
+                pass
+        return ''
+
+    return fetch_hash(retries_left=2)
+
+
+BINARY_RE = re.compile(r'^[01]+$')
+
+
+def hash_matches_blocked_image(hash: str) -> bool:
+    # calculate hamming distance between the provided hash and the hashes of all the blocked images.
+    # the hamming distance is a value between 0 and 256 indicating how many bits are different.
+    # 10 is the number of different bits we will accept. Anything less than that and we consider the images to be the same.
+
+    # only accept a string with 0 and 1 in it. This makes it safe to use sql injection-prone code below, which greatly simplifies the conversion of binary strings
+    if not BINARY_RE.match(hash):
+        current_app.logger.warning(f"Invalid binary hash: {hash}")
+        return False
+
+    sql = f"""SELECT id FROM "blocked_image" WHERE bit_length(hash # B'{hash}') - length(replace((hash # B'{hash}')::text, '0', '')) < 10;"""
+    blocked_images = db.session.execute(text(sql)).scalars().first()
+    return blocked_images is not None

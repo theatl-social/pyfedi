@@ -10,7 +10,8 @@ from app.shared.tasks import task_selector
 from app.utils import render_template, authorise_api_user, shorten_string, gibberish, ensure_directory_exists, \
     piefed_markdown_to_lemmy_markdown, markdown_to_html, fixup_url, domain_from_url, \
     opengraph_parse, url_to_thumbnail_file, can_create_post, is_video_hosting_site, recently_upvoted_posts, \
-    is_image_url, add_to_modlog_activitypub, store_files_in_s3, guess_mime_type
+    is_image_url, add_to_modlog_activitypub, store_files_in_s3, guess_mime_type, retrieve_image_hash, \
+    hash_matches_blocked_image
 
 from flask import abort, flash, redirect, request, url_for, current_app, g
 from flask_babel import _
@@ -270,6 +271,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         post.status = POST_STATUS_SCHEDULED
 
     url_changed = False
+    hash = None
 
     if not from_scratch:
         # Remove any subscription that currently exists
@@ -345,6 +347,11 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
 
         url = f"https://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
 
+        if current_app.config['IMAGE_HASHING_ENDPOINT'] and not user.trustworthy():
+            hash = retrieve_image_hash(url)
+            if hash and hash_matches_blocked_image(hash):
+                raise Exception('This image is blocked')
+
         # Move uploaded file to S3
         if store_files_in_s3():
             session = boto3.session.Session()
@@ -395,7 +402,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
 
         thumbnail_url, embed_url = fixup_url(url)
         if is_image_url(url):
-            file = File(source_url=url)
+            file = File(source_url=url, hash=hash)
             if uploaded_file and type == POST_TYPE_IMAGE:
                 # change this line when uploaded_file is supported in API
                 file.alt_text = input.image_alt_text.data if input.image_alt_text.data else title
