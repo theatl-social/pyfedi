@@ -267,6 +267,7 @@ def verify_email(token):
         if user.waiting_for_approval():
             return redirect(url_for('auth.please_wait'))
         else:
+            # Two things need to happen - email verification and (usually) admin approval. They can happen in any order.
             if g.site.registration_mode == 'RequireApplication':
                 send_registration_approved_email(user)
             else:
