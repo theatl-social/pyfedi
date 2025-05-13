@@ -1,23 +1,22 @@
-import json
 from collections import namedtuple, defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime
 from random import randint
 
 from flask import redirect, url_for, flash, current_app, abort, request, g, make_response, jsonify
-from flask_login import logout_user, current_user, login_required
+from flask_login import current_user, login_required
 from flask_babel import _
-from sqlalchemy import or_, desc, text
+from sqlalchemy import text
 from sqlalchemy.orm.exc import NoResultFound
-from wtforms import SelectField, RadioField
+from furl import furl
 
 from app import db, constants, cache, limiter, celery
-from app.activitypub.signature import HttpSignature, post_request, default_context, send_post_request
-from app.activitypub.util import notify_about_post_reply, update_post_from_activity
+from app.activitypub.signature import default_context, send_post_request
+from app.activitypub.util import update_post_from_activity
 from app.community.util import send_to_remote_instance
 from app.inoculation import inoculation
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm, ConfirmationForm, \
     ConfirmationMultiDeleteForm
-from app.community.forms import CreateLinkForm, CreateImageForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm
+from app.community.forms import CreateLinkForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm
 from app.constants import NOTIF_REPORT, POST_STATUS_SCHEDULED
 from app.post.util import post_replies, get_comment_branch, tags_to_string, url_needs_archive, \
     generate_archive_link, body_has_no_archive_link
@@ -26,20 +25,20 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_
     POST_TYPE_ARTICLE, POST_TYPE_VIDEO, NOTIF_REPLY, NOTIF_POST, POST_TYPE_POLL, SRC_WEB, SRC_API
 from app.models import Post, PostReply, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, Report, Site, Community, \
-    Topic, User, Instance, NotificationSubscription, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
-    PostReplyBookmark, CommunityBlock, File, CommunityFlair, UserFlair
+    Topic, User, Instance, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
+    PostReplyBookmark, CommunityBlock, File, CommunityFlair, UserFlair, BlockedImage
 from app.post import bp
 from app.shared.tasks import task_selector
-from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
+from app.utils import render_template, markdown_to_html, validation_required, \
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
-    request_etag_matches, ip_address, user_ip_banned, instance_banned, \
-    reply_already_exists, reply_is_just_link_to_gif_reaction, moderating_communities, joined_communities, \
-    blocked_instances, blocked_domains, community_moderators, blocked_phrases, show_ban_message, recently_upvoted_posts, \
-    recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, reply_is_stupid, \
-    languages_for_form, menu_topics, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown, \
+    request_etag_matches, ip_address, instance_banned, \
+    moderating_communities, joined_communities, \
+    blocked_instances, blocked_domains, community_moderators, show_ban_message, recently_upvoted_posts, \
+    recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, \
+    languages_for_form, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown, \
     permission_required, blocked_users, get_request, is_local_image_url, is_video_url, can_upvote, can_downvote, \
     referrer, can_create_post_reply, communities_banned_from, \
-    block_bots, flair_for_form, login_required_if_private_instance
+    block_bots, flair_for_form, login_required_if_private_instance, retrieve_image_hash
 from app.post.util import post_type_to_form_url_type
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, \
     delete_reply, mod_remove_reply, vote_for_reply
@@ -1394,6 +1393,39 @@ def post_cross_posts(post_id: int):
     post = Post.query.get_or_404(post_id)
     cross_posts = Post.query.filter(Post.id.in_(post.cross_posts))
     return render_template('post/post_cross_posts.html', cross_posts=cross_posts)
+
+
+@bp.route('/post/<int:post_id>/block_image', methods=['GET', 'POST'])
+@login_required
+@permission_required('change instance settings')
+def post_block_image(post_id: int):
+    post = Post.query.get_or_404(post_id)
+    if post.type == POST_TYPE_IMAGE:
+        form = ConfirmationForm()
+        if form.validate_on_submit():
+            hash = retrieve_image_hash(post.url)
+            community = post.community
+            if hash:
+                file_name = str(furl(post.url).path).split('/')
+                file_name = file_name[-1]
+                blocked_image = BlockedImage(hash=hash, file_name=file_name, note=shorten_string(post.title))
+                db.session.add(blocked_image)
+                db.session.commit()
+                flash(_('Image blocked'))
+            ref = request.form.get('referrer')
+            if '/post/' not in ref:
+                return redirect(ref)
+            else:
+                return redirect(url_for('activitypub.community_profile',
+                                        actor=community.ap_id if community.ap_id is not None else community.name))
+        else:
+            form.referrer.data = referrer()
+            return render_template('generic_form.html',
+                                   title=_('Are you sure you want to block this image?'),
+                                   message=_('All posts that use this image will be deleted and future posts of the image will be rejected.'),
+                                   form=form)
+
+    return redirect(referrer())
 
 
 @bp.route('/post/<int:post_id>/voting_activity', methods=['GET'])
