@@ -12,6 +12,7 @@ from slugify import slugify
 from sqlalchemy import text, desc, or_
 from PIL import Image
 from urllib.parse import urlparse
+from furl import furl
 
 from app import db, celery, cache
 from app.activitypub.routes import process_inbox_request, process_delete_request, replay_inbox_request
@@ -19,7 +20,7 @@ from app.activitypub.signature import post_request, default_context, RsaKeys
 from app.activitypub.util import instance_allowed, extract_domain_and_actor
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm, \
-    EditInstanceForm, RemoteInstanceScanForm, MoveCommunityForm, EditBlockedImageForm
+    EditInstanceForm, RemoteInstanceScanForm, MoveCommunityForm, EditBlockedImageForm, AddBlockedImageForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form, move_community_images_to_here
 from app.community.util import save_icon_file, save_banner_file, search_for_community
@@ -33,7 +34,7 @@ from app.utils import render_template, permission_required, set_setting, get_set
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
     topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents, \
     download_defeds, instance_banned, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, referrer, \
-    community_membership
+    community_membership, retrieve_image_hash
 from app.admin import bp
 
 
@@ -1664,14 +1665,23 @@ def admin_blocked_image_edit(image_id):
 @login_required
 @permission_required('change instance settings')
 def admin_blocked_image_add():
-    form = EditBlockedImageForm()
+    form = AddBlockedImageForm()
     if form.validate_on_submit():
-        image = BlockedImage(hash=form.hash.data, file_name=form.file_name.data, note=form.note.data)
+        if form.url.data:
+            hash = retrieve_image_hash(form.url.data)
+            file_name = str(furl(form.url.data).path).split('/')
+            file_name = file_name[-1]
+        else:
+            hash = form.hash.data
+            file_name = form.file_name.data
+        image = BlockedImage(hash=hash, file_name=file_name, note=form.note.data)
         db.session.add(image)
         db.session.commit()
 
         flash(_('Saved'))
         return redirect(url_for('admin.admin_blocked_images'))
+
+    flash(_('Provide the url of an image or the hash (and file name) of it, but not both.'))
 
     return render_template('admin/edit_blocked_image.html', title=_('Add blocked image'), form=form,
                            site=g.site, )

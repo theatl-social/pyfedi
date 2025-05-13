@@ -165,6 +165,14 @@ class EditBlockedImageForm(FlaskForm):
     submit = SubmitField(_l('Save'))
 
 
+class AddBlockedImageForm(FlaskForm):
+    url = StringField(_l('Url'), validators=[Optional()])
+    hash = TextAreaField(_l('Hash'), validators=[Optional(), Length(min=256, max=256)])
+    file_name = StringField(_l('Filename'), validators=[Optional(), Length(max=256)])
+    note = StringField(_l('Note'), validators=[Optional(), Length(max=256)])
+    submit = SubmitField(_l('Save'))
+
+
 class AddUserForm(FlaskForm):
     user_name = StringField(_l('User name'), validators=[DataRequired()],
                             render_kw={'autofocus': True, 'autocomplete': 'off'})
