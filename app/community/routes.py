@@ -746,12 +746,13 @@ def add_post(actor, type):
 
     if form.validate_on_submit():
         community = Community.query.get_or_404(form.communities.data)
-        #try:
-        uploaded_file = request.files['image_file'] if type == 'image' else None
-        post = make_post(form, community, post_type, SRC_WEB, uploaded_file=uploaded_file)
-        #except Exception as ex:
-        #    flash(_('Your post was not accepted because %(reason)s', reason=str(ex)), 'error')
-        #    abort(401)
+        try:
+            uploaded_file = request.files['image_file'] if type == 'image' else None
+            post = make_post(form, community, post_type, SRC_WEB, uploaded_file=uploaded_file)
+        except Exception as ex:
+            flash(_('Your post was not accepted because %(reason)s', reason=str(ex)), 'error')
+            return redirect(url_for('activitypub.community_profile',
+                                    actor=community.ap_id if community.ap_id is not None else community.name))
 
         if form.timezone.data:
             current_user.timezone = form.timezone.data

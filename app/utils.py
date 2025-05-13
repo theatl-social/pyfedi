@@ -2091,13 +2091,13 @@ BINARY_RE = re.compile(r'^[01]+$')  # used in hash_matches_blocked_image()
 def hash_matches_blocked_image(hash: str) -> bool:
     # calculate hamming distance between the provided hash and the hashes of all the blocked images.
     # the hamming distance is a value between 0 and 256 indicating how many bits are different.
-    # 10 is the number of different bits we will accept. Anything less than that and we consider the images to be the same.
+    # 15 is the number of different bits we will accept. Anything less than that and we consider the images to be the same.
 
     # only accept a string with 0 and 1 in it. This makes it safe to use sql injection-prone code below, which greatly simplifies the conversion of binary strings
     if not BINARY_RE.match(hash):
         current_app.logger.warning(f"Invalid binary hash: {hash}")
         return False
 
-    sql = f"""SELECT id FROM "blocked_image" WHERE bit_length(hash # B'{hash}') - length(replace((hash # B'{hash}')::text, '0', '')) < 10;"""
+    sql = f"""SELECT id FROM blocked_image WHERE length(replace((hash # B'{hash}')::text, '0', '')) < 15;"""
     blocked_images = db.session.execute(text(sql)).scalars().first()
     return blocked_images is not None

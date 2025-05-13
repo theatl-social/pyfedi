@@ -347,7 +347,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
 
         url = f"https://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
 
-        if current_app.config['IMAGE_HASHING_ENDPOINT'] and not user.trustworthy():
+        if current_app.config['IMAGE_HASHING_ENDPOINT']: # and not user.trustworthy():
             hash = retrieve_image_hash(url)
             if hash and hash_matches_blocked_image(hash):
                 raise Exception('This image is blocked')
