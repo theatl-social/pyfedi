@@ -1461,7 +1461,15 @@ class Post(db.Model):
             post.url = embed_url
             if is_image_url(post.url):
                 post.type = constants.POST_TYPE_IMAGE
-                image = File(source_url=post.url)
+
+                image_hash = None
+                if current_app.config['IMAGE_HASHING_ENDPOINT'] and not user.trustworthy():
+                    from app.utils import retrieve_image_hash, hash_matches_blocked_image
+                    image_hash = retrieve_image_hash(post.url)
+                    if image_hash and hash_matches_blocked_image(image_hash):
+                        return None
+
+                image = File(source_url=post.url, hash=image_hash)
                 if alt_text:
                     image.alt_text = alt_text
                 if file_path:

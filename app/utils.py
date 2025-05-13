@@ -2059,6 +2059,7 @@ def notif_id_to_string(notif_id) -> str:
         return _('All')
 
 
+@cache.memoize(timeout=3000)
 def retrieve_image_hash(image_url):
     def fetch_hash(retries_left):
         try:
