@@ -1,0 +1,27 @@
+{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
+    {% extends 'themes/' + theme() + '/base.html' %}
+{% else %}
+    {% extends "base.html" %}
+{% endif %}
+{% from 'bootstrap/form.html' import render_form %}
+{% set active_child = 'admin_content' %}
+
+{% block app_content %}
+<div class="row">
+    <div class="col col-login mx-auto">
+        {% if blocked_image %}
+            <h1>{{ _('Edit %(image_file_name)s', image_file_name=blocked_image.file_name) }}</h1>
+        {% else %}
+            <h1>{{ _('Add blocked image') }}</h1>
+        {% endif %}
+        {{ render_form(form) }}
+    </div>
+</div>
+<hr />
+<div class="row">
+    <div class="col">
+        {% include 'admin/_nav.html' %}
+    </div>
+</div>
+<hr />
+{% endblock %}
