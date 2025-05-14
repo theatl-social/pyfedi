@@ -1428,6 +1428,7 @@ class Post(db.Model):
                     return None
 
         file_path = None
+        alt_text = None
         if ('attachment' in request_json['object'] and
             isinstance(request_json['object']['attachment'], list) and
             len(request_json['object']['attachment']) > 0 and
