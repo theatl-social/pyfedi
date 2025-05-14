@@ -884,7 +884,7 @@ def notifications():
 
     notification_types = defaultdict(int)
     notification_links = defaultdict(set)
-    notification_list = Notification.query.filter_by(user_id=current_user.id).order_by(desc(Notification.created_at)).limit(300).all()
+    notification_list = Notification.query.filter_by(user_id=current_user.id).order_by(desc(Notification.created_at)).limit(100).all()
     for notification in notification_list:
         has_notifications = True
         if notification.notif_type != NOTIF_DEFAULT:
