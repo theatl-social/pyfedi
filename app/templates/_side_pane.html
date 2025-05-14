@@ -1,6 +1,7 @@
 <aside id="side_pane" class="col-12 {{ 'col-md-3 col-lg-2' if post_layout == 'masonry_wide' else 'col-md-4' }} side_pane" role="complementary">
 {% if community %}
     {% block community_actions %}
+        {% if not hide_community_actions -%}
         <div class="card">
             <div class="card-body">
                 <div class="row">
@@ -25,9 +26,10 @@
                 </form>
             </div>
         </div>
+        {% endif -%}
     {% endblock %}
     {% block about_community %}
-        <div class="card mt-3" id="about_community">
+        <div class="card {% if not hide_community_actions -%}mt-3{% endif %}" id="about_community">
             <div class="card-header">
                  <h2>{{ community.title }}</h2>
             </div>
