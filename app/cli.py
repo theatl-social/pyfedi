@@ -29,7 +29,8 @@ from app.shared.tasks import task_selector
 from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
     shorten_string, get_request, blocked_communities, gibberish, get_request_instance, \
     instance_banned, recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, download_defeds, \
-    get_setting, set_setting, get_redis_connection, instance_online, instance_gone_forever, find_next_occurrence
+    get_setting, set_setting, get_redis_connection, instance_online, instance_gone_forever, find_next_occurrence, \
+    guess_mime_type
 
 
 def register(app):
@@ -578,6 +579,43 @@ def register(app):
                     print(processed)
             s3.close()
             print('Done')
+
+    @app.cli.command('move-more-post-images-to-s3')
+    def move_more_post_images_to_s3():
+        with app.app_context():
+            import boto3
+            server_name = current_app.config['SERVER_NAME']
+            boto3_session = boto3.session.Session()
+            s3 = boto3_session.client(
+                service_name='s3',
+                region_name=current_app.config['S3_REGION'],
+                endpoint_url=current_app.config['S3_ENDPOINT'],
+                aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+            )
+
+            file_ids = list(db.session.execute(text(f'select id from "file" where source_url like \'https://{server_name}/static%\'')).scalars())
+            for file_id in file_ids:
+                file = File.query.get(file_id)
+                content_type = guess_mime_type(file.source_url)
+                new_path = file.source_url.replace('/static/media/', f"/")
+                s3_path = new_path.replace(f'https://{server_name}/', '')
+                new_path = new_path.replace(server_name, current_app.config['S3_PUBLIC_URL'])
+                local_file = file.source_url.replace(f'https://{server_name}/static/media/', 'app/static/media/')
+                if os.path.isfile(local_file):
+                    try:
+                        s3.upload_file(local_file, current_app.config['S3_BUCKET'], s3_path,
+                                       ExtraArgs={'ContentType': content_type})
+                    except Exception as e:
+                        print(f"Error uploading {local_file}: {e}")
+                    os.unlink(local_file)
+                    file.source_url = new_path
+                    print(new_path)
+                else:
+                    print('Could not find ' + local_file)
+
+                db.session.commit()
+        print('Done')
 
     @app.cli.command("spaceusage")
     def spaceusage():
