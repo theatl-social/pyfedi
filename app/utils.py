@@ -2059,7 +2059,7 @@ def notif_id_to_string(notif_id) -> str:
         return _('All')
 
 
-@cache.memoize(timeout=3000)
+@cache.memoize(timeout=300)
 def retrieve_image_hash(image_url):
     def fetch_hash(retries_left):
         try:
@@ -2080,7 +2080,7 @@ def retrieve_image_hash(image_url):
                 response.close()
             except:
                 pass
-        return ''
+        return None
 
     return fetch_hash(retries_left=2)
 
@@ -2101,3 +2101,17 @@ def hash_matches_blocked_image(hash: str) -> bool:
     sql = f"""SELECT id FROM blocked_image WHERE length(replace((hash # B'{hash}')::text, '0', '')) < 15;"""
     blocked_images = db.session.execute(text(sql)).scalars().first()
     return blocked_images is not None
+
+
+def posts_with_blocked_images() -> List[int]:
+    sql = """
+    SELECT DISTINCT post.id
+    FROM post
+    JOIN file ON post.image_id = file.id
+    JOIN blocked_image ON (
+        length(replace((file.hash # blocked_image.hash)::text, '0', ''))
+    ) < 15
+    WHERE post.deleted = false
+    """
+
+    return list(db.session.execute(text(sql)).scalars())

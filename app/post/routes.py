@@ -5,7 +5,7 @@ from random import randint
 from flask import redirect, url_for, flash, current_app, abort, request, g, make_response, jsonify
 from flask_login import current_user, login_required
 from flask_babel import _
-from sqlalchemy import text
+from sqlalchemy import text, desc
 from sqlalchemy.orm.exc import NoResultFound
 from furl import furl
 
@@ -38,7 +38,7 @@ from app.utils import render_template, markdown_to_html, validation_required, \
     languages_for_form, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown, \
     permission_required, blocked_users, get_request, is_local_image_url, is_video_url, can_upvote, can_downvote, \
     referrer, can_create_post_reply, communities_banned_from, \
-    block_bots, flair_for_form, login_required_if_private_instance, retrieve_image_hash
+    block_bots, flair_for_form, login_required_if_private_instance, retrieve_image_hash, posts_with_blocked_images
 from app.post.util import post_type_to_form_url_type
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, \
     delete_reply, mod_remove_reply, vote_for_reply
@@ -1404,20 +1404,16 @@ def post_block_image(post_id: int):
         form = ConfirmationForm()
         if form.validate_on_submit():
             hash = retrieve_image_hash(post.url)
-            community = post.community
             if hash:
                 file_name = str(furl(post.url).path).split('/')
                 file_name = file_name[-1]
                 blocked_image = BlockedImage(hash=hash, file_name=file_name, note=shorten_string(post.title))
                 db.session.add(blocked_image)
                 db.session.commit()
-                flash(_('Image blocked'))
-            ref = request.form.get('referrer')
-            if '/post/' not in ref:
-                return redirect(ref)
-            else:
-                return redirect(url_for('activitypub.community_profile',
-                                        actor=community.ap_id if community.ap_id is not None else community.name))
+
+                flash(_('Image blocked. Now delete matching posts.'))
+                return redirect(url_for('post.post_block_image_purge_posts', post_id=post_id, referrer=request.form.get('referrer')))
+
         else:
             form.referrer.data = referrer()
             return render_template('generic_form.html',
@@ -1426,6 +1422,30 @@ def post_block_image(post_id: int):
                                    form=form)
 
     return redirect(referrer())
+
+
+@bp.route('/post/<int:post_id>/block_image_purge_posts', methods=['GET', 'POST'])
+@login_required
+@permission_required('change instance settings')
+def post_block_image_purge_posts(post_id: int):
+    post = Post.query.get_or_404(post_id)
+    if request.method == 'POST':
+        post_ids = request.form.getlist('post_ids')
+
+        task_selector('delete_posts_with_blocked_images', post_ids=post_ids, user_id=current_user.id, send_async=not current_app.debug)
+
+        flash(_('%(count)s posts deleted.', count=len(post_ids)))
+
+        ref = request.args.get('referrer')
+        if '/post/' not in ref:
+            return redirect(ref)
+        else:
+            return redirect(url_for('activitypub.community_profile',
+                                    actor=post.community.ap_id if post.community.ap_id is not None else post.community.name))
+
+    posts = Post.query.filter(Post.id.in_(posts_with_blocked_images()), Post.deleted == False).order_by(desc(Post.posted_at)).all()
+    return render_template('post/post_block_image_purge_posts.html', post=post, posts=posts, title=_('Posts containing blocked images'),
+                           referrer=request.args.get('referrer'))
 
 
 @bp.route('/post/<int:post_id>/voting_activity', methods=['GET'])

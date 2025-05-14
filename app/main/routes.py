@@ -28,7 +28,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     permission_required, debug_mode_only, ip_address, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, \
     feed_tree_public, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, html_to_text, \
     get_redis_connection, subscribed_feeds, joined_or_modding_communities, login_required_if_private_instance, \
-    pending_communities
+    pending_communities, retrieve_image_hash
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, read_posts, Feed, FeedItem, CommunityFlair
 
@@ -716,6 +716,16 @@ def test_s3():
     s3.upload_file('babel.cfg', current_app.config['S3_BUCKET'], 'babel.cfg')
     s3.delete_object(Bucket=current_app.config['S3_BUCKET'], Key='babel.cfg')
     return 'Ok'
+
+
+@bp.route('/test_hashing')
+@debug_mode_only
+def test_hashing():
+    hash = retrieve_image_hash(f'https://{current_app.config["SERVER_NAME"]}/static/images/apple-touch-icon.png')
+    if hash:
+        return 'Ok'
+    else:
+        return 'Error'
 
 
 @bp.route('/find_voters')

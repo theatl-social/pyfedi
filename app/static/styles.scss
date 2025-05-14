@@ -1834,6 +1834,12 @@ form {
   }
 }
 
+.blocked_image {
+  img {
+    filter: grayscale(100%) blur(3px)!important;
+  }
+}
+
 .dropdown-header {
   color: black;
 }

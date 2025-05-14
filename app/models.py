@@ -1462,8 +1462,9 @@ class Post(db.Model):
             if is_image_url(post.url):
                 post.type = constants.POST_TYPE_IMAGE
 
+                # PDQ hash of image
                 image_hash = None
-                if current_app.config['IMAGE_HASHING_ENDPOINT'] and not user.trustworthy():
+                if current_app.config['IMAGE_HASHING_ENDPOINT']:
                     from app.utils import retrieve_image_hash, hash_matches_blocked_image
                     image_hash = retrieve_image_hash(post.url)
                     if image_hash and hash_matches_blocked_image(image_hash):

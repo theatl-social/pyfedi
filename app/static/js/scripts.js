@@ -38,6 +38,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupSelectNavigation();
     setupUserPopup();
     preventDoubleFormSubmissions();
+    setupSelectAllCheckbox();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
@@ -879,6 +880,17 @@ function preventDoubleFormSubmissions() {
       } else {
         submitting = true;
       }
+    });
+}
+
+function setupSelectAllCheckbox() {
+    const selectAllCheckbox = document.getElementById("select_all");
+
+    selectAllCheckbox.addEventListener("change", function() {
+        const checkboxes = document.querySelectorAll("input.can_select_all");
+        checkboxes.forEach(cb => {
+            cb.checked = selectAllCheckbox.checked;
+        });
     });
 }
 

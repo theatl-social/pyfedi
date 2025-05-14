@@ -1,6 +1,4 @@
-import json
 import os
-import mimetypes
 from app import db, cache
 from app.activitypub.util import make_image_sizes, notify_about_post
 from app.constants import *
@@ -13,7 +11,7 @@ from app.utils import render_template, authorise_api_user, shorten_string, gibbe
     is_image_url, add_to_modlog_activitypub, store_files_in_s3, guess_mime_type, retrieve_image_hash, \
     hash_matches_blocked_image
 
-from flask import abort, flash, redirect, request, url_for, current_app, g
+from flask import abort, flash, request, current_app, g
 from flask_babel import _
 from flask_login import current_user
 import boto3
@@ -205,7 +203,14 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
     db.session.add(vote)
     db.session.commit()
 
-    post = edit_post(input, post, type, src, user, auth, uploaded_file, from_scratch=True)
+    try:
+        post = edit_post(input, post, type, src, user, auth, uploaded_file, from_scratch=True)
+    except Exception as e:
+        if str(e) == 'This image is blocked':
+            db.session.delete(vote)
+            db.session.delete(post)
+            db.session.commit()
+            raise e
 
     notify_about_post(post)
 
@@ -216,7 +221,7 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
 
 
 # 'from_scratch == True' means that it's not really a user edit, we're just re-using code for make_post()
-def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, from_scratch=False):
+def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, from_scratch=False, hash=None):
     if src == SRC_API:
         if not user:
              user = authorise_api_user(auth, return_type='model')

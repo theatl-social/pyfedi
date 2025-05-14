@@ -30,11 +30,12 @@ from app.email import send_registration_approved_email
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission, Domain, \
     Tag, DefederationSubscription, BlockedImage
+from app.shared.tasks import task_selector
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
     topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents, \
     download_defeds, instance_banned, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, referrer, \
-    community_membership, retrieve_image_hash
+    community_membership, retrieve_image_hash, posts_with_blocked_images
 from app.admin import bp
 
 
@@ -1679,12 +1680,30 @@ def admin_blocked_image_add():
         db.session.commit()
 
         flash(_('Saved'))
-        return redirect(url_for('admin.admin_blocked_images'))
+        return redirect(url_for('admin.admin_blocked_image_purge_posts'))
 
     flash(_('Provide the url of an image or the hash (and file name) of it, but not both.'))
 
     return render_template('admin/edit_blocked_image.html', title=_('Add blocked image'), form=form,
                            site=g.site, )
+
+
+@bp.route('/block_image_purge_posts', methods=['GET', 'POST'])
+@login_required
+@permission_required('change instance settings')
+def admin_blocked_image_purge_posts():
+    if request.method == 'POST':
+        post_ids = request.form.getlist('post_ids')
+
+        task_selector('delete_posts_with_blocked_images', post_ids=post_ids, user_id=current_user.id, send_async=not current_app.debug)
+
+        flash(_('%(count)s posts deleted.', count=len(post_ids)))
+
+        return redirect(url_for('admin.admin_blocked_images'))
+
+    posts = Post.query.filter(Post.id.in_(posts_with_blocked_images()), Post.deleted == False).order_by(desc(Post.posted_at)).all()
+    return render_template('post/post_block_image_purge_posts.html', posts=posts, title=_('Posts containing blocked images'),
+                           referrer=request.args.get('referrer'))
 
 
 @bp.route('/blocked_image/<int:image_id>/delete', methods=['GET'])
