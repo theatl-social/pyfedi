@@ -61,6 +61,7 @@ def feed_new():
                     ap_public_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + form.url.data,
                     ap_followers_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + form.url.data + '/followers',
                     ap_following_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + form.url.data + '/following',
+                    ap_outbox_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + form.url.data + '/outbox',
                     ap_domain=current_app.config['SERVER_NAME'],
                     subscriptions_count=1, instance_id=1)
         if form.parent_feed_id.data:
