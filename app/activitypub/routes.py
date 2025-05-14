@@ -1994,7 +1994,7 @@ def feed_outbox(actor):
     result = {
         "@context": default_context(),
         "id": feed.ap_outbox_url,
-        "type": "OrderedCollection",
+        "type": "Collection",
         "totalItems": len(items),
         "items": items
     }
@@ -2027,7 +2027,7 @@ def feed_following(actor):
     result = {
         "@context": default_context(),
         "id": feed.ap_following_url,
-        "type": "OrderedCollection",
+        "type": "Collection",
         "totalItems": len(items),
         "items": items
     }
