@@ -29,7 +29,8 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     blocked_users, add_to_modlog, \
     blocked_communities, piefed_markdown_to_lemmy_markdown, \
     read_language_choices, request_etag_matches, return_304, mimetype_from_url, notif_id_to_string, \
-    login_required_if_private_instance
+    login_required_if_private_instance, recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
+    recently_downvoted_post_replies
 from sqlalchemy import desc, or_, text, asc
 from sqlalchemy.orm.exc import NoResultFound
 import os
@@ -1177,9 +1178,13 @@ def user_bookmarks():
     next_url = url_for('user.user_bookmarks', page=posts.next_num) if posts.has_next else None
     prev_url = url_for('user.user_bookmarks', page=posts.prev_num) if posts.has_prev and page != 1 else None
 
+    # Voting history
+    recently_upvoted = recently_upvoted_posts(current_user.id)
+    recently_downvoted = recently_downvoted_posts(current_user.id)
+
     return render_template('user/bookmarks.html', title=_('Bookmarks'), posts=posts, show_post_community=True,
                            low_bandwidth=low_bandwidth, user=current_user,
-                           site=g.site,
+                           site=g.site, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
                            next_url=next_url, prev_url=prev_url,
                            
                            )
@@ -1199,9 +1204,13 @@ def user_bookmarks_comments():
     next_url = url_for('user.user_bookmarks_comments', page=post_replies.next_num) if post_replies.has_next else None
     prev_url = url_for('user.user_bookmarks_comments', page=post_replies.prev_num) if post_replies.has_prev and page != 1 else None
 
+    # Voting history
+    recently_upvoted_replies = recently_upvoted_post_replies(current_user.id)
+    recently_downvoted_replies = recently_downvoted_post_replies(current_user.id)
+
     return render_template('user/bookmarks_comments.html', title=_('Comment bookmarks'), post_replies=post_replies, show_post_community=True,
                            low_bandwidth=low_bandwidth, user=current_user,
-                           site=g.site,
+                           site=g.site, recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies,
                            next_url=next_url, prev_url=prev_url,
                            
                            )
