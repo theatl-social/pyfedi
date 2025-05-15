@@ -144,10 +144,13 @@ def register():
                 form.user_name.data = normalize_utf(form.user_name.data)
                 if before_normalize != form.user_name.data:
                     flash(_('Your username contained special letters so it was changed to %(name)s.', name=form.user_name.data), 'warning')
+                font = ''
+                if request.user_agent.platform.lower() == 'windows':
+                    font = 'inter'
                 user = User(user_name=form.user_name.data, title=form.user_name.data, email=form.real_email.data,
                             verification_token=verification_token, instance_id=1, ip_address=ip_address(),
                             banned=user_ip_banned() or user_cookie_banned(), email_unread_sent=False,
-                            referrer=session.get('Referer', ''), alt_user_name=gibberish(randint(8, 20)))
+                            referrer=session.get('Referer', ''), alt_user_name=gibberish(randint(8, 20)), font=font)
                 user.set_password(form.password.data)
                 user.ip_address_country = ip_address_info['country'] if ip_address_info else ''
                 user.timezone = form.timezone.data
