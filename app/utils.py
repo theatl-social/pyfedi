@@ -2111,7 +2111,7 @@ def posts_with_blocked_images() -> List[int]:
     JOIN blocked_image ON (
         length(replace((file.hash # blocked_image.hash)::text, '0', ''))
     ) < 15
-    WHERE post.deleted = false
+    WHERE post.deleted = false AND file.hash is not null
     """
 
     return list(db.session.execute(text(sql)).scalars())
