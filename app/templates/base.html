@@ -84,18 +84,16 @@
         <meta name="HandheldFriendly" content="True">
         <meta name="MobileOptimized" content="320">
         <link rel="expect" blocking="render" href="#navbarSupportedContent">
-        {% if current_user.is_authenticated -%}
-            {% if current_user.font == 'atkinson' -%}
-                <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-Regular.woff2" as="font" type="font/woff2">
-                <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-Italic.woff2" as="font" type="font/woff2">
-                <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-Bold.woff2" as="font" type="font/woff2">
-                <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-BoldItalic.woff2" as="font" type="font/woff2">
-            {% elif current_user.font == 'inter' -%}
-                <link rel="preload" href="/static/fonts/inter/InterVariable.woff2" as="font" type="font/woff2">
-            {% elif current_user.font == 'roboto' -%}
-                <link rel="preload" href="/static/fonts/roboto/Roboto-Regular.woff2" as="font" type="font/woff2">
-                <link rel="preload" href="/static/fonts/roboto/Roboto-Bold.woff2" as="font" type="font/woff2">
-            {% endif -%}
+        {% if current_user.font == 'atkinson' -%}
+            <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-Regular.woff2" as="font" type="font/woff2">
+            <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-Italic.woff2" as="font" type="font/woff2">
+            <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-Bold.woff2" as="font" type="font/woff2">
+            <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-BoldItalic.woff2" as="font" type="font/woff2">
+        {% elif current_user.font == 'inter' -%}
+            <link rel="preload" href="/static/fonts/inter/InterVariable.woff2" as="font" type="font/woff2">
+        {% elif current_user.font == 'roboto' -%}
+            <link rel="preload" href="/static/fonts/roboto/Roboto-Regular.woff2" as="font" type="font/woff2">
+            <link rel="preload" href="/static/fonts/roboto/Roboto-Bold.woff2" as="font" type="font/woff2">
         {% endif -%}
         {% block styles -%}
             {{ bootstrap.load_css() }}
@@ -160,7 +158,7 @@
             }
         </style>
     {% endif -%}
-    {% if current_user.is_authenticated and current_user.font -%}
+    {% if current_user.font -%}
         <style>
             body, .form-control {
                 {% if current_user.font == 'inter' -%}

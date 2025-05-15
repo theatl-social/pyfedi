@@ -72,6 +72,10 @@ def before_request():
         current_user.last_seen = datetime.utcnow()
         current_user.email_unread_sent = False
     else:
+        if 'Windows' in request.user_agent.string:
+            current_user.font = 'inter'
+        else:
+            current_user.font = ''
         if session.get('Referer') is None and \
                 request.headers.get('Referer') is not None and \
                 current_app.config['SERVER_NAME'] not in request.headers.get('Referer'):

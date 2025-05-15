@@ -145,7 +145,7 @@ def register():
                 if before_normalize != form.user_name.data:
                     flash(_('Your username contained special letters so it was changed to %(name)s.', name=form.user_name.data), 'warning')
                 font = ''
-                if request.user_agent.platform.lower() == 'windows':
+                if 'Windows' in request.user_agent.string:
                     font = 'inter'
                 user = User(user_name=form.user_name.data, title=form.user_name.data, email=form.real_email.data,
                             verification_token=verification_token, instance_id=1, ip_address=ip_address(),
