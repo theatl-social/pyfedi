@@ -2126,6 +2126,7 @@ def update_post_from_activity(post: Post, request_json: dict):
     # Tags
     if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
         post.tags.clear()
+        post.flair.clear()
         for json_tag in request_json['object']['tag']:
             if json_tag['type'] == 'Hashtag':
                 if json_tag['name'][1:].lower() != post.community.name.lower():             # Lemmy adds the community slug as a hashtag on every post in the community, which we want to ignore
