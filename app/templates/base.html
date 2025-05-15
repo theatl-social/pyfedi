@@ -140,6 +140,13 @@
     <script src="/static/js/set_theme.js" type="text/javascript"></script>
   </head>
   <body class="d-flex flex-column{{ ' low_bandwidth' if low_bandwidth }} {{ session.get('compact_level', '') }}">
+    {% if 'fontSize' in request.cookies -%}
+        <style>
+            body, .form-control {
+                font-size: {{ request.cookies.get('fontSize') }}rem;
+            }
+        </style>
+    {% endif -%}
     <a href="#outer_container" class="skip-link" role="navigation" aria-label="Skip main navigation" tabindex="">Skip to main content</a>
     <a href="#side_pane" class="skip-link" role="navigation" aria-label="Go to side pane" tabindex="">Go to side pane</a>
     <!-- Page content -->
