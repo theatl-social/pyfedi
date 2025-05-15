@@ -910,7 +910,7 @@ def can_downvote(user, community: Community, site=None) -> bool:
     if community.local_only and not user.is_local():
         return False
 
-    if (user.attitude and user.attitude < -0.40) or user.reputation < -10:  # this should exclude about 3.7% of users.
+    if (user.attitude is not None and user.attitude < 0.0) or user.reputation < -10:
         return False
 
     if community.downvote_accept_mode != DOWNVOTE_ACCEPT_ALL:
