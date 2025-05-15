@@ -84,6 +84,19 @@
         <meta name="HandheldFriendly" content="True">
         <meta name="MobileOptimized" content="320">
         <link rel="expect" blocking="render" href="#navbarSupportedContent">
+        {% if current_user.is_authenticated -%}
+            {% if current_user.font == 'atkinson' -%}
+                <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-Regular.woff2" as="font" type="font/woff2">
+                <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-Italic.woff2" as="font" type="font/woff2">
+                <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-Bold.woff2" as="font" type="font/woff2">
+                <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-BoldItalic.woff2" as="font" type="font/woff2">
+            {% elif current_user.font == 'inter' -%}
+                <link rel="preload" href="/static/fonts/inter/InterVariable.woff2" as="font" type="font/woff2">
+            {% elif current_user.font == 'roboto' -%}
+                <link rel="preload" href="/static/fonts/roboto/Roboto-Regular.woff2" as="font" type="font/woff2">
+                <link rel="preload" href="/static/fonts/roboto/Roboto-Bold.woff2" as="font" type="font/woff2">
+            {% endif -%}
+        {% endif -%}
         {% block styles -%}
             {{ bootstrap.load_css() }}
             <link href="{{ url_for('static', filename='styles.css', changed=getmtime('styles.css')) }}" type="text/css" rel="stylesheet" />
@@ -142,8 +155,22 @@
   <body class="d-flex flex-column{{ ' low_bandwidth' if low_bandwidth }} {{ session.get('compact_level', '') }}">
     {% if 'fontSize' in request.cookies -%}
         <style>
-            body, .form-control {
+            body, .form-control, .btn {
                 font-size: {{ request.cookies.get('fontSize') }}rem;
+            }
+        </style>
+    {% endif -%}
+    {% if current_user.is_authenticated and current_user.font -%}
+        <style>
+            body, .form-control {
+                {% if current_user.font == 'inter' -%}
+                    font-family: Inter, Arial, sans-serif;
+                {% elif current_user.font == 'atkinson' -%}
+                    font-family: "Atkinson Hyperlegible", Arial, sans-serif;
+                    letter-spacing: 0.5px;
+                {% elif current_user.font == 'roboto' -%}
+                    font-family: Roboto, Arial, sans-serif;
+                {% endif -%}
             }
         </style>
     {% endif -%}

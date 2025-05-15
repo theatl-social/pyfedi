@@ -811,6 +811,7 @@ class User(UserMixin, db.Model):
     default_sort = db.Column(db.String(25), default='hot')
     default_filter = db.Column(db.String(25), default='subscribed')
     theme = db.Column(db.String(20), default='')
+    font = db.Column(db.String(25), default='')
     referrer = db.Column(db.String(256))
     markdown_editor = db.Column(db.Boolean, default=True)
     interface_language = db.Column(db.String(10))           # a locale that the translation system understands e.g. 'en' or 'en-us'. If empty, use browser default

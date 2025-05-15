@@ -81,6 +81,13 @@ class SettingsForm(FlaskForm):
         ('compact-min compact-max', _l('YEESSS')),  # this will apply both classes to the body tag
     ]
     compaction = SelectField(_l('Compact UI'), choices=compact_levels, coerce=str, render_kw={'class': 'form-select'})
+    fonts = [('', _l('Default')),
+             ('atkinson', _l('Atkinson Hyperlegible')),
+             ('inter', _l('Inter')),
+             ('roboto', _l('Roboto')),
+             ]
+    font = SelectField(_l('Font'), choices=fonts, validators=[Optional()], coerce=str,
+                               render_kw={'class': 'form-select'})
     accept_from = [
         ('0', _l('None')),
         ('1', _l('This instance')),
