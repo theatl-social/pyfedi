@@ -1309,6 +1309,33 @@ fieldset {
   }
 }
 
+a.unread {
+  font-weight: bold;
+
+  &:before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 6px;
+    background-color: red;
+    border-radius: 50%;
+    vertical-align: middle;
+    margin-top: -2px;
+  }
+}
+
+.overflow-ellipses-parent {
+  display: flex;
+
+  div.child {
+    flex: 1;
+    width: 1px;
+    overflow-x: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
 .profile_action_buttons, .rh_action_buttons {
   float: right;
 }

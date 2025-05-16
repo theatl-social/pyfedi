@@ -28,20 +28,20 @@
                 {% endfor -%}
             </div>
             <table class="table table-striped">
-                <tr>
-                    <th>Notification</th>
-                    <th>When</th>
-                    <th> </th>
-                </tr>
                 {% for notification in notifications %}
                     <tr>
-                        <td>{% if not notification.read %}<strong>{% endif %}
-                            <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">{{ notification.title }}</a>
-                            {% if not notification.read %}</strong>{% endif %}
+                        <td class="text-nowrap" width="*">
+                            <div class="overflow-ellipses-parent">
+                                <div class="child">
+                                    <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}"
+                                        class="{% if not notification.read %}unread{% endif %}">{{ notification.title }}</a>
+                                </div>
+                            </div>
                         </td>
-                        <td>{{ arrow.get(notification.created_at).humanize(locale=locale) }}</td>
-                        <td>
-                            <a href="{{ url_for('user.notification_delete', notification_id=notification.id) }}" class="no-underline"><span class="fe fe-delete"></span> {{ _('Delete') }}</a>
+                        <td class="text-nowrap" width="120">{{ arrow.get(notification.created_at).humanize(locale=locale) }}</td>
+                        <td width="30">
+                            <a href="{{ url_for('user.notification_delete', notification_id=notification.id) }}"
+                               class="no-underline"><span class="fe fe-delete"></span></a>
                         </td>
                     </tr>
                 {% endfor %}
