@@ -8,6 +8,10 @@
                          alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ ' blur' if blur_content }}" /></a>
             {% endif -%}
         </div>
+    {% else %}
+        <div class="col_thumbnail" aria-hidden="true">
+            <a href="{{ post.url }}" rel="nofollow ugc" class="post_link" target="_blank" aria-label="{{ _('Follow link') }}"><span class="fe fe-external fe-external-noimg"></span></a>
+        </div>
     {% endif -%}
     {% include "post/post_teaser/_title.html" %}
     {% if post.body_html -%}

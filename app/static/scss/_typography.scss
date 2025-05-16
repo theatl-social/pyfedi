@@ -107,6 +107,14 @@
   content: "\e95b";
 }
 
+.fe-external-noimg::before {
+  font-size: 40px;
+  opacity: 0.4;
+  float: right;
+  position: relative;
+  top: 10px;
+}
+
 .fe-circle::before {
   content: "\e937";
 }
