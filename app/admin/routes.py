@@ -1478,7 +1478,7 @@ def newsletter():
 
 
 @bp.route('/permissions', methods=['GET', 'POST'])
-@permission_required('change instance settings')
+@permission_required('change user roles')
 @login_required
 def admin_permissions():
     if request.method == 'POST':
