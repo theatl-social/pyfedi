@@ -153,7 +153,7 @@
   <body class="d-flex flex-column{{ ' low_bandwidth' if low_bandwidth }} {{ session.get('compact_level', '') }}">
     {% if 'fontSize' in request.cookies -%}
         <style>
-            body, .form-control, .btn, .dropdown-item, .navbar-brand {
+            body, .form-control, .btn, .dropdown-item {
                 font-size: {{ request.cookies.get('fontSize') }}rem;
             }
         </style>
