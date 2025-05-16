@@ -1,21 +1,36 @@
 {% if current_user.is_authenticated -%}
-    {% if post_reply.user_id == current_user.id -%}
+    {# Edit button - show if not deleted OR if deleted but user is author AND staff/admin #}
+    {% if not post_reply.deleted and post_reply.user_id == current_user.id -%}
+        <li><a href="{{ url_for('post.post_reply_edit', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-edit"></span>
+            {{ _('Edit') }}</a></li>
+    {% elif post_reply.deleted and post_reply.user_id == current_user.id and (current_user.is_staff() or current_user.is_admin()) -%}
         <li><a href="{{ url_for('post.post_reply_edit', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-edit"></span>
             {{ _('Edit') }}</a></li>
     {% endif -%}
-    {% if post_reply.user_id == current_user.id or post.community.is_moderator() or post.community.is_owner() or current_user.is_admin() -%}
-        {% if post_reply.deleted -%}
-            <li><a href="{{ url_for('post.post_reply_restore', post_id=post.id, comment_id=post_reply.id) }}" hx-get="{{ url_for('post.post_reply_restore', post_id=post.id, comment_id=post_reply.id) }}" hx-confirm="Are you sure?" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-arrow-up"></span>
-                {{ _('Restore') }}</a></li>
-            {% if not post_reply.has_replies() -%}
-                {% if post.community.is_moderator() or current_user.is_admin() or (post_reply.user_id == current_user.id and post_reply.deleted_by == post_reply.user_id) -%}
-                    <li><a href="{{ url_for('post.post_reply_purge', post_id=post.id, comment_id=post_reply.id) }}" hx-get="{{ url_for('post.post_reply_purge', post_id=post.id, comment_id=post_reply.id) }}" hx-confirm="Are you sure?" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-delete red"></span>
-                    {{ _('Purge') }}</a></li>
-                {% endif -%}
-            {% endif -%}
-        {% else -%}
+    
+    {# Delete/Restore section #}
+    {% if not post_reply.deleted -%}
+        {# Normal delete permissions (unchanged) #}
+        {% if post_reply.user_id == current_user.id or post.community.is_moderator() or post.community.is_owner() or current_user.is_admin() -%}
             <li><a href="{{ url_for('post.post_reply_delete', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-delete"></span>
                 {{ _('Delete') }}</a></li>
+        {% endif -%}
+    {% else -%}
+        {# Special restore permissions for deleted posts #}
+        {% if post.community.is_moderator() or post.community.is_owner() or current_user.is_admin() -%}
+            <li><a href="{{ url_for('post.post_reply_restore', post_id=post.id, comment_id=post_reply.id) }}" hx-get="{{ url_for('post.post_reply_restore', post_id=post.id, comment_id=post_reply.id) }}" hx-confirm="Are you sure?" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-arrow-up"></span>
+                {{ _('Restore') }}</a></li>
+        {% elif post_reply.user_id == current_user.id and (current_user.is_staff() or current_user.is_admin()) -%}
+            <li><a href="{{ url_for('post.post_reply_restore', post_id=post.id, comment_id=post_reply.id) }}" hx-get="{{ url_for('post.post_reply_restore', post_id=post.id, comment_id=post_reply.id) }}" hx-confirm="Are you sure?" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-arrow-up"></span>
+                {{ _('Restore') }}</a></li>
+        {% endif -%}
+        
+        {# Purge option - keep as is #}
+        {% if not post_reply.has_replies() -%}
+            {% if post.community.is_moderator() or current_user.is_admin() or (post_reply.user_id == current_user.id and post_reply.deleted_by == post_reply.user_id) -%}
+                <li><a href="{{ url_for('post.post_reply_purge', post_id=post.id, comment_id=post_reply.id) }}" hx-get="{{ url_for('post.post_reply_purge', post_id=post.id, comment_id=post_reply.id) }}" hx-confirm="Are you sure?" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-delete red"></span>
+                {{ _('Purge') }}</a></li>
+            {% endif -%}
         {% endif -%}
     {% endif -%}
     {% if existing_bookmark -%}
