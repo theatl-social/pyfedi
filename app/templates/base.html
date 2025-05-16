@@ -255,12 +255,14 @@
                                   {% endif -%}
                                 </ul>
                             </li>
-                            {% if user_access('change instance settings', current_user.id) %}
+                            {% if current_user.is_staff() or current_user.is_admin() %}
                                 <li class="nav-item dropdown{% if active_parent == 'admin' %} active{% endif %}">
                                     <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/admin/" aria-haspopup="true" aria-expanded="false">{{ _('Admin') }}</a>
                                     <ul class="dropdown-menu">
-                                      <li><a class="dropdown-item{{ ' active' if active_child == 'admin_site' }}" href="{{ url_for('admin.admin_site') }}">{{ _('Home') }}</a></li>
+                                      <li><a class="dropdown-item{{ ' active' if active_child == 'admin_site' }}" href="{{ url_for('admin.admin_home') }}">{{ _('Home') }}</a></li>
+                                      {% if user_access('', current_user.id) -%}
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_content' }}" href="{{ url_for('admin.admin_content', show='spammy', days='3') }}">{{ _('Spam') }}</a></li>
+                                      {% endif -%}
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'modlog' }}" href="{{ url_for('main.modlog') }}">{{ _('Modlog') }}</a></li>
                                         {% if debug_mode %}
                                             <li><a class="dropdown-item{{ ' active' if active_child == 'dev_tools' }}" href="{{ url_for('dev.tools') }}">{{ _('Dev Tools') }}</a></li>
