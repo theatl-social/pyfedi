@@ -173,7 +173,7 @@
     <a href="#side_pane" class="skip-link" role="navigation" aria-label="Go to side pane" tabindex="">Go to side pane</a>
     <!-- Page content -->
     {% block navbar -%}
-    <div class="navbar navbar-expand-lg sticky-md-top">
+    <div class="navbar navbar-expand-lg sticky-lg-top">
         <div class="{{ 'container-lg' if post_layout != 'masonry_wide' else 'container-fluid' }}" role="banner">
             <a class="navbar-brand" href="/" aria-label="{{ _('To home page') }}">{% if not low_bandwidth %}<img src="{{ g.site.logo if g.site.logo else '/static/images/piefed_logo_full_t_300x300.svg' }}" alt="Logo" width="50" height="50" />{% endif %}{{ g.site.name }}</a>
             {% if current_user.is_authenticated -%}
