@@ -1943,7 +1943,7 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
             if new_reply.user_id != notify_id:
                 targets_data = {'post_id':new_reply.post.id,'comment_id':new_reply.id}
                 new_notification = Notification(title=shorten_string(_('Reply to %(post_title)s',
-                                                                       post_title=new_reply.post.title), 50),
+                                                                       post_title=new_reply.post.title), 150),
                                                 url=f"/post/{new_reply.post.id}#comment_{new_reply.id}",
                                                 user_id=notify_id, author_id=new_reply.user_id,
                                                 notif_type=NOTIF_POST,
@@ -1961,7 +1961,7 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
                 if new_reply.depth <= THREAD_CUTOFF_DEPTH:
                     targets_data = {'post_id':parent_reply.post.id,'comment_id':new_reply.id,'author_id':new_reply.user_id}
                     new_notification = Notification(title=shorten_string(_('Reply to comment on %(post_title)s',
-                                                                           post_title=parent_reply.post.title), 50),
+                                                                           post_title=parent_reply.post.title), 150),
                                                     url=f"/post/{parent_reply.post.id}#comment_{new_reply.id}",
                                                     user_id=notify_id, author_id=new_reply.user_id,
                                                     notif_type=NOTIF_REPLY,
@@ -1970,7 +1970,7 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
                 else:
                     targets_data = {'post_id':parent_reply.post.id,'parent_comment_id':parent_reply.id,'comment_id':new_reply.id,'author_id':new_reply.user_id}
                     new_notification = Notification(title=shorten_string(_('Reply to comment on %(post_title)s',
-                                                                           post_title=parent_reply.post.title), 50),
+                                                                           post_title=parent_reply.post.title), 150),
                                                     url=f"/post/{parent_reply.post.id}/comment/{parent_reply.id}#comment_{new_reply.id}",
                                                     user_id=notify_id, author_id=new_reply.user_id,
                                                     notif_type=NOTIF_REPLY,
