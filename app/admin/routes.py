@@ -1264,10 +1264,16 @@ def admin_content():
 @permission_required('approve registrations')
 @login_required
 def admin_approve_registrations():
+    if os.path.isfile('app/static/disposable_domains.txt'):
+        with open('app/static/disposable_domains.txt', 'r', encoding='utf-8') as f:
+            disposable_domains = [line.rstrip('\n') for line in f]
+    else:
+        disposable_domains = []
+
     registrations = UserRegistration.query.filter_by(status=0).order_by(UserRegistration.created_at).all()
     recently_approved = UserRegistration.query.filter_by(status=1).order_by(desc(UserRegistration.approved_at)).limit(30)
     return render_template('admin/approve_registrations.html',
-                           registrations=registrations,
+                           registrations=registrations, disposable_domains=disposable_domains,
                            recently_approved=recently_approved,
                            site=g.site, )
 

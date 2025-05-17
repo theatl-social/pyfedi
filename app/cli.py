@@ -882,6 +882,13 @@ def register(app):
             with open('app/static/all_sfw_communities.json','w') as asfwcj:
                 json.dump(all_sfw_communities_json, asfwcj)
 
+            print('Getting disposable email domain list...')
+            resp = get_request('https://raw.githubusercontent.com/disposable/disposable-email-domains/master/domains.txt')
+            if resp.status_code == 200:
+                with open('app/static/disposable_domains.txt', 'w') as f:
+                    f.write(resp.content.decode('utf-8'))
+                resp.close()
+
             print('Done!')
 
     @app.cli.command("populate_post_reply_for_api")

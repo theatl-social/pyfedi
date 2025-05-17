@@ -1,4 +1,5 @@
 import json
+import os.path
 from datetime import date, datetime
 from random import randint
 from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, g
@@ -12,11 +13,11 @@ from app import db, cache, limiter, oauth
 from app.auth import bp
 from app.auth.forms import LoginForm, RegistrationForm, ResetPasswordRequestForm, ResetPasswordForm
 from app.auth.util import random_token, normalize_utf, ip2location, no_admins_logged_in_recently
-from app.constants import NOTIF_REGISTRATION
+from app.constants import NOTIF_REGISTRATION, NOTIF_REPORT
 from app.email import send_verification_email, send_password_reset_email, send_registration_approved_email
 from app.models import User, utcnow, IpBan, UserRegistration, Notification, Site
 from app.utils import render_template, ip_address, user_ip_banned, user_cookie_banned, banned_ip_addresses, \
-    finalize_user_setup, blocked_referrers, gibberish, get_setting
+    finalize_user_setup, blocked_referrers, gibberish, get_setting, notify_admin
 
 
 @bp.route('/login', methods=['GET', 'POST'])
@@ -146,7 +147,7 @@ def register():
                     flash(_('Your username contained special letters so it was changed to %(name)s.', name=form.user_name.data), 'warning')
                 font = ''
                 if 'Windows' in request.user_agent.string:
-                    font = 'inter'
+                    font = 'inter'  # the default font on Windows doesn't look great so defaut to Inter. A windows computer will tend to have a connection that won't notice the 300KB font file.
                 user = User(user_name=form.user_name.data, title=form.user_name.data, email=form.real_email.data,
                             verification_token=verification_token, instance_id=1, ip_address=ip_address(),
                             banned=user_ip_banned() or user_cookie_banned(), email_unread_sent=False,
@@ -178,6 +179,15 @@ def register():
                     db.session.commit()
                     return redirect(url_for('auth.please_wait'))
                 else:
+                    if os.path.isfile('app/static/disposable_domains.txt'):
+                        with open('app/static/disposable_domains.txt', 'r', encoding='utf-8') as f:
+                            disposable_domains = [line.rstrip('\n') for line in f]
+                        if user.email_domain() in disposable_domains:
+                            # todo: notify everyone with the "approve registrations" permission, instead of just all admins?
+                            targets_data = {'suspect_user_id': user.id, 'reporter_id': 1}
+                            notify_admin(_('Throwaway email used for account %(username)s', username=user.user_name),
+                                         url=f'/u/{user.link()}', author_id=1, notif_type=NOTIF_REPORT,
+                                         subtype='user_reported', targets=targets_data)
                     if user.verified:
                         finalize_user_setup(user)
                         login_user(user, remember=True)

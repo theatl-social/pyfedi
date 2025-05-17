@@ -48,7 +48,7 @@ from captcha.image import ImageCaptcha
 
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, ActivityPubLog, IpBan, \
     Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
-    File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest
+    File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest, Notification
 
 
 # Flask's render_template function, with support for themes added
@@ -2115,3 +2115,15 @@ def posts_with_blocked_images() -> List[int]:
     """
 
     return list(db.session.execute(text(sql)).scalars())
+
+
+def notify_admin(title, url, author_id, notif_type, subtype, targets):
+    for admin in Site.admins():
+        notify = Notification(title=title, url=url,
+                              user_id=admin.id,
+                              author_id=author_id, notif_type=notif_type,
+                              subtype=subtype,
+                              targets=targets)
+        admin.unread_notifications += 1
+        db.session.add(notify)
+    db.session.commit()

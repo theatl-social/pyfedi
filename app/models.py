@@ -1013,6 +1013,9 @@ class User(UserMixin, db.Model):
             return current_app.config['SERVER_NAME']
         else:
             return self.instance.domain
+    def email_domain(self):
+        email_parts = self.email.split('@')
+        return email_parts[1]
 
     def get_reset_password_token(self, expires_in=600):
         return jwt.encode(
