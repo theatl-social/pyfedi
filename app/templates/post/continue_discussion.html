@@ -7,7 +7,7 @@
 
 {% block app_content %}
 <div class="row">
-    <main class="col-12 col-md-8 position-relative main_pane">
+    <main class="col-12 col-lg-8 position-relative main_pane">
         {% include 'post/_post_full.html' %}
         <p><a href="{{ url_for('activitypub.post_ap', post_id=post.id, _anchor='replies') }}">Back to main discussion</a></p>
         <div class="row post_replies">

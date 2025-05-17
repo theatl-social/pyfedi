@@ -8,7 +8,7 @@
 {% block app_content %}
 <script src="/static/js/coolfieldset.js?v=3"></script>
 <div class="row">
-    <main class="col-12 col-md-8 position-relative main_pane">
+    <main class="col-12 col-lg-8 position-relative main_pane">
         {% block title %}<h1>{{ _('Edit post') }}</h1>{% endblock %}
         <form method="post" enctype="multipart/form-data" role="form">
             {{ form.csrf_token() }}

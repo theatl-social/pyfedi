@@ -7,7 +7,7 @@
 
 {% block app_content %}
 <div class="row">
-    <main class="col-12 col-md-8 position-relative main_pane">
+    <main class="col-12 col-lg-8 position-relative main_pane">
         {% include "post/_breadcrumb_nav.html" %}
         <h1 class="mt-2">{{ _('Cross-post %(post_name)s', post_name=post.title) }}</h1>
         {{ render_form(form) }}
