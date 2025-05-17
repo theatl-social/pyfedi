@@ -23,6 +23,7 @@
     {% endif %}
     {% if user_access('change instance settings', current_user.id) %}
         <a href="{{ url_for('admin.admin_federation') }}">{{ _('Federation') }}</a> |
+        <a href="{{ url_for('admin.admin_instances') }}">{{ _('Instances') }}</a> |
         <a href="{{ url_for('admin.newsletter') }}">{{ _('Newsletter') }}</a> |
         <a href="{{ url_for('admin.admin_activities') }}">{{ _('Activities') }}</a> |
     {% endif %}

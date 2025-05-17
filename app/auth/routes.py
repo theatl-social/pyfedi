@@ -1,4 +1,3 @@
-import json
 import os.path
 from datetime import date, datetime
 from random import randint
