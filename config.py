@@ -84,3 +84,5 @@ class Config(object):
     ENABLE_ALPHA_API = os.environ.get('ENABLE_ALPHA_API') or False
 
     IMAGE_HASHING_ENDPOINT = os.environ.get('IMAGE_HASHING_ENDPOINT') or ''
+
+    FLAG_THROWAWAY_EMAILS = os.environ.get('FLAG_THROWAWAY_EMAILS') or False

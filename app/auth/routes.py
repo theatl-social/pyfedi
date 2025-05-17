@@ -179,7 +179,7 @@ def register():
                     db.session.commit()
                     return redirect(url_for('auth.please_wait'))
                 else:
-                    if os.path.isfile('app/static/disposable_domains.txt'):
+                    if current_app.config['FLAG_THROWAWAY_EMAILS'] and os.path.isfile('app/static/disposable_domains.txt'):
                         with open('app/static/disposable_domains.txt', 'r', encoding='utf-8') as f:
                             disposable_domains = [line.rstrip('\n') for line in f]
                         if user.email_domain() in disposable_domains:

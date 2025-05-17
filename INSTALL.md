@@ -185,6 +185,10 @@ If it does not work check the log file at logs/pyfedi.log for clues.
 will be treated as bounces and deleted after extracting the email addresses in them. Use a dedicated inbox
 for bounces, not a inbox you also use for other purposes.
 
+* Set FLAG_THROWAWAY_EMAILS = 1 to see a warning on throwaway email addresses during registration approvals - https://piefed.social/post/758768
+
+* Enable [image blocking](https://piefed.social/post/751901) by setting IMAGE_HASHING_ENDPOINT to the url of [a PDQ hashing instance](https://piefed.social/post/759065).
+
 ### Development mode
 
 Setting `FLASK_DEBUG=1` in the `.env` file will enable the `<your-site>/dev/tools` page. It will expose some various testing routes as well. See the [testing section](#testing).
