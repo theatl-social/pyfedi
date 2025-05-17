@@ -67,56 +67,6 @@
   src: url("/static/fonts/feather/feather.ttf?cb") format("truetype"), url("/static/fonts/feather/feather.woff?cb") format("woff"), url("/static/fonts/feather/feather.svg?cb#Feather") format("svg");
   font-weight: normal;
   font-style: normal;
-  font-display: block;
-}
-@font-face {
-  font-family: Inter;
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url("/static/fonts/inter/InterVariable.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Roboto";
-  src: url("/static/fonts/roboto/Roboto-Regular.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Roboto";
-  src: url("/static/fonts/roboto/Roboto-Bold.woff2") format("woff2");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Atkinson Hyperlegible";
-  src: url("/static/fonts/atkinson/AtkinsonHyperlegible-Regular.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Atkinson Hyperlegible";
-  src: url("/static/fonts/atkinson/AtkinsonHyperlegible-Italic.woff2") format("woff2");
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Atkinson Hyperlegible";
-  src: url("/static/fonts/atkinson/AtkinsonHyperlegible-Bold.woff2") format("woff2");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Atkinson Hyperlegible";
-  src: url("/static/fonts/atkinson/AtkinsonHyperlegible-BoldItalic.woff2") format("woff2");
-  font-weight: 700;
-  font-style: italic;
-  font-display: swap;
 }
 .fe {
   font-family: "Feather" !important;

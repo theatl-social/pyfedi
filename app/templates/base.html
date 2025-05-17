@@ -160,16 +160,13 @@
     {% endif -%}
     {% if current_user.font -%}
         <style>
-            body, .form-control {
-                {% if current_user.font == 'inter' -%}
-                    font-family: Inter, Arial, sans-serif;
-                {% elif current_user.font == 'atkinson' -%}
-                    font-family: "Atkinson Hyperlegible", Arial, sans-serif;
-                    letter-spacing: 0.5px;
-                {% elif current_user.font == 'roboto' -%}
-                    font-family: Roboto, Arial, sans-serif;
-                {% endif -%}
-            }
+            {% if current_user.font == 'inter' %}
+                {% include 'fonts/inter.css' %}
+            {% elif current_user.font == 'atkinson' %}
+                {% include 'fonts/atkinson.css' %}
+            {% elif current_user.font == 'roboto' %}
+                {% include 'fonts/roboto.css' %}
+            {% endif %}
         </style>
     {% endif -%}
     <a href="#outer_container" class="skip-link" role="navigation" aria-label="Skip main navigation" tabindex="">Skip to main content</a>
