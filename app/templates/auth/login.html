@@ -6,6 +6,7 @@
 {% from 'bootstrap/form.html' import render_form -%}
 
 {% block app_content -%}
+<script src="/static/js/simplewebauthn13.umd.min.js" nonce="{{ session.nonce }}"></script>
     <div class="row">
         <div class="col col-login mx-auto">
             <div class="card mt-5">
@@ -18,6 +19,7 @@
                     <p align="center">OR<br><br>
                         <a href="/auth/google_login" class="btn btn-outline-primary">{{ _('Log in with Google') }}
                             <img src="/static/images/tiny_g_logo.png" width="16" alt="Logo"></a>
+                        <button class="btn btn-outline-primary mt-4 mb-3" id="log_in_with_passkey">{{ _('Log in with a passkey') }}</button>
                     </p>
                     {% endif -%}
                     <hr />

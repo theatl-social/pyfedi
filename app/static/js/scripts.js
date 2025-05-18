@@ -40,6 +40,7 @@ document.addEventListener("DOMContentLoaded", function () {
     preventDoubleFormSubmissions();
     setupSelectAllCheckbox();
     setupFontSizeChangers();
+    setupAddPassKey();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
@@ -875,13 +876,16 @@ function setupAddPollChoice() {
 
 function preventDoubleFormSubmissions() {
     let submitting = false;
-    document.querySelector('form').addEventListener('submit', function (e) {
-      if (submitting) {
-        e.preventDefault();
-      } else {
-        submitting = true;
-      }
-    });
+    const form = document.querySelector('form');
+    if (form) {
+      form.addEventListener('submit', function (e) {
+          if (submitting) {
+            e.preventDefault();
+          } else {
+            submitting = true;
+          }
+      });
+    }
 }
 
 function setupSelectAllCheckbox() {
@@ -898,20 +902,148 @@ function setupSelectAllCheckbox() {
 }
 
 function setupFontSizeChangers() {
-    document.getElementById('increase_font_size').addEventListener('click', (e) => {
-        e.preventDefault();
-        let current = getCurrentFontSize();
-        current += 0.1;
-        applyFontSize(current);
-        setCookie('fontSize', current, 100000);
-    });
-    document.getElementById('decrease_font_size').addEventListener('click', (e) => {
-        e.preventDefault();
-        let current = getCurrentFontSize();
-        current = Math.max(0.5, current - 0.1); // Prevent too small
-        applyFontSize(current);
-        setCookie('fontSize', current, 100000);
-    });
+    const increaseFontSize = document.getElementById('increase_font_size');
+    if(increaseFontSize) {
+        document.getElementById('increase_font_size').addEventListener('click', (e) => {
+            e.preventDefault();
+            let current = getCurrentFontSize();
+            current += 0.1;
+            applyFontSize(current);
+            setCookie('fontSize', current, 100000);
+        });
+        document.getElementById('decrease_font_size').addEventListener('click', (e) => {
+            e.preventDefault();
+            let current = getCurrentFontSize();
+            current = Math.max(0.5, current - 0.1); // Prevent too small
+            applyFontSize(current);
+            setCookie('fontSize', current, 100000);
+        });
+    }
+}
+
+function setupAddPassKey() {
+    const passkeyButton = document.getElementById('add_passkey_button');
+    if(passkeyButton) {
+        document.getElementById('add_passkey_button').addEventListener('click', () => {
+           const { startRegistration } = SimpleWebAuthnBrowser;
+           fetch('/user/passkeys/registration/options')
+              .then(response => {
+                if (!response.ok) {
+                  throw new Error(`Options request failed: ${response.statusText}`);
+                }
+                return response.json();
+              })
+              .then(registrationOptionsJSON => {
+                // Start WebAuthn registration
+                startRegistration({ optionsJSON: registrationOptionsJSON })
+                  .then(regResp => {
+                    const device = prompt(`Enter a name for this passkey:`);
+
+                    fetch('/user/passkeys/registration/verification', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json'
+                      },
+                      body: JSON.stringify({
+                        response: regResp,
+                        device: device
+                      })
+                    })
+                      .then(response => {
+                        if (!response.ok) {
+                          throw new Error(`Verification request failed: ${response.statusText}`);
+                        }
+                        return response.text();
+                      })
+                      .then(result => {
+                        if (result === 'FAILED') {
+                          console.log(`Verification request failed.`);
+                          alert(`Something went wrong, and we couldn't register the passkey.`);
+                        } else {
+                          setCookie('passkey', result.trim(), 365);
+                          location.href = `/user/passkeys`;
+                        }
+                      })
+                      .catch(error => {
+                        alert(error.message);
+                        alert(`Something went wrong, and we couldn't register the passkey.`);
+                      });
+                  })
+                  .catch(error => {
+                    alert(error.message);
+                    alert(`Something went wrong, and we couldn't register the passkey.`);
+                  });
+              })
+              .catch(error => {
+                alert(error.message);
+                alert(`Something went wrong, and we couldn't register the passkey.`);
+              });
+
+        });
+    }
+
+    const logInWithPasskey = document.getElementById('log_in_with_passkey');
+    if(logInWithPasskey) {
+        document.getElementById('log_in_with_passkey').addEventListener('click', async () => {
+            const { browserSupportsWebAuthn } = SimpleWebAuthnBrowser;
+            let passkeyUsername = getCookie('passkey');
+            if(!passkeyUsername) {
+                passkeyUsername = document.getElementById('user_name').value;
+                if(!passkeyUsername) {
+                   passkeyUsername = prompt('What is your user name?');
+                }
+            }
+            if (!browserSupportsWebAuthn()) {
+                logInWithPasskey.classList.add('d-none');
+            }
+            else {
+                const { startAuthentication, browserSupportsWebAuthnAutofill } = SimpleWebAuthnBrowser;
+                let redirect = getValueFromQueryString('next');
+                // Submit options
+                const apiAuthOptsResp = await fetch('/auth/passkeys/login_options', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        username: passkeyUsername,
+                    }),
+                });
+                const authenticationOptionsJSON = await apiAuthOptsResp.json();
+
+                console.log('AUTHENTICATION OPTIONS');
+                console.log(JSON.stringify(authenticationOptionsJSON, null, 2));
+
+                if (authenticationOptionsJSON.error) {
+                    $.prompt(authenticationOptionsJSON.error);
+                    return;
+                }
+
+                // Start WebAuthn authentication
+                const authResp = await startAuthentication({ optionsJSON: authenticationOptionsJSON, useBrowserAutofill: false });
+
+                console.log('AUTHENTICATION RESPONSE');
+                console.log(JSON.stringify(authResp, null, 2));
+
+                // Submit response
+                const apiAuthVerResp = await fetch('/auth/passkeys/login_verification', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        username: passkeyUsername,
+                        redirect: redirect,
+                        response: authResp,
+                    }),
+                });
+                const verificationJSON = await apiAuthVerResp.json()
+
+                if (verificationJSON.verified === true) {
+                    location.href = verificationJSON.redirectTo;
+                } else {
+                    console.log(`Authentication failed: ${verificationJSON.message}`);
+                    $.prompt(verificationJSON.message);
+                }
+            }
+        });
+    }
 }
 
 function getCurrentFontSize() {
@@ -925,6 +1057,17 @@ function applyFontSize(sizeRem) {
     document.querySelectorAll('.form-control').forEach(el => {
         el.style.fontSize = sizeRem + 'rem';
     });
+}
+
+
+// ------------------- Utilities -------------------
+
+
+// Retrieve a value from the query string by key
+function getValueFromQueryString(key) {
+    const queryString = window.location.search;
+    const params = new URLSearchParams(queryString);
+    return params.get(key);
 }
 
 function getCookie(name) {

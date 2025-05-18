@@ -759,6 +759,20 @@ read_posts = db.Table('read_posts',
                       )
 
 
+class Passkey(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    passkey_id = db.Column(db.String(256))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    public_key = db.Column(db.LargeBinary)  # Store the raw binary public key
+    created = db.Column(db.DateTime, default=utcnow)
+    used = db.Column(db.DateTime, default=utcnow)
+    device = db.Column(db.String(50))
+    counter = db.Column(db.Integer, default=0)
+    
+    def __repr__(self):
+        return f"<Passkey {self.id} {self.device}>"
+
+
 class User(UserMixin, db.Model):
     query_class = FullTextSearchQuery
     id = db.Column(db.Integer, primary_key=True)
@@ -846,8 +860,8 @@ class User(UserMixin, db.Model):
     posts = db.relationship('Post', lazy='dynamic', cascade="all, delete-orphan")
     post_replies = db.relationship('PostReply', lazy='dynamic', cascade="all, delete-orphan")
     extra_fields = db.relationship('UserExtraField', lazy='dynamic', cascade="all, delete-orphan")
-
     roles = db.relationship('Role', secondary=user_role, lazy='dynamic', cascade="all, delete")
+    passkeys = db.relationship('Passkey', lazy='dynamic', cascade="all, delete-orphan")
 
     hide_read_posts = db.Column(db.Boolean, default=False)
     # db relationship tracked by the "read_posts" table
@@ -873,6 +887,10 @@ class User(UserMixin, db.Model):
             return self.id
         else:
             return 0
+
+    @classmethod
+    def get_by_email(cls, email):
+        return User.query.filter(User.email == email.strip()).first()
 
     def display_name(self):
         if self.deleted is False:
