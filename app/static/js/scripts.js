@@ -1036,6 +1036,7 @@ function setupAddPassKey() {
                 const verificationJSON = await apiAuthVerResp.json()
 
                 if (verificationJSON.verified === true) {
+                    setCookie('passkey', passkeyUsername, 1000);
                     location.href = verificationJSON.redirectTo;
                 } else {
                     console.log(`Authentication failed: ${verificationJSON.message}`);
