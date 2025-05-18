@@ -993,55 +993,51 @@ function setupAddPassKey() {
                    passkeyUsername = prompt('What is your user name?');
                 }
             }
-            if (!browserSupportsWebAuthn()) {
-                logInWithPasskey.classList.add('d-none');
+
+            const { startAuthentication, browserSupportsWebAuthnAutofill } = SimpleWebAuthnBrowser;
+            let redirect = getValueFromQueryString('next');
+            // Submit options
+            const apiAuthOptsResp = await fetch('/auth/passkeys/login_options', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    username: passkeyUsername,
+                }),
+            });
+            const authenticationOptionsJSON = await apiAuthOptsResp.json();
+
+            console.log('AUTHENTICATION OPTIONS');
+            console.log(JSON.stringify(authenticationOptionsJSON, null, 2));
+
+            if (authenticationOptionsJSON.error) {
+                $.prompt(authenticationOptionsJSON.error);
+                return;
             }
-            else {
-                const { startAuthentication, browserSupportsWebAuthnAutofill } = SimpleWebAuthnBrowser;
-                let redirect = getValueFromQueryString('next');
-                // Submit options
-                const apiAuthOptsResp = await fetch('/auth/passkeys/login_options', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        username: passkeyUsername,
-                    }),
-                });
-                const authenticationOptionsJSON = await apiAuthOptsResp.json();
 
-                console.log('AUTHENTICATION OPTIONS');
-                console.log(JSON.stringify(authenticationOptionsJSON, null, 2));
+            // Start WebAuthn authentication
+            const authResp = await startAuthentication({ optionsJSON: authenticationOptionsJSON, useBrowserAutofill: false });
 
-                if (authenticationOptionsJSON.error) {
-                    $.prompt(authenticationOptionsJSON.error);
-                    return;
-                }
+            console.log('AUTHENTICATION RESPONSE');
+            console.log(JSON.stringify(authResp, null, 2));
 
-                // Start WebAuthn authentication
-                const authResp = await startAuthentication({ optionsJSON: authenticationOptionsJSON, useBrowserAutofill: false });
+            // Submit response
+            const apiAuthVerResp = await fetch('/auth/passkeys/login_verification', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    username: passkeyUsername,
+                    redirect: redirect,
+                    response: authResp,
+                }),
+            });
+            const verificationJSON = await apiAuthVerResp.json()
 
-                console.log('AUTHENTICATION RESPONSE');
-                console.log(JSON.stringify(authResp, null, 2));
-
-                // Submit response
-                const apiAuthVerResp = await fetch('/auth/passkeys/login_verification', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        username: passkeyUsername,
-                        redirect: redirect,
-                        response: authResp,
-                    }),
-                });
-                const verificationJSON = await apiAuthVerResp.json()
-
-                if (verificationJSON.verified === true) {
-                    setCookie('passkey', passkeyUsername, 1000);
-                    location.href = verificationJSON.redirectTo;
-                } else {
-                    console.log(`Authentication failed: ${verificationJSON.message}`);
-                    $.prompt(verificationJSON.message);
-                }
+            if (verificationJSON.verified === true) {
+                setCookie('passkey', passkeyUsername, 1000);
+                location.href = verificationJSON.redirectTo;
+            } else {
+                console.log(`Authentication failed: ${verificationJSON.message}`);
+                $.prompt(verificationJSON.message);
             }
         });
     }
