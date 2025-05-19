@@ -105,24 +105,22 @@
             {% endif -%}
         </div>
         <div class="comment_actions_link">
-            {% if not post_reply.post.deleted -%}
-                <div class="dropdown">
-                    <a 
-                        href="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) if low_bandwidth else '#' }}"
-                        data-bs-toggle="dropdown" rel="nofollow noindex" 
-                        aria-label="{{ _('Comment options') }}">
-                        <span class="fe fe-options" title="Options"> </span>
-                    </a>
-                    <ul class="dropdown-menu" style="width: 320px">
-                        <div 
-                            hx-get="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) }}"
-                            hx-trigger="intersect once"
-                            hx-target="this"
-                            hx-swap="outerHTML"
-                        ></div>
-                    </ul>
-                </div>
-            {% endif -%}
+            <div class="dropdown">
+                <a 
+                    href="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) if low_bandwidth else '#' }}"
+                    data-bs-toggle="dropdown" rel="nofollow noindex" 
+                    aria-label="{{ _('Comment options') }}">
+                    <span class="fe fe-options" title="Options"> </span>
+                </a>
+                <ul class="dropdown-menu" style="width: 320px">
+                    <div 
+                        hx-get="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) }}"
+                        hx-trigger="intersect once"
+                        hx-target="this"
+                        hx-swap="outerHTML"
+                    ></div>
+                </ul>
+            </div>
         </div>
     </div>
     <div id="reply_to_{{ post_reply.id }}" class="hidable"></div>
