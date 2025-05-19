@@ -1,18 +1,18 @@
-
 msgid ""
 msgstr ""
-"Project-Id-Version:  piefed\n"
+"Project-Id-Version: piefed\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-04-12 08:47+1200\n"
-"PO-Revision-Date: 2025-04-11 20:37+0000\n"
+"PO-Revision-Date: 2025-05-07 06:47+0000\n"
 "Last-Translator: snoopy <snoopy@zaclys.net>\n"
+"Language-Team: French <http://translate.piefed.social/projects/piefed/"
+"main-web-app/fr/>\n"
 "Language: fr\n"
-"Language-Team: French <http://translate.piefed.social/projects/piefed"
-"/main-web-app/fr/>\n"
-"Plural-Forms: nplurals=2; plural=n > 1;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n > 1;\n"
+"X-Generator: Weblate 5.10.4\n"
 "Generated-By: Babel 2.12.1\n"
 
 #: app/__init__.py:42
@@ -247,9 +247,8 @@ msgid "Trump Musk filter setup"
 msgstr "Configuration du filtre Trump Musk"
 
 #: app/admin/forms.py:41
-#, fuzzy
 msgid "Ignore registrations from these countries"
-msgstr "Bloquer les inscriptions de ces parrains/marraines (une par ligne)"
+msgstr "Ignorer les inscriptions de ces pays"
 
 #: app/admin/forms.py:42
 msgid "Block registrations from these referrers (one per line)"
@@ -261,7 +260,7 @@ msgstr "Thème par défaut"
 
 #: app/admin/forms.py:44
 msgid "Additional CSS"
-msgstr ""
+msgstr "Ajout de CSS"
 
 #: app/admin/forms.py:45 app/templates/_view_filter_nav.html:3
 #: app/templates/_view_filter_nav.html:12
@@ -1467,14 +1466,14 @@ msgid "Publish"
 msgstr "Publier"
 
 #: app/community/forms.py:132
-#, fuzzy, python-format
+#, python-format
 msgid "NSFW posts are not allowed."
-msgstr "Les liens vers %(domain)s ne sont pas autorisés."
+msgstr "Les publications NSFW ne sont pas autorisées."
 
 #: app/community/forms.py:139
-#, fuzzy, python-format
+#, python-format
 msgid "NSFL posts are not allowed."
-msgstr "Les liens vers %(domain)s ne sont pas autorisés."
+msgstr "Les publications NSFL ne sont pas autorisées."
 
 #: app/community/forms.py:149 app/community/forms.py:167
 msgid "URL"
@@ -1603,7 +1602,6 @@ msgid "Retrieve"
 msgstr "Récupérer"
 
 #: app/community/forms.py:294
-#, fuzzy
 msgid "To"
 msgstr "Vers"
 
@@ -2363,49 +2361,40 @@ msgid "Top"
 msgstr "Meilleur"
 
 #: app/templates/_home_nav.html:8
-#, fuzzy
 msgid "Most upvotes in the last hour"
-msgstr "Les plus hautvotés depuis ces dernières 24h"
+msgstr "Les plus hautvotés au cours de la dernière heure"
 
 #: app/templates/_home_nav.html:9
-#, fuzzy
 msgid "Most upvotes in the last 6h"
-msgstr "Les plus hautvotés depuis ces dernières 24h"
+msgstr "Les plus hautvotés au cours des 6 dernières heures"
 
 #: app/templates/_home_nav.html:10
-#, fuzzy
 msgid "Most upvotes in the last 12h"
-msgstr "Les plus hautvotés depuis ces dernières 24h"
+msgstr "Les plus hautvotés au cours des 12 dernières heures"
 
 #: app/templates/_home_nav.html:11
-#, fuzzy
 msgid "Most upvotes in the last day"
-msgstr "Les plus hautvotés depuis ces dernières 24h"
+msgstr "Les plus hautvotés au cours de la dernière journée"
 
 #: app/templates/_home_nav.html:11 app/templates/_home_nav.html:28
-#, fuzzy
 msgid "Day"
-msgstr "1 jour"
+msgstr "Jour"
 
 #: app/templates/_home_nav.html:12
-#, fuzzy
 msgid "Most upvotes in the last week"
-msgstr "Les plus hautvotés depuis ces dernières 24h"
+msgstr "Les plus hautvotés au cours de la dernière semaine"
 
 #: app/templates/_home_nav.html:12 app/templates/_home_nav.html:29
-#, fuzzy
 msgid "Week"
-msgstr "1 semaine"
+msgstr "Semaine"
 
 #: app/templates/_home_nav.html:13
-#, fuzzy
 msgid "Most upvotes in the last month"
-msgstr "Les plus hautvotés depuis ces dernières 24h"
+msgstr "Les plus hautvotés au cours du dernier mois"
 
 #: app/templates/_home_nav.html:13 app/templates/_home_nav.html:30
-#, fuzzy
 msgid "Month"
-msgstr "1 mois"
+msgstr "Mois"
 
 #: app/templates/_home_nav.html:17 app/templates/themes/dillo/_home_nav.html:1
 #: app/templates/themes/dillo/_home_nav.html:2
@@ -2744,9 +2733,8 @@ msgid "Activity Alerts"
 msgstr "Alertes d'activités"
 
 #: app/templates/base.html:257
-#, fuzzy
 msgid "Manage donations"
-msgstr "Domaines bannis"
+msgstr "Gérer les dons"
 
 #: app/templates/base.html:260 app/templates/themes/dillo/base.html:224
 msgid "Read Posts"
@@ -2794,10 +2782,14 @@ msgid ""
 " are vital in supporting the PieFed development effort, allowing us to "
 "expand and enhance PieFed with new features."
 msgstr ""
+"PieFed est un logiciel libre et open-source qui fonctionne sans aucune "
+"publicité, monétisation ou dépendance au capital-risque. Vos dons sont "
+"essentiels pour soutenir le développement de PieFed, nous permettant "
+"d'élargir et d'améliorer PieFed avec de nouvelles fonctionnalités."
 
 #: app/templates/donate.html:14 app/templates/user/choose_plan.html:65
 msgid "Donate using Patreon"
-msgstr ""
+msgstr "Dons via Patreon"
 
 #: app/templates/index.html:27 app/templates/themes/dillo/index.html:31
 msgid "No posts yet. Join some communities to see more."
@@ -2943,7 +2935,6 @@ msgid "Choose a topic to filter communities by"
 msgstr "Choisir une rubrique pour filtrer les communautés"
 
 #: app/templates/list_communities.html:61
-#, fuzzy
 msgid "Feed"
 msgstr "Flux"
 
@@ -2995,9 +2986,8 @@ msgid "There are no communities yet."
 msgstr "Il n'y a pas encore de communautés."
 
 #: app/templates/list_communities.html:205
-#, fuzzy
 msgid "No communities match your search."
-msgstr "Aucune publication ne correspond à votre recherche."
+msgstr "Aucune communauté ne correspond à votre recherche."
 
 #: app/templates/list_topics.html:25
 msgid "Choose a topic"
@@ -3121,7 +3111,6 @@ msgstr "Réponse"
 
 #: app/templates/admin/approve_registrations.html:26
 #: app/templates/admin/approve_registrations.html:64
-#, fuzzy
 msgid "Applied"
 msgstr "Postulé"
 
@@ -3400,11 +3389,13 @@ msgstr "Paramètres du contenu"
 
 #: app/templates/admin/misc.html:20
 msgid "CSS in this field will be added to every page."
-msgstr ""
+msgstr "Le CSS dans ce champs sera ajouté à chaque page."
 
 #: app/templates/admin/misc.html:37
 msgid "Use 2-letter country codes, one per line. Requires IPinfo API."
 msgstr ""
+"Utilisez des codes de pays à deux lettres, un par ligne. Nécessite l'API "
+"IPinfo."
 
 #: app/templates/admin/site.html:19
 msgid ""
@@ -4051,7 +4042,7 @@ msgid "Revert"
 msgstr "Retour en arrière"
 
 #: app/templates/community/invite.html:20
-#, fuzzy, python-format
+#, python-format
 msgid "Invite to %(name)s"
 msgstr "Inviter vers %(name)s"
 
@@ -4803,13 +4794,12 @@ msgid "No posts match your search."
 msgstr "Aucune publication ne correspond à votre recherche."
 
 #: app/templates/search/start.html:13
-#, fuzzy
 msgid "Search for..."
-msgstr "Rechercher des publications"
+msgstr "Rechercher..."
 
 #: app/templates/search/start.html:15
 msgid "What to search for: "
-msgstr ""
+msgstr "Ce qu'il faut rechercher : "
 
 #: app/templates/search/start.html:25
 msgid "Keyword"
@@ -5028,9 +5018,9 @@ msgstr ""
 "chaque commentaire pour trouver la fonction de mise en favori."
 
 #: app/templates/user/choose_plan.html:10
-#, fuzzy, python-format
+#, python-format
 msgid "Donate to %(instance_name)s"
-msgstr "Modifier %(instance_name)s"
+msgstr "Faire un don à %(instance_name)s"
 
 #: app/templates/user/choose_plan.html:12
 #, python-format
@@ -5038,42 +5028,44 @@ msgid ""
 "By supporting %(instance_name)s financially you will be helping to build "
 "a better internet for everyone."
 msgstr ""
+"En soutenant financièrement %(instance_name)s, vous contribuerez à la "
+"construction d'un meilleur internet pour tous et toutes."
 
 #: app/templates/user/choose_plan.html:14
 msgid "Please choose from one of the plans below."
-msgstr ""
+msgstr "Veuillez choisir l'une des offres ci-dessous."
 
 #: app/templates/user/choose_plan.html:21
 msgid "Manage existing donation plan"
-msgstr ""
+msgstr "Gérer les offres de dons existantes"
 
 #: app/templates/user/choose_plan.html:25
 msgid "Cancel regular donation"
-msgstr ""
+msgstr "Annuler le don régulier"
 
 #: app/templates/user/choose_plan.html:28
 msgid ""
 "When your credit card expires you will need to add a new one to continue "
 "your donations."
 msgstr ""
+"Lorsque votre carte de crédit expirera, vous devrez en ajouter une nouvelle "
+"pour continuer à faire des dons."
 
 #: app/templates/user/choose_plan.html:29
 msgid "Update credit card details"
-msgstr ""
+msgstr "Mettre à jour les informations de la carte de crédit"
 
 #: app/templates/user/choose_plan.html:39
-#, fuzzy
 msgid "Donation"
-msgstr "Faire un don"
+msgstr "Dons"
 
 #: app/templates/user/choose_plan.html:51
-#, fuzzy
 msgid "Generous donation"
-msgstr "Usurpation d'identité"
+msgstr "Don généreux"
 
 #: app/templates/user/choose_plan.html:60
 msgid "Prices are in US dollars."
-msgstr ""
+msgstr "Les prix sont en dollars américains."
 
 #: app/templates/user/delete_account.html:15
 #: app/templates/user/edit_settings.html:17
@@ -5385,7 +5377,7 @@ msgstr "Bloquer %(user_name)s"
 
 #: app/templates/user/show_profile.html:104
 msgid "Lemmyverse.link"
-msgstr ""
+msgstr "Lemmyverse.link"
 
 #: app/templates/user/show_profile.html:105
 #: app/templates/user/user_preview.html:59 app/user/routes.py:1425
@@ -5430,9 +5422,8 @@ msgid "IP address of last interaction."
 msgstr "Adresse IP de la dernière interaction."
 
 #: app/templates/user/show_profile.html:125
-#, fuzzy
 msgid "Donor"
-msgstr "BasVoter"
+msgstr "donateur·ice"
 
 #: app/templates/user/show_profile.html:153
 msgid "Post pagination"
@@ -5459,32 +5450,35 @@ msgid "Ban + Purge"
 msgstr "Bannir et purger"
 
 #: app/templates/user/stripe_redirect.html:10 app/user/subscription.py:86
-#, fuzzy
 msgid "Please wait..."
-msgstr "Veuillez faire en sorte que cela s'arrête"
+msgstr "Veuillez patienter..."
 
 #: app/templates/user/stripe_redirect.html:11
 msgid "You are being sent to our payment system, please wait a moment."
 msgstr ""
+"Vous êtes en train d'être redirigé vers notre plateforme de paiement, "
+"veuillez patienter un moment."
 
 #: app/templates/user/stripe_result.html:10
 msgid "Payment result"
-msgstr ""
+msgstr "Résultat du paiement"
 
 #: app/templates/user/stripe_result.html:12
 msgid "Thank you for your donation!"
-msgstr ""
+msgstr "Merci pour votre don !"
 
 #: app/templates/user/stripe_result.html:14
+#, fuzzy
 msgid ""
 "Something went wrong during the payment process. No changes have been "
 "made to your account."
 msgstr ""
+"Un problème est survenu au cours de la procédure de paiement. Aucune "
+"modification n'a été apportée à votre compte."
 
 #: app/templates/user/stripe_result.html:16
-#, fuzzy
 msgid "Continue"
-msgstr "En ligne"
+msgstr "Continuer"
 
 #: app/templates/user/user_feeds.html:13
 msgid "New Feed"
@@ -5770,18 +5764,16 @@ msgid "Theme"
 msgstr "Thème"
 
 #: app/user/forms.py:78
-#, fuzzy
 msgid "No"
-msgstr "Note"
+msgstr "Non"
 
 #: app/user/forms.py:80
-#, fuzzy
 msgid "YEESSS"
-msgstr "Oui"
+msgstr "OUIIII"
 
 #: app/user/forms.py:82
 msgid "Compact UI"
-msgstr ""
+msgstr "IU compacte"
 
 #: app/user/forms.py:83 app/user/forms.py:139
 msgid "Save settings"
@@ -6117,11 +6109,12 @@ msgid ""
 "Thank you for supporting %(instance_name)s! Any choice you make below "
 "will replace your current donation plan."
 msgstr ""
+"Merci de soutenir %(instance_name)s ! Tout choix que vous ferez ci-dessous "
+"remplacera votre plan de don actuel."
 
 #: app/user/subscription.py:21
-#, fuzzy
 msgid "Choose a donation plan"
-msgstr "Choisissez une rubrique"
+msgstr "Choisissez une offre de don"
 
 #: app/user/subscription.py:30
 #, python-format
@@ -6129,23 +6122,24 @@ msgid ""
 "Log in to donate to %(instance_name)s or donate to the PieFed project "
 "using the button below."
 msgstr ""
+"Connectez-vous pour faire un don à %(instance_name)s ou faites un don au "
+"projet PieFed en utilisant le bouton ci-dessous"
 
 #: app/user/subscription.py:153
 msgid "You are not donating"
-msgstr ""
+msgstr "Vous ne faites pas de dons"
 
 #: app/user/subscription.py:153
 msgid "There are no regular donations set to occur in the future."
-msgstr ""
+msgstr "Il n'y a pas de dons réguliers prévus dans le futur."
 
 #: app/user/subscription.py:159
 msgid "Regular donation cancelled"
-msgstr ""
+msgstr "Don récurrent annulé"
 
 #: app/user/subscription.py:159
-#, fuzzy
 msgid "Your donation has been cancelled."
-msgstr "Votre commentaire a été ajouté."
+msgstr "Votre don a été annulé."
 
 #~ msgid "Allow search engines to index this profile"
 #~ msgstr "Suchmaschinen erlauben, dieses Profil zu indizieren"
@@ -6352,4 +6346,3 @@ msgstr "Votre commentaire a été ajouté."
 
 #~ msgid "This comment has already been bookmarked"
 #~ msgstr "Ce commentaire est déjà dans vos favoris"
-

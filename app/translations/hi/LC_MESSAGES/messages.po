@@ -8,170 +8,173 @@ msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-04-12 08:47+1200\n"
-"PO-Revision-Date: 2025-04-12 08:46+1200\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"PO-Revision-Date: 2025-04-15 19:47+0000\n"
+"Last-Translator: ColdSideOfYourPillow "
+"<coldsideofyourpillow+piefed@disroot.org>\n"
+"Language-Team: Hindi <http://translate.piefed.social/projects/piefed/"
+"main-web-app/hi/>\n"
 "Language: hi\n"
-"Language-Team: hi <LL@li.org>\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Weblate 5.10.4\n"
 "Generated-By: Babel 2.12.1\n"
 
 #: app/__init__.py:42
 msgid "Please log in to access this page."
-msgstr ""
+msgstr "कृपया इस पृष्ठ पर प्रवेश करने के लिए लॉग इन करें।"
 
 #: app/cli.py:520 app/main/routes.py:663
 msgid "[PieFed] You have unread notifications"
-msgstr ""
+msgstr "[पाईफ़ेड] आपके पास अपठित सूचनाएं हैं"
 
 #: app/cli.py:640 app/shared/post.py:115
 #, python-format
 msgid "Replies to my post %(post_title)s"
-msgstr ""
+msgstr "मेरी पोस्ट %(post_title)s पर जवाब"
 
 #: app/cli.py:649 app/models.py:1909 app/shared/reply.py:105
 #, python-format
 msgid "Replies to my comment on %(post_title)s"
-msgstr ""
+msgstr "मेरी %(post_title)s पर तिप्पणी के जवाब"
 
 #: app/email.py:16
 msgid "[PieFed] Reset Your Password"
-msgstr ""
+msgstr "[पाईफ़ेड] अपना पासवर्ड रीसेट करें"
 
 #: app/email.py:26
 msgid "[PieFed] Please verify your email address"
-msgstr ""
+msgstr "[पाईफ़ेड] कृपया अपने ई-मेल पते की पुष्टि करें"
 
 #: app/email.py:34
 msgid "Your application has been approved - welcome to PieFed"
-msgstr ""
+msgstr "आपका आवेदन स्वीकृत हो गया है - पाईफ़ेड में आपका स्वागत है"
 
 #: app/email.py:34
 msgid "Welcome to PieFed"
-msgstr ""
+msgstr "पाईफ़ेड में आपका स्वागत है"
 
 #: app/models.py:2471
 msgid "Added moderator"
-msgstr ""
+msgstr "माॅडरेटर नियुक्त किया"
 
 #: app/models.py:2472
 msgid "Removed moderator"
-msgstr ""
+msgstr "मॉडरेटर हटाया गया"
 
 #: app/models.py:2473
 msgid "Featured post"
-msgstr ""
+msgstr "विशेष पोस्ट"
 
 #: app/models.py:2474
 msgid "Unfeatured post"
-msgstr ""
+msgstr "गैर-विशेष पोस्ट"
 
 #: app/models.py:2475
 msgid "Deleted post"
-msgstr ""
+msgstr "हटाया गया पोस्ट"
 
 #: app/models.py:2476
 msgid "Un-deleted post"
-msgstr ""
+msgstr "पुनर्स्थापित पोस्ट"
 
 #: app/models.py:2477
 msgid "Deleted comment"
-msgstr ""
+msgstr "हटाई गई तिप्पणी"
 
 #: app/models.py:2478
 msgid "Un-deleted comment"
-msgstr ""
+msgstr "पुनर्स्थापित तिप्पणी"
 
 #: app/models.py:2479
 msgid "Deleted community"
-msgstr ""
+msgstr "हटाया गया समुदाय"
 
 #: app/models.py:2480
 msgid "Deleted account"
-msgstr ""
+msgstr "हटाया गया एकाउंट"
 
 #: app/models.py:2481
 msgid "Restored account"
-msgstr ""
+msgstr "पुनर्स्थापित एकाउंट"
 
 #: app/models.py:2482
 msgid "Banned account"
-msgstr ""
+msgstr "प्रतिबंधित एकाउंट"
 
 #: app/models.py:2483
 msgid "Un-banned account"
-msgstr ""
+msgstr "अनुमत एकाउंट"
 
 #: app/models.py:2484
 msgid "Lock post"
-msgstr ""
+msgstr "पोस्ट निष्क्रिय करें"
 
 #: app/models.py:2485
 msgid "Un-lock post"
-msgstr ""
+msgstr "पोस्ट सक्रिय करें"
 
 #: app/auth/routes.py:50 app/auth/routes.py:245 app/post/routes.py:621
 #: app/shared/auth.py:59 app/utils.py:1384
 msgid "You have been banned."
-msgstr ""
+msgstr "आपको प्रतिबंधित कर दिया गया है।"
 
 #: app/utils.py:1716
 msgid "Wrong Captcha text."
-msgstr ""
+msgstr "गलत कैप्चा पाठ।"
 
 #: app/activitypub/util.py:1773
 #, python-format
 msgid "Reply to %(post_title)s"
-msgstr ""
+msgstr "%(post_title)s का उत्तर दें"
 
 #: app/activitypub/util.py:1787 app/activitypub/util.py:1792
 #, python-format
 msgid "Reply to comment on %(post_title)s"
-msgstr ""
+msgstr "%(post_title)s पर तिप्पणी का उत्तर दें"
 
 #: app/activitypub/util.py:2236 app/post/routes.py:1037 app/shared/post.py:506
 msgid "A post has been reported"
-msgstr ""
+msgstr "एक पोस्ट की रिपोर्ट की गई है"
 
 #: app/activitypub/util.py:2257 app/post/routes.py:1213 app/shared/reply.py:286
 msgid "A comment has been reported"
-msgstr ""
+msgstr "एक तिप्पणी की रिपोर्ट की गई है"
 
 #: app/admin/forms.py:14
 msgid "Site Name"
-msgstr ""
+msgstr "साइट का नाम"
 
 #: app/admin/forms.py:15
 msgid "Tagline"
-msgstr ""
+msgstr "टैगलाइन"
 
 #: app/admin/forms.py:16
 msgid "Icon"
-msgstr ""
+msgstr "आइकन"
 
 #: app/admin/forms.py:18
 msgid "Sidebar"
-msgstr ""
+msgstr "साइडबार"
 
 #: app/admin/forms.py:19 app/templates/base.html:315
 #: app/templates/instance/people.html:24
 #: app/templates/themes/dillo/base.html:272
 msgid "About"
-msgstr ""
+msgstr "के बारे में"
 
 #: app/admin/forms.py:20
 msgid "Announcement at top of home page"
-msgstr ""
+msgstr "मुख्य पृष्ठ के शीर्ष पर घोषणा"
 
 #: app/admin/forms.py:21
 msgid "Legal information"
-msgstr ""
+msgstr "कानूनी जानकारी"
 
 #: app/admin/forms.py:22
 msgid "General instance contact email address"
-msgstr ""
+msgstr "सामान्य Instance संपर्क ई-मेल पता"
 
 #: app/admin/forms.py:23 app/admin/forms.py:56 app/admin/forms.py:68
 #: app/admin/forms.py:125 app/admin/forms.py:146 app/admin/forms.py:155
@@ -179,107 +182,113 @@ msgstr ""
 #: app/community/forms.py:85 app/feed/forms.py:25 app/feed/forms.py:57
 #: app/templates/admin/permissions.html:36 app/user/forms.py:153
 msgid "Save"
-msgstr ""
+msgstr "सहेजें"
 
 #: app/admin/forms.py:27
 msgid "Enable downvotes"
-msgstr ""
+msgstr "डाउनवोट सक्षम करें"
 
 #: app/admin/forms.py:28
 msgid "Allow local image posts"
-msgstr ""
+msgstr "स्थानीय छवि पोस्ट करने की अनुमति दें"
 
 #: app/admin/forms.py:29
+#, fuzzy
 msgid "Days to cache images from remote instances for"
-msgstr ""
+msgstr "दूरस्थ instances से छवियों को कैश करने के लिए दिन"
 
 #: app/admin/forms.py:29
 msgid "0 means cache forever"
-msgstr ""
+msgstr "० का अर्थ है हमेशा के लिए कैश करना"
 
 #: app/admin/forms.py:30
+#, fuzzy
 msgid "Allow NSFW communities"
-msgstr ""
+msgstr "NSFW समुदायों के लिए अनुमति दें"
 
 #: app/admin/forms.py:31
+#, fuzzy
 msgid "Allow NSFL communities and posts"
-msgstr ""
+msgstr "NSFL समुदायों और पोस्ट के लिए अनुमति दें"
 
 #: app/admin/forms.py:32
 msgid "Only admins can create new local communities"
-msgstr ""
+msgstr "केवल प्रशासक नए स्थानीय समुदायों का निर्माण कर सकते हैं"
 
 #: app/admin/forms.py:33
 msgid "Notify admins about reports, not just moderators"
 msgstr ""
+"रिपोर्टों के बारे में केवल मॉडरेटरों को नहीं, बल्कि प्रशासकों को भी सूचित करें"
 
 #: app/admin/forms.py:34
 msgid "Require new accounts to verify their email address"
-msgstr ""
+msgstr "नए अकाउंटों को अपनी ई-मेल पते की पुष्टि करें"
 
 #: app/admin/forms.py:35
 msgid "Open"
-msgstr ""
+msgstr "खोलें"
 
 #: app/admin/forms.py:35
 msgid "Require application"
-msgstr ""
+msgstr "आवेदन आवश्यक करें"
 
 #: app/admin/forms.py:35
 msgid "Closed"
-msgstr ""
+msgstr "बंद किया गया"
 
 #: app/admin/forms.py:36
 msgid "Registration mode"
-msgstr ""
+msgstr "पंजीकरण मोड"
 
 #: app/admin/forms.py:37
 msgid "Question to ask people applying for an account"
-msgstr ""
+msgstr "एकाउंट के लिए आवेदन करने वाले लोगों से पूछने के लिए प्रश्न"
 
 #: app/admin/forms.py:39
 msgid "Provide a list of topics to subscribe to"
-msgstr ""
+msgstr "सदस्यता लेने के लिए विधाएँ की एक सूची प्रदान करें"
 
 #: app/admin/forms.py:40
 msgid "Trump Musk filter setup"
-msgstr ""
+msgstr "ट्रंप मस्क फ़िल्टर सेटअप"
 
 #: app/admin/forms.py:41
 msgid "Ignore registrations from these countries"
-msgstr ""
+msgstr "इन देशों से पंजीकरण की अनदेखी करें"
 
 #: app/admin/forms.py:42
 msgid "Block registrations from these referrers (one per line)"
-msgstr ""
+msgstr "इन संदर्भितों से पंजीकरण अवरुद्ध करें (प्रत्येक एक पंक्ति में)"
 
 #: app/admin/forms.py:43
 msgid "Default theme"
-msgstr ""
+msgstr "पूर्वनिर्धारित रूप"
 
 #: app/admin/forms.py:44
+#, fuzzy
 msgid "Additional CSS"
-msgstr ""
+msgstr "अतिरिक्त CSS"
 
 #: app/admin/forms.py:45 app/templates/_view_filter_nav.html:3
 #: app/templates/_view_filter_nav.html:12
 #: app/templates/themes/dillo/_view_filter_nav.html:5 app/user/forms.py:69
 msgid "Subscribed"
-msgstr ""
+msgstr "सदस्यता ली"
 
 #: app/admin/forms.py:46 app/templates/_view_filter_nav.html:4
 #: app/templates/_view_filter_nav.html:14
 #: app/templates/list_communities.html:30
 #: app/templates/themes/dillo/_view_filter_nav.html:9 app/user/forms.py:70
+#, fuzzy
 msgid "Local"
-msgstr ""
+msgstr "स्थानीय"
 
 #: app/admin/forms.py:47 app/templates/_view_filter_nav.html:5
 #: app/templates/_view_filter_nav.html:16
 #: app/templates/admin/communities.html:69
 #: app/templates/themes/dillo/_view_filter_nav.html:12 app/user/forms.py:71
 msgid "Popular"
-msgstr ""
+msgstr "लोकप्रिय"
 
 #: app/admin/forms.py:48 app/templates/_view_filter_nav.html:6
 #: app/templates/_view_filter_nav.html:18
@@ -293,209 +302,222 @@ msgstr ""
 #: app/templates/themes/dillo/_view_filter_nav.html:15
 #: app/templates/user/alerts/_filter.html:3 app/user/forms.py:72
 msgid "All"
-msgstr ""
+msgstr "सभी"
 
 #: app/admin/forms.py:50 app/user/forms.py:74
 msgid "Default home filter"
-msgstr ""
+msgstr "पूर्वनिर्धारित होम फ़िल्टर"
 
 #: app/admin/forms.py:52
 msgid "Log ActivityPub JSON for debugging"
-msgstr ""
+msgstr "डिबगिंग के लिए ActivityPub JSON लॉग करें"
 
 #: app/admin/forms.py:53
 msgid "Show moderation actions publicly"
-msgstr ""
+msgstr "मॉडरेशन क्रियाओं को सार्वजनिक रूप से दिखाएँ"
 
 #: app/admin/forms.py:54
 msgid "Show Rational Discourse Toolkit in sidebar"
-msgstr ""
+msgstr "साइडबार में तर्कसंगत संवाद उपकरण दिखाएँ"
 
 #: app/admin/forms.py:60
 msgid "Allowlist instead of blocklist"
-msgstr ""
+msgstr "अनुमति सूची के बजाय अवरोध सूची"
 
 #: app/admin/forms.py:61
+#, fuzzy
 msgid "Allow federation with these instances"
-msgstr ""
+msgstr "इन instances के साथ federation की अनुमति दें"
 
 #: app/admin/forms.py:62
 msgid "Blocklist instead of allowlist"
-msgstr ""
+msgstr "अवरोध सूची के बजाय अनुमति सूची"
 
 #: app/admin/forms.py:63
+#, fuzzy
 msgid "Deny federation with these instances"
-msgstr ""
+msgstr "इन instances के साथ federation को अस्वीकार करें"
 
 #: app/admin/forms.py:64
+#, fuzzy
 msgid "Auto-defederate from any instance defederated by"
 msgstr ""
+"किसी भी instance से स्वचालित रूप से defederate करें जिसे द्वारा defederated किया गया "
+"है"
 
 #: app/admin/forms.py:65
 msgid "Discard all posts, comments and PMs with these phrases (one per line)"
 msgstr ""
+"इन वाक्यांशों के साथ सभी पोस्ट, टिप्पणियाँ और निजी संदेश हटा दें (प्रत्येक एक पंक्ति में)"
 
 #: app/admin/forms.py:66
 msgid ""
 "Discard all posts and comments by users with these words in their name "
 "(one per line)"
 msgstr ""
+"इन शब्दों वाले उपयोगकर्ताओं के नाम में सभी पोस्ट और टिप्पणियाँ हटा दें (प्रत्येक एक पंक्ति में)"
 
 #: app/admin/forms.py:67
 msgid ""
 "Discard all posts and comments by users with these phrases in their bio "
 "(one per line)"
 msgstr ""
+"इन जीवनी में दिए गए वाक्यांशों वाले उपयोगकर्ताओं द्वारा सभी पोस्ट और टिप्पणियाँ हटा दें "
+"(प्रत्येक एक पंक्ति में)"
 
 #: app/admin/forms.py:72 app/admin/forms.py:77
 msgid "Number of Communities to add"
-msgstr ""
+msgstr "शामिल करने के लिए समुदायों की संख्या"
 
 #: app/admin/forms.py:73
 msgid "Add Communities"
-msgstr ""
+msgstr "समुदायों शामिल करें"
 
 #: app/admin/forms.py:76
 msgid "Remote Server"
-msgstr ""
+msgstr "दूरस्थ सर्वर"
 
 #: app/admin/forms.py:78
 msgid "Communities must have at least this many posts"
-msgstr ""
+msgstr "समुदायों में कम-से-कम इस संख्या में पोस्ट का होना आवश्यक है"
 
 #: app/admin/forms.py:79
 msgid "Communities must have at least this many active users in the past week."
 msgstr ""
+"समुदायों में पिछले सप्ताह में कम-से-कम इस संख्या के सक्रिय उपयोगकर्ताओं का होना आवश्यक है।"
 
 #: app/admin/forms.py:80
+#, fuzzy
 msgid "Dry Run"
-msgstr ""
+msgstr "ड्राई रन"
 
 #: app/admin/forms.py:81
 msgid "Scan"
-msgstr ""
+msgstr "स्कैन करें"
 
 #: app/admin/forms.py:84
 msgid "Import Bans List Json File"
-msgstr ""
+msgstr "आयात प्रतिबंध सूची JSON फ़ाइल"
 
 #: app/admin/forms.py:85 app/user/forms.py:89
 msgid "Import"
-msgstr ""
+msgstr "आयात करें"
 
 #: app/admin/forms.py:86 app/user/forms.py:88
 msgid "Export"
-msgstr ""
+msgstr "निर्यात करें"
 
 #: app/admin/forms.py:90 app/community/forms.py:50 app/community/forms.py:76
 #: app/community/forms.py:119
 msgid "Title"
-msgstr ""
+msgstr "शीर्षक"
 
 #: app/admin/forms.py:91 app/community/forms.py:22 app/feed/forms.py:14
 #: app/feed/forms.py:46 app/templates/community/community_wiki_list.html:33
 msgid "Url"
-msgstr ""
+msgstr "Url"
 
 #: app/admin/forms.py:92 app/community/forms.py:23 app/community/forms.py:51
 #: app/feed/forms.py:15 app/feed/forms.py:47
 #: app/templates/community/community_moderate.html:39
 msgid "Description"
-msgstr ""
+msgstr "विवरण"
 
 #: app/admin/forms.py:93 app/community/forms.py:24 app/community/forms.py:52
 #: app/feed/forms.py:19 app/feed/forms.py:51
 msgid "Icon image"
-msgstr ""
+msgstr "आइकन छवि"
 
 #: app/admin/forms.py:94 app/community/forms.py:25 app/community/forms.py:53
 #: app/feed/forms.py:20 app/feed/forms.py:52
 msgid "Banner image"
-msgstr ""
+msgstr "बैनर छवि"
 
 #: app/admin/forms.py:95 app/community/forms.py:26 app/community/forms.py:54
 msgid "Rules"
-msgstr ""
+msgstr "नियम"
 
 #: app/admin/forms.py:96 app/community/forms.py:55
 msgid "Porn community"
-msgstr ""
+msgstr "पोर्न समुदाय"
 
 #: app/admin/forms.py:97
+#, fuzzy
 msgid "Banned - no new posts accepted"
-msgstr ""
+msgstr "प्रतिबंधित - कोई नए पोस्ट स्वीकार नहीं किए जाएंगे"
 
 #: app/admin/forms.py:98 app/community/forms.py:56
 msgid "Only accept posts from current instance"
-msgstr ""
+msgstr "केवल वर्तमान instance से पोस्ट स्वीकार करें"
 
 #: app/admin/forms.py:99 app/community/forms.py:57
 msgid "Only moderators can post"
-msgstr ""
+msgstr "केवल मॉडरेटर ही पोस्ट कर सकते हैं"
 
 #: app/admin/forms.py:100 app/community/forms.py:58
 msgid "New moderators wanted"
-msgstr ""
+msgstr "नए मॉडरेटरों की आवश्यकता है"
 
 #: app/admin/forms.py:101
 msgid "Posts can be popular"
-msgstr ""
+msgstr "पोस्ट लोकप्रिय हो सकते हैं"
 
 #: app/admin/forms.py:102
 msgid "Posts show in All list"
-msgstr ""
+msgstr "“सभी” सूची में पोस्ट दिखाते हैं"
 
 #: app/admin/forms.py:103
 msgid "Low quality / toxic - upvotes in here don't add to reputation"
 msgstr ""
+"निम्न गुणवत्ता / विषैला - यहाँ पर मिले अपवो आपकी प्रतिष्ठा में योगदान नहीं करते"
 
 #: app/admin/forms.py:104
 msgid "Forever"
-msgstr ""
+msgstr "सदा"
 
 #: app/admin/forms.py:105
 msgid "1 week"
-msgstr ""
+msgstr "१ सप्ताह"
 
 #: app/admin/forms.py:106
 msgid "2 weeks"
-msgstr ""
+msgstr "२ सप्ताह"
 
 #: app/admin/forms.py:107
 msgid "1 month"
-msgstr ""
+msgstr "१ महीना"
 
 #: app/admin/forms.py:108
 msgid "2 months"
-msgstr ""
+msgstr "२ महीने"
 
 #: app/admin/forms.py:109
 msgid "3 months"
-msgstr ""
+msgstr "३ महीने"
 
 #: app/admin/forms.py:110
 msgid "6 months"
-msgstr ""
+msgstr "६ महीने"
 
 #: app/admin/forms.py:111
 msgid "1 year"
-msgstr ""
+msgstr "१ वर्ष"
 
 #: app/admin/forms.py:112
 msgid "2 years"
-msgstr ""
+msgstr "२ वर्ष"
 
 #: app/admin/forms.py:113
 msgid "5 years"
-msgstr ""
+msgstr "५ वर्ष"
 
 #: app/admin/forms.py:114
 msgid "10 years"
-msgstr ""
+msgstr "१० वर्ष"
 
 #: app/admin/forms.py:116
 msgid "Retain content"
-msgstr ""
+msgstr "सामग्री बनाए रखें"
 
 #: app/admin/forms.py:117 app/community/forms.py:66
 #: app/templates/admin/communities.html:43
@@ -503,27 +525,27 @@ msgstr ""
 #: app/templates/admin/communities.html:97
 #: app/templates/list_communities.html:46
 msgid "Topic"
-msgstr ""
+msgstr "विधा"
 
 #: app/admin/forms.py:118 app/community/forms.py:68
 #: app/templates/community/_community_nav.html:50
 #: app/templates/feed/_feed_nav.html:48
 msgid "List"
-msgstr ""
+msgstr "सूची"
 
 #: app/admin/forms.py:119 app/community/forms.py:69
 msgid "Masonry"
-msgstr ""
+msgstr "मेसनरी"
 
 #: app/admin/forms.py:120 app/community/forms.py:70
 msgid "Wide masonry"
-msgstr ""
+msgstr "चौड़ी मेसनरी"
 
 #: app/admin/forms.py:121 app/community/forms.py:71
 #: app/templates/admin/communities.html:66
 #: app/templates/admin/communities.html:101
 msgid "Layout"
-msgstr ""
+msgstr "लेआउट"
 
 #: app/admin/forms.py:122 app/admin/forms.py:154
 msgid "Posting warning"
@@ -531,15 +553,15 @@ msgstr ""
 
 #: app/admin/forms.py:123 app/community/forms.py:29 app/community/forms.py:67
 msgid "Languages"
-msgstr ""
+msgstr "भाषाएँ"
 
 #: app/admin/forms.py:124
 msgid "Override remote language setting"
-msgstr ""
+msgstr "दूरस्थ भाषा सेटिंग को अधिकार करें"
 
 #: app/admin/forms.py:131 app/community/forms.py:36 app/feed/forms.py:31
 msgid "Url is required."
-msgstr ""
+msgstr "URL आवश्यक है।"
 
 #: app/admin/forms.py:142 app/community/forms.py:21 app/feed/forms.py:13
 #: app/feed/forms.py:45 app/templates/admin/approve_registrations.html:22
@@ -553,11 +575,11 @@ msgstr ""
 #: app/templates/user/filters.html:121 app/templates/user/filters.html:139
 #: app/user/forms.py:143
 msgid "Name"
-msgstr ""
+msgstr "नाम"
 
 #: app/admin/forms.py:142
 msgid "Human readable name for the topic."
-msgstr ""
+msgstr "विधा के लिए मानव-पठनीय नाम।"
 
 #: app/admin/forms.py:143 app/community/forms.py:77
 msgid "Slug"
@@ -565,125 +587,127 @@ msgstr ""
 
 #: app/admin/forms.py:143
 msgid "A short and unique identifier that becomes part of the URL."
-msgstr ""
+msgstr "एक छोटा और अद्वितीय पहचानकर्ता जो URL का हिस्सा बनता है।"
 
 #: app/admin/forms.py:144
 msgid "Parent topic"
-msgstr ""
+msgstr "मूल विधा"
 
 #: app/admin/forms.py:145
 msgid "Show posts from child topics"
-msgstr ""
+msgstr "उपश्रेणी विधाएँ से पोस्ट दिखाएँ"
 
 #: app/admin/forms.py:150
 msgid "Vote weight"
-msgstr ""
+msgstr "मत का भार"
 
 #: app/admin/forms.py:151 app/templates/admin/instances.html:21
 #: app/templates/admin/instances.html:104
 #: app/templates/instance/list_instances.html:20
 #: app/templates/instance/list_instances.html:49
 msgid "Dormant"
-msgstr ""
+msgstr "सुप्त"
 
 #: app/admin/forms.py:152 app/templates/admin/instances.html:22
 #: app/templates/admin/instances.html:102
 #: app/templates/instance/list_instances.html:21
 msgid "Gone forever"
-msgstr ""
+msgstr "हमेशा के लिए गायब"
 
 #: app/admin/forms.py:153 app/templates/admin/instances.html:23
 #: app/templates/admin/instances.html:56 app/templates/admin/instances.html:57
 #: app/templates/admin/instances.html:97
 #: app/templates/instance/list_instances.html:22
 msgid "Trusted"
-msgstr ""
+msgstr "विश्वसनीय"
 
 #: app/admin/forms.py:159 app/auth/forms.py:13 app/auth/forms.py:20
 #: app/community/forms.py:89
+#, fuzzy
 msgid "User name"
-msgstr ""
+msgstr "उपयोगकर्ता नाम"
 
 #: app/admin/forms.py:161 app/user/forms.py:13
+#, fuzzy
 msgid "Email address"
-msgstr ""
+msgstr "ई-मेल पता"
 
 #: app/admin/forms.py:162 app/auth/forms.py:14 app/auth/forms.py:23
 #: app/auth/forms.py:83
 msgid "Password"
-msgstr ""
+msgstr "पासवर्ड"
 
 #: app/admin/forms.py:164 app/auth/forms.py:25 app/auth/forms.py:85
 msgid "Repeat password"
-msgstr ""
+msgstr "पासवर्ड दोहराएँ"
 
 #: app/admin/forms.py:165 app/user/forms.py:16
 msgid "Bio"
-msgstr ""
+msgstr "जीवनी"
 
 #: app/admin/forms.py:166 app/user/forms.py:25
 msgid "Matrix User ID"
-msgstr ""
+msgstr "मैट्रिक्स उपयोगकर्ता आई. डी."
 
 #: app/admin/forms.py:167 app/user/forms.py:27
 msgid "Avatar image"
-msgstr ""
+msgstr "अवतार छवि"
 
 #: app/admin/forms.py:168 app/user/forms.py:28
 msgid "Top banner image"
-msgstr ""
+msgstr "शीर्ष बैनर छवि"
 
 #: app/admin/forms.py:169 app/admin/forms.py:231 app/user/forms.py:29
 msgid "This profile is a bot"
-msgstr ""
+msgstr "यह प्रोफ़ाइल एक बॉट है"
 
 #: app/admin/forms.py:170 app/admin/forms.py:232
 msgid "Email address is verified"
-msgstr ""
+msgstr "ई-मेल पता सत्यापित किया गया है"
 
 #: app/admin/forms.py:171 app/admin/forms.py:233
 #: app/templates/admin/users.html:49 app/templates/admin/users.html:82
 msgid "Banned"
-msgstr ""
+msgstr "प्रतिबंधित"
 
 #: app/admin/forms.py:172 app/user/forms.py:46
 msgid "Subscribe to email newsletter"
-msgstr ""
+msgstr "ई-मेल न्यूज़लेटर के लिए सदस्यता करें"
 
 #: app/admin/forms.py:173 app/admin/forms.py:236 app/user/forms.py:127
 msgid "Show"
-msgstr ""
+msgstr "दिखाएँ"
 
 #: app/admin/forms.py:174 app/admin/forms.py:237 app/user/forms.py:128
 #: app/user/forms.py:147
 msgid "Hide completely"
-msgstr ""
+msgstr "पूरी तरह से छिपाएँ"
 
 #: app/admin/forms.py:175 app/admin/forms.py:238
 msgid "Blur"
-msgstr ""
+msgstr "धुंधलाए"
 
 #: app/admin/forms.py:176 app/admin/forms.py:239 app/user/forms.py:147
 msgid "Make semi-transparent"
-msgstr ""
+msgstr "अर्ध-पारदर्शी बनाएं"
 
 #: app/admin/forms.py:177 app/user/forms.py:48 app/user/forms.py:131
 msgid "Hide posts by bots"
-msgstr ""
+msgstr "बॉट्स द्वारा पोस्ट छिपाएँ"
 
 #: app/admin/forms.py:179 app/admin/forms.py:240 app/user/forms.py:49
 #: app/user/forms.py:133
 msgid "Show NSFW posts"
-msgstr ""
+msgstr "NSFW पोस्ट दिखाएँ"
 
 #: app/admin/forms.py:181 app/admin/forms.py:242 app/user/forms.py:50
 #: app/user/forms.py:135
 msgid "Show NSFL posts"
-msgstr ""
+msgstr "NSFL पोस्ट दिखाएँ"
 
 #: app/admin/forms.py:184 app/admin/forms.py:244
 msgid "User"
-msgstr ""
+msgstr "उपयोगकर्ता"
 
 #: app/admin/forms.py:185 app/admin/forms.py:245
 #: app/templates/admin/permissions.html:21
@@ -700,56 +724,60 @@ msgstr ""
 #: app/templates/user/user_preview.html:14
 #: app/templates/user/user_preview.html:15
 msgid "Admin"
-msgstr ""
+msgstr "प्रशासक"
 
 #: app/admin/forms.py:188 app/admin/forms.py:248
 msgid "Role"
 msgstr ""
 
 #: app/admin/forms.py:194 app/auth/forms.py:35
+#, fuzzy
 msgid "An account with this email address already exists."
-msgstr ""
+msgstr "इस ई-मेल पते के साथ एक एकाउंट पहले से मौजूद है।"
 
 #: app/admin/forms.py:198 app/auth/forms.py:42
+#, fuzzy
 msgid "User names cannot contain @."
-msgstr ""
+msgstr "उपयोगकर्ता नामों में @ नहीं हो सकता।"
 
 #: app/admin/forms.py:202 app/auth/forms.py:46
 msgid "This username was used in the past and cannot be reused."
 msgstr ""
+"यह उपयोगकर्ता नाम पहले उपयोग किया गया था और इसे फिर से उपयोग नहीं किया जा सकता।"
 
 #: app/admin/forms.py:204 app/auth/forms.py:48
 msgid "An account with this user name already exists."
-msgstr ""
+msgstr "इस उपयोगकर्ता नाम के साथ एक एकाउंट पहले से मौजूद है।"
 
 #: app/admin/forms.py:207 app/auth/forms.py:51
 msgid "A community with this name exists so it cannot be used for a user."
 msgstr ""
+"इस नाम का एक समुदाय मौजूद है, इसलिए इसे उपयोगकर्ता के लिए नहीं इस्तेमाल किया जा सकता।"
 
 #: app/admin/forms.py:214 app/admin/forms.py:227 app/auth/forms.py:58
 #: app/auth/forms.py:74
 msgid "This password is too common."
-msgstr ""
+msgstr "यह पासवर्ड बहुत अधिक सामान्य है।"
 
 #: app/admin/forms.py:224 app/auth/forms.py:71
 msgid "This password is not secure."
-msgstr ""
+msgstr "यह पासवर्ड सुरक्षित नहीं है।"
 
 #: app/admin/forms.py:234
 msgid "Ban posts"
-msgstr ""
+msgstr "पोस्टों को प्रतिबंधित करें"
 
 #: app/admin/forms.py:235
 msgid "Ban comments"
-msgstr ""
+msgstr "टिप्पणियाँ प्रतिबंधित करें"
 
 #: app/admin/forms.py:249
 msgid "Remove avatar"
-msgstr ""
+msgstr "अवतार हटाएँ"
 
 #: app/admin/forms.py:250
 msgid "Remove banner"
-msgstr ""
+msgstr "बैनर हटाएँ"
 
 #: app/admin/forms.py:255
 msgid "Subject"
@@ -757,7 +785,7 @@ msgstr ""
 
 #: app/admin/forms.py:256
 msgid "Body (text)"
-msgstr ""
+msgstr "शरीर (पाठ)"
 
 #: app/admin/forms.py:257
 msgid "Body (html)"
@@ -858,7 +886,7 @@ msgstr ""
 
 #: app/admin/routes.py:960
 msgid "Communities with no topic"
-msgstr ""
+msgstr "बिना विधा वाले समुदायों"
 
 #: app/admin/routes.py:1033 app/admin/routes.py:1143 app/admin/routes.py:1173
 #: app/admin/routes.py:1392 app/admin/routes.py:1657
@@ -891,23 +919,23 @@ msgstr ""
 #: app/templates/topic/show_topic.html:14
 #: app/templates/user/alerts/_type.html:12
 msgid "Topics"
-msgstr ""
+msgstr "विधाएँ"
 
 #: app/admin/routes.py:1146 app/templates/admin/topics.html:33
 msgid "Add topic"
-msgstr ""
+msgstr "विधा शामिल करें"
 
 #: app/admin/routes.py:1180
 msgid "Edit topic"
-msgstr ""
+msgstr "विधा संपादित करें"
 
 #: app/admin/routes.py:1198
 msgid "Topic deleted"
-msgstr ""
+msgstr "विधा हटाया गया"
 
 #: app/admin/routes.py:1200
 msgid "Cannot delete topic with communities assigned to it."
-msgstr ""
+msgstr "समुदायों को सौंपे गए विधा को हटाना संभव नहीं है।"
 
 #: app/admin/routes.py:1238 app/templates/admin/_nav.html:8
 #: app/templates/admin/_tabbed_nav.html:8 app/templates/admin/instances.html:46
@@ -936,6 +964,8 @@ msgid ""
 "Permissions are cached for 50 seconds so new admin roles won't take "
 "effect immediately."
 msgstr ""
+"अनुमतियाँ ५० सेकंड के लिए कैश की जाती हैं, इसलिए नए प्रशासक भूमिकाएँ तुरंत प्रभावी नहीं "
+"होंगी।"
 
 #: app/admin/routes.py:1396
 msgid ""
@@ -972,7 +1002,7 @@ msgstr ""
 
 #: app/admin/routes.py:1575
 msgid "Settings saved"
-msgstr ""
+msgstr "सेटिंग्स सहेजी गईं"
 
 #: app/admin/routes.py:1580 app/templates/user/show_profile.html:112
 msgid "Role permissions"
@@ -1027,7 +1057,7 @@ msgstr ""
 
 #: app/auth/forms.py:61
 msgid "Maximum password length is 128 characters."
-msgstr ""
+msgstr "अधिकतम पासवर्ड लंबाई १२८ अक्षर है।"
 
 #: app/auth/forms.py:79
 msgid "Request password reset"
@@ -1039,11 +1069,11 @@ msgstr ""
 
 #: app/auth/forms.py:91
 msgid "Please make it stop"
-msgstr ""
+msgstr "कृपया इसे रोको"
 
 #: app/auth/forms.py:92
 msgid "A little is ok"
-msgstr ""
+msgstr "थोड़ा ठीक है"
 
 #: app/auth/forms.py:93
 msgid "Bring it on"
@@ -1051,7 +1081,7 @@ msgstr ""
 
 #: app/auth/forms.py:95
 msgid "How tired of Trump and Musk news are you?"
-msgstr ""
+msgstr "आप ट्रंप और मस्क की खबरों से कितने थक चुके हैं?"
 
 #: app/auth/forms.py:97 app/auth/forms.py:102
 msgid "Choose"
@@ -1059,19 +1089,22 @@ msgstr ""
 
 #: app/auth/forms.py:101
 msgid "Choose some topics you are interested in"
-msgstr ""
+msgstr "कुछ विधाएँ चुनें जिनमें आपकी रुचि है"
 
 #: app/auth/onboarding.py:55
 msgid ""
 "You have joined some communities relating to those interests. Find more "
 "on the Topics menu or browse the home page."
 msgstr ""
+"आपने उन रुचियों से संबंधित कुछ समुदायों में शामिल हो गए हैं। विधाएँ के मेनू पर अधिक खोजें या हो"
+"म पेज पर ब्राउज़ करें।"
 
 #: app/auth/onboarding.py:59
 msgid ""
 "You did not choose any topics. Would you like to choose individual "
 "communities instead?"
 msgstr ""
+"आपने कोई विधाएँ नहीं चुनीं। क्या आप इसके बजाय व्यक्तिगत समुदायों को चुनना चाहेंगे?"
 
 #: app/auth/onboarding.py:68
 msgid ""
@@ -1270,7 +1303,7 @@ msgstr ""
 
 #: app/community/forms.py:40 app/feed/forms.py:35
 msgid "- cannot be in Url. Use _ instead?"
-msgstr ""
+msgstr "- URL में नहीं हो सकता। इसके बजाय _ का उपयोग करें?"
 
 #: app/community/forms.py:44
 msgid "A community with this url already exists."
@@ -1472,34 +1505,34 @@ msgstr ""
 
 #: app/community/forms.py:224
 msgid "30 minutes"
-msgstr ""
+msgstr "३० मिनट"
 
 #: app/community/forms.py:225 app/templates/_home_nav.html:8
 #: app/templates/_home_nav.html:25
 msgid "1 hour"
-msgstr ""
+msgstr "१ घंटा"
 
 #: app/community/forms.py:226 app/templates/_home_nav.html:9
 #: app/templates/_home_nav.html:26
 msgid "6 hours"
-msgstr ""
+msgstr "६ घंटे"
 
 #: app/community/forms.py:227 app/templates/_home_nav.html:10
 #: app/templates/_home_nav.html:27
 msgid "12 hours"
-msgstr ""
+msgstr "१२ घंटे"
 
 #: app/community/forms.py:228
 msgid "1 day"
-msgstr ""
+msgstr "१ दिन"
 
 #: app/community/forms.py:229
 msgid "3 days"
-msgstr ""
+msgstr "३ दिन"
 
 #: app/community/forms.py:230
 msgid "7 days"
-msgstr ""
+msgstr "७ दिन"
 
 #: app/community/forms.py:232
 msgid "End voting in"
@@ -1815,7 +1848,7 @@ msgstr ""
 
 #: app/dev/forms.py:15
 msgid "Populate Topics"
-msgstr ""
+msgstr "विधाएँ भरें"
 
 #: app/dev/forms.py:18
 msgid "Delete Communities"
@@ -1823,7 +1856,7 @@ msgstr ""
 
 #: app/dev/forms.py:21
 msgid "Delete Topics"
-msgstr ""
+msgstr "विधाएँ हटाएं"
 
 #: app/dev/routes.py:147
 #, python-format
@@ -1958,7 +1991,7 @@ msgstr ""
 #: app/templates/base.html:203 app/templates/themes/dillo/base.html:144
 #: app/templates/themes/dillo/base.html:169
 msgid "Browse by topic"
-msgstr ""
+msgstr "विधा के अनुसार ब्राउज़ करें"
 
 #: app/main/routes.py:299
 msgid "Local Communities"
@@ -2580,7 +2613,7 @@ msgstr ""
 #: app/templates/themes/dillo/base.html:142
 #: app/templates/themes/dillo/base.html:167
 msgid "More topics"
-msgstr ""
+msgstr "और विधाएँ"
 
 #: app/templates/base.html:173 app/templates/base.html:205
 #: app/templates/list_communities.html:26
@@ -2780,7 +2813,7 @@ msgstr ""
 #: app/templates/search/results.html:83
 #: app/templates/themes/dillo/_side_pane.html:121
 msgid "Browse topics"
-msgstr ""
+msgstr "विधाएँ ब्राउज़ करें"
 
 #: app/templates/keyboard_shortcuts.html:11
 msgid "Most shortcuts are the same as what reddit has."
@@ -2848,7 +2881,7 @@ msgstr ""
 
 #: app/templates/list_communities.html:49
 msgid "Choose a topic to filter communities by"
-msgstr ""
+msgstr "समुदायों को फिल्टर करने के लिए एक विधा चुनें"
 
 #: app/templates/list_communities.html:61
 msgid "Feed"
@@ -2907,11 +2940,11 @@ msgstr ""
 
 #: app/templates/list_topics.html:25
 msgid "Choose a topic"
-msgstr ""
+msgstr "एक विधा चुनें"
 
 #: app/templates/list_topics.html:38 app/templates/topic/suggest_topics.html:14
 msgid "Suggest a topic"
-msgstr ""
+msgstr "विधा सुझाएँ"
 
 #: app/templates/modlog.html:10
 msgid "Moderation log"
@@ -3159,7 +3192,7 @@ msgstr ""
 #: app/templates/admin/edit_topic.html:13
 #, python-format
 msgid "Edit %(topic_name)s"
-msgstr ""
+msgstr "%(topic_name)s को संपादित करें"
 
 #: app/templates/admin/edit_user.html:12
 #, python-format
@@ -3190,6 +3223,7 @@ msgid "Load communities from Lemmyverse data"
 msgstr ""
 
 #: app/templates/admin/federation.html:60
+#, fuzzy
 msgid ""
 "Use this to \"pre-load\" known threadiverse communities, as ranked by "
 "posts and activity. The list of communities pulls from the same list as "
@@ -3198,6 +3232,11 @@ msgid ""
 "Communities with less than 100 posts and less than 500 active users in "
 "the past week are excluded."
 msgstr ""
+"इसे \"पूर्व-लोड\" करने के लिए उपयोग करें ज्ञात थ्रेडविवर्स समुदायों को, जो पोस्ट और गतिविधि"
+" के अनुसार रैंक किए गए हैं। समुदायों की सूची उसी सूची से ली गई है जैसे <a href="
+"\"https://lemmyverse.net/communities\">LemmyVerse</a>। NSFW समुदायों और प्रतिबंधि"
+"त उदाहरणों से समुदायों को बाहर रखा गया है। १०० से कम पोस्ट और पिछले सप्ताह में ५०० से कम "
+"सक्रिय उपयोगकर्ताओं वाले समुदायों को बाहर रखा गया है।"
 
 #: app/templates/admin/instances.html:20 app/templates/admin/instances.html:106
 #: app/templates/instance/list_instances.html:19
@@ -3262,7 +3301,7 @@ msgstr ""
 
 #: app/templates/admin/instances.html:74
 msgid "How many times we failed to send (reset to 0 after every successful send)"
-msgstr ""
+msgstr "हम कितनी बार भेजने में असफल हुए (हर सफल भेजने के बाद ० पर रीसेट करें)"
 
 #: app/templates/admin/instances.html:75 app/templates/admin/instances.html:100
 msgid "Failed"
@@ -3313,6 +3352,8 @@ msgstr ""
 #: app/templates/admin/site.html:27
 msgid "Provide a square image, minimum 50 pixels wide but ideally 152+ pixels."
 msgstr ""
+"एक वर्गाकार छवि प्रदान करें, जिसकी चौड़ाई न्यूनतम ५० पिक्सल हो, लेकिन आदर्श रूप से १५२+ "
+"पिक्सल अधिक हो।"
 
 #: app/templates/admin/site.html:28
 msgid "About this instance"
@@ -3376,7 +3417,7 @@ msgstr ""
 
 #: app/templates/auth/choose_topics.html:9
 msgid "Please choose at least 3 topics that interest you."
-msgstr ""
+msgstr "कृपया कम-से-कम 3 विधाएँ चुनें जो आपको रुचिकर लगती हैं।"
 
 #: app/templates/auth/login.html:18
 msgid "New User?"
@@ -3920,6 +3961,8 @@ msgid ""
 "Use these buttons to quickly generate some testing topics and communities"
 " to use during development."
 msgstr ""
+"इन बटनों का उपयोग करके विकास के दौरान उपयोग करने के लिए कुछ परीक्षण विधाएँ और समुदायों "
+"को जल्दी से उत्पन्न करें।"
 
 #: app/templates/dev/tools.html:16
 msgid "Add Dev Communities"
@@ -3927,7 +3970,7 @@ msgstr ""
 
 #: app/templates/dev/tools.html:26
 msgid "Add Dev Topics"
-msgstr ""
+msgstr "डेव विधाएँ शामिल करें"
 
 #: app/templates/dev/tools.html:38
 msgid "Delete Dev Communities"
@@ -3935,7 +3978,7 @@ msgstr ""
 
 #: app/templates/dev/tools.html:48
 msgid "Delete Dev Topics"
-msgstr ""
+msgstr "डेव विधाएँ हटाएं"
 
 #: app/templates/domain/domain.html:14 app/templates/domain/domains.html:12
 #: app/templates/domain/domains.html:21
@@ -4290,7 +4333,7 @@ msgstr ""
 
 #: app/templates/post/_post_full.html:157
 msgid "Hashtags"
-msgstr ""
+msgstr "हैशटैग्स"
 
 #: app/templates/post/_post_full.html:173
 #: app/templates/post/_post_full.html:174
@@ -4481,7 +4524,7 @@ msgstr ""
 #: app/templates/post/post_options.html:11
 #: app/templates/post/post_reply_options.html:13
 msgid "Purge"
-msgstr ""
+msgstr "उन्मूलन करें"
 
 #: app/templates/post/post_options.html:20
 msgid "Un-sticky"
@@ -4508,30 +4551,31 @@ msgstr ""
 #: app/templates/post/post_options.html:42
 msgid "I made a mistake with this post and have changed my mind about the topic"
 msgstr ""
+"मैंने इस पोस्ट के साथ एक गलती की और विधा के बारे में अपना मन बदल लिया है"
 
 #: app/templates/post/post_options.html:47
 msgid "Cross-post to another community"
-msgstr ""
+msgstr "दूसरे समुदाय में क्रॉस-पोस्ट करें"
 
 #: app/templates/post/post_options.html:50
 #, python-format
 msgid "Block post author @%(author_name)s"
-msgstr ""
+msgstr "पोस्ट लेखक @%(author_name)s को अवरुद्ध करें"
 
 #: app/templates/post/post_options.html:55
 #, python-format
 msgid "Ban post author @%(author_name)s from %(community_name)s"
-msgstr ""
+msgstr "पोस्ट लेखक @%(author_name)s को %(community_name)s से प्रतिबंधित करें"
 
 #: app/templates/post/post_options.html:59
 #, python-format
 msgid "Block domain %(domain)s"
-msgstr ""
+msgstr "डोमेन %(domain)s को अवरुद्ध करें"
 
 #: app/templates/post/post_options.html:63
 #, python-format
 msgid "Hide every post from author's instance: %(name)s"
-msgstr ""
+msgstr "हर पोस्ट छिपाएँ लेखक के इंस्टेंस से: %(name)s"
 
 #: app/templates/post/post_options.html:69
 #, python-format
@@ -4541,7 +4585,7 @@ msgstr ""
 #: app/templates/post/post_options.html:75
 #: app/templates/post/post_reply_options.html:42
 msgid "View Voting Activity"
-msgstr ""
+msgstr "मतदान गतिविधि देखें"
 
 #: app/templates/post/post_options.html:77
 msgid "Fixup from remote"
@@ -4550,12 +4594,12 @@ msgstr ""
 #: app/templates/post/post_reply_options.html:30
 #, python-format
 msgid "Block author @%(author_name)s"
-msgstr ""
+msgstr "लेखक @%(author_name)s को अवरुद्ध करें"
 
 #: app/templates/post/post_reply_options.html:33
 #, python-format
 msgid "Ban @%(author_name)s from %(community_name)s"
-msgstr ""
+msgstr "@%(author_name)s को %(community_name)s से प्रतिबंधित करें"
 
 #: app/templates/post/post_reply_options.html:37
 #, python-format
@@ -4575,7 +4619,7 @@ msgstr ""
 #: app/templates/post/post_report.html:13
 #, python-format
 msgid "Report \"%(post_title)s\""
-msgstr ""
+msgstr "रिपोर्ट \"%(post_title)s\""
 
 #: app/templates/post/post_voting_activity.html:10
 #, python-format
@@ -4741,10 +4785,12 @@ msgstr ""
 #: app/templates/topic/_notification_toggle.html:5
 msgid "Notify about every new post. Not advisable in high traffic topics!"
 msgstr ""
+"हर नई पोस्ट के बारे में सूचित करें। उच्च ट्रैफ़िक विधाओं में यह सलाह नहीं दी जाती!"
 
 #: app/templates/topic/show_topic.html:26
+#, fuzzy
 msgid "Sub-topics"
-msgstr ""
+msgstr "उप-विधाएँ"
 
 #: app/templates/topic/show_topic.html:41
 #: app/templates/topic/show_topic.html:95
@@ -4753,22 +4799,23 @@ msgstr ""
 
 #: app/templates/topic/show_topic.html:68
 msgid "No posts in this topic yet."
-msgstr ""
+msgstr "इस विधा में अभी तक कोई पोस्ट नहीं हैं।"
 
 #: app/templates/topic/show_topic.html:103
 msgid "Topic communities"
-msgstr ""
+msgstr "विधा समुदायों"
 
 #: app/templates/topic/suggestion_denied.html:16
 msgid ""
 "You have not been using PieFed long enough to be allowed to suggest "
 "Topics."
 msgstr ""
+"आपने पाईफ़ेड का उपयोग करने के लिए पर्याप्त समय नहीं बिताया है कि आप विधाएँ सुझा सकें।"
 
 #: app/templates/topic/topic_create_post.html:9
-#, python-format
+#, fuzzy, python-format
 msgid "Which community within %(topic)s to post in?"
-msgstr ""
+msgstr "%(topic)s के भीतर किस समुदाय में पोस्ट करना है?"
 
 #: app/templates/user/_notification_toggle.html:5
 msgid "Notify about every new post by this person."
@@ -4880,7 +4927,7 @@ msgstr ""
 #: app/templates/user/delete_account.html:18
 #, python-format
 msgid "Delete %(username)s"
-msgstr ""
+msgstr "%(username)s हटाओं"
 
 #: app/templates/user/delete_account.html:20
 #, python-format
@@ -4956,7 +5003,7 @@ msgstr ""
 #: app/templates/user/edit_profile.html:19
 #, python-format
 msgid "Edit profile of %(name)s"
-msgstr ""
+msgstr "%(name)s का प्रोफ़ाइल संपादित करें"
 
 #: app/templates/user/edit_profile.html:48
 msgid "Extra fields"
@@ -4964,7 +5011,7 @@ msgstr ""
 
 #: app/templates/user/edit_profile.html:49
 msgid "Your homepage, pronouns, age, etc."
-msgstr ""
+msgstr "आपका होमपेज, सर्वनाम, आयु आदि"
 
 #: app/templates/user/edit_profile.html:80
 #: app/templates/user/edit_profile.html:91
@@ -5141,7 +5188,7 @@ msgstr ""
 #: app/templates/user/show_profile.html:94
 #, python-format
 msgid "Block %(user_name)s"
-msgstr ""
+msgstr "%(user_name)s को अवरुद्ध करें"
 
 #: app/templates/user/show_profile.html:104
 msgid "Lemmyverse.link"
@@ -5210,11 +5257,11 @@ msgstr ""
 
 #: app/templates/user/show_profile.html:265
 msgid "Ban + Purge"
-msgstr ""
+msgstr "प्रतिबंधित करें + उन्मूलन करें"
 
 #: app/templates/user/stripe_redirect.html:10 app/user/subscription.py:86
 msgid "Please wait..."
-msgstr ""
+msgstr "कृपया प्रतीक्षा करें..।"
 
 #: app/templates/user/stripe_redirect.html:11
 msgid "You are being sent to our payment system, please wait a moment."
@@ -5257,25 +5304,27 @@ msgstr ""
 #: app/templates/user/user_report.html:13
 #, python-format
 msgid "Report \"%(user_name)s\""
-msgstr ""
+msgstr "रिपोर्ट \"%(user_name)s\""
 
 #: app/templates/user/alerts/_comments.html:3
 msgid "You will be notified of replies to these comments"
-msgstr ""
+msgstr "आपको इन टिप्पणियों के उत्तरों के बारे में सूचित किया जाएगा"
 
 #: app/templates/user/alerts/_comments.html:8
 msgid "Read replies"
-msgstr ""
+msgstr "उत्तर पढ़ें"
 
 #: app/templates/user/alerts/_comments.html:18
 msgid ""
 "You have not subscribed to any comments. Use the bell icon on each "
 "comment to do so."
 msgstr ""
+"आपने किसी भी टिप्पणी की सदस्यता नहीं ली है। ऐसा करने के लिए प्रत्येक टिप्पणी पर घंटी के "
+"आइकन का उपयोग करें।"
 
 #: app/templates/user/alerts/_communities.html:3
 msgid "You will be notified of new posts in these communities"
-msgstr ""
+msgstr "आपको इन समुदायों में नए पोस्ट के बारे में सूचित किया जाएगा"
 
 #: app/templates/user/alerts/_communities.html:8
 msgid "Visit Community"
@@ -5286,6 +5335,8 @@ msgid ""
 "You have not subscribed to an alert for new content in any communities. "
 "Use the bell icon in each community to do so."
 msgstr ""
+"आपने किसी भी समुदाय में नए सामग्री के लिए अलर्ट की सदस्यता नहीं ली है। ऐसा करने के लिए "
+"प्रत्येक समुदाय में घंटी के आइकन का उपयोग करें।"
 
 #: app/templates/user/alerts/_filter.html:1
 msgid "Alert filters: "
@@ -5293,47 +5344,52 @@ msgstr ""
 
 #: app/templates/user/alerts/_filter.html:2
 msgid "All authors"
-msgstr ""
+msgstr "सभी लेखक"
 
 #: app/templates/user/alerts/_filter.html:5
 msgid "Only Mine"
-msgstr ""
+msgstr "केवल मेरे"
 
 #: app/templates/user/alerts/_filter.html:6
 msgid "Mine"
-msgstr ""
+msgstr "मेरे"
 
 #: app/templates/user/alerts/_filter.html:8
 msgid "Only Others"
-msgstr ""
+msgstr "केवल अन्य लोग"
 
 #: app/templates/user/alerts/_filter.html:9
 msgid "Others"
-msgstr ""
+msgstr "अन्य लोग"
 
 #: app/templates/user/alerts/_posts.html:3
 msgid "You will be notified of top-level replies to these posts"
-msgstr ""
+msgstr "आपको इन पोस्टों के शीर्ष-स्तर की प्रतिक्रियाओं की सूचना दी जाएगी"
 
 #: app/templates/user/alerts/_posts.html:16
 msgid ""
 "You have not subscribed to any posts. Use the bell icon on each post to "
 "do so."
 msgstr ""
+"आपने किसी भी पोस्ट की सदस्यता नहीं ली है। ऐसा करने के लिए प्रत्येक पोस्ट पर घंटी के आइकन "
+"का उपयोग करें।"
 
 #: app/templates/user/alerts/_topics.html:2
 msgid "You will be notified of new posts in communities covered by these topics"
 msgstr ""
+"आपको इन विधाओं से संबंधित समुदायों में नए पोस्ट के बारे में सूचित किया जाएगा"
 
 #: app/templates/user/alerts/_topics.html:7
 msgid "Visit Topic"
-msgstr ""
+msgstr "विधा पर जाएं"
 
 #: app/templates/user/alerts/_topics.html:15
 msgid ""
 "You have not subscribed to any topics. Use the bell icon on each topic to"
 " do so."
 msgstr ""
+"आपने किसी भी विधा की सदस्यता नहीं ली है। ऐसा करने के लिए प्रत्येक विधा पर घंटी के आइकन "
+"का उपयोग करें।"
 
 #: app/templates/user/alerts/_type.html:1
 msgid "Alert type: "
@@ -5352,14 +5408,16 @@ msgid ""
 "You have not subscribed to an alert for new content from any users. Use "
 "the bell icon on each person to do so."
 msgstr ""
+"आपने किसी भी उपयोगकर्ता से नए सामग्री के लिए अलर्ट की सदस्यता नहीं ली है। ऐसा करने के लि"
+"ए प्रत्येक व्यक्ति पर घंटी के आइकन का उपयोग करें।"
 
 #: app/topic/forms.py:8
 msgid "New topic name"
-msgstr ""
+msgstr "नया विधा का नाम"
 
 #: app/topic/forms.py:9
 msgid "New topic name here..."
-msgstr ""
+msgstr "यहाँ नया विषय का नाम..।"
 
 #: app/topic/forms.py:10
 msgid "Suggested communities"
@@ -5371,25 +5429,25 @@ msgstr ""
 
 #: app/topic/forms.py:12
 msgid "Submit"
-msgstr ""
+msgstr "जमा करें"
 
 #: app/topic/routes.py:218
 msgid ""
 "Thank you for the topic suggestion, it has been sent to the site "
 "administrator(s)."
-msgstr ""
+msgstr "विधा सुझाव के लिए धन्यवाद, इसे साइट प्रशासक(ों) को भेज दिया गया है।"
 
 #: app/topic/routes.py:221
 msgid "Suggest a topic\""
-msgstr ""
+msgstr "विधा सुझाएँ\""
 
 #: app/user/forms.py:12
 msgid "Display name"
-msgstr ""
+msgstr "प्रदर्शित नाम"
 
 #: app/user/forms.py:14
 msgid "Set new password"
-msgstr ""
+msgstr "नया पासवर्ड सेट करें"
 
 #: app/user/forms.py:17
 msgid "Extra field 1 - label"
@@ -5484,7 +5542,7 @@ msgstr ""
 
 #: app/user/forms.py:58
 msgid "Vote privately"
-msgstr ""
+msgstr "गोपनीयता से मतदान करें"
 
 #: app/user/forms.py:59
 msgid "Enable Automatic Follow of Feed Communities."
@@ -5504,11 +5562,11 @@ msgstr ""
 
 #: app/user/forms.py:78
 msgid "No"
-msgstr ""
+msgstr "नहीं"
 
 #: app/user/forms.py:80
 msgid "YEESSS"
-msgstr ""
+msgstr "हाँ!!!"
 
 #: app/user/forms.py:82
 msgid "Compact UI"
@@ -5524,7 +5582,7 @@ msgstr ""
 
 #: app/user/forms.py:93
 msgid "Yes, delete my account"
-msgstr ""
+msgstr "हाँ, मेरे एकाउंट को हटाओं"
 
 #: app/user/forms.py:104
 msgid "Malicious reporting"
@@ -5572,19 +5630,19 @@ msgstr ""
 
 #: app/user/forms.py:161
 msgid "Friendica"
-msgstr ""
+msgstr "फ्रेंडिका"
 
 #: app/user/forms.py:162
 msgid "Hubzilla"
-msgstr ""
+msgstr "हबज़िला"
 
 #: app/user/forms.py:163
 msgid "Lemmy"
-msgstr ""
+msgstr "लेम्मी"
 
 #: app/user/forms.py:164
 msgid "Pixelfed"
-msgstr ""
+msgstr "पिक्सेलफेड"
 
 #: app/user/forms.py:167
 msgid "Instance type"
@@ -5616,6 +5674,8 @@ msgid ""
 "You have changed your email address so we need to verify it. Please check"
 " your email inbox for a verification link."
 msgstr ""
+"आपने अपना ई-मेल पता बदल दिया है, इसलिए हमें इसे सत्यापित करने की आवश्यकता है। कृपया सत्या"
+"पन लिंक के लिए अपने ई-मेल इनबॉक्स की जांच करें।"
 
 #: app/user/routes.py:228
 msgid "Avatar removed!"
@@ -5627,31 +5687,31 @@ msgstr ""
 
 #: app/user/routes.py:399
 msgid "Catalan"
-msgstr ""
+msgstr "कैटलन"
 
 #: app/user/routes.py:400
 msgid "Chinese"
-msgstr ""
+msgstr "चीनी"
 
 #: app/user/routes.py:401
 msgid "English"
-msgstr ""
+msgstr "अंग्रेज़ी"
 
 #: app/user/routes.py:402
 msgid "French"
-msgstr ""
+msgstr "फ्रेंच"
 
 #: app/user/routes.py:403
 msgid "German"
-msgstr ""
+msgstr "जर्मन"
 
 #: app/user/routes.py:404
 msgid "Japanese"
-msgstr ""
+msgstr "जापानी"
 
 #: app/user/routes.py:405
 msgid "Spanish"
-msgstr ""
+msgstr "स्पेनिश"
 
 #: app/user/routes.py:478
 msgid "Export Complete."
@@ -5662,10 +5722,12 @@ msgid ""
 "Your subscriptions and blocks are being imported. If you have many it "
 "could take a few minutes."
 msgstr ""
+"आपकी सदस्यताएँ और ब्लॉक आयात किए जा रहे हैं। यदि आपके पास कई हैं, तो इसमें कुछ मिनट लग "
+"सकते हैं।"
 
 #: app/user/routes.py:540
 msgid "You cannot ban yourself."
-msgstr ""
+msgstr "आप खुद को प्रतिबंधित नहीं कर सकते।"
 
 #: app/user/routes.py:548
 msgid "Banned user was a remote instance admin."
@@ -5678,7 +5740,7 @@ msgstr ""
 #: app/user/routes.py:551
 #, python-format
 msgid "%(actor)s has been banned."
-msgstr ""
+msgstr "%(actor)s को प्रतिबंधित कर दिया गया है।"
 
 #: app/user/routes.py:571
 msgid "You cannot unban yourself."
@@ -5743,7 +5805,7 @@ msgstr ""
 #: app/user/routes.py:765
 #, python-format
 msgid "%(community_name)s has been unblocked."
-msgstr ""
+msgstr "%(community_name)s को अनब्लॉक कर दिया गया है।"
 
 #: app/user/routes.py:798
 msgid "Account deletion in progress. Give it a few minutes."
@@ -5751,15 +5813,16 @@ msgstr ""
 
 #: app/user/routes.py:803
 msgid "Delete my account"
-msgstr ""
+msgstr "मेरे एकाउंट को हटाओं"
 
 #: app/user/routes.py:856
 msgid "You cannot purge yourself."
-msgstr ""
+msgstr "आप अपने आप को उन्मूलन नहीं कर सकते।"
 
 #: app/user/routes.py:864
+#, fuzzy
 msgid "Purged user was a remote instance admin."
-msgstr ""
+msgstr "उन्मूलन गए उपयोगकर्ता एक दूरस्थ instance प्रशासक थे।"
 
 #: app/user/routes.py:866
 msgid "Purged user with role permissions."
@@ -5771,43 +5834,46 @@ msgid ""
 "%(actor)s has been banned, deleted and all their content deleted. This "
 "might take a few minutes."
 msgstr ""
+"%(actor)s को प्रतिबंधित किया गया है, हटाया गया है और उनकी सभी सामग्री हटाई गई है। "
+"इसमें कुछ मिनट लग सकते हैं।"
 
 #: app/user/routes.py:879
 #, python-format
 msgid "%(actor)s has been banned, deleted and all their content deleted."
 msgstr ""
+"%(actor)s को प्रतिबंधित किया गया है, हटाया गया है और उनकी सभी सामग्री हटाई गई है।"
 
 #: app/user/routes.py:941
 msgid "All notifications marked as read."
-msgstr ""
+msgstr "सभी सूचनाएँ 'पढ़ी गई' के रूप में चिह्नित की गई हैं।"
 
 #: app/user/routes.py:1146
 msgid "Filter deleted."
-msgstr ""
+msgstr "हटाए गए को फ़िल्टर करें।"
 
 #: app/user/routes.py:1207
 msgid "Comment bookmarks"
-msgstr ""
+msgstr "तिप्पणी बुकमार्क्स"
 
 #: app/user/routes.py:1238
 msgid "Reply Alerts"
-msgstr ""
+msgstr "उत्तर के लिए सूचनाएँ"
 
 #: app/user/routes.py:1257
 msgid "Community Alerts"
-msgstr ""
+msgstr "समुदाय के लिए सूचनाएँ"
 
 #: app/user/routes.py:1263
 msgid "Topic Alerts"
-msgstr ""
+msgstr "विधा के लिए सूचनाएँ"
 
 #: app/user/routes.py:1269
 msgid "User Alerts"
-msgstr ""
+msgstr "उपयोगकर्ता के लिए सूचनाएँ"
 
 #: app/user/routes.py:1284
 msgid "Post Alerts"
-msgstr ""
+msgstr "पोस्ट के लिए सूचनाएँ"
 
 #: app/user/routes.py:1312
 msgid "Lemmy can't follow profiles, sorry"
@@ -5820,7 +5886,7 @@ msgstr ""
 #: app/user/routes.py:1458
 #, python-format
 msgid "That person could not be retreived or is banned from %(site)s."
-msgstr ""
+msgstr "वह व्यक्ति %(site)s से प्राप्त नहीं किया जा सका या प्रतिबंधित है।"
 
 #: app/user/routes.py:1468
 msgid "Searching for remote people requires login"
@@ -5832,10 +5898,12 @@ msgid ""
 "Thank you for supporting %(instance_name)s! Any choice you make below "
 "will replace your current donation plan."
 msgstr ""
+"%(instance_name)s का समर्थन करने के लिए धन्यवाद! नीचे किए गए किसी भी विकल्प का चयन "
+"करने से आपकी वर्तमान दान योजना बदल जाएगी।"
 
 #: app/user/subscription.py:21
 msgid "Choose a donation plan"
-msgstr ""
+msgstr "दान योजना चुनें"
 
 #: app/user/subscription.py:30
 #, python-format
@@ -5843,20 +5911,21 @@ msgid ""
 "Log in to donate to %(instance_name)s or donate to the PieFed project "
 "using the button below."
 msgstr ""
+"%(instance_name)s में दान करने के लिए लॉग-इन करें या नीचे दिए गए बटन का उपयोग करके "
+"पाईफ़ेड परियोजना को दान करें।"
 
 #: app/user/subscription.py:153
 msgid "You are not donating"
-msgstr ""
+msgstr "आप दान नहीं कर रहे हैं"
 
 #: app/user/subscription.py:153
 msgid "There are no regular donations set to occur in the future."
-msgstr ""
+msgstr "भविष्य में कोई नियमित दान होने की योजना नहीं है।"
 
 #: app/user/subscription.py:159
 msgid "Regular donation cancelled"
-msgstr ""
+msgstr "नियमित दान रद्द कर दिया गया है"
 
 #: app/user/subscription.py:159
 msgid "Your donation has been cancelled."
-msgstr ""
-
+msgstr "आपका दान रद्द कर दिया गया है।"
