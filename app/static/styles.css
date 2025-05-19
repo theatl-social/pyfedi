@@ -1948,6 +1948,9 @@ h1 .warning_badge {
   width: 100%;
   height: auto;
 }
+.main_pane > h1 {
+  overflow: hidden;
+}
 
 .side_pane img {
   max-width: 100%;
