@@ -577,6 +577,18 @@ Log into Piefed then go to https://yourdomain/test_email to trigger a test email
 which environment variables you defined in .env. If `MAIL_SERVER` is empty it will try SES. Then if `AWS_REGION` is empty it'll
 silently do nothing.
 
+
+#### Log in with Google (OAuth)
+
+You need to set these two environment variables:
+
+ - GOOGLE_OAUTH_CLIENT_ID
+ - GOOGLE_OAUTH_SECRET
+
+The values for them are found by registering your instance with Google as 'an app'. Go to https://console.cloud.google.com/
+to begin. Create a new project, enable the People API, go to APIs & Services > Credentials and create a new OAuth client ID.
+Under "Authorized Redirect URIs", use `https://yourdomain.tld/auth/google_authorize`.
+
 ---
 
 <div id="stripe"></div>
