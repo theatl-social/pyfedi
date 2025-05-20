@@ -1287,9 +1287,9 @@ def process_inbox_request(request_json, store_ap_json):
 
                 blocked.banned = True
                 if 'expires' in core_activity:
-                    blocked.banned_until = core_activity['expires']
+                    blocked.ban_until = core_activity['expires']
                 elif 'endTime' in core_activity:
-                    blocked.banned_until = core_activity['endTime']
+                    blocked.ban_until = core_activity['endTime']
                 db.session.commit()
 
                 if remove_data:

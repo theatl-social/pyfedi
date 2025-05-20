@@ -1702,7 +1702,7 @@ def unban_user(blocker, blocked, community, core_activity):
     if blocked.is_local():
         # Notify unbanned person
         targets_data = {'community_id': community.id}
-        notify = Notification(title=shorten_string('You have been unbanned from ' + community.title),
+        notify = Notification(title=shorten_string('You have been unbanned from ' + community.display_name()),
                               url=f'/chat/ban_from_mod/{blocked.id}/{community.id}', user_id=blocked.id, 
                               author_id=blocker.id, notif_type=NOTIF_UNBAN,
                               subtype='user_unbanned_from_community',

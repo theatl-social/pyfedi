@@ -11,18 +11,19 @@ from flask import json, current_app
 from flask_babel import _
 from sqlalchemy import or_, desc, text
 
-from app import db
+from app import db, cache
 import click
 import os
 
 from app.activitypub.signature import RsaKeys, send_post_request
 from app.activitypub.util import find_actor_or_create, extract_domain_and_actor, notify_about_post
 from app.auth.util import random_token
-from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED
+from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED, \
+    NOTIF_UNBAN
 from app.email import send_email
 from app.models import Settings, BannedInstances, Role, User, RolePermission, Domain, ActivityPubLog, \
     utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply, Language, \
-    Tag, InstanceRole, Community, DefederationSubscription, SendQueue
+    Tag, InstanceRole, Community, DefederationSubscription, SendQueue, CommunityBan
 from app.post.routes import post_delete_post
 from app.shared.post import edit_post
 from app.shared.tasks import task_selector
@@ -30,7 +31,7 @@ from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_bl
     shorten_string, get_request, blocked_communities, gibberish, get_request_instance, \
     instance_banned, recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, download_defeds, \
     get_setting, set_setting, get_redis_connection, instance_online, instance_gone_forever, find_next_occurrence, \
-    guess_mime_type
+    guess_mime_type, communities_banned_from, joined_communities, moderating_communities
 
 
 def register(app):
@@ -184,6 +185,33 @@ def register(app):
             # Remove SendQueue older than 7 days
             db.session.query(SendQueue).filter(SendQueue.created < utcnow() - timedelta(days=7)).delete()
             db.session.commit()
+
+            # Expired bans
+            community_bans = CommunityBan.query.filter(CommunityBan.ban_until < utcnow()).all()
+            for expired_ban in community_bans:
+                community_membership_record = CommunityMember.query.filter_by(community_id=expired_ban.community_id,
+                                                                              user_id=expired_ban.user_id).first()
+                if community_membership_record:
+                    community_membership_record.is_banned = False
+                blocked = User.query.get(expired_ban.user_id)
+                community = Community.query.get(expired_ban.community_id)
+                if blocked.is_local():
+                    # Notify unbanned person
+                    targets_data = {'community_id': community.id}
+                    notify = Notification(title=shorten_string('You have been unbanned from ' + community.display_name()),
+                                          url=f'/chat/ban_from_mod/{blocked.id}/{community.id}', user_id=blocked.id,
+                                          author_id=1, notif_type=NOTIF_UNBAN,
+                                          subtype='user_unbanned_from_community',
+                                          targets=targets_data)
+                    db.session.add(notify)
+                    blocked.unread_notifications += 1  # who pressed 'Re-submit this activity'.
+
+                    cache.delete_memoized(communities_banned_from, blocked.id)
+                    cache.delete_memoized(joined_communities, blocked.id)
+                    cache.delete_memoized(moderating_communities, blocked.id)
+
+                db.session.delete(expired_ban)
+                db.session.commit()
 
             # Remove old content from communities
             print(f'Start removing old content from communities {datetime.now()}')
