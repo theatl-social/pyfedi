@@ -2444,7 +2444,6 @@ class CommunityBan(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)             # person who is banned, not the banner
     community_id = db.Column(db.Integer, db.ForeignKey('community.id'), primary_key=True)
     banned_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    banned_until = db.Column(db.DateTime)   # do not use
     reason = db.Column(db.String(256))
     created_at = db.Column(db.DateTime, default=utcnow)
     ban_until = db.Column(db.DateTime)
@@ -2670,6 +2669,25 @@ class PollChoiceVote(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), index=True)
     created_at = db.Column(db.DateTime, default=utcnow)
+
+
+class Event(db.Model):
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), primary_key=True)
+    start = db.Column(db.DateTime, index=True)
+    end = db.Column(db.DateTime)
+    max_attendees = db.Column(db.Integer, default=0)
+    full = db.Column(db.Boolean, default=False)
+    online_link = db.Column(db.String(1024))
+    location = db.Column(db.Text)
+    buy_tickets_link = db.Column(db.String(1024))
+    event_fee_currency = db.Column(db.String(4))
+    event_fee_amount = db.Column(db.Float, default=0)
+
+
+event_user = db.Table('event_user', db.Column('post_id', db.Integer, db.ForeignKey('post.id')),
+                                    db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
+                                    db.Column('status', db.Integer),
+                                    db.PrimaryKeyConstraint('post_id', 'user_id'))
 
 
 class PostBookmark(db.Model):
