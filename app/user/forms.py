@@ -151,6 +151,7 @@ class FilterForm(FlaskForm):
                             default=1, coerce=int, render_kw={'class': 'form-select'})
     reply_collapse_threshold = IntegerField(_l('Reply collapse threshold'))
     reply_hide_threshold = IntegerField(_l('Reply hide threshold'))
+    hide_low_quality = BooleanField(_l('Hide posts in low quality communities'))
     submit = SubmitField(_l('Save settings'))
 
 

@@ -1865,6 +1865,8 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
     if community_ids[0] == -1:  # A special value meaning to get posts from all communities
         post_id_sql = 'SELECT p.id, p.cross_posts FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
         post_id_where = ['c.banned is false ']
+        if current_user.is_authenticated and current_user.hide_low_quality:
+            post_id_where.append('c.low_quality is false')
         params = {}
     else:
         post_id_sql = 'SELECT p.id, p.cross_posts FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'

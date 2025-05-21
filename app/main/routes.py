@@ -69,16 +69,18 @@ def home_page(sort, view_filter):
 
     # view filter - subscribed/local/all
     community_ids = [-1]
+    low_quality_filter = 'AND c.low_quality is false' if current_user.is_authenticated and current_user.hide_low_quality else ''
+
     if view_filter == 'subscribed' and current_user.is_authenticated:
         community_ids = db.session.execute(text('SELECT id FROM community as c INNER JOIN community_member as cm ON cm.community_id = c.id WHERE cm.is_banned is false AND cm.user_id = :user_id'),
                                            {'user_id': current_user.id}).scalars()
     elif view_filter == 'local':
-        community_ids = db.session.execute(text('SELECT id FROM community as c WHERE c.instance_id = 1')).scalars()
+        community_ids = db.session.execute(text(f'SELECT id FROM community as c WHERE c.instance_id = 1 {low_quality_filter}')).scalars()
     elif view_filter == 'popular':
         if current_user.is_anonymous:
             community_ids = db.session.execute(text('SELECT id FROM community as c WHERE c.show_popular is true AND c.low_quality is false')).scalars()
         else:
-            community_ids = db.session.execute(text('SELECT id FROM community as c WHERE c.show_popular is true')).scalars()
+            community_ids = db.session.execute(text(f'SELECT id FROM community as c WHERE c.show_popular is true {low_quality_filter}')).scalars()
     elif view_filter == 'all' or current_user.is_anonymous:
         community_ids = [-1]    # Special value to indicate 'All'
 
@@ -196,6 +198,8 @@ def list_communities():
         communities = communities.filter(Community.id.in_(feed_community_ids))
 
     if current_user.is_authenticated:
+        if current_user.hide_low_quality:
+            communities = communities.filter(Community.low_quality == False)
         banned_from = communities_banned_from(current_user.id)
         if banned_from:
             communities = communities.filter(Community.id.not_in(banned_from))

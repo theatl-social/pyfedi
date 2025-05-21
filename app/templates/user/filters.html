@@ -28,6 +28,7 @@
             <small class="field_hint">{{ _('Collapse replies with a score at or below this level - click to view.') }}</small>
             {{ render_field(form.reply_hide_threshold) }}
             <small class="field_hint">{{ _('Hide replies with a score at or below this level.') }}</small>
+            {{ render_field(form.hide_low_quality) }}
             {{ render_field(form.submit) }}
         </form>
         <hr />

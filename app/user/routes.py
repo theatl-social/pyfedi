@@ -1041,6 +1041,7 @@ def user_settings_filters():
         current_user.hide_nsfl = form.hide_nsfl.data
         current_user.reply_collapse_threshold = form.reply_collapse_threshold.data
         current_user.reply_hide_threshold = form.reply_hide_threshold.data
+        current_user.hide_low_quality = form.hide_low_quality.data
         db.session.commit()
 
         flash(_('Your changes have been saved.'), 'success')
@@ -1051,6 +1052,7 @@ def user_settings_filters():
         form.hide_nsfl.data = current_user.hide_nsfl
         form.reply_collapse_threshold.data = current_user.reply_collapse_threshold
         form.reply_hide_threshold.data = current_user.reply_hide_threshold
+        form.hide_low_quality.data = current_user.hide_low_quality
     filters = Filter.query.filter_by(user_id=current_user.id).order_by(Filter.title).all()
     blocked_users = User.query.filter_by(deleted=False).join(UserBlock, UserBlock.blocked_id == User.id).\
         filter(UserBlock.blocker_id == current_user.id).order_by(User.user_name).all()
