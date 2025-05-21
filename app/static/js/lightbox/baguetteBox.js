@@ -98,6 +98,7 @@
         // Save x and y axis position
         touch.startX = event.changedTouches[0].pageX;
         touch.startY = event.changedTouches[0].pageY;
+        touch.startTime = new Date().getTime();
     };
     var touchmoveHandler = function(event) {
         // If action was already triggered or multitouch return
@@ -105,17 +106,18 @@
             return;
         }
         var touchEvent = event.touches[0] || event.changedTouches[0];
+        var duration = new Date().getTime() - touch.startTime;
         // Move at least 40 pixels to trigger the action
-        if (touchEvent.pageX - touch.startX > 40) {
+        if (touchEvent.pageX - touch.startX > 40 && duration < 250) {
             event.preventDefault ? event.preventDefault() : event.returnValue = false; // eslint-disable-line no-unused-expressions
             touchFlag = true;
             showPreviousImage();
-        } else if (touchEvent.pageX - touch.startX < -40) {
+        } else if (touchEvent.pageX - touch.startX < -40 && duration < 250) {
             event.preventDefault ? event.preventDefault() : event.returnValue = false; // eslint-disable-line no-unused-expressions
             touchFlag = true;
             showNextImage();
         // Move 100 pixels up to close the overlay
-        } else if (touch.startY - touchEvent.pageY > 100) {
+        } else if (touch.startY - touchEvent.pageY > 100 && duration < 250) {
             event.preventDefault ? event.preventDefault() : event.returnValue = false; // eslint-disable-line no-unused-expressions
             hideOverlay();
         }
