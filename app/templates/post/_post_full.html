@@ -28,17 +28,18 @@
                                  width="{{ post.image.width }}" height="{{ post.image.height }}" /></a>
                         {% else -%}
                             <a href="{{ post.image.view_url() }}" rel="nofollow ugc">
-                                {% set is_portrait = post.image.height > post.image.width %}
-                                <img src="{{ post.image.view_url(resize=True) }}" lowsrc="{{ post.image.medium_url() }}"
-                                     {% if is_portrait %}
-                                     sizes="(max-width: 512px) 100vw, (max-width: 768px) 70vw, 1024px"
-                                     {% else %}
-                                     sizes="(max-width: 512px) 100vw, 854px"
-                                     {% endif %}
+                                {% set is_portrait = post.image.height > post.image.width * 1.2 %}
+                                {% if is_portrait %}
+                                <img src="{{ post.image.view_url() }}"
+                                     alt="{{ post.image.alt_text if post.image.alt_text else post.title }}"
+                                     fetchpriority="high" referrerpolicy="same-origin" >
+                                {% else %}
+                                <img src="{{ post.image.view_url(resize=True) }}"
+                                     sizes="(max-width: 512px) 100vw, 854px" 
                                      srcset="{{ post.image.medium_url() }} 512w, {{ post.image.view_url(resize=True) }} 1024w"
                                      alt="{{ post.image.alt_text if post.image.alt_text else post.title }}"
-                                     width="{{ post.image.width }}" height="{{ post.image.height }}"
                                      fetchpriority="high" referrerpolicy="same-origin" >
+                                {% endif %}
                             </a>
                         {% endif -%}
                     {% else -%}
