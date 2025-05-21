@@ -940,12 +940,8 @@ def register(app):
                             os.unlink(file)
                         except FileNotFoundError:
                             ...
-            print('Sending list to S3...')
+            print(f'Sending list to S3 ({len(s3_files_to_delete)} files to delete)...')
             if len(s3_files_to_delete) > 0:
-                delete_payload = {
-                    'Objects': [{'Key': key} for key in s3_files_to_delete],
-                    'Quiet': True  # Optional: if True, successful deletions are not returned
-                }
                 boto3_session = boto3.session.Session()
                 s3 = boto3_session.client(
                     service_name='s3',
@@ -954,9 +950,23 @@ def register(app):
                     aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
                     aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
                 )
-                s3.delete_objects(Bucket=current_app.config['S3_BUCKET'], Delete=delete_payload)
+                
+                # S3 can only process 1000 files per delete operation, so we need to batch
+                batch_size = 1000
+                total_deleted = 0
+                
+                for i in range(0, len(s3_files_to_delete), batch_size):
+                    batch = s3_files_to_delete[i:i + batch_size]
+                    delete_payload = {
+                        'Objects': [{'Key': key} for key in batch],
+                        'Quiet': True  # If True, successful deletions are not returned
+                    }
+                    s3.delete_objects(Bucket=current_app.config['S3_BUCKET'], Delete=delete_payload)
+                    total_deleted += len(batch)
+                    print(f'Deleted batch {i//batch_size + 1}, progress: {total_deleted}/{len(s3_files_to_delete)} files')
+                    
                 s3.close()
-            print(f'Done, {len(s3_files_to_delete)} file deleted.')
+            print(f'Done, {len(s3_files_to_delete)} files deleted.')
 
     @app.cli.command("populate_post_reply_for_api")
     def populate_post_reply_for_api():
