@@ -576,6 +576,8 @@ ul.form-multicheck-columns {
   a {
     display: inline-block;
     max-width: 512px;
+    max-height: 512px;
+    overflow: hidden;
   }
   img {
     max-width: 100%;
