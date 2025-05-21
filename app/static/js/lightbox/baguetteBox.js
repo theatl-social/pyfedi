@@ -62,8 +62,6 @@
     var isOverlayVisible = false;
     // Touch event start position (for slide gesture)
     var touch = {};
-    // If set to true ignore touch events because animation was already fired
-    var touchFlag = false;
     // Regex pattern to match image files
     var regex = /.+\.(gif|jpe?g|png|webp)/i;
     // Object of all used galleries
@@ -101,36 +99,30 @@
         touch.startTime = new Date().getTime();
     };
     var touchmoveHandler = function(event) {
-        // If action was already triggered or multitouch return
-        if (touchFlag || touch.multitouch) {
-            return;
-        }
-        var touchEvent = event.touches[0] || event.changedTouches[0];
-        var duration = new Date().getTime() - touch.startTime;
-        // Move at least 40 pixels to trigger the action
-        if (touchEvent.pageX - touch.startX > 40 && duration < 250) {
-            event.preventDefault ? event.preventDefault() : event.returnValue = false; // eslint-disable-line no-unused-expressions
-            touchFlag = true;
-            showPreviousImage();
-        } else if (touchEvent.pageX - touch.startX < -40 && duration < 250) {
-            event.preventDefault ? event.preventDefault() : event.returnValue = false; // eslint-disable-line no-unused-expressions
-            touchFlag = true;
-            showNextImage();
-        // Move 100 pixels up to close the overlay
-        } else if (touch.startY - touchEvent.pageY > 100 && duration < 250) {
-            event.preventDefault ? event.preventDefault() : event.returnValue = false; // eslint-disable-line no-unused-expressions
-            hideOverlay();
-        }
     };
-    var touchendHandler = function() {
+    var touchendHandler = function(event) {
         touch.count--;
         if (touch.count <= 0) {
             touch.multitouch = false;
         }
-        touchFlag = false;
+
+        var touchEvent = event.touches[0] || event.changedTouches[0];
+        var duration = new Date().getTime() - touch.startTime;
+        // Move at least 40 pixels to trigger the action
+        if (touchEvent.pageX - touch.startX > 40 && duration < 300 && !touch.multitouch) {
+            event.preventDefault ? event.preventDefault() : event.returnValue = false; // eslint-disable-line no-unused-expressions
+            showPreviousImage();
+        } else if (touchEvent.pageX - touch.startX < -40 && duration < 300 && !touch.multitouch) {
+            event.preventDefault ? event.preventDefault() : event.returnValue = false; // eslint-disable-line no-unused-expressions
+            showNextImage();
+        // Move 100 pixels up to close the overlay
+        } else if (touch.startY - touchEvent.pageY > 100 && duration < 300 && !touch.multitouch) {
+            event.preventDefault ? event.preventDefault() : event.returnValue = false; // eslint-disable-line no-unused-expressions
+            hideOverlay();
+        }
     };
     var contextmenuHandler = function() {
-        touchendHandler();
+        //touchendHandler();
     };
 
     var trapFocusInsideOverlay = function(event) {
