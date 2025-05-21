@@ -229,7 +229,15 @@ function setupLightboxTeaser() {
     if(typeof baguetteBox !== 'undefined') {
         function popStateListener(event) {
             baguetteBox.hide();
-        }
+        };
+        function baguetteBoxClickImg(event) {
+          if (this.style.width != "100vw" && this.offsetWidth < window.innerWidth) {
+            this.style.width = "100vw";
+            this.style.maxHeight = "none";
+          } else {
+            baguetteBox.hide();
+          }
+        };
         baguetteBox.run('.post_teaser', {
             fullScreen: false,
             noScrollbars: true,
@@ -239,26 +247,19 @@ function setupLightboxTeaser() {
             afterShow: function() {
                 window.history.pushState('#lightbox', document.title, document.location+'#lightbox');
                 window.addEventListener('popstate', popStateListener);
-
-                function baguetteBoxClickImg(event) {
-                  if (this.style.width != "100vw" && this.offsetWidth < window.innerWidth) {
-                    this.style.width = "100vw";
-                    this.style.maxHeight = "none";
-                  } else {
-                    this.style.width = "";
-                    this.style.maxHeight = "";
-                    this.removeEventListener('click', baguetteBoxClickImg);
-                    baguetteBox.hide();
-                  }
-                };
                 for (const el of document.querySelectorAll('div#baguetteBox-overlay img')) {
                   el.addEventListener('click', baguetteBoxClickImg);
                 }
             },
             afterHide: function() {
                 if (window.history.state === '#lightbox') {
-                  window.history.back();
+                  for (const el of document.querySelectorAll('div#baguetteBox-overlay img')) {
+                    el.style.width = "";
+                    el.style.maxHeight = "";
+                    el.removeEventListener('click', baguetteBoxClickImg);
+                  }
                   window.removeEventListener('popstate', popStateListener);
+                  window.history.back();
                 }
             },
         });
