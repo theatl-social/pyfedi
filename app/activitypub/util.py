@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from datetime import timedelta, datetime, timezone
 from json import JSONDecodeError
 from random import randint
@@ -1212,7 +1213,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                             # Resize the image to medium
                             if medium_width:
                                 if img_width > medium_width:
-                                    image.thumbnail((medium_width, medium_width))
+                                    image.thumbnail((medium_width, sys.maxsize))
                                 image.save(final_place)
                                 if store_files_in_s3():
                                     content_type = guess_mime_type(final_place)

@@ -1,4 +1,6 @@
 import os
+import sys
+
 from app import db, cache
 from app.activitypub.util import make_image_sizes, notify_about_post
 from app.constants import *
@@ -345,7 +347,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
             if '.' + img.format.lower() in allowed_extensions:
                 img = ImageOps.exif_transpose(img)
 
-                img.thumbnail((2000, 2000))
+                img.thumbnail((2000, sys.maxsize))
                 img.save(final_place)
             else:
                 raise Exception('filetype not allowed')
@@ -414,7 +416,10 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
             db.session.add(file)
             db.session.commit()
             post.image_id = file.id
-            make_image_sizes(post.image_id, 170, 512, 'posts', post.community.low_quality)
+            if post.type == POST_TYPE_IMAGE:
+                make_image_sizes(post.image_id, 512, 1200, 'posts', post.community.low_quality)
+            else:
+                make_image_sizes(post.image_id, 170, 512, 'posts', post.community.low_quality)
             post.url = url
             post.type = POST_TYPE_IMAGE
         else:

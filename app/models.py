@@ -1637,8 +1637,12 @@ class Post(db.Model):
                 db.session.commit()
 
             if post.image_id and not post.type == constants.POST_TYPE_VIDEO:
-                make_image_sizes(post.image_id, 170, 512, 'posts',
-                                 community.low_quality)  # the 512 sized image is for masonry view
+                if post.type == constants.POST_TYPE_IMAGE:
+                    make_image_sizes(post.image_id, 512, 1200, 'posts',
+                                     community.low_quality)  # the 512 sized image is for masonry view
+                else:
+                    make_image_sizes(post.image_id, 170, None, 'posts',
+                                     community.low_quality)  # the 512 sized image is for masonry view
 
             # Update list of cross posts
             if post.url:
