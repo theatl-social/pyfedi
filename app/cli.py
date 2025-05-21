@@ -19,11 +19,11 @@ from app.activitypub.signature import RsaKeys, send_post_request
 from app.activitypub.util import find_actor_or_create, extract_domain_and_actor, notify_about_post
 from app.auth.util import random_token
 from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED, \
-    NOTIF_UNBAN
+    NOTIF_UNBAN, POST_TYPE_LINK
 from app.email import send_email
 from app.models import Settings, BannedInstances, Role, User, RolePermission, Domain, ActivityPubLog, \
     utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply, Language, \
-    Tag, InstanceRole, Community, DefederationSubscription, SendQueue, CommunityBan
+    Tag, InstanceRole, Community, DefederationSubscription, SendQueue, CommunityBan, _store_files_in_s3
 from app.post.routes import post_delete_post
 from app.shared.post import edit_post
 from app.shared.tasks import task_selector
@@ -918,6 +918,45 @@ def register(app):
                 resp.close()
 
             print('Done!')
+
+    @app.cli.command("remove-unnecessary-images")
+    def remove_unnecessary_images():
+        # link posts only need a thumbnail but for a long time we have been generating both a thumbnail and a medium-sized image
+        with app.app_context():
+            import boto3
+            sql = '''select file_path from "file" as f 
+                    inner join "post" as p on p.image_id  = f.id 
+                    where p.type = :type and f.file_path  is not null'''
+            files = list(db.session.execute(text(sql), {'type': POST_TYPE_LINK}).scalars())
+            s3_files_to_delete = []
+            print('Gathering file list...')
+            for file in files:
+                if file:
+                    if file.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}') and _store_files_in_s3():
+                        s3_path = file.replace(f'https://{current_app.config["S3_PUBLIC_URL"]}/', '')
+                        s3_files_to_delete.append(s3_path)
+                    elif os.path.isfile(file):
+                        try:
+                            os.unlink(file)
+                        except FileNotFoundError:
+                            ...
+            print('Sending list to S3...')
+            if len(s3_files_to_delete) > 0:
+                delete_payload = {
+                    'Objects': [{'Key': key} for key in s3_files_to_delete],
+                    'Quiet': True  # Optional: if True, successful deletions are not returned
+                }
+                boto3_session = boto3.session.Session()
+                s3 = boto3_session.client(
+                    service_name='s3',
+                    region_name=current_app.config['S3_REGION'],
+                    endpoint_url=current_app.config['S3_ENDPOINT'],
+                    aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                    aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+                )
+                s3.delete_objects(Bucket=current_app.config['S3_BUCKET'], Delete=delete_payload)
+                s3.close()
+            print(f'Done, {len(s3_files_to_delete)} file deleted.')
 
     @app.cli.command("populate_post_reply_for_api")
     def populate_post_reply_for_api():
