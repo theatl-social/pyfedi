@@ -104,17 +104,19 @@
         if (touchFlag || touch.multitouch) {
             return;
         }
-        event.preventDefault ? event.preventDefault() : event.returnValue = false; // eslint-disable-line no-unused-expressions
         var touchEvent = event.touches[0] || event.changedTouches[0];
         // Move at least 40 pixels to trigger the action
         if (touchEvent.pageX - touch.startX > 40) {
+            event.preventDefault ? event.preventDefault() : event.returnValue = false; // eslint-disable-line no-unused-expressions
             touchFlag = true;
             showPreviousImage();
         } else if (touchEvent.pageX - touch.startX < -40) {
+            event.preventDefault ? event.preventDefault() : event.returnValue = false; // eslint-disable-line no-unused-expressions
             touchFlag = true;
             showNextImage();
         // Move 100 pixels up to close the overlay
         } else if (touch.startY - touchEvent.pageY > 100) {
+            event.preventDefault ? event.preventDefault() : event.returnValue = false; // eslint-disable-line no-unused-expressions
             hideOverlay();
         }
     };
