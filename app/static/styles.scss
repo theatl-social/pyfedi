@@ -947,12 +947,18 @@ time {
       color: green;
       .fe {
         font-weight: bold;
+        &:before {
+          font-weight: bold;
+        }
       }
     }
     &.voted_down {
       color: darkred;
       .fe {
         font-weight: bold;
+        &:before {
+          font-weight: bold;
+        }
       }
     }
   }
@@ -1074,6 +1080,12 @@ time {
   padding-left: 0;
   padding-top: 8px;
   padding-right: 8px;
+
+  &.distinguished {
+    > .row:first-child {
+      background-color: $lightest-grey;
+    }
+  }
 
   .limit_height {
     position: relative;

@@ -72,7 +72,7 @@
   font-family: "Feather" !important;
   speak: none;
   font-style: normal;
-  font-weight: normal;
+  font-weight: bold;
   font-variant: normal;
   text-transform: none;
   line-height: 1;
@@ -246,10 +246,12 @@
 
 .fe-arrow-up::before {
   content: "\e914";
+  font-weight: normal;
 }
 
 .fe-arrow-down::before {
   content: "\e90c";
+  font-weight: normal;
 }
 
 .fe-reply {
@@ -359,6 +361,10 @@ h1 .fe-bell, h1 .fe-no-bell {
 
 .fe-magnify::before {
   content: "\ea08";
+}
+
+.fe-distinguished::before {
+  content: "\e9c7";
 }
 
 .imageVisible .fe-magnify::before {
@@ -1344,10 +1350,16 @@ time {
 .voting_buttons_new .upvote_button.voted_up .fe, .voting_buttons_new .downvote_button.voted_up .fe {
   font-weight: bold;
 }
+.voting_buttons_new .upvote_button.voted_up .fe:before, .voting_buttons_new .downvote_button.voted_up .fe:before {
+  font-weight: bold;
+}
 .voting_buttons_new .upvote_button.voted_down, .voting_buttons_new .downvote_button.voted_down {
   color: darkred;
 }
 .voting_buttons_new .upvote_button.voted_down .fe, .voting_buttons_new .downvote_button.voted_down .fe {
+  font-weight: bold;
+}
+.voting_buttons_new .upvote_button.voted_down .fe:before, .voting_buttons_new .downvote_button.voted_down .fe:before {
   font-weight: bold;
 }
 .voting_buttons_new .upvote_button .htmx-indicator {
@@ -1452,6 +1464,9 @@ time {
   padding-left: 0;
   padding-top: 8px;
   padding-right: 8px;
+}
+.comment.distinguished > .row:first-child {
+  background-color: #eee;
 }
 .comment .limit_height {
   position: relative;
