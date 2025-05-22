@@ -514,16 +514,20 @@ def show_community_rss(actor):
         abort(404)
 
 
-@bp.route('/<actor>/subscribe', methods=['GET'])
+@bp.route('/<actor>/subscribe', methods=['GET', 'POST'])
 @login_required
 @validation_required
 def subscribe(actor):
     do_subscribe(actor, current_user.id)
-    referrer = request.headers.get('Referer', None)
-    if referrer is not None and current_app.config['SERVER_NAME'] in referrer:
-        return redirect(referrer)
+    if request.method == 'POST':
+        community = actor_to_community(actor)
+        return render_template('community/_leave_button.html', community=community)
     else:
-        return redirect('/c/' + actor)
+        referrer = request.headers.get('Referer', None)
+        if referrer is not None and current_app.config['SERVER_NAME'] in referrer:
+            return redirect(referrer)
+        else:
+            return redirect('/c/' + actor)
 
 
 # this is separated out from the subscribe route so it can be used by the 
@@ -606,7 +610,7 @@ def do_subscribe(actor, user_id, admin_preload=False, joined_via_feed=False):
             return pre_load_message
 
 
-@bp.route('/<actor>/unsubscribe', methods=['GET'])
+@bp.route('/<actor>/unsubscribe', methods=['GET', 'POST'])
 @login_required
 def unsubscribe(actor):
     community = actor_to_community(actor)
@@ -654,12 +658,15 @@ def unsubscribe(actor):
                 # todo: community deletion
                 flash(_('You need to make someone else the owner before unsubscribing.'), 'warning')
 
-        # send them back where they came from
-        referrer = request.headers.get('Referer', None)
-        if referrer is not None and current_app.config['SERVER_NAME'] in referrer:
-            return redirect(referrer)
+        if request.method == 'POST':
+            return render_template('community/_join_button.html', community=community)
         else:
-            return redirect('/c/' + actor)
+            # send them back where they came from
+            referrer = request.headers.get('Referer', None)
+            if referrer is not None and current_app.config['SERVER_NAME'] in referrer:
+                return redirect(referrer)
+            else:
+                return redirect('/c/' + actor)
     else:
         abort(404)
 
