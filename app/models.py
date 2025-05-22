@@ -2038,7 +2038,7 @@ class PostReply(db.Model):
                           depth=depth,
                           community_id=post.community.id, body=body,
                           body_html=body_html, body_html_safe=True,
-                          from_bot=user.bot, nsfw=post.nsfw, nsfl=post.nsfl,
+                          from_bot=user.bot, nsfw=post.nsfw,
                           notify_author=notify_author, instance_id=user.instance_id,
                           language_id=language_id,
                           ap_id=request_json['object']['id'] if request_json else None,
