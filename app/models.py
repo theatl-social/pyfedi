@@ -1971,7 +1971,7 @@ class PostReply(db.Model):
     body_html_safe = db.Column(db.Boolean, default=False)
     score = db.Column(db.Integer, default=0, index=True)    # used for 'top' sorting
     nsfw = db.Column(db.Boolean, default=False, index=True)
-    nsfl = db.Column(db.Boolean, default=False, index=True)
+    distinguished = db.Column(db.Boolean, default=False)
     notify_author = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, index=True, default=utcnow)
     posted_at = db.Column(db.DateTime, index=True, default=utcnow)
