@@ -816,6 +816,7 @@ class User(UserMixin, db.Model):
     searchable = db.Column(db.Boolean, default=True)
     indexable = db.Column(db.Boolean, default=False)
     bot = db.Column(db.Boolean, default=False)
+    vote_privately = db.Column(db.Boolean, default=False)
     ignore_bots = db.Column(db.Integer, default=0)
     unread_notifications = db.Column(db.Integer, default=0)
     ip_address = db.Column(db.String(50))
@@ -951,9 +952,6 @@ class User(UserMixin, db.Model):
         if self.cover_id:
             size += self.cover.filesize()
         return size
-
-    def vote_privately(self):
-        return self.alt_user_name is not None and self.alt_user_name != ''
 
     def community_flair(self, community_id: int):
         user_flair = UserFlair.query.filter(UserFlair.community_id == community_id, UserFlair.user_id == self.id).first()

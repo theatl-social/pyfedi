@@ -115,7 +115,7 @@ def send_vote(user_id, object, vote_to_undo, vote_direction):
                 continue
                 
             # Determine if we need a private vote for this instance
-            use_private = instance.votes_are_public() and user.vote_privately()
+            use_private = instance.votes_are_public() and user.vote_privately
             
             # Select the appropriate payload based on privacy
             if vote_to_undo:
@@ -145,7 +145,7 @@ def send_vote(user_id, object, vote_to_undo, vote_direction):
             send_post_request(instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
     else:
         # For remote communities, select appropriate payload based on privacy
-        use_private = community.instance.votes_are_public() and user.vote_privately()
+        use_private = community.instance.votes_are_public() and user.vote_privately
         
         if vote_to_undo:
             payload = undo_private if use_private else undo_public
