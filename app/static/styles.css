@@ -1015,7 +1015,7 @@ ul.form-multicheck-columns {
 .post_teaser_image_preview a {
   display: inline-block;
   max-width: 512px;
-  max-height: 512px;
+  max-height: 575px;
   overflow: hidden;
 }
 .post_teaser_image_preview img {
