@@ -319,7 +319,7 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
                    'ap_id': reply.profile_id(),
                    'local': reply.is_local(),
                    'language_id': reply.language_id if reply.language_id else 0,
-                   'distinguished': False,
+                   'distinguished': reply.distinguished,
                    'removed': False})
 
         if not reply.path:

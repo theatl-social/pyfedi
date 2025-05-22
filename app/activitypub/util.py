@@ -214,7 +214,7 @@ def comment_model_to_json(reply: PostReply) -> dict:
         'mediaType': 'text/html',
         'source': {'content': reply.body, 'mediaType': 'text/markdown'},
         'published': ap_datetime(reply.created_at),
-        'distinguished': False,
+        'distinguished': reply.distinguished,
         'audience': reply.community.public_url(),
         'language': {
             'identifier': reply.language_code(),
@@ -2006,6 +2006,11 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
     if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
         language = find_language_or_create(request_json['object']['language']['identifier'], request_json['object']['language']['name'])
         reply.language_id = language.id
+
+    # Distinguished
+    if 'distinguished' in request_json['object']:
+        reply.distinguished = request_json['object']['distinguished']
+
     reply.edited_at = utcnow()
 
     if 'attachment' in request_json['object']:
