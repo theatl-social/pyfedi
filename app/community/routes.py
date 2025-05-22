@@ -518,7 +518,8 @@ def show_community_rss(actor):
 @login_required
 @validation_required
 def subscribe(actor):
-    do_subscribe(actor, current_user.id)
+    # POST is used by htmx, GET when JS is disabled
+    do_subscribe(actor, current_user.id, admin_preload=request.method == 'POST')
     if request.method == 'POST':
         community = actor_to_community(actor)
         return render_template('community/_leave_button.html', community=community)
@@ -613,6 +614,7 @@ def do_subscribe(actor, user_id, admin_preload=False, joined_via_feed=False):
 @bp.route('/<actor>/unsubscribe', methods=['GET', 'POST'])
 @login_required
 def unsubscribe(actor):
+    # POST is used by htmx, GET when JS is disabled
     community = actor_to_community(actor)
 
     if community is not None:
@@ -650,8 +652,9 @@ def unsubscribe(actor):
                 community.subscriptions_count -= 1
                 db.session.commit()
 
-                flash(Markup(_('You left %(community_name)s',
-                               community_name=f'<a href="/c/{community.link()}">{community.display_name()}</a>')))
+                if request.method == 'GET':
+                    flash(Markup(_('You left %(community_name)s',
+                                   community_name=f'<a href="/c/{community.link()}">{community.display_name()}</a>')))
                 cache.delete_memoized(community_membership, current_user, community)
                 cache.delete_memoized(joined_communities, current_user.id)
             else:
