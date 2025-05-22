@@ -2385,9 +2385,13 @@ body.compact-min .btn {
 }
 body.compact-min .post_teaser .post_teaser_article_preview,
 body.compact-min .post_teaser .post_teaser_link_preview,
-body.compact-min .post_teaser .post_teaser_image_preview,
 body.compact-min .post_teaser .post_teaser_video_preview {
   display: none;
+}
+body.compact-min .post_teaser .post_teaser_image_preview img {
+  max-height: 170px;
+  width: auto;
+  min-width: inherit;
 }
 body.compact-min .community_icon {
   width: 15vw;
@@ -2428,6 +2432,9 @@ body.compact-min .form-select {
 body.compact-max .post_teaser {
   border-bottom-width: 1px;
   padding-top: 4px;
+}
+body.compact-max .post_teaser .post_teaser_image_preview {
+  display: none;
 }
 body.compact-max .post_teaser img, body.compact-max .post_teaser .thumbnail {
   display: none;
