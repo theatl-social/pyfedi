@@ -1782,10 +1782,18 @@ form {
 }
 
 .post_flair_sidepane {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
   .post_flair {
     font-size: 90%;
     padding: 2px 4px;
-    line-height: 27px;
+    line-height: 20px;
+    display: inline-block;
+    border-radius: 4px;
+    white-space: nowrap;
+    text-align: center;
   }
   margin-top: 12px;
 }
