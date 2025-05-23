@@ -21,9 +21,16 @@
                     </div>
                 </div>
                 <form method="get" action="/search">
-                    <input type="search" id="search_community" name="q" class="form-control mt-2" placeholder="{{ _('Search this community') }}" />
+                    <input type="search" id="search_community" name="q" class="form-control" placeholder="{{ _('Search this community') }}" />
                     <input type="hidden" name="community" value="{{ community.id }}">
                 </form>
+                {% if community_flair and len(community_flair) > 0 -%}
+                    <div class="post_flair_sidepane">
+                        {% for flair in community_flair -%}
+                            <span class="post_flair" style="color: {{ flair.text_color}}; background-color: {{ flair.background_color }}" title="{{ _('Show only %(flair_name)s', flair_name=flair.flair) }}"><a href="{{ url_for('activitypub.community_profile', actor=community.link(), flair=flair.flair) }}" style="color: {{ flair.text_color}}">{{ flair.flair }}</a></span>
+                        {% endfor -%}
+                    </div>
+                {% endif %}
             </div>
         </div>
         {% endif -%}
@@ -45,13 +52,6 @@
                 {% if current_user.is_authenticated or (community_flair and len(community_flair) > 0) -%}
                     <h3>{{ _('Flair') }}</h3>
                 {% endif -%}
-                {% if community_flair and len(community_flair) > 0 -%}
-                    <div class="post_flair_sidepane">
-                        {% for flair in community_flair -%}
-                            <span class="post_flair" style="color: {{ flair.text_color}}; background-color: {{ flair.background_color }}" title="{{ _('Show only %(flair_name)s', flair_name=flair.flair) }}"><a href="{{ url_for('activitypub.community_profile', actor=community.link(), flair=flair.flair) }}" style="color: {{ flair.text_color}}">{{ flair.flair }}</a></span>
-                        {% endfor -%}
-                    </div>
-                {% endif %}
                 {% if current_user.is_authenticated -%}
                 <p>{{ current_user.display_name() }} {% if current_user.id in user_flair %}<span class="user_flair">{{ user_flair[current_user.id] }}</span>{% endif %}
                 <a href="{{ url_for('community.community_my_flair', actor=community.link()) }}">{{ _('Set my flair')}}</a></p>

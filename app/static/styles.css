@@ -2081,8 +2081,12 @@ form h5 {
 .post_flair_body {
   padding-left: 0;
 }
+#search_community {
+  margin-top: 16px;
+}
+
 .post_flair_sidepane {
-  margin-bottom: 17px;
+  margin-top: 12px;
 }
 .post_flair_sidepane .post_flair {
   font-size: 90%;
