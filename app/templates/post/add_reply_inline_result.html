@@ -52,7 +52,7 @@
                 <span class="visually-hidden">by</span>
                 {{ render_username(post_reply.author, htmx_redirect_back_to=request.path + '#comment_' + str(post_reply.id)) }}
                 {% if post_reply.author.id == post_reply.post.author.id -%}
-                    <span title="Submitter of original post" aria-label="{{ _('Post creator') }}" class="small"> [OP]</span>
+                    <span title="Submitter of original post" aria-label="{{ _('Post creator') }}" class="user_flair original_poster">OP</span>
                 {% endif -%}
             </div>
             <div class="col-auto text-muted small pt-05">

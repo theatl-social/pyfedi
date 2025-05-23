@@ -34,7 +34,7 @@
             {{ render_username(post_reply.author, htmx_redirect_back_to=request.path + '#comment_' + str(post_reply.id)) }}
             {% if post_reply.distinguished -%}<span class="fe fe-distinguished orangered" title="{{ _('Moderator') }}"></span>{% endif -%}
             {% if post_reply.author.id == post_reply.post.author.id -%}
-                <span title="Submitter of original post" aria-label="{{ _('Post creator') }}" class="small"> [OP]</span>
+                <span title="Submitter of original post" aria-label="{{ _('Post creator') }}" class="user_flair original_poster">OP</span>
             {% endif -%}
             <span class="comment_time"><a href="/post/{{ post_reply.post_id }}#comment_{{ post_reply.id }}">
                 {% if post_reply.edited_at -%}
