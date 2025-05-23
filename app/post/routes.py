@@ -1240,7 +1240,6 @@ def post_reply_edit(post_id: int, comment_id: int):
             form.distinguished.data = post_reply.distinguished
             if not post.community.is_moderator() and not post.community.is_owner() and not current_user.is_staff() and not current_user.is_admin():
                 form.distinguished.render_kw = {'disabled': True}
-                form.submit.label = _('Save')
             return render_template('post/post_reply_edit.html', title=_('Edit comment'), form=form, post=post, post_reply=post_reply,
                                    comment=comment, markdown_editor=current_user.markdown_editor,
                                    community=post.community, site=g.site,
