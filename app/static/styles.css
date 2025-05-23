@@ -718,6 +718,10 @@ div.navbar {
   top: -1px;
 }
 
+.post_reply_form {
+  margin-bottom: 25px;
+}
+
 .card {
   max-width: 380px;
   margin-left: auto;
