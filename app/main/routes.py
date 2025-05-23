@@ -8,7 +8,7 @@ from sqlalchemy.sql.operators import or_, and_
 from ua_parser import parse as uaparse
 
 from app import db, cache
-from app.activitypub.util import users_total, active_month, local_posts, local_communities, find_actor_or_create, \
+from app.activitypub.util import users_total, active_month, local_posts, local_communities, \
     lemmy_site_data, is_activitypub_request
 from app.activitypub.signature import default_context, LDSignature
 from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, \
@@ -30,7 +30,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     get_redis_connection, subscribed_feeds, joined_or_modding_communities, login_required_if_private_instance, \
     pending_communities, retrieve_image_hash
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
-    Notification, Language, community_language, ModLog, read_posts, Feed, FeedItem, CommunityFlair
+    Notification, Language, community_language, ModLog, Feed, FeedItem
 
 
 @bp.route('/', methods=['HEAD', 'GET', 'POST'])

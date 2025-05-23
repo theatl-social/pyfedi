@@ -7,7 +7,7 @@ from app.utils import get_setting
 
 
 @celery.task
-def check_user_application(application_id):
+def check_user_application(application_id, send_async=True):
     application = UserRegistration.query.get(application_id)
     if not application or not application.user:
         return

@@ -89,14 +89,12 @@ def show_topic(topic_path):
             # filter out nsfw and nsfl if desired
             if current_user.is_anonymous:
                 comments = comments.filter(PostReply.from_bot == False, PostReply.nsfw == False,
-                                           PostReply.nsfl == False, PostReply.deleted == False)
+                                           PostReply.deleted == False)
                 user = None
             else:
                 user = current_user
                 if current_user.ignore_bots == 1:
                     comments = comments.filter(PostReply.from_bot == False)
-                if current_user.hide_nsfl == 1:
-                    comments = comments.filter(PostReply.nsfl == False)
                 if current_user.hide_nsfw == 1:
                     comments = comments.filter(PostReply.nsfw == False)
 

@@ -96,8 +96,6 @@ def run_search():
             if current_user.is_authenticated:
                 if current_user.ignore_bots == 1:
                     replies = replies.filter(PostReply.from_bot == False)
-                if current_user.hide_nsfl == 1:
-                    replies = replies.filter(PostReply.nsfl == False)
                 if current_user.hide_nsfw == 1:
                     replies = replies.filter(PostReply.nsfw == False)
                 instance_ids = blocked_instances(current_user.id)
@@ -114,7 +112,6 @@ def run_search():
                     replies = replies.filter(PostReply.community_id.not_in(banned_from))
             else:
                 replies = replies.filter(PostReply.from_bot == False)
-                replies = replies.filter(PostReply.nsfl == False)
                 replies = replies.filter(PostReply.nsfw == False)
 
             replies = replies.join(Post, PostReply.post_id == Post.id).filter(Post.indexable == True, Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
