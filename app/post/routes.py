@@ -15,7 +15,7 @@ from app.activitypub.util import update_post_from_activity
 from app.community.util import send_to_remote_instance
 from app.inoculation import inoculation
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm, ConfirmationForm, \
-    ConfirmationMultiDeleteForm
+    ConfirmationMultiDeleteForm, EditReplyForm
 from app.community.forms import CreateLinkForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm
 from app.constants import NOTIF_REPORT, POST_STATUS_SCHEDULED
 from app.post.util import post_replies, get_comment_branch, tags_to_string, url_needs_archive, \
@@ -88,6 +88,10 @@ def show_post(post_id: int):
         if current_user.is_authenticated and (current_user.id == post.user_id or current_user.is_admin() or current_user.is_staff()):
             if post.status == POST_STATUS_SCHEDULED:
                 flash(_('This post is scheduled to be published at %(when)s', when=str(post.scheduled_for)))    # todo: convert into current_user.timezone
+
+        if current_user.is_authenticated:
+            if not post.community.is_moderator() and not post.community.is_owner() and not current_user.is_staff() and not current_user.is_admin():
+                form.distinguished.render_kw = {'disabled': True}
 
         if current_user.is_authenticated and current_user.verified and form.validate_on_submit():
             try:
@@ -531,7 +535,7 @@ def add_reply_inline(post_id: int, comment_id: int):
             return f'<div id="reply_to_{comment_id}" class="hidable"></div>' # do nothing, just hide the form
         reply = PostReply.new(current_user, post, in_reply_to=in_reply_to, body=piefed_markdown_to_lemmy_markdown(content),
                               body_html=markdown_to_html(content), notify_author=True,
-                              language_id=language_id)
+                              language_id=language_id, distinguished=False)
 
         current_user.language_id = language_id
         reply.ap_id = reply.profile_id()
@@ -1199,7 +1203,7 @@ def post_reply_edit(post_id: int, comment_id: int):
         comment = PostReply.query.get_or_404(post_reply.parent_id)
     else:
         comment = None
-    form = NewReplyForm()
+    form = EditReplyForm()
     form.language_id.choices = languages_for_form()
     if post_reply.user_id == current_user.id or post.community.is_moderator():
         if form.validate_on_submit():
@@ -1209,6 +1213,10 @@ def post_reply_edit(post_id: int, comment_id: int):
             form.body.data = post_reply.body
             form.notify_author.data = post_reply.notify_author
             form.language_id.data = post_reply.language_id
+            form.distinguished.data = post_reply.distinguished
+            if not post.community.is_moderator() and not post.community.is_owner() and not current_user.is_staff() and not current_user.is_admin():
+                form.distinguished.render_kw = {'disabled': True}
+                form.submit.label = _('Save')
             return render_template('post/post_reply_edit.html', title=_('Edit comment'), form=form, post=post, post_reply=post_reply,
                                    comment=comment, markdown_editor=current_user.markdown_editor,
                                    community=post.community, site=g.site,

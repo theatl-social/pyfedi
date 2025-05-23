@@ -10,8 +10,13 @@ from app.utils import MultiCheckboxField
 class NewReplyForm(FlaskForm):
     body = TextAreaField(_l('Body'), render_kw={'placeholder': 'What are your thoughts?', 'rows': 5}, validators=[DataRequired(), Length(min=1, max=10000)])
     notify_author = BooleanField(_l('Notify about replies'))
-    language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select language-float-right'})
+    distinguished = BooleanField(_l('Distinguish as moderator comment'))
+    language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Comment'))
+
+
+class EditReplyForm(NewReplyForm):
+    submit = SubmitField(_l('Save'))
 
 
 class ReportPostForm(FlaskForm):

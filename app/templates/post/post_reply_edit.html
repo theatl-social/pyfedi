@@ -3,7 +3,7 @@
 {% else %}
     {% extends "base.html" %}
 {% endif %}
-{% from 'bootstrap/form.html' import render_form %}
+{% from 'bootstrap/form.html' import render_field %}
 
 {% block app_content %}
 <script src="/static/js/coolfieldset.js?v=3"></script>
@@ -19,7 +19,18 @@
             </fieldset>
         {% endif %}
         <div class="position-relative">
-            {{ render_form(form) }}
+            <form method="post" role="form">
+                {{ form.csrf_token() }}
+                {{ render_field(form.body) }}
+                <fieldset id="post_reply_more_options" class="mt-2 coolfieldset {{ 'collapsed' if request.cookies.get('fieldset_post_reply_more_options_state', 'collapsed') == 'collapsed' }}">
+                    <legend>{{ _('More options') }}</legend>
+                    {{ render_field(form.notify_author) }}
+                    {{ render_field(form.distinguished) }}
+                    {{ render_field(form.language_id) }}
+                </fieldset>
+                {{ render_field(form.submit) }}
+            </form>
+
             {% if markdown_editor %}
                 <script nonce="{{ session['nonce'] }}">
                     window.addEventListener("load", function () {

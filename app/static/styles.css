@@ -836,13 +836,12 @@ div.navbar {
 .post_reply_form label {
   display: none;
 }
-.post_reply_form .form-check {
-  position: absolute;
-  bottom: -14px;
-  left: 122px;
-}
 .post_reply_form .form-check label {
   display: inherit;
+}
+
+#post_reply_more_options.expanded {
+  margin-bottom: 15px;
 }
 
 ul.form-multicheck-columns {
@@ -856,11 +855,6 @@ ul.form-multicheck-columns {
 
 .add_reply .form-control-label {
   display: none;
-}
-.add_reply .form-check {
-  position: absolute;
-  bottom: -14px;
-  left: 122px;
 }
 
 .sort_methods, .view_filter {

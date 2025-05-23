@@ -368,13 +368,15 @@ div.navbar {
   }
 
   .form-check {
-    position: absolute;
-    bottom: -14px;
-    left: 122px;
-
     label {
       display: inherit;
     }
+  }
+}
+
+#post_reply_more_options {
+  &.expanded {
+    margin-bottom: 15px;
   }
 }
 
@@ -392,11 +394,6 @@ ul.form-multicheck-columns {
     display: none;
   }
 
-  .form-check {
-    position: absolute;
-    bottom: -14px;
-    left: 122px;
-  }
 }
 
 .sort_methods, .view_filter {

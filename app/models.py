@@ -2016,7 +2016,7 @@ class PostReply(db.Model):
     )
 
     @classmethod
-    def new(cls, user: User, post: Post, in_reply_to, body, body_html, notify_author, language_id, request_json: dict = None, announce_id=None):
+    def new(cls, user: User, post: Post, in_reply_to, body, body_html, notify_author, language_id, distinguished, request_json: dict = None, announce_id=None):
 
         from app.utils import shorten_string, blocked_phrases, recently_upvoted_post_replies, reply_already_exists, reply_is_just_link_to_gif_reaction, reply_is_stupid
         from app.activitypub.util import notify_about_post_reply
@@ -2041,6 +2041,7 @@ class PostReply(db.Model):
                           from_bot=user.bot, nsfw=post.nsfw,
                           notify_author=notify_author, instance_id=user.instance_id,
                           language_id=language_id,
+                          distinguished=distinguished,
                           ap_id=request_json['object']['id'] if request_json else None,
                           ap_create_id=request_json['id'] if request_json else None,
                           ap_announce_id=announce_id)
