@@ -1048,12 +1048,12 @@ function setupAddPassKey() {
 function setupFancySelects() {
     var crossPostCommunity = document.getElementById('which_community');
     if(crossPostCommunity && crossPostCommunity.type === 'select-one') {
-        new TomSelect('#which_community', {});
+        new TomSelect('#which_community', {maxOptions: null, maxItems: 1});
     }
 
     var communities = document.getElementById('communities');
     if(communities && communities.type === 'select-one') {
-        new TomSelect('#communities', {});
+        new TomSelect('#communities', {maxOptions: null, maxItems: 1});
     }
 }
 
