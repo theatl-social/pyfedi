@@ -107,6 +107,8 @@
                 <link href="{{ url_for('static', filename='themes/' + theme() + '/styles.css') }}" type="text/css" rel="stylesheet" />
             {% endif -%}
         {% endblock -%}
+        {% block extra_css -%}
+        {% endblock -%}
         <title>{% if title %}{{ title }}{% else %}{{ _('PieFed') }}{% endif %}</title>
         <link rel="apple-touch-icon" sizes="180x180" href="/static/images/piefed_logo_icon_t_180.png">
         <link rel="apple-touch-icon" sizes="152x152" href="/static/images/piefed_logo_icon_t_152.png">

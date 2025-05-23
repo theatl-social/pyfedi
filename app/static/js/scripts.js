@@ -41,6 +41,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupSelectAllCheckbox();
     setupFontSizeChangers();
     setupAddPassKey();
+    setupFancySelects();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
@@ -1041,6 +1042,18 @@ function setupAddPassKey() {
                 $.prompt(verificationJSON.message);
             }
         });
+    }
+}
+
+function setupFancySelects() {
+    var crossPostCommunity = document.getElementById('which_community');
+    if(crossPostCommunity && crossPostCommunity.type === 'select-one') {
+        new TomSelect('#which_community', {});
+    }
+
+    var communities = document.getElementById('communities');
+    if(communities && communities.type === 'select-one') {
+        new TomSelect('#communities', {});
     }
 }
 

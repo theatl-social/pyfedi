@@ -5,8 +5,13 @@
 {% endif %}
 {% from 'bootstrap/form.html' import render_form, render_field %}
 
+{% block extra_css %}
+    <link href="{{ url_for('static', filename='js/tomselect/tom-select.css') }}" type="text/css" rel="stylesheet" />
+{% endblock %}
+
 {% block app_content %}
 <script src="/static/js/coolfieldset.js?v=3"></script>
+<script src="/static/js/tomselect/tom-select.complete.min.js"></script>
 <div class="row">
     <main class="col-12 col-lg-8 position-relative main_pane">
         {% block title %}<h1>{{ _('Edit post') }}</h1>{% endblock %}
