@@ -236,6 +236,10 @@ div.navbar {
   margin-bottom: 25px;
 }
 
+.dropdown-menu.show {
+  z-index: 1022;
+}
+
 .card {
   max-width: 380px;
   margin-left: auto;
