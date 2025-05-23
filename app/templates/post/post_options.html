@@ -15,6 +15,8 @@
         {% endif -%}
     {% endif -%}
     {% if post.community.is_moderator() or post.community.is_owner() or current_user.is_admin() -%}
+        <li><a href="{{ url_for('post.post_set_flair', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-label"></span>
+                {{ _('Set flair') }}</a></li>
         {% if post.sticky -%}
             <li><a href="{{ url_for('post.post_sticky', post_id=post.id, mode='no') }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-unsticky"></span>
                 {{ _('Un-sticky') }}</a></li>

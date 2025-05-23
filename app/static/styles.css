@@ -266,6 +266,10 @@
   content: "\e991";
 }
 
+.fe-label::before {
+  content: "\e9db";
+}
+
 .fe-link::before {
   content: "\e991";
 }
@@ -705,7 +709,7 @@ div.navbar {
 .form-group {
   margin-bottom: 1.1rem;
 }
-.form-group.required label:after {
+.form-group.required > label:after {
   content: "*";
   color: red;
   margin-left: 2px;

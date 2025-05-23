@@ -219,7 +219,7 @@ div.navbar {
   margin-bottom: 1.1rem;
 
   &.required {
-    label {
+    > label {
       &:after {
         content: '*';
         color: red;

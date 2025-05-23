@@ -62,3 +62,9 @@ class ConfirmationForm(FlaskForm):
 class ConfirmationMultiDeleteForm(FlaskForm):
     also_delete_replies = BooleanField(_l('Also delete replies to this comment'))
     submit = SubmitField(_l('Yes'), render_kw={'autofocus': True})
+
+
+class FlairPostForm(FlaskForm):
+    referrer = HiddenField()
+    flair = MultiCheckboxField(_l('Flair'), coerce=int, render_kw={'class': 'form-multicheck-columns'})
+    submit = SubmitField(_l('Save'))

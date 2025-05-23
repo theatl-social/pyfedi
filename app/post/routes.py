@@ -12,12 +12,12 @@ from furl import furl
 from app import db, constants, cache, limiter, celery
 from app.activitypub.signature import default_context, send_post_request
 from app.activitypub.util import update_post_from_activity
-from app.community.util import send_to_remote_instance
+from app.community.util import send_to_remote_instance, flair_from_form
 from app.inoculation import inoculation
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm, ConfirmationForm, \
-    ConfirmationMultiDeleteForm, EditReplyForm
+    ConfirmationMultiDeleteForm, EditReplyForm, FlairPostForm
 from app.community.forms import CreateLinkForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm
-from app.constants import NOTIF_REPORT, POST_STATUS_SCHEDULED
+from app.constants import NOTIF_REPORT, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED
 from app.post.util import post_replies, get_comment_branch, tags_to_string, url_needs_archive, \
     generate_archive_link, body_has_no_archive_link
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
@@ -1069,6 +1069,30 @@ def post_sticky(post_id: int, mode):
     else:
         flash(_('%(name)s has been un-stickied.', name=post.title))
     return redirect(referrer(url_for('activitypub.post_ap', post_id=post.id)))
+
+
+@bp.route('/post/<int:post_id>/set_flair', methods=['GET', 'POST'])
+@login_required
+def post_set_flair(post_id):
+    post = Post.query.get_or_404(post_id)
+    if post.user_id == current_user.id or post.community.is_moderator(current_user) or current_user.is_staff() or current_user.is_admin():
+        form = FlairPostForm()
+        flair_choices = flair_for_form(post.community.id)
+        if len(flair_choices):
+            form.flair.choices = flair_choices
+
+        if form.validate_on_submit():
+            post.flair.clear()
+            post.flair = flair_from_form(form.flair.data)
+            db.session.commit()
+            if post.status == POST_STATUS_PUBLISHED:
+                task_selector('edit_post', post_id=post.id)
+            return redirect(url_for('activitypub.community_profile', actor=post.community.link()))
+        form.referrer.data = referrer()
+        form.flair.data = [flair.id for flair in post.flair]
+        return render_template('generic_form.html', form=form, title=_('Set flair for %(post_title)s', post_title=post.title))
+    else:
+        abort(401)
 
 
 @bp.route('/post/<int:post_id>/lock/<mode>', methods=['GET', 'POST'])
