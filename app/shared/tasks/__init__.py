@@ -9,7 +9,7 @@ from app.shared.tasks.locks import lock_post, unlock_post
 from app.shared.tasks.adds import sticky_post
 from app.shared.tasks.removes import unsticky_post
 from app.shared.tasks.groups import edit_community
-
+from app.shared.tasks.users import check_user_application
 from flask import current_app
 
 
@@ -37,6 +37,7 @@ def task_selector(task_key, send_async=True, **kwargs):
         'delete_community': delete_community,
         'restore_community': restore_community,
         'delete_posts_with_blocked_images': delete_posts_with_blocked_images,
+        'check_application': check_user_application,
     }
 
     if current_app.debug:

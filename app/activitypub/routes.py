@@ -7,7 +7,7 @@ from psycopg2 import IntegrityError
 from sqlalchemy import desc, or_, text
 import werkzeug.exceptions
 
-from app import db, constants, cache, celery
+from app import db, constants, cache, celery, limiter
 from app.activitypub import bp
 
 from app.activitypub.signature import HttpSignature, VerificationError, default_context, LDSignature, \
@@ -20,7 +20,8 @@ from app.user.routes import show_profile
 from app.constants import *
 from app.models import User, Community, CommunityJoinRequest, CommunityMember, CommunityBan, ActivityPubLog, Post, \
     PostReply, Instance, PostVote, PostReplyVote, File, AllowedInstances, BannedInstances, utcnow, Site, Notification, \
-    ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice, Feed, FeedItem, FeedMember, FeedJoinRequest
+    ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice, Feed, FeedItem, FeedMember, FeedJoinRequest, \
+    IpBan
 from app.activitypub.util import public_key, users_total, active_half_year, active_month, local_posts, local_comments, \
     post_to_activity, find_actor_or_create, find_reply_parent, find_liked_object, \
     lemmy_site_data, is_activitypub_request, delete_post_or_comment, community_members, \
@@ -251,6 +252,14 @@ def domain_blocks():
                 'comment': domain.reason if domain.reason else ''
             })
     return jsonify(retval)
+
+
+@bp.route('/api/is_ip_or_email_banned', methods=['POST'])
+@limiter.limit("60 per 1 minutes", methods=['POST'])
+def api_is_ip_or_email_banned():
+    banned_ip = IpBan.query.filter(IpBan.ip_address == request.form.get('ip_address')).first()
+    banned_email = User.query.filter(User.banned == True, User.email == request.form.get('email'), User.ap_id == None).first()
+    return jsonify({'ip_address': banned_ip is not None, 'email': banned_email is not None})
 
 
 @bp.route('/api/v3/site')

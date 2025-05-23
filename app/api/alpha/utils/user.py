@@ -1,4 +1,3 @@
-import re
 from app import db
 from app.api.alpha.views import user_view, reply_view, post_view, community_view
 from app.utils import authorise_api_user

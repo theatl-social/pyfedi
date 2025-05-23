@@ -41,6 +41,7 @@ class SiteMiscForm(FlaskForm):
     filter_selection = BooleanField(_l('Trump Musk filter setup'))
     auto_decline_countries = TextAreaField(_l('Ignore registrations from these countries'))
     auto_decline_referrers = TextAreaField(_l('Block registrations from these referrers (one per line)'))
+    ban_check_servers = TextAreaField(_l('Warn if new account banned from these instances'))
     default_theme = SelectField(_l('Default theme'), coerce=str, render_kw={'class': 'form-select'})
     additional_css = TextAreaField(_l('Additional CSS'))
     filters = [('subscribed', _l('Subscribed')),

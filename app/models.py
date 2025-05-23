@@ -2507,6 +2507,7 @@ class UserRegistration(db.Model):
     created_at = db.Column(db.DateTime, default=utcnow)
     approved_at = db.Column(db.DateTime)
     approved_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    warning = db.Column(db.String(100))
     user = db.relationship('User', foreign_keys=[user_id], lazy='joined')
 
 

@@ -180,6 +180,7 @@ def admin_misc():
         set_setting('choose_topics', form.choose_topics.data)
         set_setting('filter_selection', form.filter_selection.data)
         set_setting('registration_approved_email', form.registration_approved_email.data)
+        set_setting('ban_check_servers', form.ban_check_servers.data)
         flash(_('Settings saved.'))
     elif request.method == 'GET':
         form.enable_downvotes.data = site.enable_downvotes
@@ -204,6 +205,7 @@ def admin_misc():
         form.filter_selection.data = get_setting('filter_selection', True)
         form.private_instance.data = site.private_instance
         form.registration_approved_email.data = get_setting('registration_approved_email', '')
+        form.ban_check_servers.data = get_setting('ban_check_servers', 'piefed.social')
     return render_template('admin/misc.html', title=_('Misc settings'), form=form,
                            
                            site=g.site, )

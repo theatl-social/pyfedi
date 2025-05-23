@@ -15,6 +15,7 @@ from app.auth.util import random_token, normalize_utf, ip2location, no_admins_lo
 from app.constants import NOTIF_REGISTRATION, NOTIF_REPORT
 from app.email import send_verification_email, send_password_reset_email, send_registration_approved_email
 from app.models import User, utcnow, IpBan, UserRegistration, Notification, Site
+from app.shared.tasks import task_selector
 from app.utils import render_template, ip_address, user_ip_banned, user_cookie_banned, banned_ip_addresses, \
     finalize_user_setup, blocked_referrers, gibberish, get_setting, notify_admin
 
@@ -176,6 +177,8 @@ def register():
                         db.session.add(notify)
                         # todo: notify everyone with the "approve registrations" permission, instead of just all admins
                     db.session.commit()
+                    if get_setting('ban_check_servers', 'piefed.social'):
+                        task_selector('check_application', application_id=application.id)
                     return redirect(url_for('auth.please_wait'))
                 else:
                     if current_app.config['FLAG_THROWAWAY_EMAILS'] and os.path.isfile('app/static/disposable_domains.txt'):
