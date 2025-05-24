@@ -4,4 +4,7 @@
         {{ community.display_name() }}<br>
     {% endfor -%}
     </p>
-{% endif %}
+{% endif -%}
+{% if title -%}
+<input id="retrieved_title" type="hidden" value="{{ title }}" hx-swap-oob="true">
+{% endif -%}

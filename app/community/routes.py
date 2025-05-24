@@ -3,6 +3,7 @@ from collections import namedtuple
 from random import randint
 
 import flask
+from bs4 import BeautifulSoup
 
 from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, g, json
 from flask_login import current_user, login_required
@@ -11,7 +12,7 @@ from slugify import slugify
 from sqlalchemy import or_, desc, text
 from sqlalchemy.orm.exc import NoResultFound
 
-from app import db, cache, celery
+from app import db, cache, celery, httpx_client
 from app.activitypub.signature import RsaKeys, post_request, send_post_request
 from app.activitypub.util import extract_domain_and_actor
 from app.chat.util import send_message
@@ -2014,8 +2015,30 @@ def check_url_already_posted():
     if url:
         url = remove_tracking_from_link(url.strip())
         communities = Community.query.filter_by(banned=False).join(Post).filter(Post.url == url, Post.deleted == False, Post.status > POST_STATUS_REVIEWING).all()
-        return flask.render_template('community/check_url_posted.html', communities=communities)
+        return flask.render_template('community/check_url_posted.html', communities=communities, title=retrieve_title_of_url(url))
     else:
         abort(404)
 
+
+def retrieve_title_of_url(url):
+    try:
+        response = httpx_client.get(url, timeout=10, follow_redirects=True)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+
+            # Try og:title first
+            og_title = soup.find('meta', property='og:title')
+            if og_title and og_title.get('content'):
+                return og_title.get('content').strip()
+
+            # Fall back to HTML title
+            title_tag = soup.find('title')
+            if title_tag:
+                return title_tag.get_text().strip()
+
+            return ""
+        else:
+            return ""
+    except Exception as e:
+        return ""
 

@@ -12,6 +12,21 @@
 {% block app_content %}
 <script src="/static/js/coolfieldset.js?v=3"></script>
 <script src="/static/js/tomselect/tom-select.complete.min.js"></script>
+<script nonce="{{ session['nonce'] }}">
+    function checkAndCopyTitle() {
+      const retrieved = document.getElementById('retrieved_title');
+      const title = document.getElementById('title');
+
+      if (retrieved && title && retrieved.value && !title.value) {
+        title.value = retrieved.value;
+      }
+
+      setTimeout(checkAndCopyTitle, 1000); // Check every second
+    }
+
+    // Start the checking loop
+    checkAndCopyTitle();
+</script>
 <div class="row">
     <main class="col-12 col-lg-8 position-relative main_pane">
         {% block title %}<h1>{{ _('Edit post') }}</h1>{% endblock %}
@@ -19,11 +34,13 @@
             {{ form.csrf_token() }}
             {{ render_field(form.timezone) }}
             {% block post_type %}{% endblock %}
-            {{ render_field(form.title) }}
             {% if post_type == POST_TYPE_LINK %}
                 {{ render_field(form.link_url) }}
                 <div id="urlUsed"></div>
-            {% elif post_type == POST_TYPE_IMAGE %}
+                <input type="hidden" id="retrieved_title" value="">
+            {% endif -%}
+            {{ render_field(form.title) }}
+            {% if post_type == POST_TYPE_IMAGE %}
                 {% if post.image_id -%}
                     <div class="post_image">
                         {% if low_bandwidth -%}
