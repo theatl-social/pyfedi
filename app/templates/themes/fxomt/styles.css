@@ -131,6 +131,10 @@ TODO:
 .dropdown-item:active {
     background-color: var(--accent-color-active);
 }
+.voting_buttons_new .downvote_button,
+.voting_buttons_new .upvote_button {
+    color: unset;
+}
 /* END BUTTONS */
 /* PREPARATIONS */
 body {
