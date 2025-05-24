@@ -1,5 +1,5 @@
 from collections import namedtuple, defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from random import randint
 
 from flask import redirect, url_for, flash, current_app, abort, request, g, make_response, jsonify
@@ -1569,6 +1569,7 @@ def post_cross_post(post_id: int):
         community = Community.query.get_or_404(form.which_community.data)
         post_type = post_type_to_form_url_type(post.type, post.url)
         response = make_response(redirect(url_for('community.add_post', actor=community.link(), type=post_type, source=str(post.id))))
+        response.set_cookie('cross_post_community_id', str(community.id), max_age=timedelta(days=28))
         response.delete_cookie('post_title')
         response.delete_cookie('post_description')
         response.delete_cookie('post_tags')
@@ -1583,6 +1584,9 @@ def post_cross_post(post_id: int):
         breadcrumb.text = _('Communities')
         breadcrumb.url = '/communities'
         breadcrumbs.append(breadcrumb)
+
+        if request.cookies.get('cross_post_community_id'):
+            form.which_community.data = int(request.cookies.get('cross_post_community_id'))
 
         return render_template('post/post_cross_post.html', title=_('Cross post'), form=form, post=post,
                                breadcrumbs=breadcrumbs,
