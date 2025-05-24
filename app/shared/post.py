@@ -260,7 +260,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         else:
             flair = []
         scheduled_for = input.scheduled_for.data
-        if hasattr(input, 'timezone') and input.timezone.data:
+        if scheduled_for and hasattr(input, 'timezone') and input.timezone.data:
             scheduled_for = scheduled_for.replace(tzinfo=ZoneInfo(input.timezone.data))
             scheduled_for = scheduled_for.astimezone(ZoneInfo('UTC'))
         repeat = input.repeat.data
