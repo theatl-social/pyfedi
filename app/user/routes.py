@@ -18,10 +18,10 @@ from app.email import send_verification_email
 from app.models import Post, Community, CommunityMember, User, PostReply, PostVote, Notification, utcnow, File, Site, \
     Instance, Report, UserBlock, CommunityBan, CommunityJoinRequest, CommunityBlock, Filter, Domain, DomainBlock, \
     InstanceBlock, NotificationSubscription, PostBookmark, PostReplyBookmark, read_posts, Topic, UserNote, \
-    UserExtraField, Feed, FeedMember
+    UserExtraField, Feed, FeedMember, IpBan
 from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, \
-    FilterForm, KeywordFilterEditForm, RemoteFollowForm, ImportExportForm, UserNoteForm
+    FilterForm, KeywordFilterEditForm, RemoteFollowForm, ImportExportForm, UserNoteForm, BanUserForm
 from app.user.utils import purge_user_then_delete, unsubscribe_from_community, search_for_user
 from app.utils import render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     gibberish, file_get_contents, community_membership, user_filters_home, \
@@ -525,10 +525,11 @@ def user_notification(user_id: int):
         abort(404)
 
 
-@bp.route('/u/<actor>/ban', methods=['GET'])
+@bp.route('/u/<actor>/ban', methods=['GET', 'POST'])
 @login_required
 def ban_profile(actor):
-    if user_access('ban users', current_user.id):
+    form = BanUserForm()
+    if user_access('ban users', current_user.id) or user_access('manage users', current_user.id):
         actor = actor.strip()
         user = User.query.filter_by(user_name=actor, deleted=False).first()
         if user is None:
@@ -538,22 +539,69 @@ def ban_profile(actor):
 
         if user.id == current_user.id:
             flash(_('You cannot ban yourself.'), 'error')
+            goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
+            return redirect(goto)
         else:
-            user.banned = True
-            db.session.commit()
+            if form.validate_on_submit():
+                user.banned = True
+                db.session.commit()
 
-            add_to_modlog('ban_user', link_text=user.display_name(), link=user.link())
+                # Purge content
+                if form.purge.data:
+                    if user.is_instance_admin():
+                        flash(_('Purged user was a remote instance admin.'), 'warning')
+                    if user.is_admin() or user.is_staff():
+                        flash(_('Purged user with role permissions.'), 'warning')
 
-            if user.is_instance_admin():
-                flash(_('Banned user was a remote instance admin.'), 'warning')
-            if user.is_admin() or user.is_staff():
-                flash(_('Banned user with role permissions.'), 'warning')
-            flash(_('%(actor)s has been banned.', actor=actor))
+                    # federate deletion
+                    if user.is_local():
+                        user.deleted_by = current_user.id
+                        purge_user_then_delete(user.id)
+                        flash(_('%(actor)s has been banned, deleted and all their content deleted. This might take a few minutes.',
+                              actor=actor))
+                    else:
+                        user.deleted = True
+                        user.deleted_by = current_user.id
+                        user.delete_dependencies()
+                        user.purge_content()
+                        db.session.commit()
+                        flash(_('%(actor)s has been banned, deleted and all their content deleted.', actor=actor))
+
+                    add_to_modlog('delete_user', reason=form.reason.data, link_text=user.display_name(), link=user.link())
+                else:
+                    add_to_modlog('ban_user', reason=form.reason.data, link_text=user.display_name(), link=user.link())
+
+                    if user.is_instance_admin():
+                        flash(_('Banned user was a remote instance admin.'), 'warning')
+                    if user.is_admin() or user.is_staff():
+                        flash(_('Banned user with role permissions.'), 'warning')
+                    else:
+                        flash(_('%(actor)s has been banned.', actor=actor))
+
+                # IP address ban
+                if form.ip_address.data and user.ip_address:
+                    existing_ip_ban = IpBan.query.filter(IpBan.ip_address == user.ip_address).first()
+                    if not existing_ip_ban:
+                        db.session.add(IpBan(ip_address=user.ip_address, notes=form.reason.data))
+                        db.session.commit()
+
+                goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
+                return redirect(goto)
+
+            form.ip_address.data = True
+            form.purge.data = True
+            if not user_access('manage users', current_user.id):
+                form.purge.render_kw = {'disabled': True}
+                form.purge.data = False
+            if user.ip_address is None or user.ip_address == '':
+                form.ip_address.render_kw = {'disabled': True}
+                form.ip_address.data = False
+
+            return render_template('generic_form.html', form=form, title=_('Ban %(name)s', name=actor))
     else:
         abort(401)
 
-    goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
-    return redirect(goto)
+
 
 
 @bp.route('/u/<actor>/unban', methods=['GET'])

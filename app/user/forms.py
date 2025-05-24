@@ -108,6 +108,13 @@ class DeleteAccountForm(FlaskForm):
     submit = SubmitField(_l('Yes, delete my account'))
 
 
+class BanUserForm(FlaskForm):
+    reason = TextAreaField(_l('Reason'))
+    ip_address = BooleanField(_l('Ban IP address'))
+    purge = BooleanField(_l('Delete all content by this account'))
+    submit = SubmitField(_l('Ban'), render_kw={'autofocus': True})
+
+
 class ReportUserForm(FlaskForm):
     reason_choices = [('1', _l('Breaks community rules')),
                       ('7', _l('Spam')),
