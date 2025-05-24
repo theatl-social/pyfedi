@@ -17,6 +17,7 @@
         {% block title %}<h1>{{ _('Edit post') }}</h1>{% endblock %}
         <form method="post" enctype="multipart/form-data" role="form">
             {{ form.csrf_token() }}
+            {{ render_field(form.timezone) }}
             {% block post_type %}{% endblock %}
             {{ render_field(form.title) }}
             {% if post_type == POST_TYPE_LINK %}

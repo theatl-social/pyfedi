@@ -1,5 +1,6 @@
 import os
 import sys
+from zoneinfo import ZoneInfo
 
 from app import db, cache
 from app.activitypub.util import make_image_sizes, notify_about_post
@@ -259,6 +260,9 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         else:
             flair = []
         scheduled_for = input.scheduled_for.data
+        if hasattr(input, 'timezone') and input.timezone.data:
+            scheduled_for = scheduled_for.replace(tzinfo=ZoneInfo(input.timezone.data))
+            scheduled_for = scheduled_for.astimezone(ZoneInfo('UTC'))
         repeat = input.repeat.data
     post.indexable = user.indexable
     post.sticky = False if src == SRC_API else input.sticky.data
