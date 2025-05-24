@@ -591,6 +591,8 @@ def digits(input: int) -> int:
 
 @cache.memoize(timeout=50)
 def user_access(permission: str, user_id: int) -> bool:
+    if user_id == 0:
+        return False
     has_access = db.session.execute(text('SELECT * FROM "role_permission" as rp ' +
                                     'INNER JOIN user_role ur on rp.role_id = ur.role_id ' +
                                     'WHERE ur.user_id = :user_id AND rp.permission = :permission'),
@@ -747,7 +749,7 @@ def permission_required(permission):
     def decorator(func):
         @wraps(func)
         def decorated_view(*args, **kwargs):
-            if user_access(permission, current_user.id):
+            if user_access(permission, current_user.get_id()):
                 return func(*args, **kwargs)
             else:
                 # Handle the case where the user doesn't have the required permission
