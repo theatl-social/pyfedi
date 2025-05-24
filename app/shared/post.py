@@ -278,7 +278,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
     post.scheduled_for = scheduled_for
     post.repeat = repeat
 
-    if post.scheduled_for and post.scheduled_for > utcnow():
+    if post.scheduled_for and post.scheduled_for.replace(tzinfo=None) > utcnow():
         post.status = POST_STATUS_SCHEDULED
 
     url_changed = False
