@@ -37,7 +37,7 @@
             <p class="small field_hint">{{ _('Use 2-letter country codes, one per line. Requires IPinfo API.') }}</p>
             {{ render_field(form.auto_decline_referrers) }}
             {{ render_field(form.ban_check_servers) }}
-            <p class="small field_hint">{{ _('PieFed instances only.') }}</p>
+            <p class="small field_hint">{{ _('PieFed instances only. One per line, no https:// on the front.') }}</p>
             {{ render_field(form.registration_approved_email) }}
             <p class="small field_hint">{{ _('This will be sent after their application is approved. Use markdown.') }}</p>
             <hr>
