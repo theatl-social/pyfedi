@@ -254,12 +254,33 @@ def domain_blocks():
     return jsonify(retval)
 
 
-@bp.route('/api/is_ip_or_email_banned', methods=['POST'])
+@bp.route('/api/is_ip_banned', methods=['POST'])
 @limiter.limit("60 per 1 minutes", methods=['POST'])
-def api_is_ip_or_email_banned():
-    banned_ip = IpBan.query.filter(IpBan.ip_address == request.form.get('ip_address')).first()
-    banned_email = User.query.filter(User.banned == True, User.email == request.form.get('email'), User.ap_id == None).first()
-    return jsonify({'ip_address': banned_ip is not None, 'email': banned_email is not None})
+def api_is_ip_banned():
+    result = []
+    counter = 0
+    for ip_address in request.form.get('ip_addresses').split(','):
+        banned_ip = IpBan.query.filter(IpBan.ip_address == ip_address).first()
+        result.append(banned_ip is not None)
+        counter += 1
+        if counter >= 10:
+            break
+    return jsonify(result)
+
+
+@bp.route('/api/is_email_banned', methods=['POST'])
+@limiter.limit("60 per 1 minutes", methods=['POST'])
+def api_is_email_banned():
+    result = []
+    counter = 0
+    for email in request.form.get('emails').split(','):
+        user_id = db.session.query(User.id).filter(User.banned == True, User.email == email.strip(), User.ap_id == None).scalar()
+        result.append(user_id is not None)
+        counter += 1
+        if counter >= 10:
+            break
+
+    return jsonify(result)
 
 
 @bp.route('/api/v3/site')

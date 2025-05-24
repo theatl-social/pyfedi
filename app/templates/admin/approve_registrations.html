@@ -33,7 +33,9 @@
                     <td><img src="{{ registration.user.avatar_thumbnail() }}" class="community_icon rounded-circle" loading="lazy" />
                         {{ registration.user.display_name() }}</td>
                     <td><a href="mailto:{{ registration.user.email }}">{{ registration.user.email }}</a>
-                        {% if registration.user.email_domain() in disposable_domains %}<span class="fe fe-warning red" title="{{ _('Throwaway email account, the kind spammers and trolls use.') }}"></span>{% endif %}</td>
+                        {% if registration.user.email_domain() in disposable_domains %}<span class="fe fe-warning red" title="{{ _('Throwaway email account, the kind spammers and trolls use.') }}"></span>{% endif %}
+                        {% if registration.warning %}<span class="fe fe-warning red blink" title="{{ registration.warning }}"></span>{% endif %}
+                    </td>
                     <td>{{ '<span class="green">&check;</span>'|safe if registration.user.verified else '<span class="red">&cross;</span>'|safe }}</td>
                     <td>{{ registration.answer }}</td>
                     <td>{{ arrow.get(registration.created_at).humanize(locale=locale) }}</td>

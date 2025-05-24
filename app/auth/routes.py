@@ -364,6 +364,8 @@ def google_authorize():
                 db.session.add(notify)
                 # todo: notify everyone with the "approve registrations" permission, instead of just all admins
             db.session.commit()
+            if get_setting('ban_check_servers', 'piefed.social'):
+                task_selector('check_application', application_id=application.id)
             return redirect(url_for('auth.please_wait'))
         else:
             if user.verified:
