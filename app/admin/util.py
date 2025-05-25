@@ -6,7 +6,6 @@ from flask import request, abort, g, current_app, json, flash, render_template
 from flask_login import current_user
 from sqlalchemy import text, desc
 from flask_babel import _
-import boto3
 
 from app import db, cache, celery
 from app.activitypub.signature import default_context, send_post_request
@@ -134,6 +133,7 @@ def move_community_images_to_here(community_id):
                                        {'post_type': POST_TYPE_IMAGE, 'community_id': community_id}).scalars())
 
     if store_files_in_s3():
+        import boto3
         boto3_session = boto3.session.Session()
         s3 = boto3_session.client(
             service_name='s3',

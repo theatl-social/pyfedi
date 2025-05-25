@@ -5,7 +5,6 @@ from typing import List, Union, Type
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 import arrow
-import boto3
 from flask import current_app, escape, url_for, render_template_string
 from flask_login import UserMixin, current_user
 from sqlalchemy import or_, text, desc, Index
@@ -374,6 +373,7 @@ class File(db.Model):
                 'Objects': [{'Key': key} for key in s3_files_to_delete],
                 'Quiet': True  # Optional: if True, successful deletions are not returned
             }
+            import boto3
             boto3_session = boto3.session.Session()
             s3 = boto3_session.client(
                 service_name='s3',

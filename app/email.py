@@ -1,8 +1,6 @@
 from flask import current_app, render_template, escape, g
 from app import db, celery
 from flask_babel import _, lazy_gettext as _l  # todo: set the locale based on account_id so that _() works
-import boto3
-from botocore.exceptions import ClientError
 from typing import List
 import smtplib
 from email.mime.text import MIMEText
@@ -81,6 +79,7 @@ def send_async_email(subject, sender, recipients, text_body, html_body, reply_to
         elif current_app.config['AWS_REGION']:
             try:
                 # Create a new SES resource and specify a region.
+                import boto3
                 amazon_client = boto3.client('ses', region_name=current_app.config['AWS_REGION'])
                 # Provide the contents of the email.
                 if reply_to is None:
@@ -121,7 +120,7 @@ def send_async_email(subject, sender, recipients, text_body, html_body, reply_to
                         ReturnPath=return_path,
                         ReplyToAddresses=[reply_to])
                     # message.attach_alternative("...AMPHTML content...", "text/x-amp-html")
-            except ClientError as e:
+            except Exception as e:
                 current_app.logger.error('Failed to send email. ' + e.response['Error']['Message'])
                 return e.response['Error']['Message']
 

@@ -400,6 +400,9 @@ def save_icon_file(icon_file, directory='communities') -> File:
     elif file_ext.lower() == '.avif':
         import pillow_avif
 
+    if store_files_in_s3():
+        import boto3
+
     # resize if necessary
     if file_ext.lower() in allowed_extensions:
         if file_ext.lower() == '.svg':  # svgs don't need to be resized
@@ -407,7 +410,6 @@ def save_icon_file(icon_file, directory='communities') -> File:
                         thumbnail_path=final_place)
             # Move uploaded file to S3 if needed
             if store_files_in_s3():
-                import boto3
                 session = boto3.session.Session()
                 s3 = session.client(
                     service_name='s3',
@@ -449,7 +451,6 @@ def save_icon_file(icon_file, directory='communities') -> File:
             
             # Move uploaded files to S3 if needed
             if store_files_in_s3():
-                import boto3
                 session = boto3.session.Session()
                 s3 = session.client(
                     service_name='s3',
