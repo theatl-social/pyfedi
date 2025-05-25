@@ -173,22 +173,6 @@
                               {% endif -%}
                               <a class="{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a>
                         </p>
-                              {% if moderating_communities %}
-                                <h4 class="mb-0">{{ _('Moderating') }}</h4>
-                                <p>
-                                {% for community_menu_item in moderating_communities -%}
-                                    <a class="{% if community and community.id == community_menu_item.id%} active{% endif %}" href="/c/{{ community_menu_item.link() }}">{{ community_menu_item.title }}</a><br>
-                                {% endfor -%}
-                                </p>
-                              {% endif %}
-                              {% if joined_communities %}
-                                <h4 class="mb-0">{{ _('Joined communities') }}</h4>
-                                    <p>
-                                {% for community_menu_item in joined_communities -%}
-                                    <a class="{% if community and community.id == community_menu_item.id%} active{% endif %}" href="/c/{{ community_menu_item.link() }}">{{ community_menu_item.title }}</a><br>
-                                {% endfor -%}
-                                </p>
-                              {% endif %}
 
                             {% if menu_instance_feeds -%}
                                 <h4 class="mb-0"><a href="/u/myfeeds">{{ _('Feeds') }}</a></h4>
