@@ -259,8 +259,8 @@ def domain_blocks():
 def api_is_ip_banned():
     result = []
     counter = 0
-    for ip in request.form.get('ip_addresses').split(','):
-        banned_ip = IpBan.query.filter(IpBan.ip_address == ip).first()
+    for ip_address in request.form.get('ip_addresses').split(','):
+        banned_ip = IpBan.query.filter(IpBan.ip_address == ip_address).first()
         result.append(banned_ip is not None)
         counter += 1
         if counter >= 10:

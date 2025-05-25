@@ -9,6 +9,7 @@ from typing import Union, Tuple, List
 
 import arrow
 import httpx
+import boto3
 from flask import current_app, request, g, url_for, json
 from flask_babel import _
 from sqlalchemy import text, func, desc
@@ -1209,8 +1210,6 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
 
                             boto3_session = None
                             s3 = None
-                            if store_files_in_s3():
-                                import boto3
                             # Resize the image to medium
                             if medium_width:
                                 if img_width > medium_width:
@@ -1245,7 +1244,6 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                 if store_files_in_s3():
                                     content_type = guess_mime_type(final_place_thumbnail)
                                     if boto3_session is None and s3 is None:
-                                        import boto3
                                         boto3_session = boto3.session.Session()
                                         s3 = boto3_session.client(
                                             service_name='s3',

@@ -17,6 +17,7 @@ from app.utils import render_template, authorise_api_user, shorten_string, gibbe
 from flask import abort, flash, request, current_app, g
 from flask_babel import _
 from flask_login import current_user
+import boto3
 from pillow_heif import register_heif_opener
 from PIL import Image, ImageOps
 
@@ -364,7 +365,6 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
 
         # Move uploaded file to S3
         if store_files_in_s3():
-            import boto3
             session = boto3.session.Session()
             s3 = session.client(
                 service_name='s3',
