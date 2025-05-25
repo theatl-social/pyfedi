@@ -2131,3 +2131,37 @@ def notify_admin(title, url, author_id, notif_type, subtype, targets):
         admin.unread_notifications += 1
         db.session.add(notify)
     db.session.commit()
+
+
+def possible_communities():
+    which_community = {}
+    joined = joined_communities(current_user.get_id())
+    moderating = moderating_communities(current_user.get_id())
+    comms = []
+    already_added = set()
+    for c in moderating:
+        if c.id not in already_added:
+            comms.append((c.id, c.display_name()))
+            already_added.add(c.id)
+    if len(comms) > 0:
+        which_community['Moderating'] = comms
+    comms = []
+    for c in joined:
+        if c.id not in already_added:
+            comms.append((c.id, c.display_name()))
+            already_added.add(c.id)
+    if len(comms) > 0:
+        which_community['Joined communities'] = comms
+    comms = []
+    for c in db.session.query(Community.id, Community.ap_id, Community.title, Community.ap_domain).filter(
+            Community.banned == False).order_by(Community.title).all():
+        if c.id not in already_added:
+            if c.ap_id is None:
+                display_name = c.title
+            else:
+                display_name = f"{c.title}@{c.ap_domain}"
+            comms.append((c.id, display_name))
+            already_added.add(c.id)
+    if len(comms) > 0:
+        which_community['Others'] = comms
+    return which_community

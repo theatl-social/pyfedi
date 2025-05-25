@@ -44,7 +44,8 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     community_moderators, communities_banned_from, show_ban_message, recently_upvoted_posts, recently_downvoted_posts, \
     blocked_users, languages_for_form, menu_topics, add_to_modlog, \
     blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, \
-    instance_software, domain_from_email, referrer, flair_for_form, find_flair_id, login_required_if_private_instance
+    instance_software, domain_from_email, referrer, flair_for_form, find_flair_id, login_required_if_private_instance, \
+    possible_communities
 from app.shared.post import make_post
 from app.shared.tasks import task_selector
 from feedgen.feed import FeedGenerator
@@ -742,9 +743,7 @@ def add_post(actor, type):
     if not(community.is_moderator() or community.is_owner() or current_user.is_admin()):
         form.sticky.render_kw = {'disabled': True}
 
-    form.communities.choices = [(c.id, c.display_name()) for c in current_user.communities()]
-    if not community_in_list(community.id, form.communities.choices):
-        form.communities.choices.append((community.id, community.display_name()))
+    form.communities.choices = possible_communities()
 
     form.language_id.choices = languages_for_form()
     flair_choices = flair_for_form(community.id)
@@ -796,6 +795,13 @@ def add_post(actor, type):
             elif post_type == POST_TYPE_VIDEO:
                 form.video_url.data = source_post.url
             form.tags.data = tags_to_string(source_post)
+
+        if (post_type == POST_TYPE_LINK or post_type == POST_TYPE_VIDEO) and request.args.get('link'):
+            if post_type == POST_TYPE_LINK:
+                form.link_url.data = request.args.get('link')
+            elif post_type == POST_TYPE_VIDEO:
+                form.video_url.data = request.args.get('link')
+            form.title.data = request.args.get('title')
 
     # empty post to pass since add_post.html extends edit_post.html 
     # and that one checks for a post.image_id for editing image posts

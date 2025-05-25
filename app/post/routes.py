@@ -38,7 +38,8 @@ from app.utils import render_template, markdown_to_html, validation_required, \
     languages_for_form, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown, \
     permission_required, blocked_users, get_request, is_local_image_url, is_video_url, can_upvote, can_downvote, \
     referrer, can_create_post_reply, communities_banned_from, \
-    block_bots, flair_for_form, login_required_if_private_instance, retrieve_image_hash, posts_with_blocked_images
+    block_bots, flair_for_form, login_required_if_private_instance, retrieve_image_hash, posts_with_blocked_images, \
+    possible_communities
 from app.post.util import post_type_to_form_url_type
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, \
     delete_reply, mod_remove_reply, vote_for_reply
@@ -1545,26 +1546,9 @@ def post_fixup_from_remote(post_id: int):
 def post_cross_post(post_id: int):
     post = Post.query.get_or_404(post_id)
     form = CrossPostForm()
-    which_community = {}
-    joined = joined_communities(current_user.get_id())
-    moderating = moderating_communities(current_user.get_id())
-    comms = []
-    already_added = set()
-    for community in moderating:
-        if community.id not in already_added:
-            comms.append((community.id, community.display_name()))
-            already_added.add(community.id)
-    if len(comms) > 0:
-        which_community['Moderating'] = comms
-    comms = []
-    for community in joined:
-        if community.id not in already_added:
-            comms.append((community.id, community.display_name()))
-            already_added.add(community.id)
-    if len(comms) > 0:
-        which_community['Joined communities'] = comms
 
-    form.which_community.choices = which_community
+    form.which_community.choices = possible_communities()
+
     if form.validate_on_submit():
         community = Community.query.get_or_404(form.which_community.data)
         post_type = post_type_to_form_url_type(post.type, post.url)

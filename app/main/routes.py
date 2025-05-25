@@ -1,5 +1,6 @@
 import os.path
 import json
+from datetime import timedelta
 from random import randint
 
 import flask
@@ -12,7 +13,7 @@ from app.activitypub.util import users_total, active_month, local_posts, local_c
     lemmy_site_data, is_activitypub_request
 from app.activitypub.signature import default_context, LDSignature
 from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, \
-    POST_STATUS_REVIEWING
+    POST_STATUS_REVIEWING, POST_TYPE_LINK
 from app.email import send_email, send_registration_approved_email
 from app.inoculation import inoculation
 from app.main import bp
@@ -20,6 +21,8 @@ from flask import g, session, flash, request, current_app, url_for, redirect, ma
 from flask_login import current_user, login_required
 from flask_babel import _, get_locale
 from sqlalchemy import desc, text
+
+from app.main.forms import ShareLinkForm
 from app.utils import render_template, get_setting, request_etag_matches, return_304, blocked_domains, \
     ap_datetime, shorten_string, user_filters_home, \
     joined_communities, moderating_communities, markdown_to_html, allowlist_html, \
@@ -28,7 +31,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     permission_required, debug_mode_only, ip_address, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, \
     feed_tree_public, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, html_to_text, \
     get_redis_connection, subscribed_feeds, joined_or_modding_communities, login_required_if_private_instance, \
-    pending_communities, retrieve_image_hash
+    pending_communities, retrieve_image_hash, possible_communities, remove_tracking_from_link
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, Feed, FeedItem
 
@@ -680,6 +683,30 @@ def feeds_menu():
                            menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
                            menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                            )
+
+
+@bp.route('/share', methods=['GET', 'POST'])
+def share():
+    url = request.args.get('url')
+    url = remove_tracking_from_link(url.strip())
+    form = ShareLinkForm()
+    form.which_community.choices = possible_communities()
+    if form.validate_on_submit():
+        community = Community.query.get_or_404(form.which_community.data)
+        response = make_response(redirect(url_for('community.add_post', actor=community.link(), type='link', link=url, title=request.args.get('title'))))
+        response.set_cookie('cross_post_community_id', str(community.id), max_age=timedelta(days=28))
+        response.delete_cookie('post_title')
+        response.delete_cookie('post_description')
+        response.delete_cookie('post_tags')
+        return response
+
+    if request.cookies.get('cross_post_community_id'):
+        form.which_community.data = int(request.cookies.get('cross_post_community_id'))
+
+    communities = Community.query.filter_by(banned=False).join(Post).filter(Post.url == url, Post.deleted == False,
+                                                                            Post.status > POST_STATUS_REVIEWING).all()
+
+    return render_template('share.html', form=form, title=request.args.get('title'), communities=communities)
 
 
 @bp.route('/test_email')
