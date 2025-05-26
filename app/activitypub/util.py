@@ -599,7 +599,7 @@ def refresh_community_profile_task(community_id, activity_json):
             session.commit()
 
             if 'lemmy:tagsForPosts' in activity_json and isinstance(activity_json['lemmy:tagsForPosts'], list):
-                if community.flair.count() == 0:    # for now, all we do is populate community flair if there is not yet any. simpler.
+                if len(community.flair) == 0:    # for now, all we do is populate community flair if there is not yet any. simpler.
                     for flair in activity_json['lemmy:tagsForPosts']:
                         flair_dict = {'display_name': flair['display_name']}
                         if 'text_color' in flair:
