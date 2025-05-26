@@ -11,7 +11,7 @@ from flask_babel import _, lazy_gettext as _l
 
 class AddCopyFeedForm(FlaskForm):
     title = StringField(_l('Name'), validators=[DataRequired()])
-    url = StringField(_l('Url'))
+    url = StringField(_l('Url'), validators=[Length(max=30)])
     description = TextAreaField(_l('Description'))
     parent_feed_id = SelectField(_l('Parent feed'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
     show_child_posts = BooleanField('Show posts from child feeds')
@@ -44,7 +44,7 @@ class AddCopyFeedForm(FlaskForm):
 class EditFeedForm(FlaskForm):
     feed_id = 0
     title = StringField(_l('Name'), validators=[DataRequired()])
-    url = StringField(_l('Url'))
+    url = StringField(_l('Url'), validators=[Length(max=50)])
     description = TextAreaField(_l('Description'))
     parent_feed_id = SelectField(_l('Parent feed'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
     show_child_posts = BooleanField('Show posts from child feeds')

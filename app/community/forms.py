@@ -20,7 +20,7 @@ import pytesseract
 
 class AddCommunityForm(FlaskForm):
     community_name = StringField(_l('Name'), validators=[DataRequired()])
-    url = StringField(_l('Url'))
+    url = StringField(_l('Url'), validators=[Length(max=50)])
     description = TextAreaField(_l('Description'))
     icon_file = FileField(_l('Icon image'), render_kw={'accept': 'image/*'})
     banner_file = FileField(_l('Banner image'), render_kw={'accept': 'image/*'})

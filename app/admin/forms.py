@@ -175,7 +175,7 @@ class AddBlockedImageForm(FlaskForm):
 
 
 class AddUserForm(FlaskForm):
-    user_name = StringField(_l('User name'), validators=[DataRequired()],
+    user_name = StringField(_l('User name'), validators=[DataRequired(), Length(max=50)],
                             render_kw={'autofocus': True, 'autocomplete': 'off'})
     email = StringField(_l('Email address'), validators=[Optional(), Length(max=255)])
     password = PasswordField(_l('Password'), validators=[DataRequired(), Length(min=8, max=50)],
