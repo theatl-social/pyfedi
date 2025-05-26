@@ -38,6 +38,7 @@ from wtforms.fields  import SelectField, SelectMultipleField, StringField
 from wtforms.widgets import Select, html_params, ListWidget, CheckboxInput, TextInput
 from wtforms.validators import ValidationError
 from markupsafe import Markup
+import boto3
 from app import db, cache, httpx_client, celery
 from app.constants import *
 import re
@@ -1280,7 +1281,10 @@ def url_to_thumbnail_file(filename) -> File:
                     file_extension = file_extension.split('?')[0]
 
             new_filename = gibberish(15)
-            directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
+            if store_files_in_s3():
+                directory = 'app/static/tmp'
+            else:
+                directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
             ensure_directory_exists(directory)
             final_place = os.path.join(directory, new_filename + file_extension)
             with open(final_place, 'wb') as f:
@@ -1293,6 +1297,22 @@ def url_to_thumbnail_file(filename) -> File:
                 img.save(final_place)
                 thumbnail_width = img.width
                 thumbnail_height = img.height
+            if store_files_in_s3():
+                content_type = guess_mime_type(final_place)
+                boto3_session = boto3.session.Session()
+                s3 = boto3_session.client(
+                    service_name='s3',
+                    region_name=current_app.config['S3_REGION'],
+                    endpoint_url=current_app.config['S3_ENDPOINT'],
+                    aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                    aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+                )
+                s3.upload_file(final_place, current_app.config['S3_BUCKET'], 'posts/' +
+                               new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + file_extension,
+                               ExtraArgs={'ContentType': content_type})
+                os.unlink(final_place)
+                final_place = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/{new_filename[0:2]}/{new_filename[2:4]}" + \
+                              '/' + new_filename + file_extension
             return File(file_name=new_filename + file_extension, thumbnail_width=thumbnail_width,
                         thumbnail_height=thumbnail_height, thumbnail_path=final_place,
                         source_url=filename)

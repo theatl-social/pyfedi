@@ -423,7 +423,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
             if post.type == POST_TYPE_IMAGE:
                 make_image_sizes(post.image_id, 512, 1200, 'posts', post.community.low_quality)
             else:
-                make_image_sizes(post.image_id, 170, 512, 'posts', post.community.low_quality)
+                make_image_sizes(post.image_id, 170, None, 'posts', post.community.low_quality)
             post.url = url
             post.type = POST_TYPE_IMAGE
         else:
