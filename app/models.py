@@ -1858,7 +1858,9 @@ class Post(db.Model):
         undo = None
         if existing_vote:
             if not self.community.low_quality:
-                self.author.reputation -= existing_vote.effect
+                with db.session.begin_nested():
+                    db.session.execute(text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
+                                       {'effect': existing_vote.effect, 'user_id': self.user_id})
             if existing_vote.effect > 0:  # previous vote was up
                 if vote_direction == 'upvote':  # new vote is also up, so remove it
                     db.session.delete(existing_vote)
@@ -2252,6 +2254,9 @@ class PostReply(db.Model):
         assert vote_direction == 'upvote' or vote_direction == 'downvote'
         undo = None
         if existing_vote:
+            with db.session.begin_nested():
+                db.session.execute(text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
+                                   {'effect': existing_vote.effect, 'user_id': self.user_id})
             if existing_vote.effect > 0:  # previous vote was up
                 if vote_direction == 'upvote':  # new vote is also up, so remove it
                     db.session.delete(existing_vote)
