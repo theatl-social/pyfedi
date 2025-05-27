@@ -2030,7 +2030,7 @@ def retrieve_title_of_url(url):
     try:
         response = httpx_client.get(url, timeout=10, follow_redirects=True)
         if response.status_code == 200:
-            soup = BeautifulSoup(response.text, 'html.parser')
+            soup = BeautifulSoup(response.content, 'html.parser')
 
             # Try og:title first
             og_title = soup.find('meta', property='og:title')
