@@ -1712,8 +1712,23 @@ h1 .warning_badge {
 
 .bump_up {
   position: absolute;
-  top: 115px;
-  left: 26px;
+  top: 54px;
+
+  @include breakpoint(phablet) {
+    top: 43px;
+  }
+  @include breakpoint(tablet) {
+    top: 105px;
+  }
+  @include breakpoint(laptop) {
+    top: 102px;
+    left: 16px;
+  }
+
+  @include breakpoint(desktop) {
+    top: 104px;
+    left: 16px;
+  }
 
 }
 

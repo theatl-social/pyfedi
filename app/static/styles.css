@@ -2028,8 +2028,29 @@ h1 .warning_badge {
 
 .bump_up {
   position: absolute;
-  top: 115px;
-  left: 26px;
+  top: 54px;
+}
+@media (min-width: 768px) {
+  .bump_up {
+    top: 43px;
+  }
+}
+@media (min-width: 992px) {
+  .bump_up {
+    top: 105px;
+  }
+}
+@media (min-width: 1280px) {
+  .bump_up {
+    top: 102px;
+    left: 16px;
+  }
+}
+@media (min-width: 1600px) {
+  .bump_up {
+    top: 104px;
+    left: 16px;
+  }
 }
 
 .external_link_icon {
