@@ -1166,7 +1166,7 @@ def process_inbox_request(request_json, store_ap_json):
                     community.ap_featured_url = community.ap_profile_id + '/featured'
                 featured_url = community.ap_featured_url
                 moderators_url = community.ap_moderators_url
-                if target == featured_url:
+                if target.lower() == featured_url.lower():
                     post = Post.get_by_ap_id(core_activity['object'])
                     if post:
                         post.sticky = True
@@ -1244,9 +1244,11 @@ def process_inbox_request(request_json, store_ap_json):
                     log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json, 'Does not have permission')
                     return
                 target = core_activity['target']
+                if not community.ap_featured_url:
+                    community.ap_featured_url = community.ap_profile_id + '/featured'
                 featured_url = community.ap_featured_url
                 moderators_url = community.ap_moderators_url
-                if target == featured_url:
+                if target.lower() == featured_url.lower():
                     post = Post.get_by_ap_id(core_activity['object'])
                     if post:
                         post.sticky = False
