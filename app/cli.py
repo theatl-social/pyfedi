@@ -220,7 +220,7 @@ def register(app):
                 cut_off = utcnow() - timedelta(days=community.content_retention)
                 old_posts = Post.query.filter_by(deleted=False, sticky=False, community_id=community.id).filter(Post.posted_at < cut_off).all()
                 for post in old_posts:
-                    post_delete_post(community, post, post.user_id, federate_all_communities=False)
+                    post_delete_post(community, post, post.user_id, reason=None, federate_all_communities=False)
                     community.post_count -= 1
             db.session.commit()
 
