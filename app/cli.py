@@ -238,17 +238,25 @@ def register(app):
 
             # Delete soft-deleted content after 7 days
             print(f'Delete soft-deleted content {datetime.now()}')
-            for post_reply in PostReply.query.filter(PostReply.deleted == True,
-                                                     PostReply.posted_at < utcnow() - timedelta(days=7)).all():
-                post_reply.delete_dependencies()
-                if not post_reply.has_replies():
-                    db.session.delete(post_reply)
+            # Get PostReply IDs using raw SQL to reduce memory usage
+            post_reply_ids = list(db.session.execute(text('SELECT id FROM post_reply WHERE deleted = true AND posted_at < :cutoff'),
+                                                    {'cutoff': utcnow() - timedelta(days=7)}).scalars())
+            for post_reply_id in post_reply_ids:
+                post_reply = PostReply.query.get(post_reply_id)
+                if post_reply:  # Check if still exists
+                    post_reply.delete_dependencies()
+                    if not post_reply.has_replies():
+                        db.session.delete(post_reply)
             db.session.commit()
 
-            for post in Post.query.filter(Post.deleted == True,
-                                          Post.posted_at < utcnow() - timedelta(days=7)).all():
-                post.delete_dependencies()
-                db.session.delete(post)
+            # Get Post IDs using raw SQL to reduce memory usage
+            post_ids = list(db.session.execute(text('SELECT id FROM post WHERE deleted = true AND posted_at < :cutoff'),
+                                              {'cutoff': utcnow() - timedelta(days=7)}).scalars())
+            for post_id in post_ids:
+                post = Post.query.get(post_id)
+                if post:  # Check if still exists
+                    post.delete_dependencies()
+                    db.session.delete(post)
             db.session.commit()
 
             # Ensure accurate community stats
