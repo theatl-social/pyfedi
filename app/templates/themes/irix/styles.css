@@ -7,6 +7,7 @@
   --text: #000000;
   --active-fill: #d0d8e0;
   --irix-green: #9ebfbf;
+  --bs-border-radius: 0;
 }
 
 /* General layout and background */
@@ -23,6 +24,7 @@ body {
 
 .main_pane {
   background-color: #aebfd6;
+  border-radius: 0;
 }
 
 .list-group .list-group-item {
@@ -40,14 +42,9 @@ a {
 /* Card styling */
 .card {
   background-color: var(--bg);
-  border: none;
+  border: solid 1px #ddd;
+  border-radius: 0;
   padding: 6px;
-  box-shadow:
-    inset -1px -1px 0 var(--border-dark),
-    inset 1px 1px 0 var(--border-light),
-    0 0 0 2px var(--border-mid),
-    2px 2px 0 2px var(--border-dark),
-    -2px -2px 0 2px var(--border-light);
 }
 
 .card-header {
@@ -113,6 +110,7 @@ input[type="email"],
   box-shadow: inset 1px 1px 0 var(--border-light),
               inset -1px -1px 0 var(--border-dark);
   outline: none;
+  border-radius: 0;
 }
 
 .dropdown-menu {
@@ -197,4 +195,8 @@ textarea::-webkit-scrollbar-button:horizontal:increment {
 
 footer a {
   color: whitesmoke;
+}
+
+.post_list .post_teaser .thumbnail img, .post_teaser_image_preview img {
+  border-radius: 0;
 }
