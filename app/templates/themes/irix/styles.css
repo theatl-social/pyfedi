@@ -1,0 +1,200 @@
+:root {
+  --bg: #b0b8c4;
+  --field-bg: #be9292;
+  --border-light: #ffffff;
+  --border-dark: #6b6b6b;
+  --border-mid: #9da6b0;
+  --text: #000000;
+  --active-fill: #d0d8e0;
+  --irix-green: #9ebfbf;
+}
+
+/* General layout and background */
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: "Tahoma", sans-serif;
+  background-image: url('/static/themes/irix/bg_pattern.gif');
+  background-repeat: repeat;
+  background-size: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--active-fill) var(--bg);
+}
+
+.main_pane {
+  background-color: #aebfd6;
+}
+
+.list-group .list-group-item {
+  background-color: #aebfd6;
+}
+
+div.navbar {
+  background-color: var(--irix-green);
+}
+
+a {
+  color: #324467;
+}
+
+/* Card styling */
+.card {
+  background-color: var(--bg);
+  border: none;
+  padding: 6px;
+  box-shadow:
+    inset -1px -1px 0 var(--border-dark),
+    inset 1px 1px 0 var(--border-light),
+    0 0 0 2px var(--border-mid),
+    2px 2px 0 2px var(--border-dark),
+    -2px -2px 0 2px var(--border-light);
+}
+
+.card-header {
+  background-color: inherit;
+}
+
+.card-body {
+  background-color: var(--bg);
+  border: 2px solid var(--border-mid);
+  box-shadow:
+    inset 1px 1px 0 var(--border-light),
+    inset -2px -2px 0 var(--border-dark);
+  padding: 12px;
+  font-size: 14px;
+  border-radius: 0;
+}
+
+/* Button override */
+.btn {
+  font-weight: bold;
+  padding: 4px 12px;
+  border: 2px solid var(--border-mid);
+  background-color: var(--bg);
+  color: var(--text);
+  box-shadow: inset -1px -1px 0 var(--border-dark),
+              inset 1px 1px 0 var(--border-light);
+  cursor: pointer;
+  border-radius: 0;
+}
+
+.btn:active, .btn-group .btn-primary {
+  background-color: var(--field-bg);
+  box-shadow: inset 1px 1px 0 var(--border-dark),
+              inset -1px -1px 0 var(--border-light);
+}
+
+.btn:hover {
+  background-color: var(--active-fill);
+  color: black;
+  border-color: var(--border-mid);
+}
+
+.coolfieldset.expanded, .coolfieldset.collapsed legend {
+  background-color: var(--irix-green);
+}
+
+
+
+/* Input / Textarea override */
+.form-control,
+.form-select,
+textarea,
+input[type="text"],
+input[type="password"],
+input[type="email"],
+.form-group .full .ts-control {
+  font-family: "Tahoma", sans-serif;
+  font-size: 14px;
+  padding: 4px 6px;
+  color: var(--text);
+  background-color: var(--field-bg);
+  border: 2px solid var(--border-mid);
+  box-shadow: inset 1px 1px 0 var(--border-light),
+              inset -1px -1px 0 var(--border-dark);
+  outline: none;
+}
+
+.dropdown-menu {
+  --bs-dropdown-bg: var(--active-fill);
+}
+
+.dropdown-item:focus, .dropdown-item:hover {
+  background-color: var(--irix-green);
+}
+
+.form-control:focus,
+textarea:focus,
+.form-select:focus,
+input[type="text"]:focus {
+  background-color: var(--active-fill);
+}
+
+.side_pane .list-group-item:first-child {
+  padding-top: 8px;
+}
+
+/* --- Scrollbar style (WebKit) --- */
+body,
+textarea {
+  scrollbar-width: thin;
+  scrollbar-color: var(--active-fill) var(--bg);
+}
+
+body::-webkit-scrollbar,
+textarea::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+
+body::-webkit-scrollbar-track,
+textarea::-webkit-scrollbar-track {
+  background: var(--bg);
+  border: 2px solid var(--border-mid);
+  box-shadow: inset -1px -1px 0 var(--border-dark),
+              inset 1px 1px 0 var(--border-light);
+}
+
+body::-webkit-scrollbar-thumb,
+textarea::-webkit-scrollbar-thumb {
+  background-color: var(--active-fill);
+  border: 2px solid var(--border-mid);
+  box-shadow: inset 1px 1px 0 var(--border-light),
+              inset -1px -1px 0 var(--border-dark);
+}
+
+body::-webkit-scrollbar-button,
+textarea::-webkit-scrollbar-button {
+  background-color: var(--bg);
+  border: 2px solid var(--border-mid);
+  box-shadow: inset -1px -1px 0 var(--border-dark),
+              inset 1px 1px 0 var(--border-light);
+  height: 16px;
+  width: 16px;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+body::-webkit-scrollbar-button:vertical:decrement,
+textarea::-webkit-scrollbar-button:vertical:decrement {
+  background-image: url('data:image/svg+xml;utf8,<svg fill="black" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><polygon points="5,2 2,7 8,7"/></svg>');
+}
+
+body::-webkit-scrollbar-button:vertical:increment,
+textarea::-webkit-scrollbar-button:vertical:increment {
+  background-image: url('data:image/svg+xml;utf8,<svg fill="black" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><polygon points="2,3 8,3 5,8"/></svg>');
+}
+
+body::-webkit-scrollbar-button:horizontal:decrement,
+textarea::-webkit-scrollbar-button:horizontal:decrement {
+  background-image: url('data:image/svg+xml;utf8,<svg fill="black" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><polygon points="2,5 7,2 7,8"/></svg>');
+}
+
+body::-webkit-scrollbar-button:horizontal:increment,
+textarea::-webkit-scrollbar-button:horizontal:increment {
+  background-image: url('data:image/svg+xml;utf8,<svg fill="black" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><polygon points="3,2 3,8 8,5"/></svg>');
+}
+
+footer a {
+  color: whitesmoke;
+}
