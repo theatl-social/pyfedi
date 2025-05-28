@@ -247,7 +247,7 @@ def register(app):
                     post_reply.delete_dependencies()
                     if not post_reply.has_replies():
                         db.session.delete(post_reply)
-            db.session.commit()
+                        db.session.commit()
 
             # Get Post IDs using raw SQL to reduce memory usage
             post_ids = list(db.session.execute(text('SELECT id FROM post WHERE deleted = true AND posted_at < :cutoff'),
@@ -257,7 +257,7 @@ def register(app):
                 if post:  # Check if still exists
                     post.delete_dependencies()
                     db.session.delete(post)
-            db.session.commit()
+                    db.session.commit()
 
             # Ensure accurate community stats
             print(f'Ensure accurate community stats {datetime.now()}')
