@@ -2,8 +2,8 @@
 /* use https://fontdrop.info/ to get the unicode values of the feather.ttf file */
 @font-face {
   font-family: 'Feather';
-  src: url('/static/fonts/feather/feather.ttf') format('truetype'),
-  url('/static/fonts/feather/feather.woff') format('woff'),
+  src: url('/static/fonts/feather/feather.woff') format('woff'),
+  url('/static/fonts/feather/feather.ttf') format('truetype'),
   url('/static/fonts/feather/feather.svg#Feather') format('svg');
   font-weight: normal;
   font-style: normal;
