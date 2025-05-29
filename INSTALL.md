@@ -511,6 +511,8 @@ Every few minutes PieFed will retry federation sending attempts that failed prev
 */5 * * * * rimu cd /home/rimu/pyfedi && /home/rimu/pyfedi/send_queue.sh
 ```
 
+The send_queue cron job is also needed to make scheduled posts publish themselves.
+
 
 ### Email
 
