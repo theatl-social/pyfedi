@@ -2253,6 +2253,12 @@ form h5 {
   }
 }
 
+@media (min-width: 992px) {
+  .h4, h4 {
+    font-size: 1.4rem;
+  }
+}
+
 .sender_list {
   border-right: solid 1px #ddd;
 }
