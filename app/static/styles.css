@@ -794,7 +794,7 @@ div.navbar {
   }
 }
 .community_header #breadcrumb_nav .breadcrumb {
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: rgba(0, 0, 0, 0.6);
   display: inline-block;
   padding: 5px 10px;
   margin-bottom: 0;
@@ -967,7 +967,7 @@ ul.form-multicheck-columns {
   }
 }
 .post_list .post_teaser .thumbnail img.blur {
-  filter: blur(3px);
+  filter: blur(9px);
 }
 .post_list .post_teaser .thumbnail.lbw .fe {
   background: none;
@@ -995,7 +995,7 @@ ul.form-multicheck-columns {
   cursor: pointer;
 }
 .post_list .post_teaser .post_teaser_image_preview img.blur {
-  filter: blur(3px);
+  filter: blur(24px);
 }
 
 .post_teaser_body {
@@ -1029,12 +1029,12 @@ ul.form-multicheck-columns {
   max-width: 512px;
   max-height: 575px;
   overflow: hidden;
+  border-radius: 5px;
 }
 .post_teaser_image_preview img {
   max-width: 100%;
   min-width: 150px;
   margin-right: 4px;
-  border-radius: 5px;
   height: auto;
 }
 
@@ -1139,6 +1139,7 @@ time {
 #masonry .item {
   position: relative;
   margin-bottom: 5px;
+  overflow: hidden;
 }
 #masonry .item img {
   width: 100%;
@@ -1149,7 +1150,7 @@ time {
   border: none;
 }
 #masonry .item .masonry_thumb a img.blur, #masonry .item .masonry_thumb a:active img.blur {
-  filter: blur(3px);
+  filter: blur(20px);
 }
 #masonry .item .masonry_info {
   position: absolute;
