@@ -666,7 +666,7 @@ def show_feed(feed):
     for parent_feed in reversed(parents):
         breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
         breadcrumb.text = parent_feed.title
-        breadcrumb.url = f'{existing_url}/{parent_feed.machine_name}'
+        breadcrumb.url = f'{existing_url}/{parent_feed.link()}'
         breadcrumbs.append(breadcrumb)
 
     breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
