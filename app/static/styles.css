@@ -2115,6 +2115,13 @@ form h5 {
 .post_flair_body {
   padding-left: 0;
 }
+#image_preview {
+  max-width: 200px;
+  display: none;
+  margin-top: -10px;
+  margin-bottom: 10px;
+}
+
 #search_community {
   margin-top: 16px;
 }

@@ -1801,6 +1801,13 @@ form {
   }
 }
 
+#image_preview {
+  max-width: 200px;
+  display: none;
+  margin-top: -10px;
+  margin-bottom: 10px;
+}
+
 #search_community {
   margin-top: 16px;
 }
