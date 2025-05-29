@@ -763,7 +763,8 @@ def add_post(actor, type):
                                     actor=community.ap_id if community.ap_id is not None else community.name))
 
         if form.timezone.data:
-            current_user.timezone = form.timezone.data
+            db.session.execute(text('UPDATE "user" SET timezone = :timezone WHERE id = :user_id'),
+                               {'user_id': current_user.id, 'timezone': form.timezone.data})
             db.session.commit()
 
         resp = make_response(redirect(f"/post/{post.id}"))
