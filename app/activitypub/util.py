@@ -1122,6 +1122,10 @@ def actor_json_to_model(activity_json, address, server):
             make_image_sizes(feed.icon_id, 60, 250, 'feeds')
         if feed.image_id:
             make_image_sizes(feed.image_id, 700, 1600, 'feeds')
+
+        if 'childFeeds' in activity_json:
+            for child_feed in activity_json['childFeeds']:
+                populate_child_feed(feed.id, child_feed)
         return feed
 
 
@@ -2789,6 +2793,23 @@ def get_nodebb_replies_in_background(replies_uri_list, community_id):
         resolve_remote_post(uri, community, None, False, nodebb=True)
         if reply_count >= max:
             break
+
+
+def populate_child_feed(feed_id, child_feed):
+    if current_app.debug:
+        populate_child_feed_worker(feed_id, child_feed)
+    else:
+        populate_child_feed_worker.delay(feed_id, child_feed)
+
+
+@celery.task
+def populate_child_feed_worker(feed_id, child_feed):
+    from app.feed.util import search_for_feed
+    server, feed = extract_domain_and_actor(child_feed)
+    new_feed = search_for_feed('~' + feed + '@' + server)
+    new_feed.parent_feed_id = feed_id
+    db.session.commit()
+
 
 
 # called from UI, via 'search' option in navbar, or 'Retrieve a post from the original server' in community sidebar

@@ -2891,6 +2891,7 @@ class Feed(db.Model):
 
     icon = db.relationship('File', foreign_keys=[icon_id], single_parent=True, backref='feed', cascade="all, delete-orphan")
     image = db.relationship('File', foreign_keys=[image_id], single_parent=True, cascade="all, delete-orphan")
+    parent = db.relationship('Feed', remote_side=[id], backref=db.backref('children', lazy='dynamic'))
 
     def __repr__(self):
         return '<Feed {}_{}>'.format(self.name, self.id)
