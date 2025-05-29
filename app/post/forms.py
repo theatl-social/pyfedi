@@ -59,7 +59,14 @@ class ConfirmationForm(FlaskForm):
     submit = SubmitField(_l('Yes'), render_kw={'autofocus': True})
 
 
+class DeleteConfirmationForm(FlaskForm):
+    referrer = HiddenField()
+    reason = StringField(_l('Reason'), validators=[Length(max=512)])
+    submit = SubmitField(_l('Yes'), render_kw={'autofocus': True})
+
+
 class ConfirmationMultiDeleteForm(FlaskForm):
+    reason = StringField(_l('Reason'), validators=[Length(max=512)])
     also_delete_replies = BooleanField(_l('Also delete replies to this comment'))
     submit = SubmitField(_l('Yes'), render_kw={'autofocus': True})
 

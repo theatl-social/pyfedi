@@ -42,6 +42,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupFontSizeChangers();
     setupAddPassKey();
     setupFancySelects();
+    setupImagePreview();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
@@ -1054,6 +1055,28 @@ function setupFancySelects() {
     var communities = document.getElementById('communities');
     if(communities && communities.type === 'select-one') {
         new TomSelect('#communities', {maxOptions: null, maxItems: 1});
+    }
+}
+
+function setupImagePreview() {
+    const input = document.getElementById('image_file');
+    const preview = document.getElementById('image_preview');
+
+    if(input) {
+        input.addEventListener('change', () => {
+            const file = input.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                preview.src = url;
+                preview.style.display = 'block';
+
+                // revoke the object URL later to free memory
+                preview.onload = () => URL.revokeObjectURL(url);
+            } else {
+                preview.src = '';
+                preview.style.display = 'none';
+            }
+        });
     }
 }
 

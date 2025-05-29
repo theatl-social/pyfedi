@@ -313,7 +313,7 @@ div.navbar {
       padding-top: 13px;
     }
     .breadcrumb {
-      background-color: rgba(0,0,0,0.2);
+      background-color: rgba(0,0,0,0.6);
       display: inline-block;
       padding: 5px 10px;
       @include breakpoint(tablet) {
@@ -506,7 +506,7 @@ ul.form-multicheck-columns {
           max-width: 100%;
         }
         &.blur {
-          filter: blur(3px);
+          filter: blur(9px);
         }
       }
 
@@ -546,7 +546,7 @@ ul.form-multicheck-columns {
 
     .post_teaser_image_preview {
       img.blur {
-        filter: blur(3px);
+        filter: blur(24px);
       }
     }
   }
@@ -583,12 +583,12 @@ ul.form-multicheck-columns {
     max-width: 512px;
     max-height: 575px;
     overflow: hidden;
+    border-radius: 5px;
   }
   img {
     max-width: 100%;
     min-width: 150px;
     margin-right: 4px;
-    border-radius: 5px;
     height: auto;
   }
 }
@@ -702,6 +702,7 @@ time {
   .item {
     position: relative;
     margin-bottom: 5px;
+    overflow: hidden;
     img {
       width: 100%;
       display: block;
@@ -712,7 +713,7 @@ time {
       border: none;
 
       img.blur {
-        filter: blur(3px);
+        filter: blur(20px);
       }
     }
 
@@ -1791,6 +1792,7 @@ form {
   font-size: 73%;
   padding: 1px 3px;
   border-radius: 3px;
+  text-wrap: nowrap;
 }
 
 .post_flair_body {
@@ -1798,6 +1800,13 @@ form {
   .post_flair {
 
   }
+}
+
+#image_preview {
+  max-width: 200px;
+  display: none;
+  margin-top: -10px;
+  margin-bottom: 10px;
 }
 
 #search_community {
@@ -1948,6 +1957,12 @@ form {
 .h3, h3 {
   @include breakpoint(tablet) {
     font-size: 1.6rem;
+  }
+}
+
+.h4, h4 {
+  @include breakpoint(tablet) {
+    font-size: 1.25rem;
   }
 }
 

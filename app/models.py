@@ -1590,7 +1590,7 @@ class Post(db.Model):
             post.ranking_scaled = int(post.ranking + community.scale_by())
             community.post_count += 1
             community.last_active = utcnow()
-            user.post_count += 1
+            db.session.execute(text('UPDATE "user" SET post_count = post_count + 1 WHERE id = :user_id'), {'user_id': user.id})
             db.session.execute(text('UPDATE "site" SET last_active = NOW()'))
             try:
                 db.session.commit()
@@ -1655,7 +1655,6 @@ class Post(db.Model):
             if user.is_local():
                 cache.delete_memoized(recently_upvoted_posts, user.id)
             if user.reputation > 100:
-                post.up_votes += 1
                 post.score += 1
                 post.ranking = post.post_ranking(post.score, post.posted_at)
                 post.ranking_scaled = int(post.ranking + community.scale_by())
@@ -2107,7 +2106,6 @@ class PostReply(db.Model):
 
         reply.ap_id = reply.profile_id()
         if user.reputation > 100:
-            reply.up_votes += 1
             reply.score += 1
             reply.ranking += 1
         elif user.reputation < -100:
@@ -2117,7 +2115,7 @@ class PostReply(db.Model):
             post.reply_count += 1
             post.community.post_reply_count += 1
             post.community.last_active = post.last_active = utcnow()
-        user.post_reply_count += 1
+        db.session.execute(text('UPDATE "user" SET post_reply_count = post_reply_count + 1 WHERE id = :user_id'), {'user_id': user.id})
         db.session.execute(text('UPDATE "site" SET last_active = NOW()'))
         db.session.commit()
 
@@ -2891,8 +2889,9 @@ class Feed(db.Model):
 
     search_vector = db.Column(TSVectorType('name', 'description'))
 
-    icon = db.relationship('File', foreign_keys=[icon_id], single_parent=True, backref='feed', cascade="all, delete-orphan")
-    image = db.relationship('File', foreign_keys=[image_id], single_parent=True, cascade="all, delete-orphan")
+    icon = db.relationship('File', lazy='joined', foreign_keys=[icon_id], single_parent=True, backref='feed', cascade="all, delete-orphan")
+    image = db.relationship('File', lazy='joined', foreign_keys=[image_id], single_parent=True, cascade="all, delete-orphan")
+    parent = db.relationship('Feed', remote_side=[id], backref=db.backref('children', lazy='dynamic'))
 
     def __repr__(self):
         return '<Feed {}_{}>'.format(self.name, self.id)

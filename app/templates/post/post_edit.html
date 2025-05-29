@@ -58,6 +58,7 @@
                     </div>                
                 {% endif %}
                 {{ render_field(form.image_file) }}
+                <img id="image_preview" style="" alt="Image preview">
                 {{ render_field(form.image_alt_text) }}
                 <small class="field_hint">{{ _('Describe the image, to help visually impaired people.') }}</small>
             {% elif post_type == POST_TYPE_VIDEO %}

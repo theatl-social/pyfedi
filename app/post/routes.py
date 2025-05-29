@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections import namedtuple, defaultdict
 from datetime import datetime, timedelta
 from random import randint
@@ -15,7 +17,7 @@ from app.activitypub.util import update_post_from_activity
 from app.community.util import send_to_remote_instance, flair_from_form
 from app.inoculation import inoculation
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm, ConfirmationForm, \
-    ConfirmationMultiDeleteForm, EditReplyForm, FlairPostForm
+    ConfirmationMultiDeleteForm, EditReplyForm, FlairPostForm, DeleteConfirmationForm
 from app.community.forms import CreateLinkForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm
 from app.constants import NOTIF_REPORT, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED
 from app.post.util import post_replies, get_comment_branch, tags_to_string, url_needs_archive, \
@@ -717,9 +719,9 @@ def post_delete(post_id: int):
     post = Post.query.get_or_404(post_id)
     community = post.community
     if post.user_id == current_user.id or community.is_moderator() or current_user.is_admin():
-        form = ConfirmationForm()
+        form = DeleteConfirmationForm()
         if form.validate_on_submit():
-            post_delete_post(community, post, current_user.id)
+            post_delete_post(community, post, current_user.id, form.reason.data)
             ref = request.form.get('referrer')
             if '/post/' not in ref:
                 return redirect(ref)
@@ -731,7 +733,8 @@ def post_delete(post_id: int):
                                                                 post_title=post.title),
                                    form=form)
 
-def post_delete_post(community: Community, post: Post, user_id: int, federate_all_communities=True):
+
+def post_delete_post(community: Community, post: Post, user_id: int, reason: str | None, federate_all_communities=True):
     user: User = User.query.get(user_id)
     if post.url:
         post.calculate_cross_posts(delete_only=True)
@@ -792,8 +795,8 @@ def post_delete_post(community: Community, post: Post, user_id: int, federate_al
             if instance.inbox and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain) and instance.online():
                 send_post_request(instance.inbox, delete_json, user.private_key, user.public_url() + '#main-key')
 
-    if post.user_id != user.id:
-        add_to_modlog('delete_post', community_id=community.id, link_text=shorten_string(post.title),
+    if post.user_id != user.id and reason is not None:
+        add_to_modlog('delete_post', reason=reason, community_id=community.id, link_text=shorten_string(post.title),
                       link=f'post/{post.id}')
 
 
@@ -1276,7 +1279,10 @@ def post_reply_delete(post_id: int, comment_id: int):
                         delete_reply(reply.id, SRC_WEB, None)
                     elif post.community.is_moderator() or current_user.is_admin():
                         # Moderator or admin is deleting the reply
-                        reason = 'Deleted by mod'
+                        if form.reason.data:
+                            reason = 'Deleted by mod: ' + form.reason.data
+                        else:
+                            reason = 'Deleted by mod'
                         mod_remove_reply(reply.id, reason, SRC_WEB, None)
                     num_deleted += 1
         else:
@@ -1287,7 +1293,10 @@ def post_reply_delete(post_id: int, comment_id: int):
                 num_deleted = 1
             elif community.is_moderator() or current_user.is_admin():
                 # Moderator or admin is deleting the reply
-                reason = 'Deleted by mod'
+                if form.reason.data:
+                    reason = 'Deleted by mod: ' + form.reason.data
+                else:
+                    reason = 'Deleted by mod'
                 mod_remove_reply(post_reply.id, reason, SRC_WEB, None)
                 num_deleted = 1
         if num_deleted > 0:

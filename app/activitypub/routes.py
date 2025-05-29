@@ -1986,6 +1986,9 @@ def feed_profile(actor):
                         "type": "Image",
                         "url": f"https://{current_app.config['SERVER_NAME']}{feed.header_image()}"
                     }
+            actor_data['childFeeds'] = []
+            for child_feed in feed.children.all():
+                actor_data['childFeeds'].append(child_feed.ap_profile_id)
             resp = jsonify(actor_data)
             resp.content_type = 'application/activity+json'
             resp.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/f/{actor}>; rel="alternate"; type="text/html"')

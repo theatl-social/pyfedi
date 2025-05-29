@@ -8,6 +8,13 @@
 {% if current_user.is_authenticated and user.id == current_user.id %}
     {% set active_child = 'view_profile' %}
 {% endif %}
+
+{% block schema_org %}
+    {% if user.indexable and user.searchable and user.instance_id == 1 -%}
+        {% include "user/_schema_org.html" %}
+    {%- endif %}
+{% endblock %}
+
 {% block app_content %}
 <div class="row">
     <main class="col-12 col-lg-8 position-relative main_pane">

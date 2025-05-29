@@ -5,6 +5,12 @@
 {% endif -%} -%}
 {% from 'bootstrap/form.html' import render_field -%}
 
+{% block schema_org %}
+    {% if post.indexable and post.instance_id == 1 -%}
+        {% include "post/_schema_org.html" %}
+    {%- endif %}
+{% endblock %}
+
 {% block app_content -%}
 <script src="/static/js/coolfieldset.js?v=3"></script>
 <script type="text/javascript" nonce="{{ session['nonce'] }}">
