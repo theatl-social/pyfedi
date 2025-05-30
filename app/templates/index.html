@@ -21,12 +21,12 @@
             </div>
         </div>
         <div class="post_list h-feed">
-            {% for post in posts %}
+            {% for post in posts -%}
                 {% include 'post/_post_teaser.html' %}
-            {% else %}
+            {% else -%}
                 <p>{{ _('No posts yet. Join some communities to see more.') }}</p>
                 <p><a class="btn btn-primary" href="/communities">{{ _('More communities') }}</a></p>
-            {% endfor %}
+            {% endfor -%}
         </div>
 
         <nav aria-label="Pagination" class="mt-4" role="navigation">
@@ -44,14 +44,6 @@
     </main>
 
     <aside id="side_pane" class="col-12 col-lg-4 side_pane" role="complementary">
-        <!-- <div class="card">
-            <div class="card-body">
-                <form method="get">
-                    <input type="search" name="search" class="form-control mt-2" placeholder="{{ _('Search') }}" />
-                </form>
-            </div>
-        </div> -->
-
         {% if new_communities and len(new_communities) > 0 -%}
         <div class="card mb-3">
             <div class="card-header">
