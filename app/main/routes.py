@@ -17,7 +17,7 @@ from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTIO
 from app.email import send_email, send_registration_approved_email
 from app.inoculation import inoculation
 from app.main import bp
-from flask import g, session, flash, request, current_app, url_for, redirect, make_response, jsonify
+from flask import g, session, flash, request, current_app, url_for, redirect, make_response, jsonify, send_file
 from flask_login import current_user, login_required
 from flask_babel import _, get_locale
 from sqlalchemy import desc, text
@@ -853,11 +853,8 @@ def instance_actor():
 
 @bp.route('/service_worker.js', methods=['GET'])
 def service_worker():
-    with open(os.path.join('app/static/service_worker.js'), 'r') as f:
-        content = f.read()
-    response = make_response(content)
-    response.headers['Content-Type'] = 'text/javascript'
-    return response
+    js_path = os.path.join('static', 'service_worker.js')
+    return send_file(js_path, mimetype='text/javascript')
 
 
 # intercept requests for the PWA manifest.json and provide platform specific ones
