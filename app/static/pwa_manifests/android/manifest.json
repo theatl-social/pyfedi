@@ -41,7 +41,7 @@
     "scope": "/",
     "piefed_manifest_version": "android",
     "serviceworker": {
-      "src": "/static/service_worker.js",
+      "src": "/service_worker.js",
       "scope": "/",
       "use_cache": true
     },

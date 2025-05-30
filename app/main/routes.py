@@ -851,6 +851,15 @@ def instance_actor():
     return resp
 
 
+@bp.route('/service_worker.js', methods=['GET'])
+def service_worker():
+    with open(os.path.join('app/static/service_worker.js'), 'r') as f:
+        content = f.read()
+    response = make_response(content)
+    response.headers['Content-Type'] = 'text/javascript'
+    return response
+
+
 # intercept requests for the PWA manifest.json and provide platform specific ones
 @bp.route('/manifest.json', methods=['GET'])
 @bp.route('/static/manifest.json', methods=['GET'])

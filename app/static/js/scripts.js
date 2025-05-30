@@ -1138,7 +1138,7 @@ function eraseCookie(name) {
 /* register a service worker */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('/static/service_worker.js', {scope: '/static/'}).then(function(registration) {
+    navigator.serviceWorker.register('/service_worker.js', {scope: '/'}).then(function(registration) {
       // Registration was successful
       // console.log('ServiceWorker2 registration successful with scope: ', registration.scope);
     }, function(err) {
