@@ -22,5 +22,36 @@
     "start_url": "/",
     "scope": "/",
     "piefed_manifest_version": "default",
+    "serviceworker": {
+      "src": "/static/service_worker.js",
+      "scope": "/",
+      "use_cache": true
+    },
+    "share_target": {
+        "action": "/share",
+        "method": "GET",
+        "params": {
+          "title": "title",
+          "url": "url"
+        }
+    },
+    "shortcuts": [
+      {
+        "name": "Topics",
+        "url": "/topics"
+      },
+      {
+        "name": "Feeds",
+        "url": "/feeds"
+      },
+      {
+        "name": "Notifications",
+        "url": "/notifications"
+      },
+      {
+        "name": "Donate",
+        "url": "/donate"
+      }
+    ],
     "prefer_related_applications": false
 }

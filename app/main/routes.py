@@ -868,12 +868,16 @@ def static_manifest():
         with open(manifest_file, 'r') as f:
             manifest = json.load(f)
         manifest['id'] = f'https://{current_app.config["SERVER_NAME"]}'
+        manifest['name'] = g.site.name if g.site.name else 'PieFed'
+        manifest['description'] = g.site.description if g.site.description else ''
         return jsonify(manifest)
     except Exception as e:
         manifest_file = os.path.join('app/static/pwa_manifests/default/manifest.json')
         with open(manifest_file, 'r') as f:
             manifest = json.load(f)
         manifest['id'] = f'https://{current_app.config["SERVER_NAME"]}'
+        manifest['name'] = g.site.name if g.site.name else 'PieFed'
+        manifest['description'] = g.site.description if g.site.description else ''
         return jsonify(manifest)
     
 
