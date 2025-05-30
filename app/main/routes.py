@@ -854,37 +854,43 @@ def instance_actor():
 @bp.route('/service_worker.js', methods=['GET'])
 def service_worker():
     js_path = os.path.join('static', 'service_worker.js')
-    return send_file(js_path, mimetype='text/javascript')
+    response = make_response(send_file(js_path, mimetype='text/javascript'))
+    response.headers['Cache-Control'] = 'public, max-age=86400' # cache for 1 day
+    return response
 
 
 # intercept requests for the PWA manifest.json and provide platform specific ones
 @bp.route('/manifest.json', methods=['GET'])
 @bp.route('/static/manifest.json', methods=['GET'])
 def static_manifest():
-    # get the user agent from the headers
-    # then return platform/agent specific manifests
-    # if we dont have a matching os folder, return the default manifest
+    def get_manifest_for_os(os_family):
+        base_dir = 'app/static/pwa_manifests'
+        if os_family == 'mac os x':
+            path = os.path.join(base_dir, 'ios', 'manifest.json')
+        else:
+            path = os.path.join(base_dir, os_family, 'manifest.json')
+        return path if os.path.exists(path) else os.path.join(base_dir, 'default', 'manifest.json')
+
     try:
         res = uaparse(request.user_agent.string)
-        # often ios useragents dont say ios in them anywhere, but the family is Mac OS X mostly
-        if res.os.family.lower() == 'mac os x':
-            manifest_file = os.path.join('app/static/pwa_manifests/ios/manifest.json')
-        else:
-            manifest_file = os.path.join('app/static/pwa_manifests/', res.os.family.lower(), 'manifest.json')
-        with open(manifest_file, 'r') as f:
-            manifest = json.load(f)
-        manifest['id'] = f'https://{current_app.config["SERVER_NAME"]}'
-        manifest['name'] = g.site.name if g.site.name else 'PieFed'
-        manifest['description'] = g.site.description if g.site.description else ''
-        return jsonify(manifest)
-    except Exception as e:
-        manifest_file = os.path.join('app/static/pwa_manifests/default/manifest.json')
-        with open(manifest_file, 'r') as f:
-            manifest = json.load(f)
-        manifest['id'] = f'https://{current_app.config["SERVER_NAME"]}'
-        manifest['name'] = g.site.name if g.site.name else 'PieFed'
-        manifest['description'] = g.site.description if g.site.description else ''
-        return jsonify(manifest)
+        manifest_path = get_manifest_for_os(res.os.family.lower())
+    except Exception:
+        manifest_path = os.path.join('app/static/pwa_manifests/default/manifest.json')
+
+    with open(manifest_path, 'r') as f:
+        manifest = json.load(f)
+
+    # Modify manifest
+    manifest['id'] = f'https://{current_app.config["SERVER_NAME"]}'
+    manifest['name'] = g.site.name if g.site.name else 'PieFed'
+    manifest['description'] = g.site.description if g.site.description else ''
+
+    # Build response with cache headers
+    response = make_response(jsonify(manifest))
+    # Cache for 1 hour on the client, prevent public/shared caching because we detect the user agent
+    response.headers['Cache-Control'] = 'private, max-age=3600'
+
+    return response
     
 
 @bp.route('/feeds', methods=['GET','POST'])
