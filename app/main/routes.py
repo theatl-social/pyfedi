@@ -581,6 +581,12 @@ def replay_inbox():
 @bp.route('/test')
 @debug_mode_only
 def test():
+    import json
+    user_id = 1
+    r = get_redis_connection()
+    r.publish(f"notifications:{user_id}", json.dumps({'here': 'the thing'}))
+    return 'Done'
+
     user = User.query.get(1)
     send_registration_approved_email(user)
 
