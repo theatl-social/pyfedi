@@ -2609,7 +2609,7 @@ def lemmy_site_data():
             "comment_count": 0,
             "comment_score": 0
         }
-        data['admins'].append({'person': person, 'counts': counts})
+        data['admins'].append({'person': person, 'counts': counts, 'is_admin': True})
     return data
 
 
