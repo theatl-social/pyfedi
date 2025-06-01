@@ -11,6 +11,7 @@ from app.utils import communities_banned_from, blocked_instances, blocked_commun
      joined_communities, moderating_communities
 
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 from flask import current_app
 from sqlalchemy import desc, or_
 
@@ -347,9 +348,15 @@ def post_community_moderate_ban(auth,data):
     if not community.is_local():
         raise Exception('Community not local to this instance.')
 
+    # get the ban_until time if it exists, if not default to one year
+    if isinstance(data['expiredAt'],str):
+        ban_until = datetime.strptime(data['expiredAt'],'%Y-%m-%dT%H:%M:%S')
+    else: 
+        ban_until = datetime.now() + relativedelta(years=1)
+
     # create the community ban
     cb = CommunityBan(user_id=blocked.id, community_id=community.id, banned_by=blocker.id, 
-                      reason=data['reason'],ban_until=datetime.strptime(data['expiredAt'],'%Y-%m-%dT%H:%M:%S'))
+                      reason=data['reason'],ban_until=ban_until)
     db.session.add(cb)
     community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=blocked.id).first()
     if community_membership_record:
