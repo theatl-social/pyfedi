@@ -190,11 +190,17 @@
                         <span class="fe fe-bell red"></span> <span class="red unreadNotificationDisplay">{{ current_user.unread_notifications }}</span>
                         <script type="text/javascript" nonce="{{ session['nonce'] }}">
                             let unreadNotifications = {{ current_user.unread_notifications }};
+                            if ('setAppBadge' in navigator) { // Show a number badge on pwa icon
+                              navigator.setAppBadge({{ current_user.unread_notifications }});
+                            }
                         </script>
                     {% else -%}
                         <span class="fe fe-bell"></span> <span class="red unreadNotificationDisplay"></span>
                         <script type="text/javascript" nonce="{{ session['nonce'] }}">
                             let unreadNotifications = 0;
+                            if ('setAppBadge' in navigator) {
+                              navigator.clearAppBadge();
+                            }
                         </script>
                     {% endif -%}
                 </a>
