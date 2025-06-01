@@ -165,7 +165,7 @@ def invite_with_email(community_id: int, to: str, src, auth=None):
     message = render_template('email/invite_to_community.txt', user=user, community=community, host=current_app.config['SERVER_NAME'])
 
     send_email(f"{community.display_name()} on {current_app.config['SERVER_NAME']}",
-               f"{user.display_name()} <noreply@{current_app.config['SERVER_NAME']}>",
+               f"{user.display_name()} <{current_app.config['MAIL_FROM']}>",
                [to], message, markdown_to_html(message))
     return 1
 

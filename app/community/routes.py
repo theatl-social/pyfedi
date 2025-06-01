@@ -1283,7 +1283,7 @@ def community_move(actor):
             html_body = flask_render_template('email/move_community.html', current_user=current_user, community=community,
                                               post_url=form.post_link.data,
                                               home_domain=current_app.config['SERVER_NAME'])
-            send_email(f'Request to move {community.link()}', f'noreply@{current_app.config["SERVER_NAME"]}',
+            send_email(f'Request to move {community.link()}', f'{current_app.config["MAIL_FROM"]}',
                        g.site.contact_email, text_body, html_body, current_user.email)
 
             targets_data = {'community_id': community.id,'requestor_id':current_user.id}
