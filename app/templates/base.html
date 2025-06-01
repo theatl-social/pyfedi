@@ -1,5 +1,5 @@
 {% macro render_username(user, add_domain=True, htmx_redirect_back_to=None) -%}
-<div class="render_username">
+<div class="render_username" xmlns="http://www.w3.org/1999/html">
     {% if user.deleted -%}
         {% if current_user.is_authenticated and current_user.is_admin() -%}
             <a href="/u/{{ user.link() }}" title="{{ user.ap_id if user.ap_id != none else user.user_name }}" aria-label="{{ _('Author') }}">[deleted]</a>
@@ -84,6 +84,9 @@
         <meta name="HandheldFriendly" content="True">
         <meta name="MobileOptimized" content="320">
         <link rel="expect" blocking="render" href="#navbarSupportedContent">
+        {% if current_user.is_anonymous -%}
+            <script src="/static/js/enable_low_bandwidth.js" type="text/javascript" fetchpriority="high"></script>
+        {% endif -%}
         {% if current_user.font == 'atkinson' -%}
             <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-Regular.woff2" as="font" type="font/woff2">
             <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-Italic.woff2" as="font" type="font/woff2">
