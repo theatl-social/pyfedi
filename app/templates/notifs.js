@@ -37,6 +37,10 @@ function connect() {
                     });
                 }
 
+                if ('setAppBadge' in navigator) { // Show a number badge on pwa icon
+                  navigator.setAppBadge(data['num_notifs']);
+                }
+
             }
         }
 
