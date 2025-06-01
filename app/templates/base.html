@@ -187,9 +187,21 @@
             {% if current_user.is_authenticated -%}
                 <a class="nav-link d-lg-none" href="/notifications" aria-label="{{ _('Notifications') }}">
                     {% if current_user.unread_notifications -%}
-                    <span class="fe fe-bell red"></span> <span class="red">{{ current_user.unread_notifications }}</span>
+                        <span class="fe fe-bell red"></span> <span class="red unreadNotificationDisplay">{{ current_user.unread_notifications }}</span>
+                        <script type="text/javascript" nonce="{{ session['nonce'] }}">
+                            let unreadNotifications = {{ current_user.unread_notifications }};
+                            if ('setAppBadge' in navigator) { // Show a number badge on pwa icon
+                              navigator.setAppBadge({{ current_user.unread_notifications }});
+                            }
+                        </script>
                     {% else -%}
-                        <span class="fe fe-bell"></span>
+                        <span class="fe fe-bell"></span> <span class="red unreadNotificationDisplay"></span>
+                        <script type="text/javascript" nonce="{{ session['nonce'] }}">
+                            let unreadNotifications = 0;
+                            if ('setAppBadge' in navigator) {
+                              navigator.clearAppBadge();
+                            }
+                        </script>
                     {% endif -%}
                 </a>
             {% endif -%}
@@ -280,9 +292,9 @@
                             <li class="nav-item right d-none d-md-inline-block">
                                 <a class="nav-link" href="/notifications" aria-label="{{ _('%(num)d unread notifications', num=current_user.unread_notifications) if current_user.unread_notifications else _('Notifications') }}">
                                     {% if current_user.unread_notifications %}
-                                    <span class="fe fe-bell red"></span> <span class="red">{{ current_user.unread_notifications }}</span>
+                                    <span class="fe fe-bell red"></span> <span class="red unreadNotificationDisplay">{{ current_user.unread_notifications }}</span>
                                     {% else %}
-                                        <span class="fe fe-bell"></span>
+                                        <span class="fe fe-bell"></span> <span class="red unreadNotificationDisplay"></span>
                                     {% endif %}
                                 </a>
                             </li>
@@ -334,6 +346,12 @@
             <!-- -->
         {% endif -%}
         <script type="text/javascript" src="{{ url_for('static', filename='js/markdown/downarea.js', changed=getmtime('js/markdown/downarea.js')) }}"></script>
+        {% if notif_server and current_user.is_authenticated -%}
+            <script type="text/javascript" nonce="{{ session['nonce'] }}">
+                {% include "notifs.js" %}
+            </script>
+            <audio id="notifSound" src="/static/sounds/notification.mp3" preload="auto"></audio>
+        {% endif -%}
     {% endif -%}
     {% if theme() and file_exists('app/templates/themes/' + theme() + '/scripts.js') -%}
         <script src="{{ url_for('static', filename='themes/' + theme() + '/scripts.js') }}"></script>

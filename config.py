@@ -86,3 +86,5 @@ class Config(object):
     IMAGE_HASHING_ENDPOINT = os.environ.get('IMAGE_HASHING_ENDPOINT') or ''
 
     FLAG_THROWAWAY_EMAILS = os.environ.get('FLAG_THROWAWAY_EMAILS') or False
+
+    NOTIF_SERVER = os.environ.get('NOTIF_SERVER') or ''
