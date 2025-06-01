@@ -88,8 +88,12 @@
   content: "\e9b9";
 }
 
-.fe-logout::before {
+.fe-join::before {
   content: "\e988";
+}
+
+.fe-leave::before {
+  content: "\e989";
 }
 
 .fe-fb::before {

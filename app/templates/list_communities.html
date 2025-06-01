@@ -161,7 +161,7 @@
                     {% set blur_content = (current_user.hide_nsfw == 2 and community.nsfw)
                                         or (current_user.hide_nsfl == 2 and community.nsfl) -%}
                     <tr class="{{ 'blocked' if content_blocked }}{{ 'blur' if blur_content }}">
-                        <td width="70">{% if current_user.is_authenticated -%}
+                        <td width="90">{% if current_user.is_authenticated -%}
                                 {% if community.id in pending_communities and community.id not in joined_communities -%}
                                     <a class="btn btn-outline-secondary btn-sm" href="/community/{{ community.link() }}/unsubscribe" rel="nofollow">{{ _('Pending') }}</a>
                                 {% elif community.id in joined_communities -%}
