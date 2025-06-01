@@ -43,6 +43,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupAddPassKey();
     setupFancySelects();
     setupImagePreview();
+    setupNotificationPermission();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
@@ -1077,6 +1078,22 @@ function setupImagePreview() {
                 preview.style.display = 'none';
             }
         });
+    }
+}
+
+function setupNotificationPermission() {
+    const permissionButton = document.getElementById('enableNotifications');
+    if(permissionButton) {
+        if(Notification.permission !== "granted") {
+            permissionButton.addEventListener('click', () => {
+                Notification.requestPermission().then((permission) => {
+                  permissionButton.innerText = 'Granted'
+                });
+            });
+        }
+        else {
+            permissionButton.style.display = 'none';
+        }
     }
 }
 

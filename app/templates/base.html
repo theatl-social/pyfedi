@@ -353,7 +353,6 @@
             <script type="text/javascript" nonce="{{ session['nonce'] }}">
                 {% include "notifs.js" %}
             </script>
-            <audio id="notifSound" src="/static/sounds/notification.mp3" preload="auto"></audio>
         {% endif -%}
     {% endif -%}
     {% if theme() and file_exists('app/templates/themes/' + theme() + '/scripts.js') -%}

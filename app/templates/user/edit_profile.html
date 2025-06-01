@@ -21,10 +21,10 @@
 
         <form method='post' enctype="multipart/form-data" role="form" autocomplete="off">
             {{ form.csrf_token() }}
-
+            <h5>{{ _('Login') }}</h5>
             {{ render_field(form.email) }}
             {{ render_field(form.password_field) }}
-            <h5> Profile Data </h5>
+            <h5>{{ _('Profile') }}</h5>
             {{ render_field(form.title) }}
             {{ render_field(form.about) }}
             {% if not low_bandwidth %}
@@ -69,9 +69,9 @@
             {{ render_field(form.bot) }}
             {{ render_field(form.matrixuserid) }}
             <small class="field_hint">e.g. @something:matrix.org. Include leading @ and use : before server</small>
-            <h5> Profile Images </h5>
+            <h5>{{ ('Profile Images') }}</h5>
             {{ render_field(form.profile_file) }}
-            <small class="field_hint">Provide a square image that looks good when small.</small>
+            <small class="field_hint">{{ _('Provide a square image that looks good when small.') }}</small>
             {% if user.avatar_id %}
                 <p><a href="{{ user.avatar_image() }}" class="btn btn-sm btn-primary showElement" data-id="avatar_image">{{ _('View image') }}</a>
                    <a href="{{ url_for('user.remove_avatar') }}" class="btn btn-sm btn-primary"
@@ -82,7 +82,7 @@
                 <p><img id="avatar_image" class="community_icon_big rounded-circle" loading="lazy" style="display: none;" src="{{ user.avatar_image() }}" alt="{{ _('Profile pic') }}" /></p>
             {% endif %}
             {{ render_field(form.banner_file) }}
-            <small class="field_hint">Provide a wide image - letterbox orientation.</small>
+            <small class="field_hint">{{ _('Provide a wide image - letterbox orientation.') }}</small>
             {% if user.cover_id %}
                 <p><a href="{{ user.cover_image() }}" class="btn btn-sm btn-primary showElement" data-id="cover_div">{{ _('View image') }}</a> |
                    <a href="{{ url_for('user.remove_cover') }}" class="btn btn-sm btn-primary"

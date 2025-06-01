@@ -581,12 +581,12 @@ def replay_inbox():
 @bp.route('/test')
 @debug_mode_only
 def test():
-    #import json
-    #user_id = 1
-    #r = get_redis_connection()
-    #r.publish(f"notifications:{user_id}", json.dumps({'num_notifs': randint(1, 100)}))
-    #current_user.unread_notifications = randint(1, 100)
-    #db.session.commit()
+    import json
+    user_id = 1
+    r = get_redis_connection()
+    r.publish(f"notifications:{user_id}", json.dumps({'num_notifs': randint(1, 100)}))
+    current_user.unread_notifications = randint(1, 100)
+    db.session.commit()
     return 'Done'
 
     user = User.query.get(1)

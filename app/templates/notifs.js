@@ -29,11 +29,11 @@ function connect() {
                     sibling = sibling.previousElementSibling;
                 }
 
-                //play sound
-                const sound = document.getElementById('notifSound');
-                if (sound) {
-                    sound.play().catch(err => {
-                        console.warn("Audio play failed (possibly due to autoplay restrictions):", err);
+                if (Notification.permission === "granted") {
+                    new Notification("{{ g.site.name }}", {
+                        body: `${data['num_notifs']} notifications.`,
+                        icon: "/static/images/favicon-32x32.png",
+                        tag: '{{ session["nonce"] }}'
                     });
                 }
 

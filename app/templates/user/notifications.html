@@ -58,14 +58,7 @@
                  <h2>{{ _('Manage') }}</h2>
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-6">
-                        <a class="w-100 btn btn-primary" href="/u/{{ current_user.link() }}/profile">{{ _('Profile') }}</a>
-                    </div>
-                    <div class="col-6">
-                        <a class="w-100 btn btn-primary" href="/user/settings">{{ _('Settings') }}</a>
-                    </div>
-                </div>
+                <button class="btn btn-primary" id="enableNotifications">{{ _('Enable popup notifications') }}</button>
             </div>
         </div>
 

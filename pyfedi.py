@@ -64,8 +64,8 @@ with app.app_context():
 
 @app.before_request
 def before_request():
-    # Only regenerate nonce for regular page requests, not HTMX or static files
-    if not request.path.startswith('/static/') and 'HX-Request' not in request.headers:
+    # Only regenerate nonce for regular page requests, not HTMX
+    if 'HX-Request' not in request.headers:
         session['nonce'] = gibberish()
     g.locale = str(get_locale())
     if request.path != '/inbox' and not request.path.startswith('/static/'):        # do not load g.site on shared inbox, to increase chance of duplicate detection working properly
