@@ -1,5 +1,6 @@
 pgdata/
 app/static/media/
+media/
 logs/
 .git/
 .gitignore
