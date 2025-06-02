@@ -295,7 +295,7 @@
                             <li class="nav-item right d-none d-md-inline-block">
                                 <a class="nav-link" href="/notifications" aria-label="{{ _('%(num)d unread notifications', num=current_user.unread_notifications) if current_user.unread_notifications else _('Notifications') }}">
                                     {% if current_user.unread_notifications %}
-                                        <span class="fe fe-bell red"></span> <span class="red unreadNotificationDisplay" style="margin-left:0;">{{ current_user.unread_notifications }}</span>
+                                        <span class="fe fe-bell red"></span> <span class="red unreadNotificationDisplay">{{ current_user.unread_notifications }}</span>
                                     {% else %}
                                         <span class="fe fe-bell"></span> <span class="red unreadNotificationDisplay"></span>
                                     {% endif %}

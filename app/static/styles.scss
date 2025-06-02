@@ -162,6 +162,10 @@ div.navbar {
       }
 
     }
+
+    .unreadNotificationDisplay:not(:empty) {
+      margin-left: 0;
+    }
   }
 }
 

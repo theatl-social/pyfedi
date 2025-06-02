@@ -662,6 +662,9 @@ div.navbar {
     margin-left: 5px;
     margin-right: 5px;
   }
+  ul.navbar-nav .unreadNotificationDisplay:not(:empty) {
+    margin-left: 0;
+  }
 }
 .navbar-toggler {
   border: none;
