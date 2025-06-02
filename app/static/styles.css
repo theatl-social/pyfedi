@@ -654,6 +654,14 @@ div.navbar {
   ul.navbar-nav .dropdown-menu li a {
     margin-left: 0;
   }
+  ul.navbar-nav .content-center a {
+    margin-left: 5px;
+    margin-right: 5px;
+  }
+  ul.navbar-nav .content-center a span {
+    margin-left: 5px;
+    margin-right: 5px;
+  }
 }
 .navbar-toggler {
   border: none;
