@@ -1092,7 +1092,9 @@ function setupNotificationPermission() {
             });
         }
         else {
-            permissionButton.style.display = 'none';
+            const enableNotificationWrapper = document.getElementById('enableNotificationWrapper');
+            if(enableNotificationWrapper)
+                enableNotificationWrapper.style.display = 'none';
         }
     }
 }
