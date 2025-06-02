@@ -4,7 +4,8 @@ from app.api.alpha.utils.post import get_post_list, get_post, post_post_like, pu
 from app.api.alpha.utils.reply import get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, put_reply, post_reply_delete, post_reply_report, post_reply_remove, post_reply_mark_as_read, get_reply
 from app.api.alpha.utils.community import get_community, get_community_list, post_community_follow, \
     post_community_block, post_community, put_community, put_community_subscribe, post_community_delete, \
-    get_community_moderate_bans, put_community_moderate_unban, post_community_moderate_ban
+    get_community_moderate_bans, put_community_moderate_unban, post_community_moderate_ban, \
+    post_community_moderate_post_nsfw
 from app.api.alpha.utils.user import get_user, post_user_block, get_user_unread_count, get_user_replies, \
                                     post_user_mark_all_as_read, put_user_subscribe, put_user_save_user_settings, \
                                     get_user_notifications, put_user_notification_state, get_user_notifications_count, \

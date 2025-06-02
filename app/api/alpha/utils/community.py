@@ -1,11 +1,11 @@
 from app import db, cache
-from app.api.alpha.views import community_view, user_view
+from app.api.alpha.views import community_view, user_view, post_view
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected, array_of_integers_expected
 from app.community.util import search_for_community
 from app.utils import authorise_api_user
 from app.constants import *
 from app.models import Community, CommunityMember, User, CommunityBan, Notification, CommunityJoinRequest, \
-     NotificationSubscription
+     NotificationSubscription, Post
 from app.shared.community import join_community, leave_community, block_community, unblock_community, make_community, edit_community, subscribe_community, delete_community, restore_community
 from app.utils import communities_banned_from, blocked_instances, blocked_communities, shorten_string, \
      joined_communities, moderating_communities
@@ -325,6 +325,7 @@ def put_community_moderate_unban(auth, data):
     # return the res{} json
     return res 
 
+
 def post_community_moderate_ban(auth,data):
     required(['community_id','user_id','reason','expiredAt'], data)
     integer_expected(['community_id'], data)
@@ -398,3 +399,33 @@ def post_community_moderate_ban(auth,data):
     # return the res{} json
     return res 
 
+
+def post_community_moderate_post_nsfw(auth, data):
+    required(['post_id','nsfw_status'], data)
+    integer_expected(['post_id'], data)
+    boolean_expected(['nsfw_status'], data)
+
+    # get the user from the auth and make sure they are allowed to conduct this action
+    mod_user = authorise_api_user(auth, return_type='model')
+
+    # get the post from the data
+    post_id = int(data['post_id'])
+    post = Post.query.get(post_id)
+
+    # get the community from the post
+    community = Community.query.get(post.community_id)
+
+    # validate that the user is a mod or owner of the community, or an instance admin
+    if not (community.is_owner(mod_user) or community.is_moderator(mod_user) or community.is_instance_admin(mod_user)):
+        raise Exception('incorrect_login')
+    if not community.is_local():
+        raise Exception('Community not local to this instance.')
+
+    # set the post.nsfw to nsfw_status
+    post.nsfw = data['nsfw_status']
+    db.session.commit()
+
+    # build the post view response
+    res = post_view(post=post, variant=2, stub=True, user_id=mod_user.id)
+
+    return res
