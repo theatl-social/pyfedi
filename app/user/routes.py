@@ -113,7 +113,7 @@ def show_profile(user):
                            post_next_url=post_next_url, post_prev_url=post_prev_url,
                            replies_next_url=replies_next_url, replies_prev_url=replies_prev_url,
                            noindex=not user.indexable, show_post_community=True, hide_vote_buttons=True,
-                           site=g.site,
+                           
                            rss_feed=f"https://{current_app.config['SERVER_NAME']}/u/{user.link()}/feed" if user.post_count > 0 else None,
                            rss_feed_name=f"{user.display_name()} on {g.site.name}" if user.post_count > 0 else None,
                            user_has_public_feeds=user_has_public_feeds,
@@ -209,7 +209,7 @@ def edit_profile(actor):
 
     return render_template('user/edit_profile.html', title=_('Edit profile'), form=form, user=current_user,
                            markdown_editor=current_user.markdown_editor, delete_form=delete_form,
-                           site=g.site)
+                           )
 
 
 @bp.route('/user/remove_avatar', methods=['GET', 'POST'])
@@ -457,7 +457,7 @@ def user_settings():
         form.font.data = current_user.font
 
     return render_template('user/edit_settings.html', title=_('Change settings'), form=form, user=current_user,
-                           site=g.site)
+                           )
 
 
 @bp.route('/user/settings/import_export', methods=['GET', 'POST'])
@@ -505,10 +505,7 @@ def user_settings_import_export():
         flash(_('Your changes have been saved.'), 'success')
         return redirect(url_for('user.user_settings_import_export'))
 
-    return render_template('user/import_export.html', title=_('Import & Export'), form=form, user=current_user,
-                           site=g.site,
-                           
-                           )
+    return render_template('user/import_export.html', title=_('Import & Export'), form=form, user=current_user)
 
 
 @bp.route('/user/<int:user_id>/notification', methods=['GET', 'POST'])
@@ -748,7 +745,7 @@ def report_profile(actor):
         elif request.method == 'GET':
             form.report_remote.data = True
 
-    return render_template('user/user_report.html', title=_('Report user'), form=form, user=user, site=g.site)
+    return render_template('user/user_report.html', title=_('Report user'), form=form, user=user)
 
 
 @bp.route('/u/<actor>/delete', methods=['GET'])
@@ -831,10 +828,7 @@ def delete_account():
     elif request.method == 'GET':
         ...
 
-    return render_template('user/delete_account.html', title=_('Delete my account'), form=form, user=current_user,
-                           site=g.site,
-                           
-                           )
+    return render_template('user/delete_account.html', title=_('Delete my account'), form=form, user=current_user)
 
 
 @celery.task
@@ -1106,10 +1100,7 @@ def user_settings_filters():
         filter(InstanceBlock.user_id == current_user.id).order_by(Instance.domain).all()
     return render_template('user/filters.html', form=form, filters=filters, user=current_user,
                            blocked_users=blocked_users, blocked_communities=blocked_communities,
-                           blocked_domains=blocked_domains, blocked_instances=blocked_instances,
-                           site=g.site,
-                           
-                           )
+                           blocked_domains=blocked_domains, blocked_instances=blocked_instances)
 
 
 @bp.route('/user/settings/filters/add', methods=['GET', 'POST'])
@@ -1130,10 +1121,7 @@ def user_settings_filters_add():
         flash(_('Your changes have been saved.'), 'success')
         return redirect(url_for('user.user_settings_filters'))
 
-    return render_template('user/edit_filters.html', title=_('Add filter'), form=form, user=current_user,
-                           site=g.site,
-                           
-                           )
+    return render_template('user/edit_filters.html', title=_('Add filter'), form=form, user=current_user)
 
 
 @bp.route('/user/settings/filters/<int:filter_id>/edit', methods=['GET', 'POST'])
@@ -1170,10 +1158,7 @@ def user_settings_filters_edit(filter_id):
         form.keywords.data = content_filter.keywords
         form.expire_after.data = content_filter.expire_after
 
-    return render_template('user/edit_filters.html', title=_('Edit filter'), form=form, content_filter=content_filter, user=current_user,
-                           site=g.site,
-                           
-                           )
+    return render_template('user/edit_filters.html', title=_('Edit filter'), form=form, content_filter=content_filter, user=current_user)
 
 
 @bp.route('/user/settings/filters/<int:filter_id>/delete', methods=['GET', 'POST'])
@@ -1229,10 +1214,8 @@ def user_bookmarks():
 
     return render_template('user/bookmarks.html', title=_('Bookmarks'), posts=posts, show_post_community=True,
                            low_bandwidth=low_bandwidth, user=current_user,
-                           site=g.site, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
-                           next_url=next_url, prev_url=prev_url,
-                           
-                           )
+                            recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
+                           next_url=next_url, prev_url=prev_url)
 
 
 @bp.route('/bookmarks/comments')
@@ -1255,10 +1238,8 @@ def user_bookmarks_comments():
 
     return render_template('user/bookmarks_comments.html', title=_('Comment bookmarks'), post_replies=post_replies, show_post_community=True,
                            low_bandwidth=low_bandwidth, user=current_user,
-                           site=g.site, recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies,
-                           next_url=next_url, prev_url=prev_url,
-                           
-                           )
+                            recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies,
+                           next_url=next_url, prev_url=prev_url)
 
 
 @bp.route('/alerts')
@@ -1341,10 +1322,7 @@ def user_alerts(type='posts', filter='all'):
 
     return render_template('user/alerts.html', title=title, entities=entities,
                            low_bandwidth=low_bandwidth, user=current_user, type=type, filter=filter,
-                           site=g.site,
-                           next_url=next_url, prev_url=prev_url,
-                           
-                           )
+                           next_url=next_url, prev_url=prev_url)
 
 
 @bp.route('/u/<actor>/fediverse_redirect', methods=['GET', 'POST'])
@@ -1419,10 +1397,7 @@ def user_read_posts(sort=None):
 
     return render_template('user/read_posts.html', title=_('Read posts'), posts=posts, show_post_community=True,
                            sort=sort, low_bandwidth=low_bandwidth, user=current_user,
-                           site=g.site,
-                           next_url=next_url, prev_url=prev_url,
-                           
-                           )
+                           next_url=next_url, prev_url=prev_url)
 
 
 @bp.route('/read-posts/delete')
@@ -1468,8 +1443,7 @@ def edit_user_note(actor):
     elif request.method == 'GET':
         form.note.data = user.get_note(current_user)
 
-    return render_template('user/edit_note.html', title=_('Edit note'), form=form, user=user, return_to=return_to,
-                           site=g.site, )
+    return render_template('user/edit_note.html', title=_('Edit note'), form=form, user=user, return_to=return_to)
 
 
 @bp.route('/user/<int:user_id>/preview')

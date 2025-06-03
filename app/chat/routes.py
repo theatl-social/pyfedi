@@ -55,7 +55,7 @@ def chat_home(conversation_id=None):
                                    title=_('Chat with %(name)s', name=conversation.member_names(current_user.id)),
                                    conversations=conversations, messages=messages, form=form,
                                    current_conversation=conversation_id, conversation=conversation,
-                                   site=g.site,
+                                   
                                    )
 
 
@@ -84,7 +84,7 @@ def new_message(to):
         return render_template('chat/new_message.html', form=form, title=_('New message to "%(recipient_name)s"', recipient_name=recipient.link()),
                                recipient=recipient,
                                
-                               site=g.site,
+                               
                                )
 
 
@@ -126,7 +126,7 @@ def chat_options(conversation_id):
     if current_user.is_admin() or conversation.is_member(current_user):
         return render_template('chat/chat_options.html', conversation=conversation,
                            
-                           site=g.site, )
+                            )
 
 
 @bp.route('/chat/<int:conversation_id>/delete', methods=['GET', 'POST'])
@@ -185,5 +185,5 @@ def chat_report(conversation_id):
 
         return render_template('chat/report.html', title=_('Report conversation'), form=form, conversation=conversation,
                                
-                               site=g.site, 
+                                
                                )

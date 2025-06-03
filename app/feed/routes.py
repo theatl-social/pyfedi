@@ -144,7 +144,7 @@ def feed_add_remote():
     return render_template('feed/add_remote.html',
                            title=_('Add remote feed'), form=form, new_feed=new_feed,
                            subscribed=feed_membership(current_user, new_feed) >= SUBSCRIPTION_MEMBER, 
-                           site=g.site, )    
+                            )    
 
 
 @bp.route('/feed/<int:feed_id>/edit', methods=['GET','POST'])

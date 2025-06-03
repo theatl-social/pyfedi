@@ -231,9 +231,7 @@ def show_post(post_id: int):
                                can_upvote_here=can_upvote(user, community),
                                can_downvote_here=can_downvote(user, community, g.site),
                                low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
-                               site=g.site,
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                               
                                )
         response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
         response.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/post/{post.id}>; rel="alternate"; type="application/activity+json"')
@@ -445,7 +443,6 @@ def continue_discussion(post_id, comment_id):
     response = render_template('post/continue_discussion.html', title=_('Discussing %(title)s', title=post.title), post=post, mods=mod_list,
                            is_moderator=is_moderator, comment=comment, replies=replies, markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
                            recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies,
-                           site=g.site,
                            community=post.community,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
@@ -572,8 +569,7 @@ def post_options(post_id: int):
     if current_user.is_authenticated:
         existing_bookmark = PostBookmark.query.filter(PostBookmark.post_id == post_id, PostBookmark.user_id == current_user.id).first()
 
-    return render_template('post/post_options.html', post=post, existing_bookmark=existing_bookmark,
-                           site=g.site, )
+    return render_template('post/post_options.html', post=post, existing_bookmark=existing_bookmark)
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/options_menu', methods=['GET'])
@@ -591,9 +587,7 @@ def post_reply_options(post_id: int, comment_id: int):
                                                       PostReplyBookmark.user_id == current_user.id).first()
 
     return render_template('post/post_reply_options.html', post=post, post_reply=post_reply,
-                           existing_bookmark=existing_bookmark,
-                           site=g.site,
-                           )
+                           existing_bookmark=existing_bookmark)
 
 
 @bp.route('/post/<int:post_id>/edit', methods=['GET', 'POST'])
@@ -705,9 +699,8 @@ def post_edit(post_id: int):
                 form.sticky.render_kw = {'disabled': True}
             return render_template('post/post_edit.html', title=_('Edit post'), form=form,
                                    post_type=post_type, community=post.community, post=post,
-                                   markdown_editor=current_user.markdown_editor, mods=mod_list,site=g.site,
+                                   markdown_editor=current_user.markdown_editor, mods=mod_list,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                                   
                                    )
     else:
         abort(401)
@@ -989,8 +982,7 @@ def post_report(post_id: int):
     elif request.method == 'GET':
         form.report_remote.data = True
 
-    return render_template('post/post_report.html', title=_('Report post'), form=form, post=post,
-                           site=g.site, )
+    return render_template('post/post_report.html', title=_('Report post'), form=form, post=post)
 
 
 @bp.route('/post/<int:post_id>/block_user', methods=['GET', 'POST'])
@@ -1057,9 +1049,7 @@ def post_mea_culpa(post_id: int):
         db.session.commit()
         return redirect(url_for('activitypub.post_ap', post_id=post.id))
 
-    return render_template('post/post_mea_culpa.html', title=_('I changed my mind'), form=form, post=post,
-                           site=g.site,
-                           )
+    return render_template('post/post_mea_culpa.html', title=_('I changed my mind'), form=form, post=post)
 
 
 @bp.route('/post/<int:post_id>/sticky/<mode>', methods=['GET', 'POST'])
@@ -1181,8 +1171,7 @@ def post_reply_report(post_id: int, comment_id: int):
     elif request.method == 'GET':
         form.report_remote.data = True
 
-    return render_template('post/post_reply_report.html', title=_('Report comment'), form=form, post=post, post_reply=post_reply,
-                           site=g.site, )
+    return render_template('post/post_reply_report.html', title=_('Report comment'), form=form, post=post, post_reply=post_reply)
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/bookmark', methods=['GET'])
@@ -1246,10 +1235,9 @@ def post_reply_edit(post_id: int, comment_id: int):
                 form.distinguished.render_kw = {'disabled': True}
             return render_template('post/post_reply_edit.html', title=_('Edit comment'), form=form, post=post, post_reply=post_reply,
                                    comment=comment, markdown_editor=current_user.markdown_editor,
-                                   community=post.community, site=g.site,
+                                   community=post.community, 
                                    SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                                   
                                    )
     else:
         abort(401)
@@ -1498,9 +1486,7 @@ def post_view_voting_activity(post_id: int):
     # local users will be at the bottom of each list as ap_domain is empty for those.
 
     return render_template('post/post_voting_activity.html', title=_('Voting Activity'),
-                           post_title=post_title, upvoters=upvoters, downvoters=downvoters,
-                           site=g.site, 
-                           )
+                           post_title=post_title, upvoters=upvoters, downvoters=downvoters)
 
 
 @bp.route('/comment/<int:comment_id>/voting_activity', methods=['GET'])
@@ -1516,9 +1502,7 @@ def post_reply_view_voting_activity(comment_id: int):
     # local users will be at the bottom of each list as ap_domain is empty for those.
 
     return render_template('post/post_reply_voting_activity.html', title=_('Voting Activity'),
-                           reply_text=reply_text, upvoters=upvoters, downvoters=downvoters,
-                           site=g.site,
-                           )
+                           reply_text=reply_text, upvoters=upvoters, downvoters=downvoters)
 
 
 @bp.route('/post/<int:post_id>/fixup_from_remote', methods=['GET'])
@@ -1582,9 +1566,7 @@ def post_cross_post(post_id: int):
             form.which_community.data = int(request.cookies.get('cross_post_community_id'))
 
         return render_template('post/post_cross_post.html', title=_('Cross post'), form=form, post=post,
-                               breadcrumbs=breadcrumbs,
-                               site=g.site,
-                               )
+                               breadcrumbs=breadcrumbs)
 
 
 @bp.route('/post_preview', methods=['POST'])

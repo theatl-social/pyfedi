@@ -206,18 +206,18 @@ def register():
             form.question.label = Label('question', g.site.application_question)
         if g.site.registration_mode != 'RequireApplication':
             del form.question
-        return render_template('auth/register.html', title=_('Register'), form=form, site=g.site,
+        return render_template('auth/register.html', title=_('Register'), form=form, 
                                google_oauth=current_app.config['GOOGLE_OAUTH_CLIENT_ID'])
 
 
 @bp.route('/please_wait', methods=['GET'])
 def please_wait():
-    return render_template('auth/please_wait.html', title=_('Account under review'), site=g.site)
+    return render_template('auth/please_wait.html', title=_('Account under review'))
 
 
 @bp.route('/check_email', methods=['GET'])
 def check_email():
-    return render_template('auth/check_email.html', title=_('Check your email'), site=g.site)
+    return render_template('auth/check_email.html', title=_('Check your email'))
 
 
 @bp.route('/reset_password_request', methods=['GET', 'POST'])

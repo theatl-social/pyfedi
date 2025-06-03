@@ -156,7 +156,7 @@ def run_search():
                                next_url=next_url, prev_url=prev_url, show_post_community=True,
                                recently_upvoted=recently_upvoted,
                                recently_downvoted=recently_downvoted,
-                               site=g.site, 
+                                
                                )
 
     else:
@@ -168,7 +168,7 @@ def run_search():
 
         return render_template('search/start.html', title=_('Search'), communities=communities.all(),
                                languages=languages, instance_software=instance_software,
-                               site=g.site, 
+                                
                                )
 
 

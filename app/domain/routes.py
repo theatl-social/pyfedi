@@ -68,7 +68,7 @@ def show_domain(domain_id):
                                    POST_TYPE_VIDEO=constants.POST_TYPE_VIDEO,
                                    next_url=next_url, prev_url=prev_url,
                                    content_filters=content_filters, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
-                                   site=g.site, joined_communities=joined_or_modding_communities(current_user.get_id()),
+                                    joined_communities=joined_or_modding_communities(current_user.get_id()),
                                    rss_feed=f"https://{current_app.config['SERVER_NAME']}/d/{domain.id}/feed" if domain.post_count > 0 else None,
                                    rss_feed_name=f"{domain.name} on {g.site.name}" if domain.post_count > 0 else None,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,

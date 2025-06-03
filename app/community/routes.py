@@ -105,7 +105,7 @@ def add_local():
         return redirect('/c/' + community.name)
 
     return render_template('community/add_local.html', title=_('Create community'), form=form,
-                           current_app=current_app, site=g.site, )
+                           current_app=current_app,  )
 
 
 @bp.route('/add_remote', methods=['GET', 'POST'])
@@ -147,7 +147,7 @@ def add_remote():
     return render_template('community/add_remote.html',
                            title=_('Add remote community'), form=form, new_community=new_community,
                            subscribed=community_membership(current_user, new_community) >= SUBSCRIPTION_MEMBER, 
-                           site=g.site, )
+                            )
 
 
 # endpoint used by htmx in the add_remote.html
@@ -452,7 +452,7 @@ def show_community(community: Community):
                            recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, community_feeds=community_feeds,
                            canonical=community.profile_id(), can_upvote_here=can_upvote(user, community), can_downvote_here=can_downvote(user, community, g.site),
                            rss_feed=f"https://{current_app.config['SERVER_NAME']}/community/{community.link()}/feed", rss_feed_name=f"{community.title} on {g.site.name}",
-                           content_filters=content_filters, site=g.site, sort=sort, flair=flair,
+                           content_filters=content_filters,  sort=sort, flair=flair,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                            post_layout=post_layout, content_type=content_type, current_app=current_app,
                            user_has_feeds=user_has_feeds, current_feed_id=current_feed_id,
@@ -810,7 +810,7 @@ def add_post(actor, type):
 
     return render_template('community/add_post.html', title=_('Add post to community'), form=form,
                            post_type=post_type, community=community, post=post, hide_community_actions=True,
-                           markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor, site=g.site,
+                           markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor, 
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                            )
 
@@ -930,8 +930,7 @@ def community_edit(community_id: int):
             form.downvote_accept_mode.data = community.downvote_accept_mode
         return render_template('community/community_edit.html', title=_('Edit community'), form=form,
                                current_app=current_app, current="edit_settings",
-                               community=community, site=g.site,
-                               )
+                               community=community)
     else:
         abort(401)
 
@@ -994,8 +993,7 @@ def community_delete(community_id: int):
             return redirect('/communities')
 
         return render_template('community/community_delete.html', title=_('Delete community'), form=form,
-                               community=community, site=g.site,
-                               )
+                               community=community)
     else:
         abort(401)
 
@@ -1012,8 +1010,7 @@ def community_mod_list(community_id: int):
             filter(CommunityMember.community_id == community_id, or_(CommunityMember.is_moderator == True, CommunityMember.is_owner == True)).all()
 
         return render_template('community/community_mod_list.html', title=_('Moderators for %(community)s', community=community.display_name()),
-                        moderators=moderators, community=community, current="moderators",
-                        site=g.site)
+                        moderators=moderators, community=community, current="moderators")
     else:
         abort(401)
 
@@ -1085,9 +1082,7 @@ def community_find_moderator(community_id: int):
 
         return render_template('community/community_find_moderator.html', title=_('Add moderator to %(community)s',
                                                                                  community=community.display_name()),
-                               community=community, form=form, potential_moderators=potential_moderators,
-                               site=g.site,
-                               )
+                               community=community, form=form, potential_moderators=potential_moderators)
     else:
         abort(401)
 
@@ -1207,7 +1202,6 @@ def community_ban_user(community_id: int, user_id: int):
     else:
         return render_template('community/community_ban_user.html', title=_('Ban from community'), form=form, community=community,
                                user=user,
-                               site=g.site,
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                                )
 
@@ -1296,7 +1290,7 @@ def community_move(actor):
             db.session.commit()
 
             flash(_('Your request has been sent to the site admins.'))
-        return render_template('community/community_move.html', community=community, form=form, site=g.site)
+        return render_template('community/community_move.html', community=community, form=form)
     else:
         abort(404)
 
@@ -1326,10 +1320,8 @@ def community_moderate(actor):
 
             return render_template('community/community_moderate.html', title=_('Moderation of %(community)s', community=community.display_name()),
                                    community=community, reports=reports, current='reports',
-                                   next_url=next_url, prev_url=prev_url,site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                                   
-                                   )
+                                   next_url=next_url, prev_url=prev_url,
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
         else:
             abort(401)
     else:
@@ -1359,10 +1351,8 @@ def community_moderate_subscribers(actor):
 
             return render_template('community/community_moderate_subscribers.html', title=_('Moderation of %(community)s', community=community.display_name()),
                                    community=community, current='subscribers', subscribers=subscribers, banned_people=banned_people,
-                                   next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth,site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                                   
-                                   )
+                                   next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth,
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
         else:
             abort(401)
     else:
@@ -1389,7 +1379,7 @@ def community_moderate_comments(actor):
 
             return render_template('community/community_moderate_comments.html', post_replies=post_replies,
                                    replies_next_url=replies_next_url, replies_prev_url=replies_prev_url,
-                                   disable_voting=True, community=community, current='comments',site=g.site)
+                                   disable_voting=True, community=community, current='comments')
 
 
 @bp.route('/community/<int:community_id>/<int:user_id>/kick_user_community', methods=['GET', 'POST'])
@@ -1422,10 +1412,8 @@ def community_wiki_list(actor):
             low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
             pages = CommunityWikiPage.query.filter(CommunityWikiPage.community_id == community.id).order_by(CommunityWikiPage.title).all()
             return render_template('community/community_wiki_list.html', title=_('Community Wiki'), community=community,
-                                   pages=pages, low_bandwidth=low_bandwidth, current='wiki',site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                                   
-                                   )
+                                   pages=pages, low_bandwidth=low_bandwidth, current='wiki',
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
         else:
             abort(401)
     else:
@@ -1458,10 +1446,8 @@ def community_wiki_add(actor):
                 return redirect(url_for('community.community_wiki_list', actor=community.link()))
 
             return render_template('community/community_wiki_edit.html', title=_('Add wiki page'), community=community,
-                                   form=form, low_bandwidth=low_bandwidth, current='wiki',site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                                   
-                                   )
+                                   form=form, low_bandwidth=low_bandwidth, current='wiki',
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
         else:
             abort(401)
     else:
@@ -1514,11 +1500,8 @@ def community_wiki_view(actor, slug):
 
             return render_template('community/community_wiki_page_view.html', title=page.title, page=page,
                                    community=community, breadcrumbs=breadcrumbs, is_moderator=community.is_moderator(),
-                                   is_owner=community.is_owner(),site=g.site,
-                                   inoculation=inoculation[
-                                       randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                                   
-                                   )
+                                   is_owner=community.is_owner(),
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
 
 
 @bp.route('/<actor>/wiki/<slug>/<revision_id>', methods=['GET', 'POST'])
@@ -1569,7 +1552,7 @@ def community_wiki_view_revision(actor, slug, revision_id):
 
             return render_template('community/community_wiki_revision_view.html', title=page.title, page=page,
                                    community=community, breadcrumbs=breadcrumbs, is_moderator=community.is_moderator(),
-                                   is_owner=community.is_owner(), revision=revision,site=g.site,
+                                   is_owner=community.is_owner(), revision=revision,
                                    inoculation=inoculation[
                                        randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                                    
@@ -1639,10 +1622,8 @@ def community_wiki_edit(actor, page_id):
                 form.who_can_edit.data = page.who_can_edit
 
             return render_template('community/community_wiki_edit.html', title=_('Edit wiki page'), community=community,
-                                   form=form, low_bandwidth=low_bandwidth,site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                                   
-                                   )
+                                   form=form, low_bandwidth=low_bandwidth,
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
         else:
             abort(401)
     else:
@@ -1666,10 +1647,8 @@ def community_wiki_revisions(actor, page_id):
 
             return render_template('community/community_wiki_revisions.html', title=_('%(title)s revisions', title=page.title),
                                    community=community, page=page, revisions=revisions, most_recent_revision=most_recent_revision,
-                                   low_bandwidth=low_bandwidth,site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                                   
-                                   )
+                                   low_bandwidth=low_bandwidth,
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
         else:
             abort(401)
     else:
@@ -1715,10 +1694,8 @@ def community_modlog(actor):
             return render_template('community/community_modlog.html',
                                    title=_('Mod Log of %(community)s', community=community.display_name()),
                                    community=community, current='modlog', modlog_entries=modlog_entries,
-                                   next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth,site=g.site,
-                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                                   
-                                   )
+                                   next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth,
+                                   inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
 
         else:
             abort(401)
@@ -1877,7 +1854,7 @@ def community_flair(actor):
 
             return render_template('community/community_flair.html', flairs=flairs,
                                    title=_('Flair in %(community)s', community=community.display_name()),
-                                   community=community, current='flair', low_bandwidth=low_bandwidth, site=g.site,
+                                   community=community, current='flair', low_bandwidth=low_bandwidth, 
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
         else:
             abort(401)
@@ -1967,7 +1944,7 @@ def community_invite(actor):
             return redirect('/c/' + community.link())
 
         return render_template('community/invite.html', title=_('Invite to community'), form=form, community=community,
-                               current_app=current_app, site=g.site,
+                               current_app=current_app, 
                                )
     else:
         abort(404)

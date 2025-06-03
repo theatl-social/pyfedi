@@ -43,7 +43,7 @@ from app.admin import bp
 @login_required
 def admin_home():
     return render_template('admin/home.html', title=_('Admin'), 
-                           site=g.site)
+                           )
 
 
 @bp.route('/site', methods=['GET', 'POST'])
@@ -140,7 +140,7 @@ def admin_site():
         form.announcement.data = get_setting('announcement', '')
     return render_template('admin/site.html', title=_('Site profile'), form=form,
                            
-                           site=g.site, )
+                            )
 
 
 @bp.route('/misc', methods=['GET', 'POST'])
@@ -208,7 +208,7 @@ def admin_misc():
         form.ban_check_servers.data = get_setting('ban_check_servers', 'piefed.social')
     return render_template('admin/misc.html', title=_('Misc settings'), form=form,
                            
-                           site=g.site, )
+                            )
 
 
 @bp.route('/federation', methods=['GET', 'POST'])
@@ -728,7 +728,7 @@ def admin_federation():
                            form=form, preload_form=preload_form, ban_lists_form=ban_lists_form,
                            remote_scan_form=remote_scan_form, current_app_debug=current_app.debug,
                            
-                           site=g.site, )
+                            )
 
 
 @celery.task
@@ -876,8 +876,7 @@ def admin_activities():
     prev_url = url_for('admin.admin_activities', page=activities.prev_num, result=result_filter, direction=direction_filter) if activities.has_prev and page != 1 else None
 
     return render_template('admin/activities.html', title=_('ActivityPub Log'), next_url=next_url, prev_url=prev_url,
-                           activities=activities,
-                           site=g.site, )
+                           activities=activities)
 
 
 @bp.route('/activity_json/<int:activity_id>')
@@ -887,8 +886,7 @@ def activity_json(activity_id):
     activity = ActivityPubLog.query.get_or_404(activity_id)
     return render_template('admin/activity_json.html', title=_('Activity JSON'),
                            activity_json_data=activity.activity_json, activity=activity,
-                           current_app=current_app,
-                           site=g.site, )
+                           current_app=current_app)
 
 
 @bp.route('/activity_json/<int:activity_id>/replay')
@@ -923,8 +921,7 @@ def admin_communities():
     return render_template('admin/communities.html', title=_('Communities'), next_url=next_url, prev_url=prev_url,
                            communities=communities,
                            search=search, sort_by=sort_by,
-                           
-                           site=g.site, )
+                           )
 
 
 @bp.route('/communities/no-topic', methods=['GET'])
@@ -944,8 +941,7 @@ def admin_communities_no_topic():
     prev_url = url_for('admin.admin_communities_no_topic', page=communities.prev_num) if communities.has_prev and page != 1 else None
 
     return render_template('admin/communities.html', title=_('Communities with no topic'), next_url=next_url, prev_url=prev_url,
-                           communities=communities, 
-                           site=g.site, )
+                           communities=communities)
 
 
 @bp.route('/community/<int:community_id>/edit', methods=['GET', 'POST'])
@@ -1034,9 +1030,7 @@ def admin_community_edit(community_id):
         form.posting_warning.data = community.posting_warning
         form.languages.data = community.language_ids()
         form.ignore_remote_language.data = community.ignore_remote_language
-    return render_template('admin/edit_community.html', title=_('Edit community'), form=form, community=community,
-                           
-                           site=g.site, )
+    return render_template('admin/edit_community.html', title=_('Edit community'), form=form, community=community)
 
 
 @bp.route('/community/<int:community_id>/delete', methods=['GET'])
@@ -1089,9 +1083,7 @@ def unsubscribe_everyone_then_delete_task(community_id):
 @login_required
 def admin_topics():
     topics = topic_tree()
-    return render_template('admin/topics.html', title=_('Topics'), topics=topics,
-                           
-                           site=g.site, )
+    return render_template('admin/topics.html', title=_('Topics'), topics=topics)
 
 
 @bp.route('/topic/add', methods=['GET', 'POST'])
@@ -1114,9 +1106,7 @@ def admin_topic_add():
         flash(_('Saved'))
         return redirect(url_for('admin.admin_topics'))
 
-    return render_template('admin/edit_topic.html', title=_('Add topic'), form=form,
-                           
-                           site=g.site, )
+    return render_template('admin/edit_topic.html', title=_('Add topic'), form=form)
 
 @bp.route('/topic/<int:topic_id>/edit', methods=['GET', 'POST'])
 @permission_required('administer all communities')
@@ -1143,9 +1133,7 @@ def admin_topic_edit(topic_id):
         form.machine_name.data = topic.machine_name
         form.parent_id.data = topic.parent_id
         form.show_posts_in_children.data = topic.show_posts_in_children
-    return render_template('admin/edit_topic.html', title=_('Edit topic'), form=form, topic=topic,
-                           
-                           site=g.site, )
+    return render_template('admin/edit_topic.html', title=_('Edit topic'), form=form, topic=topic)
 
 
 @bp.route('/topic/<int:topic_id>/delete', methods=['GET'])
@@ -1198,8 +1186,7 @@ def admin_users():
 
     return render_template('admin/users.html', title=_('Users'), next_url=next_url, prev_url=prev_url, users=users,
                            local_remote=local_remote, search=search, sort_by=sort_by, last_seen=last_seen,
-                           
-                           site=g.site, )
+                           )
 
 
 @bp.route('/content', methods=['GET'])
@@ -1265,8 +1252,7 @@ def admin_content():
                            next_url_replies=next_url_replies, prev_url_replies=prev_url_replies,
                            posts=posts, post_replies=post_replies,
                            posts_replies=posts_replies, show=show, days=days,
-                           
-                           site=g.site, )
+                           )
 
 
 @bp.route('/approve_registrations', methods=['GET'])
@@ -1284,7 +1270,7 @@ def admin_approve_registrations():
     return render_template('admin/approve_registrations.html',
                            registrations=registrations, disposable_domains=disposable_domains,
                            recently_approved=recently_approved,
-                           site=g.site, )
+                          )
 
 
 @bp.route('/approve_registrations/<int:user_id>/approve', methods=['GET'])
@@ -1358,9 +1344,7 @@ def admin_user_edit(user_id):
         if user.roles and user.roles.count() > 0:
             form.role.data = user.roles[0].id
 
-    return render_template('admin/edit_user.html', title=_('Edit user'), form=form, user=user,
-                           
-                           site=g.site, )
+    return render_template('admin/edit_user.html', title=_('Edit user'), form=form, user=user)
 
 
 @bp.route('/users/add', methods=['GET', 'POST'])
@@ -1418,9 +1402,7 @@ def admin_users_add():
         flash(_('User added'))
         return redirect(url_for('admin.admin_users', local_remote='local'))
 
-    return render_template('admin/add_user.html', title=_('Add user'), form=form, user=user,
-                           
-                           site=g.site, )
+    return render_template('admin/add_user.html', title=_('Add user'), form=form, user=user)
 
 
 @bp.route('/user/<int:user_id>/delete', methods=['GET'])
@@ -1472,9 +1454,7 @@ def admin_reports():
     prev_url = url_for('admin.admin_reports', page=reports.prev_num) if reports.has_prev and page != 1 else None
 
     return render_template('admin/reports.html', title=_('Reports'), next_url=next_url, prev_url=prev_url, reports=reports,
-                           local_remote=local_remote, search=search,
-                           
-                           site=g.site, )
+                           local_remote=local_remote, search=search)
 
 
 @bp.route('/newsletter', methods=['GET', 'POST'])
@@ -1487,9 +1467,7 @@ def newsletter():
         flash(_('Newsletter sent'))
         return redirect(url_for('admin.newsletter'))
 
-    return render_template("admin/newsletter.html", form=form, title=_('Send newsletter'),
-                           
-                           site=g.site, )
+    return render_template("admin/newsletter.html", form=form, title=_('Send newsletter'))
 
 
 @bp.route('/permissions', methods=['GET', 'POST'])
@@ -1515,8 +1493,7 @@ def admin_permissions():
     permissions = db.session.execute(text('SELECT DISTINCT permission FROM "role_permission"')).fetchall()
 
     return render_template('admin/permissions.html', title=_('Role permissions'), roles=roles,
-                           permissions=permissions,
-                           site=g.site, )
+                           permissions=permissions)
 
 
 @bp.route('/instances', methods=['GET', 'POST'])
@@ -1558,9 +1535,7 @@ def admin_instances():
     return render_template('admin/instances.html', instances=instances,
                            title=_(title), search=search, filter=filter, sort_by=sort_by,
                            next_url=next_url, prev_url=prev_url,
-                           low_bandwidth=low_bandwidth, 
-                           site=g.site,
-                           )
+                           low_bandwidth=low_bandwidth)
 
 
 @bp.route('/instance/<int:instance_id>/edit', methods=['GET', 'POST'])
@@ -1589,9 +1564,7 @@ def admin_instance_edit(instance_id):
         form.posting_warning.data = instance.posting_warning
         form.inbox.data = instance.inbox
 
-    return render_template('admin/edit_instance.html', title=_('Edit instance'), form=form, instance=instance,
-                           
-                           site=g.site, )
+    return render_template('admin/edit_instance.html', title=_('Edit instance'), form=form, instance=instance)
 
 
 @bp.route('/community/<int:community_id>/move/<int:new_owner>', methods=['GET', 'POST'])
@@ -1639,7 +1612,7 @@ def admin_community_move(community_id, new_owner):
 
     form.new_url.data = community.name
 
-    return render_template('admin/community_move.html', title=_('Move community'), form=form, community=community, site=g.site)
+    return render_template('admin/community_move.html', title=_('Move community'), form=form, community=community)
 
 
 @bp.route('/blocked_images', methods=['GET'])
@@ -1650,9 +1623,7 @@ def admin_blocked_images():
     blocked_images = BlockedImage.query.order_by(desc(BlockedImage.id)).all()
     return render_template('admin/blocked_images.html', blocked_images=blocked_images,
                            title=_('Blocked images'),
-                           low_bandwidth=low_bandwidth,
-                           site=g.site,
-                           )
+                           low_bandwidth=low_bandwidth)
 
 
 @bp.route('/blocked_image/<int:image_id>/edit', methods=['GET', 'POST'])
@@ -1674,8 +1645,7 @@ def admin_blocked_image_edit(image_id):
         form.file_name.data = image.file_name
         form.note.data = image.note
 
-    return render_template('admin/edit_blocked_image.html', title=_('Edit blocked image'), form=form, blocked_image=image,
-                           site=g.site, )
+    return render_template('admin/edit_blocked_image.html', title=_('Edit blocked image'), form=form, blocked_image=image)
 
 
 @bp.route('/blocked_image/add', methods=['GET', 'POST'])
@@ -1700,8 +1670,7 @@ def admin_blocked_image_add():
 
     flash(_('Provide the url of an image or the hash (and file name) of it, but not both.'))
 
-    return render_template('admin/edit_blocked_image.html', title=_('Add blocked image'), form=form,
-                           site=g.site, )
+    return render_template('admin/edit_blocked_image.html', title=_('Add blocked image'), form=form)
 
 
 @bp.route('/block_image_purge_posts', methods=['GET', 'POST'])

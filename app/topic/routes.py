@@ -260,7 +260,7 @@ def suggest_topics():
     else:
         return render_template('topic/suggest_topics.html', form=form, title=_('Suggest a topic"'),
                                
-                               site=g.site, 
+                                
                                )
 
 
