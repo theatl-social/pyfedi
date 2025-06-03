@@ -12,7 +12,8 @@ from app.api.alpha.utils import get_site, post_site_block, \
                                 get_private_message_list, \
                                 post_upload_image, post_upload_community_image, post_upload_user_image, \
                                 get_user_notifications, put_user_notification_state, get_user_notifications_count, \
-                                put_user_mark_all_notifications_read
+                                put_user_mark_all_notifications_read, get_community_moderate_bans, put_community_moderate_unban, \
+                                post_community_moderate_ban, post_community_moderate_post_nsfw
 from app.shared.auth import log_user_in
 
 from flask import current_app, jsonify, request
@@ -161,6 +162,55 @@ def post_alpha_community_delete():
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
+
+@bp.route('/api/alpha/community/moderate/bans', methods=['GET'])
+def get_alpha_community_moderate_bans():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'}), 400
+    try:
+        auth = request.headers.get('Authorization')
+        data = {}
+        data['community_id'] = request.args.get('community_id')
+        data['page'] = request.args.get('page','1')
+        return jsonify(get_community_moderate_bans(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/community/moderate/unban', methods=['PUT'])
+def put_alpha_community_moderate_unban():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'}), 400
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(put_community_moderate_unban(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400    
+
+
+@bp.route('/api/alpha/community/moderate/ban', methods=['POST'])
+def post_alpha_community_moderate_ban():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'}), 400
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(post_community_moderate_ban(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400    
+
+
+@bp.route('/api/alpha/community/moderate/post/nsfw', methods=['POST'])
+def post_alpha_community_moderate_post_nsfw():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'}), 400
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(post_community_moderate_post_nsfw(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400  
 
 # Post
 @bp.route('/api/alpha/post/list', methods=['GET'])
