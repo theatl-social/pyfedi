@@ -459,8 +459,10 @@ def user_settings():
         form.accept_private_messages.data = current_user.accept_private_messages
         form.font.data = current_user.font
 
+        delete_form = DeleteAccountForm()
+
     return render_template('user/edit_settings.html', title=_('Edit profile'), form=form, user=current_user,
-                           site=g.site,
+                           site=g.site, delete_form=delete_form
                            
                            )
 
