@@ -221,10 +221,9 @@ def post_community_delete(auth, data):
 
 def get_community_moderate_bans(auth, data):
     required(['community_id'], data)
-    integer_expected(['community_id'], data)
 
     # get the community_id from the data
-    community_id = data['community_id']
+    community_id = int(data['community_id'])
     community = Community.query.filter_by(id=community_id).one()
 
     # get the user_id from the auth

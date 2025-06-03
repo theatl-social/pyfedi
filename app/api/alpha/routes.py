@@ -169,7 +169,9 @@ def get_alpha_community_moderate_bans():
         return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
         auth = request.headers.get('Authorization')
-        data = request.get_json(force=True) or {}
+        data = {}
+        data['community_id'] = request.args.get('community_id')
+        data['page'] = request.args.get('page','1')
         return jsonify(get_community_moderate_bans(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
