@@ -47,12 +47,15 @@ function connect() {
     };
 
     eventSource.onerror = (err) => {
-        console.error("SSE error:", err);
+        //console.error("SSE error:", err);
         eventSource.close();
         reconnectAttempts++;
-        const timeout = Math.min(30000, 1000 * 2 ** reconnectAttempts);
-        console.log(`Reconnecting in ${timeout / 1000}s...`);
-        setTimeout(connect, timeout);
+        //const timeout = Math.min(30000, 1000 * 2 ** reconnectAttempts);
+        const timeout = 1;
+        //console.log(`Reconnecting in ${timeout / 1000}s...`);
+        if(reconnectAttempts < 1000) {
+            setTimeout(connect, timeout);
+        }
     };
 }
 
