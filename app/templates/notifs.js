@@ -51,7 +51,7 @@ function connect() {
         eventSource.close();
         reconnectAttempts++;
         //const timeout = Math.min(30000, 1000 * 2 ** reconnectAttempts);
-        const timeout = 1;
+        const timeout = 1000;
         //console.log(`Reconnecting in ${timeout / 1000}s...`);
         if(reconnectAttempts < 1000) {
             setTimeout(connect, timeout);
