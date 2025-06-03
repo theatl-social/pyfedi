@@ -117,9 +117,7 @@ def show_profile(user):
                            rss_feed=f"https://{current_app.config['SERVER_NAME']}/u/{user.link()}/feed" if user.post_count > 0 else None,
                            rss_feed_name=f"{user.display_name()} on {g.site.name}" if user.post_count > 0 else None,
                            user_has_public_feeds=user_has_public_feeds,
-                           user_public_feeds=user_public_feeds,
-                           
-                           )
+                           user_public_feeds=user_public_feeds)
 
 
 @bp.route('/u/<actor>/profile', methods=['GET', 'POST'])
@@ -131,6 +129,7 @@ def edit_profile(actor):
         abort(404)
     if current_user.id != user.id:
         abort(401)
+    delete_form = DeleteAccountForm()
     form = ProfileForm()
     old_email = user.email
     if form.validate_on_submit() and not current_user.banned:
@@ -209,10 +208,8 @@ def edit_profile(actor):
         form.password_field.data = ''
 
     return render_template('user/edit_profile.html', title=_('Edit profile'), form=form, user=current_user,
-                           markdown_editor=current_user.markdown_editor,
-                           site=g.site,
-                           
-                           )
+                           markdown_editor=current_user.markdown_editor, delete_form=delete_form,
+                           site=g.site)
 
 
 @bp.route('/user/remove_avatar', methods=['GET', 'POST'])
@@ -459,12 +456,8 @@ def user_settings():
         form.accept_private_messages.data = current_user.accept_private_messages
         form.font.data = current_user.font
 
-        delete_form = DeleteAccountForm()
-
-    return render_template('user/edit_settings.html', title=_('Edit profile'), form=form, user=current_user,
-                           site=g.site, delete_form=delete_form
-                           
-                           )
+    return render_template('user/edit_settings.html', title=_('Change settings'), form=form, user=current_user,
+                           site=g.site)
 
 
 @bp.route('/user/settings/import_export', methods=['GET', 'POST'])

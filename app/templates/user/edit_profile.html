@@ -4,7 +4,7 @@
     {% extends "base.html" %}
 {% endif %}
 {% set active_child = 'edit_profile' %}
-{% from 'bootstrap/form.html' import render_field %}
+{% from 'bootstrap/form.html' import render_field, render_form %}
 
 {% block app_content %}
 <div class="row">
@@ -94,9 +94,27 @@
             <p>&nbsp;</p>
             <p class="mt-4">{{ render_field(form.submit) }}</p>
         </form>
-        <p class="mt-4 pt-4">
-            <a class="btn btn-warning" href="{{ url_for('user.delete_account') }}">{{ _('Delete account') }}</a>
-        </p>
+        <hr class="bg-danger border-4 border-top border-danger" />
+        <div class="accordion" id="deleteAccordion">
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button bg-danger text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDelete" aria-expanded="false" aria-controls="collapseDelete">
+                Danger Zone! - Account Deletion
+              </button>
+            </h2>
+            <div id="collapseDelete" class="accordion-collapse collapse bg-danger text-light" data-bs-parent="#deleteAccordion">
+              <div class="accordion-body">
+                <form action="/delete_account" method="post" role="form">
+                  <p>{{ _('You are about to permanently delete the account with the username "<strong>%(username)s</strong>." This means your profile will disappear, pictures will be deleted. Text-based posts will stay but look like they are from someone named "deleted."', username=user.user_name) }}</p>
+                  <p>{{ _('Once you hit delete, nobody can use "%(username)s" as a username again. We are doing this so nobody pretends to be you.', username=user.user_name) }}</p>
+                  <p>{{ _("We will tell other websites (fediverse instances) that your account is gone. But it's up to them to decide what to do with any copies they have of your stuff. Some websites work differently than ours.") }}</p>
+                  <p>{{ _("Remember, once you do this, there's no going back. Are you sure you want to continue?") }}</p>
+                  {{ render_form(delete_form) }}
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
     </main>
 </div>
 {% endblock %}
