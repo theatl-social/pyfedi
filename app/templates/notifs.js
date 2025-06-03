@@ -7,9 +7,9 @@ function connect() {
     eventSource = new EventSource(`{{ notif_server }}/notifications/stream?user_id=${userId}`);
 
     eventSource.onmessage = (event) => {
-        //console.log('received message');
+        console.log('received message');
         const data = JSON.parse(event.data);
-        //console.log(data);
+        console.log(data);
         if(data['num_notifs'] > unreadNotifications) {      // unreadNotifications is set in base.html when the page loads initially.
             const outputs = document.getElementsByClassName('unreadNotificationDisplay');
             for (const el of outputs) {
@@ -43,21 +43,15 @@ function connect() {
 
             }
         }
-        else if(data['num_notifs'] === 0) {
-            if ('setAppBadge' in navigator) {
-              navigator.clearAppBadge();
-            }
-        }
 
     };
 
     eventSource.onerror = (err) => {
-        //console.error("SSE error:", err);
+        console.error("SSE error:", err);
         eventSource.close();
         reconnectAttempts++;
-        //const timeout = Math.min(30000, 1000 * 2 ** reconnectAttempts);
-        const timeout = 1;
-        //console.log(`Reconnecting in ${timeout / 1000}s...`);
+        const timeout = Math.min(30000, 1000 * 2 ** reconnectAttempts);
+        console.log(`Reconnecting in ${timeout / 1000}s...`);
         setTimeout(connect, timeout);
     };
 }
