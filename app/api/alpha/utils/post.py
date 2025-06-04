@@ -125,7 +125,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             continue
     list_json = {
         "posts": postlist,
-        "next_page": posts.next_num
+        "next_page": str(posts.next_num) if posts.next_num is not None else None
     }
 
     return list_json

@@ -23,9 +23,9 @@ def get_user(auth, data):
         person_id = int(data['person_id'])
     elif 'username' in data:
         if '@' in data['username']:
-            person_id = User.query.filter(User.ap_id == data['username'], User.deleted == False).first().id
+            person_id = User.query.filter(func.lower(User.ap_id) == data['username'].lower(), User.deleted == False).first().id
         else:
-            person_id = User.query.filter(User.user_name == data['username'], User.ap_id == None, User.deleted == False).first().id
+            person_id = User.query.filter(func.lower(User.user_name) == data['username'].lower(), User.ap_id == None, User.deleted == False).first().id
 
         data['person_id'] = person_id
 
