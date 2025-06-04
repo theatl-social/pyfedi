@@ -13,7 +13,7 @@ from sqlalchemy import desc, or_, text
 def get_reply_list(auth, data, user_id=None):
     sort = data['sort'].lower() if data and 'sort' in data else "new"
     max_depth = data['max_depth'] if data and 'max_depth' in data else None
-    page = int(data['page']) if data and 'page' in data else 1
+    page = int(data['page']) if data and 'page' in data else None
     limit = int(data['limit']) if data and 'limit' in data else 10
     post_id = data['post_id'] if data and 'post_id' in data else None
     parent_id = data['parent_id'] if data and 'parent_id' in data else None
@@ -61,7 +61,10 @@ def get_reply_list(auth, data, user_id=None):
     elif sort == "new":
         replies = replies.order_by(desc(PostReply.posted_at))
 
-    replies = replies.paginate(page=page, per_page=limit, error_out=False)
+    if page is not None:
+        replies = replies.paginate(page=page, per_page=limit, error_out=False)
+    else:
+        replies = replies.all()
 
     replylist = []
     for reply in replies:
