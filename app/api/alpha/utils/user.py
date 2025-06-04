@@ -22,7 +22,11 @@ def get_user(auth, data):
     if 'person_id' in data:
         person_id = int(data['person_id'])
     elif 'username' in data:
-        person_id = User.query.filter(User.user_name == data['username'], User.ap_id == None, User.deleted == False).first().id
+        if '@' in data['username']:
+            person_id = User.query.filter(User.ap_id == data['username'], User.deleted == False).first().id
+        else:
+            person_id = User.query.filter(User.user_name == data['username'], User.ap_id == None, User.deleted == False).first().id
+
         data['person_id'] = person_id
 
     user_id = None
