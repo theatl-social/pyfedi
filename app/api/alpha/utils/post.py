@@ -11,7 +11,7 @@ from datetime import timedelta
 from sqlalchemy import desc, text
 
 
-def get_post_list(auth, data, user_id=None, search_type='Posts'):
+def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     type = data['type_'] if data and 'type_' in data else "All"
     sort = data['sort'] if data and 'sort' in data else "Hot"
     page = int(data['page_cursor']) if data and 'page_cursor' in data else 1
@@ -125,7 +125,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts'):
             continue
     list_json = {
         "posts": postlist,
-        "next_page": str(posts.next_num)
+        "next_page": posts.next_num
     }
 
     return list_json
