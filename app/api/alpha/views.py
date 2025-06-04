@@ -3,7 +3,7 @@ from __future__ import annotations
 from app import cache, db
 from app.constants import *
 from app.models import ChatMessage, Community, CommunityMember, Language, Instance, Post, PostReply, PostVote, User
-from app.utils import blocked_communities, blocked_instances, blocked_users
+from app.utils import blocked_communities, blocked_instances, blocked_users, communities_banned_from
 
 from flask import current_app, g
 
@@ -58,9 +58,9 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0) ->
         else:
             bookmarked = post_sub = followed = False
         if not stub:
-            banned =  db.session.execute(text('SELECT user_id FROM "community_ban" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': post.user_id, 'community_id': post.community_id}).scalar()
-            moderator = db.session.execute(text('SELECT is_moderator FROM "community_member" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': post.user_id, 'community_id': post.community_id}).scalar()
-            admin =  db.session.execute(text('SELECT user_id FROM "user_role" WHERE user_id = :user_id and role_id = 4'), {'user_id': post.user_id}).scalar()
+            banned = post.community_id in communities_banned_from(post.user_id)
+            moderator = post.community.is_moderator(post.author) or post.community.is_owner(post.author)
+            admin = post.author.is_admin()
         else:
             banned = False
             moderator = False
@@ -348,9 +348,9 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
 
         bookmarked = db.session.execute(text('SELECT user_id FROM "post_reply_bookmark" WHERE post_reply_id = :post_reply_id and user_id = :user_id'), {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
         reply_sub = db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'), {'type': NOTIF_REPLY, 'entity_id': reply.id, 'user_id': user_id}).scalar()
-        banned = db.session.execute(text('SELECT user_id FROM "community_ban" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': reply.user_id, 'community_id': reply.community_id}).scalar()
-        moderator = db.session.execute(text('SELECT is_moderator FROM "community_member" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': reply.user_id, 'community_id': reply.community_id}).scalar()
-        admin = db.session.execute(text('SELECT user_id FROM "user_role" WHERE user_id = :user_id and role_id = 4'), {'user_id': reply.user_id}).scalar()
+        banned = reply.community_id in communities_banned_from(user_id)
+        moderator = reply.community.is_moderator(reply.author) or reply.community.is_owner(reply.author)
+        admin = reply.author.is_admin()
         if my_vote == 0 and user_id is not None:
             reply_vote = db.session.execute(text('SELECT effect FROM "post_reply_vote" WHERE post_reply_id = :post_reply_id and user_id = :user_id'), {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
             effect = reply_vote if reply_vote else 0
@@ -367,8 +367,8 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
         v2 = {'comment': reply_view(reply=reply, variant=1), 'counts': counts, 'banned_from_community': False, 'subscribed': 'NotSubscribed',
               'saved': saved, 'creator_blocked': False, 'my_vote': my_vote, 'activity_alert': activity_alert,
               'creator_banned_from_community': creator_banned_from_community, 'creator_is_moderator': creator_is_moderator, 'creator_is_admin': creator_is_admin}
-        creator = user_view(user=reply.user_id, variant=1, stub=True)
-        community = community_view(community=reply.community_id, variant=1, stub=True)
+        creator = user_view(user=reply.author, variant=1, stub=True)
+        community = community_view(community=reply.community, variant=1, stub=True)
         post = post_view(post=reply.post_id, variant=1)
         if user_id:
             user = User.query.get(user_id)
