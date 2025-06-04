@@ -12,7 +12,7 @@ from sqlalchemy import text
 # 'stub' param: set to True to exclude optional fields
 
 
-def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0):
+def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0) -> dict:
     if isinstance(post, int):
         post = Post.query.filter_by(id=post, deleted=False).one()
 
@@ -119,7 +119,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0):
 
 
 # 'user' param can be anyone (including the logged in user), 'user_id' param belongs to the user making the request
-def user_view(user: User | int, variant, stub=False, user_id=None):
+def user_view(user: User | int, variant, stub=False, user_id=None) -> dict:
     if isinstance(user, int):
         user = User.query.filter_by(id=user).one()
 
@@ -213,7 +213,7 @@ def user_view(user: User | int, variant, stub=False, user_id=None):
         return v6
 
 
-def community_view(community: Community | int | str, variant, stub=False, user_id=None):
+def community_view(community: Community | int | str, variant, stub=False, user_id=None) -> dict:
     if isinstance(community, int):
         community = Community.query.filter_by(id=community).one()
     elif isinstance(community, str):
@@ -312,7 +312,7 @@ def calculate_child_count(reply):
     db.session.commit()
 
 
-def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, read=False):
+def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, read=False) -> dict:
     if isinstance(reply, int):
         reply = PostReply.query.filter_by(id=reply).one()
 
@@ -428,7 +428,7 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
         return v5
 
 
-def reply_report_view(report, reply_id, user_id):
+def reply_report_view(report, reply_id, user_id) -> dict:
     # views/comment_report_view.dart - /comment/report api endpoint
     reply_json = reply_view(reply=reply_id, variant=2, user_id=user_id)
     post_json = post_view(post=reply_json['comment']['post_id'], variant=1, stub=True)
@@ -470,7 +470,7 @@ def reply_report_view(report, reply_id, user_id):
     return v1
 
 
-def post_report_view(report, post_id, user_id):
+def post_report_view(report, post_id, user_id) -> dict:
     # views/post_report_view.dart - /post/report api endpoint
     post_json = post_view(post=post_id, variant=2, user_id=user_id)
     community_json = community_view(community=post_json['post']['community_id'], variant=1, stub=True)
@@ -511,7 +511,7 @@ def post_report_view(report, post_id, user_id):
     return v1
 
 
-def search_view(type):
+def search_view(type) -> dict:
     v1 = {
       'type_': type,
       'comments': [],
@@ -522,7 +522,7 @@ def search_view(type):
     return v1
 
 
-def instance_view(instance: Instance | int, variant):
+def instance_view(instance: Instance | int, variant) -> dict:
     if isinstance(instance, int):
         instance = Instance.query.filter_by(id=instance).one()
 
@@ -536,7 +536,7 @@ def instance_view(instance: Instance | int, variant):
         return v1
 
 
-def private_message_view(cm: ChatMessage, user_id, ap_id):
+def private_message_view(cm: ChatMessage, user_id, ap_id) -> dict:
     creator = user_view(cm.sender_id, variant=1)
     recipient = user_view(cm.recipient_id, variant=1)
     is_local = creator['instance_id'] == 1
@@ -560,7 +560,7 @@ def private_message_view(cm: ChatMessage, user_id, ap_id):
     return v1
 
 
-def site_view(user):
+def site_view(user) -> dict:
     logo = g.site.logo if g.site.logo else '/static/images/piefed_logo_icon_t_75.png'
     site = {
       "enable_downvotes": g.site.enable_downvotes,
@@ -646,7 +646,7 @@ def joined_communities(user):
 
 
 # @cache.memoize(timeout=86400)
-def blocked_people_view(user):
+def blocked_people_view(user) -> list[dict]:
     blocked_ids = blocked_users(user.id)
     blocked = []
     for blocked_id in blocked_ids:
@@ -655,7 +655,7 @@ def blocked_people_view(user):
 
 
 # @cache.memoize(timeout=86400)
-def blocked_communities_view(user):
+def blocked_communities_view(user) -> list[dict]:
     blocked_ids = blocked_communities(user.id)
     blocked = []
     for blocked_id in blocked_ids:
@@ -664,7 +664,7 @@ def blocked_communities_view(user):
 
 
 # @cache.memoize(timeout=86400)
-def blocked_instances_view(user):
+def blocked_instances_view(user) -> list[dict]:
     blocked_ids = blocked_instances(user.id)
     blocked = []
     for blocked_id in blocked_ids:
