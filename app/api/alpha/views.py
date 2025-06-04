@@ -372,7 +372,7 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
         post = post_view(post=reply.post_id, variant=1)
         if user_id:
             user = User.query.get(user_id)
-            post_community = Community.query.get(post.community_id)
+            post_community = Community.query.get(post['community_id'])
             can_auth_user_moderate = post_community.is_moderator(user) or post_community.is_owner(user)
             v2.update({'canAuthUserModerate':can_auth_user_moderate})
 
