@@ -141,7 +141,7 @@ def make_reply(input, post, parent_id, src, auth=None):
         content = input['body']
         notify_author = input['notify_author']
         language_id = input['language_id']
-        distinguished = input['distinguished']
+        distinguished = input['distinguished'] if 'distinguished' in input else False
     else:
         user = current_user
         content = input.body.data
@@ -188,7 +188,7 @@ def edit_reply(input, reply, post, src, auth=None):
         content = input['body']
         notify_author = input['notify_author']
         language_id = input['language_id']
-        distinguished = input['distinguished']
+        distinguished = input['distinguished'] if 'distinguished' in input else False
     else:
         user = current_user
         content = input.body.data
