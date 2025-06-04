@@ -16,18 +16,18 @@ def get_user(auth, data):
         raise Exception('missing_parameters')
 
     # user_id = logged in user, person_id = person who's posts, comments etc are being fetched
-    # when 'username' is requested, user_id and person_id are the same
+    # 'username' can be provided instead, to populate person_id
 
     person_id = None
     if 'person_id' in data:
         person_id = int(data['person_id'])
+    elif 'username' in data:
+        person_id = User.query.filter(User.user_name == data['username'], User.ap_id == None, User.deleted == False).first().id
+        data['person_id'] = person_id
 
     user_id = None
     if auth:
         user_id = authorise_api_user(auth)
-        if 'username' in data:
-            data['person_id'] = user_id
-            person_id = int(user_id)
         auth = None                 # avoid authenticating user again in get_post_list and get_reply_list
 
     # bit unusual. have to help construct the json here rather than in views, to avoid circular dependencies
