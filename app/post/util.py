@@ -5,28 +5,28 @@ from flask_login import current_user
 from sqlalchemy import desc, text, or_
 
 from app import db
-from app.models import PostReply, Post, Community
+from app.models import PostReply, Post, Community, User
 from app.utils import blocked_instances, blocked_users, is_video_hosting_site
 
 from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_ARTICLE, POST_TYPE_VIDEO, POST_TYPE_POLL
 
 
 # replies to a post, in a tree, sorted by a variety of methods
-def post_replies(community: Community, post_id: int, sort_by: str, show_first: int = 0) -> List[PostReply]:
+def post_replies(community: Community, post_id: int, sort_by: str, viewer: User) -> List[PostReply]:
     comments = PostReply.query.filter_by(post_id=post_id)
-    if current_user.is_authenticated:
-        instance_ids = blocked_instances(current_user.id)
+    if viewer.is_authenticated:
+        instance_ids = blocked_instances(viewer.id)
         if instance_ids:
             comments = comments.filter(or_(PostReply.instance_id.not_in(instance_ids), PostReply.instance_id == None))
-        if current_user.ignore_bots == 1:
+        if viewer.ignore_bots == 1:
             comments = comments.filter(PostReply.from_bot == False)
-        blocked_accounts = blocked_users(current_user.id)
+        blocked_accounts = blocked_users(viewer.id)
         if blocked_accounts:
             comments = comments.filter(PostReply.user_id.not_in(blocked_accounts))
-        if current_user.reply_hide_threshold and not (current_user.is_admin() or community.is_owner() or community.is_moderator()):
-            comments = comments.filter(PostReply.score > current_user.reply_hide_threshold)
-        if current_user.read_language_ids and len(current_user.read_language_ids) > 0:
-            comments = comments.filter(or_(PostReply.language_id.in_(tuple(current_user.read_language_ids)), PostReply.language_id == None))
+        if viewer.reply_hide_threshold and not (viewer.is_admin() or community.is_owner() or community.is_moderator()):
+            comments = comments.filter(PostReply.score > viewer.reply_hide_threshold)
+        if viewer.read_language_ids and len(viewer.read_language_ids) > 0:
+            comments = comments.filter(or_(PostReply.language_id.in_(tuple(viewer.read_language_ids)), PostReply.language_id == None))
     else:
         comments.filter(PostReply.score > -20)
 

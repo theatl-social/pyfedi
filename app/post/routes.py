@@ -105,7 +105,7 @@ def show_post(post_id: int):
 
             return redirect(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{reply.id}'))
         else:
-            replies = post_replies(community, post.id, sort)
+            replies = post_replies(community, post.id, sort, current_user)
             more_replies = defaultdict(list)
             if post.cross_posts:
                 cbf = communities_banned_from(current_user.get_id())
@@ -115,7 +115,7 @@ def show_post(post_id: int):
                     if cross_posted_post.community_id not in cbf \
                             and cross_posted_post.community_id not in bc \
                             and cross_posted_post.community.instance_id not in bi:
-                        cross_posted_replies = post_replies(cross_posted_post.community, cross_posted_post.id, sort)
+                        cross_posted_replies = post_replies(cross_posted_post.community, cross_posted_post.id, sort, current_user)
                         if len(cross_posted_replies):
                             more_replies[cross_posted_post.community].extend(cross_posted_replies)
             form.notify_author.data = True
