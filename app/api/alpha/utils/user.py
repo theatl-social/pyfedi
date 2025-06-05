@@ -29,14 +29,16 @@ def get_user(auth, data):
 
         data['person_id'] = person_id
 
+    include_content = data.get('include_content', False)
+
     user_id = None
     if auth:
         user_id = authorise_api_user(auth)
         auth = None                 # avoid authenticating user again in get_post_list and get_reply_list
 
     # bit unusual. have to help construct the json here rather than in views, to avoid circular dependencies
-    post_list = get_post_list(auth, data, user_id)
-    reply_list = get_reply_list(auth, data, user_id)
+    post_list = get_post_list(auth, data, user_id) if include_content else {'posts': []}
+    reply_list = get_reply_list(auth, data, user_id) if include_content else {'comments': []}
 
     user_json = user_view(user=person_id, variant=3, user_id=user_id)
     user_json['posts'] = post_list['posts']
