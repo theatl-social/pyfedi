@@ -1594,6 +1594,13 @@ def admin_community_move(community_id, new_owner):
         if form.new_owner.data:
             community.user_id = new_owner_user.id
         db.session.commit()
+        try:
+            membership = CommunityMember(user_id=new_owner_user.id, community_id=community.id,
+                                         is_owner=new_owner_user.id)
+            db.session.add(membership)
+            db.session.commit()
+        except:
+            db.session.rollback()
 
         cache.delete_memoized(community_membership, new_owner_user, community)
         cache.delete_memoized(joined_communities, new_owner_user.id)
