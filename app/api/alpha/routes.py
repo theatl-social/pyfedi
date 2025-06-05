@@ -666,6 +666,7 @@ def put_alpha_user_notifications_read():
 # Upload
 @bp.route('/api/alpha/upload/image', methods=['POST'])
 def post_alpha_upload_image():
+    return jsonify({"error": "not_yet_implemented"}), 400
     if not enable_api():
         return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
@@ -681,6 +682,7 @@ def post_alpha_upload_image():
 
 @bp.route('/api/alpha/upload/community_image', methods=['POST'])
 def post_alpha_upload_community_image():
+    return jsonify({"error": "not_yet_implemented"}), 400
     if not enable_api():
         return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
@@ -696,6 +698,7 @@ def post_alpha_upload_community_image():
 
 @bp.route('/api/alpha/upload/user_image', methods=['POST'])
 def post_alpha_upload_user_image():
+    return jsonify({"error": "not_yet_implemented"}), 400
     if not enable_api():
         return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
