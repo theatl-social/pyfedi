@@ -1171,12 +1171,16 @@ def subscribed_feeds(user_id: int) -> List[int]:
 
 @cache.memoize(timeout=300)
 def community_moderators(community_id):
-    return CommunityMember.query.filter((CommunityMember.community_id == community_id) &
+    mods = CommunityMember.query.filter((CommunityMember.community_id == community_id) &
                                         (or_(
                                             CommunityMember.is_owner,
                                             CommunityMember.is_moderator
                                         ))
                                         ).all()
+    community = Community.query.get(community_id)
+    if community.user_id not in [mod.user_id for mod in mods]:
+        mods.append(CommunityMember(user_id=community.user_id, is_owner=True, community_id=community.id))
+    return mods
 
 
 def finalize_user_setup(user):
