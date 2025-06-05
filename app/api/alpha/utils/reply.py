@@ -5,7 +5,7 @@ from app.models import Notification, PostReply, Post
 from app.constants import *
 from app.shared.reply import vote_for_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, make_reply, edit_reply, \
                              delete_reply, restore_reply, report_reply, mod_remove_reply, mod_restore_reply
-from app.utils import authorise_api_user, blocked_users, blocked_instances
+from app.utils import authorise_api_user, blocked_users, blocked_instances, english_language_id
 
 from sqlalchemy import desc, or_, text
 
@@ -143,9 +143,9 @@ def post_reply(auth, data):
     body = data['body']
     post_id = data['post_id']
     parent_id = data['parent_id'] if 'parent_id' in data else None
-    language_id = data['language_id'] if 'language_id' in data else 2       # FIXME: use site language
+    language_id = data['language_id'] if 'language_id' in data else english_language_id()       # FIXME: use site language
     if language_id < 2:
-        language_id = 2                                                     # FIXME: use site language
+        language_id = english_language_id()                                                     # FIXME: use site language
 
     input = {'body': body, 'notify_author': True, 'language_id': language_id}
     post = Post.query.filter_by(id=post_id).one()
@@ -169,7 +169,7 @@ def put_reply(auth, data):
     language_id = data['language_id'] if 'language_id' in data else reply.language_id
     distinguished = data['distinguished'] if 'distinguished' in data else False
     if language_id < 2:
-        language_id = 2                                                     # FIXME: use site language
+        language_id = english_language_id()                                                     # FIXME: use site language
 
     input = {'body': body, 'notify_author': True, 'language_id': language_id, 'distinguished': distinguished}
     post = Post.query.filter_by(id=reply.post_id).one()
