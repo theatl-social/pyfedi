@@ -120,8 +120,8 @@ def register():
             if form.user_name.data in disallowed_usernames:
                 flash(_('Sorry, you cannot use that user name'), 'error')
             else:
-                # Nazis use 88 and 14 in their user names very often.
-                if '88' in form.user_name.data or '14' in form.user_name.data:
+                # Nazis use 88 in their user names very often.
+                if '88' in form.user_name.data:
                     resp = make_response(redirect(url_for('auth.please_wait')))
                     resp.set_cookie('sesion', '17489047567495', expires=datetime(year=2099, month=12, day=30))
                     return resp
