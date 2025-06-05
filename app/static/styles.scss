@@ -736,7 +736,7 @@ time {
     .masonry_info {
       position: absolute;
       bottom: 0;
-      background-color: rgba(0, 0, 0, 0.3);
+      background-color: rgba(0, 0, 0, 0.7);
       width: 100%;
       text-align: center;
 
@@ -798,6 +798,9 @@ time {
             }
           }
         }
+        .col-3 {
+          width: 20%;
+        }
         .col-8 {
           justify-content: center;
           p {
@@ -810,6 +813,7 @@ time {
         .reply_col {
           justify-content: right;
           padding-right: 5px;
+          flex-grow: 1;
         }
       }
     }
@@ -820,10 +824,13 @@ time {
       text-align: center;
       p {
         margin-bottom: 0;
+        flex-grow: 1;
+        display: flex;
 
         a {
           color: var(--bs-body-color);
           text-decoration: none;
+          flex-grow: 1;
         }
       }
     }
