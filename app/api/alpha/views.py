@@ -134,9 +134,9 @@ def user_view(user: User | int, variant, stub=False, user_id=None) -> dict:
         if user.about and not stub:
             v1['about'] = user.about
         if user.avatar_id:
-            v1['avatar'] = user.avatar.view_url()
+            v1['avatar'] = user.avatar.medium_url()
         if user.cover_id and not stub:
-            v1['banner'] = user.cover.view_url()
+            v1['banner'] = user.cover.medium_url()
 
         return v1
 
@@ -191,11 +191,14 @@ def user_view(user: User | int, variant, stub=False, user_id=None) -> dict:
               "user_name": user.user_name,
               "banned": user.banned,
               "published": user.created.isoformat() + 'Z',
-              "actor_id": user.public_url()[8:],
+              "actor_id": user.public_url(),
               "local": True,
               "deleted": user.deleted,
               "bot": user.bot,
-              "instance_id": 1
+              "instance_id": 1,
+              "title": user.display_name(),
+              "avatar": user.avatar.medium_url() if user.avatar_id else None,
+              "banner": user.cover.medium_url() if user.cover_id else None,
             },
             "counts": {
               "person_id": user.id,

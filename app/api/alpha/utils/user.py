@@ -73,7 +73,8 @@ def get_user_list(auth, data):
     for user in users:
         user_list.append(user_view(user, variant=2, stub=True, user_id=user_id))
     list_json = {
-        "users": user_list
+        "users": user_list,
+        'next_page': str(users.next_num) if users.next_num else None
     }
 
     return list_json
@@ -133,7 +134,8 @@ def get_user_replies(auth, data):
     for reply in replies:
         reply_list.append(reply_view(reply=reply, variant=5, user_id=user_id))
     list_json = {
-        "replies": reply_list
+        "replies": reply_list,
+        'next_page': str(replies.next_num) if replies.next_num else None
     }
 
     return list_json
@@ -265,7 +267,7 @@ def get_user_notifications(auth, data):
     res['status'] = status
     res['counts'] = counts
     res['items'] = items
-    res['next_page'] = str(user_notifications.next_num)
+    res['next_page'] = str(user_notifications.next_num) if user_notifications.next_num is not None else None
     return res
 
 
