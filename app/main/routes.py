@@ -103,7 +103,7 @@ def home_page(sort, view_filter):
     prev_url = url_for('main.index', page=page - 1, sort=sort, view_filter=view_filter, result_id=result_id) if page > 0 else None
 
     # Active Communities
-    active_communities = Community.query.filter_by(banned=False)
+    active_communities = Community.query.filter_by(banned=False).filter_by(nsfw=False).filter_by(nsfl=False)
     if current_user.is_authenticated:   # do not show communities current user is banned from
         banned_from = communities_banned_from(current_user.id)
         if banned_from:
@@ -114,7 +114,7 @@ def home_page(sort, view_filter):
     active_communities = active_communities.order_by(desc(Community.last_active)).limit(5).all()
 
     # New Communities
-    new_communities = Community.query.filter_by(banned=False)
+    new_communities = Community.query.filter_by(banned=False).filter_by(nsfw=False).filter_by(nsfl=False)
     if current_user.is_authenticated:   # do not show communities current user is banned from
         banned_from = communities_banned_from(current_user.id)
         if banned_from:
