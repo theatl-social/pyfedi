@@ -18,7 +18,7 @@ class Config(object):
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD') or None
     MAIL_FROM = os.environ.get('MAIL_FROM') or 'noreply@' + os.environ.get('SERVER_NAME')
     MAIL_ERRORS = os.environ.get('MAIL_ERRORS') is not None
-    ADMINS = os.environ.get('ADMINS')
+    ERRORS_TO = os.environ.get('ERRORS_TO') or ''
     LANGUAGES = ['ca', 'de', 'en', 'es', 'fr', 'ja', 'zh']
     FULL_AP_CONTEXT = bool(int(os.environ.get('FULL_AP_CONTEXT', 0)))
     CACHE_TYPE = os.environ.get('CACHE_TYPE') or 'FileSystemCache'

@@ -168,6 +168,8 @@ while `RedisCache` **should** be used in production. If using `RedisCache`, set 
 
 * `MAIL_*` is for sending email using a SMTP server. Leave `MAIL_SERVER` empty to send email using AWS SES instead.
 
+* Set ERRORS_TO to an email address that will receive error reports. Only do this if debugging problems and you have MAIL_* set.
+
 * `AWS_REGION` is the name of the AWS region where you chose to set up SES, if using SES. [SES credentials are stored in `~/.aws/credentials`](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html). That file has a format like
 
     ```
