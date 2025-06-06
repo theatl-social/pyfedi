@@ -666,11 +666,10 @@ def put_alpha_user_notifications_read():
 # Upload
 @bp.route('/api/alpha/upload/image', methods=['POST'])
 def post_alpha_upload_image():
-    return jsonify({"error": "not_yet_implemented"}), 400
     if not enable_api():
         return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
-        with limiter.limit('5/hour'):
+        with limiter.limit('15/hour'):
             auth = request.headers.get('Authorization')
             image_file = request.files['file']
             return jsonify(post_upload_image(auth, image_file))
@@ -682,11 +681,10 @@ def post_alpha_upload_image():
 
 @bp.route('/api/alpha/upload/community_image', methods=['POST'])
 def post_alpha_upload_community_image():
-    return jsonify({"error": "not_yet_implemented"}), 400
     if not enable_api():
         return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
-        with limiter.limit('10/day'):
+        with limiter.limit('20/day'):
             auth = request.headers.get('Authorization')
             image_file = request.files['file']
             return jsonify(post_upload_community_image(auth, image_file))
@@ -698,11 +696,10 @@ def post_alpha_upload_community_image():
 
 @bp.route('/api/alpha/upload/user_image', methods=['POST'])
 def post_alpha_upload_user_image():
-    return jsonify({"error": "not_yet_implemented"}), 400
     if not enable_api():
         return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
-        with limiter.limit('10/day'):
+        with limiter.limit('20/day'):
             auth = request.headers.get('Authorization')
             image_file = request.files['file']
             return jsonify(post_upload_user_image(auth, image_file))

@@ -1656,13 +1656,16 @@ def add_to_modlog_activitypub(action: str, actor: User, community_id: int = None
     db.session.commit()
 
 
-def authorise_api_user(auth, return_type=None, id_match=None):
+def authorise_api_user(auth, return_type=None, id_match=None) -> User | int:
     if not auth:
         raise Exception('incorrect_login')
     token = auth[7:]     # remove 'Bearer '
 
     if current_app.debug and request.host == 'piefed.ngrok.app':
-        return 1
+        if return_type and return_type == 'model':
+            return User.query.get(1)
+        else:
+            return 1
 
     decoded = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
     if decoded:

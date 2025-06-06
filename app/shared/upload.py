@@ -1,8 +1,9 @@
-from app.utils import gibberish, ensure_directory_exists
+from app.utils import gibberish, ensure_directory_exists, store_files_in_s3, guess_mime_type
 
 from pillow_heif import register_heif_opener
 from PIL import Image, ImageOps
 from flask import current_app
+import boto3
 
 import os
 
@@ -19,7 +20,10 @@ def process_upload(image_file, destination='posts'):
 
     new_filename = gibberish(15)
     # set up the storage directory
-    directory = 'app/static/media/' + destination + '/' + new_filename[0:2] + '/' + new_filename[2:4]
+    if store_files_in_s3():
+        directory = 'app/static/tmp'
+    else:
+        directory = 'app/static/media/' + destination + '/' + new_filename[0:2] + '/' + new_filename[2:4]
     ensure_directory_exists(directory)
 
     # save the file
@@ -48,6 +52,24 @@ def process_upload(image_file, destination='posts'):
             raise Exception('filetype not allowed')
     else:
         url = f"https://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
+
+    # Move uploaded file to S3
+    if store_files_in_s3():
+        session = boto3.session.Session()
+        s3 = session.client(
+            service_name='s3',
+            region_name=current_app.config['S3_REGION'],
+            endpoint_url=current_app.config['S3_ENDPOINT'],
+            aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+            aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+        )
+        s3.upload_file(final_place, current_app.config['S3_BUCKET'], destination + '/' +
+                       new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + file_ext,
+                       ExtraArgs={'ContentType': guess_mime_type(final_place)})
+        url = f"https://{current_app.config['S3_PUBLIC_URL']}/{destination}/" + \
+              new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + file_ext
+        s3.close()
+        os.unlink(final_place)
 
     if not url:
         raise Exception('unable to process upload')

@@ -1,10 +1,11 @@
-from app import db
+from app import db, cache
+from app.activitypub.util import make_image_sizes
 from app.api.alpha.views import user_view, reply_view, post_view, community_view
 from app.utils import authorise_api_user
 from app.api.alpha.utils.post import get_post_list
 from app.api.alpha.utils.reply import get_reply_list
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
-from app.models import Conversation, ChatMessage, Notification, PostReply, User, Post, Community
+from app.models import Conversation, ChatMessage, Notification, PostReply, User, Post, Community, File
 from app.shared.user import block_another_user, unblock_another_user, subscribe_user
 from app.constants import *
 
@@ -179,10 +180,12 @@ def put_user_subscribe(auth, data):
 
 
 def put_user_save_user_settings(auth, data):
-    user = authorise_api_user(auth, return_type='model')
+    user: User = authorise_api_user(auth, return_type='model')
     show_nfsw = data['show_nsfw'] if 'show_nsfw' in data else None
     show_read_posts = data['show_read_posts'] if 'show_read_posts' in data else None
     about = data['bio'] if 'bio' in data else None
+    avatar = data['avatar'] if 'avatar' in data else None
+    cover = data['cover'] if 'cover' in data else None
 
     # english is fun, so lets do the reversing and update the user settings
     if show_nfsw == True:
@@ -199,6 +202,32 @@ def put_user_save_user_settings(auth, data):
         from app.utils import markdown_to_html
         user.about = about
         user.about_html = markdown_to_html(about)
+
+    if avatar:
+        if user.avatar_id:
+            remove_file = File.query.get(user.avatar_id)
+            if remove_file:
+                remove_file.delete_from_disk()
+            user.avatar_id = None
+        file = File(source_url=avatar)
+        db.session.add(file)
+        db.session.commit()
+        user.avatar_id = file.id
+        make_image_sizes(user.avatar_id, 40, 250, 'users')
+        cache.delete_memoized(User.avatar_image, user)
+
+    if cover:
+        if user.cover_id:
+            remove_file = File.query.get(user.cover_id)
+            if remove_file:
+                remove_file.delete_from_disk()
+            user.cover_id = None
+        file = File(source_url=avatar)
+        db.session.add(file)
+        db.session.commit()
+        user.cover_id = file.id
+        make_image_sizes(user.cover_id, 700, 1600, 'users')
+        cache.delete_memoized(User.cover_image, user)
 
     # save the change to the db
     db.session.commit()
