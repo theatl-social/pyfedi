@@ -6,7 +6,7 @@
                         <span class="fe fe-arrow-up"></span>
                 </div>
         {% endif %}
-        <span title="{{ comment.up_votes }}, {{ comment.down_votes }}" aria-live="assertive" aria-label="{{ _('Score: ') }}{{ comment.up_votes - comment.down_votes }}.">{{ comment.up_votes - comment.down_votes }}</span>
+        <span class="score" title="{{ comment.up_votes }}, {{ comment.down_votes }}" aria-live="assertive" aria-label="{{ _('Score: ') }}{{ comment.up_votes - comment.down_votes }}.">{{ comment.up_votes - comment.down_votes }}</span>
         {% if (can_downvote_here or can_downvote(current_user, community)) and not disable_voting %}
                 <div class="downvote_button {{ 'voted_down' if in_sorted_list(recently_downvoted_replies, comment.id) }}" role="button" aria-label="{{ _('DownVote button.') }}" aria-live="assertive"
                  hx-post="/comment/{{ comment.id }}/downvote" hx-trigger="click throttle:1s" hx-target="closest .voting_buttons_new" tabindex="0">
