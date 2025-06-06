@@ -1175,7 +1175,7 @@ def admin_users():
     elif local_remote == 'remote':
         users = users.filter(User.ap_id != None)
     if search:
-        users = users.filter(User.email.ilike(f"%{search}%"))
+        users = users.filter(or_(User.email.ilike(f"%{search}%"), User.user_name.ilike(f"%{search}%")))
     if last_seen > 0:
         users = users.filter(User.last_seen > utcnow() - timedelta(days=last_seen))
     users = users.order_by(text('"user".' + sort_by))
