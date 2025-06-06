@@ -75,6 +75,7 @@ def add_local():
                               ap_profile_id='https://' + current_app.config['SERVER_NAME'] + '/c/' + form.url.data.lower(),
                               ap_public_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + form.url.data,
                               ap_followers_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + form.url.data + '/followers',
+                              ap_moderators_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + form.url.data + '/moderators',
                               ap_domain=current_app.config['SERVER_NAME'],
                               subscriptions_count=1, instance_id=1, low_quality='memes' in form.url.data)
         icon_file = request.files['icon_file']
