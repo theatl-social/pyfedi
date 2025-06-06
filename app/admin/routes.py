@@ -1587,6 +1587,8 @@ def admin_community_move(community_id, new_owner):
         community.ap_profile_id = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data.lower()
         community.ap_public_url = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data
         community.ap_followers_url = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data + '/followers'
+        community.ap_featured_url = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data + '/featured'
+        community.ap_moderators_url = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data + '/moderators'
         community.ap_domain = current_app.config['SERVER_NAME']
         community.instance_id = 1
         db.session.execute(text('UPDATE "post" SET instance_id = 1 WHERE community_id = :community_id'), {'community_id': community.id})
