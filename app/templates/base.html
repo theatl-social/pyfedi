@@ -153,6 +153,11 @@
           {{ g.site.additional_css }}
       </style>
       {% endif -%}
+      {% if current_user.is_authenticated and current_user.additional_css -%}
+      <style>
+          {{ current_user.additional_css }}
+      </style>
+      {% endif -%}
     {% endblock -%}
     <style>
         /* Immediate dark theme application based on system preference. Remove once Firefox's support for View Transitions API improves */

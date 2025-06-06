@@ -43,6 +43,8 @@
                     <td align="right"><a href="#" id="decrease_font_size">{{ _('Decrease font size') }}</a></td>
                 </tr>
             </table>
+            {{ render_field(form.additional_css) }}
+            <small class="field_hint">{{ _('Do not blindly copy and paste CSS from random strangers on the internet.') }}</small>
             <hr>
             <h5>{{ _('Preferences') }}</h5>
             {{ render_field(form.read_languages) }}

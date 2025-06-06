@@ -422,6 +422,7 @@ def user_settings():
         current_user.read_language_ids = form.read_languages.data
         current_user.accept_private_messages = form.accept_private_messages.data
         current_user.font = form.font.data
+        current_user.additional_css = form.additional_css.data
         session['ui_language'] = form.interface_language.data
         session['compact_level'] = form.compaction.data
         current_user.vote_privately = form.vote_privately.data
@@ -455,6 +456,7 @@ def user_settings():
         form.compaction.data = session.get('compact_level', '')
         form.accept_private_messages.data = current_user.accept_private_messages
         form.font.data = current_user.font
+        form.additional_css.data = current_user.additional_css
 
     return render_template('user/edit_settings.html', title=_('Change settings'), form=form, user=current_user,
                            )
