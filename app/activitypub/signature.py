@@ -119,8 +119,9 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str, con
                 elif 'community_has_no_followers' in result.text:
                     fix_local_community_membership(uri, private_key)
                 else:
-                    current_app.logger.error(f'Response code for post attempt to {uri} was ' +
-                                         str(result.status_code) + ' ' + result.text[:50])
+                    if current_app.debug:
+                        current_app.logger.error(f'Response code for post attempt to {uri} was ' +
+                                             str(result.status_code) + ' ' + result.text[:50])
             log.exception_message += uri
             if result.status_code == 202:
                 log.exception_message += ' 202'
@@ -129,7 +130,8 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str, con
         except Exception as e:
             log.result = 'failure'
             log.exception_message='could not send:' + str(e)
-            current_app.logger.error(f'Exception while sending post to {uri}')
+            if current_app.debug:
+                current_app.logger.error(f'Exception while sending post to {uri}')
             http_status_code = 404
     if log.result == 'processing':
         log.result = 'success'
