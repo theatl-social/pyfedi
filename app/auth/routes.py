@@ -334,6 +334,11 @@ def google_authorize():
         if user:
             user.google_oauth_id = google_id
         else:
+            # Check if registrations are closed
+            if g.site.registration_mode == 'Closed':
+                flash(_('Account registrations are currently closed.'), 'error')
+                return redirect(url_for('auth.login'))
+
             # Country-based registration blocking
             ip_address_info = ip2location(ip_address())
             if ip_address_info and ip_address_info['country']:
