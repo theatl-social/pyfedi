@@ -36,6 +36,8 @@ sudo mkdir pgdata
 sudo chown -R <USERNAME>:<USERNAME> ./pgdata
 sudo mkdir media
 sudo chown -R <USERNAME>:<USERNAME> ./media
+sudo mkdir logs
+sudo chown -R <USERNAME>:<USERNAME> ./logs
 ```
 
 #### BUILD PIEFED
