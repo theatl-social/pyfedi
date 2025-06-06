@@ -806,7 +806,7 @@ class User(UserMixin, db.Model):
     email_unread_sent = db.Column(db.Boolean)                   # True after a 'unread notifications' email has been sent. None for remote users
     receive_message_mode = db.Column(db.String(20), default='Closed')  # possible values: Open, TrustedOnly, Closed
     bounces = db.Column(db.SmallInteger, default=0)
-    timezone = db.Column(db.String(20))
+    timezone = db.Column(db.String(30))
     reputation = db.Column(db.Float, default=0.0)
     attitude = db.Column(db.Float, default=None)  # (upvotes cast - downvotes cast) / (upvotes + downvotes). A number between 1 and -1 is the ratio between up and down votes they cast
     post_count = db.Column(db.Integer, default=0)
