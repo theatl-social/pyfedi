@@ -600,7 +600,7 @@ def put_alpha_user_subscribe():
         return jsonify({"error": str(ex)}), 400
 
 
-# currently handles hide_nsfw, hide_read_posts, and user.about 
+# currently handles hide_nsfw, hide_read_posts, user.about, avatar and cover
 @bp.route('/api/alpha/user/save_user_settings', methods=['PUT'])
 def put_alpha_user_save_user_settings():
     if not enable_api():
