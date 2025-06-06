@@ -653,6 +653,10 @@ function setupKeyboardShortcuts() {
             if(document.activeElement.classList.contains('skip-link')) {
                 return;
             }
+            // Don't intercept keyboard shortcuts when modifier keys are pressed
+            if (event.ctrlKey || event.metaKey || event.altKey) {
+                return;
+            }
             var didSomething = false;
             if(event.shiftKey && event.key === '?') {
                 location.href = '/keyboard_shortcuts';
