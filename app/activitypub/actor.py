@@ -82,7 +82,7 @@ def find_remote_actor(actor_url):
 
 def schedule_actor_refresh(actor):
     """Schedule an async refresh of actor data if needed."""
-    if not actor.is_local() and (actor.ap_fetched_at is None or actor.ap_fetched_at < utcnow() - timedelta(days=7)):
+    if not actor.is_local() and (actor.ap_fetched_at is None or actor.ap_fetched_at < utcnow() - timedelta(days=1)):
         refresh_in_progress = cache.get(f'refreshing_{actor.id}')
         if not refresh_in_progress:
             cache.set(f'refreshing_{actor.id}', True, timeout=300)
