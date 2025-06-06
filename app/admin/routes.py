@@ -1591,8 +1591,7 @@ def admin_community_move(community_id, new_owner):
         community.ap_moderators_url = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data + '/moderators'
         community.ap_domain = current_app.config['SERVER_NAME']
         community.instance_id = 1
-        db.session.execute(text('UPDATE "post" SET instance_id = 1 WHERE community_id = :community_id'), {'community_id': community.id})
-        db.session.execute(text('UPDATE "post_reply" SET instance_id = 1 WHERE community_id = :community_id'), {'community_id': community.id})
+
         if form.new_owner.data:
             community.user_id = new_owner_user.id
         db.session.commit()

@@ -129,6 +129,25 @@ def topics_for_form_children(topics, current_topic: int, depth: int) -> List[Tup
 
 @celery.task
 def move_community_images_to_here(community_id):
+    db.session.execute(text('UPDATE "post" SET instance_id = 1 WHERE community_id = :community_id'),
+                       {'community_id': community_id})
+    db.session.execute(text('UPDATE "post_reply" SET instance_id = 1, ap_id = :ap_id WHERE community_id = :community_id'),
+                       {'community_id': community_id})
+    db.session.commit()
+    server_name = current_app.config['SERVER_NAME']
+    db.session.execute(text(f"""
+        UPDATE "post"
+        SET ap_id = 'https://{server_name}/post/' || id
+        WHERE community_id = :community_id
+    """), {'community_id': community_id})
+
+    db.session.execute(text(f"""
+        UPDATE "post_reply"
+        SET ap_id = 'https://{server_name}/comment/' || id
+        WHERE community_id = :community_id
+    """), {'community_id': community_id})
+    db.session.commit()
+
     import shutil
     post_ids = list(db.session.execute(text('SELECT id FROM "post" WHERE type = :post_type AND community_id = :community_id AND deleted is false AND image_id is not null'),
                                        {'post_type': POST_TYPE_IMAGE, 'community_id': community_id}).scalars())
