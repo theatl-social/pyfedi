@@ -1253,6 +1253,8 @@ time {
   background-color: rgba(0, 0, 0, 0.2);
   width: 100%;
   text-align: center;
+  display: flex;
+  min-height: 8rem;
 }
 #masonry .item .masonry_info_no_image p {
   margin-bottom: 0;

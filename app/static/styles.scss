@@ -822,6 +822,8 @@ time {
       background-color: rgba(0, 0, 0, 0.2);
       width: 100%;
       text-align: center;
+      display:flex;
+      min-height: 8rem;
       p {
         margin-bottom: 0;
         flex-grow: 1;
