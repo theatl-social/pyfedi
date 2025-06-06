@@ -273,7 +273,8 @@ class SMTPEmailService:
         """
         if self.use_tls:
             self.smtpserver.starttls()
-        self.smtpserver.login(self.username, self.password)
+        if self.username and self.password:
+            self.smtpserver.login(self.username, self.password)
         self.connected = True
         print("Connected to {}".format(self.server_name))
 
