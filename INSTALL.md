@@ -314,6 +314,8 @@ automatically discovered by using [the ipinfo service](https://ipinfo.io/) - reg
 
 If the search function is not returning any results, you need to [add some database triggers](https://codeberg.org/rimu/pyfedi/issues/358#issuecomment-2475019).
 
+Enable the API for use by mobile apps by setting the ENABLE_ALPHA_API environment variable to 'true' (a string, with quotes).
+
 <div id="background-services"></div>
 
 ### Background services
