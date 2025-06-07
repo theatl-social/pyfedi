@@ -710,6 +710,7 @@ def retrieve_peertube_block_list():
 
 
 def ensure_directory_exists(directory):
+    """Ensure a directory exists and is writable, creating it if necessary."""
     parts = directory.split('/')
     rebuild_directory = ''
     for part in parts:
@@ -717,6 +718,10 @@ def ensure_directory_exists(directory):
         if not os.path.isdir(rebuild_directory):
             os.mkdir(rebuild_directory)
         rebuild_directory += '/'
+    
+    # Check if the final directory is writable
+    if not os.access(directory, os.W_OK):
+        current_app.logger.warning(f"Directory '{directory}' is not writable")
 
 
 def mimetype_from_url(url):
