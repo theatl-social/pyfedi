@@ -167,6 +167,10 @@ def list_communities():
     page = request.args.get('page', 1, type=int)
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
     sort_by = request.args.get('sort_by', 'post_reply_count desc')
+
+    if request.args.get('prompt'):
+        flash(_('You did not choose any topics. Would you like to choose individual communities instead?'))
+
     topics = Topic.query.order_by(Topic.name).all()
     languages = Language.query.order_by(Language.name).all()
     communities = Community.query.filter_by(banned=False)
