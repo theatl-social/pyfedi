@@ -56,6 +56,9 @@ sudo docker compose up --build
 ```bash
 sudo docker exec -it piefed_app1 sh
 ```
+
+The above command will get you into a shell inside the container. Then, inside that shell run this:
+
 ```bash
 export FLASK_APP=pyfedi.py
 flask init-db
