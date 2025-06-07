@@ -159,7 +159,7 @@ def community_name_search():
     communities_list = []
     try:
         if g.site.enable_nsfw:
-            with open('app/static/all_communities.json','r') as acj:
+            with open('app/static/tmp/all_communities.json','r') as acj:
                 all_communities_json = json.load(acj)
                 communities_list = all_communities_json['all_communities']
         else:

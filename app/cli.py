@@ -911,8 +911,8 @@ def register(app):
             all_sfw_communities_json['all_sfw_communities'] = all_sfw_communities
 
             # write those files to disk as json
-            print('Saving the communities lists to app/static/ ...')
-            with open('app/static/all_communities.json','w') as acj:
+            print('Saving the communities lists to app/static/tmp/ ...')
+            with open('app/static/tmp/all_communities.json','w') as acj:
                 json.dump(all_communities_json, acj)
 
             with open('app/static/all_sfw_communities.json','w') as asfwcj:
