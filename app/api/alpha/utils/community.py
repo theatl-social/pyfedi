@@ -7,6 +7,7 @@ from app.constants import *
 from app.models import Community, CommunityMember, User, CommunityBan, Notification, CommunityJoinRequest, \
      NotificationSubscription, Post
 from app.shared.community import join_community, leave_community, block_community, unblock_community, make_community, edit_community, subscribe_community, delete_community, restore_community
+from app.shared.tasks import task_selector
 from app.utils import communities_banned_from, blocked_instances, blocked_communities, shorten_string, \
      joined_communities, moderating_communities
 
@@ -303,6 +304,9 @@ def put_community_moderate_unban(auth, data):
         community_membership_record.is_banned = False
     db.session.commit()
 
+    # federate the unban
+    task_selector('unban_from_community', user_id=user_id, mod_id=user.id, community_id=community.id, expiry=res['expiredAt'], reason=res['reason'])
+
     # notify the unbanned user if they are local to this instance
     if blocked.is_local():
         # Notify unbanned person
@@ -363,6 +367,9 @@ def post_community_moderate_ban(auth,data):
     if community_membership_record:
         community_membership_record.is_banned = True
     db.session.commit()
+
+    # federate the ban
+    task_selector('ban_from_community', user_id=user_id, mod_id=blocker.id, community_id=community.id, expiry=ban_until, reason=data['reason'])
 
     if blocked.is_local():
         db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == community.id, CommunityJoinRequest.user_id == blocked.id).delete()
