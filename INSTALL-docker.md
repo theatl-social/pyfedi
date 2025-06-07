@@ -45,7 +45,7 @@ sudo chown -R <USERNAME>:<USERNAME> ./logs
 export DOCKER_BUILDKIT=1
 sudo docker compose up --build
 ```
-- Wait until text in terminal stops scrolling
+- Wait until text in terminal stops scrolling. Ignore the configuration check errors at this point.
 - Test external access from browser (On port 8030). Watch for movement in terminal window. Browser will show "Internal Server Error" message. Proceed to initialize database to address this error message.
 
 #### INITIALIZE DATABASE
@@ -69,6 +69,9 @@ exit
 ```bash
 sudo docker compose up -d
 ```
+
+- During startup, you might see "Running configuration check..." followed by validation messages. Checkmarks (✅)
+indicate successful configuration, warnings (⚠️) are usually fine to ignore, but X marks (❌) indicate critical issues that need fixing.
 
 #### SETUP CRON (AUTOMATED) JOBS
 ```bash
