@@ -156,8 +156,6 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                         is_wordpress = True
                     if not activity:
                         return
-                    if not ensure_domains_match(activity):
-                        continue
                     if is_peertube:
                         user = mod
                     elif 'attributedTo' in activity and isinstance(activity['attributedTo'], str):
