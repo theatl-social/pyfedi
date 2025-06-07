@@ -1132,8 +1132,8 @@ def register(app):
             for var, value in url_vars.items():
                 if value:
                     format_issues = []
-                    if var in ['CACHE_REDIS_URL', 'CELERY_BROKER_URL'] and not value.startswith('redis://'):
-                        format_issues.append("should start with redis://")
+                    if var in ['CACHE_REDIS_URL', 'CELERY_BROKER_URL'] and not (value.startswith('redis://') or value.startswith('unix://')):
+                        format_issues.append("should start with redis:// or unix://")
                     if var == 'SENTRY_DSN' and not (value.startswith('https://') or value.startswith('http://')):
                         format_issues.append("should start with https:// or http://")
                     if var in ['S3_ENDPOINT'] and not (value.startswith('https://') or value.startswith('http://')):
