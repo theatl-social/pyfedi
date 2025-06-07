@@ -131,7 +131,7 @@ def topics_for_form_children(topics, current_topic: int, depth: int) -> List[Tup
 def move_community_images_to_here(community_id):
     db.session.execute(text('UPDATE "post" SET instance_id = 1 WHERE community_id = :community_id'),
                        {'community_id': community_id})
-    db.session.execute(text('UPDATE "post_reply" SET instance_id = 1, ap_id = :ap_id WHERE community_id = :community_id'),
+    db.session.execute(text('UPDATE "post_reply" SET instance_id = 1 WHERE community_id = :community_id'),
                        {'community_id': community_id})
     db.session.commit()
     server_name = current_app.config['SERVER_NAME']
