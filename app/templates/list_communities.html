@@ -205,5 +205,7 @@
         <p class="mt-4">{{ _('No communities match your search.') }}</p>
     {% endif -%}
 {% endif -%}
-<p class="mt-4"><a href="/topics" class="btn btn-primary">{{ _('Browse topics') }}</a></p>
+<p class="mt-4"><a href="/topics" class="btn btn-primary">{{ _('Browse topics') }}</a>
+    {% if current_user.is_authenticated -%}
+    <a class="btn btn-primary confirm_first" href="{{ url_for('community.community_leave_all') }}" style="float: right;">{{ _('Leave all communities') }}</a>{% endif %}</p>
 {% endblock -%}

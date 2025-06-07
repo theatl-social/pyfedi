@@ -1910,6 +1910,59 @@ def community_flair_delete(community_id, flair_id):
         abort(401)
 
 
+@bp.route('/community/leave_all')
+@login_required
+def community_leave_all():
+    all_communities = Community.query.filter_by(banned=False)
+    user_joined_communities = joined_communities(current_user.id)
+    user_moderating_communities = moderating_communities(current_user.id)
+    # get the joined community ids list
+    joined_ids = []
+    for jc in user_joined_communities:
+        joined_ids.append(jc.id)
+    for mc in user_moderating_communities:
+        joined_ids.append(mc.id)
+    # filter down to just the joined communities
+    communities = all_communities.filter(Community.id.in_(joined_ids))
+
+    for community in communities.all():
+        subscription = community_membership(current_user, community)
+        if subscription:
+            if subscription != SUBSCRIPTION_OWNER:
+                # Undo the Follow
+                if not community.is_local():
+                    if not community.instance.gone_forever:
+                        follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
+                        if community.instance.domain == 'a.gup.pe':
+                            join_request = CommunityJoinRequest.query.filter_by(user_id=current_user.id, community_id=community.id).first()
+                            if join_request:
+                                follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+                        undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
+                        follow = {
+                          "actor": current_user.public_url(),
+                          "to": [community.public_url()],
+                          "object": community.public_url(),
+                          "type": "Follow",
+                          "id": follow_id
+                        }
+                        undo = {
+                          'actor': current_user.public_url(),
+                          'to': [community.public_url()],
+                          'type': 'Undo',
+                          'id': undo_id,
+                          'object': follow
+                        }
+                        send_post_request(community.ap_inbox_url, undo, current_user.private_key,
+                                          current_user.public_url() + '#main-key', timeout=10)
+
+                db.session.query(CommunityMember).filter_by(user_id=current_user.id, community_id=community.id).delete()
+                db.session.query(CommunityJoinRequest).filter_by(user_id=current_user.id, community_id=community.id).delete()
+                cache.delete_memoized(community_membership, current_user, community)
+                db.session.commit()
+
+    return redirect(url_for('main.list_communities'))
+
+
 @bp.route('/<actor>/invite', methods=['GET', 'POST'])
 @login_required
 def community_invite(actor):
