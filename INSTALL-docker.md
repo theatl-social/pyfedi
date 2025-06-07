@@ -38,6 +38,8 @@ sudo mkdir media
 sudo chown -R <USERNAME>:<USERNAME> ./media
 sudo mkdir logs
 sudo chown -R <USERNAME>:<USERNAME> ./logs
+sudo mkdir tmp
+sudo chown -R <USERNAME>:<USERNAME> ./tmp
 ```
 
 #### BUILD PIEFED
