@@ -197,6 +197,20 @@ Setting `FLASK_DEBUG=1` in the `.env` file will enable the `<your-site>/dev/tool
 
 That page can be accessed from the `Admin` navigation drop down, or nav bar as `Dev Tools`. That page has buttons that can create/delete communities and topics. The communities and topics will all begin with "dev_".
 
+### Verify your configuration
+
+After setting up your .env file, you can verify your configuration is correct by running:
+
+```bash
+export FLASK_APP=pyfedi.py
+source venv/bin/activate
+flask config_check
+```
+
+This command will check your environment variables for proper format, test database and Redis connections, verify directory
+permissions, and identify common configuration issues. Fix any errors reported before proceeding. For warnings you'll need to use
+your judgement.
+
 <div id="initialise-database-and-setup-admin-account"></div>
 
 ## Initialise database, and set up admin account
@@ -630,6 +644,8 @@ variable set to 1 for these to work.
  - https://yourinstance.tld/test_s3 - tests your S3 config
  - https://yourinstance.tld/test_email - tests email sending
  - https://yourinstance.tld/test_redis - tests the connection to redis
+
+You can also run `flask config_check` to validate your configuration and identify potential issues with environment variables, database connections, and file permissions.
 
 ---
 

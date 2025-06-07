@@ -1034,6 +1034,254 @@ def register(app):
 
             print('Done!')
 
+    @app.cli.command("config_check")
+    def config_check():
+        """Perform basic sanity checks on site configuration."""
+        with app.app_context():
+            print("PieFed Configuration Check")
+            print("=" * 40)
+            errors = []
+            warnings = []
+
+            # Check required environment variables and their formats
+            print("\n1. Checking required environment variables...")
+            
+            # Check SERVER_NAME
+            server_name = current_app.config.get('SERVER_NAME')
+            if not server_name or server_name == 'localhost':
+                errors.append("   ❌ SERVER_NAME is not set or using default value")
+            else:
+                # Check for common format issues
+                format_issues = []
+                if server_name.startswith('http://') or server_name.startswith('https://'):
+                    format_issues.append("should not include protocol (http:// or https://)")
+                if server_name.endswith('/'):
+                    format_issues.append("should not end with trailing slash")
+                if ' ' in server_name:
+                    format_issues.append("should not contain spaces")
+                if server_name.startswith("'") and server_name.endswith("'"):
+                    format_issues.append("should not be wrapped in quotes")
+                
+                if format_issues:
+                    errors.append(f"   ❌ SERVER_NAME format issues: {', '.join(format_issues)}")
+                else:
+                    print(f"   ✅ SERVER_NAME is configured: {server_name}")
+
+            # Check SECRET_KEY
+            secret_key = current_app.config.get('SECRET_KEY')
+            if not secret_key or secret_key == 'you-will-never-guesss' or secret_key == 'change this to random characters':
+                errors.append("   ❌ SECRET_KEY is not set or using default value")
+            elif len(secret_key) < 32:
+                warnings.append("   ⚠️  SECRET_KEY should be at least 32 characters long")
+                print(f"   ✅ SECRET_KEY is configured (but short)")
+            else:
+                print(f"   ✅ SECRET_KEY is configured")
+
+            # Check DATABASE_URL
+            database_url = current_app.config.get('SQLALCHEMY_DATABASE_URI')
+            if not database_url:
+                errors.append("   ❌ DATABASE_URL is not set")
+            elif database_url.startswith('sqlite://'):
+                warnings.append("   ⚠️  Using SQLite database - consider PostgreSQL for production")
+                print(f"   ✅ DATABASE_URL is configured (SQLite)")
+            elif database_url.startswith('postgresql'):
+                print(f"   ✅ DATABASE_URL is configured (PostgreSQL)")
+            else:
+                print(f"   ✅ DATABASE_URL is configured")
+
+            # Check numeric environment variables
+            print("\n   Checking numeric environment variables...")
+            numeric_vars = {
+                'MAIL_PORT': current_app.config.get('MAIL_PORT'),
+                'DB_POOL_SIZE': current_app.config.get('DB_POOL_SIZE'),
+                'DB_MAX_OVERFLOW': current_app.config.get('DB_MAX_OVERFLOW'),
+            }
+            
+            for var, value in numeric_vars.items():
+                if value is not None:
+                    try:
+                        int_val = int(value)
+                        if var == 'MAIL_PORT' and (int_val < 1 or int_val > 65535):
+                            warnings.append(f"   ⚠️  {var} should be between 1 and 65535")
+                        else:
+                            print(f"   ✅ {var} is valid: {int_val}")
+                    except (ValueError, TypeError):
+                        errors.append(f"   ❌ {var} should be a number, got: {value}")
+
+            # Check boolean environment variables
+            print("\n   Checking boolean environment variables...")
+            boolean_vars = ['MAIL_USE_TLS', 'MAIL_ERRORS', 'SESSION_COOKIE_SECURE', 'SESSION_COOKIE_HTTPONLY']
+            for var in boolean_vars:
+                env_value = os.environ.get(var)
+                if env_value is not None:
+                    if env_value.lower() in ['true', 'false', '1', '0', 'yes', 'no']:
+                        print(f"   ✅ {var} is valid: {env_value}")
+                    else:
+                        warnings.append(f"   ⚠️  {var} should be true/false or 1/0, got: {env_value}")
+
+            # Check URL format variables
+            print("\n   Checking URL format variables...")
+            url_vars = {
+                'CACHE_REDIS_URL': current_app.config.get('CACHE_REDIS_URL'),
+                'CELERY_BROKER_URL': current_app.config.get('CELERY_BROKER_URL'),
+                'SENTRY_DSN': current_app.config.get('SENTRY_DSN'),
+                'S3_ENDPOINT': current_app.config.get('S3_ENDPOINT'),
+                'S3_PUBLIC_URL': current_app.config.get('S3_PUBLIC_URL'),
+            }
+            
+            for var, value in url_vars.items():
+                if value:
+                    format_issues = []
+                    if var in ['CACHE_REDIS_URL', 'CELERY_BROKER_URL'] and not value.startswith('redis://'):
+                        format_issues.append("should start with redis://")
+                    if var == 'SENTRY_DSN' and not (value.startswith('https://') or value.startswith('http://')):
+                        format_issues.append("should start with https:// or http://")
+                    if var in ['S3_ENDPOINT'] and not (value.startswith('https://') or value.startswith('http://')):
+                        format_issues.append("should start with https:// or http://")
+                    if var in ['S3_PUBLIC_URL'] and value.startswith('https://'):
+                        format_issues.append("should start with https://")
+                    if value.endswith('/') and var in ['S3_ENDPOINT', 'S3_PUBLIC_URL']:
+                        format_issues.append("should not end with trailing slash")
+                    
+                    if format_issues:
+                        warnings.append(f"   ⚠️  {var} format issues: {', '.join(format_issues)}")
+                    else:
+                        print(f"   ✅ {var} format is valid")
+
+            # Check database connection
+            print("\n2. Checking database connection...")
+            try:
+                db.session.execute(text('SELECT 1'))
+                print("   ✅ Database connection successful")
+            except Exception as e:
+                errors.append(f"   ❌ Database connection failed: {e}")
+
+            # Check Redis connection
+            print("\n3. Checking Redis connection...")
+            try:
+                redis = get_redis_connection()
+                if redis:
+                    redis.ping()
+                    print("   ✅ Redis connection successful")
+                else:
+                    warnings.append("   ⚠️  Redis connection could not be established")
+            except Exception as e:
+                warnings.append(f"   ⚠️  Redis connection failed: {e}")
+
+            # Check write access to critical directories
+            print("\n4. Checking directory write permissions...")
+            critical_dirs = [
+                'app/static/tmp',
+                'app/static/media'
+                'logs'
+            ]
+
+            for dir_path in critical_dirs:
+                try:
+                    if not os.path.exists(dir_path):
+                        os.makedirs(dir_path, exist_ok=True)
+                    
+                    # Test write access
+                    test_file = os.path.join(dir_path, 'config_check_test.txt')
+                    with open(test_file, 'w') as f:
+                        f.write('test')
+                    os.remove(test_file)
+                    print(f"   ✅ {dir_path} is writable")
+                except Exception as e:
+                    errors.append(f"   ❌ {dir_path} is not writable: {e}")
+
+            # Check mail configuration
+            print("\n5. Checking mail configuration...")
+            mail_server = current_app.config.get('MAIL_SERVER')
+            if mail_server:
+                print(f"   ✅ Mail server configured: {mail_server}. Visit /test_email in your browser to test.")
+                mail_from = current_app.config.get('MAIL_FROM')
+                if mail_from:
+                    print(f"   ✅ Mail from address: {mail_from}")
+                else:
+                    warnings.append("   ⚠️  MAIL_FROM not configured")
+            else:
+                warnings.append("   ⚠️  Mail server not configured - email functionality will be disabled")
+
+            # Check cache configuration
+            print("\n6. Checking cache configuration...")
+            cache_type = current_app.config.get('CACHE_TYPE')
+            print(f"   ✅ Cache type: {cache_type}")
+            
+            if cache_type == 'FileSystemCache':
+                cache_dir = current_app.config.get('CACHE_DIR')
+                if cache_dir:
+                    try:
+                        os.makedirs(cache_dir, exist_ok=True)
+                        print(f"   ✅ Cache directory: {cache_dir}")
+                    except Exception as e:
+                        errors.append(f"   ❌ Cache directory not accessible: {e}")
+
+            # Check S3 configuration (if used)
+            print("\n7. Checking S3 configuration...")
+            s3_bucket = current_app.config.get('S3_BUCKET')
+            if s3_bucket:
+                s3_required = ['S3_REGION', 'S3_ENDPOINT', 'S3_ACCESS_KEY', 'S3_ACCESS_SECRET', 'S3_PUBLIC_URL']
+                s3_missing = []
+                for var in s3_required:
+                    if not current_app.config.get(var):
+                        s3_missing.append(var)
+                
+                if s3_missing:
+                    warnings.append(f"   ⚠️  S3 partially configured, missing: {', '.join(s3_missing)}")
+                else:
+                    print("   ✅ S3 configuration appears complete")
+            else:
+                print("   ℹ️  S3 not configured (local file storage will be used)")
+
+            # Check ActivityPub configuration
+            print("\n8. Checking ActivityPub configuration...")
+            server_name = current_app.config.get('SERVER_NAME')
+            if server_name and server_name != 'localhost' and '127.0.0.1' not in server_name:
+                print(f"   ✅ Server name configured for federation: {server_name}")
+                
+                # Check if we have a site with keys
+                site = Site.query.first()
+                if site and site.private_key and site.public_key:
+                    print("   ✅ Site ActivityPub keys are configured")
+                else:
+                    warnings.append("   ⚠️  Site ActivityPub keys not found - run 'flask init-db' if this is a new installation")
+            else:
+                warnings.append("   ⚠️  SERVER_NAME not properly configured for federation")
+
+            admin = User.query.get(1)
+            if admin and admin.private_key and admin.public_key:
+                print("   ✅ Admin user configured")
+            else:
+                warnings.append(
+                    "   ⚠️  Admin user not found - run 'flask init-db' if this is a new installation")
+
+            # Summary
+            print("\n" + "=" * 40)
+            print("CONFIGURATION CHECK SUMMARY")
+            print("=" * 40)
+            
+            if not errors and not warnings:
+                print("✅ All checks passed! Your PieFed configuration looks good.")
+            else:
+                if errors:
+                    print(f"❌ {len(errors)} error(s) found:")
+                    for error in errors:
+                        print(error)
+                
+                if warnings:
+                    print(f"\n⚠️  {len(warnings)} warning(s) found:")
+                    for warning in warnings:
+                        print(warning)
+                
+                if errors:
+                    print("\n❌ Configuration has critical issues that need to be resolved.")
+                    exit(1)
+                else:
+                    print("\n⚠️  Configuration has warnings but should work.")
+            
+            print("\nFor more information, see the installation documentation.")
+
 
 def parse_communities(interests_source, segment):
     lines = interests_source.split("\n")
