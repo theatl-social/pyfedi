@@ -15,7 +15,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip3 install gunicorn
 
-RUN pybabel compile -d app/translations
+RUN pybabel compile -d app/translations || true
 
 RUN chmod u+x ./entrypoint.sh
 RUN chmod u+x ./entrypoint_celery.sh
