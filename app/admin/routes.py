@@ -1259,8 +1259,8 @@ def admin_content():
 @permission_required('approve registrations')
 @login_required
 def admin_approve_registrations():
-    if current_app.config['FLAG_THROWAWAY_EMAILS'] and os.path.isfile('app/static/disposable_domains.txt'):
-        with open('app/static/disposable_domains.txt', 'r', encoding='utf-8') as f:
+    if current_app.config['FLAG_THROWAWAY_EMAILS'] and os.path.isfile('app/static/tmp/disposable_domains.txt'):
+        with open('app/static/tmp/disposable_domains.txt', 'r', encoding='utf-8') as f:
             disposable_domains = [line.rstrip('\n') for line in f]
     else:
         disposable_domains = []
