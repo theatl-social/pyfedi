@@ -30,7 +30,7 @@ sudo nano compose.yaml
 ```
 
 #### CREATE REQUIRED FOLDERS WITH REQUIRED PERMISSIONS
-- Replace `<USERNAME>` with account username
+- Replace `<USERNAME>` with your login.
 ```bash
 sudo mkdir pgdata
 sudo chown -R <USERNAME>:<USERNAME> ./pgdata
@@ -48,6 +48,7 @@ export DOCKER_BUILDKIT=1
 sudo docker compose up --build
 ```
 - Wait until text in terminal stops scrolling. Ignore the configuration check errors at this point.
+- If you see many permission-related errors, try repeating the previous step (with the chown using 1000 instead of your username)
 - Test external access from browser (On port 8030). Watch for movement in terminal window. Browser will show "Internal Server Error" message. Proceed to initialize database to address this error message.
 
 #### INITIALIZE DATABASE
