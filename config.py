@@ -7,7 +7,6 @@ load_dotenv(os.path.join(basedir, '.env'))
 
 class Config(object):
     SERVER_NAME = os.environ.get('SERVER_NAME').lower() or 'localhost'
-    HTTP_PROTOCOL = os.environ.get('HTTP_PROTOCOL') or 'https'
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guesss'
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
                               'sqlite:///' + os.path.join(basedir, 'app.db')
