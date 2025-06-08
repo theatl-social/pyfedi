@@ -177,6 +177,7 @@ def admin_misc():
         cache.delete_memoized(blocked_referrers)
         set_setting('public_modlog', form.public_modlog.data)
         set_setting('email_verification', form.email_verification.data)
+        set_setting('captcha_enabled', form.captcha_enabled.data)
         set_setting('choose_topics', form.choose_topics.data)
         set_setting('filter_selection', form.filter_selection.data)
         set_setting('registration_approved_email', form.registration_approved_email.data)
@@ -201,6 +202,7 @@ def admin_misc():
         form.default_filter.data = site.default_filter if site.default_filter else 'popular'
         form.public_modlog.data = get_setting('public_modlog', False)
         form.email_verification.data = get_setting('email_verification', True)
+        form.captcha_enabled.data = get_setting('captcha_enabled', False)
         form.choose_topics.data = get_setting('choose_topics', True)
         form.filter_selection.data = get_setting('filter_selection', True)
         form.private_instance.data = site.private_instance
