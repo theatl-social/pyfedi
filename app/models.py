@@ -1724,6 +1724,9 @@ class Post(db.Model):
             file = File.query.get(self.image_id)
             file.delete_from_disk()
 
+    def has_been_reported(self):
+        return self.reports > 0 and current_user.is_authenticated and self.community.is_moderator()
+
     def youtube_embed(self, rel=True) -> str:
         if self.url:
             parsed_url = urlparse(self.url)
@@ -2200,6 +2203,9 @@ class PostReply(db.Model):
     def has_replies(self):
         reply = PostReply.query.filter_by(parent_id=self.id).filter(PostReply.deleted == False).first()
         return reply is not None
+
+    def has_been_reported(self):
+        return self.reports > 0 and current_user.is_authenticated and self.community.is_moderator()
 
     def blocked_by_content_filter(self, content_filters):
         lowercase_body = self.body.lower()

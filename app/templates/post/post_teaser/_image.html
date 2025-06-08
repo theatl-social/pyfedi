@@ -1,4 +1,4 @@
-<div class="col post_teaser_body {{ 'reported' if post.reports and post.reports != -1 }}">
+<div class="col post_teaser_body {{ 'reported' if post.has_been_reported() }}">
     {% include "post/post_teaser/_title.html" %}
     {% if post.image_id and not low_bandwidth -%}
         <div class="post_teaser_image_preview">

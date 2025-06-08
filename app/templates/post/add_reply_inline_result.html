@@ -59,7 +59,7 @@
                 <time datetime="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post_reply.posted_at).humanize(locale=locale) }}</time>{% if post_reply.edited_at -%}, edited <time datetime="{{ arrow.get(post_reply.posted_at) }}" title="{{ arrow.get(post_reply.posted_at) }}">{{ arrow.get(post_reply.edited_at).humanize(locale=locale) }}</time>{% endif -%}
             </div>
             <div class="col-auto">
-                {% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) -%}
+                {% if post_reply.has_been_reported() -%}
                     <span class="red fe fe-report" title="{{ _('Reported. Check comment for issues.') }}"></span>
                 {% endif -%}
             </div>
@@ -73,7 +73,7 @@
             </div>
         </div>
 
-        <div class="row comment_body hidable{% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) %} reported{% endif %}">
+        <div class="row comment_body hidable{% if post_reply.has_been_reported() %} reported{% endif %}">
             <div class="col-12 pr-0">
                 {{ post_reply.body_html | community_links | person_links | safe }}
             </div>

@@ -10,10 +10,10 @@
     {# do nothing - blocked by keyword filter #}
 {% else %}
     {% set post_title = post.title.replace('`', "'") %}
-    <div class="item{{ ' reported' if post.reports > 0 and current_user.is_authenticated and post.community.is_moderator() }}{{ ' blocked' if content_blocked }}{{ ' blur' if blur_content }}"
+    <div class="item{{ ' reported' if post.has_been_reported() }}{{ ' blocked' if content_blocked }}{{ ' blur' if blur_content }}"
         {% if content_blocked %} title="{{ _('Filtered: ') }}{{ content_blocked }}"{% endif %} id="post_{{ post.id }}">
         {% if post.image_id and not (post.url and (post.url.endswith('.mp4') or post.url.endswith('.webm'))) %}
-            <div class="masonry_thumb {{ 'reported' if post.reports and post.reports != -1 }}" title="{{ post_title }}">
+            <div class="masonry_thumb {{ 'reported' if post.has_been_reported() }}" title="{{ post_title }}">
                 {% if post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO %}
                     {% if post.image.medium_url() %}
                         <a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="{{ _('View image') }}"><img src="{{ post.image.medium_url() }}"

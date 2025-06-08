@@ -1,5 +1,5 @@
 <div class="row position-relative post_full">
-        <div class="col post_col {% if post.type == POST_TYPE_IMAGE %}post_col post_type_image{% else %}post_type_normal{% endif %} {{ 'reported' if post.reports and post.reports != -1 }}">
+        <div class="col post_col {% if post.type == POST_TYPE_IMAGE %}post_col post_type_image{% else %}post_type_normal{% endif %} {{ 'reported' if post.has_been_reported() }}">
             {% include "post/_breadcrumb_nav.html" %}
             <h1 class="mt-2 post_title" lang="{{ post.language_code() }}">{{ post.title }}
                 {% if post.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif -%}
