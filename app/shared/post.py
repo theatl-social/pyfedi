@@ -346,7 +346,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         Image.MAX_IMAGE_PIXELS = 89478485
 
         # limit full sized version to 2000px
-        if not final_place.endswith('.svg'):
+        if not final_place.endswith('.svg') and not final_place.endswith('.gif'):
             img = Image.open(final_place)
             if '.' + img.format.lower() in allowed_extensions:
                 img = ImageOps.exif_transpose(img)
@@ -355,6 +355,12 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
                 img.save(final_place)
             else:
                 raise Exception('filetype not allowed')
+        
+        if final_place.endswith('.gif'):
+            gif_image = Image.open(final_place)
+            gif_image.save(final_place[:-4] + ".webp", format="WEBP", save_all=True, loop=0)
+            os.remove(final_place)
+            final_place = final_place[:-4] + ".webp"
 
         url = f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
 

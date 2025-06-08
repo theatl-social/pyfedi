@@ -194,7 +194,7 @@ class CreateImageForm(CreatePostForm):
 
     def validate(self, extra_validators=None) -> bool:
         uploaded_file = request.files['image_file']
-        if uploaded_file and uploaded_file.filename != '' and not uploaded_file.filename.endswith('.svg'):
+        if uploaded_file and uploaded_file.filename != '' and not uploaded_file.filename.endswith('.svg') and not uploaded_file.filename.endswith('.gif'):
             Image.MAX_IMAGE_PIXELS = 89478485
             # Do not allow fascist meme content
             try:
@@ -212,6 +212,16 @@ class CreateImageForm(CreatePostForm):
                 current_user.reputation -= 1
                 db.session.commit()
                 return False
+        if uploaded_file.filename.endswith('.gif'):
+            max_size_in_mb = 10 * 1024 * 1024  # 10 MB
+            if len(uploaded_file.read()) > max_size_in_mb:
+                error_message = "This image filesize is too large."
+                if not isinstance(self.image_file.errors, list):
+                    self.image_file.errors = [error_message]
+                else:
+                    self.image_file.errors.append(error_message)
+                return False
+            uploaded_file.seek(0)
         if self.communities:
             community = Community.query.get(self.communities.data)
             if community.is_local() and g.site.allow_local_image_posts is False:
