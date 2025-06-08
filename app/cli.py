@@ -1172,7 +1172,7 @@ def register(app):
             print("\n4. Checking directory write permissions...")
             critical_dirs = [
                 'app/static/tmp',
-                'app/static/media'
+                'app/static/media',
                 'logs'
             ]
 
