@@ -74,6 +74,11 @@
                                 </div>
                             {% endif %}
                         {% endif %}
+                        {% if form -%}
+                            <div class="mt-4">
+                                {{ render_form(form) }}
+                            </div>
+                        {% endif -%}
                     </div>
                 </div>
             </div>
