@@ -55,7 +55,7 @@
         </div>
     </div>
 
-    <div class="row comment_body hidable{% if post.has_been_reported() %} reported{% endif %}">
+    <div class="row comment_body hidable{% if post_reply.has_been_reported() %} reported{% endif %}">
         <div class="col-12 pr-0" lang="{{ post_reply.language_code() }}">
             {% if post_reply.deleted and not show_deleted -%}
                 {% if post_reply.deleted_by is none or post_reply.deleted_by != post_reply.user_id -%}
