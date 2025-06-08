@@ -83,6 +83,7 @@ class Config(object):
 
     # enable the aplha api
     ENABLE_ALPHA_API = os.environ.get('ENABLE_ALPHA_API') or False
+    SKIP_RATE_LIMIT_IPS = os.environ.get('SKIP_RATE_LIMIT_IPS') or ['127.0.0.1']
 
     IMAGE_HASHING_ENDPOINT = os.environ.get('IMAGE_HASHING_ENDPOINT') or ''
 

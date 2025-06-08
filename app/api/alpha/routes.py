@@ -24,6 +24,15 @@ from sqlalchemy.orm.exc import NoResultFound
 def enable_api():
     return True if current_app.debug  or current_app.config['ENABLE_ALPHA_API'] == 'true' else False
 
+
+def is_trusted_request():
+    if current_app.debug:
+        return True
+    if request.remote_addr in current_app.config['SKIP_RATE_LIMIT_IPS']:
+        return True
+    return False
+
+
 # Site
 @bp.route('/api/alpha/site', methods=['GET'])
 def get_alpha_site():
@@ -534,7 +543,7 @@ def post_alpha_user_login():
     if not enable_api():
         return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
-        with limiter.limit('6/hour'):
+        with limiter.limit('6/hour', exempt_when=is_trusted_request):
             data = request.get_json(force=True) or {}
             return jsonify(log_user_in(data, SRC_API))
     except RateLimitExceeded as ex:
@@ -671,7 +680,7 @@ def post_alpha_user_verify_credentials():
     if not enable_api():
         return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
-        with limiter.limit('6/hour'):
+        with limiter.limit('6/hour', exempt_when=is_trusted_request):
             data = request.get_json(force=True) or {}
             return jsonify(post_user_verify_credentials(data))
     except RateLimitExceeded as ex:
