@@ -934,7 +934,8 @@ def post_report(post_id: int):
 
         # Notify moderators
         already_notified = set()
-        targets_data = {'suspect_post_id':post.id,'suspect_user_id':post.author.id,'reporter_id':current_user.id}
+
+        targets_data = {'suspect_post_id': post.id, 'suspect_user_id': post.author.id, 'reporter_id': current_user.id}
         for mod in post.community.moderators():
             notification = Notification(user_id=mod.user_id, title=_('A post has been reported'),
                                         url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
@@ -943,16 +944,19 @@ def post_report(post_id: int):
                                         targets=targets_data)
             db.session.add(notification)
             already_notified.add(mod.user_id)
+
+        # only notify admins for certain types of report
+        if '5' in form.reasons.data or '6' in form.reasons.data:
+            for admin in Site.admins():
+                if admin.id not in already_notified:
+                    notify = Notification(title=_('Reported content'), url='/admin/reports', user_id=admin.id,
+                                          author_id=current_user.id, notif_type=NOTIF_REPORT,
+                                          subtype='post_reported',
+                                          targets=targets_data)
+                    db.session.add(notify)
+                    admin.unread_notifications += 1
+
         post.reports += 1
-        # todo: only notify admins for certain types of report
-        for admin in Site.admins():
-            if admin.id not in already_notified:
-                notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, 
-                                      author_id=current_user.id, notif_type=NOTIF_REPORT,
-                                      subtype='post_reported',
-                                      targets=targets_data)
-                db.session.add(notify)
-                admin.unread_notifications += 1
         db.session.commit()
 
         # federate report to community instance
@@ -1132,16 +1136,17 @@ def post_reply_report(post_id: int, comment_id: int):
                                         targets=targets_data)
             db.session.add(notification)
             already_notified.add(mod.user_id)
+
+        if '5' in form.reasons.data or '6' in form.reasons.data:
+            for admin in Site.admins():
+                if admin.id not in already_notified:
+                    notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id,
+                                          author_id=current_user.id, notif_type=NOTIF_REPORT,
+                                            subtype='comment_reported',
+                                          targets=targets_data)
+                    db.session.add(notify)
+                    admin.unread_notifications += 1
         post_reply.reports += 1
-        # todo: only notify admins for certain types of report
-        for admin in Site.admins():
-            if admin.id not in already_notified:
-                notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, 
-                                      author_id=current_user.id, notif_type=NOTIF_REPORT,
-                                        subtype='comment_reported',
-                                      targets=targets_data)
-                db.session.add(notify)
-                admin.unread_notifications += 1
         db.session.commit()
 
         # federate report to originating instance
