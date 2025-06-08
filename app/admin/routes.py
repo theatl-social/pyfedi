@@ -676,14 +676,14 @@ def admin_federation():
 
     # this is the main settings form
     elif form.validate_on_submit():
-        if form.use_allowlist.data:
+        if form.federation_mode.data == 'allowlist':
             set_setting('use_allowlist', True)
             db.session.execute(text('DELETE FROM allowed_instances'))
             for allow in form.allowlist.data.split('\n'):
                 if allow.strip():
                     db.session.add(AllowedInstances(domain=allow.strip()))
                     cache.delete_memoized(instance_allowed, allow.strip())
-        if form.use_blocklist.data:
+        else:  # blocklist mode
             set_setting('use_allowlist', False)
             db.session.execute(text('DELETE FROM banned_instances WHERE subscription_id is null'))
             for banned in form.blocklist.data.split('\n'):
@@ -713,8 +713,8 @@ def admin_federation():
     
     # this is just the regular page load
     elif request.method == 'GET':
-        form.use_allowlist.data = get_setting('use_allowlist', False)
-        form.use_blocklist.data = not form.use_allowlist.data
+        use_allowlist = get_setting('use_allowlist', False)
+        form.federation_mode.data = 'allowlist' if use_allowlist else 'blocklist'
         instances = BannedInstances.query.filter(BannedInstances.subscription_id == None).all()
         form.blocklist.data = '\n'.join([instance.domain for instance in instances])
         instances = AllowedInstances.query.all()

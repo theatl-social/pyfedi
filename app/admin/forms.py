@@ -2,7 +2,7 @@ from flask_wtf import FlaskForm
 from flask_wtf.file import FileRequired, FileAllowed
 from sqlalchemy import func
 from wtforms import StringField, PasswordField, SubmitField, EmailField, HiddenField, BooleanField, TextAreaField, \
-    SelectField, FileField, IntegerField, FloatField
+    SelectField, FileField, IntegerField, FloatField, RadioField
 from wtforms.fields.choices import SelectMultipleField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Optional
 from flask_babel import _, lazy_gettext as _l
@@ -60,9 +60,11 @@ class SiteMiscForm(FlaskForm):
 
 
 class FederationForm(FlaskForm):
-    use_allowlist = BooleanField(_l('Allowlist instead of blocklist'))
+    federation_mode = RadioField(_l('Federation mode'), choices=[
+        ('blocklist', _l('Blocklist - deny federation with specified instances')),
+        ('allowlist', _l('Allowlist - only allow federation with specified instances'))
+    ], default='blocklist')
     allowlist = TextAreaField(_l('Allow federation with these instances'))
-    use_blocklist = BooleanField(_l('Blocklist instead of allowlist'))
     blocklist = TextAreaField(_l('Deny federation with these instances'))
     defederation_subscription = TextAreaField(_l('Auto-defederate from any instance defederated by'))
     blocked_phrases = TextAreaField(_l('Discard all posts, comments and PMs with these phrases (one per line)'))

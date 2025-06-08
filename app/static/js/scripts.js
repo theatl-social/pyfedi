@@ -44,6 +44,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupFancySelects();
     setupImagePreview();
     setupNotificationPermission();
+    setupFederationModeToggle();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
@@ -1101,6 +1102,40 @@ function setupNotificationPermission() {
                 enableNotificationWrapper.style.display = 'none';
         }
     }
+}
+
+function setupFederationModeToggle() {
+    const federationModeRadios = document.querySelectorAll('input[name="federation_mode"]');
+    const allowlistField = document.getElementById('allowlist');
+    const blocklistField = document.getElementById('blocklist');
+    
+    if (federationModeRadios.length === 0 || !allowlistField || !blocklistField) {
+        return; // Exit if we're not on the federation page
+    }
+    
+    // Get the form groups containing the textarea fields
+    const allowlistGroup = allowlistField.closest('.form-group');
+    const blocklistGroup = blocklistField.closest('.form-group');
+    
+    function toggleFields() {
+        const selectedMode = document.querySelector('input[name="federation_mode"]:checked').value;
+        
+        if (selectedMode === 'allowlist') {
+            allowlistGroup.style.display = '';
+            blocklistGroup.style.display = 'none';
+        } else {
+            allowlistGroup.style.display = 'none';
+            blocklistGroup.style.display = '';
+        }
+    }
+    
+    // Set initial state
+    toggleFields();
+    
+    // Add event listeners to radio buttons
+    federationModeRadios.forEach(radio => {
+        radio.addEventListener('change', toggleFields);
+    });
 }
 
 function getCurrentFontSize() {
