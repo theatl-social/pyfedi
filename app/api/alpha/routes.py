@@ -534,8 +534,11 @@ def post_alpha_user_login():
     if not enable_api():
         return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
-        data = request.get_json(force=True) or {}
-        return jsonify(log_user_in(data, SRC_API))
+        with limiter.limit('6/hour'):
+            data = request.get_json(force=True) or {}
+            return jsonify(log_user_in(data, SRC_API))
+    except RateLimitExceeded as ex:
+        return jsonify({"error": str(ex)}), 429
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
