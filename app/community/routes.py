@@ -46,7 +46,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, \
     instance_software, domain_from_email, referrer, flair_for_form, find_flair_id, login_required_if_private_instance, \
     possible_communities
-from app.shared.post import make_post
+from app.shared.post import make_post, sticky_post
 from app.shared.tasks import task_selector
 from feedgen.feed import FeedGenerator
 from datetime import timezone, timedelta
@@ -767,6 +767,9 @@ def add_post(actor, type):
             db.session.execute(text('UPDATE "user" SET timezone = :timezone WHERE id = :user_id'),
                                {'user_id': current_user.id, 'timezone': form.timezone.data})
             db.session.commit()
+
+        if post.sticky:
+            sticky_post(post.id, True, SRC_WEB)     # federating post's stickiness is separate from creating it
 
         resp = make_response(redirect(f"/post/{post.id}"))
         # remove cookies used to maintain state when switching post type
