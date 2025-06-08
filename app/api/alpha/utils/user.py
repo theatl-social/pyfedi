@@ -4,12 +4,13 @@ from app.api.alpha.views import user_view, reply_view, post_view, community_view
 from app.utils import authorise_api_user
 from app.api.alpha.utils.post import get_post_list
 from app.api.alpha.utils.reply import get_reply_list
-from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
+from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
 from app.models import Conversation, ChatMessage, Notification, PostReply, User, Post, Community, File
 from app.shared.user import block_another_user, unblock_another_user, subscribe_user
 from app.constants import *
 
 from sqlalchemy import text, desc, func, literal_column
+from sqlalchemy.orm.exc import NoResultFound
 
 
 def get_user(auth, data):
@@ -468,3 +469,24 @@ def put_user_mark_all_notifications_read(auth):
     # return a message, though it may not be used by the client
     res = {"mark_all_notifications_as_read":"complete"}
     return res
+
+
+
+def post_user_verify_credentials(data):
+    required(["username", "password"], data)
+    string_expected(["username", "password"], data)
+
+    username = data['username']
+    password = data['password']
+
+    if '@' in username:
+        user = User.query.filter_by(email=username, ap_id=None, deleted=False).one()
+    else:
+        user = User.query.filter_by(user_name=username, ap_id=None, deleted=False).one()
+
+    if not user.check_password(password):
+        raise NoResultFound
+
+    return {}
+
+
