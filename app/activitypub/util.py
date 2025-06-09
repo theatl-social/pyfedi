@@ -1273,22 +1273,23 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
 
                             # Alert regarding fascist meme content
                             if toxic_community and img_width < 2000:    # images > 2000px tend to be real photos instead of 4chan screenshots.
-                                try:
-                                    image_text = pytesseract.image_to_string(Image.open(BytesIO(source_image)).convert('L'), timeout=30)
-                                except Exception:
-                                    image_text = ''
-                                if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):   # chan posts usually contain the text 'Anonymous' and ' No.12345'
-                                    post = Post.query.filter_by(image_id=file.id).first()
-                                    targets_data = {'post_id': post.id}
-                                    notification = Notification(title='Review this',
-                                                                user_id=1,
-                                                                author_id=post.user_id,
-                                                                url=url_for('activitypub.post_ap', post_id=post.id),
-                                                                notif_type=NOTIF_REPORT,
-                                                                subtype='post_with_suspicious_image',
-                                                                targets=targets_data)
-                                    session.add(notification)
-                                    session.commit()
+                                if os.environ.get('ALLOW_4CHAN', None) is None:
+                                    try:
+                                        image_text = pytesseract.image_to_string(Image.open(BytesIO(source_image)).convert('L'), timeout=30)
+                                    except Exception:
+                                        image_text = ''
+                                    if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):   # chan posts usually contain the text 'Anonymous' and ' No.12345'
+                                        post = Post.query.filter_by(image_id=file.id).first()
+                                        targets_data = {'post_id': post.id}
+                                        notification = Notification(title='Review this',
+                                                                    user_id=1,
+                                                                    author_id=post.user_id,
+                                                                    url=url_for('activitypub.post_ap', post_id=post.id),
+                                                                    notif_type=NOTIF_REPORT,
+                                                                    subtype='post_with_suspicious_image',
+                                                                    targets=targets_data)
+                                        session.add(notification)
+                                        session.commit()
 
 
 def find_reply_parent(in_reply_to: str) -> Tuple[int, int, int]:
