@@ -110,6 +110,8 @@ def form_communities_to_ids(form_communities: str) -> set:
     for community_ap_id in parts:
         if not community_ap_id.startswith('!'):
             community_ap_id = '!' + community_ap_id
+        if not '@' in community_ap_id:
+            community_ap_id = community_ap_id + '@' + current_app.config['SERVER_NAME']
         community = search_for_community(community_ap_id.strip())
         if community:
             result.add(community.id)
