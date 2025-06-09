@@ -170,3 +170,5 @@ celery_worker.py
 # local volumes for docker
 media/
 pgdata/
+logs/
+tmp/
