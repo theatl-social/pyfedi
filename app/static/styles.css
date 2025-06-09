@@ -635,6 +635,9 @@ div.navbar {
 .navbar-light .navbar-nav .nav-link {
   outline-style: none;
 }
+.navbar-light .navbar-nav .nav-link .dropdown-item {
+  max-width: 300px;
+}
 
 @media (min-width: 992px) {
   ul.navbar-nav {

@@ -127,6 +127,10 @@ div.navbar {
 }
 .navbar-light .navbar-nav .nav-link {
   outline-style: none;
+
+  .dropdown-item {
+    max-width: 300px;
+  }
 }
 
 @include breakpoint(tablet) {
