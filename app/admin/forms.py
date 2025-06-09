@@ -32,6 +32,7 @@ class SiteMiscForm(FlaskForm):
     community_creation_admin_only = BooleanField(_l('Only admins can create new local communities'))
     reports_email_admins = BooleanField(_l('Notify admins about reports, not just moderators'))
     email_verification = BooleanField(_l('Require new accounts to verify their email address'))
+    captcha_enabled = BooleanField(_l('Require CAPTCHA for new account registration'))
     types = [('Open', _l('Open')), ('RequireApplication', _l('Require application')), ('Closed', _l('Closed'))]
     registration_mode = SelectField(_l('Registration mode'), choices=types, default=1, coerce=str, render_kw={'class': 'form-select'})
     application_question = TextAreaField(_l('Question to ask people applying for an account'))

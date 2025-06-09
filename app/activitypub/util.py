@@ -2525,7 +2525,7 @@ def lemmy_site_data():
           "application_email_admins": True,
           "actor_name_max_length": 20,
           "federation_enabled": True,
-          "captcha_enabled": True,
+          "captcha_enabled": get_setting('captcha_enabled', True),
           "captcha_difficulty": "medium",
           "published": site.created_at.isoformat(),
           "updated": site.updated.isoformat(),
