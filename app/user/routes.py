@@ -1083,7 +1083,7 @@ def import_settings_task(user_id, filename):
                               "to": [community.public_url()],
                               "object": community.public_url(),
                               "type": "Follow",
-                              "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+                              "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
                             }
                             send_post_request(community.ap_inbox_url, follow, user.private_key,
                                               user.public_url() + '#main-key')

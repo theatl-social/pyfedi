@@ -1227,7 +1227,7 @@ def process_inbox_request(request_json, store_ap_json):
                                         if community_to_remove.instance.domain == 'a.gup.pe':
                                             join_request = CommunityJoinRequest.query.filter_by(user_id=fm_user.id, community_id=community_to_remove.id).first()
                                             if join_request:
-                                                follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+                                                follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
                                         undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
                                         follow = {'actor': fm_user.public_url(), 'to': [community_to_remove.public_url()], 'object': community_to_remove.public_url(), 'type': 'Follow', 'id': follow_id}
                                         undo = {'actor': fm_user.public_url(), 'to': [community_to_remove.public_url()], 'type': 'Undo', 'id': undo_id, 'object': follow}

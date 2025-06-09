@@ -556,7 +556,7 @@ def _feed_remove_community(community_id: int, current_feed_id: int, user_id: int
                     if community.instance.domain == 'a.gup.pe':
                         join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
                         if join_request:
-                            follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+                            follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
                     undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
                     follow = {
                         "actor": user.public_url(),
@@ -825,7 +825,7 @@ def do_feed_subscribe(actor, user_id):
                       "to": [feed.public_url()],
                       "object": feed.public_url(),
                       "type": "Follow",
-                      "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+                      "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
                     }
                     send_post_request(feed.ap_inbox_url, follow, user.private_key, user.public_url() + '#main-key', timeout=10)
                     
@@ -876,7 +876,7 @@ def feed_unsubscribe(actor):
                         if feed.instance.domain == 'a.gup.pe':
                             join_request = FeedJoinRequest.query.filter_by(user_id=current_user.id, feed_id=feed.id).first()
                             if join_request:
-                                follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+                                follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
                         undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
                         follow = {
                           "actor": current_user.public_url(),

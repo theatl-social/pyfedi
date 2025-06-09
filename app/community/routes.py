@@ -586,7 +586,7 @@ def do_subscribe(actor, user_id, admin_preload=False, joined_via_feed=False):
                       "to": [community.public_url()],
                       "object": community.public_url(),
                       "type": "Follow",
-                      "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+                      "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
                     }
                     send_post_request(community.ap_inbox_url, follow, user.private_key, user.public_url() + '#main-key', timeout=10)
 
@@ -629,7 +629,7 @@ def unsubscribe(actor):
                         if community.instance.domain == 'a.gup.pe':
                             join_request = CommunityJoinRequest.query.filter_by(user_id=current_user.id, community_id=community.id).first()
                             if join_request:
-                                follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+                                follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
                         undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
                         follow = {
                           "actor": current_user.public_url(),
@@ -692,7 +692,7 @@ def join_then_add(actor):
                   "to": [community.public_url()],
                   "object": community.public_url(),
                   "type": "Follow",
-                  "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+                  "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
                 }
                 send_post_request(community.ap_inbox_url, follow, current_user.private_key,
                                   current_user.public_url() + '#main-key')
@@ -1939,7 +1939,7 @@ def community_leave_all():
                         if community.instance.domain == 'a.gup.pe':
                             join_request = CommunityJoinRequest.query.filter_by(user_id=current_user.id, community_id=community.id).first()
                             if join_request:
-                                follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+                                follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
                         undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
                         follow = {
                           "actor": current_user.public_url(),
