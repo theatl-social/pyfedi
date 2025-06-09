@@ -1113,22 +1113,46 @@ def user_filters_replies(user_id):
 def moderating_communities(user_id):
     if user_id is None or user_id == 0:
         return []
-    return Community.query.join(CommunityMember, Community.id == CommunityMember.community_id).\
+    communities = Community.query.join(CommunityMember, Community.id == CommunityMember.community_id).\
         filter(Community.banned == False).\
         filter(or_(CommunityMember.is_moderator == True, CommunityMember.is_owner == True)). \
         filter(CommunityMember.is_banned == False). \
         filter(CommunityMember.user_id == user_id).order_by(Community.title).all()
+    
+    # Track display names to identify duplicates
+    display_name_counts = {}
+    for community in communities:
+        display_name = community.title
+        display_name_counts[display_name] = display_name_counts.get(display_name, 0) + 1
+    
+    # Flag communities as duplicates if their display name appears more than once
+    for community in communities:
+        community.is_duplicate = display_name_counts[community.display_name()] > 1
+    
+    return communities
 
 
 @cache.memoize(timeout=300)
 def joined_communities(user_id):
     if user_id is None or user_id == 0:
         return []
-    return Community.query.join(CommunityMember, Community.id == CommunityMember.community_id).\
+    communities = Community.query.join(CommunityMember, Community.id == CommunityMember.community_id).\
         filter(Community.banned == False). \
         filter(CommunityMember.is_moderator == False, CommunityMember.is_owner == False). \
         filter(CommunityMember.is_banned == False). \
         filter(CommunityMember.user_id == user_id).order_by(Community.title).all()
+    
+    # track display names to identify duplicates
+    display_name_counts = {}
+    for community in communities:
+        display_name = community.title
+        display_name_counts[display_name] = display_name_counts.get(display_name, 0) + 1
+    
+    # flag communities as duplicates if their display name appears more than once
+    for community in communities:
+        community.is_duplicate = display_name_counts[community.display_name()] > 1
+    
+    return communities
 
 
 def joined_or_modding_communities(user_id):
