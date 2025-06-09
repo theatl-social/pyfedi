@@ -7,92 +7,87 @@
 {% set active_child = 'list_communities' -%}
 
 {% block app_content -%}
-<script src="/static/js/coolfieldset.js?v=3"></script>
-<div class="row mt-3">
-    <div class="col-auto">
-        <div class="btn-group">
-            <a href="{{ url_for('community.add_local') }}" class="btn btn-outline-secondary" aria-label="{{ _('Create local community') }}">{{ _('Create local community') }}</a>
-            <a href="{{ url_for('community.add_remote') }}" class="btn btn-outline-secondary" aria-label="{{ _('Add community from another instance') }}">{{ _('Add remote community') }}</a>
-        </div>
+<!--<script src="/static/js/coolfieldset.js?v=3"></script>-->
+
+<div class="row align-items-center my-3">
+  <div class="col-auto me-auto">
+    <div class="btn-group" role="group">
+      <a href="/communities" aria-label="{{ _('All communities') }}" class="btn {{ 'btn-primary' if request.path == '/communities' else 'btn-outline-secondary' }}">
+        {{ _('All') }}
+      </a>
+      <a href="/communities/local" aria-label="{{ _('Communities on this server') }}" class="btn {{ 'btn-primary' if request.path == '/communities/local' else 'btn-outline-secondary' }}">
+        {{ _('Local') }}
+      </a>
+      {% if current_user.is_authenticated -%}
+        <a href="/communities/subscribed" aria-label="{{ _('Joined communities') }}" class="btn {{ 'btn-primary' if request.path == '/communities/subscribed' else 'btn-outline-secondary' }}">
+          {{ _('Joined') }}
+        </a>
+        <a href="/communities/notsubscribed" aria-label="{{ _('Not Joined communities') }}" class="btn {{ 'btn-primary' if request.path == '/communities/notsubscribed' else 'btn-outline-secondary' }}">
+          {{ _('Not Joined') }}
+        </a>
+      {% endif -%}
     </div>
-</div>
-<div class="row">
-    <div class="col-12">
-        <fieldset id="community_filters" class="mt-4 mb-1 pb-3 coolfieldset  {{ 'collapsed' if request.cookies.get('fieldset_community_filters_state', 'collapsed') == 'collapsed' and request.args.get('search', '') == '' }}">
-            <legend class="w-auto">{{ _('Filters') }}</legend>
-            <div class="row mb-3">
-                <div class="col-auto">
-                    <div class="btn-group">
-                        <a href="/communities" aria-label="{{ _('All communities') }}" class="btn {{ 'btn-primary' if request.path == '/communities' else 'btn-outline-secondary' }}">
-                            {{ _('All') }}
-                        </a>
-                        <a href="/communities/local" aria-label="{{ _('Communities on this server') }}" class="btn {{ 'btn-primary' if request.path == '/communities/local' else 'btn-outline-secondary' }}">
-                            {{ _('Local') }}
-                        </a>
-                        {% if current_user.is_authenticated -%}
-                            <a href="/communities/subscribed" aria-label="{{ _('Joined communities') }}" class="btn {{ 'btn-primary' if request.path == '/communities/subscribed' else 'btn-outline-secondary' }}">
-                                {{ _('Joined') }}
-                            </a>
-                            <a href="/communities/notsubscribed" aria-label="{{ _('Not Joined communities') }}" class="btn {{ 'btn-primary' if request.path == '/communities/notsubscribed' else 'btn-outline-secondary' }}">
-                                {{ _('Not Joined') }}
-                            </a>
-                        {% endif -%}
-                    </div>
-                </div>
-            </div>
-             <form id="searchCommunities" method="get" class="row">
-                  {% if topics -%}
-                      <div class="col-3">
-                          <label for="topic_id">{{ _('Topic') }}:</label>
-                          <select name="topic_id" id="topic_id"
-                                  class="form-control-sm form-select submit_on_change"
-                                  aria-label="{{ _('Choose a topic to filter communities by') }}"
-                                >
-                              <option value="0">{{ _('All') }}</option>
-                              {% for topic in topics -%}
-                                  <option value="{{ topic.id }}" {{ 'selected' if topic.id == topic_id }}>{{ topic.name }}
-                                  </option>
-                              {% endfor -%}
-                          </select>
-                      </div>
-                  {% endif -%}
-                  {% if server_has_feeds -%}
-                            <div class="col-3">
-                                <label for="feed_id">{{ _('Feed') }}:</label>
-                                <select name="feed_id" id="feed_id" class="form-control-sm form-select submit_on_change"
-                                        aria-label="{{ _('Choose a public feed to filter communities by') }}">
-                                    <option value="0">{{ _('All') }}</option>
-                                    {% for feed in public_feeds -%}
-                                        <option value="{{ feed.id }}" {{ 'selected' if feed.id == feed_id }}>{{ feed.title }}
-                                        </option>
-                                    {% endfor -%}
-                                </select></label>
-                            </div>
-                  {% endif -%}
-                  {% if languages -%}
-                      <div class="col-3">
-                          <label for="language_id">{{ _('Language') }}:</label>
-                          <select name="language_id" id="language_id" class="form-control-sm form-select submit_on_change"
-                                  aria-label="{{ _('Choose a language to filter communities by') }}">
-                              <option value="0">{{ _('All') }}</option>
-                              {% for language in languages -%}
-                                  <option value="{{ language.id }}" {{ 'selected' if language.id == language_id }}>{{ language.name }}
-                                  </option>
-                              {% endfor -%}
-                          </select>
-                      </div>
-                  {% endif -%}
-                  <div class="col-3">
-                      <label for="search_text">{{ _('Search') }}:<br></label>
-                      <input id="search_text" class="form-control" type="search"
-                             name="search"
-                             placeholder=""
-                             value="{{ search }}">
-                  </div>
-              </form>
-        </fieldset>
+  </div>
+  <div class="col-auto">
+    <div class="d-flex justify-content-end align-items-center">
+      <div class="p-1">
+        <a href="{{ url_for('community.add_local') }}" class="btn btn-primary p-1" aria-label="{{ _('Create local community') }}">{{ _('Create local community') }}</a>
+      </div>
+      <div class="p-1">
+        <a href="{{ url_for('community.add_remote') }}" class="btn btn-primary p-1" aria-label="{{ _('Add community from another instance') }}">{{ _('Add remote community') }}</a>
+      </div>
     </div>
+  </div>
 </div>
+<form id="searchCommunities" method="get" class="row">
+  {% if topics -%}
+    <div class="col">
+      <label for="topic_id">{{ _('Topic') }}:</label>
+      <select name="topic_id" id="topic_id"
+          class="form-control-sm form-select submit_on_change"
+          aria-label="{{ _('Choose a topic to filter communities by') }}">
+        <option value="0">{{ _('All') }}</option>
+        {% for topic in topics -%}
+          <option value="{{ topic.id }}" {{ 'selected' if topic.id == topic_id }}>{{ topic.name }}
+          </option>
+        {% endfor -%}
+      </select>
+    </div>
+  {% endif -%}
+  {% if server_has_feeds -%}
+    <div class="col">
+      <label for="feed_id">{{ _('Feed') }}:</label>
+      <select name="feed_id" id="feed_id" class="form-control-sm form-select submit_on_change"
+          aria-label="{{ _('Choose a public feed to filter communities by') }}">
+        <option value="0">{{ _('All') }}</option>
+        {% for feed in public_feeds -%}
+          <option value="{{ feed.id }}" {{ 'selected' if feed.id == feed_id }}>{{ feed.title }}
+          </option>
+        {% endfor -%}
+      </select></label>
+    </div>
+  {% endif -%}
+  {% if languages -%}
+    <div class="col">
+      <label for="language_id">{{ _('Language') }}:</label>
+      <select name="language_id" id="language_id" class="form-control-sm form-select submit_on_change"
+          aria-label="{{ _('Choose a language to filter communities by') }}">
+        <option value="0">{{ _('All') }}</option>
+        {% for language in languages -%}
+          <option value="{{ language.id }}" {{ 'selected' if language.id == language_id }}>{{ language.name }}
+          </option>
+        {% endfor -%}
+      </select>
+    </div>
+  {% endif -%}
+  <div class="col">
+    <label for="search_text">{{ _('Search') }}:<br></label>
+    <input id="search_text" class="form-control" type="search"
+        name="search"
+        placeholder=""
+        value="{{ search }}">
+  </div>
+</form>
 {% if communities and communities.items -%}
     <div class="table-responsive-md">
         <table class="communities_table table table-striped table-hover w-100">
