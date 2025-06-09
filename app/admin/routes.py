@@ -913,7 +913,7 @@ def admin_communities():
 
     communities = Community.query
     if search:
-        communities = communities.filter(Community.title.ilike(f"%{search}%"))
+        communities = communities.filter(or_(Community.title.ilike(f"%{search}%"), Community.ap_id.ilike(f"%{search}%")))
     communities = communities.order_by(text('"community".' + sort_by))
     communities = communities.paginate(page=page, per_page=1000, error_out=False)
 
