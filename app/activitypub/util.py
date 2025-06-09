@@ -1273,7 +1273,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
 
                             # Alert regarding fascist meme content
                             if toxic_community and img_width < 2000:    # images > 2000px tend to be real photos instead of 4chan screenshots.
-                                if os.environ.get('ALLOW_4CHAN', None) is not None:
+                                if os.environ.get('ALLOW_4CHAN', None) is None:
                                     try:
                                         image_text = pytesseract.image_to_string(Image.open(BytesIO(source_image)).convert('L'), timeout=30)
                                     except Exception:
