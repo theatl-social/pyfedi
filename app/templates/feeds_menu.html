@@ -1,4 +1,4 @@
-<ul>
+<ul class="text-end text-lg-start">
   {% if menu_instance_feeds -%}
        {% for feed_menu_item in menu_instance_feeds -%}
             <li><a class="dropdown-item{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a></li>

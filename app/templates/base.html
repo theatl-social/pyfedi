@@ -264,7 +264,7 @@
                             </li>                            
                             <li class="nav-item dropdown{% if active_parent == 'account' %} active{% endif %}">
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/u/{{ current_user.link() }}" aria-haspopup="true" aria-expanded="false">{{ _('Account') }}</a>
-                                <ul class="dropdown-menu">
+                                <ul class="dropdown-menu text-end text-lg-start">
                                   <li><a class="dropdown-item{% if active_child == 'view_profile' %} active{% endif %}" href="/u/{{ current_user.link() }}">{{ _('View profile') }}</a></li>
                                   <li><a class="dropdown-item{% if active_child == 'edit_profile' %} active{% endif %}" href="/u/{{ current_user.link() }}/profile">{{ _('Edit profile') }}</a></li>
                                   <li><a class="dropdown-item{% if active_child == 'chats' %} active{% endif %}" href="/chat">{{ _('Chats') }}</a></li>
@@ -284,7 +284,7 @@
                             {% if current_user.is_staff() or current_user.is_admin() %}
                                 <li class="nav-item dropdown{% if active_parent == 'admin' %} active{% endif %}">
                                     <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/admin/" aria-haspopup="true" aria-expanded="false">{{ _('Admin') }}</a>
-                                    <ul class="dropdown-menu">
+                                    <ul class="dropdown-menu text-end text-lg-start">
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_site' }}" href="{{ url_for('admin.admin_home') }}">{{ _('Home') }}</a></li>
                                       {% if user_access('', current_user.id) -%}
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_content' }}" href="{{ url_for('admin.admin_content', show='spammy', days='3') }}">{{ _('Spam') }}</a></li>

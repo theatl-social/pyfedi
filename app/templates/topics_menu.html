@@ -1,4 +1,4 @@
-<ul>
+<ul class="text-end text-lg-start">
   {% if menu_topics -%}
        {% for topic_menu_item in menu_topics -%}
             <li><a class="dropdown-item{% if topic and topic.id == topic_menu_item.id%} active{% endif %}" href="/topic/{{ topic_menu_item.path() }}">{{ topic_menu_item.name }}</a></li>
