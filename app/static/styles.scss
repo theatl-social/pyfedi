@@ -134,7 +134,11 @@ div.navbar {
 
 .dropdown-menu {
   .dropdown-item {
+    @include breakpoint(tablet) {
+      max-width: 200px;
+    }
     white-space: break-spaces;
+    break-inside: avoid;
   }
 }
 
@@ -215,6 +219,63 @@ div.navbar {
 
 .dropdown-divider {
   margin-right: 10px;
+}
+
+.communities_menu {
+  @include breakpoint(tablet) {
+    width: 70vw;
+  }
+
+  h4 {
+    font-size: 1.2rem;
+  }
+
+  h6 {
+    font-size: 1rem;
+  }
+
+
+  .dropdown-item {
+    padding-left: 0;
+  }
+
+  .dropdown-header {
+    margin-left: 0;
+    padding-left: 0;
+    break-after: avoid-column;
+    text-align: right;
+    @include breakpoint(tablet) {
+      text-align: left;
+    }
+  }
+
+  ul {
+    break-after: avoid-column;
+  }
+
+  @include breakpoint(laptop) {
+    left: -166px!important;
+  }
+
+  .communities_menu_body {
+    @include breakpoint(tablet) {
+      columns: 200px 5;
+    }
+  }
+
+  .col-12 {
+    margin-left: 0;
+  }
+
+  ul {
+    margin-left: 0;
+    list-style-type: none;
+    padding-left: 0;
+  }
+
+  ul * > * {
+    margin-left: 0!important;
+  }
 }
 
 .topics_menu, .feeds_menu {

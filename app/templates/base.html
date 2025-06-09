@@ -222,46 +222,17 @@
                     <ul class="nav navbar-nav text-end text-lg-start">
                         {% if current_user.is_anonymous -%}
                             <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %}">
-                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/topics" aria-haspopup="true" aria-expanded="false">{{ _('Topics') }}</a>
-                                <ul class="dropdown-menu">
-                                  {% if menu_topics %}
-                                       {% for topic_menu_item in menu_topics -%}
-                                            <li><a class="dropdown-item{% if topic and topic.id == topic_menu_item.id%} active{% endif %}" href="/topic/{{ topic_menu_item.path() }}">{{ topic_menu_item.name }}</a></li>
-                                       {% endfor -%}
-                                       <li><a class="dropdown-item{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('More topics') }}</a></li>
-                                       <li><hr class="dropdown-divider"></li>
-                                  {% else %}
-                                    <li><a class="dropdown-item{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('Browse by topic') }}</a></li>
-                                  {% endif %}
-                                  <li><a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a></li>
-                                </ul>
+                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/communities"  aria-haspopup="true" aria-expanded="false">{{ _('Communities') }}</a>
+                                <div class="dropdown-menu communities_menu" hx-get="{{ url_for('main.communities_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
                             </li>
-                            <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %}">
-                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/feeds"  aria-haspopup="true" aria-expanded="false">{{ _('Feeds') }}</a>
-                                <ul class="dropdown-menu">
-                                  {% if menu_instance_feeds -%}
-                                       {% for feed_menu_item in menu_instance_feeds -%}
-                                            <li><a class="dropdown-item{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a></li>
-                                       {% endfor -%}
-                                       <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></li>
-                                  {% else -%}
-                                    <li><a class="dropdown-item{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></li>
-                                  {% endif -%}
-                                </ul>
-                            </li>                               
                             <li class="nav-item"><a class="nav-link" href="/auth/login">{{ _('Log in') }}</a></li>
                             <li class="nav-item"><a class="nav-link" href="/auth/register">{{ _('Register') }}</a></li>
                             <li class="nav-item"><a class="nav-link" href="/donate">{{ _('Donate') }}</a></li>
                         {% else %}
                             <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %}">
-                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/topics"  aria-haspopup="true" aria-expanded="false">{{ _('Topics') }}</a>
-                                <div class="dropdown-menu topics_menu" hx-get="{{ url_for('main.topics_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
+                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/communities"  aria-haspopup="true" aria-expanded="false">{{ _('Communities') }}</a>
+                                <div class="dropdown-menu communities_menu" hx-get="{{ url_for('main.communities_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
                             </li>
-                            <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %}">
-                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/u/myfeeds"  aria-haspopup="true" aria-expanded="false">{{ _('Feeds') }}</a>
-                                <div class="dropdown-menu feeds_menu" hx-get="{{ url_for('main.feeds_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
-                            </li>                            
                             <li class="nav-item dropdown{% if active_parent == 'account' %} active{% endif %}">
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/u/{{ current_user.link() }}" aria-haspopup="true" aria-expanded="false">{{ _('Account') }}</a>
                                 <ul class="dropdown-menu text-end text-lg-start">
