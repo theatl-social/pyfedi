@@ -86,10 +86,19 @@ def before_request():
 
 @app.after_request
 def after_request(response):
-    if 'auth/register' not in request.path:
-        response.headers['Content-Security-Policy'] = f"script-src 'self' 'nonce-{g.nonce}'"
-        response.headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains; preload'
-        response.headers['X-Content-Type-Options'] = 'nosniff'
-        if '/embed' not in request.path:
-            response.headers['X-Frame-Options'] = 'DENY'
+    # Don't set cookies for static resources or ActivityPub responses to make them cachable
+    if request.path.startswith('/static/') or request.path.startswith('/bootstrap/static/') or response.content_type == 'application/activity+json':
+        # Remove session cookies that mess up caching
+        if 'Set-Cookie' in response.headers:
+            del response.headers['Set-Cookie']
+        # Cache headers for static resources
+        if request.path.startswith('/static/') or request.path.startswith('/bootstrap/static/'):
+            response.headers['Cache-Control'] = 'public, max-age=31536000'  # 1 year
+    else:
+        if 'auth/register' not in request.path:
+            response.headers['Content-Security-Policy'] = f"script-src 'self' 'nonce-{g.nonce}'"
+            response.headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains; preload'
+            response.headers['X-Content-Type-Options'] = 'nosniff'
+            if '/embed' not in request.path:
+                response.headers['X-Frame-Options'] = 'DENY'
     return response
