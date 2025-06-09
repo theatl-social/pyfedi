@@ -33,7 +33,7 @@ function connect() {
                     new Notification("{{ g.site.name }}", {
                         body: `${data['num_notifs']} notifications.`,
                         icon: "/static/images/favicon-32x32.png",
-                        tag: '{{ session["nonce"] }}'
+                        tag: '{{ nonce }}'
                     });
                 }
 

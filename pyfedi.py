@@ -25,7 +25,7 @@ cli.register(app)
 def app_context_processor():
     return dict(getmtime=getmtime, instance_domain=current_app.config['SERVER_NAME'], debug_mode=current_app.debug,
                 arrow=arrow, locale=g.locale if hasattr(g, 'locale') else None, notif_server=current_app.config['NOTIF_SERVER'],
-                site=g.site if hasattr(g, 'site') else None,
+                site=g.site if hasattr(g, 'site') else None, nonce=g.nonce if hasattr(g, 'nonce') else None,
                 POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE, notif_id_to_string=notif_id_to_string,
                 POST_TYPE_ARTICLE=POST_TYPE_ARTICLE, POST_TYPE_VIDEO=POST_TYPE_VIDEO, POST_TYPE_POLL=POST_TYPE_POLL,
                 SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
@@ -65,9 +65,8 @@ with app.app_context():
 
 @app.before_request
 def before_request():
-    # Only regenerate nonce for regular page requests, not HTMX
-    if 'HX-Request' not in request.headers:
-        session['nonce'] = gibberish()
+    # Store nonce in g (g is per-request, unlike session)
+    g.nonce = gibberish()
     g.locale = str(get_locale())
     if request.path != '/inbox' and not request.path.startswith('/static/'):        # do not load g.site on shared inbox, to increase chance of duplicate detection working properly
         g.site = Site.query.get(1)
@@ -88,7 +87,7 @@ def before_request():
 @app.after_request
 def after_request(response):
     if 'auth/register' not in request.path:
-        response.headers['Content-Security-Policy'] = f"script-src 'self' 'nonce-{session['nonce']}'"
+        response.headers['Content-Security-Policy'] = f"script-src 'self' 'nonce-{g.nonce}'"
         response.headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains; preload'
         response.headers['X-Content-Type-Options'] = 'nosniff'
         if '/embed' not in request.path:

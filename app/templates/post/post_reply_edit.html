@@ -32,7 +32,7 @@
             </form>
 
             {% if markdown_editor %}
-                <script nonce="{{ session['nonce'] }}">
+                <script nonce="{{ nonce }}">
                     window.addEventListener("load", function () {
                         var downarea = new DownArea({
                             elem: document.querySelector('#body'),

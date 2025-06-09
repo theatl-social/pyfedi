@@ -13,7 +13,7 @@
 
 {% block app_content -%}
 <script src="/static/js/coolfieldset.js?v=3"></script>
-<script type="text/javascript" nonce="{{ session['nonce'] }}">
+<script type="text/javascript" nonce="{{ nonce }}">
     var toBeHidden = Array();   // this list of comment IDs will be iterated over in setupHideButtons() and the 'hide' button clicked
 </script>
 <div class="row">
@@ -45,7 +45,7 @@
                                 </form>
                                 {% if not low_bandwidth -%}
                                     {% if markdown_editor -%}
-                                        <script nonce="{{ session['nonce'] }}">
+                                        <script nonce="{{ nonce }}">
                                             window.addEventListener("load", function () {
                                                 var downarea = new DownArea({
                                                     elem: document.querySelector('#body'),
@@ -150,7 +150,7 @@
         {% include "_side_pane.html" %}
     {% endwith -%}
 </div>
-<script nonce="{{ session['nonce'] }}">
+<script nonce="{{ nonce }}">
     window.addEventListener("load", function () {
         currentPost = document.querySelector('.post_col');  // set the current post, so A and Z voting keys work when viewing a post page
     });

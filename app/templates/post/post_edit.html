@@ -12,7 +12,7 @@
 {% block app_content %}
 <script src="/static/js/coolfieldset.js?v=3"></script>
 <script src="/static/js/tomselect/tom-select.complete.min.js"></script>
-<script nonce="{{ session['nonce'] }}">
+<script nonce="{{ nonce }}">
     function checkAndCopyTitle() {
       const retrieved = document.getElementById('retrieved_title');
       const title = document.getElementById('title');
@@ -74,7 +74,7 @@
                     </div>
                     <div class="col-6 text-right">
                         {% if markdown_editor %}
-                            <script nonce="{{ session['nonce'] }}">
+                            <script nonce="{{ nonce }}">
                                 window.addEventListener("load", function () {
                                     var downarea = new DownArea({
                                         elem: document.querySelector('#body'),

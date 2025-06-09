@@ -196,7 +196,7 @@
                 <a class="nav-link d-lg-none" href="/notifications" aria-label="{{ _('Notifications') }}">
                     {% if current_user.unread_notifications -%}
                         <span class="fe fe-bell red"></span> <span class="red unreadNotificationDisplay">{{ current_user.unread_notifications }}</span>
-                        <script type="text/javascript" nonce="{{ session['nonce'] }}">
+                        <script type="text/javascript" nonce="{{ nonce }}">
                             let unreadNotifications = {{ current_user.unread_notifications }};
                             if ('setAppBadge' in navigator) { // Show a number badge on pwa icon
                               navigator.setAppBadge({{ current_user.unread_notifications }});
@@ -204,7 +204,7 @@
                         </script>
                     {% else -%}
                         <span class="fe fe-bell"></span> <span class="red unreadNotificationDisplay"></span>
-                        <script type="text/javascript" nonce="{{ session['nonce'] }}">
+                        <script type="text/javascript" nonce="{{ nonce }}">
                             let unreadNotifications = 0;
                             if ('setAppBadge' in navigator) {
                               navigator.clearAppBadge();
@@ -344,8 +344,8 @@
     {% block scripts -%}
     {% endblock -%}
     {% if not low_bandwidth -%}
-        {{ str(bootstrap.load_js()).replace('<script ', '<script nonce="' + session['nonce'] + '" ')|safe }}
-        <script src="{{ url_for('static', filename='js/lightbox/baguetteBox.js') }}" nonce="{{ session['nonce'] }}"></script>
+        {{ str(bootstrap.load_js()).replace('<script ', '<script nonce="' + nonce + '" ')|safe }}
+        <script src="{{ url_for('static', filename='js/lightbox/baguetteBox.js') }}" nonce="{{ nonce }}"></script>
     {% endif -%}
     <script type="text/javascript" src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/scripts.js', changed=getmtime('js/scripts.js')) }}"></script>
@@ -355,7 +355,7 @@
         {% endif -%}
         <script type="text/javascript" src="{{ url_for('static', filename='js/markdown/downarea.js', changed=getmtime('js/markdown/downarea.js')) }}"></script>
         {% if notif_server and current_user.is_authenticated -%}
-            <script type="text/javascript" nonce="{{ session['nonce'] }}">
+            <script type="text/javascript" nonce="{{ nonce }}">
                 {% include "notifs.js" %}
             </script>
         {% endif -%}

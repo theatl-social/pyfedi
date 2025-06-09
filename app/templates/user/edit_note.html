@@ -52,7 +52,7 @@
             </div>
         </div>
     </div>
-    <script nonce="{{ session['nonce'] }}" type="text/javascript">
+    <script nonce="{{ nonce }}" type="text/javascript">
         function addtext(text) {
             var note = document.getElementById("note");
             newtext = note.value.replaceAll(text, "");

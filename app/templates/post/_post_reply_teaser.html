@@ -144,7 +144,7 @@
     {% endif -%}
 
     {% if collapsed -%}
-        <script nonce="{{ session['nonce'] }}" type="text/javascript">
+        <script nonce="{{ nonce }}" type="text/javascript">
             if (typeof(toBeHidden) === 'undefined') {
                 toBeHidden = Array();
             }

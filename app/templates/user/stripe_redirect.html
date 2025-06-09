@@ -15,8 +15,8 @@
 {% endblock %}
 
 {% block end_scripts %}
-    <script src="https://js.stripe.com/v3/" nonce="{{ session['nonce'] }}"></script>
-    <script nonce="{{ session['nonce'] }}">
+    <script src="https://js.stripe.com/v3/" nonce="{{ nonce }}"></script>
+    <script nonce="{{ nonce }}">
         document.addEventListener("DOMContentLoaded", function () {
             var stripe = Stripe('{{ key }}');
             stripe.redirectToCheckout({ sessionId: '{{ stripe_session.id }}' });

@@ -23,7 +23,7 @@
 
         {% if send_to %}
         <div id="redirectMessage"></div>
-        <script defer nonce="{{ session['nonce'] }}">
+        <script defer nonce="{{ nonce }}">
             window.addEventListener("load", function () {
                 var redirectTimeout;
                 var cookieName = "remote_instance_url";
