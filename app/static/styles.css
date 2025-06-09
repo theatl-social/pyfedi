@@ -707,6 +707,42 @@ div.navbar {
   margin-right: 10px;
 }
 
+.communities_menu {
+  width: 70vw;
+}
+.communities_menu .dropdown-item {
+  padding-left: 0;
+}
+.communities_menu .dropdown-header {
+  break-after: avoid-column;
+}
+.communities_menu ul {
+  break-after: avoid-column;
+}
+@media (min-width: 1280px) {
+  .communities_menu {
+    left: -166px !important;
+  }
+}
+.communities_menu .communities_menu_body {
+  columns: 300px 5;
+}
+.communities_menu .col-12 {
+  margin-left: 0;
+}
+.communities_menu .dropdown-header {
+  margin-left: 0;
+  padding-left: 0;
+}
+.communities_menu ul {
+  margin-left: 0;
+  list-style-type: none;
+  padding-left: 0;
+}
+.communities_menu ul * > * {
+  margin-left: 0 !important;
+}
+
 .topics_menu ul, .feeds_menu ul {
   margin-left: 0;
   list-style-type: none;
