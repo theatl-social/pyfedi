@@ -125,11 +125,13 @@ div.navbar {
     margin-right: 20px;
   }
 }
-.navbar-light .navbar-nav .nav-link {
-  outline-style: none;
 
+.navbar-light .navbar-nav {
   .dropdown-item {
     max-width: 300px;
+  }
+  .nav-link {
+    outline-style: none;
   }
 }
 
