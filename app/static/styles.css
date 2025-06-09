@@ -637,7 +637,7 @@ div.navbar {
 }
 
 .dropdown-menu .dropdown-item {
-  max-width: 300px;
+  white-space: break-spaces;
 }
 
 @media (min-width: 992px) {
