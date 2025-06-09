@@ -1127,7 +1127,7 @@ def moderating_communities(user_id):
     
     # Flag communities as duplicates if their display name appears more than once
     for community in communities:
-        community.is_duplicate = display_name_counts[community.display_name()] > 1
+        community.is_duplicate = display_name_counts[community.title] > 1
     
     return communities
 
@@ -1150,7 +1150,7 @@ def joined_communities(user_id):
     
     # flag communities as duplicates if their display name appears more than once
     for community in communities:
-        community.is_duplicate = display_name_counts[community.display_name()] > 1
+        community.is_duplicate = display_name_counts[community.title] > 1
     
     return communities
 
