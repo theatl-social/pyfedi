@@ -837,7 +837,7 @@ class User(UserMixin, db.Model):
     reply_hide_threshold = db.Column(db.Integer, default=-20)
     feed_auto_follow = db.Column(db.Boolean, default=True)  # does the user want to auto-follow feed communities
     feed_auto_leave = db.Column(db.Boolean, default=True)   # does the user want to auto-leave feed communities
-    accept_private_messages = db.Column(db.Integer, default=1)         # None or 0 = do not accept, 1 = This instance, 2 = Trusted instances, 3 = All instances
+    accept_private_messages = db.Column(db.Integer, default=3)         # None or 0 = do not accept, 1 = This instance, 2 = Trusted instances, 3 = All instances
     google_oauth_id = db.Column(db.String(64), unique=True, index=True)
     hide_low_quality = db.Column(db.Boolean, default=False)
     additional_css = db.Column(db.Text)
