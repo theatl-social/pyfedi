@@ -65,10 +65,10 @@
             {{ _("Hide every post from author's instance: %(name)s", name=post.instance.domain) }}</a></li>
         {% endif -%}
     {% endif -%}
-{% endif -%}
-{% if post.type == POST_TYPE_IMAGE and post.image.hash and (current_user.is_admin() or current_user.is_staff()) -%}
-    <li><a href="{{ url_for('post.post_block_image', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline"><span class="fe fe-block red"></span>
-        {{ _('Ban image everywhere forever') }}</a></li>
+    {% if post.type == POST_TYPE_IMAGE and post.image.hash and (current_user.is_admin() or current_user.is_staff()) -%}
+        <li><a href="{{ url_for('post.post_block_image', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline"><span class="fe fe-block red"></span>
+            {{ _('Ban image everywhere forever') }}</a></li>
+    {% endif -%}
 {% endif -%}
 {% if post.ap_id -%}
     <li><a href="{{ post.ap_id }}" style="white-space: normal" rel="nofollow noindex" class="dropdown-item no-underline"><span class="fe fe-external"></span>
