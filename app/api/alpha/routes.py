@@ -8,7 +8,7 @@ from app.api.alpha.utils import get_site, post_site_block, \
                                 get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, put_reply, post_reply_mark_as_read, get_reply, \
                                 post_reply_delete, post_reply_report, post_reply_remove, \
                                 get_community_list, get_community, post_community_follow, post_community_block, post_community, put_community, put_community_subscribe, post_community_delete, \
-                                get_user, post_user_block, get_user_unread_count, get_user_replies, post_user_mark_all_as_read, put_user_subscribe, put_user_save_user_settings, \
+                                get_user, post_user_block, get_user_unread_count, get_user_replies, post_user_mark_all_as_read, put_user_subscribe, put_user_save_user_settings, post_user_verify_credentials, \
                                 get_private_message_list, \
                                 post_upload_image, post_upload_community_image, post_upload_user_image, \
                                 get_user_notifications, put_user_notification_state, get_user_notifications_count, \
@@ -23,6 +23,15 @@ from sqlalchemy.orm.exc import NoResultFound
 
 def enable_api():
     return True if current_app.debug  or current_app.config['ENABLE_ALPHA_API'] == 'true' else False
+
+
+def is_trusted_request():
+    if current_app.debug:
+        return True
+    if request.remote_addr in current_app.config['SKIP_RATE_LIMIT_IPS']:
+        return True
+    return False
+
 
 # Site
 @bp.route('/api/alpha/site', methods=['GET'])
@@ -534,8 +543,11 @@ def post_alpha_user_login():
     if not enable_api():
         return jsonify({'error': 'alpha api is not enabled'}), 400
     try:
-        data = request.get_json(force=True) or {}
-        return jsonify(log_user_in(data, SRC_API))
+        with limiter.limit('6/hour', exempt_when=is_trusted_request):
+            data = request.get_json(force=True) or {}
+            return jsonify(log_user_in(data, SRC_API))
+    except RateLimitExceeded as ex:
+        return jsonify({"error": str(ex)}), 429
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
@@ -659,6 +671,22 @@ def put_alpha_user_notifications_read():
     try:
         auth = request.headers.get('Authorization')
         return jsonify(put_user_mark_all_notifications_read(auth))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/user/verify_credentials', methods=['POST'])
+def post_alpha_user_verify_credentials():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'}), 400
+    try:
+        with limiter.limit('6/hour', exempt_when=is_trusted_request):
+            data = request.get_json(force=True) or {}
+            return jsonify(post_user_verify_credentials(data))
+    except RateLimitExceeded as ex:
+        return jsonify({"error": str(ex)}), 429
+    except NoResultFound:
+        return jsonify({"error": "Bad credentials"}), 400
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 

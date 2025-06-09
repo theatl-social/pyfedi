@@ -9,7 +9,7 @@ from app.api.alpha.utils.community import get_community, get_community_list, pos
 from app.api.alpha.utils.user import get_user, post_user_block, get_user_unread_count, get_user_replies, \
                                     post_user_mark_all_as_read, put_user_subscribe, put_user_save_user_settings, \
                                     get_user_notifications, put_user_notification_state, get_user_notifications_count, \
-                                    put_user_mark_all_notifications_read
+                                    put_user_mark_all_notifications_read, post_user_verify_credentials
 from app.api.alpha.utils.private_message import get_private_message_list
 from app.api.alpha.utils.upload import post_upload_image, post_upload_community_image, post_upload_user_image
 
