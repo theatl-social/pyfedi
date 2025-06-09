@@ -164,9 +164,8 @@ while `RedisCache` **should** be used in production. If using `RedisCache`, set 
 
 * `CELERY_BROKER_URL` is similar to `CACHE_REDIS_URL` but with a different number on the end: `redis://localhost:6379/0`.
  If using unix socket, try something like `CELERY_BROKER_URL='redis+socket:///var/run/redis/redis.sock?virtual_host=0'`
- Make sure to not have a password set for the default user. (
 
-* `MAIL_*` is for sending email using a SMTP server. Leave `MAIL_SERVER` empty to send email using AWS SES instead.
+* `MAIL_*` is for sending email using a SMTP server. Leave `MAIL_SERVER` empty to send email using AWS SES instead. Set MAIL_FROM to a no-reply inbox.
 
 * Set ERRORS_TO to an email address that will receive error reports. Only do this if debugging problems and you have MAIL_* set.
 
