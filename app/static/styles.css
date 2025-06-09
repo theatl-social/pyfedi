@@ -751,9 +751,6 @@ div.navbar {
     columns: 200px 5;
   }
 }
-.communities_menu .col-12 {
-  margin-left: 0;
-}
 .communities_menu ul {
   margin-left: 0;
   list-style-type: none;
@@ -761,6 +758,18 @@ div.navbar {
 }
 .communities_menu ul * > * {
   margin-left: 0 !important;
+}
+.communities_menu .jump_links {
+  float: left;
+  padding-left: 12px;
+  padding-top: 3px;
+}
+.communities_menu .jump_links a {
+  margin-right: 5px;
+}
+
+.communities_menu_parent .show {
+  display: block !important;
 }
 
 .topics_menu ul, .feeds_menu ul {

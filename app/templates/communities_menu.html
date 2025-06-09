@@ -2,6 +2,17 @@
 {% if moderating_communities or joined_communities %}
     {% set something_displayed = true -%}
     <div class="communities_menu_body">
+        {% if menu_topics or menu_instance_feeds or menu_my_feeds or menu_subscribed_feeds%}
+        <div class="d-lg-none jump_links">
+            <p>{{ _('Skip to:') }}</p>
+            {% if menu_instance_feeds or menu_my_feeds %}
+                <a href="#feeds_mega_menu">{{ _('Feeds') }}</a>
+            {% endif -%}
+            {% if menu_topics -%}
+                <a href="#topics_mega_menu">{{ _('Topics') }}</a>
+            {% endif -%}
+        </div>
+        {% endif %}
         <h4 class="dropdown-header">{{ _('Communities') }}</h4>
         <ul class="text-end text-lg-start">
           {% if moderating_communities %}
@@ -18,15 +29,15 @@
                        href="/c/{{ community_menu_item.link() }}">{% if community_menu_item.is_duplicate %}{{ community_menu_item.title }}<span class="text-muted small">@{{ community_menu_item.ap_domain | shorten(13) }}</span>{% else %}{{ community_menu_item.title }}{% endif %}</a></li>
             {% endfor -%}
           {% endif %}
+        <li><a class="dropdown-item{% if active_child == 'list_communities_local' %} active{% endif %}" href="/communities/local"><strong>{{ _('Local communities') }}</strong></a></li>
+            <li><a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities"><strong>{{ _('All communities') }}</strong></a></li>
         </ul>
-        <li><a class="dropdown-item{% if active_child == 'list_communities_local' %} active{% endif %}" href="/communities/local">{{ _('Local communities') }}</a></li>
-        <li><a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a></li>
     </div>
     <hr>
 {% endif -%}
 {% if menu_topics -%}
     {% set something_displayed = true -%}
-    <div class="communities_menu_body">
+    <div class="communities_menu_body" id="topics_mega_menu">
         <h4 class="dropdown-header">{{ _('Topics') }}</h4>
         <ul class="text-end text-lg-start">
           {% if menu_topics -%}
@@ -43,7 +54,7 @@
 {% endif -%}
 {% if menu_instance_feeds or menu_my_feeds or menu_subscribed_feeds -%}
     {% set something_displayed = true -%}
-    <div class="communities_menu_body">
+    <div class="communities_menu_body" id="feeds_mega_menu">
         <h4 class="dropdown-header">{{ _('Feeds') }}</h4>
         <ul class="text-end text-lg-start">
           {% if menu_instance_feeds -%}

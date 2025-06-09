@@ -45,6 +45,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupImagePreview();
     setupNotificationPermission();
     setupFederationModeToggle();
+    setupMegaMenuNavigation();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
@@ -1231,3 +1232,46 @@ document.getElementById('btn_add_home_screen').addEventListener('click', functio
         deferredPrompt = null;
     });
 });
+
+function setupMegaMenuNavigation() {
+    // Custom dropdown management since Bootstrap's data-bs-toggle gets in the way
+    const dropdownToggle = document.querySelector('.nav-link.dropdown-toggle[href="/communities"]');
+    const dropdownMenu = document.querySelector('.dropdown-menu.communities_menu');
+    
+    if (dropdownToggle && dropdownMenu) {
+        // Handle dropdown toggle click
+        dropdownToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const isVisible = dropdownMenu.style.display === 'block';
+            if (isVisible) {
+                hideDropdown();
+            } else {
+                showDropdown();
+            }
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!dropdownToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                hideDropdown();
+            }
+        });
+
+    }
+    
+    function showDropdown() {
+        dropdownMenu.classList.add('show');
+        dropdownMenu.style.setProperty('display', 'block', 'important');
+        dropdownToggle.setAttribute('aria-expanded', 'true');
+        dropdownToggle.parentElement.classList.add('show');
+    }
+    
+    function hideDropdown() {
+        dropdownMenu.classList.remove('show');
+        dropdownMenu.style.setProperty('display', 'none', 'important');
+        dropdownToggle.setAttribute('aria-expanded', 'false');
+        dropdownToggle.parentElement.classList.remove('show');
+    }
+}
