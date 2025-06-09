@@ -127,11 +127,14 @@ div.navbar {
 }
 
 .navbar-light .navbar-nav {
-  .dropdown-item {
-    max-width: 300px;
-  }
   .nav-link {
     outline-style: none;
+  }
+}
+
+.dropdown-menu {
+  .dropdown-item {
+    max-width: 300px;
   }
 }
 

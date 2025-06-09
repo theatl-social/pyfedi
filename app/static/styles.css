@@ -632,11 +632,12 @@ div.navbar {
   margin-right: 20px;
 }
 
-.navbar-light .navbar-nav .dropdown-item {
-  max-width: 300px;
-}
 .navbar-light .navbar-nav .nav-link {
   outline-style: none;
+}
+
+.dropdown-menu .dropdown-item {
+  max-width: 300px;
 }
 
 @media (min-width: 992px) {
