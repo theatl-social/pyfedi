@@ -917,6 +917,9 @@ def community_edit(community_id: int):
                 db.session.commit()
             flash(_('Saved'))
 
+            cache.delete_memoized(moderating_communities, current_user.id)
+            cache.delete_memoized(joined_communities, current_user.id)
+
             # just borrow federation code for now (replacing most of this function with a call to edit_community in app.shared.community can be done "later")
             task_selector('edit_community', user_id=current_user.id, community_id=community.id)
             return redirect(url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not None else community.name))

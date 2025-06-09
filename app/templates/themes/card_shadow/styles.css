@@ -94,3 +94,7 @@
 .voting_buttons > div {
     box-shadow: 0 3px 5px 0 rgba(0,0,0,0.1);
 }
+
+.dropdown-menu.show {
+    box-shadow: 0 3px 5px 0 rgba(0,0,0,0.15);
+}
