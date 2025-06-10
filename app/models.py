@@ -1110,12 +1110,13 @@ class User(UserMixin, db.Model):
         else:
             new_attitude = None
         
-        # Update attitude with direct SQL query to avoid deadlocks
-        db.session.execute(text("""
-            UPDATE "user" 
-            SET attitude = :attitude
-            WHERE id = :user_id
-        """), {"attitude": new_attitude, "user_id": self.id})
+        # Update attitude with direct SQL query in nested transaction to avoid deadlocks
+        with db.session.begin_nested():
+            db.session.execute(text("""
+                UPDATE "user" 
+                SET attitude = :attitude
+                WHERE id = :user_id
+            """), {"attitude": new_attitude, "user_id": self.id})
 
     def get_num_upvotes(self):
         post_votes = db.session.execute(text('SELECT COUNT(*) FROM "post_vote" WHERE user_id = :user_id AND effect > 0'), {'user_id': self.id}).scalar()
