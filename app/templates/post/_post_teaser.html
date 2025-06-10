@@ -4,7 +4,8 @@
                          or (current_user.ignore_bots == 3 and post.from_bot) -%}
 {% set blur_content = (current_user.hide_nsfw == 2 and post.nsfw)
                    or (current_user.hide_nsfl == 2 and post.nsfl)
-                   or (current_user.ignore_bots == 2 and post.from_bot) -%}
+                   or (current_user.ignore_bots == 2 and post.from_bot)
+                   or (post.spoiler_flair()) -%}
 {% if content_blocked and content_blocked == '-1' -%}
     {# do nothing - blocked by keyword filter #}
 {% else -%}

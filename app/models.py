@@ -1828,6 +1828,14 @@ class Post(db.Model):
                                  'href': f'https://{current_app.config["SERVER_NAME"]}/tag/{tag.name}',
                                  'name': f'#{tag.name}'})
         return return_value
+    
+    def spoiler_flair(self):
+        for flair in self.flair:
+            if flair.blur_images:
+                return True
+        
+        return False
+
 
     def post_reply_count_recalculate(self):
         self.post_reply_count = db.session.execute(text('SELECT COUNT(id) as c FROM "post_reply" WHERE post_id = :post_id AND deleted is false'),
@@ -3059,6 +3067,7 @@ class CommunityFlair(db.Model):
     flair = db.Column(db.String(50), index=True)
     text_color = db.Column(db.String(50))
     background_color = db.Column(db.String(50))
+    blur_images = db.Column(db.Boolean, default=False)
 
 
 class UserFlair(db.Model):

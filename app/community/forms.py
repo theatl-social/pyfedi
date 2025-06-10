@@ -333,4 +333,5 @@ class EditCommunityFlairForm(FlaskForm):
     flair = StringField(_l('Flair'), validators=[DataRequired()])
     text_color = StringField(_l('Text color'), render_kw={"type": "color"})
     background_color = StringField(_l('Background color'), render_kw={"type": "color"})
+    blur_images = BooleanField(_l('Blur images and thumbnails for posts with this flair?'))
     submit = SubmitField(_l('Save'))
