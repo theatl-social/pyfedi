@@ -2,7 +2,7 @@ from typing import List
 from urllib.parse import urlparse
 
 from flask_login import current_user
-from sqlalchemy import desc, text, or_
+from sqlalchemy import desc, asc, text, or_
 
 from app import db
 from app.models import PostReply, Post, Community, User
@@ -36,6 +36,8 @@ def post_replies(community: Community, post_id: int, sort_by: str, viewer: User)
         comments = comments.order_by(desc(PostReply.score))
     elif sort_by == 'new':
         comments = comments.order_by(desc(PostReply.posted_at))
+    elif sort_by == 'old':
+        comments = comments.order_by(asc(PostReply.posted_at))
 
     comments = comments.limit(2000) # paginating indented replies is too hard so just get the first 2000.
 
