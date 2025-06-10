@@ -986,6 +986,9 @@ class User(UserMixin, db.Model):
                 return True
         return False
 
+    def is_admin_or_staff(self):
+        return self.is_admin() or self.is_staff()
+
     def is_instance_admin(self):
         if self.instance_id:
             instance_role = InstanceRole.query.filter(InstanceRole.instance_id == self.instance_id,
