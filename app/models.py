@@ -637,9 +637,9 @@ class Community(db.Model):
 
     def is_owner(self, user=None):
         if user is None:
-            return any(moderator.user_id == current_user.get_id() and moderator.is_owner for moderator in self.moderators())
+            return any(moderator.user_id == current_user.get_id() and moderator.is_owner for moderator in self.moderators()) or current_user.get_id() == self.user_id
         else:
-            return any(moderator.user_id == user.id and moderator.is_owner for moderator in self.moderators())
+            return any(moderator.user_id == user.id and moderator.is_owner for moderator in self.moderators()) or user.id == self.user_id
 
     def is_instance_admin(self, user):
         if self.instance_id:
