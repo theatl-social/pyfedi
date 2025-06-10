@@ -846,6 +846,9 @@ div.navbar {
   width: 100%;
   display: inline-block;
 }
+.communities_table tbody .btn {
+  text-wrap: nowrap;
+}
 
 .topics_list {
   list-style-type: none;

@@ -376,6 +376,11 @@ div.navbar {
       display: inline-block;
     }
   }
+  tbody {
+    .btn {
+      text-wrap: nowrap;
+    }
+  }
 }
 
 .topics_list {
