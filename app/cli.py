@@ -31,7 +31,7 @@ from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_bl
     shorten_string, get_request, blocked_communities, gibberish, get_request_instance, \
     instance_banned, recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, download_defeds, \
     get_setting, set_setting, get_redis_connection, instance_online, instance_gone_forever, find_next_occurrence, \
-    guess_mime_type, communities_banned_from, joined_communities, moderating_communities
+    guess_mime_type, communities_banned_from, joined_communities, moderating_communities, ensure_directory_exists
 
 
 def register(app):
@@ -912,10 +912,11 @@ def register(app):
 
             # write those files to disk as json
             print('Saving the communities lists to app/static/tmp/ ...')
+            ensure_directory_exists('app/static/tmp')
             with open('app/static/tmp/all_communities.json','w') as acj:
                 json.dump(all_communities_json, acj)
 
-            with open('app/static/all_sfw_communities.json','w') as asfwcj:
+            with open('app/static/tmp/all_sfw_communities.json','w') as asfwcj:
                 json.dump(all_sfw_communities_json, asfwcj)
 
             print('Getting disposable email domain list...')

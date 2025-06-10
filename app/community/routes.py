@@ -163,7 +163,7 @@ def community_name_search():
                 all_communities_json = json.load(acj)
                 communities_list = all_communities_json['all_communities']
         else:
-            with open('app/static/all_sfw_communities.json','r') as asfwcj:
+            with open('app/static/tmp/all_sfw_communities.json','r') as asfwcj:
                 all_sfw_communities_json = json.load(asfwcj)
                 communities_list = all_sfw_communities_json['all_sfw_communities']
     except:
