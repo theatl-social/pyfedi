@@ -3089,6 +3089,17 @@ class BlockedImage(db.Model):
     hash = db.Column(BIT(256), index=True)
 
 
+class CmsPage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    url = db.Column(db.String(100), index=True)
+    title = db.Column(db.String(255))
+    body = db.Column(db.Text)
+    body_html = db.Column(db.Text)
+    last_edited_by = db.Column(db.String(50))
+    created_at = db.Column(db.DateTime, default=utcnow)
+    edited_at = db.Column(db.DateTime, default=utcnow)
+
+
 def _large_community_subscribers() -> float:
     # average number of subscribers in the top 15% communities
 

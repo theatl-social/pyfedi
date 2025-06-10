@@ -20,7 +20,7 @@ from app.activitypub.signature import post_request, default_context, RsaKeys
 from app.activitypub.util import instance_allowed, extract_domain_and_actor
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm, \
-    EditInstanceForm, RemoteInstanceScanForm, MoveCommunityForm, EditBlockedImageForm, AddBlockedImageForm
+    EditInstanceForm, RemoteInstanceScanForm, MoveCommunityForm, EditBlockedImageForm, AddBlockedImageForm, CmsPageForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form, move_community_images_to_here
 from app.community.util import save_icon_file, save_banner_file, search_for_community
@@ -29,7 +29,7 @@ from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED, POST_STATUS_
 from app.email import send_registration_approved_email
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission, Domain, \
-    Tag, DefederationSubscription, BlockedImage
+    Tag, DefederationSubscription, BlockedImage, CmsPage
 from app.shared.tasks import task_selector
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
@@ -1713,3 +1713,61 @@ def admin_blocked_image_delete(image_id):
     flash(_('Blocked image deleted'))
 
     return redirect(url_for('admin.admin_blocked_images'))
+
+
+# CMS pages
+@bp.route('/pages', methods=['GET'])
+@permission_required('edit cms pages')
+@login_required
+def admin_cms_pages():
+    pages = CmsPage.query.order_by(CmsPage.created_at.desc()).all()
+    return render_template('admin/cms_pages.html', pages=pages, title=_('CMS Pages'))
+
+
+@bp.route('/pages/add', methods=['GET', 'POST'])
+@permission_required('edit cms pages')
+@login_required
+def admin_cms_page_add():
+    form = CmsPageForm()
+    if form.validate_on_submit():
+        page = CmsPage(url=form.url.data, title=form.title.data, body=form.body.data,
+                       body_html=markdown_to_html(form.body.data), last_edited_by=current_user.display_name())
+        db.session.add(page)
+        db.session.commit()
+        flash(_('Page saved.'))
+        return redirect(url_for('admin.admin_cms_pages'))
+    
+    return render_template('admin/cms_page_edit.html', form=form, title=_('Add CMS Page'))
+
+
+@bp.route('/pages/<int:page_id>/edit', methods=['GET', 'POST'])
+@permission_required('edit cms pages')
+@login_required
+def admin_cms_page_edit(page_id):
+    page = CmsPage.query.get_or_404(page_id)
+    form = CmsPageForm(original_page=page, obj=page)
+    
+    if form.validate_on_submit():
+        page.url = form.url.data
+        page.title = form.title.data
+        page.body = form.body.data
+        page.body_html = markdown_to_html(form.body.data)
+        page.last_edited_by = current_user.display_name()
+        page.edited_at = utcnow()
+        db.session.commit()
+        flash(_('Page saved.'))
+        return redirect(url_for('admin.admin_cms_pages'))
+    
+    return render_template('admin/cms_page_edit.html', form=form, page=page, title=_('Edit page'))
+
+
+@bp.route('/pages/<int:page_id>/delete', methods=['GET'])
+@permission_required('edit cms pages')
+@login_required
+def admin_cms_page_delete(page_id):
+    page = CmsPage.query.get_or_404(page_id)
+
+    db.session.delete(page)
+    db.session.commit()
+    flash(_('Page deleted.'))
+    return redirect(url_for('admin.admin_cms_pages'))

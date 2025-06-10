@@ -7,7 +7,7 @@ from wtforms.fields.choices import SelectMultipleField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Optional
 from flask_babel import _, lazy_gettext as _l
 
-from app.models import Community, User
+from app.models import Community, User, CmsPage
 
 
 class SiteProfileForm(FlaskForm):
@@ -290,3 +290,25 @@ class MoveCommunityForm(FlaskForm):
         existing_community = Community.query.filter(Community.ap_id == None, Community.name == new_url.data.lower()).first()
         if existing_community:
             raise ValidationError(_l('A local community at that url already exists'))
+
+
+class CmsPageForm(FlaskForm):
+    url = StringField(_l('URL path'), validators=[DataRequired(), Length(max=100)], 
+                      render_kw={'placeholder': _l('e.g., /about-us')})
+    title = StringField(_l('Page title'), validators=[DataRequired(), Length(max=255)])
+    body = TextAreaField(_l('Content (Markdown)'), validators=[DataRequired()], 
+                        render_kw={'rows': 15, 'placeholder': _l('Write your content in Markdown format...')})
+    submit = SubmitField(_l('Save'))
+
+    def __init__(self, original_page=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.original_page = original_page
+
+    def validate_url(self, url):
+        if not url.data.startswith('/'):
+            url.data = '/' + url.data
+        
+        # Check if another page already uses this URL (excluding the current page if editing)
+        existing_page = CmsPage.query.filter_by(url=url.data).first()
+        if existing_page and (not self.original_page or existing_page.id != self.original_page.id):
+            raise ValidationError(_l('A page with this URL already exists.'))

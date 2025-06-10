@@ -33,7 +33,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     get_redis_connection, subscribed_feeds, joined_or_modding_communities, login_required_if_private_instance, \
     pending_communities, retrieve_image_hash, possible_communities, remove_tracking_from_link
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
-    Notification, Language, community_language, ModLog, Feed, FeedItem
+    Notification, Language, community_language, ModLog, Feed, FeedItem, CmsPage
 
 
 @bp.route('/', methods=['HEAD', 'GET', 'POST'])
@@ -512,14 +512,19 @@ def about_page():
     domains_amount = db.session.execute(text('SELECT COUNT(id) as c FROM "domain" WHERE "banned" IS false')).scalar()
     community_amount = local_communities()
     instance = Instance.query.filter_by(id=1).first()
-    
+
+    cms_page = CmsPage.query.filter(CmsPage.url == '/about').first()
+
     return render_template('about.html', user_amount=user_amount, mau=MAU, posts_amount=posts_amount,
                            domains_amount=domains_amount, community_amount=community_amount, instance=instance,
-                           admins=admins, staff=staff)
+                           admins=admins, staff=staff, cms_page=cms_page)
 
 
 @bp.route('/privacy')
 def privacy():
+    cms_page = CmsPage.query.filter(CmsPage.url == '/privacy').first()
+    if cms_page:
+        return render_template('cms_page.html', page=cms_page)
     return render_template('privacy.html')
 
 

@@ -32,5 +32,8 @@
         <p> {{ g.site.legal_information | safe }} </p>
         <p> <a href="/privacy">{{ _('Our Privacy Policy') }}</a> </p>
         {% endif %}
+        {% if cms_page -%}
+            {{ cms_page.body_html | safe }}
+        {% endif -%}
 </main>
 {% endblock %}
