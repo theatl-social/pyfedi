@@ -610,6 +610,13 @@ The values for them are found by registering your instance with Google as 'an ap
 to begin. Create a new project, enable the People API, go to APIs & Services > Credentials and create a new OAuth client ID.
 Under "Authorized Redirect URIs", use `https://yourdomain.tld/auth/google_authorize`.
 
+#### CMS
+
+At /admin/pages there is a markdown-based CMS which you can use to add pages to your instance. Create one with the url
+'privacy' to override the default privacy policy. Create one with the url 'about' and it will be appended to the existing about page.
+
+All other urls have no special behaviour and will just display the page.
+
 ---
 
 <div id="stripe"></div>
