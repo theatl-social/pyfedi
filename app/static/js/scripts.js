@@ -1063,6 +1063,11 @@ function setupFancySelects() {
     if(communities && communities.type === 'select-one') {
         new TomSelect('#communities', {maxOptions: null, maxItems: 1});
     }
+
+    var community = document.getElementById('community');
+    if(community && community.type === 'select-one') {
+        new TomSelect('#community', {maxOptions: null, maxItems: 1});
+    }
 }
 
 function setupImagePreview() {
