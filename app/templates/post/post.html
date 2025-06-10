@@ -89,6 +89,9 @@
                     <a href="?sort=new#post_replies" title="{{ _('Show newest first') }}" class="btn  btn-sm {{ 'btn-primary' if request.args.get('sort', '') == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex">
                         {{ _('New') }}
                     </a>
+                    <a href="?sort=old#post_replies" title="{{ _('Show oldest first') }}" class="btn btn-sm {{ 'btn-primary' if request.args.get('sort', '') == 'old' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                        {{ _('Old') }}
+                    </a>
                 </div>
 
                 <div id="replies" class="comments" role="tree" aria-label="{{ _('Comments') }}" aria-expanded="true">
