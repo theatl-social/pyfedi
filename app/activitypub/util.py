@@ -337,7 +337,7 @@ def find_flair_or_create(flair: dict, community_id: int) -> CommunityFlair:
     else:
         new_flair = CommunityFlair(flair=flair['display_name'].strip(), community_id=community_id,
                                    text_color=flair['text_color'], background_color=flair['background_color'],
-                                   blur_images=flair['blur_images']  if 'blur_images' in flair else False)
+                                   blur_images=flair['blur_images'] if 'blur_images' in flair else False)
         return new_flair
 
 
@@ -607,6 +607,8 @@ def refresh_community_profile_task(community_id, activity_json):
                             flair_dict['text_color'] = flair['text_color']
                         if 'background_color' in flair:
                             flair_dict['background_color'] = flair['background_color']
+                        if 'blur_images' in flair:
+                            flair_dict['blur_images'] = flair['blur_images']
                         community.flair.append(find_flair_or_create(flair_dict, community.id))
                     session.commit()
 
