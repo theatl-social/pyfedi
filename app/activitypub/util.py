@@ -336,7 +336,8 @@ def find_flair_or_create(flair: dict, community_id: int) -> CommunityFlair:
         return existing_flair
     else:
         new_flair = CommunityFlair(flair=flair['display_name'].strip(), community_id=community_id,
-                                   text_color=flair['text_color'], background_color=flair['background_color'])
+                                   text_color=flair['text_color'], background_color=flair['background_color'],
+                                   blur_images=flair['blur_images']  if 'blur_images' in flair else False)
         return new_flair
 
 

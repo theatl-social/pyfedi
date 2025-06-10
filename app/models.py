@@ -729,7 +729,8 @@ class Community(db.Model):
                            'id': f'https://{current_app.config["SERVER_NAME"]}/c/{self.link()}/tag/{flair.id}',
                            'display_name': flair.flair,
                            'text_color': flair.text_color,
-                           'background_color': flair.background_color
+                           'background_color': flair.background_color,
+                           'blur_images': flair.blur_images
                            })
         return result
 
@@ -1822,7 +1823,8 @@ class Post(db.Model):
                                  'id': f'https://{current_app.config["SERVER_NAME"]}/c/{self.community.link()}/tag/{flair.id}',
                                  'display_name': flair.flair,
                                  'text_color': flair.text_color,
-                                 'background_color': flair.background_color})
+                                 'background_color': flair.background_color,
+                                 'blur_images': flair.blur_images})
         for tag in self.tags:
             return_value.append({'type': 'Hashtag',
                                  'href': f'https://{current_app.config["SERVER_NAME"]}/tag/{tag.name}',
