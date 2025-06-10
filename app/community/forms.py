@@ -322,6 +322,10 @@ class InviteCommunityForm(FlaskForm):
     to = TextAreaField(_l('To'), validators=[DataRequired()], render_kw={'placeholder': _l('Email addresses or fediverse handles, one per line'), 'autofocus': True})
     submit = SubmitField(_l('Invite'))
 
+    def validate_to(self, field):
+        if ',' in field.data:
+            raise ValidationError(_l('Use new lines instead of commas.'))
+
 
 class MoveCommunityForm(FlaskForm):
     old_community_locked = BooleanField(_l('The old community is locked'), validators=[DataRequired()])
