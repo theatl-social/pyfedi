@@ -90,3 +90,6 @@ class Config(object):
     FLAG_THROWAWAY_EMAILS = os.environ.get('FLAG_THROWAWAY_EMAILS') or False
 
     NOTIF_SERVER = os.environ.get('NOTIF_SERVER') or ''
+    
+    # CORS configuration
+    CORS_ALLOW_ORIGIN = os.environ.get('CORS_ALLOW_ORIGIN') or '*'

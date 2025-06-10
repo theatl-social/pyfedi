@@ -317,6 +317,8 @@ If the search function is not returning any results, you need to [add some datab
 
 Enable the API for use by mobile apps by setting the ENABLE_ALPHA_API environment variable to 'true' (a string, with quotes).
 
+To limit which domains can access the API, set the CORS_ALLOW_ORIGIN environment variable. This defaults to '*' (allowing requests from any origin) but can be set to a specific domain like 'https://example.com' for security.
+
 <div id="background-services"></div>
 
 ### Background services
