@@ -1305,43 +1305,50 @@ def process_inbox_request(request_json, store_ap_json):
                 return
 
             remove_data = core_activity['removeData'] if 'removeData' in core_activity else False
-            target = core_activity['target']
-            if target.count('/') < 4:   # site ban
-                if not blocker.is_instance_admin():
-                    log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, saved_json, 'Does not have permission')
-                    return
-                if blocked.is_local():
-                    log_incoming_ap(id, APLOG_USERBAN, APLOG_MONITOR, request_json, 'Remote Admin in banning one of our users from their site')
-                    current_app.logger.error('Remote Admin in banning one of our users from their site: ' + str(request_json))
-                    return
-                if blocked.instance_id != blocker.instance_id:
-                    log_incoming_ap(id, APLOG_USERBAN, APLOG_MONITOR, request_json, 'Remote Admin is banning a user of a different instance from their site')
-                    current_app.logger.error('Remote Admin is banning a user of a different instance from their site: ' + str(request_json))
-                    return
+            if 'target' in core_activity:
+                target = core_activity['target']
+                if target.count('/') < 4:   # site ban
+                    if not blocker.is_instance_admin():
+                        log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, saved_json, 'Does not have permission')
+                        return
+                    if blocked.is_local():
+                        log_incoming_ap(id, APLOG_USERBAN, APLOG_MONITOR, request_json, 'Remote Admin in banning one of our users from their site')
+                        current_app.logger.error('Remote Admin in banning one of our users from their site: ' + str(request_json))
+                        return
+                    if blocked.instance_id != blocker.instance_id:
+                        log_incoming_ap(id, APLOG_USERBAN, APLOG_MONITOR, request_json, 'Remote Admin is banning a user of a different instance from their site')
+                        current_app.logger.error('Remote Admin is banning a user of a different instance from their site: ' + str(request_json))
+                        return
 
-                blocked.banned = True
-                if 'expires' in core_activity:
-                    blocked.ban_until = core_activity['expires']
-                elif 'endTime' in core_activity:
-                    blocked.ban_until = core_activity['endTime']
-                db.session.commit()
+                    blocked.banned = True
+                    if 'expires' in core_activity:
+                        blocked.ban_until = core_activity['expires']
+                    elif 'endTime' in core_activity:
+                        blocked.ban_until = core_activity['endTime']
+                    db.session.commit()
 
-                if remove_data:
-                    site_ban_remove_data(blocker.id, blocked)
-                log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, saved_json)
-            else:                       # community ban (community will already known if activity was Announced)
-                community = community if community else find_actor_or_create(target, create_if_not_found=False, community_only=True)
-                if not community:
-                    log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, saved_json, 'Blocked or unfound community')
-                    return
-                if not community.is_moderator(blocker) and not community.is_instance_admin(blocker):
-                    log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, saved_json, 'Does not have permission')
-                    return
+                    if remove_data:
+                        site_ban_remove_data(blocker.id, blocked)
+                    log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, saved_json)
+                else:                       # community ban (community will already known if activity was Announced)
+                    community = community if community else find_actor_or_create(target, create_if_not_found=False, community_only=True)
+                    if not community:
+                        log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, saved_json, 'Blocked or unfound community')
+                        return
+                    if not community.is_moderator(blocker) and not community.is_instance_admin(blocker):
+                        log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, saved_json, 'Does not have permission')
+                        return
 
-                if remove_data:
-                    community_ban_remove_data(blocker.id, community.id, blocked)
-                ban_user(blocker, blocked, community, core_activity)
-                log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, saved_json)
+                    if remove_data:
+                        community_ban_remove_data(blocker.id, community.id, blocked)
+                    ban_user(blocker, blocked, community, core_activity)
+                    log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, saved_json)
+            else:   # Mastodon does not have a target when blocking, only object
+                if 'object' in core_activity and isinstance(core_activity['object'], str):
+                    if not blocker.has_blocked_user(blocked.id):
+                        db.session.add(UserBlock(blocker_id=blocker.id, blocked_id=blocked.id))
+                        db.session.commit()
+
             return
 
         if core_activity['type'] == 'Undo':
