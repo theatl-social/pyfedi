@@ -1,4 +1,5 @@
 {% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    return redirect(url_for('auth.check_email'))
     {% extends 'themes/' + theme() + '/base.html' -%}
 {% else -%}
     {% extends "base.html" -%}
@@ -13,6 +14,7 @@
                 <div class="card-body p-6">
                     <div class="card-title text-center">{{ _('Log in') }}</div>
                     {{ render_form(form) }}
+                    {% if google_oauth -%}
                     <br>
                     <hr />
                     <p align="center">OR<br><br>
@@ -20,8 +22,12 @@
                             <a href="/auth/google_login" class="btn btn-outline-primary">{{ _('Log in with Google') }}
                                 <img src="/static/images/tiny_g_logo.png" width="16" alt="Logo"></a>
                         {% endif -%}
-                        <button class="btn btn-outline-primary mt-4 mb-3" id="log_in_with_passkey">{{ _('Log in with a passkey') }}</button>
+                        <a href="/auth/google_login" class="btn btn-outline-primary">{{ _('Log in with Google') }}
+                            <img src="/static/images/tiny_g_logo.png" width="16" alt="Logo"></a>
                     </p>
+                    {% endif -%}
+                    {% if mastodon_oauth %}
+                    {% endif %}
 
                     <hr />
                     <p>{{ _('New User?') }} <a href="{{ url_for('auth.register') }}">{{ _('Register new account') }}</a></p>

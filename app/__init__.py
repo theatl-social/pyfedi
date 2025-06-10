@@ -85,6 +85,17 @@ def create_app(config_class=Config):
             api_base_url='https://www.googleapis.com/',
             client_kwargs={'scope': 'email profile'}
         )
+    if app.config["MASTODON_OAUTH_CLIENT_ID"]:
+        oauth.init_app(app)
+        oauth.register(
+            name="mastodon",
+            client_id=app.config["MASTODON_OAUTH_CLIENT_ID"],
+            client_secret=app.config["MASTODON_OAUTH_SECRET"],
+            access_token_url=f"https://{app.config['MASTODON_OAUTH_DOMAIN']}/oauth/token",
+            authorize_url=f"https://{app.config['MASTODON_OAUTH_DOMAIN']}/oauth/authorize",
+            api_base_url=f"https://{app.config['MASTODON_OAUTH_DOMAIN']}/api/",
+            client_kwargs={"response_type": "code"}
+        )
 
     from app.main import bp as main_bp
     app.register_blueprint(main_bp)

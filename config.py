@@ -81,6 +81,10 @@ class Config(object):
     GOOGLE_OAUTH_CLIENT_ID = os.environ.get('GOOGLE_OAUTH_CLIENT_ID') or ''
     GOOGLE_OAUTH_SECRET = os.environ.get('GOOGLE_OAUTH_SECRET') or ''
 
+    MASTODON_OAUTH_CLIENT_ID = os.environ.get('MASTODON_OAUTH_CLIENT_ID') or ""
+    MASTODON_OAUTH_SECRET = os.environ.get("MASTODON_OAUTH_SECRET") or ""
+    MASTODON_OAUTH_DOMAIN = os.environ.get("MASTODON_OAUTH_DOMAIN") or ""
+
     # enable the aplha api
     ENABLE_ALPHA_API = os.environ.get('ENABLE_ALPHA_API') or False
     SKIP_RATE_LIMIT_IPS = os.environ.get('SKIP_RATE_LIMIT_IPS') or ['127.0.0.1']

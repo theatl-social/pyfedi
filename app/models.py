@@ -841,6 +841,7 @@ class User(UserMixin, db.Model):
     google_oauth_id = db.Column(db.String(64), unique=True, index=True)
     hide_low_quality = db.Column(db.Boolean, default=False)
     additional_css = db.Column(db.Text)
+    mastodon_oauth_id = db.Column(db.String(64), unique=True, index=True)
 
     avatar = db.relationship('File', lazy='joined', foreign_keys=[avatar_id], single_parent=True, cascade="all, delete-orphan")
     cover = db.relationship('File', lazy='joined', foreign_keys=[cover_id], single_parent=True, cascade="all, delete-orphan")
