@@ -32,7 +32,7 @@ from furl import furl
 from flask import current_app, json, redirect, url_for, request, make_response, Response, g, flash, abort
 from flask_babel import _, lazy_gettext as _l
 from flask_login import current_user, logout_user
-from sqlalchemy import text, or_, desc, event
+from sqlalchemy import text, or_, desc, asc, event
 from sqlalchemy.orm import Session
 from wtforms.fields  import SelectField, SelectMultipleField, StringField
 from wtforms.widgets import Select, html_params, ListWidget, CheckboxInput, TextInput
@@ -2003,6 +2003,8 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
             params['top_cutoff'] = utcnow() - timedelta(days=1)
     elif sort == 'new':
         post_id_sort = 'ORDER BY p.posted_at DESC'
+    elif sort == 'old':
+        post_id_sort = 'ORDER BY p.posted_at ASC'
     elif sort == 'active':
         post_id_sort = 'ORDER BY p.last_active DESC'
     final_post_id_sql = f"{post_id_sql} WHERE {' AND '.join(post_id_where)}\n{post_id_sort}\nLIMIT 1000"
@@ -2027,6 +2029,8 @@ def post_ids_to_models(post_ids: List[int], sort: str):
         posts = posts.order_by(desc(Post.up_votes - Post.down_votes))
     elif sort == 'new':
         posts = posts.order_by(desc(Post.posted_at))
+    elif sort == 'old':
+        posts = posts.order_by(asc(Post.posted_at))
     elif sort == 'active':
         posts = posts.order_by(desc(Post.last_active))
     return posts

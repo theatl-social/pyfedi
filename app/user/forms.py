@@ -62,6 +62,7 @@ class SettingsForm(FlaskForm):
     sorts = [('hot', _l('Hot')),
              ('top', _l('Top')),
              ('new', _l('New')),
+             ('old', _l('Old')),
              ('active', _l('Active')),
              ('scaled', _l('Scaled')),
              ]
