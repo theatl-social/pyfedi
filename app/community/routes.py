@@ -1887,6 +1887,7 @@ def community_flair_edit(community_id, flair_id):
             flair.flair = form.flair.data
             flair.text_color = form.text_color.data
             flair.background_color = form.background_color.data
+            flair.blur_images = form.blur_images.data
             db.session.commit()
 
             return redirect(url_for('community.community_flair', actor=community.link()))
@@ -1894,6 +1895,7 @@ def community_flair_edit(community_id, flair_id):
             form.flair.data = flair.flair if flair else ''
             form.text_color.data = flair.text_color if flair else '#000000'
             form.background_color.data = flair.background_color if flair else '#deddda'
+            form.blur_images.data = flair.blur_images if flair else False
             return render_template('generic_form.html', form=form, flair=flair,
                                    title=_('Edit %(flair_name)s in %(community_name)s', flair_name=flair.flair, community_name=community.display_name()) if flair else _('Add flair in %(community_name)s', community_name=community.display_name()),
                                    community=community)
