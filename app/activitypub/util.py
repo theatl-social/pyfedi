@@ -2413,12 +2413,18 @@ def undo_vote(comment, post, target_ap_id, user):
 
 
 def process_report(user, reported, request_json):
-    if len(request_json['summary']) < 15:
-        reasons = request_json['summary']
+    if 'summary' not in request_json:   # reports from peertube have no summary
+        reasons = ''
         description = ''
+        if 'content' in request_json:
+            reasons = request_json['content']
     else:
-        reasons = request_json['summary'][:15]
-        description = request_json['summary'][15:]
+        if len(request_json['summary']) < 15:
+            reasons = request_json['summary']
+            description = ''
+        else:
+            reasons = request_json['summary'][:15]
+            description = request_json['summary'][15:]
     if isinstance(reported, User):
         if reported.reports == -1:
             return
