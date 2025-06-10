@@ -9,7 +9,7 @@ from flask import redirect, url_for, flash, request, make_response, session, Mar
 from flask_login import current_user, login_required
 from flask_babel import _
 from slugify import slugify
-from sqlalchemy import or_, desc, text
+from sqlalchemy import or_, asc, desc, text
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import db, cache, celery, httpx_client
@@ -309,6 +309,8 @@ def show_community(community: Community):
             posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=7)).order_by(desc(Post.sticky)).order_by(desc(Post.up_votes - Post.down_votes))
         elif sort == 'new':
             posts = posts.order_by(desc(Post.posted_at))
+        elif sort == 'old':
+            posts = posts.order_by(asc(Post.posted_at))
         elif sort == 'active':
             posts = posts.order_by(desc(Post.sticky)).order_by(desc(Post.last_active))
         per_page = 100
