@@ -1,8 +1,9 @@
 from datetime import timedelta
 from random import randint
 
-from flask import request, current_app, abort, jsonify, json, g, url_for, redirect, make_response
+from flask import request, current_app, abort, jsonify, json, g, url_for, redirect, make_response, flash
 from flask_login import current_user
+from flask_babel import _
 from psycopg2 import IntegrityError
 from sqlalchemy import desc, or_, text
 import werkzeug.exceptions
@@ -516,7 +517,16 @@ def community_profile(actor):
         else:   # browser request - return html
             return show_community(community)
     else:
-        abort(404)
+        if is_activitypub_request():
+            abort(404)
+        elif current_user.is_authenticated and "@" in actor:
+            flash(_("Community not found on this instance"))
+            return redirect(url_for("community.add_remote"))
+        elif current_user.is_authenticated:
+            flash(_("Community not found on this instance"))
+            return redirect(url_for("community.add_local"))
+        else:
+            abort(404)
 
 
 @bp.route('/inbox', methods=['POST'])
