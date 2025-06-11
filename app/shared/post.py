@@ -420,18 +420,15 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         thumbnail_url, embed_url = fixup_url(url)
         if is_image_url(url):
             file = File(source_url=url, hash=hash)
-            if uploaded_file and type == POST_TYPE_IMAGE:
+            post.type = POST_TYPE_IMAGE
+            if uploaded_file:
                 # change this line when uploaded_file is supported in API
                 file.alt_text = input.image_alt_text.data if input.image_alt_text.data else title
             db.session.add(file)
             db.session.commit()
             post.image_id = file.id
-            if post.type == POST_TYPE_IMAGE:
-                make_image_sizes(post.image_id, 512, 1200, 'posts', post.community.low_quality)
-            else:
-                make_image_sizes(post.image_id, 170, None, 'posts', post.community.low_quality)
+            make_image_sizes(post.image_id, 512, 1200, 'posts', post.community.low_quality)
             post.url = url
-            post.type = POST_TYPE_IMAGE
         else:
             opengraph = opengraph_parse(thumbnail_url)
             if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
