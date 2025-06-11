@@ -192,8 +192,8 @@ def feed_edit(feed_id: int):
         if g.site.enable_nsfl:
             feed_to_edit.nsfl = edit_feed_form.nsfl.data
         feed_to_edit.public = edit_feed_form.public.data
-        feed_to_edit.is_instance_feed = edit_feed_form.is_instance_feed.data
         if current_user.is_admin():
+            feed_to_edit.is_instance_feed = edit_feed_form.is_instance_feed.data
             cache.delete_memoized(menu_instance_feeds)
         db.session.add(feed_to_edit)
         db.session.commit()
