@@ -41,6 +41,7 @@ from markupsafe import Markup
 import boto3
 from app import db, cache, httpx_client, celery
 from app.constants import *
+from app.utils import get_setting
 import re
 from PIL import Image, ImageOps
 
@@ -734,7 +735,7 @@ def mimetype_from_url(url):
 def validation_required(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
-        if current_user.verified:
+        if current_user.verified or not get_setting('email_verification', True):
             return func(*args, **kwargs)
         else:
             return redirect(url_for('auth.validation_required'))
