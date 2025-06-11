@@ -595,7 +595,7 @@ def site_view(user) -> dict:
     return v1
 
 
-@cache.memoize(timeout=86400)
+@cache.memoize(timeout=60)
 def cached_modlist_for_community(community_id):
     moderator_ids = db.session.execute(text('SELECT user_id FROM "community_member" WHERE community_id = :community_id and is_moderator = True'), {'community_id': community_id}).scalars()
     modlist = []
@@ -608,7 +608,7 @@ def cached_modlist_for_community(community_id):
     return modlist
 
 
-@cache.memoize(timeout=86400)
+@cache.memoize(timeout=60)
 def cached_modlist_for_user(user):
     community_ids = db.session.execute(text('SELECT community_id FROM "community_member" WHERE user_id = :user_id and is_moderator = True'), {'user_id': user.id}).scalars()
     modlist = []
@@ -621,14 +621,14 @@ def cached_modlist_for_user(user):
     return modlist
 
 
-@cache.memoize(timeout=86400)
+@cache.memoize(timeout=3000)
 def users_total():
     return db.session.execute(text(
         'SELECT COUNT(id) as c FROM "user" WHERE ap_id is null AND verified is true AND banned is false AND deleted is false')).scalar()
 
 
 """
-@cache.memoize(timeout=86400)
+@cache.memoize(timeout=60)
 def moderating_communities(user):
     cms = CommunityMember.query.filter_by(user_id=user.id, is_moderator=True)
     moderates = []
@@ -638,7 +638,7 @@ def moderating_communities(user):
 """
 
 """
-@cache.memoize(timeout=86400)
+@cache.memoize(timeout=60)
 def joined_communities(user):
     cms = CommunityMember.query.filter_by(user_id=user.id, is_banned=False)
     follows = []
