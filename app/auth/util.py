@@ -7,6 +7,7 @@ from flask import current_app
 from app import cache, db
 from app.models import Site, utcnow, Notification, UserRegistration, User
 from app.utils import get_request
+from app.constants import NOTIF_REGISTRATION
 
 
 # Return a random string of 6 letter/digits.
