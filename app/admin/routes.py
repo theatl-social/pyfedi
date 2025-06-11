@@ -1580,13 +1580,14 @@ def admin_community_move(community_id, new_owner):
     form.new_owner.label.text = _('Set community owner to %(user_name)s', user_name=new_owner_user.link())
 
     if form.validate_on_submit():
+        form.new_url.data = slugify(form.new_url.data, separator='_').lower()
         old_name = community.link()
         community.ap_id = None
         private_key, public_key = RsaKeys.generate_keypair()
         community.name = form.new_url.data.lower()
         community.private_key = private_key
         community.public_key = public_key
-        community.ap_profile_id = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data.lower()
+        community.ap_profile_id = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data
         community.ap_public_url = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data
         community.ap_followers_url = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data + '/followers'
         community.ap_featured_url = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data + '/featured'

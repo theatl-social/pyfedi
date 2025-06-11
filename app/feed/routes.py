@@ -165,6 +165,7 @@ def feed_edit(feed_id: int):
         edit_feed_form.is_instance_feed.render_kw = {'disabled': True}
     
     if edit_feed_form.validate_on_submit():
+        edit_feed_form.url.data = slugify(edit_feed_form.url.data, separator='_').lower()
         feed_to_edit.title = edit_feed_form.title.data
         feed_to_edit.name = edit_feed_form.url.data
         feed_to_edit.machine_name = edit_feed_form.url.data
