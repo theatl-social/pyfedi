@@ -372,6 +372,7 @@ def feed_copy(feed_id: int):
     copy_feed_form.title.data = feed_to_copy.title
     copy_feed_form.url.data = feed_to_copy.name
     copy_feed_form.description.data = feed_to_copy.description
+    copy_feed_form.communities.data = feed_communities_for_edit(feed_to_copy.id)
     copy_feed_form.show_child_posts.data = feed_to_copy.show_posts_in_children
     if g.site.enable_nsfw is False:
         copy_feed_form.nsfw.render_kw = {'disabled': True}

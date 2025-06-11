@@ -17,10 +17,12 @@
                         <div class="form-group">{{ form.url.label(class_="form-control-label required") }}
                             /f/{{ form.url(class_="form-control", maxlength=255) }}
                             {% for error in form.url.errors %}
-                            <span style="color: red;">[{{ error }}]</span>
+                            <br><span style="color: red;">[{{ error }}]</span>
                             {% endfor %}
                         </div>
                         {{ render_field(form.description) }}
+                        {{ render_field(form.communities) }}
+                        <small class="field_hint">{{ _('Format example: news@lemmy.world. One per line.') }}</small>
                         {{ render_field(form.parent_feed_id) }}
                         {{ render_field(form.show_child_posts) }}
                         {{ render_field(form.icon_file) }}

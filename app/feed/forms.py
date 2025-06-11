@@ -34,7 +34,7 @@ class AddCopyFeedForm(FlaskForm):
             if '-' in self.url.data.strip():
                 self.url.errors.append(_l('- cannot be in Url. Use _ instead?'))
                 return False
-            feed = Feed.query.filter(Feed.name == self.url.data.strip().lower(), Feed.ap_id == None).first()
+            feed = Feed.query.filter(Feed.name == self.url.data.strip().lower()).first()
             if feed is not None:
                 self.url.errors.append(_l('A Feed with this url already exists.'))
                 return False
@@ -60,7 +60,7 @@ class EditFeedForm(FlaskForm):
     def validate(self, extra_validators=None):
         if not super().validate():
             return False
-        feed = Feed.query.filter(Feed.name == self.url.data.strip().lower(), Feed.ap_id == None).first()
+        feed = Feed.query.filter(Feed.name == self.url.data.strip().lower()).first()
         if feed is not None and feed.id != self.feed_id:
             self.url.errors.append(_l('Url is already used by another feed.'))
             return False
