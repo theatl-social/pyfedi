@@ -521,7 +521,8 @@ def community_profile(actor):
             abort(404)
         elif current_user.is_authenticated and "@" in actor:
             flash(_("Community not found on this instance"))
-            return redirect(url_for("community.add_remote"))
+            part = actor.split('@')
+            return redirect(url_for("community.lookup", community=part[0], domain=part[1]))
         elif current_user.is_authenticated:
             flash(_("Community not found on this instance"))
             return redirect(url_for("community.add_local"))
