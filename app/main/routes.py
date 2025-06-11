@@ -124,24 +124,26 @@ def home_page(sort, view_filter):
             new_communities = new_communities.filter(Community.id.not_in(community_ids))
     new_communities = new_communities.order_by(desc(Community.created_at)).limit(5).all()
 
-    # Voting history
+    # Voting history and ban status
     if current_user.is_authenticated:
         recently_upvoted = recently_upvoted_posts(current_user.id)
         recently_downvoted = recently_downvoted_posts(current_user.id)
+        communities_banned_from_list = communities_banned_from(current_user.id)
     else:
         recently_upvoted = []
         recently_downvoted = []
+        communities_banned_from_list = []
 
     return render_template('index.html', posts=posts, active_communities=active_communities, new_communities=new_communities,
                            show_post_community=True, low_bandwidth=low_bandwidth, recently_upvoted=recently_upvoted,
-                           recently_downvoted=recently_downvoted,
+                           recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list,
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            etag=f"{sort}_{view_filter}_{hash(str(g.site.last_active))}", next_url=next_url, prev_url=prev_url,
                            title=f"{g.site.name} - {g.site.description}",
                            description=shorten_string(html_to_text(g.site.sidebar), 150),
                            content_filters=content_filters, sort=sort, view_filter=view_filter,
                            announcement=allowlist_html(get_setting('announcement', '')),
-                            joined_communities=joined_or_modding_communities(current_user.get_id()),
+                           joined_communities=joined_or_modding_communities(current_user.get_id()),
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
                            )
 

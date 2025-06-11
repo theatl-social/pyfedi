@@ -23,7 +23,7 @@ from app.utils import render_template, user_filters_posts, moderating_communitie
     menu_topics, menu_instance_feeds, \
     menu_my_feeds, menu_subscribed_feeds, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, \
     recently_upvoted_posts, recently_downvoted_posts, blocked_instances, blocked_users, joined_or_modding_communities, \
-    login_required_if_private_instance
+    login_required_if_private_instance, communities_banned_from
 
 
 @bp.route('/topic/<path:topic_path>', methods=['GET'])
@@ -132,9 +132,11 @@ def show_topic(topic_path):
         if current_user.is_authenticated:
             recently_upvoted = recently_upvoted_posts(current_user.id)
             recently_downvoted = recently_downvoted_posts(current_user.id)
+            communities_banned_from_list = communities_banned_from(current_user.id)
         else:
             recently_upvoted = []
             recently_downvoted = []
+            communities_banned_from_list = []
 
         return render_template('topic/show_topic.html', title=_(current_topic.name), posts=posts, topic=current_topic, sort=sort,
                                page=page, post_layout=post_layout, next_url=next_url, prev_url=prev_url, comments=comments,
@@ -148,6 +150,7 @@ def show_topic(topic_path):
                                POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
                                POST_TYPE_VIDEO=POST_TYPE_VIDEO,
                                SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
+                               communities_banned_from_list=communities_banned_from_list
                                )
     else:
         abort(404)

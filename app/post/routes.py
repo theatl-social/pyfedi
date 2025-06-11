@@ -229,7 +229,7 @@ def show_post(post_id: int):
                                reply_collapse_threshold=reply_collapse_threshold,
                                etag=f"{post.id}{sort}_{hash(post.last_active)}", markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
                                can_upvote_here=can_upvote(user, community),
-                               can_downvote_here=can_downvote(user, community, g.site),
+                               can_downvote_here=can_downvote(user, community),
                                low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                                )

@@ -902,15 +902,14 @@ def guess_mime_type(file_path: str) -> str:
     return content_type
 
 
-def can_downvote(user, community: Community, site=None) -> bool:
+def can_downvote(user, community: Community, communities_banned_from_list=None) -> bool:
     if user is None or community is None or user.banned or user.bot:
         return False
 
-    if site is None:
-        try:
-            site = g.site
-        except:
-            site = Site.query.get(1)
+    try:
+        site = g.site
+    except:
+        site = Site.query.get(1)
 
     if not site.enable_downvotes:
         return False
@@ -935,18 +934,26 @@ def can_downvote(user, community: Community, site=None) -> bool:
                 if user.instance_id not in trusted_instance_ids():
                     return False
 
-    if community.id in communities_banned_from(user.id):
-        return False
+    if communities_banned_from_list is not None:
+        if community.id in communities_banned_from_list:
+            return False
+    else:
+        if community.id in communities_banned_from(user.id):
+            return False
 
     return True
 
 
-def can_upvote(user, community: Community) -> bool:
+def can_upvote(user, community: Community, communities_banned_from_list=None) -> bool:
     if user is None or community is None or user.banned or user.bot:
         return False
 
-    if community.id in communities_banned_from(user.id):
-        return False
+    if communities_banned_from_list is not None:
+        if community.id in communities_banned_from_list:
+            return False
+    else:
+        if community.id in communities_banned_from(user.id):
+            return False
 
     return True
 
@@ -1536,28 +1543,28 @@ def in_sorted_list(arr, target):
 
 @cache.memoize(timeout=600)
 def recently_upvoted_posts(user_id) -> List[int]:
-    post_ids = db.session.execute(text('SELECT post_id FROM "post_vote" WHERE user_id = :user_id AND effect > 0 ORDER BY id DESC LIMIT 1000'),
+    post_ids = db.session.execute(text('SELECT post_id FROM "post_vote" WHERE user_id = :user_id AND effect > 0 ORDER BY id DESC LIMIT 100'),
                                {'user_id': user_id}).scalars()
     return sorted(post_ids)     # sorted so that in_sorted_list can be used
 
 
 @cache.memoize(timeout=600)
 def recently_downvoted_posts(user_id) -> List[int]:
-    post_ids = db.session.execute(text('SELECT post_id FROM "post_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 1000'),
+    post_ids = db.session.execute(text('SELECT post_id FROM "post_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 100'),
                                {'user_id': user_id}).scalars()
     return sorted(post_ids)
 
 
 @cache.memoize(timeout=600)
 def recently_upvoted_post_replies(user_id) -> List[int]:
-    reply_ids = db.session.execute(text('SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect > 0 ORDER BY id DESC LIMIT 1000'),
+    reply_ids = db.session.execute(text('SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect > 0 ORDER BY id DESC LIMIT 100'),
                                {'user_id': user_id}).scalars()
     return sorted(reply_ids)     # sorted so that in_sorted_list can be used
 
 
 @cache.memoize(timeout=600)
 def recently_downvoted_post_replies(user_id) -> List[int]:
-    reply_ids = db.session.execute(text('SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 1000'),
+    reply_ids = db.session.execute(text('SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 100'),
                                {'user_id': user_id}).scalars()
     return sorted(reply_ids)
 
