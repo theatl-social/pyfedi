@@ -15,6 +15,7 @@
         {% endif %}
         <h4 class="dropdown-header">{{ _('Feeds') }}</h4>
         <ul class="text-end text-lg-start">
+          <li><a class="dropdown-item{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></li>
           {% if menu_instance_feeds -%}
                {% for feed_menu_item in menu_instance_feeds -%}
                     <li><a class="dropdown-item{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a></li>
@@ -29,10 +30,8 @@
                {% for feed_menu_item in menu_subscribed_feeds -%}
                     <li><a class="dropdown-item{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a></li>
                {% endfor -%}
-               <li><a class="dropdown-item{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></li>
           {% else -%}
             <li><a class="dropdown-item{% if active_child == 'user_feeds' %} active{% endif %}" href="/u/myfeeds">{{ _('My Feeds') }}</a></li>
-            <li><a class="dropdown-item{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></li>
           {% endif -%}
         </ul>
     </div>
@@ -82,4 +81,5 @@
 {% if current_user.is_anonymous or not something_displayed -%}
     <a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities/local">{{ _('Local communities') }}</a>
     <a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a>
+    <a class="dropdown-item{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Feeds') }}</a>
 {% endif %}
