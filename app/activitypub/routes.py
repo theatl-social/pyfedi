@@ -522,9 +522,11 @@ def community_profile(actor):
         elif current_user.is_authenticated and "@" in actor:
             flash(_("Community not found on this instance"))
             return redirect(url_for("community.add_remote"))
-        else:
+        elif current_user.is_authenticated:
             flash(_("Community not found on this instance"))
             return redirect(url_for("community.add_local"))
+        else:
+            abort(404)
 
 
 @bp.route('/inbox', methods=['POST'])
