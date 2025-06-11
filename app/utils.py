@@ -41,7 +41,6 @@ from markupsafe import Markup
 import boto3
 from app import db, cache, httpx_client, celery
 from app.constants import *
-from app.utils import get_setting
 import re
 from PIL import Image, ImageOps
 
