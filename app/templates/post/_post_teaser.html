@@ -13,15 +13,15 @@
         {% if content_blocked -%} title="{{ _('Filtered: ') }}{{ content_blocked }}"{% else %} title="Post: {{ post.title }}" aria-label="Post: {{ post.title }}"{% endif %} id="post_{{ post.id }}" tabindex="0">
         <div class="row">
             {% if post.type == POST_TYPE_ARTICLE %}
-                {% include "post/post_teaser/_article.html" -%}
+                {{ render_article(post, low_bandwidth=low_bandwidth, blur_content=blur_content, sort=sort, current_user=current_user, request=request, locale=locale, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class) }}
             {% elif post.type == POST_TYPE_LINK %}
-                {% include "post/post_teaser/_link.html" -%}
+                {{ render_link(post, low_bandwidth=low_bandwidth, blur_content=blur_content, sort=sort, current_user=current_user, request=request, locale=locale, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class) }}
             {% elif post.type == POST_TYPE_POLL %}
-                {% include "post/post_teaser/_poll.html" -%}
+                {{ render_poll(post, low_bandwidth=low_bandwidth, blur_content=blur_content, sort=sort, current_user=current_user, request=request, locale=locale, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class) }}
             {% elif post.type == POST_TYPE_IMAGE %}
-                {% include "post/post_teaser/_image.html" -%}
+                {{ render_image(post, low_bandwidth=low_bandwidth, blur_content=blur_content, sort=sort, current_user=current_user, request=request, locale=locale, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class) }}
             {% elif post.type == POST_TYPE_VIDEO %}
-                {% include "post/post_teaser/_video.html" -%}
+                {{ render_video(post, low_bandwidth=low_bandwidth, sort=sort, autoplay=autoplay|default(false), current_user=current_user, request=request, locale=locale, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class) }}
             {% endif -%}
         </div>
     </div>

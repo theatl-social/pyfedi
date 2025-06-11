@@ -29,6 +29,7 @@
     {% endif -%}
 </div>
 {% endmacro -%}
+{% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video -%}
 <!doctype html>
 <html lang="{{ 'en' if current_user.is_anonymous else current_user.interface_language }}">
   <head>

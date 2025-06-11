@@ -4,6 +4,8 @@
     {% extends "base.html" %}
 {% endif %}
 {% set active_child = 'read_posts' %}
+{% from "_macros.html" import render_communityname %}
+{% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video %}
 
 {% block app_content %}
 <div class="row">

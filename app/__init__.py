@@ -14,6 +14,7 @@ from flask_babel import Babel, lazy_gettext as _l
 from flask_caching import Cache
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from jinja2 import FileSystemBytecodeCache
 from werkzeug.middleware.proxy_fix import ProxyFix
 from celery import Celery
 from sqlalchemy_searchable import make_searchable
@@ -85,6 +86,8 @@ def create_app(config_class=Config):
             api_base_url='https://www.googleapis.com/',
             client_kwargs={'scope': 'email profile'}
         )
+
+    app.jinja_env.bytecode_cache = FileSystemBytecodeCache('app/static/tmp')
 
     from app.main import bp as main_bp
     app.register_blueprint(main_bp)

@@ -4,6 +4,7 @@
     {% extends "base.html" %}
 {% endif %}
 {% from 'bootstrap/form.html' import render_form %}
+{% from "_macros.html" import render_username, render_communityname, render_feedname -%}
 
 {% block app_content %}
 <script src="/static/js/embed_listener.js" type="text/javascript"></script>

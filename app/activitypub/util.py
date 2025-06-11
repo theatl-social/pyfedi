@@ -1197,7 +1197,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
 
                             # set up the storage directory
                             if store_files_in_s3():
-                                directory = f'app/static/tmp'
+                                directory = 'app/static/tmp'
                             else:
                                 directory = f'app/static/media/{directory}/' + new_filename[0:2] + '/' + new_filename[2:4]
                             ensure_directory_exists(directory)
