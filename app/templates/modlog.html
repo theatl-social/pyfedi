@@ -15,7 +15,7 @@
             <thead>
                 <tr>
                     <th>{{ _('When') }}</th>
-                    {% if can_see_names %}<th>{{ _('Moderator') }}</th>{% endif %}
+                    <th>{{ _('Moderator') }}</th>
                     <th>{{ _('Action') }}</th>
                 </tr>
             </thead>
@@ -23,7 +23,17 @@
                 {% for modlog_entry in modlog_entries.items %}
                     <tr>
                         <td>{{ arrow.get(modlog_entry.created_at).humanize(locale=locale) }}</td>
-                        {% if can_see_names %}<td>{{ render_username(modlog_entry.author) }}</td>{% endif %}
+                        <td>
+                            {% if can_see_names %}
+                                {{ render_username(modlog_entry.author) }}
+                            {% else %}
+                                {% if modlog_entry.community_id %}
+                                    {{ instances[modlog_entry.community.instance_id] }} mod
+                                {% else %}
+                                    {{ instances[modlog_entry.author.instance_id] }} admin
+                                {% endif %}
+                            {% endif %}
+                        </td>
                         <td>{{ modlog_entry.action_to_str() }}
                             {% if modlog_entry.link and modlog_entry.link_text -%}
                                 <a href="/{{ modlog_entry.link }}">{{ modlog_entry.link_text}}</a>

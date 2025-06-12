@@ -494,10 +494,14 @@ def modlog():
     next_url = url_for('main.modlog', page=modlog_entries.next_num) if modlog_entries.has_next else None
     prev_url = url_for('main.modlog', page=modlog_entries.prev_num) if modlog_entries.has_prev and page != 1 else None
 
+    instances = {}
+    for instance in Instance.query.all():
+        instances[instance.id] = instance.domain
+
     return render_template('modlog.html',
                            title=_('Moderation Log'), modlog_entries=modlog_entries, can_see_names=can_see_names,
                            next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth,
-                           
+                           instances=instances,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                            )
 
