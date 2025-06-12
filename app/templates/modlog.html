@@ -5,6 +5,7 @@
 {% endif -%} -%}
 {% from 'bootstrap5/form.html' import render_form -%}
 {% set active_child = 'modlog' -%}
+{% from "_macros.html" import render_username %}
 
 {% block app_content -%}
     <h1>{{ _('Moderation log') }}</h1>
