@@ -264,7 +264,7 @@ def mime_type_using_head(url):
 
 allowed_tags = ['p', 'strong', 'a', 'ul', 'ol', 'li', 'em', 'blockquote', 'cite', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre',
                 'code', 'img', 'details', 'summary', 'table', 'tr', 'td', 'th', 'tbody', 'thead', 'hr', 'span', 'small', 'sub', 'sup',
-                's']
+                's', 'tg-spoiler']
 
 # sanitise HTML using an allow list
 def allowlist_html(html: str, a_target='_blank') -> str:
@@ -403,14 +403,14 @@ def markdown_to_html(markdown_text, anchors_new_tab=True) -> str:
 
         try:
             raw_html = markdown2.markdown(markdown_text,
-                        extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True,
+                        extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True, 'tg-spoiler': True,
                                 'breaks': {'on_newline': True, 'on_backslash': True}, 'tag-friendly': True})
         except TypeError:
             # weird markdown, like https://mander.xyz/u/tty1 and https://feddit.uk/comment/16076443,
             # causes "markdown2.Markdown._color_with_pygments() argument after ** must be a mapping, not bool" error, so try again without fenced-code-blocks extra
             try:
                 raw_html = markdown2.markdown(markdown_text,
-                            extras={'middle-word-em': False, 'tables': True, 'strike': True,
+                            extras={'middle-word-em': False, 'tables': True, 'strike': True, 'tg-spoiler': True,
                                     'breaks': {'on_newline': True, 'on_backslash': True}, 'tag-friendly': True})
             except TypeError:
                 raw_html = ''
