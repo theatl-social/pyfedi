@@ -1264,7 +1264,6 @@ class User(UserMixin, db.Model):
     def has_read_post(self, post):
         return self.read_post.filter(read_posts.c.read_post_id == post.id).count() > 0
 
-    @cache.memoize(timeout=500)
     def get_note(self, by_user):
         user_note = self.user_notes.filter(UserNote.target_id == self.id, UserNote.user_id == by_user.id).first()
         if user_note:

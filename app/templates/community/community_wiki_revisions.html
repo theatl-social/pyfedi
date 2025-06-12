@@ -35,7 +35,7 @@
                 <tbody>
                     {% for revision in revisions %}
                         <tr>
-                            <td>{{ render_username(revision.author) }}</td>
+                            <td>{{ render_username(revision.author, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</td>
                             <td>{{ arrow.get(revision.edited_at).humanize(locale=locale) }}</td>
                             <td class="text-right">{% if page.can_edit(current_user, community) %}
                                 <div class="dropdown">

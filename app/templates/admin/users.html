@@ -79,7 +79,7 @@
             </tr>
             {% for user in users.items %}
                 <tr>
-                    <td><span title="{{ _('Name') }}">{{ render_username(user) }}</span></td>
+                    <td><span title="{{ _('Name') }}">{{ render_username(user, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</span></td>
                     <td><span title="{{ _('Banned') }}">{{ '<span class="red">Banned</span>'|safe if user.banned }}
                         {{ '<span class="red">Banned posts</span>'|safe if user.ban_posts }}
                         {{ '<span class="red">Banned comments</span>'|safe if user.ban_comments }}</span></td>

@@ -45,7 +45,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     blocked_users, languages_for_form, menu_topics, add_to_modlog, \
     blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, \
     instance_software, domain_from_email, referrer, flair_for_form, find_flair_id, login_required_if_private_instance, \
-    possible_communities, reported_posts
+    possible_communities, reported_posts, user_notes
 from app.shared.post import make_post, sticky_post
 from app.shared.tasks import task_selector
 from feedgen.feed import FeedGenerator
@@ -457,6 +457,7 @@ def show_community(community: Community):
                            rss_feed=f"https://{current_app.config['SERVER_NAME']}/community/{community.link()}/feed", rss_feed_name=f"{community.title} on {g.site.name}",
                            content_filters=content_filters,  sort=sort, flair=flair,
                            reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
+                           user_notes=user_notes(current_user.get_id()),
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                            post_layout=post_layout, content_type=content_type, current_app=current_app,
                            user_has_feeds=user_has_feeds, current_feed_id=current_feed_id,

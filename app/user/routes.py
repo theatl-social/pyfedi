@@ -30,7 +30,7 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     blocked_communities, piefed_markdown_to_lemmy_markdown, \
     read_language_choices, request_etag_matches, return_304, mimetype_from_url, notif_id_to_string, \
     login_required_if_private_instance, recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
-    recently_downvoted_post_replies, reported_posts
+    recently_downvoted_post_replies, reported_posts, user_notes
 from sqlalchemy import desc, or_, text, asc
 from sqlalchemy.orm.exc import NoResultFound
 import os
@@ -162,6 +162,7 @@ def show_profile(user):
                            moderates=moderates, canonical=canonical, title=_('Posts by %(user_name)s',
                                                                                    user_name=user.user_name),
                            description=description, subscribed=subscribed, upvoted=upvoted, disable_voting=True,
+                           user_notes=user_notes(current_user.get_id()),
                            post_next_url=post_next_url, post_prev_url=post_prev_url,
                            replies_next_url=replies_next_url, replies_prev_url=replies_prev_url,
                            noindex=not user.indexable, show_post_community=True, hide_vote_buttons=True,
@@ -1482,7 +1483,6 @@ def edit_user_note(actor):
             usernote = UserNote(target_id=user.id, user_id=current_user.id, body=text)
             db.session.add(usernote)
         db.session.commit()
-        cache.delete_memoized(User.get_note, user, current_user)
 
         flash(_('Your changes have been saved.'), 'success')
         if return_to:

@@ -35,7 +35,7 @@ from app.utils import render_template, permission_required, set_setting, get_set
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
     topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents, \
     download_defeds, instance_banned, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, referrer, \
-    community_membership, retrieve_image_hash, posts_with_blocked_images, user_access, reported_posts
+    community_membership, retrieve_image_hash, posts_with_blocked_images, user_access, reported_posts, user_notes
 from app.admin import bp
 
 
@@ -1188,6 +1188,7 @@ def admin_users():
 
     return render_template('admin/users.html', title=_('Users'), next_url=next_url, prev_url=prev_url, users=users,
                            local_remote=local_remote, search=search, sort_by=sort_by, last_seen=last_seen,
+                           user_notes=user_notes(current_user.get_id()),
                            )
 
 
@@ -1253,6 +1254,7 @@ def admin_content():
                            next_url=next_url, prev_url=prev_url,
                            next_url_replies=next_url_replies, prev_url_replies=prev_url_replies,
                            posts=posts, post_replies=post_replies,
+                           user_notes=user_notes(current_user.get_id()),
                            posts_replies=posts_replies, show=show, days=days,
                            reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
                            )

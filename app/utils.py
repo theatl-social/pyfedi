@@ -52,7 +52,7 @@ from captcha.image import ImageCaptcha
 
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, ActivityPubLog, IpBan, \
     Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
-    File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest, Notification
+    File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest, Notification, UserNote
 
 
 # Flask's render_template function, with support for themes added
@@ -2288,6 +2288,15 @@ def possible_communities():
     if len(comms) > 0:
         which_community['Others'] = comms
     return which_community
+
+
+def user_notes(user_id):
+    if user_id is None:
+        return {}
+    result = {}
+    for note in UserNote.query.filter(UserNote.user_id == user_id).all():
+        result[note.target_id] = note.body
+    return result
 
 
 @event.listens_for(User.unread_notifications, 'set')

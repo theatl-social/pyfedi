@@ -24,7 +24,7 @@ from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markd
     gibberish, get_task_session, instance_banned, menu_subscribed_feeds, referrer, community_membership, \
     paginate_post_ids, get_deduped_post_ids, get_request, post_ids_to_models, recently_upvoted_posts, \
     recently_downvoted_posts, joined_or_modding_communities, login_required_if_private_instance, \
-    communities_banned_from, reported_posts
+    communities_banned_from, reported_posts, user_notes
 from collections import namedtuple
 from sqlalchemy import desc, or_, text
 from slugify import slugify
@@ -727,6 +727,7 @@ def show_feed(feed):
                                show_post_community=True, joined_communities=joined_or_modding_communities(current_user.get_id()),
                                recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
                                reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
+                               user_notes=user_notes(current_user.get_id()),
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                                POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
                                POST_TYPE_VIDEO=POST_TYPE_VIDEO,
