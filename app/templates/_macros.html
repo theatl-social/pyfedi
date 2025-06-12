@@ -1,9 +1,9 @@
 {# Shared utility macros used across multiple templates #}
 
-{% macro render_username(user, add_domain=True, htmx_redirect_back_to=None, current_user=None, low_bandwidth=False, collapsed=False, user_flair=None) -%}
+{% macro render_username(user, add_domain=True, htmx_redirect_back_to=None, current_user=None, low_bandwidth=False, collapsed=False, user_flair=None, admin_ids=None) -%}
 <div class="render_username" xmlns="http://www.w3.org/1999/html">
     {% if user.deleted -%}
-        {% if current_user and current_user.is_authenticated and current_user.is_admin() -%}
+        {% if current_user and current_user.is_authenticated and current_user.get_id() in admin_ids -%}
             <a href="/u/{{ user.link() }}" title="{{ user.ap_id if user.ap_id != none else user.user_name }}" aria-label="{{ _('Author') }}">[deleted]</a>
         {% else -%}
             [deleted]

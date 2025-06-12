@@ -27,7 +27,7 @@
     {% endfor -%}
     {% if post.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif -%}
     {% if post.nsfl -%}<span class="warning_badge nsfl" title="{{ _('Potentially emotionally scarring content') }}">nsfl</span>{% endif -%}
-    {% if post.has_been_reported() -%}
+    {% if post.id in reported_posts -%}
         <span class="red fe fe-report" title="{{ _('Reported. Check post for issues.') }}"></span>
     {% endif -%}
     {% if post.sticky -%}<span class="fe fe-sticky-right"></span>{% endif -%}

@@ -23,7 +23,7 @@ from app.utils import render_template, user_filters_posts, moderating_communitie
     menu_topics, menu_instance_feeds, \
     menu_my_feeds, menu_subscribed_feeds, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, \
     recently_upvoted_posts, recently_downvoted_posts, blocked_instances, blocked_users, joined_or_modding_communities, \
-    login_required_if_private_instance, communities_banned_from
+    login_required_if_private_instance, communities_banned_from, reported_posts
 
 
 @bp.route('/topic/<path:topic_path>', methods=['GET'])
@@ -145,6 +145,7 @@ def show_topic(topic_path):
                                joined_communities=joined_or_modding_communities(current_user.get_id()),
                                rss_feed=f"https://{current_app.config['SERVER_NAME']}/topic/{topic_path}.rss",
                                rss_feed_name=f"{current_topic.name} on {g.site.name}", content_type=content_type,
+                               reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
                                show_post_community=True, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                                POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,

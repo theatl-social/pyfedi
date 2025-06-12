@@ -9,8 +9,9 @@ from flask_login import current_user
 from app import create_app, db, cli
 import arrow
 from flask import session, g, json, request, current_app
+from sqlalchemy import text
 from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_ARTICLE, POST_TYPE_VIDEO, POST_TYPE_POLL, \
-    SUBSCRIPTION_MODERATOR, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_PENDING
+    SUBSCRIPTION_MODERATOR, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_PENDING, ROLE_ADMIN
 from app.models import Site
 from app.utils import getmtime, gibberish, shorten_string, shorten_url, digits, user_access, community_membership, \
     can_create_post, can_upvote, can_downvote, shorten_number, ap_datetime, current_theme, community_link_to_href, \
@@ -26,6 +27,7 @@ def app_context_processor():
     return dict(getmtime=getmtime, instance_domain=current_app.config['SERVER_NAME'], debug_mode=current_app.debug,
                 arrow=arrow, locale=g.locale if hasattr(g, 'locale') else None, notif_server=current_app.config['NOTIF_SERVER'],
                 site=g.site if hasattr(g, 'site') else None, nonce=g.nonce if hasattr(g, 'nonce') else None,
+                admin_ids=g.admin_ids if hasattr(g, 'admin_ids') else [],
                 POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE, notif_id_to_string=notif_id_to_string,
                 POST_TYPE_ARTICLE=POST_TYPE_ARTICLE, POST_TYPE_VIDEO=POST_TYPE_VIDEO, POST_TYPE_POLL=POST_TYPE_POLL,
                 SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
@@ -74,6 +76,10 @@ def before_request():
     g.locale = str(get_locale())
     if request.path != '/inbox' and not request.path.startswith('/static/'):        # do not load g.site on shared inbox, to increase chance of duplicate detection working properly
         g.site = Site.query.get(1)
+        g.admin_ids = list(db.session.execute(
+            text('SELECT DISTINCT u.id FROM "user" u LEFT JOIN user_role ur ON u.id = ur.user_id WHERE (ur.role_id = :role_admin AND u.deleted = false AND u.banned = false) OR u.id = 1 ORDER BY u.id'),
+            {'role_admin': ROLE_ADMIN}
+        ).scalars())
     if current_user.is_authenticated:
         current_user.last_seen = datetime.utcnow()
         current_user.email_unread_sent = False

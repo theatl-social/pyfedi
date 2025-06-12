@@ -1117,7 +1117,7 @@ def user_filters_replies(user_id):
 
 
 @cache.memoize(timeout=300)
-def moderating_communities(user_id):
+def moderating_communities(user_id) -> List[Community]:
     if user_id is None or user_id == 0:
         return []
     communities = Community.query.join(CommunityMember, Community.id == CommunityMember.community_id).\
@@ -1140,7 +1140,7 @@ def moderating_communities(user_id):
 
 
 @cache.memoize(timeout=300)
-def joined_communities(user_id):
+def joined_communities(user_id) -> List[Community]:
     if user_id is None or user_id == 0:
         return []
     communities = Community.query.join(CommunityMember, Community.id == CommunityMember.community_id).\
@@ -2201,6 +2201,30 @@ def notify_admin(title, url, author_id, notif_type, subtype, targets):
         admin.unread_notifications += 1
         db.session.add(notify)
     db.session.commit()
+
+
+def reported_posts(user_id, admin_ids) -> List[int]:
+    if user_id is None:
+        return []
+    if user_id in admin_ids:
+        post_ids = list(db.session.execute(text('SELECT id FROM "post" WHERE reports > 0')).scalars())
+    else:
+        community_ids = [community.id for community in moderating_communities(user_id)]
+        post_ids = list(db.session.execute(text('SELECT id FROM "post" WHERE reports > 0 AND community_id IN :community_ids'),
+                                           {'community_ids': community_ids}).scalars())
+    return post_ids
+
+
+def reported_post_replies(user_id, admin_ids) -> List[int]:
+    if user_id is None:
+        return []
+    if user_id in admin_ids:
+        post_reply_ids = list(db.session.execute(text('SELECT id FROM "post_reply" WHERE reports > 0')).scalars())
+    else:
+        community_ids = [community.id for community in moderating_communities(user_id)]
+        post_reply_ids = list(db.session.execute(text('SELECT id FROM "post_reply" WHERE reports > 0 AND community_id IN :community_ids'),
+                                           {'community_ids': community_ids}).scalars())
+    return post_reply_ids
 
 
 def possible_communities():

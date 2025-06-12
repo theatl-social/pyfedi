@@ -6,7 +6,7 @@
 {% macro render_username(user, add_domain=True, htmx_redirect_back_to=None) -%}
 <div class="render_username">
     {% if user.deleted -%}
-        {% if current_user.is_authenticated and current_user.is_admin() -%}
+        {% if current_user.is_authenticated and current_user.get_id() in admin_ids -%}
             <a href="/u/{{ user.link() }}" title="{{ user.ap_id if user.ap_id != none else user.user_name }}" aria-label="{{ _('Author') }}">[deleted]</a>
         {% else -%}
             [deleted]

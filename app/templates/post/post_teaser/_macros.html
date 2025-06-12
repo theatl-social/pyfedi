@@ -1,7 +1,7 @@
 {# Macros for post teaser components. We used to use include for this but import is much faster when deeply nested, as these are. #}
 {% from "_macros.html" import render_username, render_communityname %}
 
-{% macro render_title(post, sort=None, embed=False, show_post_community=True, low_bandwidth=False, current_user=None, request=None, locale=None) -%}
+{% macro render_title(post, sort=None, embed=False, show_post_community=True, low_bandwidth=False, current_user=None, request=None, locale=None, reported_posts=None, admin_ids=None) -%}
 {% if embed -%}
 <div class="embed_logo">
     <a href="/" target="_blank" title="{{ g.site.name }}"><img src="{{ g.site.logo if g.site.logo else '/static/images/piefed_logo_full_t_300x300.svg' }}" alt="Logo" width="40" height="40"></a>
@@ -31,7 +31,7 @@
     {% endfor -%}
     {% if post.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif -%}
     {% if post.nsfl -%}<span class="warning_badge nsfl" title="{{ _('Potentially emotionally scarring content') }}">nsfl</span>{% endif -%}
-    {% if post.has_been_reported() -%}
+    {% if post.id in reported_posts -%}
         <span class="red fe fe-report" title="{{ _('Reported. Check post for issues.') }}"></span>
     {% endif -%}
     {% if post.sticky -%}<span class="fe fe-sticky-right"></span>{% endif -%}
@@ -40,10 +40,10 @@
 <div class="author small">{% if show_post_community -%}<a href="{{ url_for('activitypub.community_profile', actor=post.community.link(), _external=embed) }}" {{ 'target="_blank"' if embed }} aria-label="{{ _('Go to community %(name)s', name=post.community.name) }}">
     {% if post.community.icon_id and not low_bandwidth %}<img class="community_icon_small rounded-circle" src="{{ post.community.icon_image('tiny') }}" alt="Community icon" />{% endif -%}
     c/{{ post.community.name }}</a>{% endif -%}
-    by {{ render_username(post.author, htmx_redirect_back_to=request.path + '#post_' + str(post.id), current_user=current_user, low_bandwidth=low_bandwidth) }} <time datetime="{{ post.last_active }}" title="{{ post.last_active }}">{{ post.posted_at_localized(sort, locale) }}</time></div>
+    by {{ render_username(post.author, htmx_redirect_back_to=request.path + '#post_' + str(post.id), current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids) }} <time datetime="{{ post.last_active }}" title="{{ post.last_active }}">{{ post.posted_at_localized(sort, locale) }}</time></div>
 {%- endmacro %}
 
-{% macro render_utilities_bar(post, sort=None, embed=False, low_bandwidth=False, current_user=None, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='') -%}
+{% macro render_utilities_bar(post, sort=None, embed=False, low_bandwidth=False, current_user=None, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='', reported_posts=None) -%}
 <div class="post_utilities_bar">
     <div class="post_replies_link">
         <a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None, _anchor='post_replies') }}" {{ 'target="_blank"' if embed }} aria-label="{{ _('View comments') }}"><span class="fe fe-reply"></span> <span aria-label="{{ _('Number of comments:') }}">{{ post.reply_count }}</span></a>
@@ -133,7 +133,7 @@
 </div>
 {%- endmacro %}
 
-{% macro render_article(post, low_bandwidth=False, blur_content=False, sort=None, current_user=None, request=None, locale=None, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='') -%}
+{% macro render_article(post, low_bandwidth=False, blur_content=False, sort=None, current_user=None, request=None, locale=None, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='', reported_posts=None, admin_ids=None) -%}
 <div class="col post_teaser_body">
     {% if post.image_id -%}
         <div class="col_thumbnail thumbnail{{ ' lbw' if low_bandwidth }}" aria-hidden="true">
@@ -146,17 +146,17 @@
         </div>
     {% endif -%}
 
-    {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale) }}
+    {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale, reported_posts=reported_posts, admin_ids=admin_ids) }}
     {% if post.body_html -%}
         <div class="post_teaser_article_preview small post_teaser_clickable" lang="{{ post.language_code() }}">
             {{ first_paragraph(post.body_html) | safe }}
         </div>
     {% endif -%}
-    {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class) }}
+    {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class, reported_posts=reported_posts) }}
 </div>
 {%- endmacro %}
 
-{% macro render_link(post, low_bandwidth=False, blur_content=False, sort=None, current_user=None, request=None, locale=None, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='') -%}
+{% macro render_link(post, low_bandwidth=False, blur_content=False, sort=None, current_user=None, request=None, locale=None, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='', reported_posts=None, admin_ids=None) -%}
 <div class="col post_teaser_body">
     {% if post.image_id -%}
         <div class="col_thumbnail thumbnail{{ ' lbw' if low_bandwidth }}" aria-hidden="true">
@@ -172,17 +172,17 @@
             <a href="{{ post.url }}" rel="nofollow ugc" class="post_link" target="_blank" aria-label="{{ _('Follow link') }}"><span class="fe fe-external fe-external-noimg"></span></a>
         </div>
     {% endif -%}
-    {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale) }}
+    {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale, reported_posts=reported_posts, admin_ids=admin_ids) }}
     {% if post.body_html -%}
         <div class="post_teaser_link_preview small post_teaser_clickable" lang="{{ post.language_code() }}">
             {{ first_paragraph(post.body_html) | safe }}
         </div>
     {% endif -%}
-    {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class) }}
+    {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class, reported_posts=reported_posts) }}
 </div>
 {%- endmacro %}
 
-{% macro render_poll(post, low_bandwidth=False, blur_content=False, sort=None, current_user=None, request=None, locale=None, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='') -%}
+{% macro render_poll(post, low_bandwidth=False, blur_content=False, sort=None, current_user=None, request=None, locale=None, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='', reported_posts=None, admin_ids=None) -%}
 <div class="col post_teaser_body">
     {% if post.image_id -%}
         <div class="col_thumbnail thumbnail{{ ' lbw' if low_bandwidth }}" aria-hidden="true">
@@ -198,19 +198,19 @@
             <a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None) }}"><span class="fe fe-poll"></span></a>
         </div>
     {% endif -%}
-    {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale) }}
+    {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale, reported_posts=reported_posts, admin_ids=admin_ids) }}
     {% if post.body_html -%}
         <div class="post_teaser_link_preview small post_teaser_clickable" lang="{{ post.language_code() }}">
             {{ first_paragraph(post.body_html) | safe }}
         </div>
     {% endif -%}
-    {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class) }}
+    {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class, reported_posts=reported_posts) }}
 </div>
 {%- endmacro %}
 
-{% macro render_image(post, low_bandwidth=False, blur_content=False, sort=None, current_user=None, request=None, locale=None, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='') -%}
-<div class="col post_teaser_body {{ 'reported' if post.has_been_reported() }}">
-    {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale) }}
+{% macro render_image(post, low_bandwidth=False, blur_content=False, sort=None, current_user=None, request=None, locale=None, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='', reported_posts=None, admin_ids=None) -%}
+<div class="col post_teaser_body {{ 'reported' if post.id in reported_posts }}">
+    {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale, reported_posts=reported_posts, admin_ids=admin_ids) }}
     {% if post.image_id and not low_bandwidth -%}
         <div class="post_teaser_image_preview">
             <a href="{{ post.image.view_url() }}" class="post_link" rel="nofollow ugc" aria-label="{{ _('View image') }}" target="_blank"><img src="{{ post.image.medium_url() }}"
@@ -222,13 +222,13 @@
             {{ first_paragraph(post.body_html) | safe }}
         </div>
     {% endif -%}
-    {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class) }}
+    {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class, reported_posts=reported_posts) }}
 </div>
 {%- endmacro %}
 
-{% macro render_video(post, low_bandwidth=False, sort=None, autoplay=False, current_user=None, request=None, locale=None, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='') -%}
+{% macro render_video(post, low_bandwidth=False, sort=None, autoplay=False, current_user=None, request=None, locale=None, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='', reported_posts=None, admin_ids=None) -%}
 <div class="col post_teaser_body">
-    {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale) }}
+    {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale, reported_posts=reported_posts, admin_ids=admin_ids) }}
     {% if not low_bandwidth %}
         <div class="post_teaser_video_preview">
             <div class="max_width_512">
@@ -260,6 +260,6 @@
             </div>
         </div>
     {% endif -%}
-    {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class) }}
+    {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class, reported_posts=reported_posts) }}
 </div>
 {%- endmacro %}
