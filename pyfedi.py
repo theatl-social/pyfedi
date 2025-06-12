@@ -112,7 +112,8 @@ def after_request(response):
             response.headers['Cache-Control'] = 'public, max-age=31536000'  # 1 year
     else:
         if 'auth/register' not in request.path:
-            response.headers['Content-Security-Policy'] = f"script-src 'self' 'nonce-{g.nonce}'"
+            if hasattr(g, 'nonce'):
+                response.headers['Content-Security-Policy'] = f"script-src 'self' 'nonce-{g.nonce}'"
             response.headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains; preload'
             response.headers['X-Content-Type-Options'] = 'nosniff'
             if '/embed' not in request.path:
