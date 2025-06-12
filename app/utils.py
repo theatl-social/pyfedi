@@ -11,6 +11,8 @@ from json import JSONDecodeError
 from time import sleep
 from typing import List, Literal, Union
 
+from jinja2 import BytecodeCache
+
 import app
 import redis
 import httpx
@@ -28,6 +30,7 @@ from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_TRUSTED, DOWNVOTE
 
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 import os
+import pickle
 from furl import furl
 from flask import current_app, json, redirect, url_for, request, make_response, Response, g, flash, abort
 from flask_babel import _, lazy_gettext as _l
@@ -1744,8 +1747,9 @@ def get_task_session() -> Session:
     return Session(bind=db.engine)
 
 
-def get_redis_connection() -> redis.Redis:
-    connection_string = current_app.config['CACHE_REDIS_URL']
+def get_redis_connection(connection_string=None) -> redis.Redis:
+    if connection_string is None:
+        connection_string = current_app.config['CACHE_REDIS_URL']
     if connection_string.startswith('unix://'):
         unix_socket_path, db, password = parse_redis_pipe_string(connection_string)
         return redis.Redis(unix_socket_path=unix_socket_path, db=db, password=password, decode_responses=True)
