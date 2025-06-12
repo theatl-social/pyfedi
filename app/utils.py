@@ -1140,6 +1140,28 @@ def moderating_communities(user_id) -> List[Community]:
 
 
 @cache.memoize(timeout=300)
+def moderating_communities_ids(user_id) -> List[int]:
+    """
+    Raw SQL version of moderating_communities() that returns community IDs instead of full objects.
+    """
+    if user_id is None or user_id == 0:
+        return []
+    
+    sql = text("""
+        SELECT c.id
+        FROM community c
+        JOIN community_member cm ON c.id = cm.community_id
+        WHERE c.banned = false
+          AND (cm.is_moderator = true OR cm.is_owner = true)
+          AND cm.is_banned = false
+          AND cm.user_id = :user_id
+        ORDER BY c.title
+    """)
+    
+    return db.session.execute(sql, {'user_id': user_id}).scalars().all()
+
+
+@cache.memoize(timeout=300)
 def joined_communities(user_id) -> List[Community]:
     if user_id is None or user_id == 0:
         return []
