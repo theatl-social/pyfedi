@@ -190,6 +190,8 @@ for bounces, not a inbox you also use for other purposes.
 
 * Enable [image blocking](https://piefed.social/post/751901) by setting IMAGE_HASHING_ENDPOINT to the url of [a PDQ hashing instance](https://piefed.social/post/759065).
 
+* If the home page is loading slowly, set PAGE_LENGTH to a lower number.
+
 ### Development mode
 
 Setting `FLASK_DEBUG=1` in the `.env` file will enable the `<your-site>/dev/tools` page. It will expose some various testing routes as well. See the [testing section](#testing).
