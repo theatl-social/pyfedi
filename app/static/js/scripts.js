@@ -1232,16 +1232,22 @@ window.addEventListener('beforeinstallprompt', function (e) {
 });
 
 document.getElementById('btn_add_home_screen').addEventListener('click', function () {
-    document.getElementById('btn_add_home_screen').style.display = 'none';
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(function (choiceResult) {
-        if (choiceResult.outcome === 'accepted') {
-            console.log('User accepted the A2HS prompt');
-        } else {
-            console.log('User dismissed the A2HS prompt');
-        }
-        deferredPrompt = null;
-    });
+    // iOS doesn't support beforeinstallprompt, so show manual instructions
+    if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+        alert('To add this app to your home screen:\n\n1. Tap the Share button at the bottom of the screen\n2. Select "Add to Home Screen" from the menu\n3. Tap "Add" to confirm');
+    } else if (deferredPrompt) {
+        // For other browsers that support beforeinstallprompt
+        document.getElementById('btn_add_home_screen').style.display = 'none';
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(function (choiceResult) {
+            if (choiceResult.outcome === 'accepted') {
+                console.log('User accepted the A2HS prompt');
+            } else {
+                console.log('User dismissed the A2HS prompt');
+            }
+            deferredPrompt = null;
+        });
+    }
 });
 
 function setupMegaMenuNavigation() {
