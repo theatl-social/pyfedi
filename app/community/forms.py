@@ -196,27 +196,29 @@ class CreateImageForm(CreatePostForm):
         uploaded_file = request.files['image_file']
         if uploaded_file and uploaded_file.filename != '' and not uploaded_file.filename.endswith('.svg') and not uploaded_file.filename.endswith('.gif'):
             Image.MAX_IMAGE_PIXELS = 89478485
-            # Do not allow fascist meme content
-            try:
-                if '.avif' in uploaded_file.filename:
-                    import pillow_avif
-                image_text = pytesseract.image_to_string(Image.open(BytesIO(uploaded_file.read())).convert('L'))
-            except FileNotFoundError:
-                image_text = ''
-            except UnidentifiedImageError:
-                image_text = ''
 
             site = Site.query.get(1)
             if site is None:
                 site = Site()
+            
+            if site.enable_chan_image_filter:
+                # Do not allow fascist meme content
+                try:
+                    if '.avif' in uploaded_file.filename:
+                        import pillow_avif
+                    image_text = pytesseract.image_to_string(Image.open(BytesIO(uploaded_file.read())).convert('L'))
+                except FileNotFoundError:
+                    image_text = ''
+                except UnidentifiedImageError:
+                    image_text = ''
 
-            if 'Anonymous' in image_text and (
-                    'No.' in image_text or ' N0' in image_text) and site.enable_chan_image_filter:  # chan posts usually contain the text 'Anonymous' and ' No.12345'
-                self.image_file.errors.append(
-                    "This image is an invalid file type.")  # deliberately misleading error message
-                current_user.reputation -= 1
-                db.session.commit()
-                return False
+                if 'Anonymous' in image_text and (
+                        'No.' in image_text or ' N0' in image_text):  # chan posts usually contain the text 'Anonymous' and ' No.12345'
+                    self.image_file.errors.append(
+                        "This image is an invalid file type.")  # deliberately misleading error message
+                    current_user.reputation -= 1
+                    db.session.commit()
+                    return False
         if uploaded_file.filename.endswith('.gif'):
             max_size_in_mb = 10 * 1024 * 1024  # 10 MB
             if len(uploaded_file.read()) > max_size_in_mb:
