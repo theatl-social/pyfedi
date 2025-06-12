@@ -69,6 +69,7 @@ class SettingsForm(FlaskForm):
     default_sort = SelectField(_l('Default post sort'), choices=sorts, validators=[DataRequired()], coerce=str,
                                render_kw={'class': 'form-select'})
     filters = [('subscribed', _l('Subscribed')),
+               ('moderating', _l('Moderating')),
                ('local', _l('Local')),
                ('popular', _l('Popular')),
                ('all', _l('All')),

@@ -73,6 +73,8 @@ def home_page(sort, view_filter):
     # view filter - subscribed/local/all
     community_ids = [-1]
     low_quality_filter = 'AND c.low_quality is false' if current_user.is_authenticated and current_user.hide_low_quality else ''
+    modded_communities = moderating_communities(current_user.id)
+    enable_mod_filter = len(modded_communities) > 0
 
     if view_filter == 'subscribed' and current_user.is_authenticated:
         community_ids = db.session.execute(text('SELECT id FROM community as c INNER JOIN community_member as cm ON cm.community_id = c.id WHERE cm.is_banned is false AND cm.user_id = :user_id'),
@@ -86,6 +88,8 @@ def home_page(sort, view_filter):
             community_ids = db.session.execute(text(f'SELECT id FROM community as c WHERE c.show_popular is true {low_quality_filter}')).scalars()
     elif view_filter == 'all' or current_user.is_anonymous:
         community_ids = [-1]    # Special value to indicate 'All'
+    elif view_filter == 'moderating':
+        community_ids = [comm.id for comm in modded_communities]
 
     post_ids = get_deduped_post_ids(result_id, list(community_ids), sort)
     has_next_page = len(post_ids) > page + 1 * page_length
@@ -145,7 +149,8 @@ def home_page(sort, view_filter):
                            announcement=allowlist_html(get_setting('announcement', '')),
                            reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
                            joined_communities=joined_or_modding_communities(current_user.get_id()),
-                           inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                           inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                           enable_mod_filter=enable_mod_filter,
                            )
 
 

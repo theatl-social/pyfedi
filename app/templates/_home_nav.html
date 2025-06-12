@@ -1,4 +1,4 @@
-<div class="d-lg-none">
+<div class="d-xl-none">
     <select class="form-control form-select navigate_on_change" name="sort_by">
         <option value="/home/hot/{{ view_filter }}" aria-label="{{ _('Trending now') }}" {{ 'selected'  if sort == 'hot' }}>{{ _('Hot') }}</option>
         <option value="/home/new/{{ view_filter }}" aria-label="{{ _('Latest posts') }}" {{ 'selected'  if sort == 'new' }}>{{ _('New') }}</option>
@@ -15,7 +15,7 @@
         </optgroup>
     </select>
 </div>
-<div class="d-none sort_methods d-lg-inline-block btn-group mt-1 mb-2" aria-label="{{ _('Sorting methods: ') }}">
+<div class="d-none sort_methods d-xl-inline-block btn-group mt-1 mb-2" aria-label="{{ _('Sorting methods: ') }}">
     <a href="/home/hot/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'hot' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Trending now') }}">
         {{ _('Hot') }}
     </a><div class="btn-group" role="group">
