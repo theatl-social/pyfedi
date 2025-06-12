@@ -53,6 +53,12 @@ document.addEventListener("DOMContentLoaded", function () {
         timezoneField.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
     }
 
+    // iOS doesn't support beforeinstallprompt, so detect iOS and show PWA button manually
+    if(/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+        document.getElementById('btn_add_home_screen').style.display = 'inline-block';
+        document.body.classList.add('ios');
+    }
+
 });
 
 
