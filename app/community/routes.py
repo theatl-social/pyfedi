@@ -313,7 +313,7 @@ def show_community(community: Community):
             posts = posts.order_by(asc(Post.posted_at))
         elif sort == 'active':
             posts = posts.order_by(desc(Post.sticky)).order_by(desc(Post.last_active))
-        per_page = 100
+        per_page = 20 if low_bandwidth else current_app.config['PAGE_LENGTH']
         if post_layout == 'masonry':
             per_page = 200
         elif post_layout == 'masonry_wide':

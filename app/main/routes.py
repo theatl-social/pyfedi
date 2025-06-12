@@ -68,7 +68,7 @@ def home_page(sort, view_filter):
     page = request.args.get('page', 0, type=int)
     result_id = request.args.get('result_id', gibberish(15)) if current_user.is_authenticated else None
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
-    page_length = 20 if low_bandwidth else 100
+    page_length = 20 if low_bandwidth else current_app.config['PAGE_LENGTH']
 
     # view filter - subscribed/local/all
     community_ids = [-1]

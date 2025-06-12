@@ -93,3 +93,5 @@ class Config(object):
     
     # CORS configuration
     CORS_ALLOW_ORIGIN = os.environ.get('CORS_ALLOW_ORIGIN') or '*'
+
+    PAGE_LENGTH = int(os.environ.get('PAGE_LENGTH') or 100)

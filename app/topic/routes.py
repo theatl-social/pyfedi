@@ -35,7 +35,7 @@ def show_topic(topic_path):
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
     post_layout = request.args.get('layout', 'list' if not low_bandwidth else None)
     content_type = request.args.get('content_type', 'posts')
-    page_length = 20 if low_bandwidth else 100
+    page_length = 20 if low_bandwidth else current_app.config['PAGE_LENGTH']
     if post_layout == 'masonry':
         page_length = 200
     elif post_layout == 'masonry_wide':
