@@ -484,8 +484,6 @@ def refresh_user_profile_task(user_id):
             session.commit()
             if user.avatar_id and avatar_changed:
                 make_image_sizes(user.avatar_id, 40, 250, 'users')
-                cache.delete_memoized(User.avatar_image, user)
-                cache.delete_memoized(User.avatar_thumbnail, user)
             if user.cover_id and cover_changed:
                 make_image_sizes(user.cover_id, 700, 1600, 'users')
                 cache.delete_memoized(User.cover_image, user)

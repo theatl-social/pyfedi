@@ -273,9 +273,7 @@ def edit_community(input, community, src, auth=None, uploaded_icon_file=None, up
                 if remove_file:
                     remove_file.delete_from_disk()
                 community.icon_id = None
-                cache.delete_memoized(Community.icon_image, community)
         if not community.icon_id:
-            cache.delete_memoized(Community.icon_image, community)
             icon_url_changed = True
         if community.image_id and banner_url != community.image.source_url:
             if banner_url != community.image.medium_url():

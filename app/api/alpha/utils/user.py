@@ -215,7 +215,6 @@ def put_user_save_user_settings(auth, data):
         db.session.commit()
         user.avatar_id = file.id
         make_image_sizes(user.avatar_id, 40, 250, 'users')
-        cache.delete_memoized(User.avatar_image, user)
 
     if cover:
         if user.cover_id:

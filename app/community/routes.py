@@ -891,7 +891,6 @@ def community_edit(community_id: int):
                 file = save_icon_file(icon_file)
                 if file:
                     community.icon = file
-                    cache.delete_memoized(Community.icon_image, community)
             banner_file = request.files['banner_file']
             if banner_file and banner_file.filename != '':
                 if community.image_id:
@@ -957,7 +956,6 @@ def remove_icon(community_id):
             community.icon_id = None
             db.session.delete(file)
             db.session.commit()
-            cache.delete_memoized(Community.icon_image, community)
     return _('Icon removed!')
 
 
