@@ -35,8 +35,28 @@ div.navbar {
   background-color: var(--irix-green);
 }
 
+nav {
+  background-color: var(--irix-green);
+}
+
 a {
   color: #324467;
+}
+
+time {
+  color: var(--bs-gray-600)
+}
+
+.text-muted {
+  color: var(--bs-gray-700) !important;
+}
+
+.breadcrumb-item.active {
+  color: #416732;
+}
+
+.breadcrumb-item+.breadcrumb-item::before {
+  color: #324467 !important;
 }
 
 /* Card styling */
@@ -49,10 +69,12 @@ a {
 
 .card-header {
   background-color: inherit;
+  color: var(--text);
 }
 
 .card-body {
   background-color: var(--bg);
+  color: var(--text);
   border: 2px solid var(--border-mid);
   box-shadow:
     inset 1px 1px 0 var(--border-light),
@@ -117,8 +139,13 @@ input[type="email"],
   --bs-dropdown-bg: var(--active-fill);
 }
 
+.dropdown-item {
+  color: var(--text);
+}
+
 .dropdown-item:focus, .dropdown-item:hover {
   background-color: var(--irix-green);
+  color: var(--bs-nav-link-color)
 }
 
 .form-control:focus,
