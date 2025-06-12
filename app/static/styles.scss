@@ -39,6 +39,18 @@ a {
   border: solid 2px transparent;
 }
 
+tg-spoiler {
+  border-style: solid;
+  border-color: var(--bs-warning);
+  border-width: 1px;
+  border-radius: 3px;
+  padding: 0px 10px;
+  color: transparent;
+  &:hover {
+    color: var(--bs-body-color);
+  }
+}
+
 .container {
   width: 100%;
   padding-right: 0.75rem;
