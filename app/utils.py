@@ -2210,8 +2210,11 @@ def reported_posts(user_id, admin_ids) -> List[int]:
         post_ids = list(db.session.execute(text('SELECT id FROM "post" WHERE reports > 0')).scalars())
     else:
         community_ids = [community.id for community in moderating_communities(user_id)]
-        post_ids = list(db.session.execute(text('SELECT id FROM "post" WHERE reports > 0 AND community_id IN :community_ids'),
-                                           {'community_ids': community_ids}).scalars())
+        if len(community_ids) > 0:
+            post_ids = list(db.session.execute(text('SELECT id FROM "post" WHERE reports > 0 AND community_id IN :community_ids'),
+                                               {'community_ids': community_ids}).scalars())
+        else:
+            return []
     return post_ids
 
 
