@@ -32,6 +32,7 @@
         <div class="col-auto comment_author">
             <span class="visually-hidden">by</span>
             {{ render_username(post_reply.author, htmx_redirect_back_to=request.path + '#comment_' + str(post_reply.id)) }}
+            {% if user_flair and post_reply.author.id in user_flair %}<span class="user_flair">{{ user_flair[post_reply.author.id] }}</span>{% endif %}
             {% if post_reply.distinguished -%}<span class="fe fe-distinguished orangered" title="{{ _('Moderator') }}"></span>{% endif -%}
             {% if post_reply.author.id == post_reply.post.author.id -%}
                 <span title="Submitter of original post" aria-label="{{ _('Post creator') }}" class="user_flair original_poster">OP</span>
