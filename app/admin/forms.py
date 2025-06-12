@@ -25,6 +25,9 @@ class SiteProfileForm(FlaskForm):
 
 class SiteMiscForm(FlaskForm):
     enable_downvotes = BooleanField(_l('Enable downvotes'))
+    enable_gif_reply_rep_decrease = BooleanField(_l('Enable decrease in reputation when posting only a gif as a comment'))
+    enable_chan_image_filter = BooleanField(_l('Enable decrease in reputation when making image posts that match the 4chan filter'))
+    enable_this_comment_filter = BooleanField(_l('Filter out comments that are simply a form of "this"'))
     allow_local_image_posts = BooleanField(_l('Allow local image posts'))
     remote_image_cache_days = IntegerField(_l('Days to cache images from remote instances for'), render_kw={'placeholder': _l('0 means cache forever')})
     enable_nsfw = BooleanField(_l('Allow NSFW communities'))
