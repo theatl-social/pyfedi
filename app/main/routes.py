@@ -74,7 +74,10 @@ def home_page(sort, view_filter):
     # view filter - subscribed/local/all
     community_ids = [-1]
     low_quality_filter = 'AND c.low_quality is false' if current_user.is_authenticated and current_user.hide_low_quality else ''
-    modded_communities = moderating_communities_ids(current_user.id)
+    if current_user.is_authenticated:
+        modded_communities = moderating_communities_ids(current_user.id)
+    else:
+        modded_communities = []
     enable_mod_filter = len(modded_communities) > 0
 
     if view_filter == 'subscribed' and current_user.is_authenticated:
