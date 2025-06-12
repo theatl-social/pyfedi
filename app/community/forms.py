@@ -11,7 +11,7 @@ from flask_babel import _, lazy_gettext as _l
 from app import db
 from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_MEMBERS, DOWNVOTE_ACCEPT_INSTANCE, \
     DOWNVOTE_ACCEPT_TRUSTED
-from app.models import Community, utcnow
+from app.models import Community, Site, utcnow
 from app.utils import domain_from_url, MultiCheckboxField
 from PIL import Image, ImageOps, UnidentifiedImageError
 from io import BytesIO
@@ -205,8 +205,13 @@ class CreateImageForm(CreatePostForm):
                 image_text = ''
             except UnidentifiedImageError:
                 image_text = ''
+
+            site = Site.query.get(1)
+            if site is None:
+                site = Site()
+
             if 'Anonymous' in image_text and (
-                    'No.' in image_text or ' N0' in image_text):  # chan posts usually contain the text 'Anonymous' and ' No.12345'
+                    'No.' in image_text or ' N0' in image_text) and site.enable_chan_image_filter:  # chan posts usually contain the text 'Anonymous' and ' No.12345'
                 self.image_file.errors.append(
                     "This image is an invalid file type.")  # deliberately misleading error message
                 current_user.reputation -= 1

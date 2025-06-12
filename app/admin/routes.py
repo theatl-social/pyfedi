@@ -154,6 +154,9 @@ def admin_misc():
     form.default_theme.choices = theme_list()
     if form.validate_on_submit():
         site.enable_downvotes = form.enable_downvotes.data
+        site.enable_gif_reply_rep_decrease = form.enable_gif_reply_rep_decrease.data
+        site.enable_chan_image_filter = form.enable_chan_image_filter.data
+        site.enable_this_comment_filter = form.enable_this_comment_filter.data
         site.allow_local_image_posts = form.allow_local_image_posts.data
         site.remote_image_cache_days = form.remote_image_cache_days.data
         site.enable_nsfw = form.enable_nsfw.data
@@ -185,6 +188,9 @@ def admin_misc():
         flash(_('Settings saved.'))
     elif request.method == 'GET':
         form.enable_downvotes.data = site.enable_downvotes
+        form.enable_gif_reply_rep_decrease.data = site.enable_gif_reply_rep_decrease
+        form.enable_chan_image_filter.data = site.enable_chan_image_filter
+        form.enable_this_comment_filter.data = site.enable_this_comment_filter
         form.allow_local_image_posts.data = site.allow_local_image_posts
         form.remote_image_cache_days.data = site.remote_image_cache_days
         form.enable_nsfw.data = site.enable_nsfw
