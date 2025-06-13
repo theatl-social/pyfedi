@@ -211,10 +211,7 @@ def list_communities():
         site = Site.query.get(1)
     create_admin_only = site.community_creation_admin_only
 
-    if current_user.is_authenticated:
-        is_admin = current_user.is_admin()
-    else:
-        is_admin = False
+    is_admin = current_user.is_authenticated and current_user.is_admin()
         
     # if filtering by public feed 
     # get all the ids of the communities
@@ -300,10 +297,7 @@ def list_local_communities():
         site = Site.query.get(1)
     create_admin_only = site.community_creation_admin_only
 
-    if current_user.is_authenticated:
-        is_admin = current_user.is_admin()
-    else:
-        is_admin = False
+    is_admin = current_user.is_authenticated and current_user.is_admin()
 
     # if filtering by public feed
     # get all the ids of the communities
@@ -398,10 +392,7 @@ def list_subscribed_communities():
         site = Site.query.get(1)
     create_admin_only = site.community_creation_admin_only
 
-    if current_user.is_authenticated:
-        is_admin = current_user.is_admin()
-    else:
-        is_admin = False
+    is_admin = current_user.is_authenticated and current_user.is_admin()
 
     # if filtering by public feed
     # get all the ids of the communities
@@ -486,10 +477,7 @@ def list_not_subscribed_communities():
         site = Site.query.get(1)
     create_admin_only = site.community_creation_admin_only
 
-    if current_user.is_authenticated:
-        is_admin = current_user.is_admin()
-    else:
-        is_admin = False
+    is_admin = current_user.is_authenticated and current_user.is_admin()
 
     # if filtering by public feed
     # get all the ids of the communities
