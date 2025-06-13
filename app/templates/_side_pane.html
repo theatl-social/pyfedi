@@ -4,7 +4,7 @@
         {% if not hide_community_actions -%}
         <div class="card">
             <div class="card-body">
-                <div class="row">
+                <div class="row mb-2">
                     {% if not banned_from_community -%}
                         {% if not community.restricted_to_mods or (community.restricted_to_mods and current_user.is_authenticated and community_membership(current_user, community) in [SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER]) -%}
                             <div class="col-6">
@@ -22,6 +22,16 @@
                         </div>
                     {% endif -%}
                 </div>
+                {% if is_moderator or is_owner or is_admin -%}
+                  <div class="row mb-2">
+                    <div class="col-6">
+                      <a href="{{ url_for('community.community_edit', community_id=community.id) }}" class="w-100 btn btn-primary">{{ _('Settings') }}</a>
+                    </div>
+                    <div class="col-6">
+                      <a class="w-100 btn btn-primary" href="/community/{{ community.link() }}/invite" rel="nofollow noindex">{{ _('Invite others') }}</a>
+                    </div>
+                  </div>
+                {% endif %}
                 <form method="get" action="/search">
                     <input type="search" id="search_community" name="q" class="form-control" placeholder="{{ _('Search this community') }}" />
                     <input type="hidden" name="community" value="{{ community.id }}">
@@ -44,7 +54,9 @@
             </div>
             <div class="card-body">
                 {% if community.local_only -%}
-                    <p>{{ _('This community does not federate with other instances.') }}</p>
+                    <p class="border bg-body-secondary border-secondary rounded-pill text-center px-3 py-1">
+                      {{ _('This community does not federate with other instances.') }}
+                    </p>
                 {% endif %}
                 <p>{{ community.description_html|community_links|safe if community.description_html else '' }}</p>
                 <p>{{ community.rules_html|safe if community.rules_html else '' }}</p>
@@ -80,9 +92,6 @@
                         {% endif -%}
                         <li><p><a href="{{ url_for('search.retrieve_remote_post') }}">{{ _('Retrieve a post from the original server') }}</a></p></li>
                     </ul>
-                {% endif -%}
-                {% if community.local_only -%}
-                <p>{{ _('Only people on %(instance_domain)s can post or reply in this community.', instance_domain=instance_domain) }}</p>
                 {% endif -%}
                 {% if rss_feed -%}
                 <p class="mt-4">
@@ -125,25 +134,6 @@
                     <p class="mt-4"><a class="btn btn-primary" href="/feeds">{{ _('More feeds') }}</a></p>
                 </div>
             </div>
-        {% endif -%}
-    {% endblock %}
-    {% block community_settings %}
-        {% if is_moderator or is_admin -%}
-        <div class="card mt-3">
-            <div class="card-header">
-                 <h2>{{ _('Community Settings') }}</h2>
-            </div>
-            <div class="card-body">
-                <p><a class="btn btn-primary" href="/community/{{ community.link() }}/invite" rel="nofollow noindex">{{ _('Invite people to join') }}</a></p>
-                {% if is_moderator or is_owner or is_admin -%}
-                <p><a href="/community/{{ community.link() }}/moderate" class="btn btn-primary">{{ _('Moderate') }}</a></p>
-                <p><a href="{{ url_for('community.community_edit', community_id=community.id) }}" class="btn btn-primary">{{ _('Settings') }}</a></p>
-                {% endif -%}
-                {% if community.is_local() and (community.is_owner() or current_user.is_admin()) -%}
-                    <p><a class="btn btn-primary btn-warning" href="{{ url_for('community.community_delete', community_id=community.id) }}" rel="nofollow">Delete community</a></p>
-                {% endif -%}
-            </div>
-        </div>
         {% endif -%}
     {% endblock %}
 {% endif %}

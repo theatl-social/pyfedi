@@ -1995,8 +1995,8 @@ def community_invite(actor):
 
     community = actor_to_community(actor)
 
-    if current_user.created_recently():
-        flash(_('Sorry your account it too new to do this.'), 'warning')
+    if current_user.created_recently() and not current_user.is_admin():
+        flash(_('Sorry your account is too new to do this.'), 'warning')
         return redirect(referrer())
 
     if community is not None:
