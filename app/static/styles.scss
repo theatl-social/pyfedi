@@ -1532,12 +1532,20 @@ a.unread {
   }
 
   pre {
+    background: var(--bs-secondary-bg);
     font-family: monospace;
     padding-left: 0.5rem;
     margin-left: 1.25rem;
     border-style: solid;
     border-color: var(--bs-secondary-border-subtle);
     border-width: 2px;
+    border-radius: 5px;
+  }
+
+  p > code {
+    background: var(--bs-secondary-bg);
+    padding: 0.25rem 0.5rem;
+    border-radius: 5px;
   }
 
   table.table {
