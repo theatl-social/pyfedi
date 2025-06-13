@@ -204,6 +204,14 @@ def list_communities():
     public_feeds = Feed.query.filter_by(public=True).order_by(Feed.title).all()
     if len(public_feeds) > 0:
         server_has_feeds = True
+    
+    try:
+        site = g.site
+    except:
+        site = Site.query.get(1)
+    create_admin_only = site.community_creation_admin_only
+
+    is_admin = current_user.is_authenticated and current_user.is_admin()
         
     # if filtering by public feed 
     # get all the ids of the communities
@@ -242,7 +250,7 @@ def list_communities():
     return render_template('list_communities.html', communities=communities, search=search_param, title=_('Communities'),
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                           next_url=next_url, prev_url=prev_url, current_user=current_user,
+                           next_url=next_url, prev_url=prev_url, current_user=current_user, create_admin_only=create_admin_only, is_admin=is_admin,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            joined_communities=joined_or_modding_communities(current_user.get_id()),
                            pending_communities=pending_communities(current_user.get_id()),
@@ -283,6 +291,14 @@ def list_local_communities():
     if len(public_feeds) > 0:
         server_has_feeds = True
 
+    try:
+        site = g.site
+    except:
+        site = Site.query.get(1)
+    create_admin_only = site.community_creation_admin_only
+
+    is_admin = current_user.is_authenticated and current_user.is_admin()
+
     # if filtering by public feed
     # get all the ids of the communities
     # then filter the communities to ones whose ids match the feed
@@ -315,7 +331,7 @@ def list_local_communities():
     return render_template('list_communities.html', communities=communities, search=search_param, title=_('Local Communities'),
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                           next_url=next_url, prev_url=prev_url, current_user=current_user,
+                           next_url=next_url, prev_url=prev_url, current_user=current_user, create_admin_only=create_admin_only, is_admin=is_admin,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            joined_communities=joined_or_modding_communities(current_user.get_id()),
                            pending_communities=pending_communities(current_user.get_id()),
@@ -369,6 +385,14 @@ def list_subscribed_communities():
     public_feeds = Feed.query.filter_by(public=True).order_by(Feed.title).all()
     if len(public_feeds) > 0:
         server_has_feeds = True
+    
+    try:
+        site = g.site
+    except:
+        site = Site.query.get(1)
+    create_admin_only = site.community_creation_admin_only
+
+    is_admin = current_user.is_authenticated and current_user.is_admin()
 
     # if filtering by public feed
     # get all the ids of the communities
@@ -395,7 +419,7 @@ def list_subscribed_communities():
     return render_template('list_communities.html', communities=communities, search=search_param, title=_('Joined Communities'),
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                           next_url=next_url, prev_url=prev_url, current_user=current_user,
+                           next_url=next_url, prev_url=prev_url, current_user=current_user, create_admin_only=create_admin_only, is_admin=is_admin,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            joined_communities=joined_or_modding_communities(current_user.get_id()),
                            pending_communities=pending_communities(current_user.get_id()),
@@ -446,6 +470,14 @@ def list_not_subscribed_communities():
     public_feeds = Feed.query.filter_by(public=True).order_by(Feed.title).all()
     if len(public_feeds) > 0:
         server_has_feeds = True
+    
+    try:
+        site = g.site
+    except:
+        site = Site.query.get(1)
+    create_admin_only = site.community_creation_admin_only
+
+    is_admin = current_user.is_authenticated and current_user.is_admin()
 
     # if filtering by public feed
     # get all the ids of the communities
@@ -476,7 +508,7 @@ def list_not_subscribed_communities():
     return render_template('list_communities.html', communities=communities, search=search_param, title=_('Not Joined Communities'),
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                           next_url=next_url, prev_url=prev_url, current_user=current_user,
+                           next_url=next_url, prev_url=prev_url, current_user=current_user, create_admin_only=create_admin_only, is_admin=is_admin,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            joined_communities=joined_or_modding_communities(current_user.get_id()),
                            pending_communities=pending_communities(current_user.get_id()),

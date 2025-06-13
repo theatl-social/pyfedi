@@ -2136,7 +2136,9 @@ def update_post_from_activity(post: Post, request_json: dict):
     # Tags
     if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
         post.tags.clear()
-        post.flair.clear()
+        # change back when lemmy supports flairs
+        #post.flair.clear()
+        flair_tags = []
         for json_tag in request_json['object']['tag']:
             if json_tag['type'] == 'Hashtag':
                 if json_tag['name'][1:].lower() != post.community.name.lower():             # Lemmy adds the community slug as a hashtag on every post in the community, which we want to ignore
@@ -2144,9 +2146,11 @@ def update_post_from_activity(post: Post, request_json: dict):
                     if hashtag:
                         post.tags.append(hashtag)
             if json_tag['type'] == 'lemmy:CommunityTag':
-                flair = find_flair_or_create(json_tag, post.community_id)
-                if flair:
-                    post.flair.append(flair)
+                # change back when lemmy supports flairs
+                #flair = find_flair_or_create(json_tag, post.community_id)
+                #if flair:
+                #    post.flair.append(flair)
+                flair_tags.append(json_tag)
             if 'type' in json_tag and json_tag['type'] == 'Mention':
                 profile_id = json_tag['href'] if 'href' in json_tag else None
                 if profile_id and isinstance(profile_id, str) and profile_id.startswith('https://' + current_app.config['SERVER_NAME']):
@@ -2165,6 +2169,14 @@ def update_post_from_activity(post: Post, request_json: dict):
                                                             targets=targets_data)
                                 recipient.unread_notifications += 1
                                 db.session.add(notification)
+        # remove when lemmy supports flairs
+        # for now only clear tags if there's new ones or if maybe another PieFed instance is trying to remove them
+        if len(flair_tags) > 0 or post.instance.software == 'piefed':
+            post.flair.clear()
+            for ft in flair_tags:
+                flair = find_flair_or_create(ft, post.community_id)
+                if flair:
+                    post.flair.append(flair)
 
     post.comments_enabled = request_json['object']['commentsEnabled'] if 'commentsEnabled' in request_json['object'] else True
     try:

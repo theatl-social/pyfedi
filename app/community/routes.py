@@ -30,7 +30,7 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LIN
     NOTIF_REPORT, NOTIF_NEW_MOD, NOTIF_BAN, NOTIF_UNBAN, NOTIF_REPORT_ESCALATION, NOTIF_MENTION, POST_STATUS_REVIEWING
 from app.email import send_email
 from app.inoculation import inoculation
-from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, \
+from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, Site, \
     File, PostVote, utcnow, Report, Notification, ActivityPubLog, Topic, Conversation, PostReply, \
     NotificationSubscription, UserFollower, Instance, Language, Poll, PollChoice, ModLog, CommunityWikiPage, \
     CommunityWikiPageRevision, read_posts, Feed, FeedItem, CommunityBlock, CommunityFlair, post_flair, UserFlair
@@ -57,6 +57,16 @@ from datetime import timezone, timedelta
 def add_local():
     if current_user.banned:
         return show_ban_message()
+    
+    try:
+        site = g.site
+    except:
+        site = Site.query.get(1)
+    
+    if not current_user.is_admin() and site.community_creation_admin_only:
+        flash(_('Community creation has been restricted to admins on this site'))
+        return redirect(url_for('main.list_communities'))
+
     form = AddCommunityForm()
     if g.site.enable_nsfw is False:
         form.nsfw.render_kw = {'disabled': True}
