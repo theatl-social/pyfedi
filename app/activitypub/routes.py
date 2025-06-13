@@ -1569,12 +1569,16 @@ def community_outbox(actor):
             "@context": default_context(),
             "type": "OrderedCollection",
             "id": f"https://{current_app.config['SERVER_NAME']}/c/{actor}/outbox",
-            "totalItems": len(posts),
             "orderedItems": []
         }
 
+        valid_post_count = 0
         for post in posts:
-            community_data['orderedItems'].append(post_to_activity(post, community))
+            activity = post_to_activity(post, community)
+            if ensure_domains_match(activity['object']['object']):
+                valid_post_count += 1
+                community_data['orderedItems'].append(activity)
+        community_data['totalItems'] = valid_post_count
 
         return jsonify(community_data)
 
