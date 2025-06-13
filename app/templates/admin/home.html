@@ -17,19 +17,19 @@
     <div class="col mt-4">
         <p>{{ _('Load average: ') }}
         {% if load1 > num_cores %}
-            <span class="blink red">{{ load1 | format('%.2f') }}</span>
+            <span class="blink red">{{ '%.2f' % load1 }}</span>
         {% else %}
-            {{ load1 | format('%.2f') }}
+            {{ '%.2f' % load1 }}
         {% endif -%}
         {% if load5 > num_cores %}
-            <span class="blink red">{{ load5 | format('%.2f') }}</span>
+            <span class="blink red">{{ '%.2f' % load5 }}</span>
         {% else %}
-            {{ load5 | format('%.2f') }}
+            {{ '%.2f' % load5 }}
         {% endif -%}
         {% if load15 > num_cores %}
-            <span class="blink red">{{ load15 | format('%.2f') }}</span>
+            <span class="blink red">{{ '%.2f' % load15 }}</span>
         {% else %}
-            {{ load15 | format('%.2f') }}
+            {{ '%.2f' % load15 }}
         {% endif -%}
         </p>
         <p>{{ disk_usage | safe }}</p>
