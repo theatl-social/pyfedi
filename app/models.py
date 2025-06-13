@@ -482,8 +482,7 @@ class Community(db.Model):
     title = db.Column(db.String(256))
     description = db.Column(db.Text)        # markdown
     description_html = db.Column(db.Text)   # html equivalent of above markdown
-    rules = db.Column(db.Text)
-    rules_html = db.Column(db.Text)
+    rules = db.Column(db.Text)              # this is unused but do not remove, it breaks everything
     content_warning = db.Column(db.Text)        # "Are you sure you want to view this community?"
     subscriptions_count = db.Column(db.Integer, default=0)
     post_count = db.Column(db.Integer, default=0)

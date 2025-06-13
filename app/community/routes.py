@@ -69,9 +69,9 @@ def add_local():
         form.url.data = slugify(form.url.data.strip(), separator='_').lower()
         private_key, public_key = RsaKeys.generate_keypair()
         community = Community(title=form.community_name.data, name=form.url.data, description=piefed_markdown_to_lemmy_markdown(form.description.data),
-                              rules=form.rules.data, nsfw=form.nsfw.data, private_key=private_key,
+                              nsfw=form.nsfw.data, private_key=private_key,
                               public_key=public_key, description_html=markdown_to_html(form.description.data),
-                              rules_html=markdown_to_html(form.rules.data), local_only=form.local_only.data,
+                              local_only=form.local_only.data,
                               ap_profile_id='https://' + current_app.config['SERVER_NAME'] + '/c/' + form.url.data.lower(),
                               ap_public_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + form.url.data,
                               ap_followers_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + form.url.data + '/followers',
@@ -885,8 +885,6 @@ def community_edit(community_id: int):
             community.title = form.title.data
             community.description = piefed_markdown_to_lemmy_markdown(form.description.data)
             community.description_html = markdown_to_html(form.description.data, anchors_new_tab=False)
-            community.rules = form.rules.data
-            community.rules_html = markdown_to_html(form.rules.data, anchors_new_tab=False)
             community.nsfw = form.nsfw.data
             community.local_only = form.local_only.data
             community.restricted_to_mods = form.restricted_to_mods.data
@@ -939,7 +937,6 @@ def community_edit(community_id: int):
         else:
             form.title.data = community.title
             form.description.data = community.description
-            form.rules.data = community.rules
             form.nsfw.data = community.nsfw
             form.local_only.data = community.local_only
             form.new_mods_wanted.data = community.new_mods_wanted
