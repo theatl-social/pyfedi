@@ -964,6 +964,26 @@ def admin_communities_no_topic():
                            communities=communities)
 
 
+@bp.route('/communities/low-quality', methods=['GET'])
+@permission_required('administer all communities')
+@login_required
+def admin_communities_low_quality():
+
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '')
+
+    communities = Community.query.filter(Community.low_quality == True)
+    if search:
+        communities = communities.filter(Community.title.ilike(f"%{search}%"))
+    communities = communities.order_by(-Community.post_count).paginate(page=page, per_page=1000, error_out=False)
+
+    next_url = url_for('admin.admin_communities_low_quality', page=communities.next_num) if communities.has_next else None
+    prev_url = url_for('admin.admin_communities_low_quality', page=communities.prev_num) if communities.has_prev and page != 1 else None
+
+    return render_template('admin/communities.html', title=_('Communities with low_quality == True'), next_url=next_url, prev_url=prev_url,
+                           communities=communities)
+
+
 @bp.route('/community/<int:community_id>/edit', methods=['GET', 'POST'])
 @permission_required('administer all communities')
 @login_required
