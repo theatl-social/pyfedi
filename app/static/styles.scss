@@ -1518,11 +1518,34 @@ a.unread {
   }
 
   blockquote {
-    padding: 0.1em 5px;
+    padding: 0.2em 5px;
     font-style: italic;
     font-family: "Open Sans", "Segoe UI", Tahoma, Arial, sans-serif;
-    margin: 0 3%;
+    margin: 0 3% 6px 3%;
     font-size: 95%;
+    border-left-style: solid;
+    border-left-width: 4px;
+
+    p {
+      margin-bottom: 0px;
+    }
+  }
+
+  pre {
+    background: var(--bs-secondary-bg);
+    font-family: monospace;
+    padding-left: 0.5rem;
+    margin-left: 1.25rem;
+    border-style: solid;
+    border-color: var(--bs-secondary-border-subtle);
+    border-width: 2px;
+    border-radius: 5px;
+  }
+
+  p > code {
+    background: var(--bs-secondary-bg);
+    padding: 0.25rem 0.5rem;
+    border-radius: 5px;
   }
 
   table.table {
