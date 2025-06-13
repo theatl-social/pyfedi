@@ -161,17 +161,17 @@
                 {% endfor -%}
             </ul>
         {% endif -%}
-        <ul class="nav nav-pills nav-justified mt-4">
+        <ul class="nav nav-tabs nav-justified mt-4">
           <li class="nav-item">
-            <h3><a href="#post_list_tab" class="nav-link active" id="post-pill" data-bs-toggle="pill" role="tab" aria-current="page">Posts</a></h3>
+            <a href="#post_list_tab" class="nav-link {{ 'active' if replies_prev_url is none }}" id="post-pill" data-bs-toggle="pill" role="tab" aria-current="page">Posts</a>
           </li>
           <li class="nav-item">
-            <h3><a href="#comments_tab" class="nav-link" id="comments-pill" data-bs-toggle="pill" role="tab">Comments</a></h3>
+            <a href="#comments_tab" class="nav-link {{ 'active' if replies_prev_url is not none }}" id="comments-pill" data-bs-toggle="pill" role="tab">Comments</a>
           </li>
         </ul>
         <div class="tab-content">
           {% if posts %}
-            <div class="tab-pane border-0 active" id="post_list_tab" role="tabpanel" aria-labelled-by="post-pill">
+            <div class="tab-pane border-0 {{ 'active' if replies_prev_url is none }}" id="post_list_tab" role="tabpanel" aria-labelled-by="post-pill">
               {% if rss_feed -%}
                   <p class="mt-2 d-block" style="float: right;">
                       <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
@@ -197,13 +197,13 @@
               </nav>
             </div>
           {% else %}
-            <div class="tab-pane border-0 active" id="post_list_tab" role="tabpanel" aria-labelled-by="post-pill">
+            <div class="tab-pane border-0 {{ 'active' if replies_prev_url is none }}" id="post_list_tab" role="tabpanel" aria-labelled-by="post-pill">
               <p>{{ _('No posts yet.') }}</p>
             </div>
           {% endif %}
 
           {% if post_replies %}
-            <div class="tab-pane border-0" id="comments_tab" role="tabpanel" aria-labelled-by="comments-pill">
+            <div class="tab-pane border-0 {{ 'active' if replies_prev_url is not none }}" id="comments_tab" role="tabpanel" aria-labelled-by="comments-pill">
               <h4 class="mt-2" id="comments">Comments by {{ user.display_name() if user.is_local()  else user.display_name() + ', ' + user.ap_id }}</h4>
               <div class="post_list comments">
                   {% for post_reply in post_replies.items %}
@@ -226,7 +226,7 @@
               </nav>
             </div>
           {% else %}
-            <div class="tab-pane border-0" id="comments_tab" role="tabpanel" aria-labelled-by="comments-pill">
+            <div class="tab-pane border-0 {{ 'active' if replies_prev_url is not none }}" id="comments_tab" role="tabpanel" aria-labelled-by="comments-pill">
               <p>{{ _('No comments yet.') }}</p>
             </div>
           {% endif %}
