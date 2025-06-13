@@ -743,6 +743,7 @@ class Community(db.Model):
         db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == self.id).delete()
         db.session.query(CommunityMember).filter(CommunityMember.community_id == self.id).delete()
         db.session.query(Report).filter(Report.suspect_community_id == self.id).delete()
+        db.session.query(UserFlair).filter(UserFlair.community_id == self.id).delete()
         db.session.query(ModLog).filter(ModLog.community_id == self.id).delete()
 
 
