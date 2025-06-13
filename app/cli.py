@@ -464,6 +464,11 @@ def register(app):
                 db.session.rollback()
                 current_app.logger.error(f"Error in daily maintenance: {e}")
 
+            # recalculate recent active user's attitude
+            print(f'recalcuating attitudes {datetime.now()}')
+            for user in User.query.filter(User.last_seen > utcnow() - timedelta(days=1)):
+                user.recalculate_attitude()
+
             print(f'Done {datetime.now()}')
 
     @app.cli.command('send-queue')

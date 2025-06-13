@@ -1107,13 +1107,13 @@ class User(UserMixin, db.Model):
         else:
             new_attitude = None
         
-        # Update attitude with direct SQL query in nested transaction to avoid deadlocks
-        with db.session.begin_nested():
-            db.session.execute(text("""
-                UPDATE "user" 
-                SET attitude = :attitude
-                WHERE id = :user_id
-            """), {"attitude": new_attitude, "user_id": self.id})
+        # Update attitude
+        db.session.execute(text("""
+            UPDATE "user" 
+            SET attitude = :attitude
+            WHERE id = :user_id
+        """), {"attitude": new_attitude, "user_id": self.id})
+        db.session.commit()
 
     def get_num_upvotes(self):
         post_votes = db.session.execute(text('SELECT COUNT(*) FROM "post_vote" WHERE user_id = :user_id AND effect > 0'), {'user_id': self.id}).scalar()
@@ -1958,10 +1958,6 @@ class Post(db.Model):
                               "ranking_scaled": new_ranking_scaled, 
                               "post_id": self.id})
         
-        # Update user's attitude in another separate transaction
-        with db.session.begin_nested():
-            user.recalculate_attitude()
-        
         db.session.commit()
         return undo
 
@@ -2333,10 +2329,6 @@ class PostReply(db.Model):
         with db.session.begin_nested():
             db.session.execute(text("UPDATE post_reply SET ranking=:ranking WHERE id=:post_reply_id"),
                              {"ranking": new_ranking, "post_reply_id": self.id})
-        
-        # Update user's attitude in another separate transaction
-        with db.session.begin_nested():
-            user.recalculate_attitude()
         
         db.session.commit()
         return undo
