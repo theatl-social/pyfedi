@@ -192,6 +192,7 @@ def admin_misc():
             db.session.add(site)
         db.session.commit()
         cache.delete_memoized(blocked_referrers)
+        set_setting('meme_comms_low_quality', form.meme_comms_low_quality.data)
         set_setting('public_modlog', form.public_modlog.data)
         set_setting('email_verification', form.email_verification.data)
         set_setting('captcha_enabled', form.captcha_enabled.data)
@@ -205,6 +206,7 @@ def admin_misc():
         form.enable_gif_reply_rep_decrease.data = site.enable_gif_reply_rep_decrease
         form.enable_chan_image_filter.data = site.enable_chan_image_filter
         form.enable_this_comment_filter.data = site.enable_this_comment_filter
+        form.meme_comms_low_quality.data = get_setting('meme_comms_low_quality', False)
         form.allow_local_image_posts.data = site.allow_local_image_posts
         form.remote_image_cache_days.data = site.remote_image_cache_days
         form.enable_nsfw.data = site.enable_nsfw
@@ -228,9 +230,7 @@ def admin_misc():
         form.private_instance.data = site.private_instance
         form.registration_approved_email.data = get_setting('registration_approved_email', '')
         form.ban_check_servers.data = get_setting('ban_check_servers', 'piefed.social')
-    return render_template('admin/misc.html', title=_('Misc settings'), form=form,
-                           
-                            )
+    return render_template('admin/misc.html', title=_('Misc settings'), form=form)
 
 
 @bp.route('/federation', methods=['GET', 'POST'])
@@ -748,9 +748,7 @@ def admin_federation():
 
     return render_template('admin/federation.html', title=_('Federation settings'), 
                            form=form, preload_form=preload_form, ban_lists_form=ban_lists_form,
-                           remote_scan_form=remote_scan_form, current_app_debug=current_app.debug,
-                           
-                            )
+                           remote_scan_form=remote_scan_form, current_app_debug=current_app.debug)
 
 
 @celery.task
