@@ -1103,7 +1103,7 @@ def post_set_flair(post_id):
             post.flair.clear()
             post.flair = flair_from_form(form.flair.data)
             db.session.commit()
-            if post.status == POST_STATUS_PUBLISHED:
+            if post.status == POST_STATUS_PUBLISHED and post.author.is_local():
                 task_selector('edit_post', post_id=post.id)
             return redirect(url_for('activitypub.community_profile', actor=post.community.link()))
         form.referrer.data = referrer()
