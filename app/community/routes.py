@@ -65,7 +65,7 @@ def add_local():
     
     if not current_user.is_admin() and site.community_creation_admin_only:
         flash(_('Community creation has been restricted to admins on this site'))
-        return redirect(url_for('main.communities'))
+        return redirect(url_for('main.list_communities'))
 
     form = AddCommunityForm()
     if g.site.enable_nsfw is False:
