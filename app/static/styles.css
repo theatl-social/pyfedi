@@ -1859,6 +1859,14 @@ a.unread:before {
 .post_body blockquote p, .comment_body blockquote p {
   margin-bottom: 0px;
 }
+.post_body pre, .comment_body pre {
+  font-family: monospace;
+  padding-left: 0.5rem;
+  margin-left: 1.25rem;
+  border-style: solid;
+  border-color: var(--bs-secondary-border-subtle);
+  border-width: 2px;
+}
 .post_body table.table, .comment_body table.table {
   display: block;
   width: 100%;

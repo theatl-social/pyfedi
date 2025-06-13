@@ -1531,6 +1531,15 @@ a.unread {
     }
   }
 
+  pre {
+    font-family: monospace;
+    padding-left: 0.5rem;
+    margin-left: 1.25rem;
+    border-style: solid;
+    border-color: var(--bs-secondary-border-subtle);
+    border-width: 2px;
+  }
+
   table.table {
     display: block;
     width: 100%;
