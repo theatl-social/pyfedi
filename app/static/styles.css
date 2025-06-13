@@ -1176,6 +1176,10 @@ ul.form-multicheck-columns {
   border: 0;
 }
 
+.domain-label {
+  font-size: 80%;
+}
+
 time {
   white-space: nowrap;
 }
