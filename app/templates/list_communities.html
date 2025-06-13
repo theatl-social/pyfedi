@@ -29,7 +29,7 @@
   {% if current_user.is_authenticated -%}
     <div class="col-auto">
       <div class="d-flex justify-content-end align-items-center">
-        {% if is_admin or (not is_admin and not create_admin_only) -%}
+        {% if is_admin or not create_admin_only -%}
           <div class="p-1">
             <a href="{{ url_for('community.add_local') }}" class="btn btn-sm btn-primary" aria-label="{{ _('Create local community') }}">{{ _('Create local community') }}</a>
           </div>
