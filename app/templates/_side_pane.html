@@ -54,7 +54,7 @@
                 {% if current_user.is_authenticated or (community_flair and len(community_flair) > 0) -%}
                     <h3>{{ _('Flair') }}</h3>
                 {% endif -%}
-                {% if current_user.is_authenticated -%}
+                {% if current_user.is_authenticated and not banned_from_community -%}
                 <p>{{ current_user.display_name() }} {% if current_user.id in user_flair %}<span class="user_flair">{{ user_flair[current_user.id] }}</span>{% endif %}
                 <a href="{{ url_for('community.community_my_flair', actor=community.link()) }}">{{ _('Set my flair')}}</a></p>
                 {% endif %}

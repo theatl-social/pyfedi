@@ -70,7 +70,9 @@
                         {% endif -%}
                     </div>
                 {% else -%}
-                    <p><a href="{{ url_for('auth.validation_required') }}">{{ _('Verify your email address to comment') }}</a></p>
+                    {% if not current_user.verified -%}
+                        <p><a href="{{ url_for('auth.validation_required') }}">{{ _('Verify your email address to comment') }}</a></p>
+                    {% endif -%}
                 {% endif -%}
             {% else -%}
                 <p><a href="{{ url_for('auth.login', next='/post/' + str(post.id)) }}">{{ _('Log in to comment') }}</a></p>

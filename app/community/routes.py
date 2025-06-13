@@ -243,7 +243,7 @@ def show_community(community: Community):
         banned_from_community = True
         if ban_details:
             if ban_details.ban_until:
-                flash(_('You have been banned from this community until %(when)s.', when=ban_details.ban_until.isoformat()))
+                flash(_('You have been banned from this community until %(when)s.', when=ban_details.ban_until.date()))
             else:
                 flash(_('You have been banned from this community.'))
 
