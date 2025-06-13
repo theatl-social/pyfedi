@@ -4,6 +4,7 @@ from datetime import timedelta
 from time import sleep
 from io import BytesIO
 import json as python_json
+import shutil
 
 from flask import request, flash, json, url_for, current_app, redirect, g, abort, send_file
 from flask_login import login_required, current_user
@@ -44,7 +45,19 @@ from app.admin import bp
 def admin_home():
     load1, load5, load15 = os.getloadavg()
     num_cores = os.cpu_count()
-    return render_template('admin/home.html', title=_('Admin'), load1=load1, load5=load5, load15=load15, num_cores=num_cores)
+    path = os.getcwd()
+    usage = shutil.disk_usage(path)
+
+    total = usage.total
+    used = usage.used
+    percent_used = used / total * 100
+
+    if percent_used > 95:
+        disk_usage = f"<span class='blink red'>Storage used: {percent_used:.2f}%</span>"
+    else:
+        disk_usage = f"Storage used: {percent_used:.2f}%"
+    return render_template('admin/home.html', title=_('Admin'), load1=load1, load5=load5, load15=load15, num_cores=num_cores,
+                           disk_usage=disk_usage)
 
 
 @bp.route('/site', methods=['GET', 'POST'])
