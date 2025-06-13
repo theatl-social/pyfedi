@@ -43,6 +43,9 @@
                  <h2>{{ community.title }}</h2>
             </div>
             <div class="card-body">
+                {% if community.local_only -%}
+                    <p>{{ _('This community does not federate with other instances.') }}</p>
+                {% endif %}
                 <p>{{ community.description_html|community_links|safe if community.description_html else '' }}</p>
                 <p>{{ community.rules_html|safe if community.rules_html else '' }}</p>
                 <p>{{ _('Members') if community.is_local() else _('Local members') }}: {{ community.subscriptions_count }}
