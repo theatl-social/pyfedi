@@ -1848,11 +1848,16 @@ a.unread:before {
   height: auto;
 }
 .post_body blockquote, .comment_body blockquote {
-  padding: 0.1em 5px;
+  padding: 0.2em 5px;
   font-style: italic;
   font-family: "Open Sans", "Segoe UI", Tahoma, Arial, sans-serif;
-  margin: 0 3%;
+  margin: 0 3% 6px 3%;
   font-size: 95%;
+  border-left-style: solid;
+  border-left-width: 4px;
+}
+.post_body blockquote p, .comment_body blockquote p {
+  margin-bottom: 0px;
 }
 .post_body table.table, .comment_body table.table {
   display: block;
