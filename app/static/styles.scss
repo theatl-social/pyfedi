@@ -144,13 +144,15 @@ div.navbar {
   }
 }
 
-.dropdown-menu {
-  .dropdown-item {
-    @include breakpoint(tablet) {
-      max-width: 200px;
+.navbar {
+  .dropdown-menu {
+    .dropdown-item {
+      @include breakpoint(tablet) {
+        max-width: 200px;
+      }
+      white-space: break-spaces;
+      break-inside: avoid;
     }
-    white-space: break-spaces;
-    break-inside: avoid;
   }
 }
 

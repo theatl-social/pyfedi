@@ -237,6 +237,16 @@ def show_community(community: Community):
         is_owner = False
         is_admin = False
 
+    banned_from_community = False
+    if current_user.is_authenticated and community.id in communities_banned_from(current_user.id):
+        ban_details = CommunityBan.query.filter(CommunityBan.user_id == current_user.id, CommunityBan.community_id == community.id).first()
+        banned_from_community = True
+        if ban_details:
+            if ban_details.ban_until:
+                flash(_('You have been banned from this community until %(when)s.', when=ban_details.ban_until.isoformat()))
+            else:
+                flash(_('You have been banned from this community.'))
+
     # Build list of moderators and set un-moderated flag
     mod_user_ids = [mod.user_id for mod in mods]
     un_moderated = False
@@ -457,7 +467,7 @@ def show_community(community: Community):
                            rss_feed=f"https://{current_app.config['SERVER_NAME']}/community/{community.link()}/feed", rss_feed_name=f"{community.title} on {g.site.name}",
                            content_filters=content_filters,  sort=sort, flair=flair,
                            reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
-                           user_notes=user_notes(current_user.get_id()),
+                           user_notes=user_notes(current_user.get_id()), banned_from_community=banned_from_community,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                            post_layout=post_layout, content_type=content_type, current_app=current_app,
                            user_has_feeds=user_has_feeds, current_feed_id=current_feed_id,
@@ -1179,7 +1189,9 @@ def community_ban_user(community_id: int, user_id: int):
             if post_replies:
                 flash(_('Comments by %(name)s have been deleted.', name=user.display_name()))
 
-        # todo: federate ban to post author instance
+        # federate ban to post author instance
+        task_selector('ban_from_community', user_id=user_id, mod_id=current_user.id, community_id=community.id,
+                      expiry=form.ban_until.data, reason=form.reason.data)
 
         # Notify banned person
         if user.is_local():
@@ -1232,7 +1244,8 @@ def community_unban_user(community_id: int, user_id: int):
 
     flash(_('%(name)s has been unbanned.', name=user.display_name()))
 
-    # todo: federate ban to post author instance
+    # federate ban to post author instance
+    task_selector('unban_from_community', user_id=user_id, mod_id=current_user.id, community_id=community.id, expiry=utcnow(), reason='Un-banned')
 
     # notify banned person
     if user.is_local():

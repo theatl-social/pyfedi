@@ -24,7 +24,7 @@
         {% include 'post/_post_full.html' -%}
         {% if post.comments_enabled -%}
             {% if current_user.is_authenticated -%}
-                {% if current_user.verified -%}
+                {% if current_user.verified and not banned_from_community -%}
                     <div class="row post_reply_form">
                         <hr class="mt-1" />
                         <div class="col">

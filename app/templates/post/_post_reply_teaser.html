@@ -69,6 +69,7 @@
             {% endif -%}
         </div>
     </div>
+    {% if not banned_from_community %}
     <div class="comment_actions hidable">
         <div class="post_replies_link">
             {% if post_reply.post.comments_enabled -%}
@@ -121,6 +122,7 @@
             </div>
         </div>
     </div>
+    {% endif -%}
     <div id="reply_to_{{ post_reply.id }}" class="hidable"></div>
     {% if not post_reply.author.indexable -%}<!--googleon all-->{% endif -%}
 

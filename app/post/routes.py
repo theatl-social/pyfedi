@@ -28,7 +28,7 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_
 from app.models import Post, PostReply, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, Report, Site, Community, \
     Topic, User, Instance, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
-    PostReplyBookmark, CommunityBlock, File, CommunityFlair, UserFlair, BlockedImage
+    PostReplyBookmark, CommunityBlock, File, CommunityFlair, UserFlair, BlockedImage, CommunityBan
 from app.post import bp
 from app.shared.tasks import task_selector
 from app.utils import render_template, markdown_to_html, validation_required, \
@@ -83,6 +83,18 @@ def show_post(post_id: int):
         else:
             mod_user_ids = [mod.user_id for mod in mods]
             mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
+
+        banned_from_community = False
+        if current_user.is_authenticated and community.id in communities_banned_from(current_user.id):
+            ban_details = CommunityBan.query.filter(CommunityBan.user_id == current_user.id,
+                                                    CommunityBan.community_id == community.id).first()
+            banned_from_community = True
+            if ban_details:
+                if ban_details.ban_until:
+                    flash(_('You have been banned from this community until %(when)s.',
+                            when=ban_details.ban_until.isoformat()))
+                else:
+                    flash(_('You have been banned from this community.'))
 
         # handle top-level comments/replies
         form = NewReplyForm()
@@ -231,6 +243,7 @@ def show_post(post_id: int):
                                can_upvote_here=can_upvote(user, community),
                                can_downvote_here=can_downvote(user, community),
                                user_notes=user_notes(current_user.get_id()),
+                               banned_from_community=banned_from_community,
                                low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                                )
@@ -635,6 +648,10 @@ def post_edit(post_id: int):
         mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
 
     if post.user_id == current_user.id or post.community.is_moderator() or current_user.is_admin():
+
+        if post.community.id in communities_banned_from(current_user.id):
+            abort(403)
+
         if g.site.enable_nsfl is False:
             form.nsfl.render_kw = {'disabled': True}
         if post.community.nsfw:
@@ -713,6 +730,8 @@ def post_delete(post_id: int):
     post = Post.query.get_or_404(post_id)
     community = post.community
     if post.user_id == current_user.id or community.is_moderator() or current_user.is_admin():
+        if post.community.id in communities_banned_from(current_user.id):
+            abort(403)
         form = DeleteConfirmationForm()
         if form.validate_on_submit():
             post_delete_post(community, post, current_user.id, form.reason.data)

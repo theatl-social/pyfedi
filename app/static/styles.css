@@ -648,12 +648,12 @@ div.navbar {
   outline-style: none;
 }
 
-.dropdown-menu .dropdown-item {
+.navbar .dropdown-menu .dropdown-item {
   white-space: break-spaces;
   break-inside: avoid;
 }
 @media (min-width: 992px) {
-  .dropdown-menu .dropdown-item {
+  .navbar .dropdown-menu .dropdown-item {
     max-width: 200px;
   }
 }
