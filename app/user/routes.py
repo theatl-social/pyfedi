@@ -139,6 +139,8 @@ def show_profile(user):
     canonical = user.ap_public_url if user.ap_public_url else None
     description = shorten_string(markdown_to_text(user.about), 150) if user.about else None
     user.recalculate_post_stats()
+    if current_user.is_authenticated and current_user.is_admin_or_staff():
+        user.recalculate_attitude()
     db.session.commit()
 
     # find all user feeds marked as public
