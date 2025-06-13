@@ -207,6 +207,7 @@ After setting up your .env file, you can verify your configuration is correct by
 ```bash
 export FLASK_APP=pyfedi.py
 source venv/bin/activate
+flask init-db
 flask config_check
 ```
 
@@ -221,7 +222,6 @@ your judgement.
 ```bash
 export FLASK_APP=pyfedi.py
 flask db upgrade
-flask init-db
 ```
 
 (choose a new username, email address, and password for your PyFedi admin account)
