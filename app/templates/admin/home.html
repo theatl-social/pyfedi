@@ -15,8 +15,23 @@
 
 <div class="row">
     <div class="col mt-4">
-        <p>Welcome to the admin area. This page will eventually have some helpful guides and links for new admins but
-        for now it does not.</p>
+        <p>{{ _('Load average: ') }}
+        {% if load1 > num_cores %}
+            <span class="blink red">{{ load1 }}</span>
+        {% else %}
+            {{ load1 }}
+        {% endif -%}
+        {% if load5 > num_cores %}
+            <span class="blink red">{{ load5 }}</span>
+        {% else %}
+            {{ load5 }}
+        {% endif -%}
+        {% if load15 > num_cores %}
+            <span class="blink red">{{ load15 }}</span>
+        {% else %}
+            {{ load15 }}
+        {% endif -%}
+        </p>
     </div>
 </div>
 {% endblock %}

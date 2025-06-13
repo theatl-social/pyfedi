@@ -42,8 +42,9 @@ from app.admin import bp
 @bp.route('/', methods=['GET', 'POST'])
 @login_required
 def admin_home():
-    return render_template('admin/home.html', title=_('Admin'), 
-                           )
+    load1, load5, load15 = os.getloadavg()
+    num_cores = os.cpu_count()
+    return render_template('admin/home.html', title=_('Admin'), load1=load1, load5=load5, load15=load15, num_cores=num_cores)
 
 
 @bp.route('/site', methods=['GET', 'POST'])
