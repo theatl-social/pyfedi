@@ -440,6 +440,12 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
 
         return v5
 
+    # Variant 6 - from resolve_object
+    if variant == 6:
+        v6 = {'comment': reply_view(reply=reply, variant=2, user_id=user_id)}
+
+        return v6
+
 
 def reply_report_view(report, reply_id, user_id) -> dict:
     # views/comment_report_view.dart - /comment/report api endpoint
