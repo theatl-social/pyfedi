@@ -23,7 +23,7 @@ from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, Cre
     InviteCommunityForm, MoveCommunityForm, EditCommunityFlairForm, SetMyFlairForm
 from app.community.util import search_for_community, actor_to_community, \
     save_icon_file, save_banner_file, \
-    delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users
+    delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users, find_potential_moderators
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
     REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, NOTIF_POST, POST_TYPE_POLL, MICROBLOG_APPS, SRC_WEB, \
@@ -1065,7 +1065,7 @@ def community_find_moderator(community_id: int):
         form = AddModeratorForm()
         potential_moderators = None
         if form.validate_on_submit():
-            potential_moderators = find_local_users(form.user_name.data)
+            potential_moderators = find_potential_moderators(form.user_name.data)
 
         return render_template('community/community_find_moderator.html', title=_('Add moderator to %(community)s',
                                                                                  community=community.display_name()),
