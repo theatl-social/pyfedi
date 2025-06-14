@@ -300,6 +300,11 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
               'blocked': blocked}
         return v5
 
+    # Variant 6 - from resolve_object
+    if variant == 6:
+        v6  = {'community': community_view(community=community, variant=2, stub=False, user_id=user_id)}
+        return v6
+
 
 # emergency function - shouldn't be called in normal circumstances
 @cache.memoize(timeout=86400)

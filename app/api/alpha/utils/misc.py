@@ -1,8 +1,8 @@
 from app.api.alpha.utils.community import get_community_list
 from app.api.alpha.utils.post import get_post_list
 from app.api.alpha.utils.user import get_user_list
-from app.api.alpha.views import search_view, post_view, reply_view, user_view
-from app.models import Post, PostReply, User
+from app.api.alpha.views import search_view, post_view, reply_view, user_view, community_view
+from app.models import Post, PostReply, User, Community
 from app.utils import authorise_api_user
 
 
@@ -48,9 +48,13 @@ def get_resolve_object(auth, data):
         if object.deleted:
             raise Exception('No object found.')
         return user_view(user=object, variant=7, user_id=user_id)
+    object = Community.query.filter_by(ap_profile_id=query.lower()).first()
+    if object:
+        if object.banned:
+            raise Exception('No object found.')
+        return community_view(community=object, variant=6, user_id=user_id)
 
-    # TODO: queries for User, and Community
-    # Also, if not found and user is logged in, fetch the object
+    # TODO: if not found and user is logged in, fetch the object
     # probably use remote_object_to_json(uri) in activitypub.util and then create it.
 
     raise Exception('No object found.')
