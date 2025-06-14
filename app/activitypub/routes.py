@@ -916,7 +916,10 @@ def process_inbox_request(request_json, store_ap_json):
             user = None
             if isinstance(core_activity['object'], str): # a.gup.pe accepts using a string with the ID of the follow request
                 join_request_parts = core_activity['object'].split('/')
-                join_request = CommunityJoinRequest.query.filter_by(uuid=join_request_parts[-1]).first()
+                try:
+                    join_request = CommunityJoinRequest.query.filter_by(uuid=join_request_parts[-1]).first()
+                except Exception as e:  # old style join requests were just a number
+                    join_request = CommunityJoinRequest.query.get(join_request_parts[-1])
                 if join_request:
                     user = User.query.get(join_request.user_id)
             elif core_activity['object']['type'] == 'Follow':
