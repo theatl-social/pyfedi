@@ -1265,6 +1265,32 @@ function setupMegaMenuNavigation() {
             if (isVisible) {
                 hideDropdown();
             } else {
+                const accountMenu = document.querySelector('.account_menu_parent');
+                if(accountMenu) {
+                    const accountAnchor = accountMenu.querySelector('a');
+                    if(accountAnchor) {
+                        accountAnchor.classList.remove('show');
+                        accountAnchor.setAttribute('aria-expanded', 'false');
+                    }
+                    const accountUl = accountMenu.querySelector('ul');
+                    if(accountUl) {
+                        accountUl.classList.remove('show');
+                        accountUl.removeAttribute('data-bs-popper');
+                    }
+                }
+                const adminMenu = document.querySelector('.admin_menu_parent');
+                if(adminMenu) {
+                    const adminAnchor = adminMenu.querySelector('a');
+                    if(adminAnchor) {
+                        adminAnchor.classList.remove('show');
+                        adminAnchor.setAttribute('aria-expanded', 'false');
+                    }
+                    const adminUl = adminMenu.querySelector('ul');
+                    if(adminUl) {
+                        adminUl.classList.remove('show');
+                        adminUl.removeAttribute('data-bs-popper');
+                    }
+                }
                 showDropdown();
             }
         });

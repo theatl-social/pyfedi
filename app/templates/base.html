@@ -150,7 +150,7 @@
             <div class="collapse navbar-collapse" id="navbarSupportedContent" role="navigation">
                     <ul class="nav navbar-nav text-end text-lg-start">
                         {% if current_user.is_anonymous -%}
-                            <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %}">
+                            <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %} communities_menu_parent">
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/communities"  aria-haspopup="true" aria-expanded="false">{{ _('Communities') }}</a>
                                 <div class="dropdown-menu communities_menu" hx-get="{{ url_for('main.communities_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
                             </li>
@@ -162,7 +162,7 @@
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/communities"  aria-haspopup="true" aria-expanded="false">{{ _('Communities') }}</a>
                                 <div class="dropdown-menu communities_menu" hx-get="{{ url_for('main.communities_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
                             </li>
-                            <li class="nav-item dropdown{% if active_parent == 'account' %} active{% endif %}">
+                            <li class="nav-item dropdown{% if active_parent == 'account' %} active{% endif %} account_menu_parent">
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/u/{{ current_user.link() }}" aria-haspopup="true" aria-expanded="false">{{ _('Account') }}</a>
                                 <ul class="dropdown-menu text-end text-lg-start">
                                   <li><a class="dropdown-item{% if active_child == 'view_profile' %} active{% endif %}" href="/u/{{ current_user.link() }}">{{ _('View profile') }}</a></li>
@@ -182,7 +182,7 @@
                                 </ul>
                             </li>
                             {% if current_user.is_staff() or current_user.is_admin() %}
-                                <li class="nav-item dropdown{% if active_parent == 'admin' %} active{% endif %}">
+                                <li class="nav-item dropdown{% if active_parent == 'admin' %} active{% endif %} admin_menu_parent">
                                     <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/admin/" aria-haspopup="true" aria-expanded="false">{{ _('Admin') }}</a>
                                     <ul class="dropdown-menu text-end text-lg-start">
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_site' }}" href="{{ url_for('admin.admin_home') }}">{{ _('Home') }}</a></li>
