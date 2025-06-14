@@ -1,4 +1,4 @@
-@charset "UTF-8";
+git checkout -b bugfix/my-fix-descriptionava@charset "UTF-8";
 /* */
 .red {
   color: red;
@@ -2469,6 +2469,9 @@ form h5 {
 }
 .render_username .user_preview .card .preview_avatar_image img {
   max-width: 100%;
+}
+.preview_avatar_image{
+  width:64px;
 }
 
 #preview:has(p, a, h1, h2, h3, ul, ol) {
