@@ -220,8 +220,12 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
     if isinstance(community, int):
         community = Community.query.filter_by(id=community).one()
     elif isinstance(community, str):
-        name, ap_domain = community.split('@')
-        community = Community.query.filter_by(name=name, ap_domain=ap_domain).one()
+        original_community = community.strip()
+        name, ap_domain = community.strip().split('@')
+        community = Community.query.filter_by(name=name, ap_domain=ap_domain).first()
+        if community is None:
+            community = Community.query.filter(Community.ap_id == original_community.lower()).first()
+
 
     # Variant 1 - models/community/community.dart
     if variant == 1:
