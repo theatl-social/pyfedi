@@ -117,6 +117,12 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0) ->
 
         return v4
 
+    # Variant 5 - from resolve_object
+    if variant == 5:
+        v5 = {'post': post_view(post=post, variant=2, user_id=user_id)}
+
+        return v5
+
 
 # 'user' param can be anyone (including the logged in user), 'user_id' param belongs to the user making the request
 def user_view(user: User | int, variant, stub=False, user_id=None) -> dict:

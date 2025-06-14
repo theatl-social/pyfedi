@@ -3,7 +3,7 @@ from app.api.alpha import bp
 from app.constants import *
 from app.shared.auth import log_user_in
 from app.api.alpha.utils.site import get_site, post_site_block
-from app.api.alpha.utils.misc import get_search
+from app.api.alpha.utils.misc import get_search, get_resolve_object
 from app.api.alpha.utils.post import get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, \
     post_post, put_post, post_post_delete, post_post_report, post_post_lock, post_post_feature, post_post_remove
 from app.api.alpha.utils.reply import get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, \
@@ -70,6 +70,18 @@ def get_alpha_search():
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
         return jsonify(get_search(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/resolve_object', methods=['GET'])
+def get_alpha_resolve_object():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'}), 400
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.args.to_dict() or None
+        return jsonify(get_resolve_object(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
@@ -763,7 +775,6 @@ def alpha_site():
 
 # Miscellaneous - not yet implemented
 @bp.route('/api/alpha/modlog', methods=['GET'])                                   # Get Modlog. Not usually public
-@bp.route('/api/alpha/resolve_object', methods=['GET'])                           # Stage 2
 @bp.route('/api/alpha/federated_instances', methods=['GET'])                      # No plans to implement - only V3 version needed
 def alpha_miscellaneous():
     return jsonify({"error": "not_yet_implemented"}), 400

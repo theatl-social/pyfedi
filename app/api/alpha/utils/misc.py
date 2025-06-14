@@ -1,7 +1,9 @@
 from app.api.alpha.utils.community import get_community_list
 from app.api.alpha.utils.post import get_post_list
 from app.api.alpha.utils.user import get_user_list
-from app.api.alpha.views import search_view
+from app.api.alpha.views import search_view, post_view
+from app.models import Post
+from app.utils import authorise_api_user
 
 
 def get_search(auth, data):
@@ -24,3 +26,19 @@ def get_search(auth, data):
 
     return search_json
 
+
+def get_resolve_object(auth, data):
+    if not data or 'q' not in data:
+        raise Exception('missing q parameter for resolve_object')
+    user_id = authorise_api_user(auth) if auth else None
+
+    object = data['q']
+    object = Post.query.filter_by(ap_id=object).first()
+    if object:
+        return post_view(post=object, variant=5, user_id=user_id)
+
+    # TODO: queries for PostReply, User, and Community
+    # Also, if not found and user is logged in, fetch the object
+    # probably use remote_object_to_json(uri) in activitypub.util and then create it.
+
+    raise Exception('No object found.')
