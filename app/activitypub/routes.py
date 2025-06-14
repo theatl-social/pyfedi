@@ -1584,6 +1584,8 @@ def community_outbox(actor):
         community_data['totalItems'] = valid_post_count
 
         return jsonify(community_data)
+    else:
+        abort(404)
 
 
 @bp.route('/c/<actor>/featured', methods=['GET'])
