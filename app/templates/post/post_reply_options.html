@@ -57,5 +57,9 @@
                 {{ _('View Voting Activity') }}</a></li>
     {% endif -%}
 {% endif -%}
- <li><a href="{{ url_for('post.post_reply_report', post_id=post.id, comment_id=post_reply.id) }}" rel="nofollow" class="dropdown-item no-underline"><span class="fe fe-report"></span>
-        {{ _('Report to moderators') }}</a></li>
+{% if post_reply.ap_id -%}
+  <li><a href="{{ post_reply.ap_id }}" rel="nofollow" class="dropdown-item no-underline"><span class="fe fe-external"></span>
+    {{ _('View original on %(domain)s', domain=post_reply.instance.domain) }}</a></li>
+{% endif -%}
+<li><a href="{{ url_for('post.post_reply_report', post_id=post.id, comment_id=post_reply.id) }}" rel="nofollow" class="dropdown-item no-underline"><span class="fe fe-report"></span>
+  {{ _('Report to moderators') }}</a></li>
