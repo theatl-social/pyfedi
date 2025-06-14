@@ -687,6 +687,14 @@ ul.form-multicheck-columns {
     text-overflow: ellipsis;
     white-space: normal;
   }
+
+  &.blur {
+    overflow: hidden;
+
+    p {
+      filter: blur(6px);
+    }
+  }
 }
 
 .post_teaser_image_preview {

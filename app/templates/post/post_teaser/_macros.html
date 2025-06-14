@@ -160,7 +160,7 @@
 
     {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale, low_bandwidth=low_bandwidth, reported_posts=reported_posts, user_flair=user_flair, admin_ids=admin_ids, user_notes=user_notes) }}
     {% if post.body_html -%}
-        <div class="post_teaser_article_preview small post_teaser_clickable" lang="{{ post.language_code() }}">
+        <div class="post_teaser_article_preview small post_teaser_clickable {{ 'blur' if blur_content }}" lang="{{ post.language_code() }}">
             {{ first_paragraph(post.body_html) | safe }}
         </div>
     {% endif -%}
@@ -186,7 +186,7 @@
     {% endif -%}
     {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale, low_bandwidth=low_bandwidth, reported_posts=reported_posts, user_flair=user_flair, admin_ids=admin_ids, user_notes=user_notes) }}
     {% if post.body_html -%}
-        <div class="post_teaser_link_preview small post_teaser_clickable" lang="{{ post.language_code() }}">
+        <div class="post_teaser_link_preview small post_teaser_clickable {{ 'blur' if blur_content }}" lang="{{ post.language_code() }}">
             {{ first_paragraph(post.body_html) | safe }}
         </div>
     {% endif -%}
@@ -212,7 +212,7 @@
     {% endif -%}
     {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale, low_bandwidth=low_bandwidth, reported_posts=reported_posts, user_flair=user_flair, admin_ids=admin_ids, user_notes=user_notes) }}
     {% if post.body_html -%}
-        <div class="post_teaser_link_preview small post_teaser_clickable" lang="{{ post.language_code() }}">
+        <div class="post_teaser_link_preview small post_teaser_clickable {{ 'blur' if blur_content }}" lang="{{ post.language_code() }}">
             {{ first_paragraph(post.body_html) | safe }}
         </div>
     {% endif -%}
@@ -230,7 +230,7 @@
         </div>
     {% endif -%}
     {% if post.body_html -%}
-        <div class="post_teaser_link_preview small post_teaser_clickable" lang="{{ post.language_code() }}">
+        <div class="post_teaser_link_preview small post_teaser_clickable {{ 'blur' if blur_content }}" lang="{{ post.language_code() }}">
             {{ first_paragraph(post.body_html) | safe }}
         </div>
     {% endif -%}

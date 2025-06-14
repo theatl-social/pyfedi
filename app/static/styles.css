@@ -1118,6 +1118,12 @@ ul.form-multicheck-columns {
   text-overflow: ellipsis;
   white-space: normal;
 }
+.post_teaser_article_preview.blur, .post_teaser_link_preview.blur {
+  overflow: hidden;
+}
+.post_teaser_article_preview.blur p, .post_teaser_link_preview.blur p {
+  filter: blur(6px);
+}
 
 .post_teaser_image_preview {
   text-align: center;
