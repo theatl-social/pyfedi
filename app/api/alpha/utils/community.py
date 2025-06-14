@@ -78,6 +78,8 @@ def get_community(auth, data):
         community = int(data['id'])
     elif 'name' in data:
         community = data['name']
+        if '@' not in community:
+            community = f"{community}@{current_app.config['SERVER_NAME']}"
 
     user_id = authorise_api_user(auth) if auth else None
 

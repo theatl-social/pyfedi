@@ -7,7 +7,7 @@ from app.utils import blocked_communities, blocked_instances, blocked_users, com
 
 from flask import current_app, g
 
-from sqlalchemy import text
+from sqlalchemy import text, func
 
 # 'stub' param: set to True to exclude optional fields
 
@@ -220,11 +220,11 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
     if isinstance(community, int):
         community = Community.query.filter_by(id=community).one()
     elif isinstance(community, str):
-        original_community = community.strip()
         name, ap_domain = community.strip().split('@')
         community = Community.query.filter_by(name=name, ap_domain=ap_domain).first()
         if community is None:
-            community = Community.query.filter(Community.ap_id == original_community.lower()).first()
+            community = Community.query.filter(func.lower(Community.name) == name.lower(),
+                                               func.lower(Community.ap_domain) == ap_domain.lower()).one()
 
 
     # Variant 1 - models/community/community.dart
