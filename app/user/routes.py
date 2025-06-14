@@ -86,10 +86,8 @@ def _get_user_post_replies(user, replies_page):
 
 
 def _get_user_moderates(user):
-    """Get communities moderated by user based on current user's permissions."""
-    if not (current_user.is_authenticated and (user.id == current_user.get_id() or current_user.is_staff() or current_user.is_admin())):
-        return []
-    
+    """Get communities moderated by user."""
+
     moderates = Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == user.id).\
         filter(or_(CommunityMember.is_moderator, CommunityMember.is_owner))
     
