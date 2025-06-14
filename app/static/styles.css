@@ -920,7 +920,7 @@ div.navbar {
   height: auto;
 }
 
-#choose_topics_card label.form-control-label {
+#choose_topics_card label.form-label {
   display: none;
 }
 #choose_topics_card .form-group {
@@ -964,7 +964,7 @@ ul.form-multicheck-columns {
   overflow-y: auto;
 }
 
-.add_reply .form-control-label {
+.add_reply .form-label {
   display: none;
 }
 
@@ -1961,7 +1961,7 @@ h1 .warning_badge {
 .conversation .message_created_at {
   float: right;
 }
-.conversation form .form-control-label {
+.conversation form .form-label {
   display: none;
 }
 .conversation .conversation_options {

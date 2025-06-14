@@ -459,7 +459,7 @@ div.navbar {
 }
 
 #choose_topics_card {
-  label.form-control-label {
+  label.form-label {
     display: none;
   }
   .form-group {
@@ -512,7 +512,7 @@ ul.form-multicheck-columns {
 }
 
 .add_reply {
-  .form-control-label {
+  .form-label {
     display: none;
   }
 
@@ -1644,7 +1644,7 @@ h1 .warning_badge {
   .message_created_at {
     float: right;
   }
-  form .form-control-label {
+  form .form-label {
     display: none;
   }
   .conversation_options {

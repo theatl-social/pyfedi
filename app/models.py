@@ -1171,6 +1171,9 @@ class User(UserMixin, db.Model):
     def created_recently(self):
         return self.created and self.created > utcnow() - timedelta(days=7)
 
+    def created_very_recently(self):
+        return self.created and self.created > utcnow() - timedelta(days=1)
+
     def has_blocked_instance(self, instance_id: int):
         instance_block = InstanceBlock.query.filter_by(user_id=self.id, instance_id=instance_id).first()
         return instance_block is not None

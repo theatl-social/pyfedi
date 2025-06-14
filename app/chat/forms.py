@@ -10,7 +10,7 @@ from app.utils import MultiCheckboxField
 
 
 class AddReply(FlaskForm):
-    message = TextAreaField(_l('Message'), validators=[DataRequired(), Length(min=1, max=5000)], render_kw={'placeholder': 'Type a reply here...'})
+    message = TextAreaField(_l('Message'), validators=[DataRequired(), Length(min=1, max=5000)], render_kw={'placeholder': 'Type a message here...', 'rows': 6, 'autofocus': 'true'})
     submit = SubmitField(_l('Reply'))
 
 

@@ -157,9 +157,8 @@ def domains():
 
     ban_visibility_permission = False
 
-    if not current_user.is_anonymous:
-        if not current_user.created_recently() and current_user.reputation > 100 or current_user.is_admin():
-            ban_visibility_permission = True
+    if current_user.is_authenticated and current_user.is_admin_or_staff():
+        ban_visibility_permission = True
 
     next_url = url_for('domain.domains', page=domains.next_num) if domains.has_next else None
     prev_url = url_for('domain.domains', page=domains.prev_num) if domains.has_prev and page != 1 else None
