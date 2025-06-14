@@ -1771,8 +1771,8 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
             language = find_language(next(iter(request_json['object']['contentMap'])))  # Combination of next and iter gets the first key in a dict
             language_id = language.id if language else None
         else:
-            from app.utils import english_language_id
-            language_id = english_language_id()
+            from app.utils import site_language_id
+            language_id = site_language_id()
 
         distinguished = request_json['object']['distinguished'] if 'distinguished' in request_json['object'] else False
 

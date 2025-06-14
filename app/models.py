@@ -1567,8 +1567,8 @@ class Post(db.Model):
                 language = find_language(next(iter(request_json['object']['contentMap'])))
                 post.language_id = language.id if language else None
             else:
-                from app.utils import english_language_id
-                post.language_id = english_language_id()
+                from app.utils import site_language_id
+                post.language_id = site_language_id()
             if 'licence' in request_json['object'] and isinstance(request_json['object']['licence'], dict):
                 licence = find_licence_or_create(request_json['object']['licence']['name'])
                 post.licence = licence
@@ -2814,6 +2814,7 @@ class Site(db.Model):
     show_inoculation_block = db.Column(db.Boolean, default=True)
     additional_css = db.Column(db.Text)
     private_instance = db.Column(db.Boolean, default=False)
+    language_id = db.Column(db.Integer)
 
     @staticmethod
     def admins() -> List[User]:

@@ -1594,37 +1594,40 @@ def recently_downvoted_post_replies(user_id) -> List[int]:
     return sorted(reply_ids)
 
 
-def languages_for_form():
+def languages_for_form(all=False):
     used_languages = []
     other_languages = []
     if current_user.is_authenticated:
-        recently_used_language_ids = db.session.execute(text("""SELECT language_id
-                                                                FROM (
-                                                                    SELECT language_id, posted_at
-                                                                    FROM "post"
-                                                                    WHERE user_id = :user_id
-                                                                    UNION ALL
-                                                                    SELECT language_id, posted_at
-                                                                    FROM "post_reply"
-                                                                    WHERE user_id = :user_id
-                                                                ) AS subquery
-                                                                GROUP BY language_id
-                                                                ORDER BY MAX(posted_at) DESC
-                                                                LIMIT 10"""),
-                                                          {'user_id': current_user.id}).scalars().all()
+        # if they've defined which languages they read, only present those as options for writing.
+        # otherwise, present their most recently used languages
+        if current_user.read_language_ids is None or len(current_user.read_language_ids) == 0:
+            recently_used_language_ids = db.session.execute(text("""SELECT language_id
+                                                                    FROM (
+                                                                        SELECT language_id, posted_at
+                                                                        FROM "post"
+                                                                        WHERE user_id = :user_id
+                                                                        UNION ALL
+                                                                        SELECT language_id, posted_at
+                                                                        FROM "post_reply"
+                                                                        WHERE user_id = :user_id
+                                                                    ) AS subquery
+                                                                    GROUP BY language_id
+                                                                    ORDER BY MAX(posted_at) DESC
+                                                                    LIMIT 10"""),
+                                                              {'user_id': current_user.id}).scalars().all()
 
-        # note: recently_used_language_ids is now a List, ordered with the most recently used at the top
-        # but Language.query.filter(Language.id.in_(recently_used_language_ids)) isn't guaranteed to return
-        # language results in the same order as that List :(
-        for language_id in recently_used_language_ids:
-            if language_id is not None:
-                used_languages.append((language_id, ""))
+            # note: recently_used_language_ids is now a List, ordered with the most recently used at the top
+            # but Language.query.filter(Language.id.in_(recently_used_language_ids)) isn't guaranteed to return
+            # language results in the same order as that List :(
+            for language_id in recently_used_language_ids:
+                if language_id is not None:
+                    used_languages.append((language_id, ""))
+        else:
+            for language in Language.query.filter(Language.id.in_(tuple(current_user.read_language_ids))).order_by(Language.name).all():
+                used_languages.append((language.id, language.name))
 
-        # use 'English' as a default for brand new users (no posts or replies yet)
-        # not great, but better than them accidently using 'Afaraf' (the first in a alphabetical list of languages)
-        # FIXME: use site language when it is settable by admins, or anything that avoids hardcoding 'English' in
         if not used_languages:
-            id = english_language_id()
+            id = site_language_id()
             if id:
                 used_languages.append((id, ""))
 
@@ -1633,8 +1636,10 @@ def languages_for_form():
             i = used_languages.index((language.id, ""))
             used_languages[i] = (language.id, language.name)
         except:
-            if language.code != "und":
+            if all and language.code != "und":
                 other_languages.append((language.id, language.name))
+    else:
+        other_languages = []
 
     return used_languages + other_languages
 
@@ -1654,9 +1659,14 @@ def find_flair_id(flair: str, community_id: int) -> int | None:
         return None
 
 
-def english_language_id():
-    english = Language.query.filter(Language.code == 'en').first()
-    return english.id if english else None
+def site_language_id(site=None):
+    if site is not None and site.language_id:
+        return site.language_id
+    if g and hasattr(g, 'site') and g.site.language_id:
+        return g.site.language_id
+    else:
+        english = Language.query.filter(Language.code == 'en').first()
+        return english.id if english else None
 
 
 def read_language_choices() -> List[tuple]:
