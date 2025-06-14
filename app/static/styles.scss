@@ -766,6 +766,8 @@ time {
   max-width: 512px;
   display: inline-block;
   width: 100%;
+  overflow: hidden;
+  border-radius: 5px;
 }
 
 .post_utilities_bar {
@@ -1703,6 +1705,14 @@ h1 .warning_badge {
 .responsive-video {
   max-width: 100%;
   max-height: 90vh;
+
+  &.blur {
+    filter: blur(24px);
+
+    &:focus {
+      filter: blur(0px);
+    }
+  }
 }
 
 .post_language_chooser {
