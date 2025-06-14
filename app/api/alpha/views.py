@@ -221,6 +221,11 @@ def user_view(user: User | int, variant, stub=False, user_id=None) -> dict:
         }
         return v6
 
+    # Variant 7 - from resolve_object
+    if variant == 7:
+        v7 = {'person': user_view(user=user, variant=2, user_id=user_id)}
+        return v7
+
 
 def community_view(community: Community | int | str, variant, stub=False, user_id=None) -> dict:
     if isinstance(community, int):
