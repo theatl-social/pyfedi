@@ -67,8 +67,8 @@ with app.app_context():
 
 @app.before_request
 def before_request():
-    # Handle CORS preflight requests for API routes
-    if request.method == 'OPTIONS' and request.path.startswith('/api/'):
+    # Handle CORS preflight requests for all routes
+    if request.method == 'OPTIONS':
         return '', 200
     
     # Store nonce in g (g is per-request, unlike session)
@@ -96,11 +96,10 @@ def before_request():
 
 @app.after_request
 def after_request(response):
-    # Add CORS headers for API routes
-    if request.path.startswith('/api/'):
-        response.headers['Access-Control-Allow-Origin'] = current_app.config['CORS_ALLOW_ORIGIN']
-        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    # Add CORS headers to all responses
+    response.headers['Access-Control-Allow-Origin'] = current_app.config.get('CORS_ALLOW_ORIGIN', '*')
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
     
     # Don't set cookies for static resources or ActivityPub responses to make them cachable
     if request.path.startswith('/static/') or request.path.startswith('/bootstrap/static/') or response.content_type == 'application/activity+json':
