@@ -11,7 +11,7 @@ from app.api.alpha.utils.reply import get_reply_list, post_reply_like, put_reply
 from app.api.alpha.utils.community import get_community, get_community_list, post_community_follow, \
     post_community_block, post_community, put_community, put_community_subscribe, post_community_delete, \
     get_community_moderate_bans, put_community_moderate_unban, post_community_moderate_ban, \
-    post_community_moderate_post_nsfw
+    post_community_moderate_post_nsfw, post_community_mod
 from app.api.alpha.utils.user import get_user, post_user_block, get_user_unread_count, get_user_replies, \
                                     post_user_mark_all_as_read, put_user_subscribe, put_user_save_user_settings, \
                                     get_user_notifications, put_user_notification_state, get_user_notifications_count, \
@@ -174,6 +174,18 @@ def post_alpha_community_delete():
         return jsonify(post_community_delete(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/community/mod', methods=['POST'])
+def post_alpha_community_mod():
+    #if not enable_api():
+    #    return jsonify({'error': 'alpha api is not enabled'}), 400
+    #try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(post_community_mod(auth, data))
+    #except Exception as ex:
+    #    return jsonify({"error": str(ex)}), 400
 
 
 @bp.route('/api/alpha/community/moderate/bans', methods=['GET'])
@@ -763,8 +775,7 @@ def alpha_miscellaneous():
 #@bp.route('/api/alpha/community/delete', methods=['POST'])                        #  are
 @bp.route('/api/alpha/community/remove', methods=['POST'])                        #  available
 @bp.route('/api/alpha/community/transfer', methods=['POST'])                      #  in
-@bp.route('/api/alpha/community/ban_user', methods=['POST'])                      #  the
-@bp.route('/api/alpha/community/mod', methods=['POST'])                           #  app)
+@bp.route('/api/alpha/community/ban_user', methods=['POST'])                      #  the app)
 def alpha_community():
     return jsonify({"error": "not_yet_implemented"}), 400
 
