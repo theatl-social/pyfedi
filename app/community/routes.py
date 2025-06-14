@@ -23,7 +23,7 @@ from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, Cre
     InviteCommunityForm, MoveCommunityForm, EditCommunityFlairForm, SetMyFlairForm
 from app.community.util import search_for_community, actor_to_community, \
     save_icon_file, save_banner_file, \
-    delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users
+    delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users, find_potential_moderators
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
     REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, NOTIF_POST, POST_TYPE_POLL, MICROBLOG_APPS, SRC_WEB, \
@@ -36,7 +36,8 @@ from app.models import User, Community, CommunityMember, CommunityJoinRequest, C
     CommunityWikiPageRevision, read_posts, Feed, FeedItem, CommunityBlock, CommunityFlair, post_flair, UserFlair
 from app.community import bp
 from app.post.util import tags_to_string
-from app.shared.community import invite_with_chat, invite_with_email, subscribe_community
+from app.shared.community import invite_with_chat, invite_with_email, subscribe_community, add_mod_to_community, \
+    remove_mod_from_community
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, gibberish, community_membership, ap_datetime, \
     request_etag_matches, return_304, can_upvote, can_downvote, user_filters_posts, \
@@ -1046,52 +1047,12 @@ def community_mod_list(community_id: int):
 def community_add_moderator(community_id: int, user_id: int):
     if current_user.banned:
         return show_ban_message()
-    community = Community.query.get_or_404(community_id)
-    new_moderator = User.query.get_or_404(user_id)
-    if community.is_owner() or current_user.is_admin() and not new_moderator.banned:
-        existing_member = CommunityMember.query.filter(CommunityMember.user_id == new_moderator.id,
-                                                       CommunityMember.community_id == community_id).first()
-        if existing_member:
-            existing_member.is_moderator = True
-        else:
-            new_member = CommunityMember(community_id=community_id, user_id=new_moderator.id, is_moderator=True)
-            db.session.add(new_member)
-        db.session.commit()
-        flash(_('Moderator added'))
+    try:
+        add_mod_to_community(community_id, user_id, SRC_WEB)
+    except Exception:
+        abort(401)
 
-        # Notify new mod
-        if new_moderator.is_local():
-            targets_data = {'community_id':community.id}
-            notify = Notification(title=_('You are now a moderator of %(name)s', name=community.display_name()),
-                                  url='/c/' + community.name, user_id=new_moderator.id,
-                                  author_id=current_user.id, notif_type=NOTIF_NEW_MOD,
-                                  subtype='new_moderator',
-                                  targets=targets_data)
-            new_moderator.unread_notifications += 1
-            db.session.add(notify)
-            db.session.commit()
-        else:
-            # for remote users, send a chat message to let them know
-            existing_conversation = Conversation.find_existing_conversation(recipient=new_moderator,
-                                                                            sender=current_user)
-            if not existing_conversation:
-                existing_conversation = Conversation(user_id=current_user.id)
-                existing_conversation.members.append(new_moderator)
-                existing_conversation.members.append(current_user)
-                db.session.add(existing_conversation)
-                db.session.commit()
-            server = current_app.config['SERVER_NAME']
-            send_message(f"Hi there. I've added you as a moderator to the community !{community.name}@{server}.",
-                         existing_conversation.id)
-
-        add_to_modlog('add_mod', community_id=community_id, link_text=new_moderator.display_name(),
-                      link=new_moderator.link())
-
-        # Flush cache
-        cache.delete_memoized(moderating_communities, new_moderator.id)
-        cache.delete_memoized(joined_communities, new_moderator.id)
-        cache.delete_memoized(community_moderators, community_id)
-        return redirect(url_for('community.community_mod_list', community_id=community.id))
+    return redirect(url_for('community.community_mod_list', community_id=community_id))
 
 
 @bp.route('/community/<int:community_id>/moderators/find', methods=['GET', 'POST'])
@@ -1104,7 +1065,7 @@ def community_find_moderator(community_id: int):
         form = AddModeratorForm()
         potential_moderators = None
         if form.validate_on_submit():
-            potential_moderators = find_local_users(form.user_name.data)
+            potential_moderators = find_potential_moderators(form.user_name.data)
 
         return render_template('community/community_find_moderator.html', title=_('Add moderator to %(community)s',
                                                                                  community=community.display_name()),
@@ -1118,29 +1079,13 @@ def community_find_moderator(community_id: int):
 def community_remove_moderator(community_id: int, user_id: int):
     if current_user.banned:
         return show_ban_message()
-    community = Community.query.get_or_404(community_id)
-    if community.is_owner() or current_user.is_admin() or user_id == current_user.id:
 
-        existing_member = CommunityMember.query.filter(CommunityMember.user_id == user_id,
-                                                       CommunityMember.community_id == community_id).first()
-        if existing_member:
-            existing_member.is_moderator = False
-            db.session.commit()
-            flash(_('Moderator removed'))
-
-            removed_mod = User.query.get(existing_member.user_id)
-
-            add_to_modlog('remove_mod', community_id=community_id, link_text=removed_mod.display_name(),
-                          link=removed_mod.link())
-
-            # Flush cache
-            cache.delete_memoized(moderating_communities, user_id)
-            cache.delete_memoized(joined_communities, user_id)
-            cache.delete_memoized(community_moderators, community_id)
-
-        return redirect(url_for('community.community_mod_list', community_id=community.id))
-    else:
+    try:
+        remove_mod_from_community(community_id, user_id, SRC_WEB)
+    except Exception:
         abort(401)
+
+    return redirect(url_for('community.community_mod_list', community_id=community_id))
 
 
 @bp.route('/community/<int:community_id>/block', methods=['GET', 'POST'])

@@ -594,3 +594,12 @@ def community_in_list(community_id, community_list):
 def find_local_users(search: str) -> List[User]:
     return User.query.filter(User.banned == False, User.deleted == False, User.ap_id == None, User.user_name.ilike(f"%{search}%")).\
         order_by(desc(User.reputation)).all()
+
+
+def find_potential_moderators(search: str) -> List[User]:
+    if not '@' in search:
+        return User.query.filter(User.banned == False, User.deleted == False, User.user_name.ilike(f"%{search}%")).\
+          order_by(desc(User.reputation)).all()
+    else:
+        return User.query.filter(User.banned == False, User.deleted == False, User.ap_id == search.lower()).\
+          order_by(desc(User.reputation)).all()

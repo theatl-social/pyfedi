@@ -1,12 +1,12 @@
 from app import db, cache
-from app.api.alpha.views import community_view, user_view, post_view
+from app.api.alpha.views import community_view, user_view, post_view, cached_modlist_for_community
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected, array_of_integers_expected
 from app.community.util import search_for_community
 from app.utils import authorise_api_user
 from app.constants import *
 from app.models import Community, CommunityMember, User, CommunityBan, Notification, CommunityJoinRequest, \
      NotificationSubscription, Post
-from app.shared.community import join_community, leave_community, block_community, unblock_community, make_community, edit_community, subscribe_community, delete_community, restore_community
+from app.shared.community import join_community, leave_community, block_community, unblock_community, make_community, edit_community, subscribe_community, delete_community, restore_community, add_mod_to_community, remove_mod_from_community
 from app.shared.tasks import task_selector
 from app.utils import communities_banned_from, blocked_instances, blocked_communities, shorten_string, \
      joined_communities, moderating_communities
@@ -78,6 +78,8 @@ def get_community(auth, data):
         community = int(data['id'])
     elif 'name' in data:
         community = data['name']
+        if '@' not in community:
+            community = f"{community}@{current_app.config['SERVER_NAME']}"
 
     user_id = authorise_api_user(auth) if auth else None
 
@@ -436,3 +438,24 @@ def post_community_moderate_post_nsfw(auth, data):
     res = post_view(post=post, variant=2, stub=True, user_id=mod_user.id)
 
     return res
+
+
+def post_community_mod(auth, data):
+    required(['community_id', 'person_id', 'added'], data)
+    integer_expected(['community_id', 'person_id'], data)
+    boolean_expected(['added'], data)
+
+    community_id = data['community_id']
+    person_id = data['person_id']
+    added = data['added']
+
+    if added:
+        user_id = add_mod_to_community(community_id, person_id, SRC_API, auth)
+    else:
+        user_id = remove_mod_from_community(community_id, person_id, SRC_API, auth)
+    cache.delete_memoized(cached_modlist_for_community)
+    community_json = {
+        'moderators': cached_modlist_for_community(community_id)
+    }
+    return community_json
+

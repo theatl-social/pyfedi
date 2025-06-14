@@ -6,8 +6,8 @@ from app.shared.tasks.deletes import delete_reply, restore_reply, delete_post, r
 from app.shared.tasks.flags import report_reply, report_post
 from app.shared.tasks.pages import make_post, edit_post
 from app.shared.tasks.locks import lock_post, unlock_post
-from app.shared.tasks.adds import sticky_post
-from app.shared.tasks.removes import unsticky_post
+from app.shared.tasks.adds import sticky_post, add_mod
+from app.shared.tasks.removes import unsticky_post, remove_mod
 from app.shared.tasks.groups import edit_community
 from app.shared.tasks.users import check_user_application
 from app.shared.tasks.blocks import ban_from_community, unban_from_community
@@ -41,6 +41,8 @@ def task_selector(task_key, send_async=True, **kwargs):
         'check_application': check_user_application,
         'ban_from_community': ban_from_community,
         'unban_from_community': unban_from_community,
+        'add_mod': add_mod,
+        'remove_mod': remove_mod,
     }
 
     if current_app.debug:

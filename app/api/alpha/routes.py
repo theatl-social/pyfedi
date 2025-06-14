@@ -1,20 +1,24 @@
 from app import limiter
 from app.api.alpha import bp
 from app.constants import *
-from app.api.alpha.utils import get_site, post_site_block, \
-                                get_search, \
-                                get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, post_post, \
-                                put_post, post_post_delete, post_post_report, post_post_lock, post_post_feature, post_post_remove, \
-                                get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, put_reply, post_reply_mark_as_read, get_reply, \
-                                post_reply_delete, post_reply_report, post_reply_remove, \
-                                get_community_list, get_community, post_community_follow, post_community_block, post_community, put_community, put_community_subscribe, post_community_delete, \
-                                get_user, post_user_block, get_user_unread_count, get_user_replies, post_user_mark_all_as_read, put_user_subscribe, put_user_save_user_settings, post_user_verify_credentials, \
-                                get_private_message_list, \
-                                post_upload_image, post_upload_community_image, post_upload_user_image, \
-                                get_user_notifications, put_user_notification_state, get_user_notifications_count, \
-                                put_user_mark_all_notifications_read, get_community_moderate_bans, put_community_moderate_unban, \
-                                post_community_moderate_ban, post_community_moderate_post_nsfw
 from app.shared.auth import log_user_in
+from app.api.alpha.utils.site import get_site, post_site_block
+from app.api.alpha.utils.misc import get_search, get_resolve_object
+from app.api.alpha.utils.post import get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, \
+    post_post, put_post, post_post_delete, post_post_report, post_post_lock, post_post_feature, post_post_remove
+from app.api.alpha.utils.reply import get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, \
+    put_reply, post_reply_delete, post_reply_report, post_reply_remove, post_reply_mark_as_read, get_reply
+from app.api.alpha.utils.community import get_community, get_community_list, post_community_follow, \
+    post_community_block, post_community, put_community, put_community_subscribe, post_community_delete, \
+    get_community_moderate_bans, put_community_moderate_unban, post_community_moderate_ban, \
+    post_community_moderate_post_nsfw, post_community_mod
+from app.api.alpha.utils.user import get_user, post_user_block, get_user_unread_count, get_user_replies, \
+                                    post_user_mark_all_as_read, put_user_subscribe, put_user_save_user_settings, \
+                                    get_user_notifications, put_user_notification_state, get_user_notifications_count, \
+                                    put_user_mark_all_notifications_read, post_user_verify_credentials
+from app.api.alpha.utils.private_message import get_private_message_list
+from app.api.alpha.utils.upload import post_upload_image, post_upload_community_image, post_upload_user_image
+
 
 from flask import current_app, jsonify, request
 from flask_limiter import RateLimitExceeded
@@ -66,6 +70,18 @@ def get_alpha_search():
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
         return jsonify(get_search(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/resolve_object', methods=['GET'])
+def get_alpha_resolve_object():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'}), 400
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.args.to_dict() or None
+        return jsonify(get_resolve_object(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
@@ -170,6 +186,18 @@ def post_alpha_community_delete():
         return jsonify(post_community_delete(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/community/mod', methods=['POST'])
+def post_alpha_community_mod():
+    #if not enable_api():
+    #    return jsonify({'error': 'alpha api is not enabled'}), 400
+    #try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(post_community_mod(auth, data))
+    #except Exception as ex:
+    #    return jsonify({"error": str(ex)}), 400
 
 
 @bp.route('/api/alpha/community/moderate/bans', methods=['GET'])
@@ -747,7 +775,6 @@ def alpha_site():
 
 # Miscellaneous - not yet implemented
 @bp.route('/api/alpha/modlog', methods=['GET'])                                   # Get Modlog. Not usually public
-@bp.route('/api/alpha/resolve_object', methods=['GET'])                           # Stage 2
 @bp.route('/api/alpha/federated_instances', methods=['GET'])                      # No plans to implement - only V3 version needed
 def alpha_miscellaneous():
     return jsonify({"error": "not_yet_implemented"}), 400
@@ -759,8 +786,7 @@ def alpha_miscellaneous():
 #@bp.route('/api/alpha/community/delete', methods=['POST'])                        #  are
 @bp.route('/api/alpha/community/remove', methods=['POST'])                        #  available
 @bp.route('/api/alpha/community/transfer', methods=['POST'])                      #  in
-@bp.route('/api/alpha/community/ban_user', methods=['POST'])                      #  the
-@bp.route('/api/alpha/community/mod', methods=['POST'])                           #  app)
+@bp.route('/api/alpha/community/ban_user', methods=['POST'])                      #  the app)
 def alpha_community():
     return jsonify({"error": "not_yet_implemented"}), 400
 

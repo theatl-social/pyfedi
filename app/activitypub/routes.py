@@ -547,19 +547,16 @@ def shared_inbox():
         return '', 200
 
     id = request_json['id']
-    missing_actor_in_announce_object = False     # nodebb
     if request_json['type'] == 'Announce' and isinstance(request_json['object'], dict):
         object = request_json['object']
-        if not 'actor' in object:
-            missing_actor_in_announce_object = True
-        if not 'id' in object or not 'type' in object or not 'object' in object:
+        if not 'id' in object or not 'type' in object or not 'actor' in object or not 'object' in object:
             if 'type' in object and (object['type'] == 'Page' or object['type'] == 'Note'):
                 log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_IGNORED, saved_json, 'Intended for Mastodon')
             else:
                 log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Missing minimum expected fields in JSON Announce object')
             return '', 200
 
-        if not missing_actor_in_announce_object and isinstance(object['actor'], str) and object['actor'].startswith('https://' + current_app.config['SERVER_NAME']):
+        if isinstance(object['actor'], str) and object['actor'].startswith('https://' + current_app.config['SERVER_NAME']):
             log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json, 'Activity about local content which is already present')
             return '', 200
 
@@ -639,12 +636,6 @@ def shared_inbox():
             process_delete_request.delay(request_json, store_ap_json)
         return ''
 
-    if missing_actor_in_announce_object:
-        if ((request_json['object']['type'] == 'Create' or request_json['object']['type'] == 'Update') and
-            'attributedTo' in request_json['object']['object'] and isinstance(request_json['object']['object']['attributedTo'], str)):
-            log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_MONITOR, request_json, 'nodebb: Actor is missing in the Create')
-            request_json['object']['actor'] = request_json['object']['object']['attributedTo']
-
     if current_app.debug:
         process_inbox_request(request_json, store_ap_json)
     else:
@@ -674,20 +665,16 @@ def replay_inbox_request(request_json):
         return
 
     id = request_json['id']
-    missing_actor_in_announce_object = False     # nodebb
     if request_json['type'] == 'Announce' and isinstance(request_json['object'], dict):
         object = request_json['object']
-        if not 'actor' in object:
-            missing_actor_in_announce_object = True
-            log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_MONITOR, request_json, 'REPLAY: Actor is missing in Announce object')
-        if not 'id' in object or not 'type' in object or not 'object' in object:
+        if not 'id' in object or not 'type' in object or not 'actor' in object or not 'object' in object:
             if 'type' in object and (object['type'] == 'Page' or object['type'] == 'Note'):
                 log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_IGNORED, request_json, 'REPLAY: Intended for Mastodon')
             else:
                 log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'REPLAY: Missing minimum expected fields in JSON Announce object')
             return
 
-        if not missing_actor_in_announce_object and isinstance(object['actor'], str) and object['actor'].startswith('https://' + current_app.config['SERVER_NAME']):
+        if isinstance(object['actor'], str) and object['actor'].startswith('https://' + current_app.config['SERVER_NAME']):
             log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, request_json, 'REPLAY: Activity about local content which is already present')
             return
 
@@ -722,11 +709,6 @@ def replay_inbox_request(request_json):
     if account_deletion == True:
         process_delete_request(request_json, True)
         return
-
-    if missing_actor_in_announce_object:
-        if ((request_json['object']['type'] == 'Create' or request_json['object']['type'] == 'Update') and
-            'attributedTo' in request_json['object']['object'] and isinstance(request_json['object']['object']['attributedTo'], str)):
-            request_json['object']['actor'] = request_json['object']['object']['attributedTo']
 
     process_inbox_request(request_json, True)
 

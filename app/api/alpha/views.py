@@ -7,7 +7,7 @@ from app.utils import blocked_communities, blocked_instances, blocked_users, com
 
 from flask import current_app, g
 
-from sqlalchemy import text
+from sqlalchemy import text, func
 
 # 'stub' param: set to True to exclude optional fields
 
@@ -117,6 +117,12 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0) ->
 
         return v4
 
+    # Variant 5 - from resolve_object
+    if variant == 5:
+        v5 = {'post': post_view(post=post, variant=2, user_id=user_id)}
+
+        return v5
+
 
 # 'user' param can be anyone (including the logged in user), 'user_id' param belongs to the user making the request
 def user_view(user: User | int, variant, stub=False, user_id=None) -> dict:
@@ -215,16 +221,21 @@ def user_view(user: User | int, variant, stub=False, user_id=None) -> dict:
         }
         return v6
 
+    # Variant 7 - from resolve_object
+    if variant == 7:
+        v7 = {'person': user_view(user=user, variant=2, user_id=user_id)}
+        return v7
+
 
 def community_view(community: Community | int | str, variant, stub=False, user_id=None) -> dict:
     if isinstance(community, int):
         community = Community.query.filter_by(id=community).one()
     elif isinstance(community, str):
-        original_community = community.strip()
         name, ap_domain = community.strip().split('@')
         community = Community.query.filter_by(name=name, ap_domain=ap_domain).first()
         if community is None:
-            community = Community.query.filter(Community.ap_id == original_community.lower()).first()
+            community = Community.query.filter(func.lower(Community.name) == name.lower(),
+                                               func.lower(Community.ap_domain) == ap_domain.lower()).one()
 
 
     # Variant 1 - models/community/community.dart
@@ -288,6 +299,11 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
         v5 = {'community_view': community_view(community=community, variant=2, stub=False, user_id=user_id),
               'blocked': blocked}
         return v5
+
+    # Variant 6 - from resolve_object
+    if variant == 6:
+        v6  = {'community': community_view(community=community, variant=2, stub=False, user_id=user_id)}
+        return v6
 
 
 # emergency function - shouldn't be called in normal circumstances
@@ -433,6 +449,12 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
              }
 
         return v5
+
+    # Variant 6 - from resolve_object
+    if variant == 6:
+        v6 = {'comment': reply_view(reply=reply, variant=2, user_id=user_id)}
+
+        return v6
 
 
 def reply_report_view(report, reply_id, user_id) -> dict:
