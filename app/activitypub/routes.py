@@ -1605,6 +1605,8 @@ def community_featured(actor):
             community_data['orderedItems'].append(post_to_page(post))
 
         return jsonify(community_data)
+    else:
+        abort(404)
 
 
 @bp.route('/c/<actor>/moderators', methods=['GET'])
