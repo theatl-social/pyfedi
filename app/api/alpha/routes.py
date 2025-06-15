@@ -190,14 +190,14 @@ def post_alpha_community_delete():
 
 @bp.route('/api/alpha/community/mod', methods=['POST'])
 def post_alpha_community_mod():
-    #if not enable_api():
-    #    return jsonify({'error': 'alpha api is not enabled'}), 400
-    #try:
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'}), 400
+    try:
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
         return jsonify(post_community_mod(auth, data))
-    #except Exception as ex:
-    #    return jsonify({"error": str(ex)}), 400
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
 
 
 @bp.route('/api/alpha/community/moderate/bans', methods=['GET'])
