@@ -1123,6 +1123,7 @@ ul.form-multicheck-columns {
 }
 .post_teaser_article_preview.blur p, .post_teaser_link_preview.blur p {
   filter: blur(6px);
+  user-select: none;
 }
 
 .post_teaser_image_preview {
