@@ -46,6 +46,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupNotificationPermission();
     setupFederationModeToggle();
     setupMegaMenuNavigation();
+    setupVideoSpoilers();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
@@ -1291,4 +1292,19 @@ function setupMegaMenuNavigation() {
         dropdownToggle.setAttribute('aria-expanded', 'false');
         dropdownToggle.parentElement.classList.remove('show');
     }
+}
+
+function setupVideoSpoilers() {
+    const videosBlurred = document.querySelectorAll('.responsive-video.blur');
+
+    videosBlurred.forEach(function(vid) {
+        vid.addEventListener('play', function(playing) {
+            vid.classList.remove("blur");
+            vid.classList.add("deblur");
+        });
+        vid.addEventListener('pause', function(paused) {
+            vid.classList.remove("deblur");
+            vid.classList.add("blur");
+        });
+    });
 }

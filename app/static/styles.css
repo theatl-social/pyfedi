@@ -2023,9 +2023,6 @@ h1 .warning_badge {
 .responsive-video.blur {
   filter: blur(24px);
 }
-.responsive-video.blur:focus {
-  filter: blur(0px);
-}
 
 @media (min-width: 768px) {
   .post_language_chooser label {
