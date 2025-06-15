@@ -2916,6 +2916,7 @@ class Feed(db.Model):
     def __repr__(self):
         return '<Feed {}_{}>'.format(self.name, self.id)
 
+    @cache.memoize(timeout=500)
     def icon_image(self, size='default') -> str:
         if self.icon_id is not None:
             if size == 'default':
