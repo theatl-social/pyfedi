@@ -114,7 +114,10 @@ class BanUserCommunityForm(FlaskForm):
 
 
 class CreatePostForm(FlaskForm):
-    communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
+    communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select',
+                                                                                                   'hx-get': '/community/community_changed',
+                                                                                                   'hx-params': '*',
+                                                                                                   'hx-target': '#communityFlair'})
     title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])
     body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=50000)], render_kw={'rows': 5})
     tags = StringField(_l('Tags'), validators=[Optional(), Length(min=3, max=5000)])

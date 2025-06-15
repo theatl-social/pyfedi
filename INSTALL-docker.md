@@ -31,7 +31,7 @@ sudo nano compose.yaml
 
 #### CREATE REQUIRED FOLDERS WITH REQUIRED PERMISSIONS
 
-Do not skip this.
+Do not skip this. Enter your sudo password when prompted.
 
 ```bash
 ./docker-dirs.sh

@@ -740,7 +740,10 @@ def join_then_add(actor):
 def add_post(actor, type):
     if current_user.banned or current_user.ban_posts:
         return show_ban_message()
-    community = actor_to_community(actor)
+    if request.method == 'GET':
+        community = actor_to_community(actor)
+    else:
+        community = Community.query.get(request.form.get('communities'))
 
     post_type = POST_TYPE_ARTICLE
     if type == 'discussion':
@@ -2031,6 +2034,16 @@ def check_url_already_posted():
         return flask.render_template('community/check_url_posted.html', communities=communities, title=retrieve_title_of_url(url))
     else:
         abort(404)
+
+
+@bp.route('/community_changed')
+def community_changed():
+    community_id = request.args.get('communities')
+    if community_id:
+        community = Community.query.get(community_id)
+        return flask.render_template('community/community_changed.html', community=community)
+    else:
+        return ''
 
 
 def retrieve_title_of_url(url):
