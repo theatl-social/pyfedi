@@ -1,4 +1,5 @@
-from app.activitypub.util import find_actor_or_create, remote_object_to_json, actor_json_to_model
+from app.activitypub.util import find_actor_or_create, remote_object_to_json, actor_json_to_model, \
+    find_community, create_resolved_object
 from app.api.alpha.utils.community import get_community_list
 from app.api.alpha.utils.post import get_post_list
 from app.api.alpha.utils.user import get_user_list
@@ -6,7 +7,7 @@ from app.api.alpha.views import search_view, post_view, reply_view, user_view, c
 from app.community.util import search_for_community
 from app.user.utils import search_for_user
 from app.models import Post, PostReply, User, Community, BannedInstances
-from app.utils import authorise_api_user
+from app.utils import authorise_api_user, gibberish
 
 from urllib.parse import urlparse
 
@@ -105,8 +106,11 @@ def get_resolve_object(auth, data):
     if not ap_json:
         raise Exception('No object found.')
 
-    if ('type' in ap_json and
-        ap_json['type'] == 'Person' or ap_json['type'] == 'Service' or ap_json['type'] == 'Group' and
+    # a user or a community
+    if not 'type' in ap_json:
+        raise Exception('No object found.')
+
+    if (ap_json['type'] == 'Person' or ap_json['type'] == 'Service' or ap_json['type'] == 'Group' and
         'preferredUsername' in ap_json):
             name = ap_json['preferredUsername'].lower()
             object = actor_json_to_model(ap_json, name, server)
@@ -116,5 +120,21 @@ def get_resolve_object(auth, data):
                 elif isinstance(object, Community):
                     return community_view(community=object, variant=6, user_id=user_id)
 
+    # a post or a reply
+    # there's no recursive backfilling (a post's community, and a reply's parents need to already exist)
+    # that's possible to do, but it depends on how long a client is willing to wait for this endpoint to return
+    community = find_community(ap_json)
+    if not community:
+        raise Exception('No object found.')
 
+    # pretend this was Announced in, so an existing function can be re-used
+    announce_id = f"https://{server}/activities/announce/{gibberish(15)}"
+    object = create_resolved_object(query, ap_json, server, community, announce_id, False)
+    if object:
+        if isinstance(object, Post):
+            return post_view(post=object, variant=5, user_id=user_id)
+        elif isinstance(object, PostReply):
+            return reply_view(reply=object, variant=6, user_id=user_id)
+
+    # failed to resolve if here.
     raise Exception('No object found.')
