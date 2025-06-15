@@ -33,16 +33,8 @@ sudo nano compose.yaml
 
 Do not skip this.
 
-- Replace `<USERNAME>` with your login.
 ```bash
-sudo mkdir pgdata
-sudo chown -R <USERNAME>:<USERNAME> ./pgdata
-sudo mkdir media
-sudo chown -R <USERNAME>:<USERNAME> ./media
-sudo mkdir logs
-sudo chown -R <USERNAME>:<USERNAME> ./logs
-sudo mkdir tmp
-sudo chown -R <USERNAME>:<USERNAME> ./tmp
+./docker-dirs.sh
 ```
 
 #### BUILD PIEFED
