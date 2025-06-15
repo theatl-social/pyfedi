@@ -46,6 +46,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupNotificationPermission();
     setupFederationModeToggle();
     setupMegaMenuNavigation();
+    setupPopupCommunitySidebar();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
@@ -1316,5 +1317,51 @@ function setupMegaMenuNavigation() {
         dropdownMenu.style.setProperty('display', 'none', 'important');
         dropdownToggle.setAttribute('aria-expanded', 'false');
         dropdownToggle.parentElement.classList.remove('show');
+    }
+}
+
+function setupPopupCommunitySidebar() {
+    const dialog = document.getElementById('communitySidebar');
+    
+    document.querySelectorAll('.showPopupCommunitySidebar').forEach(anchor => {
+        anchor.addEventListener('click', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const communityId = this.getAttribute('data-id');
+            
+            if (communityId && dialog) {
+                fetch(`/community/get_sidebar/${communityId}`)
+                    .then(response => response.text())
+                    .then(html => {
+                        dialog.innerHTML = `
+                            <div style="position: relative;">
+                                <button id="closeCommunitySidebar" style="position: absolute; top: -10px; right: 0; background: none; border: none; font-size: 24px; cursor: pointer; z-index: 1000;" aria-label="Close">&times;</button>
+                                ${html}
+                            </div>
+                        `;
+                        
+                        const closeButton = dialog.querySelector('#closeCommunitySidebar');
+                        if (closeButton) {
+                            closeButton.addEventListener('click', function() {
+                                dialog.close();
+                            });
+                        }
+                        
+                        dialog.showModal();
+                    })
+                    .catch(error => {
+                        console.error('Error fetching community sidebar:', error);
+                    });
+            }
+        });
+    });
+    
+    if (dialog) {
+        dialog.addEventListener('click', function(event) {
+            if (event.target === dialog) {
+                dialog.close();
+            }
+        });
     }
 }

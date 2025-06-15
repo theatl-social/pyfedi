@@ -2235,6 +2235,21 @@ form {
   }
 }
 
+#communitySidebar {
+  color: var(--bs-body-color);
+  background-color: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+  max-width: 90vw;
+  max-height: 90vh;
+  padding: 1rem;
+  box-shadow: var(--bs-box-shadow);
+
+  &::backdrop {
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+}
+
 .blink {
   animation: blink-animation 1s steps(2, start) infinite;
   -webkit-animation: blink-animation 1s steps(2, start) infinite;

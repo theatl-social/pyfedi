@@ -1,0 +1,13 @@
+<h2>{{ community.title }}</h2>
+<p>{{ community.description_html|community_links|safe if community.description_html else '' }}</p>
+{% if len(mods) > 0 and not community.private_mods -%}
+    <h3>Moderators</h3>
+    <ul class="moderator_list">
+        {% for mod in mods -%}
+            <li>{{ render_username(mod, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</li>
+        {% endfor -%}
+    </ul>
+    {% if un_moderated -%}
+    <p class="red small">{{ _('Moderators have not been active recently.') }}</p>
+    {% endif -%}
+{% endif -%}

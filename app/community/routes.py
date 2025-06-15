@@ -2046,6 +2046,12 @@ def community_changed():
         return ''
 
 
+@bp.route('/get_sidebar/<int:community_id>')
+def get_sidebar(community_id):
+    community = Community.query.get(community_id)
+    return flask.render_template('community/description.html', community=community, hide_community_actions=True)
+
+
 def retrieve_title_of_url(url):
     try:
         response = httpx_client.get(url, timeout=10, follow_redirects=True)

@@ -383,6 +383,10 @@ h1 .fe-bell, h1 .fe-no-bell {
   content: "\e9be";
 }
 
+.fe-rules::before {
+  content: "\e907";
+}
+
 .fe-cross-post::before {
   content: "\e9ba";
 }
@@ -2491,6 +2495,20 @@ form h5 {
 
 #typeTab a:not(.btn):active {
   border-width: 1px;
+}
+
+#communitySidebar {
+  color: var(--bs-body-color);
+  background-color: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+  max-width: 90vw;
+  max-height: 90vh;
+  padding: 1rem;
+  box-shadow: var(--bs-box-shadow);
+}
+#communitySidebar::backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
 }
 
 .blink {
