@@ -1300,10 +1300,8 @@ function setupVideoSpoilers() {
     videosBlurred.forEach(function(vid) {
         vid.addEventListener('play', function(playing) {
             vid.classList.remove("blur");
-            vid.classList.add("deblur");
         });
         vid.addEventListener('pause', function(paused) {
-            vid.classList.remove("deblur");
             vid.classList.add("blur");
         });
     });
