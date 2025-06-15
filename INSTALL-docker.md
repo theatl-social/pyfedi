@@ -30,6 +30,9 @@ sudo nano compose.yaml
 ```
 
 #### CREATE REQUIRED FOLDERS WITH REQUIRED PERMISSIONS
+
+Do not skip this.
+
 - Replace `<USERNAME>` with your login.
 ```bash
 sudo mkdir pgdata
