@@ -2729,14 +2729,18 @@ def resolve_remote_post(uri: str, community, announce_id, store_ap_json, nodebb=
     announce_actor_domain = parsed_url.netloc
     if announce_actor_domain != 'a.gup.pe' and not nodebb and announce_actor_domain != uri_domain:
         return None
-    actor_domain = None
-    actor = None
 
     post_data = remote_object_to_json(uri)
     if not post_data:
         return None
 
+    return create_resolved_object(uri, post_data, uri_domain, community, announce_id, store_ap_json)
+
+
+def create_resolved_object(uri, post_data, uri_domain, community, announce_id, store_ap_json):
     # find the author. Make sure their domain matches the site hosting it to mitigate impersonation attempts
+    actor_domain = None
+    actor = None
     if 'attributedTo' in post_data:
         attributed_to = post_data['attributedTo']
         if isinstance(attributed_to, str):
@@ -2799,6 +2803,7 @@ def resolve_remote_post(uri: str, community, announce_id, store_ap_json, nodebb=
                 return post
 
     return None
+
 
 
 @celery.task
