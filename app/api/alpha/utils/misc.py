@@ -1,7 +1,9 @@
+from app.activitypub.util import find_actor_or_create
 from app.api.alpha.utils.community import get_community_list
 from app.api.alpha.utils.post import get_post_list
 from app.api.alpha.utils.user import get_user_list
 from app.api.alpha.views import search_view, post_view, reply_view, user_view, community_view
+from app.community.util import search_for_community
 from app.models import Post, PostReply, User, Community
 from app.utils import authorise_api_user
 
@@ -54,7 +56,22 @@ def get_resolve_object(auth, data):
             raise Exception('No object found.')
         return community_view(community=object, variant=6, user_id=user_id)
 
-    # TODO: if not found and user is logged in, fetch the object
+    # if not found and user is logged in, fetch the object
     # probably use remote_object_to_json(uri) in activitypub.util and then create it.
+    if user_id:
+        if '/u/' in query or '/c/' in query:
+            object = find_actor_or_create(query.lower())
+            if object:
+                if isinstance(object, User):
+                    return user_view(user=object, variant=7, user_id=user_id)
+                elif isinstance(object, Community):
+                    return community_view(community=object, variant=6, user_id=user_id)
+        elif query.startswith('!'):
+            object = search_for_community(query.lower())
+            if object:
+                return community_view(community=object, variant=6, user_id=user_id)
+        else:
+            ...
+            # retrieve posts or postreplies, using remote_object_to_json ?
 
     raise Exception('No object found.')
