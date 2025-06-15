@@ -468,20 +468,17 @@ def add_mod_to_community(community_id: int, person_id: int, src, auth=None):
         db.session.commit()
     else:
 	      # for remote users, send a chat message to let them know
-        # send_message uses current_user, so only do for SRC_WEB for now
-        if src == SRC_WEB:
-            existing_conversation = Conversation.find_existing_conversation(recipient=new_moderator,
-                                                                            sender=user)
-            if not existing_conversation:
-                existing_conversation = Conversation(user_id=user.id)
-                existing_conversation.members.append(new_moderator)
-                existing_conversation.members.append(user)
-                db.session.add(existing_conversation)
-                db.session.commit()
-            server = current_app.config['SERVER_NAME']
-            send_message(f"Hi there. I've added you as a moderator to the community !{community.name}@{server}.",
-                         existing_conversation.id)
-
+        existing_conversation = Conversation.find_existing_conversation(recipient=new_moderator,
+                                                                        sender=user)
+        if not existing_conversation:
+            existing_conversation = Conversation(user_id=user.id)
+            existing_conversation.members.append(new_moderator)
+            existing_conversation.members.append(user)
+            db.session.add(existing_conversation)
+            db.session.commit()
+        server = current_app.config['SERVER_NAME']
+        send_message(f"Hi there. I've added you as a moderator to the community !{community.name}@{server}.",
+                     existing_conversation.id, user=user)
     if src == SRC_WEB:
         add_to_modlog('add_mod', community_id=community_id, link_text=new_moderator.display_name(),
                       link=new_moderator.link())
