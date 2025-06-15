@@ -4,6 +4,7 @@ from app.api.alpha.utils.post import get_post_list
 from app.api.alpha.utils.user import get_user_list
 from app.api.alpha.views import search_view, post_view, reply_view, user_view, community_view
 from app.community.util import search_for_community
+from app.user.utils import search_for_user
 from app.models import Post, PostReply, User, Community
 from app.utils import authorise_api_user
 
@@ -57,6 +58,7 @@ def get_resolve_object(auth, data):
         return community_view(community=object, variant=6, user_id=user_id)
 
     # if not found and user is logged in, fetch the object
+    # note: accommodating ! and @ queries for communities and people is different from lemmy's v3 api
     # probably use remote_object_to_json(uri) in activitypub.util and then create it.
     if user_id:
         if '/u/' in query or '/c/' in query:
@@ -70,6 +72,10 @@ def get_resolve_object(auth, data):
             object = search_for_community(query.lower())
             if object:
                 return community_view(community=object, variant=6, user_id=user_id)
+        elif query.startswith('@'):
+            object = search_for_user(query.lower())
+            if object:
+                return user_view(user=object, variant=7, user_id=user_id)
         else:
             ...
             # retrieve posts or postreplies, using remote_object_to_json ?
