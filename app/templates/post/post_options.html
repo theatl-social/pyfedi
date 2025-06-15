@@ -71,7 +71,7 @@
     {% endif -%}
 {% endif -%}
 {% if post.ap_id -%}
-    <li><a href="{{ post.ap_id }}" style="white-space: normal" rel="nofollow noindex" class="dropdown-item no-underline"><span class="fe fe-external"></span>
+    <li><a href="{{ post.ap_id }}" style="white-space: normal" rel="nofollow noindex" class="dropdown-item no-underline"><img src="/static/images/fediverse_logo.svg" class="options_fediverse_logo">
         {{ _('View original on %(domain)s', domain=post.instance.domain) }}</a></li>
 {% endif -%}
 <li><a href="{{ url_for('post.post_report', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-report"></span>

@@ -2514,6 +2514,11 @@ form h5 {
   max-width: 100%;
 }
 
+.options_fediverse_logo {
+  width: 16px;
+  height: 16px;
+}
+
 .blink {
   animation: blink-animation 1s steps(2, start) infinite;
   -webkit-animation: blink-animation 1s steps(2, start) infinite;
