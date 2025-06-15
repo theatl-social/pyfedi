@@ -3042,33 +3042,22 @@ def find_community(request_json):
                             if potential_community:
                                 return potential_community
 
-    # used for manual retrieval of a PeerTube vid
-    if request_json['type'] == 'Video':
-        if 'attributedTo' in request_json and isinstance(request_json['attributedTo'], list):
-            for a in request_json['attributedTo']:
-                if a['type'] == 'Group':
-                    potential_community = Community.query.filter_by(ap_profile_id=a['id'].lower()).first()
-                    if potential_community:
-                        return potential_community
-
-    # change this if manual retrieval of comments is allowed in future
-    if not 'object' in request_json:
-        return None
+    rj = request_json['object'] if 'object' in request_json else request_json
 
     # Create/Update Note from platform that didn't include the Community in 'audience', 'cc', or 'to' (e.g. Mastodon reply to Lemmy post)
-    if 'inReplyTo' in request_json['object'] and request_json['object']['inReplyTo'] is not None:
-        post_being_replied_to = Post.get_by_ap_id(request_json['object']['inReplyTo'])
+    if 'inReplyTo' in rj and rj['inReplyTo'] is not None:
+        post_being_replied_to = Post.get_by_ap_id(rj['inReplyTo'])
         if post_being_replied_to:
             return post_being_replied_to.community
         else:
-            comment_being_replied_to = PostReply.get_by_ap_id(request_json['object']['inReplyTo'])
+            comment_being_replied_to = PostReply.get_by_ap_id(rj['inReplyTo'])
             if comment_being_replied_to:
                 return comment_being_replied_to.community
 
     # Update / Video from PeerTube (possibly an edit, more likely an invite to query Likes / Replies endpoints)
-    if request_json['object']['type'] == 'Video':
-        if 'attributedTo' in request_json['object'] and isinstance(request_json['object']['attributedTo'], list):
-            for a in request_json['object']['attributedTo']:
+    if rj['type'] == 'Video':
+        if 'attributedTo' in rj and isinstance(rj['attributedTo'], list):
+            for a in rj['attributedTo']:
                 if a['type'] == 'Group':
                     potential_community = Community.query.filter_by(ap_profile_id=a['id'].lower()).first()
                     if potential_community:
