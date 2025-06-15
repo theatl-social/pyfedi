@@ -2207,8 +2207,10 @@ form {
       }
     }
   }
+}
 
-
+.preview_avatar_image{
+  max-width: 64px;
 }
 
 #preview:has(p, a, h1, h2, h3, ul, ol) {
