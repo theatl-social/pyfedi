@@ -345,14 +345,26 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
 
         Image.MAX_IMAGE_PIXELS = 89478485
 
-        # limit full sized version to 2000px
+        # Use environment variables to determine image max dimension, format, and quality
+
+        image_max_dimension = int(os.getenv('MEDIA_IMAGE_MAX_DIMENSION', 2000))
+        image_format = os.getenv('MEDIA_IMAGE_FORMAT')
+        image_quality = os.getenv('MEDIA_IMAGE_QUALITY')
+
         if not final_place.endswith('.svg') and not final_place.endswith('.gif'):
             img = Image.open(final_place)
             if '.' + img.format.lower() in allowed_extensions:
                 img = ImageOps.exif_transpose(img)
+                img.thumbnail((image_max_dimension, image_max_dimension))
 
-                img.thumbnail((2000, sys.maxsize))
-                img.save(final_place)
+                kwargs = {}
+                if image_format:
+                    kwargs['format'] = image_format.upper()
+                    final_place = os.path.splitext(final_place)[0] + '.' + image_format.lower()
+                if image_quality:
+                    kwargs['quality'] = int(image_quality)
+
+                img.save(final_place, **kwargs)
             else:
                 raise Exception('filetype not allowed')
         
