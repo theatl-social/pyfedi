@@ -2510,6 +2510,9 @@ form h5 {
 #communitySidebar::backdrop {
   background-color: rgba(0, 0, 0, 0.5);
 }
+#communitySidebar img {
+  max-width: 320px;
+}
 
 .blink {
   animation: blink-animation 1s steps(2, start) infinite;

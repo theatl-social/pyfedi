@@ -2248,6 +2248,10 @@ form {
   &::backdrop {
     background-color: rgba(0, 0, 0, 0.5);
   }
+
+  img {
+    max-width: 320px;
+  }
 }
 
 .blink {
