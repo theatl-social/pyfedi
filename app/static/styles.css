@@ -2502,7 +2502,7 @@ form h5 {
   background-color: var(--bs-body-bg);
   border: 1px solid var(--bs-border-color);
   border-radius: var(--bs-border-radius);
-  max-width: 90vw;
+  max-width: 345px;
   max-height: 90vh;
   padding: 1rem;
   box-shadow: var(--bs-box-shadow);
@@ -2511,7 +2511,7 @@ form h5 {
   background-color: rgba(0, 0, 0, 0.5);
 }
 #communitySidebar img {
-  max-width: 320px;
+  max-width: 100%;
 }
 
 .blink {
