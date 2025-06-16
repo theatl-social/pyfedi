@@ -113,7 +113,7 @@
                 {% endif -%}
             {% endif -%}
             <div class="post_body" lang="{{ post.language_code() }}">
-                {{ post.body_html | community_links | person_links | safe if post.body_html else '' }}
+                {{ post.body_html | community_links | feed_links| person_links | safe if post.body_html else '' }}
                 {% if archive_link -%}
                     <p><a href="{{ archive_link }}" rel="nofollow ucg noindex" target="_blank">{{ _('Archive.ph link') }} <span class="fe fe-external"></span></a></p>
                 {% endif -%}

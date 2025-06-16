@@ -58,7 +58,7 @@
                       {{ _('This community does not federate with other instances.') }}
                     </p>
                 {% endif %}
-                <p>{{ community.description_html|community_links|safe if community.description_html else '' }}</p>
+                <p>{{ community.description_html|community_links|feed_links|safe if community.description_html else '' }}</p>
                 <p>{{ _('Members') if community.is_local() else _('Local members') }}: {{ community.subscriptions_count }}
                     <a href="/community/{{ community.link() }}/invite" rel="nofollow noindex">{{ _('Invite people to join') }}</a>
                     <br>

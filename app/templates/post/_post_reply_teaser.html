@@ -65,7 +65,7 @@
                     <p>{{ _('Deleted by author') }}</p>
                 {% endif -%}
             {% else -%}
-                {{ post_reply.body_html | community_links | person_links | safe }}
+                {{ post_reply.body_html | community_links | feed_links | person_links | safe }}
             {% endif -%}
         </div>
     </div>

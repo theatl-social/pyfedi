@@ -515,10 +515,17 @@ def first_paragraph(html):
     else:
         return ''
 
+
 def community_link_to_href(link: str) -> str:
     pattern = r"!([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
     server = r'<a href=https://' + current_app.config['SERVER_NAME'] + r'/community/lookup/'
     return re.sub(pattern, server + r'\g<1>/\g<2>>' + r'!\g<1>@\g<2></a>', link)
+
+
+def feed_link_to_href(link: str) -> str:
+    pattern = r"~([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
+    server = r'<a href=https://' + current_app.config['SERVER_NAME'] + r'/feed/lookup/'
+    return re.sub(pattern, server + r'\g<1>/\g<2>>' + r'~\g<1>@\g<2></a>', link)
 
 
 def person_link_to_href(link: str) -> str:
