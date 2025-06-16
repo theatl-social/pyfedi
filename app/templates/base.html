@@ -243,10 +243,8 @@
 
     {% block scripts -%}
     {% endblock -%}
-    {% if not low_bandwidth -%}
-        {{ str(bootstrap.load_js()).replace('<script ', '<script nonce="' + nonce + '" ')|safe }}
-        <script src="{{ url_for('static', filename='js/lightbox/baguetteBox.js') }}" nonce="{{ nonce }}"></script>
-    {% endif -%}
+    {{ str(bootstrap.load_js()).replace('<script ', '<script nonce="' + nonce + '" ')|safe }}
+    <script src="{{ url_for('static', filename='js/lightbox/baguetteBox.js') }}" nonce="{{ nonce }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/scripts.js', changed=getmtime('js/scripts.js')) }}"></script>
     {% if not low_bandwidth -%}
