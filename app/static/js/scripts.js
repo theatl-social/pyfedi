@@ -47,6 +47,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupFederationModeToggle();
     setupMegaMenuNavigation();
     setupPopupCommunitySidebar();
+    setupVideoSpoilers();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
@@ -1322,14 +1323,14 @@ function setupMegaMenuNavigation() {
 
 function setupPopupCommunitySidebar() {
     const dialog = document.getElementById('communitySidebar');
-    
+
     document.querySelectorAll('.showPopupCommunitySidebar').forEach(anchor => {
         anchor.addEventListener('click', function(event) {
             event.preventDefault();
             event.stopPropagation();
-            
+
             const communityId = this.getAttribute('data-id');
-            
+
             if (communityId && dialog) {
                 fetch(`/community/get_sidebar/${communityId}`)
                     .then(response => response.text())
@@ -1340,14 +1341,14 @@ function setupPopupCommunitySidebar() {
                                 ${html}
                             </div>
                         `;
-                        
+
                         const closeButton = dialog.querySelector('#closeCommunitySidebar');
                         if (closeButton) {
                             closeButton.addEventListener('click', function() {
                                 dialog.close();
                             });
                         }
-                        
+
                         dialog.showModal();
                     })
                     .catch(error => {
@@ -1356,7 +1357,7 @@ function setupPopupCommunitySidebar() {
             }
         });
     });
-    
+
     if (dialog) {
         dialog.addEventListener('click', function(event) {
             if (event.target === dialog) {
@@ -1364,4 +1365,17 @@ function setupPopupCommunitySidebar() {
             }
         });
     }
+}
+
+function setupVideoSpoilers() {
+    const videosBlurred = document.querySelectorAll('.responsive-video.blur');
+
+    videosBlurred.forEach(function(vid) {
+        vid.addEventListener('play', function(playing) {
+            vid.classList.remove("blur");
+        });
+        vid.addEventListener('pause', function(paused) {
+            vid.classList.add("blur");
+        });
+    });
 }
