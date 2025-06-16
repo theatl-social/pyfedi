@@ -154,7 +154,7 @@ def feed_edit(feed_id: int):
     if current_user.banned:
         return show_ban_message()
     # load the feed
-    feed_to_edit = Feed.query.get_or_404(feed_id)
+    feed_to_edit: Feed = Feed.query.get_or_404(feed_id)
     # make sure the user owns this feed
     if feed_to_edit.user_id != current_user.id:
         abort(404)
@@ -164,6 +164,9 @@ def feed_edit(feed_id: int):
 
     if not current_user.is_admin():
         edit_feed_form.is_instance_feed.render_kw = {'disabled': True}
+
+    if feed_to_edit.subscriptions_count > 1:
+        edit_feed_form.url.render_kw = {'disabled': True}
     
     if edit_feed_form.validate_on_submit():
         edit_feed_form.url.data = slugify(edit_feed_form.url.data, separator='_').lower()
