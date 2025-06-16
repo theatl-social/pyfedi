@@ -901,6 +901,7 @@ def process_inbox_request(request_json, store_ap_json):
                 try:
                     join_request = CommunityJoinRequest.query.filter_by(uuid=join_request_parts[-1]).first()
                 except Exception as e:  # old style join requests were just a number
+                    db.session.rollback()
                     join_request = CommunityJoinRequest.query.get(join_request_parts[-1])
                 if join_request:
                     user = User.query.get(join_request.user_id)
