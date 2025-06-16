@@ -1356,8 +1356,8 @@ def find_instance_id(server):
     else:
         # Our instance does not know about {server} yet. Initially, create a sparse row in the 'instance' table and spawn a background
         # task to update the row with more details later
-        new_instance = Instance(domain=server, software='unknown', inbox=f'https://{server}/inbox', created_at=utcnow(),
-                                trusted=server == 'piefed.social')
+        new_instance = Instance(domain=server, software='unknown', inbox=f'https://{server}/inbox', created_at=utcnow())
+        
         try:
             db.session.add(new_instance)
             db.session.commit()
