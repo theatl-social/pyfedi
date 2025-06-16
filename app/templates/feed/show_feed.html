@@ -162,7 +162,7 @@
                      <h2>{{ feed.title }}</h2>
                 </div>
                 <div class="card-body">
-                    <p>{{ feed.description_html|community_links|safe if feed.description_html else '' }}</p>
+                    <p>{{ feed.description_html|community_links|feed_links|safe if feed.description_html else '' }}</p>
                 </div>
             </div>
         {% endif %}
