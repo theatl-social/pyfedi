@@ -38,6 +38,12 @@ class AddCopyFeedForm(FlaskForm):
             if feed is not None:
                 self.url.errors.append(_l('A Feed with this url already exists.'))
                 return False
+        
+        input_communities = self.communities.data.strip().split('\n')
+        for community_ap_id in input_communities:
+            if not '@' in community_ap_id:
+                self.communities.errors.append(_l('Please make sure each community is formatted as "community_name@instance.tld"'))
+                return False
         return True    
 
 
@@ -64,6 +70,12 @@ class EditFeedForm(FlaskForm):
         if feed is not None and feed.id != self.feed_id:
             self.url.errors.append(_l('Url is already used by another feed.'))
             return False
+        
+        input_communities = self.communities.data.strip().split('\n')
+        for community_ap_id in input_communities:
+            if not '@' in community_ap_id:
+                self.communities.errors.append(_l('Please make sure each community is formatted as "community_name@instance.tld"'))
+                return False
         return True
 
 
