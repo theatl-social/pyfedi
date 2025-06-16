@@ -17,7 +17,7 @@
                         <div class="form-group">{{ form.url.label(class_="form-control-label required") }}
                             /c/{{ form.url(class_="form-control", maxlength=255) }}
                             {% for error in form.url.errors %}
-                            <span style="color: red;">[{{ error }}]</span>
+                            <br><span style="color: red;">[{{ error }}]</span>
                             {% endfor %}
                         </div>
                         {{ render_field(form.description) }}

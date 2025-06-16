@@ -1,6 +1,7 @@
 from flask import request, g
 from flask_login import current_user
 from flask_wtf import FlaskForm
+from sqlalchemy import func
 from wtforms import StringField, SubmitField, TextAreaField, BooleanField, HiddenField, SelectField, FileField, \
     DateField
 from wtforms.fields.choices import SelectMultipleField
@@ -11,7 +12,7 @@ from flask_babel import _, lazy_gettext as _l
 from app import db
 from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_MEMBERS, DOWNVOTE_ACCEPT_INSTANCE, \
     DOWNVOTE_ACCEPT_TRUSTED
-from app.models import Community, Site, utcnow
+from app.models import Community, Site, utcnow, User, Feed
 from app.utils import domain_from_url, MultiCheckboxField
 from PIL import Image, ImageOps, UnidentifiedImageError
 from io import BytesIO
@@ -43,6 +44,16 @@ class AddCommunityForm(FlaskForm):
             if community is not None:
                 self.url.errors.append(_l('A community with this url already exists.'))
                 return False
+            user = User.query.filter(func.lower(User.user_name) == func.lower(self.url.data.strip())).filter_by(ap_id=None).first()
+            if user is not None:
+                if user.deleted:
+                    self.url.errors.append(_l('This name was used in the past and cannot be reused.'))
+                else:
+                    self.url.errors.append(_l('This name is in use already.'))
+                return False
+            feed = Feed.query.filter(Feed.name == self.url.data.strip().lower(), Feed.ap_id == None).first()
+            if feed is not None:
+                raise ValidationError(_('This name is in use already.'))
         return True
 
 
