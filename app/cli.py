@@ -293,6 +293,7 @@ def register(app):
             # update and sync defederation subscriptions
             print(f'update and sync defederation subscriptions {datetime.now()}')
             db.session.execute(text('DELETE FROM banned_instances WHERE subscription_id is not null'))
+            db.session.commit()
             for defederation_sub in DefederationSubscription.query.all():
                 download_defeds(defederation_sub.id, defederation_sub.domain)
 
