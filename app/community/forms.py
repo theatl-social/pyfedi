@@ -1,3 +1,5 @@
+import re
+
 from flask import request, g
 from flask_login import current_user
 from flask_wtf import FlaskForm
@@ -40,6 +42,12 @@ class AddCommunityForm(FlaskForm):
             if '-' in self.url.data.strip():
                 self.url.errors.append(_l('- cannot be in Url. Use _ instead?'))
                 return False
+
+            # Allow alphanumeric characters and underscores (a-z, A-Z, 0-9, _)
+            if not re.match(r'^[a-zA-Z0-9_]+$', self.url.data):
+                self.url.errors.append(_l('Community urls can only contain letters, numbers, and underscores.'))
+                return False
+
             community = Community.query.filter(Community.name == self.url.data.strip().lower(), Community.ap_id == None).first()
             if community is not None:
                 self.url.errors.append(_l('A community with this url already exists.'))
@@ -53,7 +61,8 @@ class AddCommunityForm(FlaskForm):
                 return False
             feed = Feed.query.filter(Feed.name == self.url.data.strip().lower(), Feed.ap_id == None).first()
             if feed is not None:
-                raise ValidationError(_('This name is in use already.'))
+                self.url.errors.append(_('This name is in use already.'))
+                return False
         return True
 
 
