@@ -10,7 +10,7 @@ from app.shared.tasks.adds import sticky_post, add_mod
 from app.shared.tasks.removes import unsticky_post, remove_mod
 from app.shared.tasks.groups import edit_community
 from app.shared.tasks.users import check_user_application
-from app.shared.tasks.blocks import ban_from_community, unban_from_community
+from app.shared.tasks.blocks import ban_from_community, unban_from_community, ban_from_site, unban_from_site
 from flask import current_app
 
 
@@ -41,6 +41,8 @@ def task_selector(task_key, send_async=True, **kwargs):
         'check_application': check_user_application,
         'ban_from_community': ban_from_community,
         'unban_from_community': unban_from_community,
+        'ban_from_site': ban_from_site,
+        'unban_from_site': unban_from_site,
         'add_mod': add_mod,
         'remove_mod': remove_mod,
     }
