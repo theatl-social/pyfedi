@@ -44,7 +44,7 @@ class AddCopyFeedForm(FlaskForm):
             if not community_ap_id.startswith('!'):
                 community_ap_id = '!' + community_ap_id
             if not '@' in community_ap_id:
-                self.communities.errors.append(_l('Please make sure each community is formatted as "!community_name@instance.tld"'))
+                self.communities.errors.append(_l('Please make sure each community is formatted as "community_name@instance.tld"'))
                 return False
         return True    
 
@@ -78,7 +78,7 @@ class EditFeedForm(FlaskForm):
             if not community_ap_id.startswith('!'):
                 community_ap_id = '!' + community_ap_id
             if not '@' in community_ap_id:
-                self.communities.errors.append(_l('Please make sure each community is formatted as "!community_name@instance.tld"'))
+                self.communities.errors.append(_l('Please make sure each community is formatted as "community_name@instance.tld"'))
                 return False
         return True
 
