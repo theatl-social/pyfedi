@@ -743,7 +743,10 @@ def add_post(actor, type):
     if request.method == 'GET':
         community = actor_to_community(actor)
     else:
-        community = Community.query.get(request.form.get('communities'))
+        if request.form.get('communities'):
+            community = Community.query.get_or_404(request.form.get('communities'))
+        else:
+            community = actor_to_community(actor)
 
     post_type = POST_TYPE_ARTICLE
     if type == 'discussion':
@@ -782,7 +785,6 @@ def add_post(actor, type):
         del form.flair
 
     if form.validate_on_submit():
-        community = Community.query.get_or_404(form.communities.data)
         try:
             uploaded_file = request.files['image_file'] if type == 'image' else None
             post = make_post(form, community, post_type, SRC_WEB, uploaded_file=uploaded_file)
