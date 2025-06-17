@@ -1,0 +1,47 @@
+{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
+    {% extends 'themes/' + theme() + '/base.html' %}
+{% else %}
+    {% extends "base.html" %}
+{% endif %}
+{% from 'bootstrap5/form.html' import render_form %}
+{% set active_child = 'admin_content' %}
+
+{% block app_content %}
+{% include 'admin/_tabbed_nav.html' %}
+<br>
+<div class="row">
+    <div class="col">
+        <a href="{{ url_for('admin.admin_blocked_image_add') }}" class="btn btn-primary" style="float: right;">{{ _('Add blocked image') }}</a>
+        <h1>{{ title }}</h1>
+
+        <table class="table table-striped">
+            <tr>
+               <th>{{ _('Hash') }}</th>
+               <th>{{ _('File') }}</th>
+               <th>{{ _('Note') }}</th>
+               <th> </th>
+            </tr>
+            {% for blocked_image in blocked_images %}
+                <tr>
+                    <td><span title="{{ blocked_image.hash }}">{{ blocked_image.hash | shorten(100) }}</span></td>
+                    <td><span title="{{ _('File') }}">{{ blocked_image.file_name  }}</span></td>
+                    <td><span title="{{ _('Note') }}">{{ blocked_image.note  }}</span></td>
+                    <td><a href="{{ url_for('admin.admin_blocked_image_edit', image_id=blocked_image.id) }}">{{ _('Edit') }}</a> |
+                    <a href="{{ url_for('admin.admin_blocked_image_delete', image_id=blocked_image.id) }}" class="confirm_first">Delete</a></td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="4">No blocked images.</td>
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+<hr />
+<div class="row">
+    <div class="col">
+        {% include 'admin/_nav.html' %}
+    </div>
+</div>
+<hr />
+{% endblock %}

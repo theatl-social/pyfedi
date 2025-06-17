@@ -34,6 +34,8 @@ services:
     entrypoint: ./entrypoint_celery.sh
     volumes:
      - ./media/:/app/app/static/media/
+     - ./logs/:/app/logs/
+     - ./tmp/:/app/app/static/tmp/
     networks:
       - pf_network
 
@@ -51,6 +53,8 @@ services:
     volumes:
      - ./gunicorn.conf.py:/app/gunicorn.conf.py
      - ./media/:/app/app/static/media/
+     - ./logs/:/app/logs/
+     - ./tmp/:/app/app/static/tmp/
     ports:
       - '8030:5000'
     networks:

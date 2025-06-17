@@ -3,7 +3,7 @@
 {% else %}
     {% extends "base.html" %}
 {% endif %}
-{% from 'bootstrap/form.html' import render_form %}
+{% from 'bootstrap5/form.html' import render_form %}
 {% set active_child = 'user_feeds' %}
 
 
@@ -21,7 +21,7 @@
             <th># Communities</th>
             <th>Creator</th>
             <th>Public</th>
-            {% if current_user.is_admin() %}
+            {% if current_user.get_id() in admin_ids %}
                 <th>Instance</th>
             {% endif %}
             <th>Actions</th>

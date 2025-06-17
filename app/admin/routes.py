@@ -4,6 +4,7 @@ from datetime import timedelta
 from time import sleep
 from io import BytesIO
 import json as python_json
+import shutil
 
 from flask import request, flash, json, url_for, current_app, redirect, g, abort, send_file
 from flask_login import login_required, current_user
@@ -12,6 +13,7 @@ from slugify import slugify
 from sqlalchemy import text, desc, or_
 from PIL import Image
 from urllib.parse import urlparse
+from furl import furl
 
 from app import db, celery, cache
 from app.activitypub.routes import process_inbox_request, process_delete_request, replay_inbox_request
@@ -19,7 +21,7 @@ from app.activitypub.signature import post_request, default_context, RsaKeys
 from app.activitypub.util import instance_allowed, extract_domain_and_actor
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm, \
-    EditInstanceForm, RemoteInstanceScanForm, MoveCommunityForm
+    EditInstanceForm, RemoteInstanceScanForm, MoveCommunityForm, EditBlockedImageForm, AddBlockedImageForm, CmsPageForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form, move_community_images_to_here
 from app.community.util import save_icon_file, save_banner_file, search_for_community
@@ -28,26 +30,39 @@ from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED, POST_STATUS_
 from app.email import send_registration_approved_email
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission, Domain, \
-    Tag, DefederationSubscription
+    Tag, DefederationSubscription, BlockedImage, CmsPage
+from app.shared.tasks import task_selector
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
     topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents, \
     download_defeds, instance_banned, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, referrer, \
-    community_membership
+    community_membership, retrieve_image_hash, posts_with_blocked_images, user_access, reported_posts, user_notes
 from app.admin import bp
 
 
 @bp.route('/', methods=['GET', 'POST'])
 @login_required
-@permission_required('change instance settings')
 def admin_home():
-    return render_template('admin/home.html', title=_('Admin'), 
-                           site=g.site)
+    load1, load5, load15 = os.getloadavg()
+    num_cores = os.cpu_count()
+    path = os.getcwd()
+    usage = shutil.disk_usage(path)
+
+    total = usage.total
+    used = usage.used
+    percent_used = used / total * 100
+
+    if percent_used > 95:
+        disk_usage = f"<span class='blink red'>Storage used: {percent_used:.2f}%</span>"
+    else:
+        disk_usage = f"Storage used: {percent_used:.2f}%"
+    return render_template('admin/home.html', title=_('Admin'), load1=load1, load5=load5, load15=load15, num_cores=num_cores,
+                           disk_usage=disk_usage)
 
 
 @bp.route('/site', methods=['GET', 'POST'])
-@login_required
 @permission_required('change instance settings')
+@login_required
 def admin_site():
     form = SiteProfileForm()
     site = Site.query.get(1)
@@ -76,6 +91,8 @@ def admin_site():
             # Remove existing logo files
             if os.path.isfile(f'app{site.logo}'):
                 os.unlink(f'app{site.logo}')
+            if os.path.isfile(f'app{site.logo_180}'):
+                os.unlink(f'app{site.logo_180}')
             if os.path.isfile(f'app{site.logo_152}'):
                 os.unlink(f'app{site.logo_152}')
             if os.path.isfile(f'app{site.logo_32}'):
@@ -88,7 +105,7 @@ def admin_site():
             uploaded_icon.save(f'{directory}/{base_filename}{file_ext}')
             if file_ext == '.svg':
                 delete_original = False
-                site.logo = site.logo_152 = site.logo_32 = site.logo_16 = f'/static/media/{base_filename}{file_ext}'
+                site.logo = site.logo_180 = site.logo_152 = site.logo_32 = site.logo_16 = f'/static/media/{base_filename}{file_ext}'
             else:
                 img = Image.open(f'{directory}/{base_filename}{file_ext}')
                 if img.width > 100:
@@ -101,6 +118,11 @@ def admin_site():
                     delete_original = False
 
                 # Save multiple copies of the logo - different sizes
+                img = Image.open(f'{directory}/{base_filename}{file_ext}')
+                img.thumbnail((180, 180))
+                img.save(f'{directory}/{base_filename}_180{file_ext}')
+                site.logo_180 = f'/static/media/{base_filename}_180{file_ext}'
+
                 img = Image.open(f'{directory}/{base_filename}{file_ext}')
                 img.thumbnail((152, 152))
                 img.save(f'{directory}/{base_filename}_152{file_ext}')
@@ -132,20 +154,24 @@ def admin_site():
         form.announcement.data = get_setting('announcement', '')
     return render_template('admin/site.html', title=_('Site profile'), form=form,
                            
-                           site=g.site, )
+                            )
 
 
 @bp.route('/misc', methods=['GET', 'POST'])
-@login_required
 @permission_required('change instance settings')
+@login_required
 def admin_misc():
     form = SiteMiscForm()
     site = Site.query.get(1)
     if site is None:
         site = Site()
     form.default_theme.choices = theme_list()
+    form.language_id.choices = languages_for_form(all=True)
     if form.validate_on_submit():
         site.enable_downvotes = form.enable_downvotes.data
+        site.enable_gif_reply_rep_decrease = form.enable_gif_reply_rep_decrease.data
+        site.enable_chan_image_filter = form.enable_chan_image_filter.data
+        site.enable_this_comment_filter = form.enable_this_comment_filter.data
         site.allow_local_image_posts = form.allow_local_image_posts.data
         site.remote_image_cache_days = form.remote_image_cache_days.data
         site.enable_nsfw = form.enable_nsfw.data
@@ -163,18 +189,26 @@ def admin_misc():
         site.additional_css = form.additional_css.data
         site.default_filter = form.default_filter.data
         site.private_instance = form.private_instance.data
+        site.language_id = form.language_id.data
         if site.id is None:
             db.session.add(site)
         db.session.commit()
         cache.delete_memoized(blocked_referrers)
+        set_setting('meme_comms_low_quality', form.meme_comms_low_quality.data)
         set_setting('public_modlog', form.public_modlog.data)
         set_setting('email_verification', form.email_verification.data)
+        set_setting('captcha_enabled', form.captcha_enabled.data)
         set_setting('choose_topics', form.choose_topics.data)
         set_setting('filter_selection', form.filter_selection.data)
         set_setting('registration_approved_email', form.registration_approved_email.data)
+        set_setting('ban_check_servers', form.ban_check_servers.data)
         flash(_('Settings saved.'))
     elif request.method == 'GET':
         form.enable_downvotes.data = site.enable_downvotes
+        form.enable_gif_reply_rep_decrease.data = site.enable_gif_reply_rep_decrease
+        form.enable_chan_image_filter.data = site.enable_chan_image_filter
+        form.enable_this_comment_filter.data = site.enable_this_comment_filter
+        form.meme_comms_low_quality.data = get_setting('meme_comms_low_quality', False)
         form.allow_local_image_posts.data = site.allow_local_image_posts
         form.remote_image_cache_days.data = site.remote_image_cache_days
         form.enable_nsfw.data = site.enable_nsfw
@@ -186,24 +220,25 @@ def admin_misc():
         form.auto_decline_referrers.data = site.auto_decline_referrers
         form.auto_decline_countries.data = get_setting('auto_decline_countries', '')
         form.log_activitypub_json.data = site.log_activitypub_json
+        form.language_id.data = site.language_id
         form.show_inoculation_block.data = site.show_inoculation_block
         form.default_theme.data = site.default_theme if site.default_theme is not None else ''
         form.additional_css.data = site.additional_css if site.additional_css is not None else ''
         form.default_filter.data = site.default_filter if site.default_filter else 'popular'
         form.public_modlog.data = get_setting('public_modlog', False)
         form.email_verification.data = get_setting('email_verification', True)
+        form.captcha_enabled.data = get_setting('captcha_enabled', False)
         form.choose_topics.data = get_setting('choose_topics', True)
         form.filter_selection.data = get_setting('filter_selection', True)
         form.private_instance.data = site.private_instance
         form.registration_approved_email.data = get_setting('registration_approved_email', '')
-    return render_template('admin/misc.html', title=_('Misc settings'), form=form,
-                           
-                           site=g.site, )
+        form.ban_check_servers.data = get_setting('ban_check_servers', 'piefed.social')
+    return render_template('admin/misc.html', title=_('Misc settings'), form=form)
 
 
 @bp.route('/federation', methods=['GET', 'POST'])
-@login_required
 @permission_required('change instance settings')
+@login_required
 def admin_federation():
     form = FederationForm()
     preload_form = PreLoadCommunitiesForm()
@@ -666,14 +701,14 @@ def admin_federation():
 
     # this is the main settings form
     elif form.validate_on_submit():
-        if form.use_allowlist.data:
+        if form.federation_mode.data == 'allowlist':
             set_setting('use_allowlist', True)
             db.session.execute(text('DELETE FROM allowed_instances'))
             for allow in form.allowlist.data.split('\n'):
                 if allow.strip():
                     db.session.add(AllowedInstances(domain=allow.strip()))
                     cache.delete_memoized(instance_allowed, allow.strip())
-        if form.use_blocklist.data:
+        else:  # blocklist mode
             set_setting('use_allowlist', False)
             db.session.execute(text('DELETE FROM banned_instances WHERE subscription_id is null'))
             for banned in form.blocklist.data.split('\n'):
@@ -703,8 +738,8 @@ def admin_federation():
     
     # this is just the regular page load
     elif request.method == 'GET':
-        form.use_allowlist.data = get_setting('use_allowlist', False)
-        form.use_blocklist.data = not form.use_allowlist.data
+        use_allowlist = get_setting('use_allowlist', False)
+        form.federation_mode.data = 'allowlist' if use_allowlist else 'blocklist'
         instances = BannedInstances.query.filter(BannedInstances.subscription_id == None).all()
         form.blocklist.data = '\n'.join([instance.domain for instance in instances])
         instances = AllowedInstances.query.all()
@@ -716,9 +751,7 @@ def admin_federation():
 
     return render_template('admin/federation.html', title=_('Federation settings'), 
                            form=form, preload_form=preload_form, ban_lists_form=ban_lists_form,
-                           remote_scan_form=remote_scan_form, current_app_debug=current_app.debug,
-                           
-                           site=g.site, )
+                           remote_scan_form=remote_scan_form, current_app_debug=current_app.debug)
 
 
 @celery.task
@@ -840,8 +873,8 @@ def import_bans_task(filename):
 
 
 @bp.route('/activities', methods=['GET'])
-@login_required
 @permission_required('change instance settings')
+@login_required
 def admin_activities():
     if current_app.config['LOG_ACTIVITYPUB_TO_DB'] is False:
         flash(_('LOG_ACTIVITYPUB_TO_DB is off so no incoming activities are being logged to the database.'), 'warning')
@@ -866,24 +899,22 @@ def admin_activities():
     prev_url = url_for('admin.admin_activities', page=activities.prev_num, result=result_filter, direction=direction_filter) if activities.has_prev and page != 1 else None
 
     return render_template('admin/activities.html', title=_('ActivityPub Log'), next_url=next_url, prev_url=prev_url,
-                           activities=activities,
-                           site=g.site, )
+                           activities=activities)
 
 
 @bp.route('/activity_json/<int:activity_id>')
-@login_required
 @permission_required('change instance settings')
+@login_required
 def activity_json(activity_id):
     activity = ActivityPubLog.query.get_or_404(activity_id)
     return render_template('admin/activity_json.html', title=_('Activity JSON'),
                            activity_json_data=activity.activity_json, activity=activity,
-                           current_app=current_app,
-                           site=g.site, )
+                           current_app=current_app)
 
 
 @bp.route('/activity_json/<int:activity_id>/replay')
-@login_required
 @permission_required('change instance settings')
+@login_required
 def activity_replay(activity_id):
     activity = ActivityPubLog.query.get_or_404(activity_id)
     request_json = json.loads(activity.activity_json)
@@ -893,8 +924,8 @@ def activity_replay(activity_id):
 
 
 @bp.route('/communities', methods=['GET'])
-@login_required
 @permission_required('administer all communities')
+@login_required
 def admin_communities():
 
     page = request.args.get('page', 1, type=int)
@@ -903,7 +934,7 @@ def admin_communities():
 
     communities = Community.query
     if search:
-        communities = communities.filter(Community.title.ilike(f"%{search}%"))
+        communities = communities.filter(or_(Community.title.ilike(f"%{search}%"), Community.ap_id.ilike(f"%{search}%")))
     communities = communities.order_by(text('"community".' + sort_by))
     communities = communities.paginate(page=page, per_page=1000, error_out=False)
 
@@ -913,13 +944,12 @@ def admin_communities():
     return render_template('admin/communities.html', title=_('Communities'), next_url=next_url, prev_url=prev_url,
                            communities=communities,
                            search=search, sort_by=sort_by,
-                           
-                           site=g.site, )
+                           )
 
 
 @bp.route('/communities/no-topic', methods=['GET'])
-@login_required
 @permission_required('administer all communities')
+@login_required
 def admin_communities_no_topic():
 
     page = request.args.get('page', 1, type=int)
@@ -934,19 +964,38 @@ def admin_communities_no_topic():
     prev_url = url_for('admin.admin_communities_no_topic', page=communities.prev_num) if communities.has_prev and page != 1 else None
 
     return render_template('admin/communities.html', title=_('Communities with no topic'), next_url=next_url, prev_url=prev_url,
-                           communities=communities, 
-                           site=g.site, )
+                           communities=communities)
+
+
+@bp.route('/communities/low-quality', methods=['GET'])
+@permission_required('administer all communities')
+@login_required
+def admin_communities_low_quality():
+
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '')
+
+    communities = Community.query.filter(Community.low_quality == True)
+    if search:
+        communities = communities.filter(Community.title.ilike(f"%{search}%"))
+    communities = communities.order_by(-Community.post_count).paginate(page=page, per_page=1000, error_out=False)
+
+    next_url = url_for('admin.admin_communities_low_quality', page=communities.next_num) if communities.has_next else None
+    prev_url = url_for('admin.admin_communities_low_quality', page=communities.prev_num) if communities.has_prev and page != 1 else None
+
+    return render_template('admin/communities.html', title=_('Communities with low_quality == True'), next_url=next_url, prev_url=prev_url,
+                           communities=communities)
 
 
 @bp.route('/community/<int:community_id>/edit', methods=['GET', 'POST'])
-@login_required
 @permission_required('administer all communities')
+@login_required
 def admin_community_edit(community_id):
     form = EditCommunityForm()
     community = Community.query.get_or_404(community_id)
     old_topic_id = community.topic_id if community.topic_id else None
     form.topic.choices = topics_for_form(0)
-    form.languages.choices = languages_for_form()
+    form.languages.choices = languages_for_form(all=True)
     if form.validate_on_submit():
         community.name = form.url.data
         community.title = form.title.data
@@ -1024,14 +1073,12 @@ def admin_community_edit(community_id):
         form.posting_warning.data = community.posting_warning
         form.languages.data = community.language_ids()
         form.ignore_remote_language.data = community.ignore_remote_language
-    return render_template('admin/edit_community.html', title=_('Edit community'), form=form, community=community,
-                           
-                           site=g.site, )
+    return render_template('admin/edit_community.html', title=_('Edit community'), form=form, community=community)
 
 
 @bp.route('/community/<int:community_id>/delete', methods=['GET'])
-@login_required
 @permission_required('administer all communities')
+@login_required
 def admin_community_delete(community_id):
     community = Community.query.get_or_404(community_id)
     
@@ -1075,18 +1122,16 @@ def unsubscribe_everyone_then_delete_task(community_id):
 
 
 @bp.route('/topics', methods=['GET'])
-@login_required
 @permission_required('administer all communities')
+@login_required
 def admin_topics():
     topics = topic_tree()
-    return render_template('admin/topics.html', title=_('Topics'), topics=topics,
-                           
-                           site=g.site, )
+    return render_template('admin/topics.html', title=_('Topics'), topics=topics)
 
 
 @bp.route('/topic/add', methods=['GET', 'POST'])
-@login_required
 @permission_required('administer all communities')
+@login_required
 def admin_topic_add():
     form = EditTopicForm()
     form.parent_id.choices = topics_for_form(0)
@@ -1104,13 +1149,11 @@ def admin_topic_add():
         flash(_('Saved'))
         return redirect(url_for('admin.admin_topics'))
 
-    return render_template('admin/edit_topic.html', title=_('Add topic'), form=form,
-                           
-                           site=g.site, )
+    return render_template('admin/edit_topic.html', title=_('Add topic'), form=form)
 
 @bp.route('/topic/<int:topic_id>/edit', methods=['GET', 'POST'])
-@login_required
 @permission_required('administer all communities')
+@login_required
 def admin_topic_edit(topic_id):
     form = EditTopicForm()
     topic = Topic.query.get_or_404(topic_id)
@@ -1133,14 +1176,12 @@ def admin_topic_edit(topic_id):
         form.machine_name.data = topic.machine_name
         form.parent_id.data = topic.parent_id
         form.show_posts_in_children.data = topic.show_posts_in_children
-    return render_template('admin/edit_topic.html', title=_('Edit topic'), form=form, topic=topic,
-                           
-                           site=g.site, )
+    return render_template('admin/edit_topic.html', title=_('Edit topic'), form=form, topic=topic)
 
 
 @bp.route('/topic/<int:topic_id>/delete', methods=['GET'])
-@login_required
 @permission_required('administer all communities')
+@login_required
 def admin_topic_delete(topic_id):
     topic = Topic.query.get_or_404(topic_id)
     topic.num_communities = topic.communities.count()
@@ -1157,8 +1198,8 @@ def admin_topic_delete(topic_id):
 
 
 @bp.route('/users', methods=['GET'])
-@login_required
 @permission_required('administer all users')
+@login_required
 def admin_users():
 
     page = request.args.get('page', 1, type=int)
@@ -1177,7 +1218,7 @@ def admin_users():
     elif local_remote == 'remote':
         users = users.filter(User.ap_id != None)
     if search:
-        users = users.filter(User.email.ilike(f"%{search}%"))
+        users = users.filter(or_(User.email.ilike(f"%{search}%"), User.user_name.ilike(f"%{search}%")))
     if last_seen > 0:
         users = users.filter(User.last_seen > utcnow() - timedelta(days=last_seen))
     users = users.order_by(text('"user".' + sort_by))
@@ -1188,13 +1229,13 @@ def admin_users():
 
     return render_template('admin/users.html', title=_('Users'), next_url=next_url, prev_url=prev_url, users=users,
                            local_remote=local_remote, search=search, sort_by=sort_by, last_seen=last_seen,
-                           
-                           site=g.site, )
+                           user_notes=user_notes(current_user.get_id()),
+                           )
 
 
 @bp.route('/content', methods=['GET'])
+@permission_required('administer all communities')
 @login_required
-@permission_required('administer all users')
 def admin_content():
     page = request.args.get('page', 1, type=int)
     replies_page = request.args.get('replies_page', 1, type=int)
@@ -1254,26 +1295,33 @@ def admin_content():
                            next_url=next_url, prev_url=prev_url,
                            next_url_replies=next_url_replies, prev_url_replies=prev_url_replies,
                            posts=posts, post_replies=post_replies,
+                           user_notes=user_notes(current_user.get_id()),
                            posts_replies=posts_replies, show=show, days=days,
-                           
-                           site=g.site, )
+                           reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
+                           )
 
 
 @bp.route('/approve_registrations', methods=['GET'])
-@login_required
 @permission_required('approve registrations')
+@login_required
 def admin_approve_registrations():
+    if current_app.config['FLAG_THROWAWAY_EMAILS'] and os.path.isfile('app/static/tmp/disposable_domains.txt'):
+        with open('app/static/tmp/disposable_domains.txt', 'r', encoding='utf-8') as f:
+            disposable_domains = [line.rstrip('\n') for line in f]
+    else:
+        disposable_domains = []
+
     registrations = UserRegistration.query.filter_by(status=0).order_by(UserRegistration.created_at).all()
     recently_approved = UserRegistration.query.filter_by(status=1).order_by(desc(UserRegistration.approved_at)).limit(30)
     return render_template('admin/approve_registrations.html',
-                           registrations=registrations,
+                           registrations=registrations, disposable_domains=disposable_domains,
                            recently_approved=recently_approved,
-                           site=g.site, )
+                          )
 
 
 @bp.route('/approve_registrations/<int:user_id>/approve', methods=['GET'])
-@login_required
 @permission_required('approve registrations')
+@login_required
 def admin_approve_registrations_approve(user_id):
     user = User.query.get_or_404(user_id)
     registration = UserRegistration.query.filter_by(status=0, user_id=user_id).first()
@@ -1292,8 +1340,8 @@ def admin_approve_registrations_approve(user_id):
 
 
 @bp.route('/user/<int:user_id>/edit', methods=['GET', 'POST'])
-@login_required
 @permission_required('administer all users')
+@login_required
 def admin_user_edit(user_id):
     form = EditUserForm()
     user = User.query.get_or_404(user_id)
@@ -1342,14 +1390,12 @@ def admin_user_edit(user_id):
         if user.roles and user.roles.count() > 0:
             form.role.data = user.roles[0].id
 
-    return render_template('admin/edit_user.html', title=_('Edit user'), form=form, user=user,
-                           
-                           site=g.site, )
+    return render_template('admin/edit_user.html', title=_('Edit user'), form=form, user=user)
 
 
 @bp.route('/users/add', methods=['GET', 'POST'])
-@login_required
 @permission_required('administer all users')
+@login_required
 def admin_users_add():
     form = AddUserForm()
     user = User()
@@ -1402,14 +1448,12 @@ def admin_users_add():
         flash(_('User added'))
         return redirect(url_for('admin.admin_users', local_remote='local'))
 
-    return render_template('admin/add_user.html', title=_('Add user'), form=form, user=user,
-                           
-                           site=g.site, )
+    return render_template('admin/add_user.html', title=_('Add user'), form=form, user=user)
 
 
 @bp.route('/user/<int:user_id>/delete', methods=['GET'])
-@login_required
 @permission_required('administer all users')
+@login_required
 def admin_user_delete(user_id):
     user = User.query.get_or_404(user_id)
 
@@ -1437,8 +1481,8 @@ def admin_user_delete(user_id):
 
 
 @bp.route('/reports', methods=['GET'])
-@login_required
 @permission_required('administer all users')
+@login_required
 def admin_reports():
 
     page = request.args.get('page', 1, type=int)
@@ -1456,14 +1500,12 @@ def admin_reports():
     prev_url = url_for('admin.admin_reports', page=reports.prev_num) if reports.has_prev and page != 1 else None
 
     return render_template('admin/reports.html', title=_('Reports'), next_url=next_url, prev_url=prev_url, reports=reports,
-                           local_remote=local_remote, search=search,
-                           
-                           site=g.site, )
+                           local_remote=local_remote, search=search)
 
 
 @bp.route('/newsletter', methods=['GET', 'POST'])
+@permission_required('change instance settings')
 @login_required
-@permission_required('administer all users')
 def newsletter():
     form = SendNewsletterForm()
     if form.validate_on_submit():
@@ -1471,23 +1513,24 @@ def newsletter():
         flash(_('Newsletter sent'))
         return redirect(url_for('admin.newsletter'))
 
-    return render_template("admin/newsletter.html", form=form, title=_('Send newsletter'),
-                           
-                           site=g.site, )
+    return render_template("admin/newsletter.html", form=form, title=_('Send newsletter'))
 
 
 @bp.route('/permissions', methods=['GET', 'POST'])
+@permission_required('change user roles')
 @login_required
-@permission_required('change instance settings')
 def admin_permissions():
     if request.method == 'POST':
         permissions = db.session.execute(text('SELECT DISTINCT permission FROM "role_permission"')).fetchall()
         db.session.execute(text('DELETE FROM "role_permission"'))
         roles = [3, 4]  # 3 = Staff, 4 = Admin
+        staff_user_ids = list(db.session.execute(text('SELECT user_id FROM "user_role" WHERE role_id = 3')).scalars())
         for permission in permissions:
             for role in roles:
                 if request.form.get(f'role_{role}_{permission[0]}'):
                     db.session.add(RolePermission(role_id=role, permission=permission[0]))
+            for staff_user_id in staff_user_ids:
+                cache.delete_memoized(user_access, permission, staff_user_id)
         db.session.commit()
 
         flash(_('Settings saved'))
@@ -1496,14 +1539,12 @@ def admin_permissions():
     permissions = db.session.execute(text('SELECT DISTINCT permission FROM "role_permission"')).fetchall()
 
     return render_template('admin/permissions.html', title=_('Role permissions'), roles=roles,
-                           permissions=permissions,
-                           
-                           site=g.site, )
+                           permissions=permissions)
 
 
 @bp.route('/instances', methods=['GET', 'POST'])
-@login_required
 @permission_required('change instance settings')
+@login_required
 def admin_instances():
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
@@ -1540,14 +1581,12 @@ def admin_instances():
     return render_template('admin/instances.html', instances=instances,
                            title=_(title), search=search, filter=filter, sort_by=sort_by,
                            next_url=next_url, prev_url=prev_url,
-                           low_bandwidth=low_bandwidth, 
-                           site=g.site,
-                           )
+                           low_bandwidth=low_bandwidth)
 
 
 @bp.route('/instance/<int:instance_id>/edit', methods=['GET', 'POST'])
-@login_required
 @permission_required('administer all communities')
+@login_required
 def admin_instance_edit(instance_id):
     form = EditInstanceForm()
     instance = Instance.query.get_or_404(instance_id)
@@ -1571,14 +1610,12 @@ def admin_instance_edit(instance_id):
         form.posting_warning.data = instance.posting_warning
         form.inbox.data = instance.inbox
 
-    return render_template('admin/edit_instance.html', title=_('Edit instance'), form=form, instance=instance,
-                           
-                           site=g.site, )
+    return render_template('admin/edit_instance.html', title=_('Edit instance'), form=form, instance=instance)
 
 
 @bp.route('/community/<int:community_id>/move/<int:new_owner>', methods=['GET', 'POST'])
-@login_required
 @permission_required('change instance settings')
+@login_required
 def admin_community_move(community_id, new_owner):
     community = Community.query.get_or_404(community_id)
     new_owner_user = User.query.get_or_404(new_owner)
@@ -1587,22 +1624,31 @@ def admin_community_move(community_id, new_owner):
     form.new_owner.label.text = _('Set community owner to %(user_name)s', user_name=new_owner_user.link())
 
     if form.validate_on_submit():
+        form.new_url.data = slugify(form.new_url.data, separator='_').lower()
         old_name = community.link()
         community.ap_id = None
         private_key, public_key = RsaKeys.generate_keypair()
         community.name = form.new_url.data.lower()
         community.private_key = private_key
         community.public_key = public_key
-        community.ap_profile_id = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data.lower()
+        community.ap_profile_id = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data
         community.ap_public_url = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data
         community.ap_followers_url = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data + '/followers'
+        community.ap_featured_url = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data + '/featured'
+        community.ap_moderators_url = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + form.new_url.data + '/moderators'
         community.ap_domain = current_app.config['SERVER_NAME']
         community.instance_id = 1
-        db.session.execute(text('UPDATE "post" SET instance_id = 1 WHERE community_id = :community_id'), {'community_id': community.id})
-        db.session.execute(text('UPDATE "post_reply" SET instance_id = 1 WHERE community_id = :community_id'), {'community_id': community.id})
+
         if form.new_owner.data:
             community.user_id = new_owner_user.id
         db.session.commit()
+        try:
+            membership = CommunityMember(user_id=new_owner_user.id, community_id=community.id,
+                                         is_owner=new_owner_user.id)
+            db.session.add(membership)
+            db.session.commit()
+        except:
+            db.session.rollback()
 
         cache.delete_memoized(community_membership, new_owner_user, community)
         cache.delete_memoized(joined_communities, new_owner_user.id)
@@ -1621,4 +1667,152 @@ def admin_community_move(community_id, new_owner):
 
     form.new_url.data = community.name
 
-    return render_template('admin/community_move.html', title=_('Move community'), form=form, community=community, site=g.site)
+    return render_template('admin/community_move.html', title=_('Move community'), form=form, community=community)
+
+
+@bp.route('/blocked_images', methods=['GET'])
+@permission_required('administer all communities')
+@login_required
+def admin_blocked_images():
+    low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+    blocked_images = BlockedImage.query.order_by(desc(BlockedImage.id)).all()
+    return render_template('admin/blocked_images.html', blocked_images=blocked_images,
+                           title=_('Blocked images'),
+                           low_bandwidth=low_bandwidth)
+
+
+@bp.route('/blocked_image/<int:image_id>/edit', methods=['GET', 'POST'])
+@permission_required('administer all communities')
+@login_required
+def admin_blocked_image_edit(image_id):
+    form = EditBlockedImageForm()
+    image = BlockedImage.query.get_or_404(image_id)
+    if form.validate_on_submit():
+        image.hash = form.hash.data
+        image.file_name = form.file_name.data
+        image.note = form.note.data
+        db.session.commit()
+
+        flash(_('Saved'))
+        return redirect(url_for('admin.admin_blocked_images'))
+    else:
+        form.hash.data = image.hash
+        form.file_name.data = image.file_name
+        form.note.data = image.note
+
+    return render_template('admin/edit_blocked_image.html', title=_('Edit blocked image'), form=form, blocked_image=image)
+
+
+@bp.route('/blocked_image/add', methods=['GET', 'POST'])
+@permission_required('administer all communities')
+@login_required
+def admin_blocked_image_add():
+    form = AddBlockedImageForm()
+    if form.validate_on_submit():
+        if form.url.data:
+            hash = retrieve_image_hash(form.url.data)
+            file_name = str(furl(form.url.data).path).split('/')
+            file_name = file_name[-1]
+        else:
+            hash = form.hash.data
+            file_name = form.file_name.data
+        image = BlockedImage(hash=hash, file_name=file_name, note=form.note.data)
+        db.session.add(image)
+        db.session.commit()
+
+        flash(_('Saved'))
+        return redirect(url_for('admin.admin_blocked_image_purge_posts'))
+
+    flash(_('Provide the url of an image or the hash (and file name) of it, but not both.'))
+
+    return render_template('admin/edit_blocked_image.html', title=_('Add blocked image'), form=form)
+
+
+@bp.route('/block_image_purge_posts', methods=['GET', 'POST'])
+@permission_required('administer all communities')
+@login_required
+def admin_blocked_image_purge_posts():
+    if request.method == 'POST':
+        post_ids = request.form.getlist('post_ids')
+
+        task_selector('delete_posts_with_blocked_images', post_ids=post_ids, user_id=current_user.id, send_async=not current_app.debug)
+
+        flash(_('%(count)s posts deleted.', count=len(post_ids)))
+
+        return redirect(url_for('admin.admin_blocked_images'))
+
+    posts = Post.query.filter(Post.id.in_(posts_with_blocked_images()), Post.deleted == False).order_by(desc(Post.posted_at)).all()
+    return render_template('post/post_block_image_purge_posts.html', posts=posts, title=_('Posts containing blocked images'),
+                           referrer=request.args.get('referrer'))
+
+
+@bp.route('/blocked_image/<int:image_id>/delete', methods=['GET'])
+@permission_required('administer all communities')
+@login_required
+def admin_blocked_image_delete(image_id):
+    image = BlockedImage.query.get_or_404(image_id)
+
+    db.session.delete(image)
+    db.session.commit()
+
+    flash(_('Blocked image deleted'))
+
+    return redirect(url_for('admin.admin_blocked_images'))
+
+
+# CMS pages
+@bp.route('/pages', methods=['GET'])
+@permission_required('edit cms pages')
+@login_required
+def admin_cms_pages():
+    pages = CmsPage.query.order_by(CmsPage.created_at.desc()).all()
+    return render_template('admin/cms_pages.html', pages=pages, title=_('CMS Pages'))
+
+
+@bp.route('/pages/add', methods=['GET', 'POST'])
+@permission_required('edit cms pages')
+@login_required
+def admin_cms_page_add():
+    form = CmsPageForm()
+    if form.validate_on_submit():
+        page = CmsPage(url=form.url.data, title=form.title.data, body=form.body.data,
+                       body_html=markdown_to_html(form.body.data), last_edited_by=current_user.display_name())
+        db.session.add(page)
+        db.session.commit()
+        flash(_('Page saved.'))
+        return redirect(url_for('admin.admin_cms_pages'))
+    
+    return render_template('admin/cms_page_edit.html', form=form, title=_('Add CMS Page'))
+
+
+@bp.route('/pages/<int:page_id>/edit', methods=['GET', 'POST'])
+@permission_required('edit cms pages')
+@login_required
+def admin_cms_page_edit(page_id):
+    page = CmsPage.query.get_or_404(page_id)
+    form = CmsPageForm(original_page=page, obj=page)
+    
+    if form.validate_on_submit():
+        page.url = form.url.data
+        page.title = form.title.data
+        page.body = form.body.data
+        page.body_html = markdown_to_html(form.body.data)
+        page.last_edited_by = current_user.display_name()
+        page.edited_at = utcnow()
+        db.session.commit()
+        flash(_('Page saved.'))
+        return redirect(url_for('admin.admin_cms_pages'))
+    
+    return render_template('admin/cms_page_edit.html', form=form, page=page, title=_('Edit page'))
+
+
+@bp.route('/pages/<int:page_id>/delete', methods=['GET'])
+@permission_required('edit cms pages')
+@login_required
+def admin_cms_page_delete(page_id):
+    page = CmsPage.query.get_or_404(page_id)
+
+    db.session.delete(page)
+    db.session.commit()
+    flash(_('Page deleted.'))
+    return redirect(url_for('admin.admin_cms_pages'))

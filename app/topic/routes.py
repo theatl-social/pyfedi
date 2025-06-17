@@ -23,7 +23,7 @@ from app.utils import render_template, user_filters_posts, moderating_communitie
     menu_topics, menu_instance_feeds, \
     menu_my_feeds, menu_subscribed_feeds, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, \
     recently_upvoted_posts, recently_downvoted_posts, blocked_instances, blocked_users, joined_or_modding_communities, \
-    login_required_if_private_instance
+    login_required_if_private_instance, communities_banned_from, reported_posts, user_notes
 
 
 @bp.route('/topic/<path:topic_path>', methods=['GET'])
@@ -35,7 +35,7 @@ def show_topic(topic_path):
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
     post_layout = request.args.get('layout', 'list' if not low_bandwidth else None)
     content_type = request.args.get('content_type', 'posts')
-    page_length = 20 if low_bandwidth else 100
+    page_length = 20 if low_bandwidth else current_app.config['PAGE_LENGTH']
     if post_layout == 'masonry':
         page_length = 200
     elif post_layout == 'masonry_wide':
@@ -89,14 +89,12 @@ def show_topic(topic_path):
             # filter out nsfw and nsfl if desired
             if current_user.is_anonymous:
                 comments = comments.filter(PostReply.from_bot == False, PostReply.nsfw == False,
-                                           PostReply.nsfl == False, PostReply.deleted == False)
+                                           PostReply.deleted == False)
                 user = None
             else:
                 user = current_user
                 if current_user.ignore_bots == 1:
                     comments = comments.filter(PostReply.from_bot == False)
-                if current_user.hide_nsfl == 1:
-                    comments = comments.filter(PostReply.nsfl == False)
                 if current_user.hide_nsfw == 1:
                     comments = comments.filter(PostReply.nsfw == False)
 
@@ -134,9 +132,11 @@ def show_topic(topic_path):
         if current_user.is_authenticated:
             recently_upvoted = recently_upvoted_posts(current_user.id)
             recently_downvoted = recently_downvoted_posts(current_user.id)
+            communities_banned_from_list = communities_banned_from(current_user.id)
         else:
             recently_upvoted = []
             recently_downvoted = []
+            communities_banned_from_list = []
 
         return render_template('topic/show_topic.html', title=_(current_topic.name), posts=posts, topic=current_topic, sort=sort,
                                page=page, post_layout=post_layout, next_url=next_url, prev_url=prev_url, comments=comments,
@@ -145,11 +145,14 @@ def show_topic(topic_path):
                                joined_communities=joined_or_modding_communities(current_user.get_id()),
                                rss_feed=f"https://{current_app.config['SERVER_NAME']}/topic/{topic_path}.rss",
                                rss_feed_name=f"{current_topic.name} on {g.site.name}", content_type=content_type,
+                               reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
+                               user_notes=user_notes(current_user.get_id()),
                                show_post_community=True, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                                POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
                                POST_TYPE_VIDEO=POST_TYPE_VIDEO,
                                SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
+                               communities_banned_from_list=communities_banned_from_list
                                )
     else:
         abort(404)
@@ -262,7 +265,7 @@ def suggest_topics():
     else:
         return render_template('topic/suggest_topics.html', form=form, title=_('Suggest a topic"'),
                                
-                               site=g.site, 
+                                
                                )
 
 

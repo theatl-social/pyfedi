@@ -3,11 +3,12 @@
 {% else %}
     {% extends "base.html" %}
 {% endif %}
-{% from 'bootstrap/form.html' import render_field %}
+{% from 'bootstrap5/form.html' import render_field %}
+{% from "_macros.html" import render_username, render_communityname, render_feedname -%}
 
 {% block app_content %}
 <div class="row">
-    <main class="col-12 col-md-8 position-relative main_pane">
+    <main class="col-12 col-lg-8 position-relative main_pane">
         <nav aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
           <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
@@ -23,7 +24,7 @@
                 <h1 class="mt-2">{{ _('Moderators for %(community)s', community=community.display_name()) }}</h1>
             </div>
             <p>{{ _('See and change who moderates this community') }}</p>
-            {% if community.is_owner() or (current_user.is_admin() and community.is_local()) -%}
+            {% if community.is_owner(current_user) or (current_user.is_admin_or_staff() and community.is_local()) -%}
                 <div class="col-12 text-right">
                     <a class="btn btn-primary" href="{{ url_for('community.community_find_moderator', community_id=community.id) }}">{{ _('Add moderator') }}</a>
                 </div>
@@ -39,8 +40,8 @@
             <tbody>
                 {% for moderator in moderators %}
                     <tr>
-                        <td>{{ render_username(moderator) }}</td>
-                        <td>{% if not community.is_owner(moderator) and (current_user.is_admin() or moderator.id == current_user.id) %}
+                        <td>{% if community.is_owner(moderator) %}<strong>{% endif %}{{ render_username(moderator, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}{% if community.is_owner(moderator) %}</strong>{% endif %}</td>
+                        <td>{% if (community.is_owner(current_user) and moderator.id != current_user.id) or (not community.is_owner(moderator) and (current_user.is_admin_or_staff() or moderator.id == current_user.id)) %}
                             <a class="no-underline confirm_first"
                                href="{{ url_for('community.community_remove_moderator', community_id=community.id, user_id=moderator.id) }}"
                                rel="nofollow"><span class="fe fe-delete"></span> {{ _('Remove') }}</a>{% endif %}</td>

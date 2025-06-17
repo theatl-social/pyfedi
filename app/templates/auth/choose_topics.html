@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% from 'bootstrap/form.html' import render_form %}
+{% from 'bootstrap5/form.html' import render_form %}
 
 {% block app_content %}
     <div class="row">
@@ -7,6 +7,7 @@
             <div class="card mt-5">
                 <div class="card-body p-6" id="choose_topics_card">
                     <div class="card-title text-center">{{ _('Please choose at least 3 topics that interest you.') }}</div>
+                    <p><a href="{{ url_for('main.list_communities', prompt='true') }}">{{ _('Proceed without choosing any topics')  }}</a></p>
                     {{ render_form(form) }}
                 </div>
             </div>

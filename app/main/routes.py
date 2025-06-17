@@ -1,5 +1,6 @@
 import os.path
 import json
+from datetime import timedelta
 from random import randint
 
 import flask
@@ -8,18 +9,20 @@ from sqlalchemy.sql.operators import or_, and_
 from ua_parser import parse as uaparse
 
 from app import db, cache
-from app.activitypub.util import users_total, active_month, local_posts, local_communities, find_actor_or_create, \
+from app.activitypub.util import users_total, active_month, local_posts, local_communities, \
     lemmy_site_data, is_activitypub_request
 from app.activitypub.signature import default_context, LDSignature
 from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, \
-    POST_STATUS_REVIEWING
+    POST_STATUS_REVIEWING, POST_TYPE_LINK
 from app.email import send_email, send_registration_approved_email
 from app.inoculation import inoculation
 from app.main import bp
-from flask import g, session, flash, request, current_app, url_for, redirect, make_response, jsonify
+from flask import g, session, flash, request, current_app, url_for, redirect, make_response, jsonify, send_file
 from flask_login import current_user, login_required
 from flask_babel import _, get_locale
 from sqlalchemy import desc, text
+
+from app.main.forms import ShareLinkForm
 from app.utils import render_template, get_setting, request_etag_matches, return_304, blocked_domains, \
     ap_datetime, shorten_string, user_filters_home, \
     joined_communities, moderating_communities, markdown_to_html, allowlist_html, \
@@ -28,9 +31,10 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     permission_required, debug_mode_only, ip_address, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, \
     feed_tree_public, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, html_to_text, \
     get_redis_connection, subscribed_feeds, joined_or_modding_communities, login_required_if_private_instance, \
-    pending_communities
+    pending_communities, retrieve_image_hash, possible_communities, remove_tracking_from_link, reported_posts, \
+    moderating_communities_ids, user_notes
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
-    Notification, Language, community_language, ModLog, read_posts, Feed, FeedItem, CommunityFlair
+    Notification, Language, community_language, ModLog, Feed, FeedItem, CmsPage
 
 
 @bp.route('/', methods=['HEAD', 'GET', 'POST'])
@@ -65,22 +69,31 @@ def home_page(sort, view_filter):
     page = request.args.get('page', 0, type=int)
     result_id = request.args.get('result_id', gibberish(15)) if current_user.is_authenticated else None
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
-    page_length = 20 if low_bandwidth else 100
+    page_length = 20 if low_bandwidth else current_app.config['PAGE_LENGTH']
 
     # view filter - subscribed/local/all
     community_ids = [-1]
+    low_quality_filter = 'AND c.low_quality is false' if current_user.is_authenticated and current_user.hide_low_quality else ''
+    if current_user.is_authenticated:
+        modded_communities = moderating_communities_ids(current_user.id)
+    else:
+        modded_communities = []
+    enable_mod_filter = len(modded_communities) > 0
+
     if view_filter == 'subscribed' and current_user.is_authenticated:
         community_ids = db.session.execute(text('SELECT id FROM community as c INNER JOIN community_member as cm ON cm.community_id = c.id WHERE cm.is_banned is false AND cm.user_id = :user_id'),
                                            {'user_id': current_user.id}).scalars()
     elif view_filter == 'local':
-        community_ids = db.session.execute(text('SELECT id FROM community as c WHERE c.instance_id = 1')).scalars()
+        community_ids = db.session.execute(text(f'SELECT id FROM community as c WHERE c.instance_id = 1 {low_quality_filter}')).scalars()
     elif view_filter == 'popular':
         if current_user.is_anonymous:
             community_ids = db.session.execute(text('SELECT id FROM community as c WHERE c.show_popular is true AND c.low_quality is false')).scalars()
         else:
-            community_ids = db.session.execute(text('SELECT id FROM community as c WHERE c.show_popular is true')).scalars()
+            community_ids = db.session.execute(text(f'SELECT id FROM community as c WHERE c.show_popular is true {low_quality_filter}')).scalars()
     elif view_filter == 'all' or current_user.is_anonymous:
         community_ids = [-1]    # Special value to indicate 'All'
+    elif view_filter == 'moderating':
+        community_ids = modded_communities
 
     post_ids = get_deduped_post_ids(result_id, list(community_ids), sort)
     has_next_page = len(post_ids) > page + 1 * page_length
@@ -98,7 +111,7 @@ def home_page(sort, view_filter):
     prev_url = url_for('main.index', page=page - 1, sort=sort, view_filter=view_filter, result_id=result_id) if page > 0 else None
 
     # Active Communities
-    active_communities = Community.query.filter_by(banned=False)
+    active_communities = Community.query.filter_by(banned=False).filter_by(nsfw=False).filter_by(nsfl=False)
     if current_user.is_authenticated:   # do not show communities current user is banned from
         banned_from = communities_banned_from(current_user.id)
         if banned_from:
@@ -109,7 +122,7 @@ def home_page(sort, view_filter):
     active_communities = active_communities.order_by(desc(Community.last_active)).limit(5).all()
 
     # New Communities
-    new_communities = Community.query.filter_by(banned=False)
+    new_communities = Community.query.filter_by(banned=False).filter_by(nsfw=False).filter_by(nsfl=False)
     if current_user.is_authenticated:   # do not show communities current user is banned from
         banned_from = communities_banned_from(current_user.id)
         if banned_from:
@@ -119,25 +132,30 @@ def home_page(sort, view_filter):
             new_communities = new_communities.filter(Community.id.not_in(community_ids))
     new_communities = new_communities.order_by(desc(Community.created_at)).limit(5).all()
 
-    # Voting history
+    # Voting history and ban status
     if current_user.is_authenticated:
         recently_upvoted = recently_upvoted_posts(current_user.id)
         recently_downvoted = recently_downvoted_posts(current_user.id)
+        communities_banned_from_list = communities_banned_from(current_user.id)
     else:
         recently_upvoted = []
         recently_downvoted = []
+        communities_banned_from_list = []
 
     return render_template('index.html', posts=posts, active_communities=active_communities, new_communities=new_communities,
                            show_post_community=True, low_bandwidth=low_bandwidth, recently_upvoted=recently_upvoted,
-                           recently_downvoted=recently_downvoted,
+                           recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list,
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            etag=f"{sort}_{view_filter}_{hash(str(g.site.last_active))}", next_url=next_url, prev_url=prev_url,
                            title=f"{g.site.name} - {g.site.description}",
                            description=shorten_string(html_to_text(g.site.sidebar), 150),
                            content_filters=content_filters, sort=sort, view_filter=view_filter,
                            announcement=allowlist_html(get_setting('announcement', '')),
-                           site=g.site, joined_communities=joined_or_modding_communities(current_user.get_id()),
-                           inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None
+                           reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
+                           user_notes=user_notes(current_user.get_id()),
+                           joined_communities=joined_or_modding_communities(current_user.get_id()),
+                           inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                           enable_mod_filter=enable_mod_filter,
                            )
 
 
@@ -148,9 +166,7 @@ def list_topics():
     topics = topic_tree()
 
     return render_template('list_topics.html', topics=topics, title=_('Browse by topic'),
-                           low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
-                           site=g.site,
-                           )
+                           low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1')
 
 
 @bp.route('/communities', methods=['GET'])
@@ -164,6 +180,10 @@ def list_communities():
     page = request.args.get('page', 1, type=int)
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
     sort_by = request.args.get('sort_by', 'post_reply_count desc')
+
+    if request.args.get('prompt'):
+        flash(_('You did not choose any topics. Would you like to choose individual communities instead?'))
+
     topics = Topic.query.order_by(Topic.name).all()
     languages = Language.query.order_by(Language.name).all()
     communities = Community.query.filter_by(banned=False)
@@ -184,6 +204,14 @@ def list_communities():
     public_feeds = Feed.query.filter_by(public=True).order_by(Feed.title).all()
     if len(public_feeds) > 0:
         server_has_feeds = True
+    
+    try:
+        site = g.site
+    except:
+        site = Site.query.get(1)
+    create_admin_only = site.community_creation_admin_only
+
+    is_admin = current_user.is_authenticated and current_user.is_admin()
         
     # if filtering by public feed 
     # get all the ids of the communities
@@ -196,6 +224,8 @@ def list_communities():
         communities = communities.filter(Community.id.in_(feed_community_ids))
 
     if current_user.is_authenticated:
+        if current_user.hide_low_quality:
+            communities = communities.filter(Community.low_quality == False)
         banned_from = communities_banned_from(current_user.id)
         if banned_from:
             communities = communities.filter(Community.id.not_in(banned_from))
@@ -220,12 +250,12 @@ def list_communities():
     return render_template('list_communities.html', communities=communities, search=search_param, title=_('Communities'),
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                           next_url=next_url, prev_url=prev_url, current_user=current_user,
+                           next_url=next_url, prev_url=prev_url, current_user=current_user, create_admin_only=create_admin_only, is_admin=is_admin,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            joined_communities=joined_or_modding_communities(current_user.get_id()),
                            pending_communities=pending_communities(current_user.get_id()),
                            low_bandwidth=low_bandwidth,
-                           site=g.site, feed_id=feed_id,
+                            feed_id=feed_id,
                            server_has_feeds=server_has_feeds, public_feeds=public_feeds,
                            )
 
@@ -261,6 +291,14 @@ def list_local_communities():
     if len(public_feeds) > 0:
         server_has_feeds = True
 
+    try:
+        site = g.site
+    except:
+        site = Site.query.get(1)
+    create_admin_only = site.community_creation_admin_only
+
+    is_admin = current_user.is_authenticated and current_user.is_admin()
+
     # if filtering by public feed
     # get all the ids of the communities
     # then filter the communities to ones whose ids match the feed
@@ -293,12 +331,12 @@ def list_local_communities():
     return render_template('list_communities.html', communities=communities, search=search_param, title=_('Local Communities'),
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                           next_url=next_url, prev_url=prev_url, current_user=current_user,
+                           next_url=next_url, prev_url=prev_url, current_user=current_user, create_admin_only=create_admin_only, is_admin=is_admin,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            joined_communities=joined_or_modding_communities(current_user.get_id()),
                            pending_communities=pending_communities(current_user.get_id()),
                            low_bandwidth=low_bandwidth,
-                           site=g.site,
+                           
                            feed_id=feed_id, server_has_feeds=server_has_feeds, public_feeds=public_feeds,
                            )
 
@@ -347,6 +385,14 @@ def list_subscribed_communities():
     public_feeds = Feed.query.filter_by(public=True).order_by(Feed.title).all()
     if len(public_feeds) > 0:
         server_has_feeds = True
+    
+    try:
+        site = g.site
+    except:
+        site = Site.query.get(1)
+    create_admin_only = site.community_creation_admin_only
+
+    is_admin = current_user.is_authenticated and current_user.is_admin()
 
     # if filtering by public feed
     # get all the ids of the communities
@@ -373,12 +419,12 @@ def list_subscribed_communities():
     return render_template('list_communities.html', communities=communities, search=search_param, title=_('Joined Communities'),
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                           next_url=next_url, prev_url=prev_url, current_user=current_user,
+                           next_url=next_url, prev_url=prev_url, current_user=current_user, create_admin_only=create_admin_only, is_admin=is_admin,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            joined_communities=joined_or_modding_communities(current_user.get_id()),
                            pending_communities=pending_communities(current_user.get_id()),
                            low_bandwidth=low_bandwidth,
-                           site=g.site, feed_id=feed_id,
+                            feed_id=feed_id,
                            server_has_feeds=server_has_feeds, public_feeds=public_feeds,
                            )
 
@@ -424,6 +470,14 @@ def list_not_subscribed_communities():
     public_feeds = Feed.query.filter_by(public=True).order_by(Feed.title).all()
     if len(public_feeds) > 0:
         server_has_feeds = True
+    
+    try:
+        site = g.site
+    except:
+        site = Site.query.get(1)
+    create_admin_only = site.community_creation_admin_only
+
+    is_admin = current_user.is_authenticated and current_user.is_admin()
 
     # if filtering by public feed
     # get all the ids of the communities
@@ -454,14 +508,12 @@ def list_not_subscribed_communities():
     return render_template('list_communities.html', communities=communities, search=search_param, title=_('Not Joined Communities'),
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                           next_url=next_url, prev_url=prev_url, current_user=current_user,
+                           next_url=next_url, prev_url=prev_url, current_user=current_user, create_admin_only=create_admin_only, is_admin=is_admin,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id, sort_by=sort_by,
                            joined_communities=joined_or_modding_communities(current_user.get_id()),
                            pending_communities=pending_communities(current_user.get_id()),
                            low_bandwidth=low_bandwidth,
-                           feed_id=feed_id, server_has_feeds=server_has_feeds, public_feeds=public_feeds,
-                           site=g.site,
-                           )
+                           feed_id=feed_id, server_has_feeds=server_has_feeds, public_feeds=public_feeds)
 
 
 @bp.route('/modlog', methods=['GET'])
@@ -485,10 +537,14 @@ def modlog():
     next_url = url_for('main.modlog', page=modlog_entries.next_num) if modlog_entries.has_next else None
     prev_url = url_for('main.modlog', page=modlog_entries.prev_num) if modlog_entries.has_prev and page != 1 else None
 
+    instances = {}
+    for instance in Instance.query.all():
+        instances[instance.id] = instance.domain
+
     return render_template('modlog.html',
                            title=_('Moderation Log'), modlog_entries=modlog_entries, can_see_names=can_see_names,
                            next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth,
-                           site=g.site,
+                           instances=instances,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                            )
 
@@ -505,14 +561,19 @@ def about_page():
     domains_amount = db.session.execute(text('SELECT COUNT(id) as c FROM "domain" WHERE "banned" IS false')).scalar()
     community_amount = local_communities()
     instance = Instance.query.filter_by(id=1).first()
-    
+
+    cms_page = CmsPage.query.filter(CmsPage.url == '/about').first()
+
     return render_template('about.html', user_amount=user_amount, mau=MAU, posts_amount=posts_amount,
                            domains_amount=domains_amount, community_amount=community_amount, instance=instance,
-                           admins=admins, staff=staff)
+                           admins=admins, staff=staff, cms_page=cms_page)
 
 
 @bp.route('/privacy')
 def privacy():
+    cms_page = CmsPage.query.filter(CmsPage.url == '/privacy').first()
+    if cms_page:
+        return render_template('cms_page.html', page=cms_page)
     return render_template('privacy.html')
 
 
@@ -574,6 +635,14 @@ def replay_inbox():
 @bp.route('/test')
 @debug_mode_only
 def test():
+    import json
+    user_id = 1
+    r = get_redis_connection()
+    r.publish(f"notifications:{user_id}", json.dumps({'num_notifs': randint(1, 100)}))
+    current_user.unread_notifications = randint(1, 100)
+    db.session.commit()
+    return 'Done'
+
     user = User.query.get(1)
     send_registration_approved_email(user)
 
@@ -662,6 +731,17 @@ And if you want to add your score to the database to help your fellow Bookworms 
     return 'ok'
 
 
+@bp.route('/communities_menu')
+def communities_menu():
+    return render_template('communities_menu.html', menu_topics=menu_topics(),
+                           moderating_communities=moderating_communities(current_user.get_id()),
+                           joined_communities=joined_communities(current_user.get_id()),
+                           menu_instance_feeds=menu_instance_feeds(),
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
+                           )
+
+
 @bp.route('/topics_menu')
 def topics_menu():
     return render_template('topics_menu.html', menu_topics=menu_topics(),
@@ -676,6 +756,30 @@ def feeds_menu():
                            menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
                            menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
                            )
+
+
+@bp.route('/share', methods=['GET', 'POST'])
+def share():
+    url = request.args.get('url')
+    url = remove_tracking_from_link(url.strip())
+    form = ShareLinkForm()
+    form.which_community.choices = possible_communities()
+    if form.validate_on_submit():
+        community = Community.query.get_or_404(form.which_community.data)
+        response = make_response(redirect(url_for('community.add_post', actor=community.link(), type='link', link=url, title=request.args.get('title'))))
+        response.set_cookie('cross_post_community_id', str(community.id), max_age=timedelta(days=28))
+        response.delete_cookie('post_title')
+        response.delete_cookie('post_description')
+        response.delete_cookie('post_tags')
+        return response
+
+    if request.cookies.get('cross_post_community_id'):
+        form.which_community.data = int(request.cookies.get('cross_post_community_id'))
+
+    communities = Community.query.filter_by(banned=False).join(Post).filter(Post.url == url, Post.deleted == False,
+                                                                            Post.status > POST_STATUS_REVIEWING).all()
+
+    return render_template('share.html', form=form, title=request.args.get('title'), communities=communities)
 
 
 @bp.route('/test_email')
@@ -716,6 +820,16 @@ def test_s3():
     s3.upload_file('babel.cfg', current_app.config['S3_BUCKET'], 'babel.cfg')
     s3.delete_object(Bucket=current_app.config['S3_BUCKET'], Key='babel.cfg')
     return 'Ok'
+
+
+@bp.route('/test_hashing')
+@debug_mode_only
+def test_hashing():
+    hash = retrieve_image_hash(f'https://{current_app.config["SERVER_NAME"]}/static/images/apple-touch-icon.png')
+    if hash:
+        return 'Ok'
+    else:
+        return 'Error'
 
 
 @bp.route('/find_voters')
@@ -810,28 +924,46 @@ def instance_actor():
     return resp
 
 
+@bp.route('/service_worker.js', methods=['GET'])
+def service_worker():
+    js_path = os.path.join('static', 'service_worker.js')
+    response = make_response(send_file(js_path, mimetype='text/javascript'))
+    response.headers['Cache-Control'] = 'public, max-age=86400' # cache for 1 day
+    return response
+
+
 # intercept requests for the PWA manifest.json and provide platform specific ones
 @bp.route('/manifest.json', methods=['GET'])
 @bp.route('/static/manifest.json', methods=['GET'])
 def static_manifest():
-    # get the user agent from the headers
-    # then return platform/agent specific manifests
-    # if we dont have a matching os folder, return the default manifest
+    def get_manifest_for_os(os_family):
+        base_dir = 'app/static/pwa_manifests'
+        if os_family == 'mac os x':
+            path = os.path.join(base_dir, 'ios', 'manifest.json')
+        else:
+            path = os.path.join(base_dir, os_family, 'manifest.json')
+        return path if os.path.exists(path) else os.path.join(base_dir, 'default', 'manifest.json')
+
     try:
         res = uaparse(request.user_agent.string)
-        # often ios useragents dont say ios in them anywhere, but the family is Mac OS X mostly
-        if res.os.family.lower() == 'mac os x':
-            manifest_file = os.path.join('app/static/pwa_manifests/ios/manifest.json')
-        else:
-            manifest_file = os.path.join('app/static/pwa_manifests/', res.os.family.lower(), 'manifest.json')
-        with open(manifest_file, 'r') as f:
-            manifest = json.load(f)
-        return jsonify(manifest)
-    except:
-        manifest_file = os.path.join('app/static/pwa_manifests/default/manifest.json')
-        with open(manifest_file, 'r') as f:
-            manifest = json.load(f)
-        return jsonify(manifest)
+        manifest_path = get_manifest_for_os(res.os.family.lower())
+    except Exception:
+        manifest_path = os.path.join('app/static/pwa_manifests/default/manifest.json')
+
+    with open(manifest_path, 'r') as f:
+        manifest = json.load(f)
+
+    # Modify manifest
+    manifest['id'] = f'https://{current_app.config["SERVER_NAME"]}'
+    manifest['name'] = g.site.name if g.site.name else 'PieFed'
+    manifest['description'] = g.site.description if g.site.description else ''
+
+    # Build response with cache headers
+    response = make_response(jsonify(manifest))
+    # Cache for 1 hour on the client, prevent public/shared caching because we detect the user agent
+    response.headers['Cache-Control'] = 'private, max-age=3600'
+
+    return response
     
 
 @bp.route('/feeds', methods=['GET','POST'])
@@ -861,5 +993,4 @@ def list_feeds():
     else:
         # render the page
         return render_template('feed/public_feeds.html', server_has_feeds=server_has_feeds, public_feeds_list=public_feeds,
-                            subscribed_feeds=subscribed_feeds(current_user.get_id()),
-                            )
+                            subscribed_feeds=subscribed_feeds(current_user.get_id()))

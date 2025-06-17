@@ -1,74 +1,3 @@
-{% macro render_username(user, add_domain=True, htmx_redirect_back_to=None) -%}
-<div class="render_username">
-    {% if user.deleted -%}
-        {% if current_user.is_authenticated and current_user.is_admin() -%}
-            <a href="/u/{{ user.link() }}" title="{{ user.ap_id if user.ap_id != none else user.user_name }}" aria-label="{{ _('Author') }}">[deleted]</a>
-        {% else -%}
-            [deleted]
-        {% endif -%}
-    {% else -%}
-        <a href="/u/{{ user.link() }}" aria-label="{{ _('Author') }}" class="author_link {{ 'donor' if user.stripe_subscription_id }}" title="" rel="author">
-            {% if user.avatar_id and not low_bandwidth and not collapsed -%}
-                <img src="{{ user.avatar_thumbnail() }}" alt="" loading="lazy" />
-            {% endif -%}
-            {{ user.display_name() }}{% if add_domain and not user.is_local() %}<span class="text-muted">@{{ user.ap_domain }}</span>{% endif %}
-        </a>
-        <div class="user_preview d-none" id="preview_{{ user.id }}"
-            {% if htmx_redirect_back_to -%}
-                hx-get="{{ url_for('user.user_preview', user_id=user.id, return_to=htmx_redirect_back_to) }}"
-            {% else %}
-                hx-get="{{ url_for('user.user_preview', user_id=user.id) }}"
-            {% endif %}
-            hx-trigger="intersect once"
-            hx-target="this"
-            hx-swap="innerHTML"
-        ></div>
-        {% if user.created_recently() -%}
-            <span class="fe fe-new-account" title="New account"> </span>
-        {% endif -%}
-        {% if user.bot -%}
-            <span class="fe fe-bot-account" title="Bot account"> </span>
-        {% endif -%}
-        {% if user_flair and user.id in user_flair %}
-            <span class="user_flair">{{ user_flair[user.id] }}</span>
-        {% endif %}
-        {% if user.id != current_user.id -%}
-            {% if user.reputation < -10 -%}
-                <span class="fe fe-warning red" title="Very low reputation. Beware."> </span>
-                <span class="fe fe-warning red" title="Very low reputation. Beware!"> </span>
-            {% elif user.reputation < 0 -%}
-                <span class="fe fe-warning orangered" title="Low reputation."> </span>
-            {% endif -%}
-        {% endif -%}
-        {% if current_user.is_authenticated -%}
-            {% set user_note = user.get_note(current_user) %}
-            {% if user_note -%}
-                <span class="user_note" title="{{ _('User note: %(note)s', note=user_note) }}">[{{ user_note | truncate(12, True) }}]</span>
-            {% endif -%}
-        {% endif -%}
-    {% endif -%}
-</div>
-{% endmacro -%}
-{% macro render_communityname(community, add_domain=True) -%}
-    <span class="render_community">
-        <a href="/c/{{ community.link() }}" aria-label="{{ _('Go to community %(name)s', name=community.name) }}">
-            {% if community.icon_id and not low_bandwidth and not collapsed -%}
-                <img src="{{ community.icon_image('tiny') }}" class="community_icon rounded-circle" alt="" loading="lazy" />
-            {% endif -%}
-            {{ community.title }}{% if add_domain and not community.is_local() %}<span class="text-muted">@{{ community.ap_domain }}</span>{% endif %}
-        </a>
-    </span>
-{% endmacro -%}
-{% macro render_feedname(feed, add_domain=True) -%}
-    <span class="render_community">
-        <a href="/f/{{ feed.link() }}" aria-label="{{ _('Go to feed %(name)s', name=feed.name) }}">
-            {% if feed.icon_id and not low_bandwidth and not collapsed -%}
-                <img src="{{ feed.icon_image('tiny') }}" class="community_icon rounded-circle" alt="" loading="lazy" />
-            {% endif -%}
-            {{ feed.title }}{% if add_domain and not feed.is_local() %}<span class="text-muted">@{{ feed.ap_domain }}</span>{% endif %}
-        </a>
-    </span>
-{% endmacro -%}
 <!doctype html>
 <html lang="{{ 'en' if current_user.is_anonymous else current_user.interface_language }}">
   <head>
@@ -84,6 +13,20 @@
         <meta name="HandheldFriendly" content="True">
         <meta name="MobileOptimized" content="320">
         <link rel="expect" blocking="render" href="#navbarSupportedContent">
+        {% if current_user.is_anonymous -%}
+            <script src="/static/js/enable_low_bandwidth.js" type="text/javascript" fetchpriority="high"></script>
+        {% endif -%}
+        {% if current_user.font == 'atkinson' -%}
+            <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-Regular.woff2" as="font" type="font/woff2">
+            <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-Italic.woff2" as="font" type="font/woff2">
+            <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-Bold.woff2" as="font" type="font/woff2">
+            <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-BoldItalic.woff2" as="font" type="font/woff2">
+        {% elif current_user.font == 'inter' -%}
+            <link rel="preload" href="/static/fonts/inter/InterVariable.woff2" as="font" type="font/woff2">
+        {% elif current_user.font == 'roboto' -%}
+            <link rel="preload" href="/static/fonts/roboto/Roboto-Regular.woff2" as="font" type="font/woff2">
+            <link rel="preload" href="/static/fonts/roboto/Roboto-Bold.woff2" as="font" type="font/woff2">
+        {% endif -%}
         {% block styles -%}
             {{ bootstrap.load_css() }}
             <link href="{{ url_for('static', filename='styles.css', changed=getmtime('styles.css')) }}" type="text/css" rel="stylesheet" />
@@ -93,11 +36,14 @@
                 <link href="{{ url_for('static', filename='js/lightbox/baguetteBox.css') }}" type="text/css" rel="stylesheet" />
             {% endif -%}
             {% if theme() and file_exists('app/templates/themes/' + theme() + '/styles.css') -%}
-                <link href="{{ url_for('static', filename='themes/' + theme() + '/styles.css') }}" type="text/css" rel="stylesheet" />
+                <link href="{{ url_for('static', filename='themes/' + theme() + '/styles.css', changed=getmtime('themes/' + theme() + '/styles.css')) }}" type="text/css" rel="stylesheet" />
             {% endif -%}
         {% endblock -%}
+        {% block extra_css -%}
+        {% endblock -%}
         <title>{% if title %}{{ title }}{% else %}{{ _('PieFed') }}{% endif %}</title>
-        <link rel="apple-touch-icon" sizes="152x152" href="{{ g.site.logo_152 if g.site.logo_152 else '/static/images/apple-touch-icon.png' }}">
+        <link rel="apple-touch-icon" sizes="180x180" href="/static/images/piefed_logo_icon_t_180.png">
+        <link rel="apple-touch-icon" sizes="152x152" href="/static/images/piefed_logo_icon_t_152.png">
         <link rel="icon" type="image/png" sizes="32x32" href="{{ g.site.logo_32 if g.site.logo_32 else '/static/images/favicon-32x32.png' }}">
         <link rel="icon" type="image/png" sizes="16x16" href="{{ g.site.logo_16 if g.site.logo_16 else '/static/images/favicon-16x16.png' }}">
         <link rel="manifest" href="/manifest.json">
@@ -136,23 +82,63 @@
           {{ g.site.additional_css }}
       </style>
       {% endif -%}
+      {% if current_user.is_authenticated and current_user.additional_css -%}
+      <style>
+          {{ current_user.additional_css }}
+      </style>
+      {% endif -%}
     {% endblock -%}
-    <script src="/static/js/set_theme.js" type="text/javascript"></script>
+    <script src="{{ url_for('static', filename='js/set_theme.js', changed=getmtime('js/set_theme.js')) }}" type="text/javascript"></script>
+    {% if current_user.is_authenticated and current_user.theme == 'hlt-fruits' -%}
+      <script src="/static/themes/hlt-fruits/scripts.js" type="text/javascript"></script>
+    {% endif -%}
+    {% block schema_org %}
+    {% endblock %}
   </head>
   <body class="d-flex flex-column{{ ' low_bandwidth' if low_bandwidth }} {{ session.get('compact_level', '') }}">
+    {% if 'fontSize' in request.cookies -%}
+        <style>
+            body, .form-control, .btn, .dropdown-item {
+                font-size: {{ request.cookies.get('fontSize') }}rem;
+            }
+        </style>
+    {% endif -%}
+    {% if current_user.font -%}
+        <style>
+            {% if current_user.font == 'inter' %}
+                {% include 'fonts/inter.css' %}
+            {% elif current_user.font == 'atkinson' %}
+                {% include 'fonts/atkinson.css' %}
+            {% elif current_user.font == 'roboto' %}
+                {% include 'fonts/roboto.css' %}
+            {% endif %}
+        </style>
+    {% endif -%}
     <a href="#outer_container" class="skip-link" role="navigation" aria-label="Skip main navigation" tabindex="">Skip to main content</a>
     <a href="#side_pane" class="skip-link" role="navigation" aria-label="Go to side pane" tabindex="">Go to side pane</a>
     <!-- Page content -->
     {% block navbar -%}
-    <div class="navbar navbar-expand-lg sticky-md-top">
+    <div class="navbar navbar-expand-lg sticky-lg-top">
         <div class="{{ 'container-lg' if post_layout != 'masonry_wide' else 'container-fluid' }}" role="banner">
             <a class="navbar-brand" href="/" aria-label="{{ _('To home page') }}">{% if not low_bandwidth %}<img src="{{ g.site.logo if g.site.logo else '/static/images/piefed_logo_full_t_300x300.svg' }}" alt="Logo" width="50" height="50" />{% endif %}{{ g.site.name }}</a>
             {% if current_user.is_authenticated -%}
                 <a class="nav-link d-lg-none" href="/notifications" aria-label="{{ _('Notifications') }}">
                     {% if current_user.unread_notifications -%}
-                    <span class="fe fe-bell red"></span> <span class="red">{{ current_user.unread_notifications }}</span>
+                        <span class="fe fe-bell red"></span> <span class="red unreadNotificationDisplay">{{ current_user.unread_notifications }}</span>
+                        <script type="text/javascript" nonce="{{ nonce }}">
+                            let unreadNotifications = {{ current_user.unread_notifications }};
+                            if ('setAppBadge' in navigator) { // Show a number badge on pwa icon
+                              navigator.setAppBadge({{ current_user.unread_notifications }});
+                            }
+                        </script>
                     {% else -%}
-                        <span class="fe fe-bell"></span>
+                        <span class="fe fe-bell"></span> <span class="red unreadNotificationDisplay"></span>
+                        <script type="text/javascript" nonce="{{ nonce }}">
+                            let unreadNotifications = 0;
+                            if ('setAppBadge' in navigator) {
+                              navigator.clearAppBadge();
+                            }
+                        </script>
                     {% endif -%}
                 </a>
             {% endif -%}
@@ -162,51 +148,23 @@
             </button>
 
             <div class="collapse navbar-collapse" id="navbarSupportedContent" role="navigation">
-                    <ul class="nav navbar-nav">
+                    <ul class="nav navbar-nav text-end text-lg-start">
                         {% if current_user.is_anonymous -%}
-                            <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %}">
-                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/topics" aria-haspopup="true" aria-expanded="false">{{ _('Topics') }}</a>
-                                <ul class="dropdown-menu">
-                                  {% if menu_topics %}
-                                       {% for topic_menu_item in menu_topics -%}
-                                            <li><a class="dropdown-item{% if topic and topic.id == topic_menu_item.id%} active{% endif %}" href="/topic/{{ topic_menu_item.path() }}">{{ topic_menu_item.name }}</a></li>
-                                       {% endfor -%}
-                                       <li><a class="dropdown-item{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('More topics') }}</a></li>
-                                       <li><hr class="dropdown-divider"></li>
-                                  {% else %}
-                                    <li><a class="dropdown-item{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('Browse by topic') }}</a></li>
-                                  {% endif %}
-                                  <li><a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a></li>
-                                </ul>
+                            <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %} communities_menu_parent">
+                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/communities"  aria-haspopup="true" aria-expanded="false">{{ _('Communities') }}</a>
+                                <div class="dropdown-menu communities_menu" hx-get="{{ url_for('main.communities_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
                             </li>
-                            <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %}">
-                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/feeds"  aria-haspopup="true" aria-expanded="false">{{ _('Feeds') }}</a>
-                                <ul class="dropdown-menu">
-                                  {% if menu_instance_feeds -%}
-                                       {% for feed_menu_item in menu_instance_feeds -%}
-                                            <li><a class="dropdown-item{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a></li>
-                                       {% endfor -%}
-                                       <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></li>
-                                  {% else -%}
-                                    <li><a class="dropdown-item{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></li>
-                                  {% endif -%}
-                                </ul>
-                            </li>                               
                             <li class="nav-item"><a class="nav-link" href="/auth/login">{{ _('Log in') }}</a></li>
                             <li class="nav-item"><a class="nav-link" href="/auth/register">{{ _('Register') }}</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/donate">{{ _('Donate') }}</a></li>
                         {% else %}
-                            <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %}">
-                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/topics"  aria-haspopup="true" aria-expanded="false">{{ _('Topics') }}</a>
-                                <div class="dropdown-menu topics_menu" hx-get="{{ url_for('main.topics_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
+                            <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %} communities_menu_parent">
+                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/communities"  aria-haspopup="true" aria-expanded="false">{{ _('Communities') }}</a>
+                                <div class="dropdown-menu communities_menu" hx-get="{{ url_for('main.communities_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
                             </li>
-                            <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %}">
-                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/u/myfeeds"  aria-haspopup="true" aria-expanded="false">{{ _('Feeds') }}</a>
-                                <div class="dropdown-menu feeds_menu" hx-get="{{ url_for('main.feeds_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
-                            </li>                            
-                            <li class="nav-item dropdown{% if active_parent == 'account' %} active{% endif %}">
+                            <li class="nav-item dropdown{% if active_parent == 'account' %} active{% endif %} account_menu_parent">
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/u/{{ current_user.link() }}" aria-haspopup="true" aria-expanded="false">{{ _('Account') }}</a>
-                                <ul class="dropdown-menu">
+                                <ul class="dropdown-menu text-end text-lg-start">
                                   <li><a class="dropdown-item{% if active_child == 'view_profile' %} active{% endif %}" href="/u/{{ current_user.link() }}">{{ _('View profile') }}</a></li>
                                   <li><a class="dropdown-item{% if active_child == 'edit_profile' %} active{% endif %}" href="/u/{{ current_user.link() }}/profile">{{ _('Edit profile') }}</a></li>
                                   <li><a class="dropdown-item{% if active_child == 'chats' %} active{% endif %}" href="/chat">{{ _('Chats') }}</a></li>
@@ -223,12 +181,14 @@
                                   {% endif -%}
                                 </ul>
                             </li>
-                            {% if user_access('change instance settings', current_user.id) %}
-                                <li class="nav-item dropdown{% if active_parent == 'admin' %} active{% endif %}">
+                            {% if current_user.is_staff() or current_user.is_admin() %}
+                                <li class="nav-item dropdown{% if active_parent == 'admin' %} active{% endif %} admin_menu_parent">
                                     <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/admin/" aria-haspopup="true" aria-expanded="false">{{ _('Admin') }}</a>
-                                    <ul class="dropdown-menu">
-                                      <li><a class="dropdown-item{{ ' active' if active_child == 'admin_site' }}" href="{{ url_for('admin.admin_site') }}">{{ _('Home') }}</a></li>
+                                    <ul class="dropdown-menu text-end text-lg-start">
+                                      <li><a class="dropdown-item{{ ' active' if active_child == 'admin_site' }}" href="{{ url_for('admin.admin_home') }}">{{ _('Home') }}</a></li>
+                                      {% if user_access('', current_user.id) -%}
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_content' }}" href="{{ url_for('admin.admin_content', show='spammy', days='3') }}">{{ _('Spam') }}</a></li>
+                                      {% endif -%}
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'modlog' }}" href="{{ url_for('main.modlog') }}">{{ _('Modlog') }}</a></li>
                                         {% if debug_mode %}
                                             <li><a class="dropdown-item{{ ' active' if active_child == 'dev_tools' }}" href="{{ url_for('dev.tools') }}">{{ _('Dev Tools') }}</a></li>
@@ -236,19 +196,20 @@
                                     </ul>
                                 </li>
                             {% endif %}
+                            <li class="nav-item"><a class="nav-link" href="/donate">{{ _('Donate') }}</a></li>
                             <li class="nav-item right d-none d-md-inline-block">
                                 <a class="nav-link" href="/notifications" aria-label="{{ _('%(num)d unread notifications', num=current_user.unread_notifications) if current_user.unread_notifications else _('Notifications') }}">
                                     {% if current_user.unread_notifications %}
-                                    <span class="fe fe-bell red"></span> <span class="red">{{ current_user.unread_notifications }}</span>
+                                        <span class="fe fe-bell red"></span> <span class="red unreadNotificationDisplay">{{ current_user.unread_notifications }}</span>
                                     {% else %}
-                                        <span class="fe fe-bell"></span>
+                                        <span class="fe fe-bell"></span> <span class="red unreadNotificationDisplay"></span>
                                     {% endif %}
                                 </a>
                             </li>
                         {% endif %}
-                        <li class="nav-item {% if current_user.is_anonymous %}right{% endif %}" aria-label="{{ _('Search') }}"><a class="nav-link" id="search" href="/search" tabindex="" title="{{ _('Search') }}"><span class="fe fe-search"></span></a></li>
-                        <li class="nav-item"  aria-label="{{ _('Settings') }}"><a class="nav-link" href="/user/settings" tabindex="" title="{{ _('Settings') }}"><span class="fe fe-settings"></span></a></li>
-                        <li class="nav-item"  aria-label="{{ _('Color mode') }}"><a class="nav-link" id="color_mode" href="#" tabindex="" title="{{ _('Color mode') }}"><span id="color_mode_icon" class="fe fe-eye"></span></a></li>
+                        <li class="nav-item {% if current_user.is_anonymous %}right{% endif %} content-center" aria-label="{{ _('Search') }}"><a class="nav-link" id="search" href="/search" tabindex="" title="{{ _('Search') }}"><span class="fe fe-search"></span></a></li>
+                        <li class="nav-item content-center"  aria-label="{{ _('Settings') }}"><a class="nav-link" href="/user/settings" tabindex="" title="{{ _('Settings') }}"><span class="fe fe-settings"></span></a></li>
+                        <li class="nav-item content-center"  aria-label="{{ _('Color mode') }}"><a class="nav-link" id="color_mode" href="#" tabindex="" title="{{ _('Color mode') }}"><span id="color_mode_icon" class="fe fe-eye"></span></a></li>
                     </ul>
             </div>
 
@@ -282,10 +243,8 @@
 
     {% block scripts -%}
     {% endblock -%}
-    {% if not low_bandwidth -%}
-        {{ str(bootstrap.load_js()).replace('<script ', '<script nonce="' + session['nonce'] + '" ')|safe }}
-        <script src="{{ url_for('static', filename='js/lightbox/baguetteBox.js') }}" nonce="{{ session['nonce'] }}"></script>
-    {% endif -%}
+    {{ str(bootstrap.load_js()).replace('<script ', '<script nonce="' + nonce + '" ')|safe }}
+    <script src="{{ url_for('static', filename='js/lightbox/baguetteBox.js') }}" nonce="{{ nonce }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/scripts.js', changed=getmtime('js/scripts.js')) }}"></script>
     {% if not low_bandwidth -%}
@@ -293,6 +252,11 @@
             <!-- -->
         {% endif -%}
         <script type="text/javascript" src="{{ url_for('static', filename='js/markdown/downarea.js', changed=getmtime('js/markdown/downarea.js')) }}"></script>
+        {% if notif_server and current_user.is_authenticated -%}
+            <script type="text/javascript" nonce="{{ nonce }}">
+                {% include "notifs.js" %}
+            </script>
+        {% endif -%}
     {% endif -%}
     {% if theme() and file_exists('app/templates/themes/' + theme() + '/scripts.js') -%}
         <script src="{{ url_for('static', filename='themes/' + theme() + '/scripts.js') }}"></script>

@@ -67,7 +67,7 @@ DOWNVOTE_ACCEPT_MEMBERS = 2
 DOWNVOTE_ACCEPT_INSTANCE = 4
 DOWNVOTE_ACCEPT_TRUSTED = 6
 
-MICROBLOG_APPS = ["mastodon", "misskey", "akkoma", "iceshrimp", "pleroma"]
+MICROBLOG_APPS = ["mastodon", "misskey", "akkoma", "iceshrimp", "pleroma", "fedibird"]
 
 SRC_WEB = 1
 SRC_PUB = 2

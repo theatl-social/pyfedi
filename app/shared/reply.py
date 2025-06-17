@@ -141,11 +141,13 @@ def make_reply(input, post, parent_id, src, auth=None):
         content = input['body']
         notify_author = input['notify_author']
         language_id = input['language_id']
+        distinguished = input['distinguished'] if 'distinguished' in input else False
     else:
         user = current_user
         content = input.body.data
         notify_author = input.notify_author.data
         language_id = input.language_id.data
+        distinguished = input.distinguished.data
 
     if parent_id:
         parent_reply = PostReply.query.filter_by(id=parent_id).one()
@@ -163,7 +165,7 @@ def make_reply(input, post, parent_id, src, auth=None):
     # WEBFORM would call 'make_reply' in a try block, so any exception from 'new' would bubble-up for it to handle
     reply = PostReply.new(user, post, in_reply_to=parent_reply, body=piefed_markdown_to_lemmy_markdown(content),
                           body_html=markdown_to_html(content), notify_author=notify_author,
-                          language_id=language_id)
+                          language_id=language_id, distinguished=distinguished)
 
     user.language_id = language_id
     reply.ap_id = reply.profile_id()
@@ -186,11 +188,13 @@ def edit_reply(input, reply, post, src, auth=None):
         content = input['body']
         notify_author = input['notify_author']
         language_id = input['language_id']
+        distinguished = input['distinguished'] if 'distinguished' in input else False
     else:
         user = current_user
         content = input.body.data
         notify_author = input.notify_author.data
         language_id = input.language_id.data
+        distinguished = input.distinguished.data
 
     reply.body = piefed_markdown_to_lemmy_markdown(content)
     reply.body_html = markdown_to_html(content)
@@ -198,8 +202,8 @@ def edit_reply(input, reply, post, src, auth=None):
     reply.community.last_active = utcnow()
     reply.edited_at = utcnow()
     reply.language_id = language_id
+    reply.distinguished = distinguished
     db.session.commit()
-
 
     if src == SRC_WEB:
         flash(_('Your changes have been saved.'), 'success')

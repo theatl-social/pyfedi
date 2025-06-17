@@ -1,7 +1,8 @@
-<div class="d-lg-none">
+<div class="d-xl-none">
     <select class="form-control form-select navigate_on_change" name="sort_by">
         <option value="/home/hot/{{ view_filter }}" aria-label="{{ _('Trending now') }}" {{ 'selected'  if sort == 'hot' }}>{{ _('Hot') }}</option>
         <option value="/home/new/{{ view_filter }}" aria-label="{{ _('Latest posts') }}" {{ 'selected'  if sort == 'new' }}>{{ _('New') }}</option>
+        <option value="/home/old/{{ view_filter }}" aria-label="{{ _('Oldest posts') }}" {{ 'selected'  if sort == 'old' }}>{{ _('Old') }}</option>
         <option value="/home/active/{{ view_filter }}" aria-label="{{ _('Recently commented on') }}" {{ 'selected'  if sort == 'active' }}>{{ _('Active') }}</option>
         <option value="/home/scaled/{{ view_filter }}" aria-label="{{ _('Trending in niche communities') }}" {{ 'selected'  if sort == 'scaled' }}>{{ _('Scaled') }}</option>
         <optgroup label="{{ _('Top') }}">
@@ -14,7 +15,7 @@
         </optgroup>
     </select>
 </div>
-<div class="d-none sort_methods d-lg-block btn-group mt-1 mb-2" aria-label="{{ _('Sorting methods: ') }}">
+<div class="d-none sort_methods d-xl-inline-block btn-group mt-1 mb-2" aria-label="{{ _('Sorting methods: ') }}">
     <a href="/home/hot/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'hot' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Trending now') }}">
         {{ _('Hot') }}
     </a><div class="btn-group" role="group">
@@ -31,7 +32,9 @@
     </ul>
   </div><a href="/home/new/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Latest posts') }}">
         {{ _('New') }}
-    </a><a href="/home/active/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'active' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Recently commented on') }}">
+    </a><!--<a href="/home/old/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'old' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Oldest posts') }}">
+        {{ _('Old') }}
+    </a>--><a href="/home/active/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'active' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Recently commented on') }}">
         {{ _('Active') }}
     </a><a href="/home/scaled/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'scaled' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Trending in niche communities') }}">
         {{ _('Scaled') }}

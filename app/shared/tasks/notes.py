@@ -150,7 +150,7 @@ def send_reply(reply_id, parent_id, edit=False):
       'published': ap_datetime(reply.posted_at),
       'language': language,
       'contentMap': content_map,
-      'distinguished': False,
+      'distinguished': reply.distinguished,
       'flair': user.community_flair(reply.community_id)
     }
     if edit:

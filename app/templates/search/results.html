@@ -3,11 +3,14 @@
 {% else %}
     {% extends "base.html" %}
 {% endif %}
-{% from 'bootstrap/form.html' import render_form %}
+{% from 'bootstrap5/form.html' import render_form %}
+{% from "_macros.html" import render_username, render_communityname %}
+{% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video %}
+{% from "post/reply/_macros.html" import render_comment_voting_buttons, render_reply_notification_toggle %}
 
 {% block app_content %}
 <div class="row">
-    <main class="col-12 col-md-8 position-relative main_pane">
+    <main class="col-12 col-lg-8 position-relative main_pane">
         <h1>{{ _('Search results for') }} <form method="get" class="redo_search"><input type="search" name="q" value="{{ q }}" class="form-control">
         <input type="hidden" name="community" value="{{ community_id }}">
         <input type="hidden" name="language" value="{{ language_id }}">
@@ -58,7 +61,7 @@
         </nav>
     </main>
 
-    <aside id="side_pane" class="col-12 col-md-4 side_pane" role="complementary">
+    <aside id="side_pane" class="col-12 col-lg-4 side_pane" role="complementary">
         <!-- <div class="card">
             <div class="card-body">
                 <form method="get">

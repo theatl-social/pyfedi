@@ -1,6 +1,7 @@
-import json
 import os
-import mimetypes
+import sys
+from zoneinfo import ZoneInfo
+
 from app import db, cache
 from app.activitypub.util import make_image_sizes, notify_about_post
 from app.constants import *
@@ -10,9 +11,10 @@ from app.shared.tasks import task_selector
 from app.utils import render_template, authorise_api_user, shorten_string, gibberish, ensure_directory_exists, \
     piefed_markdown_to_lemmy_markdown, markdown_to_html, fixup_url, domain_from_url, \
     opengraph_parse, url_to_thumbnail_file, can_create_post, is_video_hosting_site, recently_upvoted_posts, \
-    is_image_url, add_to_modlog_activitypub, store_files_in_s3, guess_mime_type
+    is_image_url, add_to_modlog_activitypub, store_files_in_s3, guess_mime_type, retrieve_image_hash, \
+    hash_matches_blocked_image
 
-from flask import abort, flash, redirect, request, url_for, current_app, g
+from flask import abort, flash, request, current_app, g
 from flask_babel import _
 from flask_login import current_user
 import boto3
@@ -204,7 +206,14 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
     db.session.add(vote)
     db.session.commit()
 
-    post = edit_post(input, post, type, src, user, auth, uploaded_file, from_scratch=True)
+    try:
+        post = edit_post(input, post, type, src, user, auth, uploaded_file, from_scratch=True)
+    except Exception as e:
+        if str(e) == 'This image is blocked':
+            db.session.delete(vote)
+            db.session.delete(post)
+            db.session.commit()
+            raise e
 
     notify_about_post(post)
 
@@ -215,7 +224,7 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
 
 
 # 'from_scratch == True' means that it's not really a user edit, we're just re-using code for make_post()
-def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, from_scratch=False):
+def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, from_scratch=False, hash=None):
     if src == SRC_API:
         if not user:
              user = authorise_api_user(auth, return_type='model')
@@ -251,6 +260,9 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         else:
             flair = []
         scheduled_for = input.scheduled_for.data
+        if scheduled_for and hasattr(input, 'timezone') and input.timezone.data:
+            scheduled_for = scheduled_for.replace(tzinfo=ZoneInfo(input.timezone.data))
+            scheduled_for = scheduled_for.astimezone(ZoneInfo('UTC'))
         repeat = input.repeat.data
     post.indexable = user.indexable
     post.sticky = False if src == SRC_API else input.sticky.data
@@ -266,10 +278,11 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
     post.scheduled_for = scheduled_for
     post.repeat = repeat
 
-    if post.scheduled_for and post.scheduled_for > utcnow():
+    if post.scheduled_for and post.scheduled_for.replace(tzinfo=None) > utcnow():
         post.status = POST_STATUS_SCHEDULED
 
     url_changed = False
+    hash = None
 
     if not from_scratch:
         # Remove any subscription that currently exists
@@ -333,17 +346,28 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         Image.MAX_IMAGE_PIXELS = 89478485
 
         # limit full sized version to 2000px
-        if not final_place.endswith('.svg'):
+        if not final_place.endswith('.svg') and not final_place.endswith('.gif'):
             img = Image.open(final_place)
             if '.' + img.format.lower() in allowed_extensions:
                 img = ImageOps.exif_transpose(img)
 
-                img.thumbnail((2000, 2000))
+                img.thumbnail((2000, sys.maxsize))
                 img.save(final_place)
             else:
                 raise Exception('filetype not allowed')
+        
+        if final_place.endswith('.gif'):
+            gif_image = Image.open(final_place)
+            gif_image.save(final_place[:-4] + ".webp", format="WEBP", save_all=True, loop=0)
+            os.remove(final_place)
+            final_place = final_place[:-4] + ".webp"
 
-        url = f"https://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
+        url = f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
+
+        if current_app.config['IMAGE_HASHING_ENDPOINT']: # and not user.trustworthy():
+            hash = retrieve_image_hash(url)
+            if hash and hash_matches_blocked_image(hash):
+                raise Exception('This image is blocked')
 
         # Move uploaded file to S3
         if store_files_in_s3():
@@ -395,16 +419,16 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
 
         thumbnail_url, embed_url = fixup_url(url)
         if is_image_url(url):
-            file = File(source_url=url)
-            if uploaded_file and type == POST_TYPE_IMAGE:
+            file = File(source_url=url, hash=hash)
+            post.type = POST_TYPE_IMAGE
+            if uploaded_file:
                 # change this line when uploaded_file is supported in API
                 file.alt_text = input.image_alt_text.data if input.image_alt_text.data else title
             db.session.add(file)
             db.session.commit()
             post.image_id = file.id
-            make_image_sizes(post.image_id, 170, 512, 'posts', post.community.low_quality)
+            make_image_sizes(post.image_id, 512, 1200, 'posts', post.community.low_quality)
             post.url = url
-            post.type = POST_TYPE_IMAGE
         else:
             opengraph = opengraph_parse(thumbnail_url)
             if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):

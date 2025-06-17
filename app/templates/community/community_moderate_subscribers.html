@@ -3,11 +3,12 @@
 {% else %}
     {% extends "base.html" %}
 {% endif %}
-{% from 'bootstrap/form.html' import render_field %}
+{% from 'bootstrap5/form.html' import render_field %}
+{% from "_macros.html" import render_username, render_communityname, render_feedname -%}
 
 {% block app_content %}
 <div class="row">
-    <main class="col-12 col-md-8 position-relative main_pane">
+    <main class="col-12 col-lg-8 position-relative main_pane">
         <nav aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
           <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
@@ -39,7 +40,7 @@
                 {% for user in subscribers.items %}
                     <tr>
                         <td>
-                            {{ render_username(user) }}
+                            {{ render_username(user, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}
                         </td>
                         <td>{% if user.is_local() %} Local {% else %} <a href="{{ user.ap_profile_id }}">{{ user.ap_domain }}</a>{% endif %}</td>
                         <td>{{ arrow.get(user.last_seen).humanize(locale=locale) }} </td>
@@ -53,7 +54,7 @@
                                 <li><a class="dropdown-item" href="/u/{{ user.link() }}/report">Report</a></li>
                                 <div class="dropdown-divider"></div>
                                 <li><a class="dropdown-item" href="{{ url_for('community.community_ban_user', community_id=community.id, user_id=user.id) }}" class="confirm_first">{{ _('Ban') }}</a></li>
-                                {% if current_user.is_admin() and community.is_local() and not user.is_local() %}
+                                {% if current_user.get_id() in admin_ids and community.is_local() and not user.is_local() %}
                                     <li><a class="dropdown-item confirm_first" href="{{ url_for('community.community_kick_user', community_id=community.id, user_id=user.id) }}">{{ _('Kick') }}</a></li>
                                 {% endif %}
                               </ul>
@@ -97,7 +98,7 @@
                 </tr>
                 {% for user in banned_people %}
                     <tr>
-                        <td>{{ render_username(user) }}</td>
+                        <td>{{ render_username(user, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</td>
                         <td>{% if user.is_local() %} Local {% else %} <a href="{{ user.ap_profile_id }}">{{ user.ap_domain }}</a>{% endif %}</td>
                         <td>{{ user.reports if user.reports > 0 }} </td>
                         <td>

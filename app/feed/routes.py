@@ -23,7 +23,8 @@ from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markd
     joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, validation_required, feed_membership, \
     gibberish, get_task_session, instance_banned, menu_subscribed_feeds, referrer, community_membership, \
     paginate_post_ids, get_deduped_post_ids, get_request, post_ids_to_models, recently_upvoted_posts, \
-    recently_downvoted_posts, joined_or_modding_communities, login_required_if_private_instance
+    recently_downvoted_posts, joined_or_modding_communities, login_required_if_private_instance, \
+    communities_banned_from, reported_posts, user_notes
 from collections import namedtuple
 from sqlalchemy import desc, or_, text
 from slugify import slugify
@@ -61,6 +62,7 @@ def feed_new():
                     ap_public_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + form.url.data,
                     ap_followers_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + form.url.data + '/followers',
                     ap_following_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + form.url.data + '/following',
+                    ap_outbox_url='https://' + current_app.config['SERVER_NAME'] + '/f/' + form.url.data + '/outbox',
                     ap_domain=current_app.config['SERVER_NAME'],
                     subscriptions_count=1, instance_id=1)
         if form.parent_feed_id.data:
@@ -143,7 +145,7 @@ def feed_add_remote():
     return render_template('feed/add_remote.html',
                            title=_('Add remote feed'), form=form, new_feed=new_feed,
                            subscribed=feed_membership(current_user, new_feed) >= SUBSCRIPTION_MEMBER, 
-                           site=g.site, )    
+                            )    
 
 
 @bp.route('/feed/<int:feed_id>/edit', methods=['GET','POST'])
@@ -152,7 +154,7 @@ def feed_edit(feed_id: int):
     if current_user.banned:
         return show_ban_message()
     # load the feed
-    feed_to_edit = Feed.query.get_or_404(feed_id)
+    feed_to_edit: Feed = Feed.query.get_or_404(feed_id)
     # make sure the user owns this feed
     if feed_to_edit.user_id != current_user.id:
         abort(404)
@@ -162,8 +164,12 @@ def feed_edit(feed_id: int):
 
     if not current_user.is_admin():
         edit_feed_form.is_instance_feed.render_kw = {'disabled': True}
+
+    if feed_to_edit.subscriptions_count > 1:
+        edit_feed_form.url.render_kw = {'disabled': True}
     
     if edit_feed_form.validate_on_submit():
+        edit_feed_form.url.data = slugify(edit_feed_form.url.data, separator='_').lower()
         feed_to_edit.title = edit_feed_form.title.data
         feed_to_edit.name = edit_feed_form.url.data
         feed_to_edit.machine_name = edit_feed_form.url.data
@@ -191,8 +197,8 @@ def feed_edit(feed_id: int):
         if g.site.enable_nsfl:
             feed_to_edit.nsfl = edit_feed_form.nsfl.data
         feed_to_edit.public = edit_feed_form.public.data
-        feed_to_edit.is_instance_feed = edit_feed_form.is_instance_feed.data
         if current_user.is_admin():
+            feed_to_edit.is_instance_feed = edit_feed_form.is_instance_feed.data
             cache.delete_memoized(menu_instance_feeds)
         db.session.add(feed_to_edit)
         db.session.commit()
@@ -371,6 +377,7 @@ def feed_copy(feed_id: int):
     copy_feed_form.title.data = feed_to_copy.title
     copy_feed_form.url.data = feed_to_copy.name
     copy_feed_form.description.data = feed_to_copy.description
+    copy_feed_form.communities.data = feed_communities_for_edit(feed_to_copy.id)
     copy_feed_form.show_child_posts.data = feed_to_copy.show_posts_in_children
     if g.site.enable_nsfw is False:
         copy_feed_form.nsfw.render_kw = {'disabled': True}
@@ -555,7 +562,7 @@ def _feed_remove_community(community_id: int, current_feed_id: int, user_id: int
                     if community.instance.domain == 'a.gup.pe':
                         join_request = CommunityJoinRequest.query.filter_by(user_id=user.id, community_id=community.id).first()
                         if join_request:
-                            follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+                            follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
                     undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
                     follow = {
                         "actor": user.public_url(),
@@ -645,7 +652,7 @@ def show_feed(feed):
     sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)
     result_id = request.args.get('result_id', gibberish(15)) if current_user.is_authenticated else None
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
-    page_length = 20 if low_bandwidth else 100
+    page_length = 20 if low_bandwidth else current_app.config['PAGE_LENGTH']
     post_layout = request.args.get('layout', 'list' if not low_bandwidth else None)
     if post_layout == 'masonry':
         page_length = 200
@@ -665,7 +672,7 @@ def show_feed(feed):
     for parent_feed in reversed(parents):
         breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
         breadcrumb.text = parent_feed.title
-        breadcrumb.url = f'{existing_url}/{parent_feed.machine_name}'
+        breadcrumb.url = f'{existing_url}/{parent_feed.link()}'
         breadcrumbs.append(breadcrumb)
 
     breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
@@ -708,18 +715,22 @@ def show_feed(feed):
         if current_user.is_authenticated:
             recently_upvoted = recently_upvoted_posts(current_user.id)
             recently_downvoted = recently_downvoted_posts(current_user.id)
+            communities_banned_from_list = communities_banned_from(current_user.id)
         else:
             recently_upvoted = []
             recently_downvoted = []
+            communities_banned_from_list = []
 
         return render_template('feed/show_feed.html', title=_(current_feed.name), posts=posts, feed=current_feed, sort=sort,
                                page=page, post_layout=post_layout, next_url=next_url, prev_url=prev_url,
                                feed_communities=feed_communities, content_filters=user_filters_posts(current_user.id) if current_user.is_authenticated else {},
                                sub_feeds=sub_feeds, feed_path=feed.path(), breadcrumbs=breadcrumbs,
                                rss_feed=f"https://{current_app.config['SERVER_NAME']}/f/{feed.path()}.rss",
-                               rss_feed_name=f"{current_feed.name} on {g.site.name}",
+                               rss_feed_name=f"{current_feed.name} on {g.site.name}", communities_banned_from_list=communities_banned_from_list,
                                show_post_community=True, joined_communities=joined_or_modding_communities(current_user.get_id()),
                                recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
+                               reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
+                               user_notes=user_notes(current_user.get_id()),
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                                POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
                                POST_TYPE_VIDEO=POST_TYPE_VIDEO,
@@ -824,7 +835,7 @@ def do_feed_subscribe(actor, user_id):
                       "to": [feed.public_url()],
                       "object": feed.public_url(),
                       "type": "Follow",
-                      "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+                      "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
                     }
                     send_post_request(feed.ap_inbox_url, follow, user.private_key, user.public_url() + '#main-key', timeout=10)
                     
@@ -875,7 +886,7 @@ def feed_unsubscribe(actor):
                         if feed.instance.domain == 'a.gup.pe':
                             join_request = FeedJoinRequest.query.filter_by(user_id=current_user.id, feed_id=feed.id).first()
                             if join_request:
-                                follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+                                follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
                         undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
                         follow = {
                           "actor": current_user.public_url(),
@@ -1025,3 +1036,46 @@ def announce_feed_delete_to_subscribers(user_id, feed_id):
         if instance.inbox and instance.online() and not instance_banned(instance.domain):
             send_post_request(instance.inbox, delete_json, user.private_key, user.ap_profile_id + '#main-key', timeout=10)
     session.close()
+
+
+@bp.route('/feed/lookup/<feedname>/<domain>')
+def lookup(feedname, domain):
+    if domain == current_app.config['SERVER_NAME']:
+        return redirect('/f/' + feedname)
+
+    feedname = feedname.lower()
+    domain = domain.lower()
+
+    exists = Feed.query.filter_by(ap_id=f'{feedname}@{domain}').first()
+    if exists:
+        return redirect('/f/' + feedname + '@' + domain)
+    else:
+        address = '~' + feedname + '@' + domain
+        if current_user.is_authenticated:
+            new_feed = None
+
+            try:
+                new_feed = search_for_feed(address)
+            except Exception as e:
+                if 'is blocked.' in str(e):
+                    flash(_('Sorry, that instance is blocked, check https://gui.fediseer.com/ for reasons.'), 'warning')
+            if new_feed is None:
+                if g.site.enable_nsfw:
+                    flash(_('Feed not found.'), 'warning')
+                else:
+                    flash(_('Feed not found. If you are searching for a nsfw feed it is blocked by this instance.'), 'warning')
+            else:
+                if new_feed.banned:
+                    flash(_('That feed is banned from %(site)s.', site=g.site.name), 'warning')
+
+            return render_template('feed/lookup_remote.html',
+                           title=_('Search result for remote feed'), new_feed=new_feed,
+                           subscribed=feed_membership(current_user, new_feed) >= SUBSCRIPTION_MEMBER)
+        else:
+            # send them back where they came from
+            flash(_('Searching for remote feeds requires login'), 'error')
+            referrer = request.headers.get('Referer', None)
+            if referrer is not None:
+                return redirect(referrer)
+            else:
+                return redirect('/')

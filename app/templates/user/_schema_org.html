@@ -1,0 +1,71 @@
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "name": {{ user.display_name()|tojson }},
+  {% if user.ap_profile_id -%}
+  "url": {{ user.ap_profile_id|tojson }},
+  {% else -%}
+  "url": {{ (request.host_url.rstrip('/') + '/u/' + user.user_name)|tojson }},
+  {% endif -%}
+  {% if user.about -%}
+  "description": {{ user.about|tojson }},
+  {% endif -%}
+  {% if user.avatar_image() != '' -%}
+  "image": {{ user.avatar_image()|tojson }},
+  {% endif -%}
+  {% if user.matrix_user_id -%}
+  "sameAs": {{ ('https://matrix.to/#/' + user.matrix_user_id)|tojson }},
+  {% endif -%}
+  {% if user.bot -%}
+  "additionalType": "https://schema.org/SoftwareApplication",
+  {% endif -%}
+  "memberOf": [
+    {% for community in subscribed -%}
+    {
+      "@type": "Organization",
+      "name": {{ community.display_name()|tojson }},
+      {% if community.ap_profile_id -%}
+      "url": {{ community.ap_profile_id|tojson }}
+      {% else -%}
+      "url": {{ (request.host_url.rstrip('/') + '/c/' + community.name)|tojson }}
+      {% endif -%}
+    }{% if not loop.last %},{% endif %}
+    {% endfor -%}
+  ],
+  "agentInteractionStatistic": [
+    {
+      "@type": "InteractionCounter",
+      "interactionType": "https://schema.org/CreateAction",
+      "userInteractionCount": {{ user.post_count }},
+      "description": "Posts created"
+    },
+    {
+      "@type": "InteractionCounter", 
+      "interactionType": "https://schema.org/CommentAction",
+      "userInteractionCount": {{ user.post_reply_count }},
+      "description": "Comments posted"
+    }
+  ],
+  {% if user.extra_fields -%}
+  "knowsAbout": [
+    {% for field in user.extra_fields -%}
+    {
+      "@type": "Thing",
+      "name": {{ field.label|tojson }},
+      {% if field.text.startswith('http') -%}
+      "url": {{ field.text|tojson }}
+      {% else -%}
+      "description": {{ field.text|tojson }}
+      {% endif -%}
+    }{% if not loop.last %},{% endif %}
+    {% endfor -%}
+  ],
+  {% endif -%}
+  "affiliation": {
+    "@type": "Organization",
+    "name": {{ user.instance_domain()|tojson }},
+    "url": {{ ('https://' + user.instance_domain())|tojson }}
+  }
+}
+</script>

@@ -3,7 +3,7 @@
 {% else %}
     {% extends "base.html" %}
 {% endif %}
-{% from 'bootstrap/form.html' import render_field %}
+{% from 'bootstrap5/form.html' import render_field %}
 
 {% block app_content %}
     <div class="row">
@@ -17,7 +17,7 @@
                         <div class="form-group">{{ form.url.label(class_="form-control-label required") }}
                             /c/{{ form.url(class_="form-control", maxlength=255) }}
                             {% for error in form.url.errors %}
-                            <span style="color: red;">[{{ error }}]</span>
+                            <br><span style="color: red;">[{{ error }}]</span>
                             {% endfor %}
                         </div>
                         {{ render_field(form.description) }}
@@ -25,7 +25,6 @@
                         <small class="field_hint">{{ _('Provide a square image that looks good when small. SVG is allowed.') }}</small>
                         {{ render_field(form.banner_file) }}
                         <small class="field_hint">{{ _('Provide a wide image - letterbox orientation.') }}</small>
-                        {{ render_field(form.rules) }}
                         {{ render_field(form.nsfw) }}
                         {{ render_field(form.local_only) }}
                         <small class="field_hint">{{ _('Only people using %(name)s can post or reply', name=current_app.config['SERVER_NAME']) }}.</small>

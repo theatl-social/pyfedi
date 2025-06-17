@@ -3,11 +3,13 @@
 {% else %}
     {% extends "base.html" %}
 {% endif %}
-{% from 'bootstrap/form.html' import render_form %}
+{% from 'bootstrap5/form.html' import render_form %}
+{% from "_macros.html" import render_communityname %}
+{% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video %}
 
 {% block app_content %}
 <div class="row">
-    <main class="col-12 col-md-8 position-relative main_pane">
+    <main class="col-12 col-lg-8 position-relative main_pane">
       {% if feed.header_image() != '' and not low_bandwidth -%}
         <div class="community_header" style="background-image: url({{ feed.header_image() }});">
           <nav aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
@@ -31,7 +33,7 @@
           <h5 class="mb-0" id="sub-feeds">{{ _('Sub-feeds') }}</h5>
           <ul id="subfeed_nav" class="nav" role="listbox" aria-labelledby="sub-feeds">
             {% for sub_feed in sub_feeds %}
-              <li class="nav-item" role="option"><a class="nav-link" href="/f/{{ sub_feed.machine_name }}">{{ sub_feed.title }}</a></li>
+              <li class="nav-item" role="option"><a class="nav-link" href="/f/{{ sub_feed.link() }}">{{ sub_feed.title }}</a></li>
             {% endfor %}
           </ul>
         {% endif %}
@@ -60,7 +62,7 @@
               <h5 class="mb-0" id="sub-feeds">{{ _('Sub-feeds') }}</h5>
               <ul id="subfeed_nav" class="nav" role="listbox" aria-labelledby="sub-feeds">
               {% for sub_feed in sub_feeds %}
-                <li class="nav-item" role="option"><a class="nav-link" href="/f/{{ sub_feed.machine_name }}">{{ sub_feed.title }}</a></li>
+                <li class="nav-item" role="option"><a class="nav-link" href="/f/{{ sub_feed.link() }}">{{ sub_feed.title }}</a></li>
               {% endfor %}
               </ul>
             {% endif %}
@@ -86,7 +88,7 @@
         <h5 class="mb-0" id="sub-feeds">{{ _('Sub-feeds') }}</h5>
         <ul id="subfeed_nav" class="nav" role="listbox" aria-labelledby="sub-feeds">
         {% for sub_feed in sub_feeds %}
-            <li class="nav-item" role="option"><a class="nav-link" href="/f/{{ sub_feed.machine_name }}">{{ sub_feed.title }}</a></li>
+            <li class="nav-item" role="option"><a class="nav-link" href="/f/{{ sub_feed.link() }}">{{ sub_feed.title }}</a></li>
         {% endfor %}
         </ul>
         {% endif %}
@@ -96,7 +98,7 @@
              <div class="masonry" id="masonry">
               <!-- Masonry columns will be added here -->
             </div>
-            <script nonce="{{ session['nonce'] }}">
+            <script nonce="{{ nonce }}">
               document.addEventListener("DOMContentLoaded", function() {
                   const masonry = document.getElementById('masonry');
                   const htmlSnippets = [
@@ -131,7 +133,7 @@
         </nav>
     </main>
 
-    <aside id="side_pane" class="col-12 col-md-4 side_pane" role="complementary">
+    <aside id="side_pane" class="col-12 col-lg-4 side_pane" role="complementary">
         <div class="card">
             <div class="card-body">
                 <div class="row">
@@ -160,7 +162,7 @@
                      <h2>{{ feed.title }}</h2>
                 </div>
                 <div class="card-body">
-                    <p>{{ feed.description_html|community_links|safe if feed.description_html else '' }}</p>
+                    <p>{{ feed.description_html|community_links|feed_links|safe if feed.description_html else '' }}</p>
                 </div>
             </div>
         {% endif %}

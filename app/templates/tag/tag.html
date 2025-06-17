@@ -3,11 +3,13 @@
 {% else %}
     {% extends "base.html" %}
 {% endif %}
-{% from 'bootstrap/form.html' import render_form %}
+{% from 'bootstrap5/form.html' import render_form %}
+{% from "_macros.html" import render_communityname %}
+{% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video %}
 
 {% block app_content %}
 <div class="row">
-    <main class="col-12 col-md-8 position-relative main_pane">
+    <main class="col-12 col-lg-8 position-relative main_pane">
         <nav aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
           <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
@@ -38,7 +40,7 @@
         </nav>
     </main>
 
-    <aside id="side_pane" class="col-12 col-md-4 side_pane" role="complementary">
+    <aside id="side_pane" class="col-12 col-lg-4 side_pane" role="complementary">
         {% if current_user.is_authenticated %}
             <div class="card mt-3">
                 <div class="card-header">

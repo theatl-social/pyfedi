@@ -11,6 +11,8 @@ from json import JSONDecodeError
 from time import sleep
 from typing import List, Literal, Union
 
+from jinja2 import BytecodeCache
+
 import app
 import redis
 import httpx
@@ -28,16 +30,18 @@ from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_TRUSTED, DOWNVOTE
 
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 import os
+import pickle
 from furl import furl
 from flask import current_app, json, redirect, url_for, request, make_response, Response, g, flash, abort
 from flask_babel import _, lazy_gettext as _l
 from flask_login import current_user, logout_user
-from sqlalchemy import text, or_, desc
+from sqlalchemy import text, or_, desc, asc, event
 from sqlalchemy.orm import Session
 from wtforms.fields  import SelectField, SelectMultipleField, StringField
 from wtforms.widgets import Select, html_params, ListWidget, CheckboxInput, TextInput
 from wtforms.validators import ValidationError
 from markupsafe import Markup
+import boto3
 from app import db, cache, httpx_client, celery
 from app.constants import *
 import re
@@ -48,7 +52,7 @@ from captcha.image import ImageCaptcha
 
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, ActivityPubLog, IpBan, \
     Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
-    File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest
+    File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest, Notification, UserNote
 
 
 # Flask's render_template function, with support for themes added
@@ -233,7 +237,7 @@ def is_video_url(url: str) -> bool:
 def is_video_hosting_site(url: str) -> bool:
     if url is None or url == '':
         return False
-    video_hosting_sites = ['https://youtube.com', 'https://www.youtube.com', 'https://youtu.be', 'https://www.vimeo.com', 'https://www.redgifs.com/watch/']
+    video_hosting_sites = ['https://youtube.com', 'https://www.youtube.com', 'https://youtu.be', 'https://www.vimeo.com', 'https://vimeo.com', 'https://streamable.com', 'https://www.redgifs.com/watch/']
     for starts_with in video_hosting_sites:
         if url.startswith(starts_with):
             return True
@@ -263,7 +267,7 @@ def mime_type_using_head(url):
 
 allowed_tags = ['p', 'strong', 'a', 'ul', 'ol', 'li', 'em', 'blockquote', 'cite', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre',
                 'code', 'img', 'details', 'summary', 'table', 'tr', 'td', 'th', 'tbody', 'thead', 'hr', 'span', 'small', 'sub', 'sup',
-                's']
+                's', 'tg-spoiler']
 
 # sanitise HTML using an allow list
 def allowlist_html(html: str, a_target='_blank') -> str:
@@ -402,14 +406,14 @@ def markdown_to_html(markdown_text, anchors_new_tab=True) -> str:
 
         try:
             raw_html = markdown2.markdown(markdown_text,
-                        extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True,
+                        extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True, 'tg-spoiler': True,
                                 'breaks': {'on_newline': True, 'on_backslash': True}, 'tag-friendly': True})
         except TypeError:
             # weird markdown, like https://mander.xyz/u/tty1 and https://feddit.uk/comment/16076443,
             # causes "markdown2.Markdown._color_with_pygments() argument after ** must be a mapping, not bool" error, so try again without fenced-code-blocks extra
             try:
                 raw_html = markdown2.markdown(markdown_text,
-                            extras={'middle-word-em': False, 'tables': True, 'strike': True,
+                            extras={'middle-word-em': False, 'tables': True, 'strike': True, 'tg-spoiler': True,
                                     'breaks': {'on_newline': True, 'on_backslash': True}, 'tag-friendly': True})
             except TypeError:
                 raw_html = ''
@@ -511,10 +515,17 @@ def first_paragraph(html):
     else:
         return ''
 
+
 def community_link_to_href(link: str) -> str:
     pattern = r"!([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
     server = r'<a href=https://' + current_app.config['SERVER_NAME'] + r'/community/lookup/'
     return re.sub(pattern, server + r'\g<1>/\g<2>>' + r'!\g<1>@\g<2></a>', link)
+
+
+def feed_link_to_href(link: str) -> str:
+    pattern = r"~([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
+    server = r'<a href=https://' + current_app.config['SERVER_NAME'] + r'/feed/lookup/'
+    return re.sub(pattern, server + r'\g<1>/\g<2>>' + r'~\g<1>@\g<2></a>', link)
 
 
 def person_link_to_href(link: str) -> str:
@@ -591,6 +602,8 @@ def digits(input: int) -> int:
 
 @cache.memoize(timeout=50)
 def user_access(permission: str, user_id: int) -> bool:
+    if user_id == 0:
+        return False
     has_access = db.session.execute(text('SELECT * FROM "role_permission" as rp ' +
                                     'INNER JOIN user_role ur on rp.role_id = ur.role_id ' +
                                     'WHERE ur.user_id = :user_id AND rp.permission = :permission'),
@@ -707,6 +720,7 @@ def retrieve_peertube_block_list():
 
 
 def ensure_directory_exists(directory):
+    """Ensure a directory exists and is writable, creating it if necessary."""
     parts = directory.split('/')
     rebuild_directory = ''
     for part in parts:
@@ -714,6 +728,10 @@ def ensure_directory_exists(directory):
         if not os.path.isdir(rebuild_directory):
             os.mkdir(rebuild_directory)
         rebuild_directory += '/'
+    
+    # Check if the final directory is writable
+    if not os.access(directory, os.W_OK):
+        current_app.logger.warning(f"Directory '{directory}' is not writable")
 
 
 def mimetype_from_url(url):
@@ -726,7 +744,7 @@ def mimetype_from_url(url):
 def validation_required(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
-        if current_user.verified:
+        if current_user.verified or not get_setting('email_verification', True):
             return func(*args, **kwargs)
         else:
             return redirect(url_for('auth.validation_required'))
@@ -747,7 +765,7 @@ def permission_required(permission):
     def decorator(func):
         @wraps(func)
         def decorated_view(*args, **kwargs):
-            if user_access(permission, current_user.id):
+            if user_access(permission, current_user.get_id()):
                 return func(*args, **kwargs)
             else:
                 # Handle the case where the user doesn't have the required permission
@@ -894,15 +912,14 @@ def guess_mime_type(file_path: str) -> str:
     return content_type
 
 
-def can_downvote(user, community: Community, site=None) -> bool:
+def can_downvote(user, community: Community, communities_banned_from_list=None) -> bool:
     if user is None or community is None or user.banned or user.bot:
         return False
 
-    if site is None:
-        try:
-            site = g.site
-        except:
-            site = Site.query.get(1)
+    try:
+        site = g.site
+    except:
+        site = Site.query.get(1)
 
     if not site.enable_downvotes:
         return False
@@ -910,7 +927,7 @@ def can_downvote(user, community: Community, site=None) -> bool:
     if community.local_only and not user.is_local():
         return False
 
-    if (user.attitude and user.attitude < -0.40) or user.reputation < -10:  # this should exclude about 3.7% of users.
+    if (user.attitude is not None and user.attitude < 0.0) or user.reputation < -10:
         return False
 
     if community.downvote_accept_mode != DOWNVOTE_ACCEPT_ALL:
@@ -927,18 +944,26 @@ def can_downvote(user, community: Community, site=None) -> bool:
                 if user.instance_id not in trusted_instance_ids():
                     return False
 
-    if community.id in communities_banned_from(user.id):
-        return False
+    if communities_banned_from_list is not None:
+        if community.id in communities_banned_from_list:
+            return False
+    else:
+        if community.id in communities_banned_from(user.id):
+            return False
 
     return True
 
 
-def can_upvote(user, community: Community) -> bool:
+def can_upvote(user, community: Community, communities_banned_from_list=None) -> bool:
     if user is None or community is None or user.banned or user.bot:
         return False
 
-    if community.id in communities_banned_from(user.id):
-        return False
+    if communities_banned_from_list is not None:
+        if community.id in communities_banned_from_list:
+            return False
+    else:
+        if community.id in communities_banned_from(user.id):
+            return False
 
     return True
 
@@ -1102,25 +1127,71 @@ def user_filters_replies(user_id):
 
 
 @cache.memoize(timeout=300)
-def moderating_communities(user_id):
+def moderating_communities(user_id) -> List[Community]:
     if user_id is None or user_id == 0:
         return []
-    return Community.query.join(CommunityMember, Community.id == CommunityMember.community_id).\
+    communities = Community.query.join(CommunityMember, Community.id == CommunityMember.community_id).\
         filter(Community.banned == False).\
         filter(or_(CommunityMember.is_moderator == True, CommunityMember.is_owner == True)). \
         filter(CommunityMember.is_banned == False). \
         filter(CommunityMember.user_id == user_id).order_by(Community.title).all()
+    
+    # Track display names to identify duplicates
+    display_name_counts = {}
+    for community in communities:
+        display_name = community.title
+        display_name_counts[display_name] = display_name_counts.get(display_name, 0) + 1
+    
+    # Flag communities as duplicates if their display name appears more than once
+    for community in communities:
+        community.is_duplicate = display_name_counts[community.title] > 1
+    
+    return communities
 
 
 @cache.memoize(timeout=300)
-def joined_communities(user_id):
+def moderating_communities_ids(user_id) -> List[int]:
+    """
+    Raw SQL version of moderating_communities() that returns community IDs instead of full objects.
+    """
     if user_id is None or user_id == 0:
         return []
-    return Community.query.join(CommunityMember, Community.id == CommunityMember.community_id).\
+    
+    sql = text("""
+        SELECT c.id
+        FROM community c
+        JOIN community_member cm ON c.id = cm.community_id
+        WHERE c.banned = false
+          AND (cm.is_moderator = true OR cm.is_owner = true)
+          AND cm.is_banned = false
+          AND cm.user_id = :user_id
+        ORDER BY c.title
+    """)
+    
+    return db.session.execute(sql, {'user_id': user_id}).scalars().all()
+
+
+@cache.memoize(timeout=300)
+def joined_communities(user_id) -> List[Community]:
+    if user_id is None or user_id == 0:
+        return []
+    communities = Community.query.join(CommunityMember, Community.id == CommunityMember.community_id).\
         filter(Community.banned == False). \
         filter(CommunityMember.is_moderator == False, CommunityMember.is_owner == False). \
         filter(CommunityMember.is_banned == False). \
         filter(CommunityMember.user_id == user_id).order_by(Community.title).all()
+    
+    # track display names to identify duplicates
+    display_name_counts = {}
+    for community in communities:
+        display_name = community.title
+        display_name_counts[display_name] = display_name_counts.get(display_name, 0) + 1
+    
+    # flag communities as duplicates if their display name appears more than once
+    for community in communities:
+        community.is_duplicate = display_name_counts[community.title] > 1
+    
+    return communities
 
 
 def joined_or_modding_communities(user_id):
@@ -1168,12 +1239,16 @@ def subscribed_feeds(user_id: int) -> List[int]:
 
 @cache.memoize(timeout=300)
 def community_moderators(community_id):
-    return CommunityMember.query.filter((CommunityMember.community_id == community_id) &
+    mods = CommunityMember.query.filter((CommunityMember.community_id == community_id) &
                                         (or_(
                                             CommunityMember.is_owner,
                                             CommunityMember.is_moderator
                                         ))
                                         ).all()
+    community = Community.query.get(community_id)
+    if community.user_id not in [mod.user_id for mod in mods]:
+        mods.append(CommunityMember(user_id=community.user_id, is_owner=True, community_id=community.id))
+    return mods
 
 
 def finalize_user_setup(user):
@@ -1278,7 +1353,10 @@ def url_to_thumbnail_file(filename) -> File:
                     file_extension = file_extension.split('?')[0]
 
             new_filename = gibberish(15)
-            directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
+            if store_files_in_s3():
+                directory = 'app/static/tmp'
+            else:
+                directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
             ensure_directory_exists(directory)
             final_place = os.path.join(directory, new_filename + file_extension)
             with open(final_place, 'wb') as f:
@@ -1291,6 +1369,22 @@ def url_to_thumbnail_file(filename) -> File:
                 img.save(final_place)
                 thumbnail_width = img.width
                 thumbnail_height = img.height
+            if store_files_in_s3():
+                content_type = guess_mime_type(final_place)
+                boto3_session = boto3.session.Session()
+                s3 = boto3_session.client(
+                    service_name='s3',
+                    region_name=current_app.config['S3_REGION'],
+                    endpoint_url=current_app.config['S3_ENDPOINT'],
+                    aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                    aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+                )
+                s3.upload_file(final_place, current_app.config['S3_BUCKET'], 'posts/' +
+                               new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + file_extension,
+                               ExtraArgs={'ContentType': content_type})
+                os.unlink(final_place)
+                final_place = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/{new_filename[0:2]}/{new_filename[2:4]}" + \
+                              '/' + new_filename + file_extension
             return File(file_name=new_filename + file_extension, thumbnail_width=thumbnail_width,
                         thumbnail_height=thumbnail_height, thumbnail_path=final_place,
                         source_url=filename)
@@ -1481,63 +1575,66 @@ def in_sorted_list(arr, target):
 
 @cache.memoize(timeout=600)
 def recently_upvoted_posts(user_id) -> List[int]:
-    post_ids = db.session.execute(text('SELECT post_id FROM "post_vote" WHERE user_id = :user_id AND effect > 0 ORDER BY id DESC LIMIT 1000'),
+    post_ids = db.session.execute(text('SELECT post_id FROM "post_vote" WHERE user_id = :user_id AND effect > 0 ORDER BY id DESC LIMIT 100'),
                                {'user_id': user_id}).scalars()
     return sorted(post_ids)     # sorted so that in_sorted_list can be used
 
 
 @cache.memoize(timeout=600)
 def recently_downvoted_posts(user_id) -> List[int]:
-    post_ids = db.session.execute(text('SELECT post_id FROM "post_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 1000'),
+    post_ids = db.session.execute(text('SELECT post_id FROM "post_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 100'),
                                {'user_id': user_id}).scalars()
     return sorted(post_ids)
 
 
 @cache.memoize(timeout=600)
 def recently_upvoted_post_replies(user_id) -> List[int]:
-    reply_ids = db.session.execute(text('SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect > 0 ORDER BY id DESC LIMIT 1000'),
+    reply_ids = db.session.execute(text('SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect > 0 ORDER BY id DESC LIMIT 100'),
                                {'user_id': user_id}).scalars()
     return sorted(reply_ids)     # sorted so that in_sorted_list can be used
 
 
 @cache.memoize(timeout=600)
 def recently_downvoted_post_replies(user_id) -> List[int]:
-    reply_ids = db.session.execute(text('SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 1000'),
+    reply_ids = db.session.execute(text('SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 100'),
                                {'user_id': user_id}).scalars()
     return sorted(reply_ids)
 
 
-def languages_for_form():
+def languages_for_form(all=False):
     used_languages = []
     other_languages = []
     if current_user.is_authenticated:
-        recently_used_language_ids = db.session.execute(text("""SELECT language_id
-                                                                FROM (
-                                                                    SELECT language_id, posted_at
-                                                                    FROM "post"
-                                                                    WHERE user_id = :user_id
-                                                                    UNION ALL
-                                                                    SELECT language_id, posted_at
-                                                                    FROM "post_reply"
-                                                                    WHERE user_id = :user_id
-                                                                ) AS subquery
-                                                                GROUP BY language_id
-                                                                ORDER BY MAX(posted_at) DESC
-                                                                LIMIT 10"""),
-                                                          {'user_id': current_user.id}).scalars().all()
+        # if they've defined which languages they read, only present those as options for writing.
+        # otherwise, present their most recently used languages
+        if current_user.read_language_ids is None or len(current_user.read_language_ids) == 0:
+            recently_used_language_ids = db.session.execute(text("""SELECT language_id
+                                                                    FROM (
+                                                                        SELECT language_id, posted_at
+                                                                        FROM "post"
+                                                                        WHERE user_id = :user_id
+                                                                        UNION ALL
+                                                                        SELECT language_id, posted_at
+                                                                        FROM "post_reply"
+                                                                        WHERE user_id = :user_id
+                                                                    ) AS subquery
+                                                                    GROUP BY language_id
+                                                                    ORDER BY MAX(posted_at) DESC
+                                                                    LIMIT 10"""),
+                                                              {'user_id': current_user.id}).scalars().all()
 
-        # note: recently_used_language_ids is now a List, ordered with the most recently used at the top
-        # but Language.query.filter(Language.id.in_(recently_used_language_ids)) isn't guaranteed to return
-        # language results in the same order as that List :(
-        for language_id in recently_used_language_ids:
-            if language_id is not None:
-                used_languages.append((language_id, ""))
+            # note: recently_used_language_ids is now a List, ordered with the most recently used at the top
+            # but Language.query.filter(Language.id.in_(recently_used_language_ids)) isn't guaranteed to return
+            # language results in the same order as that List :(
+            for language_id in recently_used_language_ids:
+                if language_id is not None:
+                    used_languages.append((language_id, ""))
+        else:
+            for language in Language.query.filter(Language.id.in_(tuple(current_user.read_language_ids))).order_by(Language.name).all():
+                used_languages.append((language.id, language.name))
 
-        # use 'English' as a default for brand new users (no posts or replies yet)
-        # not great, but better than them accidently using 'Afaraf' (the first in a alphabetical list of languages)
-        # FIXME: use site language when it is settable by admins, or anything that avoids hardcoding 'English' in
         if not used_languages:
-            id = english_language_id()
+            id = site_language_id()
             if id:
                 used_languages.append((id, ""))
 
@@ -1546,8 +1643,10 @@ def languages_for_form():
             i = used_languages.index((language.id, ""))
             used_languages[i] = (language.id, language.name)
         except:
-            if language.code != "und":
+            if all and language.code != "und":
                 other_languages.append((language.id, language.name))
+    else:
+        other_languages = []
 
     return used_languages + other_languages
 
@@ -1567,9 +1666,14 @@ def find_flair_id(flair: str, community_id: int) -> int | None:
         return None
 
 
-def english_language_id():
-    english = Language.query.filter(Language.code == 'en').first()
-    return english.id if english else None
+def site_language_id(site=None):
+    if site is not None and site.language_id:
+        return site.language_id
+    if g and hasattr(g, 'site') and g.site.language_id:
+        return g.site.language_id
+    else:
+        english = Language.query.filter(Language.code == 'en').first()
+        return english.id if english else None
 
 
 def read_language_choices() -> List[tuple]:
@@ -1630,10 +1734,16 @@ def add_to_modlog_activitypub(action: str, actor: User, community_id: int = None
     db.session.commit()
 
 
-def authorise_api_user(auth, return_type=None, id_match=None):
+def authorise_api_user(auth, return_type=None, id_match=None) -> User | int:
     if not auth:
         raise Exception('incorrect_login')
     token = auth[7:]     # remove 'Bearer '
+
+    if current_app.debug and request.host == 'piefed.ngrok.app':
+        if return_type and return_type == 'model':
+            return User.query.get(1)
+        else:
+            return 1
 
     decoded = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
     if decoded:
@@ -1654,8 +1764,9 @@ def get_task_session() -> Session:
     return Session(bind=db.engine)
 
 
-def get_redis_connection() -> redis.Redis:
-    connection_string = current_app.config['CACHE_REDIS_URL']
+def get_redis_connection(connection_string=None) -> redis.Redis:
+    if connection_string is None:
+        connection_string = current_app.config['CACHE_REDIS_URL']
     if connection_string.startswith('unix://'):
         unix_socket_path, db, password = parse_redis_pipe_string(connection_string)
         return redis.Redis(unix_socket_path=unix_socket_path, db=db, password=password, decode_responses=True)
@@ -1865,6 +1976,8 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
     if community_ids[0] == -1:  # A special value meaning to get posts from all communities
         post_id_sql = 'SELECT p.id, p.cross_posts FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
         post_id_where = ['c.banned is false ']
+        if current_user.is_authenticated and current_user.hide_low_quality:
+            post_id_where.append('c.low_quality is false')
         params = {}
     else:
         post_id_sql = 'SELECT p.id, p.cross_posts FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
@@ -1940,6 +2053,8 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
             params['top_cutoff'] = utcnow() - timedelta(days=1)
     elif sort == 'new':
         post_id_sort = 'ORDER BY p.posted_at DESC'
+    elif sort == 'old':
+        post_id_sort = 'ORDER BY p.posted_at ASC'
     elif sort == 'active':
         post_id_sort = 'ORDER BY p.last_active DESC'
     final_post_id_sql = f"{post_id_sql} WHERE {' AND '.join(post_id_where)}\n{post_id_sort}\nLIMIT 1000"
@@ -1964,6 +2079,8 @@ def post_ids_to_models(post_ids: List[int], sort: str):
         posts = posts.order_by(desc(Post.up_votes - Post.down_votes))
     elif sort == 'new':
         posts = posts.order_by(desc(Post.posted_at))
+    elif sort == 'old':
+        posts = posts.order_by(asc(Post.posted_at))
     elif sort == 'active':
         posts = posts.order_by(desc(Post.last_active))
     return posts
@@ -2057,3 +2174,154 @@ def notif_id_to_string(notif_id) -> str:
     # --model/db default--
     if notif_id == NOTIF_DEFAULT:
         return _('All')
+
+
+@cache.memoize(timeout=300)
+def retrieve_image_hash(image_url):
+    def fetch_hash(retries_left):
+        try:
+            response = get_request(current_app.config['IMAGE_HASHING_ENDPOINT'], {'image_url': image_url})
+            if response.status_code == 200:
+                result = response.json()
+                if result.get('quality', 0) >= 70:
+                    return result.get('pdq_hash_binary', '')
+            elif response.status_code == 429 and retries_left > 0:
+                sleep(random.uniform(1, 3))
+                return fetch_hash(retries_left - 1)
+        except httpx.HTTPError as e:
+            current_app.logger.warning(f"Error retrieving image hash: {e}")
+        except httpx.ReadError as e:
+            current_app.logger.warning(f"Error retrieving image hash: {e}")
+        finally:
+            try:
+                response.close()
+            except:
+                pass
+        return None
+
+    return fetch_hash(retries_left=2)
+
+
+BINARY_RE = re.compile(r'^[01]+$')  # used in hash_matches_blocked_image()
+
+
+def hash_matches_blocked_image(hash: str) -> bool:
+    # calculate hamming distance between the provided hash and the hashes of all the blocked images.
+    # the hamming distance is a value between 0 and 256 indicating how many bits are different.
+    # 15 is the number of different bits we will accept. Anything less than that and we consider the images to be the same.
+
+    # only accept a string with 0 and 1 in it. This makes it safe to use sql injection-prone code below, which greatly simplifies the conversion of binary strings
+    if not BINARY_RE.match(hash):
+        current_app.logger.warning(f"Invalid binary hash: {hash}")
+        return False
+
+    sql = f"""SELECT id FROM blocked_image WHERE length(replace((hash # B'{hash}')::text, '0', '')) < 15;"""
+    blocked_images = db.session.execute(text(sql)).scalars().first()
+    return blocked_images is not None
+
+
+def posts_with_blocked_images() -> List[int]:
+    sql = """
+    SELECT DISTINCT post.id
+    FROM post
+    JOIN file ON post.image_id = file.id
+    JOIN blocked_image ON (
+        length(replace((file.hash # blocked_image.hash)::text, '0', ''))
+    ) < 15
+    WHERE post.deleted = false AND file.hash is not null
+    """
+
+    return list(db.session.execute(text(sql)).scalars())
+
+
+def notify_admin(title, url, author_id, notif_type, subtype, targets):
+    for admin in Site.admins():
+        notify = Notification(title=title, url=url,
+                              user_id=admin.id,
+                              author_id=author_id, notif_type=notif_type,
+                              subtype=subtype,
+                              targets=targets)
+        admin.unread_notifications += 1
+        db.session.add(notify)
+    db.session.commit()
+
+
+def reported_posts(user_id, admin_ids) -> List[int]:
+    if user_id is None:
+        return []
+    if user_id in admin_ids:
+        post_ids = list(db.session.execute(text('SELECT id FROM "post" WHERE reports > 0')).scalars())
+    else:
+        community_ids = [community.id for community in moderating_communities(user_id)]
+        if len(community_ids) > 0:
+            post_ids = list(db.session.execute(text('SELECT id FROM "post" WHERE reports > 0 AND community_id IN :community_ids'),
+                                               {'community_ids': tuple(community_ids)}).scalars())
+        else:
+            return []
+    return post_ids
+
+
+def reported_post_replies(user_id, admin_ids) -> List[int]:
+    if user_id is None:
+        return []
+    if user_id in admin_ids:
+        post_reply_ids = list(db.session.execute(text('SELECT id FROM "post_reply" WHERE reports > 0')).scalars())
+    else:
+        community_ids = [community.id for community in moderating_communities(user_id)]
+        post_reply_ids = list(db.session.execute(text('SELECT id FROM "post_reply" WHERE reports > 0 AND community_id IN :community_ids'),
+                                           {'community_ids': community_ids}).scalars())
+    return post_reply_ids
+
+
+def possible_communities():
+    which_community = {}
+    joined = joined_communities(current_user.get_id())
+    moderating = moderating_communities(current_user.get_id())
+    comms = []
+    already_added = set()
+    for c in moderating:
+        if c.id not in already_added:
+            comms.append((c.id, c.display_name()))
+            already_added.add(c.id)
+    if len(comms) > 0:
+        which_community['Moderating'] = comms
+    comms = []
+    for c in joined:
+        if c.id not in already_added:
+            comms.append((c.id, c.display_name()))
+            already_added.add(c.id)
+    if len(comms) > 0:
+        which_community['Joined communities'] = comms
+    comms = []
+    for c in db.session.query(Community.id, Community.ap_id, Community.title, Community.ap_domain).filter(
+            Community.banned == False).order_by(Community.title).all():
+        if c.id not in already_added:
+            if c.ap_id is None:
+                display_name = c.title
+            else:
+                display_name = f"{c.title}@{c.ap_domain}"
+            comms.append((c.id, display_name))
+            already_added.add(c.id)
+    if len(comms) > 0:
+        which_community['Others'] = comms
+    return which_community
+
+
+def user_notes(user_id):
+    if user_id is None:
+        return {}
+    result = {}
+    for note in UserNote.query.filter(UserNote.user_id == user_id).all():
+        result[note.target_id] = note.body
+    return result
+
+
+@event.listens_for(User.unread_notifications, 'set')
+def on_unread_notifications_set(target, value, oldvalue, initiator):
+    if value != oldvalue and current_app.config['NOTIF_SERVER']:
+        publish_sse_event(f"notifications:{target.id}", json.dumps({'num_notifs': value}))
+
+
+def publish_sse_event(key, value):
+    r = get_redis_connection()
+    r.publish(key, value)

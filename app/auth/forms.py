@@ -1,12 +1,13 @@
+import re
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, HiddenField, BooleanField, SelectField, RadioField, \
-    EmailField
+    EmailField, TextAreaField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length
 from flask_babel import _, lazy_gettext as _l
-from app.models import User, Community
+from app.models import User, Community, Feed
 from sqlalchemy import func
 
-from app.utils import MultiCheckboxField, CaptchaField
+from app.utils import MultiCheckboxField, CaptchaField, get_setting
 
 
 class LoginForm(FlaskForm):
@@ -18,18 +19,23 @@ class LoginForm(FlaskForm):
 
 
 class RegistrationForm(FlaskForm):
-    user_name = StringField(_l('User name'), validators=[DataRequired()], render_kw={'autofocus': True, 'autocomplete': 'username'})
+    user_name = StringField(_l('User name'), validators=[DataRequired(), Length(max=50)], render_kw={'autofocus': True, 'autocomplete': 'username'})
     email = HiddenField(_l('Email'))
     real_email = EmailField(_l('Email'), validators=[DataRequired(), Email(), Length(min=5, max=255)], render_kw={'autocomplete': 'email'})
     password = PasswordField(_l('Password'), validators=[DataRequired(), Length(min=8, max=129)], render_kw={'autocomplete': 'new-password'})
     password2 = PasswordField(
         _l('Repeat password'), validators=[DataRequired(),
                                            EqualTo('password')])
-    question = StringField(_l('Why would you like to join this site?'), validators=[DataRequired(), Length(min=1, max=512)])
+    question = TextAreaField(_l('Why would you like to join this site?'), validators=[DataRequired(), Length(min=1, max=512)])
     captcha = CaptchaField(_l('Enter captcha code'), validators=[DataRequired()])
     timezone = HiddenField(render_kw={'id': 'timezone'})
 
     submit = SubmitField(_l('Register'))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not get_setting('captcha_enabled', True):
+            delattr(self, 'captcha')
 
     def validate_real_email(self, email):
         user = User.query.filter(func.lower(User.email) == func.lower(email.data.strip())).first()
@@ -42,15 +48,25 @@ class RegistrationForm(FlaskForm):
             raise ValidationError(_l('User names cannot contain spaces.'))
         if '@' in user_name.data:
             raise ValidationError(_l('User names cannot contain @.'))
+
+        # Allow alphanumeric characters and underscores (a-z, A-Z, 0-9, _)
+        if not re.match(r'^[a-zA-Z0-9_]+$', user_name.data):
+            raise ValidationError(_l('User names can only contain letters, numbers, and underscores.'))
+
         user = User.query.filter(func.lower(User.user_name) == func.lower(user_name.data.strip())).filter_by(ap_id=None).first()
         if user is not None:
             if user.deleted:
                 raise ValidationError(_l('This username was used in the past and cannot be reused.'))
             else:
                 raise ValidationError(_l('An account with this user name already exists.'))
-        community = Community.query.filter(func.lower(Community.name) == func.lower(user_name.data.strip())).first()
+
+        community = Community.query.filter(func.lower(Community.name) == func.lower(user_name.data.strip()), Community.ap_id == None).first()
         if community is not None:
-            raise ValidationError(_l('A community with this name exists so it cannot be used for a user.'))
+            raise ValidationError(_l('This name is in use already.'))
+
+        feed = Feed.query.filter(Feed.name == user_name.data.lower(), Feed.ap_id == None).first()
+        if feed is not None:
+            raise ValidationError(_('This name is in use already.'))
         
     def validate_password(self, password):
         if not password.data:

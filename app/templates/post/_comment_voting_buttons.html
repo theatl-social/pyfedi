@@ -1,13 +1,13 @@
 {% if current_user.is_authenticated and current_user.verified %}
         {% if disable_voting %}&nbsp;{% endif %}
-        {% if (can_upvote_here or can_upvote(current_user, community)) and not disable_voting %}
+        {% if (can_upvote_here or can_upvote(current_user, community, communities_banned_from_list)) and not disable_voting %}
                 <div class="upvote_button {{ 'voted_up' if in_sorted_list(recently_upvoted_replies, comment.id) }}" role="button" aria-label="{{ _('UpVote button.') }}" aria-live="assertive"
                  hx-post="/comment/{{ comment.id }}/upvote" hx-trigger="click throttle:1s" hx-target="closest .voting_buttons_new" tabindex="0">
                         <span class="fe fe-arrow-up"></span>
                 </div>
         {% endif %}
-        <span title="{{ comment.up_votes }}, {{ comment.down_votes }}" aria-live="assertive" aria-label="{{ _('Score: ') }}{{ comment.up_votes - comment.down_votes }}.">{{ comment.up_votes - comment.down_votes }}</span>
-        {% if (can_downvote_here or can_downvote(current_user, community)) and not disable_voting %}
+        <span class="score" title="{{ comment.up_votes }}, {{ comment.down_votes }}" aria-live="assertive" aria-label="{{ _('Score: ') }}{{ comment.up_votes - comment.down_votes }}.">{{ comment.up_votes - comment.down_votes }}</span>
+        {% if (can_downvote_here or can_downvote(current_user, community, communities_banned_from_list)) and not disable_voting %}
                 <div class="downvote_button {{ 'voted_down' if in_sorted_list(recently_downvoted_replies, comment.id) }}" role="button" aria-label="{{ _('DownVote button.') }}" aria-live="assertive"
                  hx-post="/comment/{{ comment.id }}/downvote" hx-trigger="click throttle:1s" hx-target="closest .voting_buttons_new" tabindex="0">
                         <span class="fe fe-arrow-down"></span>

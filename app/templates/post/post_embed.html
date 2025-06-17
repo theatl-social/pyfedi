@@ -29,6 +29,7 @@
     {% endif -%}
 </div>
 {% endmacro -%}
+{% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video -%}
 <!doctype html>
 <html lang="{{ 'en' if current_user.is_anonymous else current_user.interface_language }}">
   <head>
@@ -73,7 +74,7 @@
   <body class="embed">
     {% block app_content -%}
     <div class="row">
-        <main class="col-12 col-md-8 position-relative main_pane border-0 w-100">
+        <main class="col-12 col-lg-8 position-relative main_pane border-0 w-100">
             {% include 'post/_post_teaser.html' -%}
         </main>
     </div>

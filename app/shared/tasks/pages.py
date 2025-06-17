@@ -71,34 +71,37 @@ def send_post(post_id, edit=False):
     user = post.author
     community = post.community
 
+    post_body_html = post.body_html if post.body_html else ''
+
     # Find any users Mentioned in post body with @user@instance syntax
     recipients = []
-    pattern = r"@([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
-    matches = re.finditer(pattern, post.body)
-    for match in matches:
-        recipient = None
-        if match.group(2) == current_app.config['SERVER_NAME']:
-            user_name = match.group(1)
-            if user_name != user.user_name:
+    if post.body:
+        pattern = r"@([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
+        matches = re.finditer(pattern, post.body)
+        for match in matches:
+            recipient = None
+            if match.group(2) == current_app.config['SERVER_NAME']:
+                user_name = match.group(1)
+                if user_name != user.user_name:
+                    try:
+                        recipient = search_for_user(user_name)
+                    except:
+                        pass
+            else:
+                ap_id = f"{match.group(1)}@{match.group(2)}"
                 try:
-                    recipient = search_for_user(user_name)
+                    recipient = search_for_user(ap_id)
                 except:
                     pass
-        else:
-            ap_id = f"{match.group(1)}@{match.group(2)}"
-            try:
-                recipient = search_for_user(ap_id)
-            except:
-                pass
-        if recipient:
-            add_recipient = True
-            for existing_recipient in recipients:
-                if ((not recipient.ap_id and recipient.user_name == existing_recipient.user_name) or
-                    (recipient.ap_id and recipient.ap_id == existing_recipient.ap_id)):
-                    add_recipient = False
-                    break
-            if add_recipient:
-                recipients.append(recipient)
+            if recipient:
+                add_recipient = True
+                for existing_recipient in recipients:
+                    if ((not recipient.ap_id and recipient.user_name == existing_recipient.user_name) or
+                        (recipient.ap_id and recipient.ap_id == existing_recipient.ap_id)):
+                        add_recipient = False
+                        break
+                if add_recipient:
+                    recipients.append(recipient)
 
     # Notify any local users that have been Mentioned
     for recipient in recipients:
@@ -157,7 +160,7 @@ def send_post(post_id, edit=False):
       'cc': cc,
       'tag': tag,
       'audience': community.public_url(),
-      'content': post.body_html if post.type != POST_TYPE_POLL else '<p>' + post.title + '</p>' + post.body_html,
+      'content': post_body_html if post.type != POST_TYPE_POLL else '<p>' + post.title + '</p>' + post_body_html,
       'mediaType': 'text/html',
       'source': source,
       'published': ap_datetime(post.posted_at),
@@ -263,8 +266,8 @@ def send_post(post_id, edit=False):
         note['content'] = '<p><a href=' + post.url + '>' + post.title + '</a></p>'
     elif post.type != POST_TYPE_POLL:
         note['content'] = '<p>' + post.title + '</p>'
-    if post.body_html:
-        note['content'] = note['content'] + post.body_html
+    if post_body_html:
+        note['content'] = note['content'] + post_body_html
     note['inReplyTo'] = None
     create['object'] = note
     if not community.local_only:

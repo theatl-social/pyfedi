@@ -1,48 +1,50 @@
 {% if community %}
 <div class="row d-lg-none mt-1 mb-3">
     <div class="col-6">
-        <div class="dropdown">
-            <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                {{ _('Filters') }}
-            </button>
-            <div class="dropdown-menu">
-              <form class="px-3 py-1">
-                <div class="mb-3">
-                  <label for="sorting" class="form-label">{{ _('Sorting') }}</label>
-                  <select class="form-control form-select" id="sorting" name="sort">
-                      <option value="hot" {{ 'selected' if sort == '' or sort == 'hot' }}>{{ _('Hot') }}</option>
-                      <option value="top" {{ 'selected' if sort == 'top' }}>{{ _('Top') }}</option>
-                      <option value="new" {{ 'selected' if sort == 'new' }}>{{ _('New') }}</option>
-                      <option value="active" {{ 'selected' if sort == 'active' }}>{{ _('Active') }}</option>
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label for="layout" class="form-label">{{ _('Layout') }}</label>
-                  <select class="form-control form-select" id="layout" name="layout">
-                      <option value="list" {{ 'selected' if post_layout == '' or post_layout == 'list' }}>{{ _('List') }}</option>
-                      <option value="masonry" {{ 'selected' if post_layout == 'masonry' }}>{{ _('Tile') }}</option>
-                      <option value="masonry_wide" {{ 'selected' if post_layout == 'masonry_wide' }}>{{ _('Wide tile') }}</option>
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label for="type" class="form-label">{{ _('Content type') }}</label>
-                  <select class="form-control form-select" id="type" name="content_type">
-                      <option value="posts" {{ 'selected' if content_type == '' or content_type == 'posts' }}>{{ _('Posts') }}</option>
-                      <option value="comments" {{ 'selected' if content_type == 'comments' }}>{{ _('Comments') }}</option>
-                  </select>
-                </div>
-                <button type="submit" class="btn btn-primary">{{ _('Apply filters') }}</button>
-              </form>
-            </div>
+        <div class="btn-group mt-1 mb-2">
+            <a href="?sort=hot&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by hot') }}" class="btn {{ 'btn-primary' if sort == '' or sort == 'hot' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                {{ _('Hot') }}
+            </a>
+            <a href="?sort=top&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by top') }}" class="btn {{ 'btn-primary' if sort == 'top' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                {{ _('Top') }}
+            </a>
+            <a href="?sort=new&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by new') }}" class="btn {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                {{ _('New') }}
+            </a>
+            <a href="?sort=old&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by old') }}" class="btn {{ 'btn-primary' if sort == 'old' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                {{ _('Old') }}
+            </a>
+            <a href="?sort=active&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by active') }}" class="btn {{ 'btn-primary' if sort == 'active' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                {{ _('Active') }}
+            </a>
         </div>
     </div>
     <div class="col-6">
         <div class="mobile_create_post">
             <div class="dropdown">
                 <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    {{ _('Actions') }}
+                    {{ _('Options') }}
                 </button>
                 <ul class="dropdown-menu">
+                    <form class="px-3 py-1">
+                        <div class="mb-3">
+                          <label for="layout" class="form-label">{{ _('Layout') }}</label>
+                          <select class="form-control form-select" id="layout" name="layout">
+                              <option value="list" {{ 'selected' if post_layout == '' or post_layout == 'list' }}>{{ _('List') }}</option>
+                              <option value="masonry" {{ 'selected' if post_layout == 'masonry' }}>{{ _('Tile') }}</option>
+                              <option value="masonry_wide" {{ 'selected' if post_layout == 'masonry_wide' }}>{{ _('Wide tile') }}</option>
+                          </select>
+                        </div>
+                        <div class="mb-3">
+                          <label for="type" class="form-label">{{ _('Content type') }}</label>
+                          <select class="form-control form-select" id="type" name="content_type">
+                              <option value="posts" {{ 'selected' if content_type == '' or content_type == 'posts' }}>{{ _('Posts') }}</option>
+                              <option value="comments" {{ 'selected' if content_type == 'comments' }}>{{ _('Comments') }}</option>
+                          </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">{{ _('Apply filters') }}</button>
+                    </form>
+                    <div class="dropdown-divider"></div>
                     {% if not community.restricted_to_mods or (community.restricted_to_mods and current_user.is_authenticated and community_membership(current_user, community) in [SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER]) %}
                         <li><a class="dropdown-item" href="/community/{{ community.link() }}/submit" rel="nofollow noindex">{{ _('Create post') }}</a></li>
                     {% endif %}
@@ -75,48 +77,50 @@
 {% if topic %}
 <div class="row d-lg-none mt-1 mb-3">
     <div class="col-6">
-        <div class="dropdown">
-            <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                {{ _('Filters') }}
-            </button>
-            <div class="dropdown-menu">
-              <form class="px-3 py-1">
-                <div class="mb-3">
-                  <label for="sorting" class="form-label">{{ _('Sorting') }}</label>
-                  <select class="form-control form-select" id="sorting" name="sort">
-                      <option value="hot" {{ 'selected' if sort == '' or sort == 'hot' }}>{{ _('Hot') }}</option>
-                      <option value="top" {{ 'selected' if sort == 'top' }}>{{ _('Top') }}</option>
-                      <option value="new" {{ 'selected' if sort == 'new' }}>{{ _('New') }}</option>
-                      <option value="active" {{ 'selected' if sort == 'active' }}>{{ _('Active') }}</option>
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label for="layout" class="form-label">{{ _('Layout') }}</label>
-                  <select class="form-control form-select" id="layout" name="layout">
-                      <option value="list" {{ 'selected' if post_layout == '' or post_layout == 'list' }}>{{ _('List') }}</option>
-                      <option value="masonry" {{ 'selected' if post_layout == 'masonry' }}>{{ _('Tile') }}</option>
-                      <option value="masonry_wide" {{ 'selected' if post_layout == 'masonry_wide' }}>{{ _('Wide tile') }}</option>
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label for="type" class="form-label">{{ _('Content type') }}</label>
-                  <select class="form-control form-select" id="type" name="content_type">
-                      <option value="posts" {{ 'selected' if content_type == '' or content_type == 'posts' }}>{{ _('Posts') }}</option>
-                      <option value="comments" {{ 'selected' if content_type == 'comments' }}>{{ _('Comments') }}</option>
-                  </select>
-                </div>
-                <button type="submit" class="btn btn-primary">{{ _('Apply filters') }}</button>
-              </form>
-            </div>
+        <div class="btn-group mt-1 mb-2">
+            <a href="?sort=hot&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by hot') }}" class="btn {{ 'btn-primary' if sort == '' or sort == 'hot' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                {{ _('Hot') }}
+            </a>
+            <a href="?sort=top&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by top') }}" class="btn {{ 'btn-primary' if sort == 'top' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                {{ _('Top') }}
+            </a>
+            <a href="?sort=new&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by new') }}" class="btn {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                {{ _('New') }}
+            </a>
+            <a href="?sort=old&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by old') }}" class="btn {{ 'btn-primary' if sort == 'old' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                {{ _('Old') }}
+            </a>
+            <a href="?sort=active&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by active') }}" class="btn {{ 'btn-primary' if sort == 'active' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                {{ _('Active') }}
+            </a>
         </div>
     </div>
     <div class="col-6">
         <div class="mobile_create_post d-md-none">
             <div class="dropdown">
                 <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    {{ _('Actions') }}
+                    {{ _('Options') }}
                 </button>
                 <ul class="dropdown-menu">
+                    <form class="px-3 py-1">
+                        <div class="mb-3">
+                          <label for="layout" class="form-label">{{ _('Layout') }}</label>
+                          <select class="form-control form-select" id="layout" name="layout">
+                              <option value="list" {{ 'selected' if post_layout == '' or post_layout == 'list' }}>{{ _('List') }}</option>
+                              <option value="masonry" {{ 'selected' if post_layout == 'masonry' }}>{{ _('Tile') }}</option>
+                              <option value="masonry_wide" {{ 'selected' if post_layout == 'masonry_wide' }}>{{ _('Wide tile') }}</option>
+                          </select>
+                        </div>
+                        <div class="mb-3">
+                          <label for="type" class="form-label">{{ _('Content type') }}</label>
+                          <select class="form-control form-select" id="type" name="content_type">
+                              <option value="posts" {{ 'selected' if content_type == '' or content_type == 'posts' }}>{{ _('Posts') }}</option>
+                              <option value="comments" {{ 'selected' if content_type == 'comments' }}>{{ _('Comments') }}</option>
+                          </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">{{ _('Apply filters') }}</button>
+                    </form>
+                    <div class="dropdown-divider"></div>
                     <li><a class="dropdown-item" href="{{ url_for('topic.topic_create_post', topic_name=topic.machine_name) }}" rel="nofollow noindex">{{ _('Create post') }}</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('feed.feed_new', topic_id=topic.id) }}" rel="nofollow noindex">{{ _('Create feed') }}</a></li>
                     <li><a class="dropdown-item" href="#topic_communities">{{ _('Communities') }}</a></li>
@@ -136,6 +140,9 @@
         </a>
         <a href="?sort=new&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by new') }}" class="btn {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex">
             {{ _('New') }}
+        </a>
+        <a href="?sort=old&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by old') }}" class="btn {{ 'btn-primary' if sort == 'old' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+            {{ _('Old') }}
         </a>
         <a href="?sort=active&layout={{ post_layout }}&content_type={{ content_type }}&flair={{ flair }}" aria-label="{{ _('Sort by active') }}" class="btn {{ 'btn-primary' if sort == 'active' else 'btn-outline-secondary' }}" rel="nofollow noindex">
             {{ _('Active') }}

@@ -1,24 +1,25 @@
-import json
+from __future__ import annotations
+
 from collections import namedtuple, defaultdict
 from datetime import datetime, timedelta
 from random import randint
 
 from flask import redirect, url_for, flash, current_app, abort, request, g, make_response, jsonify
-from flask_login import logout_user, current_user, login_required
+from flask_login import current_user, login_required
 from flask_babel import _
-from sqlalchemy import or_, desc, text
+from sqlalchemy import text, desc
 from sqlalchemy.orm.exc import NoResultFound
-from wtforms import SelectField, RadioField
+from furl import furl
 
 from app import db, constants, cache, limiter, celery
-from app.activitypub.signature import HttpSignature, post_request, default_context, send_post_request
-from app.activitypub.util import notify_about_post_reply, update_post_from_activity
-from app.community.util import send_to_remote_instance
+from app.activitypub.signature import default_context, send_post_request
+from app.activitypub.util import update_post_from_activity
+from app.community.util import send_to_remote_instance, flair_from_form
 from app.inoculation import inoculation
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm, ConfirmationForm, \
-    ConfirmationMultiDeleteForm
-from app.community.forms import CreateLinkForm, CreateImageForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm
-from app.constants import NOTIF_REPORT, POST_STATUS_SCHEDULED
+    ConfirmationMultiDeleteForm, EditReplyForm, FlairPostForm, DeleteConfirmationForm
+from app.community.forms import CreateLinkForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm
+from app.constants import NOTIF_REPORT, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED
 from app.post.util import post_replies, get_comment_branch, tags_to_string, url_needs_archive, \
     generate_archive_link, body_has_no_archive_link
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
@@ -26,20 +27,21 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_
     POST_TYPE_ARTICLE, POST_TYPE_VIDEO, NOTIF_REPLY, NOTIF_POST, POST_TYPE_POLL, SRC_WEB, SRC_API
 from app.models import Post, PostReply, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, Report, Site, Community, \
-    Topic, User, Instance, NotificationSubscription, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
-    PostReplyBookmark, CommunityBlock, File, CommunityFlair, UserFlair
+    Topic, User, Instance, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
+    PostReplyBookmark, CommunityBlock, File, CommunityFlair, UserFlair, BlockedImage, CommunityBan
 from app.post import bp
 from app.shared.tasks import task_selector
-from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
+from app.utils import render_template, markdown_to_html, validation_required, \
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
-    request_etag_matches, ip_address, user_ip_banned, instance_banned, \
-    reply_already_exists, reply_is_just_link_to_gif_reaction, moderating_communities, joined_communities, \
-    blocked_instances, blocked_domains, community_moderators, blocked_phrases, show_ban_message, recently_upvoted_posts, \
-    recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, reply_is_stupid, \
-    languages_for_form, menu_topics, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown, \
+    request_etag_matches, ip_address, instance_banned, \
+    moderating_communities, joined_communities, \
+    blocked_instances, blocked_domains, community_moderators, show_ban_message, recently_upvoted_posts, \
+    recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, \
+    languages_for_form, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown, \
     permission_required, blocked_users, get_request, is_local_image_url, is_video_url, can_upvote, can_downvote, \
     referrer, can_create_post_reply, communities_banned_from, \
-    block_bots, flair_for_form, login_required_if_private_instance
+    block_bots, flair_for_form, login_required_if_private_instance, retrieve_image_hash, posts_with_blocked_images, \
+    possible_communities, user_notes
 from app.post.util import post_type_to_form_url_type
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, \
     delete_reply, mod_remove_reply, vote_for_reply
@@ -82,6 +84,18 @@ def show_post(post_id: int):
             mod_user_ids = [mod.user_id for mod in mods]
             mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
 
+        banned_from_community = False
+        if current_user.is_authenticated and community.id in communities_banned_from(current_user.id):
+            ban_details = CommunityBan.query.filter(CommunityBan.user_id == current_user.id,
+                                                    CommunityBan.community_id == community.id).first()
+            banned_from_community = True
+            if ban_details:
+                if ban_details.ban_until:
+                    flash(_('You have been banned from this community until %(when)s.',
+                            when=ban_details.ban_until.date()))
+                else:
+                    flash(_('You have been banned from this community.'))
+
         # handle top-level comments/replies
         form = NewReplyForm()
         form.language_id.choices = languages_for_form() if current_user.is_authenticated else []
@@ -89,6 +103,10 @@ def show_post(post_id: int):
         if current_user.is_authenticated and (current_user.id == post.user_id or current_user.is_admin() or current_user.is_staff()):
             if post.status == POST_STATUS_SCHEDULED:
                 flash(_('This post is scheduled to be published at %(when)s', when=str(post.scheduled_for)))    # todo: convert into current_user.timezone
+
+        if current_user.is_authenticated:
+            if not post.community.is_moderator() and not post.community.is_owner() and not current_user.is_staff() and not current_user.is_admin():
+                form.distinguished.render_kw = {'disabled': True}
 
         if current_user.is_authenticated and current_user.verified and form.validate_on_submit():
             try:
@@ -99,7 +117,7 @@ def show_post(post_id: int):
 
             return redirect(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{reply.id}'))
         else:
-            replies = post_replies(community, post.id, sort)
+            replies = post_replies(community, post.id, sort, current_user)
             more_replies = defaultdict(list)
             if post.cross_posts:
                 cbf = communities_banned_from(current_user.get_id())
@@ -109,7 +127,7 @@ def show_post(post_id: int):
                     if cross_posted_post.community_id not in cbf \
                             and cross_posted_post.community_id not in bc \
                             and cross_posted_post.community.instance_id not in bi:
-                        cross_posted_replies = post_replies(cross_posted_post.community, cross_posted_post.id, sort)
+                        cross_posted_replies = post_replies(cross_posted_post.community, cross_posted_post.id, sort, current_user)
                         if len(cross_posted_replies):
                             more_replies[cross_posted_post.community].extend(cross_posted_replies)
             form.notify_author.data = True
@@ -223,11 +241,11 @@ def show_post(post_id: int):
                                reply_collapse_threshold=reply_collapse_threshold,
                                etag=f"{post.id}{sort}_{hash(post.last_active)}", markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
                                can_upvote_here=can_upvote(user, community),
-                               can_downvote_here=can_downvote(user, community, g.site),
+                               can_downvote_here=can_downvote(user, community),
+                               user_notes=user_notes(current_user.get_id()),
+                               banned_from_community=banned_from_community,
                                low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
-                               site=g.site,
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                               
                                )
         response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
         response.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/post/{post.id}>; rel="alternate"; type="application/activity+json"')
@@ -439,7 +457,6 @@ def continue_discussion(post_id, comment_id):
     response = render_template('post/continue_discussion.html', title=_('Discussing %(title)s', title=post.title), post=post, mods=mod_list,
                            is_moderator=is_moderator, comment=comment, replies=replies, markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
                            recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies,
-                           site=g.site,
                            community=post.community,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
@@ -532,7 +549,7 @@ def add_reply_inline(post_id: int, comment_id: int):
             return f'<div id="reply_to_{comment_id}" class="hidable"></div>' # do nothing, just hide the form
         reply = PostReply.new(current_user, post, in_reply_to=in_reply_to, body=piefed_markdown_to_lemmy_markdown(content),
                               body_html=markdown_to_html(content), notify_author=True,
-                              language_id=language_id)
+                              language_id=language_id, distinguished=False)
 
         current_user.language_id = language_id
         reply.ap_id = reply.profile_id()
@@ -566,8 +583,7 @@ def post_options(post_id: int):
     if current_user.is_authenticated:
         existing_bookmark = PostBookmark.query.filter(PostBookmark.post_id == post_id, PostBookmark.user_id == current_user.id).first()
 
-    return render_template('post/post_options.html', post=post, existing_bookmark=existing_bookmark,
-                           site=g.site, )
+    return render_template('post/post_options.html', post=post, existing_bookmark=existing_bookmark)
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/options_menu', methods=['GET'])
@@ -578,10 +594,6 @@ def post_reply_options(post_id: int, comment_id: int):
     if post.deleted or post_reply.deleted:
         if current_user.is_anonymous:
             abort(404)
-        if (not post.community.is_moderator() and
-            not current_user.is_admin() and
-            (post_reply.deleted_by is not None and post_reply.deleted_by != current_user.id)):
-            abort(401)
 
     existing_bookmark = []
     if current_user.is_authenticated:
@@ -589,9 +601,7 @@ def post_reply_options(post_id: int, comment_id: int):
                                                       PostReplyBookmark.user_id == current_user.id).first()
 
     return render_template('post/post_reply_options.html', post=post, post_reply=post_reply,
-                           existing_bookmark=existing_bookmark,
-                           site=g.site,
-                           )
+                           existing_bookmark=existing_bookmark)
 
 
 @bp.route('/post/<int:post_id>/edit', methods=['GET', 'POST'])
@@ -638,6 +648,10 @@ def post_edit(post_id: int):
         mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
 
     if post.user_id == current_user.id or post.community.is_moderator() or current_user.is_admin():
+
+        if post.community.id in communities_banned_from(current_user.id):
+            abort(403)
+
         if g.site.enable_nsfl is False:
             form.nsfl.render_kw = {'disabled': True}
         if post.community.nsfw:
@@ -703,9 +717,8 @@ def post_edit(post_id: int):
                 form.sticky.render_kw = {'disabled': True}
             return render_template('post/post_edit.html', title=_('Edit post'), form=form,
                                    post_type=post_type, community=post.community, post=post,
-                                   markdown_editor=current_user.markdown_editor, mods=mod_list,site=g.site,
+                                   markdown_editor=current_user.markdown_editor, mods=mod_list,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                                   
                                    )
     else:
         abort(401)
@@ -717,9 +730,11 @@ def post_delete(post_id: int):
     post = Post.query.get_or_404(post_id)
     community = post.community
     if post.user_id == current_user.id or community.is_moderator() or current_user.is_admin():
-        form = ConfirmationForm()
+        if post.community.id in communities_banned_from(current_user.id):
+            abort(403)
+        form = DeleteConfirmationForm()
         if form.validate_on_submit():
-            post_delete_post(community, post, current_user.id)
+            post_delete_post(community, post, current_user.id, form.reason.data)
             ref = request.form.get('referrer')
             if '/post/' not in ref:
                 return redirect(ref)
@@ -731,7 +746,8 @@ def post_delete(post_id: int):
                                                                 post_title=post.title),
                                    form=form)
 
-def post_delete_post(community: Community, post: Post, user_id: int, federate_all_communities=True):
+
+def post_delete_post(community: Community, post: Post, user_id: int, reason: str | None, federate_all_communities=True):
     user: User = User.query.get(user_id)
     if post.url:
         post.calculate_cross_posts(delete_only=True)
@@ -792,8 +808,8 @@ def post_delete_post(community: Community, post: Post, user_id: int, federate_al
             if instance.inbox and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain) and instance.online():
                 send_post_request(instance.inbox, delete_json, user.private_key, user.public_url() + '#main-key')
 
-    if post.user_id != user.id:
-        add_to_modlog('delete_post', community_id=community.id, link_text=shorten_string(post.title),
+    if post.user_id != user.id and reason is not None:
+        add_to_modlog('delete_post', reason=reason, community_id=community.id, link_text=shorten_string(post.title),
                       link=f'post/{post.id}')
 
 
@@ -938,7 +954,8 @@ def post_report(post_id: int):
 
         # Notify moderators
         already_notified = set()
-        targets_data = {'suspect_post_id':post.id,'suspect_user_id':post.author.id,'reporter_id':current_user.id}
+
+        targets_data = {'suspect_post_id': post.id, 'suspect_user_id': post.author.id, 'reporter_id': current_user.id}
         for mod in post.community.moderators():
             notification = Notification(user_id=mod.user_id, title=_('A post has been reported'),
                                         url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
@@ -947,16 +964,19 @@ def post_report(post_id: int):
                                         targets=targets_data)
             db.session.add(notification)
             already_notified.add(mod.user_id)
+
+        # only notify admins for certain types of report
+        if '5' in form.reasons.data or '6' in form.reasons.data:
+            for admin in Site.admins():
+                if admin.id not in already_notified:
+                    notify = Notification(title=_('Reported content'), url='/admin/reports', user_id=admin.id,
+                                          author_id=current_user.id, notif_type=NOTIF_REPORT,
+                                          subtype='post_reported',
+                                          targets=targets_data)
+                    db.session.add(notify)
+                    admin.unread_notifications += 1
+
         post.reports += 1
-        # todo: only notify admins for certain types of report
-        for admin in Site.admins():
-            if admin.id not in already_notified:
-                notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, 
-                                      author_id=current_user.id, notif_type=NOTIF_REPORT,
-                                      subtype='post_reported',
-                                      targets=targets_data)
-                db.session.add(notify)
-                admin.unread_notifications += 1
         db.session.commit()
 
         # federate report to community instance
@@ -986,8 +1006,7 @@ def post_report(post_id: int):
     elif request.method == 'GET':
         form.report_remote.data = True
 
-    return render_template('post/post_report.html', title=_('Report post'), form=form, post=post,
-                           site=g.site, )
+    return render_template('post/post_report.html', title=_('Report post'), form=form, post=post)
 
 
 @bp.route('/post/<int:post_id>/block_user', methods=['GET', 'POST'])
@@ -1054,9 +1073,7 @@ def post_mea_culpa(post_id: int):
         db.session.commit()
         return redirect(url_for('activitypub.post_ap', post_id=post.id))
 
-    return render_template('post/post_mea_culpa.html', title=_('I changed my mind'), form=form, post=post,
-                           site=g.site,
-                           )
+    return render_template('post/post_mea_culpa.html', title=_('I changed my mind'), form=form, post=post)
 
 
 @bp.route('/post/<int:post_id>/sticky/<mode>', methods=['GET', 'POST'])
@@ -1070,6 +1087,30 @@ def post_sticky(post_id: int, mode):
     else:
         flash(_('%(name)s has been un-stickied.', name=post.title))
     return redirect(referrer(url_for('activitypub.post_ap', post_id=post.id)))
+
+
+@bp.route('/post/<int:post_id>/set_flair', methods=['GET', 'POST'])
+@login_required
+def post_set_flair(post_id):
+    post = Post.query.get_or_404(post_id)
+    if post.user_id == current_user.id or post.community.is_moderator(current_user) or current_user.is_staff() or current_user.is_admin():
+        form = FlairPostForm()
+        flair_choices = flair_for_form(post.community.id)
+        if len(flair_choices):
+            form.flair.choices = flair_choices
+
+        if form.validate_on_submit():
+            post.flair.clear()
+            post.flair = flair_from_form(form.flair.data)
+            db.session.commit()
+            if post.status == POST_STATUS_PUBLISHED and post.author.is_local():
+                task_selector('edit_post', post_id=post.id)
+            return redirect(url_for('activitypub.community_profile', actor=post.community.link()))
+        form.referrer.data = referrer()
+        form.flair.data = [flair.id for flair in post.flair]
+        return render_template('generic_form.html', form=form, title=_('Set flair for %(post_title)s', post_title=post.title))
+    else:
+        abort(401)
 
 
 @bp.route('/post/<int:post_id>/lock/<mode>', methods=['GET', 'POST'])
@@ -1115,16 +1156,17 @@ def post_reply_report(post_id: int, comment_id: int):
                                         targets=targets_data)
             db.session.add(notification)
             already_notified.add(mod.user_id)
+
+        if '5' in form.reasons.data or '6' in form.reasons.data:
+            for admin in Site.admins():
+                if admin.id not in already_notified:
+                    notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id,
+                                          author_id=current_user.id, notif_type=NOTIF_REPORT,
+                                            subtype='comment_reported',
+                                          targets=targets_data)
+                    db.session.add(notify)
+                    admin.unread_notifications += 1
         post_reply.reports += 1
-        # todo: only notify admins for certain types of report
-        for admin in Site.admins():
-            if admin.id not in already_notified:
-                notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, 
-                                      author_id=current_user.id, notif_type=NOTIF_REPORT,
-                                        subtype='comment_reported',
-                                      targets=targets_data)
-                db.session.add(notify)
-                admin.unread_notifications += 1
         db.session.commit()
 
         # federate report to originating instance
@@ -1154,8 +1196,7 @@ def post_reply_report(post_id: int, comment_id: int):
     elif request.method == 'GET':
         form.report_remote.data = True
 
-    return render_template('post/post_reply_report.html', title=_('Report comment'), form=form, post=post, post_reply=post_reply,
-                           site=g.site, )
+    return render_template('post/post_reply_report.html', title=_('Report comment'), form=form, post=post, post_reply=post_reply)
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/bookmark', methods=['GET'])
@@ -1204,7 +1245,7 @@ def post_reply_edit(post_id: int, comment_id: int):
         comment = PostReply.query.get_or_404(post_reply.parent_id)
     else:
         comment = None
-    form = NewReplyForm()
+    form = EditReplyForm()
     form.language_id.choices = languages_for_form()
     if post_reply.user_id == current_user.id or post.community.is_moderator():
         if form.validate_on_submit():
@@ -1214,12 +1255,14 @@ def post_reply_edit(post_id: int, comment_id: int):
             form.body.data = post_reply.body
             form.notify_author.data = post_reply.notify_author
             form.language_id.data = post_reply.language_id
+            form.distinguished.data = post_reply.distinguished
+            if not post.community.is_moderator() and not post.community.is_owner() and not current_user.is_staff() and not current_user.is_admin():
+                form.distinguished.render_kw = {'disabled': True}
             return render_template('post/post_reply_edit.html', title=_('Edit comment'), form=form, post=post, post_reply=post_reply,
                                    comment=comment, markdown_editor=current_user.markdown_editor,
-                                   community=post.community, site=g.site,
+                                   community=post.community, 
                                    SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                                   
                                    )
     else:
         abort(401)
@@ -1249,7 +1292,10 @@ def post_reply_delete(post_id: int, comment_id: int):
                         delete_reply(reply.id, SRC_WEB, None)
                     elif post.community.is_moderator() or current_user.is_admin():
                         # Moderator or admin is deleting the reply
-                        reason = 'Deleted by mod'
+                        if form.reason.data:
+                            reason = 'Deleted by mod: ' + form.reason.data
+                        else:
+                            reason = 'Deleted by mod'
                         mod_remove_reply(reply.id, reason, SRC_WEB, None)
                     num_deleted += 1
         else:
@@ -1260,7 +1306,10 @@ def post_reply_delete(post_id: int, comment_id: int):
                 num_deleted = 1
             elif community.is_moderator() or current_user.is_admin():
                 # Moderator or admin is deleting the reply
-                reason = 'Deleted by mod'
+                if form.reason.data:
+                    reason = 'Deleted by mod: ' + form.reason.data
+                else:
+                    reason = 'Deleted by mod'
                 mod_remove_reply(post_reply.id, reason, SRC_WEB, None)
                 num_deleted = 1
         if num_deleted > 0:
@@ -1396,6 +1445,59 @@ def post_cross_posts(post_id: int):
     return render_template('post/post_cross_posts.html', cross_posts=cross_posts)
 
 
+@bp.route('/post/<int:post_id>/block_image', methods=['GET', 'POST'])
+@login_required
+@permission_required('change instance settings')
+def post_block_image(post_id: int):
+    post = Post.query.get_or_404(post_id)
+    if post.type == POST_TYPE_IMAGE:
+        form = ConfirmationForm()
+        if form.validate_on_submit():
+            hash = retrieve_image_hash(post.url)
+            if hash:
+                file_name = str(furl(post.url).path).split('/')
+                file_name = file_name[-1]
+                blocked_image = BlockedImage(hash=hash, file_name=file_name, note=shorten_string(post.title))
+                db.session.add(blocked_image)
+                db.session.commit()
+
+                flash(_('Image blocked. Now delete matching posts.'))
+                return redirect(url_for('post.post_block_image_purge_posts', post_id=post_id, referrer=request.form.get('referrer')))
+
+        else:
+            form.referrer.data = referrer()
+            return render_template('generic_form.html',
+                                   title=_('Are you sure you want to block this image?'),
+                                   message=_('All posts that use this image will be deleted and future posts of the image will be rejected.'),
+                                   form=form)
+
+    return redirect(referrer())
+
+
+@bp.route('/post/<int:post_id>/block_image_purge_posts', methods=['GET', 'POST'])
+@login_required
+@permission_required('change instance settings')
+def post_block_image_purge_posts(post_id: int):
+    post = Post.query.get_or_404(post_id)
+    if request.method == 'POST':
+        post_ids = request.form.getlist('post_ids')
+
+        task_selector('delete_posts_with_blocked_images', post_ids=post_ids, user_id=current_user.id, send_async=not current_app.debug)
+
+        flash(_('%(count)s posts deleted.', count=len(post_ids)))
+
+        ref = request.args.get('referrer')
+        if '/post/' not in ref:
+            return redirect(ref)
+        else:
+            return redirect(url_for('activitypub.community_profile',
+                                    actor=post.community.ap_id if post.community.ap_id is not None else post.community.name))
+
+    posts = Post.query.filter(Post.id.in_(posts_with_blocked_images()), Post.deleted == False).order_by(desc(Post.posted_at)).all()
+    return render_template('post/post_block_image_purge_posts.html', post=post, posts=posts, title=_('Posts containing blocked images'),
+                           referrer=request.args.get('referrer'))
+
+
 @bp.route('/post/<int:post_id>/voting_activity', methods=['GET'])
 @login_required
 @permission_required('change instance settings')
@@ -1409,9 +1511,7 @@ def post_view_voting_activity(post_id: int):
     # local users will be at the bottom of each list as ap_domain is empty for those.
 
     return render_template('post/post_voting_activity.html', title=_('Voting Activity'),
-                           post_title=post_title, upvoters=upvoters, downvoters=downvoters,
-                           site=g.site, 
-                           )
+                           post_title=post_title, upvoters=upvoters, downvoters=downvoters)
 
 
 @bp.route('/comment/<int:comment_id>/voting_activity', methods=['GET'])
@@ -1427,9 +1527,7 @@ def post_reply_view_voting_activity(comment_id: int):
     # local users will be at the bottom of each list as ap_domain is empty for those.
 
     return render_template('post/post_reply_voting_activity.html', title=_('Voting Activity'),
-                           reply_text=reply_text, upvoters=upvoters, downvoters=downvoters,
-                           site=g.site,
-                           )
+                           reply_text=reply_text, upvoters=upvoters, downvoters=downvoters)
 
 
 @bp.route('/post/<int:post_id>/fixup_from_remote', methods=['GET'])
@@ -1466,30 +1564,14 @@ def post_fixup_from_remote(post_id: int):
 def post_cross_post(post_id: int):
     post = Post.query.get_or_404(post_id)
     form = CrossPostForm()
-    which_community = {}
-    joined = joined_communities(current_user.get_id())
-    moderating = moderating_communities(current_user.get_id())
-    comms = []
-    already_added = set()
-    for community in moderating:
-        if community.id not in already_added:
-            comms.append((community.id, community.display_name()))
-            already_added.add(community.id)
-    if len(comms) > 0:
-        which_community['Moderating'] = comms
-    comms = []
-    for community in joined:
-        if community.id not in already_added:
-            comms.append((community.id, community.display_name()))
-            already_added.add(community.id)
-    if len(comms) > 0:
-        which_community['Joined communities'] = comms
 
-    form.which_community.choices = which_community
+    form.which_community.choices = possible_communities()
+
     if form.validate_on_submit():
         community = Community.query.get_or_404(form.which_community.data)
         post_type = post_type_to_form_url_type(post.type, post.url)
         response = make_response(redirect(url_for('community.add_post', actor=community.link(), type=post_type, source=str(post.id))))
+        response.set_cookie('cross_post_community_id', str(community.id), max_age=timedelta(days=28))
         response.delete_cookie('post_title')
         response.delete_cookie('post_description')
         response.delete_cookie('post_tags')
@@ -1505,10 +1587,11 @@ def post_cross_post(post_id: int):
         breadcrumb.url = '/communities'
         breadcrumbs.append(breadcrumb)
 
+        if request.cookies.get('cross_post_community_id'):
+            form.which_community.data = int(request.cookies.get('cross_post_community_id'))
+
         return render_template('post/post_cross_post.html', title=_('Cross post'), form=form, post=post,
-                               breadcrumbs=breadcrumbs,
-                               site=g.site,
-                               )
+                               breadcrumbs=breadcrumbs)
 
 
 @bp.route('/post_preview', methods=['POST'])

@@ -1,4 +1,5 @@
 from flask_login import login_user
+from sqlalchemy.exc import NoResultFound
 from werkzeug.urls import url_parse
 
 from app import db, cache
@@ -13,8 +14,8 @@ from datetime import datetime
 from flask import redirect, url_for, flash, request, make_response, session, Markup
 from flask_babel import _
 
-# function can be shared between WEB and API (only API calls it for now)
 
+# function can be shared between WEB and API (only API calls it for now)
 def log_user_in(input, src):
     if src == SRC_WEB:
         username = input.user_name.data
@@ -26,7 +27,13 @@ def log_user_in(input, src):
 
         username = input['username']
         password = input['password']
-        user = User.query.filter_by(user_name=username, ap_id=None, deleted=False).one()
+        try:
+            user = User.query.filter_by(user_name=username, ap_id=None, deleted=False).one()
+        except NoResultFound as e:
+            try:
+                user = User.query.filter_by(email=username, ap_id=None, deleted=False).one()
+            except NoResultFound as e2:
+                raise Exception('incorrect_login')
     else:
         return None
 

@@ -1,15 +1,16 @@
-import re
-from app import db
+from app import db, cache
+from app.activitypub.util import make_image_sizes
 from app.api.alpha.views import user_view, reply_view, post_view, community_view
 from app.utils import authorise_api_user
 from app.api.alpha.utils.post import get_post_list
 from app.api.alpha.utils.reply import get_reply_list
-from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
-from app.models import Conversation, ChatMessage, Notification, PostReply, User, Post, Community
+from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
+from app.models import Conversation, ChatMessage, Notification, PostReply, User, Post, Community, File
 from app.shared.user import block_another_user, unblock_another_user, subscribe_user
 from app.constants import *
 
 from sqlalchemy import text, desc, func, literal_column
+from sqlalchemy.orm.exc import NoResultFound
 
 
 def get_user(auth, data):
@@ -17,23 +18,29 @@ def get_user(auth, data):
         raise Exception('missing_parameters')
 
     # user_id = logged in user, person_id = person who's posts, comments etc are being fetched
-    # when 'username' is requested, user_id and person_id are the same
+    # 'username' can be provided instead, to populate person_id
 
     person_id = None
     if 'person_id' in data:
         person_id = int(data['person_id'])
+    elif 'username' in data:
+        if '@' in data['username']:
+            person_id = User.query.filter(func.lower(User.ap_id) == data['username'].lower(), User.deleted == False).first().id
+        else:
+            person_id = User.query.filter(func.lower(User.user_name) == data['username'].lower(), User.ap_id == None, User.deleted == False).first().id
+
+        data['person_id'] = person_id
+
+    include_content = data.get('include_content', False)
 
     user_id = None
     if auth:
         user_id = authorise_api_user(auth)
-        if 'username' in data:
-            data['person_id'] = user_id
-            person_id = int(user_id)
         auth = None                 # avoid authenticating user again in get_post_list and get_reply_list
 
     # bit unusual. have to help construct the json here rather than in views, to avoid circular dependencies
-    post_list = get_post_list(auth, data, user_id)
-    reply_list = get_reply_list(auth, data, user_id)
+    post_list = get_post_list(auth, data, user_id) if include_content else {'posts': []}
+    reply_list = get_reply_list(auth, data, user_id) if include_content else {'comments': []}
 
     user_json = user_view(user=person_id, variant=3, user_id=user_id)
     user_json['posts'] = post_list['posts']
@@ -70,7 +77,8 @@ def get_user_list(auth, data):
     for user in users:
         user_list.append(user_view(user, variant=2, stub=True, user_id=user_id))
     list_json = {
-        "users": user_list
+        "users": user_list,
+        'next_page': str(users.next_num) if users.next_num else None
     }
 
     return list_json
@@ -130,7 +138,8 @@ def get_user_replies(auth, data):
     for reply in replies:
         reply_list.append(reply_view(reply=reply, variant=5, user_id=user_id))
     list_json = {
-        "replies": reply_list
+        "replies": reply_list,
+        'next_page': str(replies.next_num) if replies.next_num else None
     }
 
     return list_json
@@ -172,10 +181,12 @@ def put_user_subscribe(auth, data):
 
 
 def put_user_save_user_settings(auth, data):
-    user = authorise_api_user(auth, return_type='model')
+    user: User = authorise_api_user(auth, return_type='model')
     show_nfsw = data['show_nsfw'] if 'show_nsfw' in data else None
     show_read_posts = data['show_read_posts'] if 'show_read_posts' in data else None
     about = data['bio'] if 'bio' in data else None
+    avatar = data['avatar'] if 'avatar' in data else None
+    cover = data['cover'] if 'cover' in data else None
 
     # english is fun, so lets do the reversing and update the user settings
     if show_nfsw == True:
@@ -192,6 +203,31 @@ def put_user_save_user_settings(auth, data):
         from app.utils import markdown_to_html
         user.about = about
         user.about_html = markdown_to_html(about)
+
+    if avatar:
+        if user.avatar_id:
+            remove_file = File.query.get(user.avatar_id)
+            if remove_file:
+                remove_file.delete_from_disk()
+            user.avatar_id = None
+        file = File(source_url=avatar)
+        db.session.add(file)
+        db.session.commit()
+        user.avatar_id = file.id
+        make_image_sizes(user.avatar_id, 40, 250, 'users')
+
+    if cover:
+        if user.cover_id:
+            remove_file = File.query.get(user.cover_id)
+            if remove_file:
+                remove_file.delete_from_disk()
+            user.cover_id = None
+        file = File(source_url=avatar)
+        db.session.add(file)
+        db.session.commit()
+        user.cover_id = file.id
+        make_image_sizes(user.cover_id, 700, 1600, 'users')
+        cache.delete_memoized(User.cover_image, user)
 
     # save the change to the db
     db.session.commit()
@@ -217,28 +253,37 @@ def get_user_notifications(auth, data):
     # setup the db query/generator all notifications for the user
     user_notifications = Notification.query.filter_by(user_id=user.id).order_by(desc(Notification.created_at)).paginate(page=page, per_page=limit, error_out=False)
 
+    # currently supported notif types
+    supported_notif_types = [
+        NOTIF_USER,
+        NOTIF_COMMUNITY,
+        NOTIF_TOPIC,
+        NOTIF_POST,
+        NOTIF_REPLY,
+        NOTIF_FEED,
+        NOTIF_MENTION
+    ]
+
+
     # new
     if status == 'New':
         for item in user_notifications:
-            if item.read == False:
+            if item.read == False and item.notif_type in supported_notif_types:
                 if isinstance(item.subtype,str):
                     notif = _process_notification_item(item)
-                    notif['status'] = status
                     items.append(notif)
     # all
     elif status == 'All':
         for item in user_notifications:
-                if isinstance(item.subtype,str):
+                if isinstance(item.subtype,str) and item.notif_type in supported_notif_types:
                     notif = _process_notification_item(item)
-                    notif['status'] = status
                     items.append(notif)
     # read
     elif status == 'Read':
         for item in user_notifications:
-            if item.read == True:
+            if item.read == True and item.notif_type in supported_notif_types:
                 if isinstance(item.subtype,str):
                     notif = _process_notification_item(item)
-                    notif['status'] = status
                     items.append(notif)
 
     # get counts for new/read/all
@@ -253,7 +298,7 @@ def get_user_notifications(auth, data):
     res['status'] = status
     res['counts'] = counts
     res['items'] = items
-    res['next_page'] = str(user_notifications.next_num)
+    res['next_page'] = str(user_notifications.next_num) if user_notifications.next_num is not None else None
     return res
 
 
@@ -270,6 +315,7 @@ def _process_notification_item(item):
         notification_json['post'] = post_view(post, variant=2)
         notification_json['post_id'] = post.id
         notification_json['notif_body'] = post.body if post.body else ''
+        notification_json['status'] = 'Read' if item.read else 'Unread'
         return notification_json
     # for the NOTIF_COMMUNITY
     elif item.notif_type == NOTIF_COMMUNITY:
@@ -285,6 +331,7 @@ def _process_notification_item(item):
         notification_json['post_id'] = post.id
         notification_json['community'] = community_view(community, variant=2)
         notification_json['notif_body'] = post.body if post.body else ''
+        notification_json['status'] = 'Read' if item.read else 'Unread'
         return notification_json
     # for the NOTIF_TOPIC
     elif item.notif_type == NOTIF_TOPIC:
@@ -298,6 +345,7 @@ def _process_notification_item(item):
         notification_json['post'] = post_view(post, variant=2)
         notification_json['post_id'] = post.id
         notification_json['notif_body'] = post.body if post.body else ''
+        notification_json['status'] = 'Read' if item.read else 'Unread'
         return notification_json
     # for the NOTIF_POST
     elif item.notif_type == NOTIF_POST:
@@ -314,6 +362,7 @@ def _process_notification_item(item):
         notification_json['comment'] = reply_view(comment, variant=1)
         notification_json['comment_id'] = comment.id
         notification_json['notif_body'] = comment.body if comment.body else ''
+        notification_json['status'] = 'Read' if item.read else 'Unread'
         return notification_json        
     # for the NOTIF_REPLY
     elif item.notif_type == NOTIF_REPLY:
@@ -330,6 +379,7 @@ def _process_notification_item(item):
         notification_json['comment'] = reply_view(comment, variant=1)
         notification_json['comment_id'] = comment.id
         notification_json['notif_body'] = comment.body if comment.body else ''
+        notification_json['status'] = 'Read' if item.read else 'Unread'
         return notification_json
     # for the NOTIF_FEED
     elif item.notif_type == NOTIF_FEED:
@@ -343,6 +393,7 @@ def _process_notification_item(item):
         notification_json['post'] = post_view(post, variant=2)
         notification_json['post_id'] = post.id
         notification_json['notif_body'] = post.body if post.body else ''
+        notification_json['status'] = 'Read' if item.read else 'Unread'
         return notification_json        
     # for the NOTIF_MENTION
     elif item.notif_type == NOTIF_MENTION:
@@ -357,6 +408,7 @@ def _process_notification_item(item):
             notification_json['notif_type'] = NOTIF_MENTION
             notification_json['notif_subtype'] = item.subtype
             notification_json['notif_body'] = post.body if post.body else ''
+            notification_json['status'] = 'Read' if item.read else 'Unread'
             return notification_json
         if item.subtype == 'comment_mention':
             author = User.query.get(item.author_id)
@@ -368,22 +420,21 @@ def _process_notification_item(item):
             notification_json['notif_type'] = NOTIF_MENTION
             notification_json['notif_subtype'] = item.subtype
             notification_json['notif_body'] = comment.body if comment.body else ''
+            notification_json['status'] = 'Read' if item.read else 'Unread'
             return notification_json
-    else:
-        return {"notif_type":item.notif_type}
 
 
 def put_user_notification_state(auth, data):
-    user = authorise_api_user(auth, return_type='model')
-    notif_id = data['notif_id'] if 'notif_id' in data else None
-    read_state = data['read_state'] if 'read_state' in data else None
-    
-    # get the notification from the data.notif_id
-    notif = Notification.query.get(notif_id)
+    required(['notif_id', 'read_state'], data)
+    integer_expected(['notif_id'], data)
+    boolean_expected(['read_state'], data)
 
-    # make sure the notif belongs to the user
-    if notif.user_id != user.id:
-        raise Exception('Notification does not belong to provided User.')
+    user_id = authorise_api_user(auth)
+    notif_id = data['notif_id']
+    read_state = data['read_state']
+
+    # get the notification from the data.notif_id
+    notif = Notification.query.filter_by(id=notif_id, user_id=user_id).one()
 
     # set the read state for the notification
     notif.read = read_state
@@ -417,3 +468,24 @@ def put_user_mark_all_notifications_read(auth):
     # return a message, though it may not be used by the client
     res = {"mark_all_notifications_as_read":"complete"}
     return res
+
+
+
+def post_user_verify_credentials(data):
+    required(["username", "password"], data)
+    string_expected(["username", "password"], data)
+
+    username = data['username']
+    password = data['password']
+
+    if '@' in username:
+        user = User.query.filter_by(email=username, ap_id=None, deleted=False).one()
+    else:
+        user = User.query.filter_by(user_name=username, ap_id=None, deleted=False).one()
+
+    if not user.check_password(password):
+        raise NoResultFound
+
+    return {}
+
+

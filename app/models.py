@@ -13,14 +13,16 @@ from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_babel import _, lazy_gettext as _l
 from sqlalchemy_utils.types import TSVectorType # https://sqlalchemy-searchable.readthedocs.io/en/latest/installation.html
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.ext.mutable import MutableList
 from flask_sqlalchemy import BaseQuery
 from sqlalchemy_searchable import SearchQueryMixin
+from sqlalchemy.dialects.postgresql import BIT
 from app import db, login, cache, celery, httpx_client, constants
 import jwt
 import os
 import math
+import uuid
 
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER, \
     SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER, NOTIF_COMMUNITY, NOTIF_TOPIC, NOTIF_POST, NOTIF_REPLY, \
@@ -292,7 +294,7 @@ class File(db.Model):
     thumbnail_path = db.Column(db.String(255))
     thumbnail_width = db.Column(db.Integer)
     thumbnail_height = db.Column(db.Integer)
-    hash = db.Column(db.String(64), index=True)
+    hash = db.Column(BIT(256), index=True)
 
     def view_url(self, resize=False):
         if self.source_url:
@@ -480,8 +482,7 @@ class Community(db.Model):
     title = db.Column(db.String(256))
     description = db.Column(db.Text)        # markdown
     description_html = db.Column(db.Text)   # html equivalent of above markdown
-    rules = db.Column(db.Text)
-    rules_html = db.Column(db.Text)
+    rules = db.Column(db.Text)              # this is unused but do not remove, it breaks everything
     content_warning = db.Column(db.Text)        # "Are you sure you want to view this community?"
     subscriptions_count = db.Column(db.Integer, default=0)
     post_count = db.Column(db.Integer, default=0)
@@ -532,7 +533,7 @@ class Community(db.Model):
     posts = db.relationship('Post', lazy='dynamic', cascade="all, delete-orphan")
     replies = db.relationship('PostReply', lazy='dynamic', cascade="all, delete-orphan")
     wiki_pages = db.relationship('CommunityWikiPage', lazy='dynamic', backref='community', cascade="all, delete-orphan")
-    icon = db.relationship('File', foreign_keys=[icon_id], single_parent=True, backref='community', cascade="all, delete-orphan")
+    icon = db.relationship('File', lazy='joined', foreign_keys=[icon_id], single_parent=True, backref='community', cascade="all, delete-orphan")
     image = db.relationship('File', foreign_keys=[image_id], single_parent=True, cascade="all, delete-orphan")
     languages = db.relationship('Language', lazy='dynamic', secondary=community_language, backref=db.backref('communities', lazy='dynamic'))
     flair = db.relationship('CommunityFlair', backref=db.backref('community'), cascade="all, delete-orphan")
@@ -548,7 +549,6 @@ class Community(db.Model):
     def language_ids(self):
         return [language.id for language in self.languages.all()]
 
-    @cache.memoize(timeout=500)
     def icon_image(self, size='default') -> str:
         if self.icon_id is not None:
             if size == 'default':
@@ -635,9 +635,9 @@ class Community(db.Model):
 
     def is_owner(self, user=None):
         if user is None:
-            return any(moderator.user_id == current_user.get_id() and moderator.is_owner for moderator in self.moderators())
+            return any(moderator.user_id == current_user.get_id() and moderator.is_owner for moderator in self.moderators()) or current_user.get_id() == self.user_id
         else:
-            return any(moderator.user_id == user.id and moderator.is_owner for moderator in self.moderators())
+            return any(moderator.user_id == user.id and moderator.is_owner for moderator in self.moderators()) or user.id == self.user_id
 
     def is_instance_admin(self, user):
         if self.instance_id:
@@ -727,7 +727,8 @@ class Community(db.Model):
                            'id': f'https://{current_app.config["SERVER_NAME"]}/c/{self.link()}/tag/{flair.id}',
                            'display_name': flair.flair,
                            'text_color': flair.text_color,
-                           'background_color': flair.background_color
+                           'background_color': flair.background_color,
+                           'blur_images': flair.blur_images
                            })
         return result
 
@@ -741,6 +742,7 @@ class Community(db.Model):
         db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == self.id).delete()
         db.session.query(CommunityMember).filter(CommunityMember.community_id == self.id).delete()
         db.session.query(Report).filter(Report.suspect_community_id == self.id).delete()
+        db.session.query(UserFlair).filter(UserFlair.community_id == self.id).delete()
         db.session.query(ModLog).filter(ModLog.community_id == self.id).delete()
 
 
@@ -756,6 +758,20 @@ read_posts = db.Table('read_posts',
                         db.Column('read_post_id', db.Integer, db.ForeignKey('post.id'), index=True),
                         db.Column('interacted_at', db.DateTime, index=True, default=utcnow)    # this is when the content is interacted with
                       )
+
+
+class Passkey(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    passkey_id = db.Column(db.String(256))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    public_key = db.Column(db.LargeBinary)  # Store the raw binary public key
+    created = db.Column(db.DateTime, default=utcnow)
+    used = db.Column(db.DateTime, default=utcnow)
+    device = db.Column(db.String(50))
+    counter = db.Column(db.Integer, default=0)
+    
+    def __repr__(self):
+        return f"<Passkey {self.id} {self.device}>"
 
 
 class User(UserMixin, db.Model):
@@ -791,7 +807,7 @@ class User(UserMixin, db.Model):
     email_unread_sent = db.Column(db.Boolean)                   # True after a 'unread notifications' email has been sent. None for remote users
     receive_message_mode = db.Column(db.String(20), default='Closed')  # possible values: Open, TrustedOnly, Closed
     bounces = db.Column(db.SmallInteger, default=0)
-    timezone = db.Column(db.String(20))
+    timezone = db.Column(db.String(30))
     reputation = db.Column(db.Float, default=0.0)
     attitude = db.Column(db.Float, default=None)  # (upvotes cast - downvotes cast) / (upvotes + downvotes). A number between 1 and -1 is the ratio between up and down votes they cast
     post_count = db.Column(db.Integer, default=0)
@@ -801,6 +817,7 @@ class User(UserMixin, db.Model):
     searchable = db.Column(db.Boolean, default=True)
     indexable = db.Column(db.Boolean, default=False)
     bot = db.Column(db.Boolean, default=False)
+    vote_privately = db.Column(db.Boolean, default=False)
     ignore_bots = db.Column(db.Integer, default=0)
     unread_notifications = db.Column(db.Integer, default=0)
     ip_address = db.Column(db.String(50))
@@ -810,6 +827,7 @@ class User(UserMixin, db.Model):
     default_sort = db.Column(db.String(25), default='hot')
     default_filter = db.Column(db.String(25), default='subscribed')
     theme = db.Column(db.String(20), default='')
+    font = db.Column(db.String(25), default='')
     referrer = db.Column(db.String(256))
     markdown_editor = db.Column(db.Boolean, default=True)
     interface_language = db.Column(db.String(10))           # a locale that the translation system understands e.g. 'en' or 'en-us'. If empty, use browser default
@@ -819,8 +837,10 @@ class User(UserMixin, db.Model):
     reply_hide_threshold = db.Column(db.Integer, default=-20)
     feed_auto_follow = db.Column(db.Boolean, default=True)  # does the user want to auto-follow feed communities
     feed_auto_leave = db.Column(db.Boolean, default=True)   # does the user want to auto-leave feed communities
-    accept_private_messages = db.Column(db.Integer, default=1)         # None or 0 = do not accept, 1 = This instance, 2 = Trusted instances, 3 = All instances
+    accept_private_messages = db.Column(db.Integer, default=3)         # None or 0 = do not accept, 1 = This instance, 2 = Trusted instances, 3 = All instances
     google_oauth_id = db.Column(db.String(64), unique=True, index=True)
+    hide_low_quality = db.Column(db.Boolean, default=False)
+    additional_css = db.Column(db.Text)
 
     avatar = db.relationship('File', lazy='joined', foreign_keys=[avatar_id], single_parent=True, cascade="all, delete-orphan")
     cover = db.relationship('File', lazy='joined', foreign_keys=[cover_id], single_parent=True, cascade="all, delete-orphan")
@@ -844,8 +864,8 @@ class User(UserMixin, db.Model):
     posts = db.relationship('Post', lazy='dynamic', cascade="all, delete-orphan")
     post_replies = db.relationship('PostReply', lazy='dynamic', cascade="all, delete-orphan")
     extra_fields = db.relationship('UserExtraField', lazy='dynamic', cascade="all, delete-orphan")
-
     roles = db.relationship('Role', secondary=user_role, lazy='dynamic', cascade="all, delete")
+    passkeys = db.relationship('Passkey', lazy='dynamic', cascade="all, delete-orphan")
 
     hide_read_posts = db.Column(db.Boolean, default=False)
     # db relationship tracked by the "read_posts" table
@@ -872,6 +892,10 @@ class User(UserMixin, db.Model):
         else:
             return 0
 
+    @classmethod
+    def get_by_email(cls, email):
+        return User.query.filter(User.email == email.strip()).first()
+
     def display_name(self):
         if self.deleted is False:
             if self.title:
@@ -881,7 +905,6 @@ class User(UserMixin, db.Model):
         else:
             return '[deleted]'
 
-    @cache.memoize(timeout=500)
     def avatar_thumbnail(self) -> str:
         if self.avatar_id is not None:
             if self.avatar.thumbnail_path is not None:
@@ -893,7 +916,6 @@ class User(UserMixin, db.Model):
                 return self.avatar_image()
         return ''
 
-    @cache.memoize(timeout=500)
     def avatar_image(self) -> str:
         if self.avatar_id is not None:
             if self.avatar.file_path is not None:
@@ -931,9 +953,6 @@ class User(UserMixin, db.Model):
             size += self.cover.filesize()
         return size
 
-    def vote_privately(self):
-        return self.alt_user_name is not None and self.alt_user_name != ''
-
     def community_flair(self, community_id: int):
         user_flair = UserFlair.query.filter(UserFlair.community_id == community_id, UserFlair.user_id == self.id).first()
         return user_flair.flair.strip() if user_flair else ''
@@ -964,6 +983,9 @@ class User(UserMixin, db.Model):
             if role.name == 'Staff':
                 return True
         return False
+
+    def is_admin_or_staff(self):
+        return self.is_admin() or self.is_staff()
 
     def is_instance_admin(self):
         if self.instance_id:
@@ -1011,6 +1033,9 @@ class User(UserMixin, db.Model):
             return current_app.config['SERVER_NAME']
         else:
             return self.instance.domain
+    def email_domain(self):
+        email_parts = self.email.split('@')
+        return email_parts[1]
 
     def get_reset_password_token(self, expires_in=600):
         return jwt.encode(
@@ -1082,12 +1107,13 @@ class User(UserMixin, db.Model):
         else:
             new_attitude = None
         
-        # Update attitude with direct SQL query to avoid deadlocks
+        # Update attitude
         db.session.execute(text("""
             UPDATE "user" 
             SET attitude = :attitude
             WHERE id = :user_id
         """), {"attitude": new_attitude, "user_id": self.id})
+        db.session.commit()
 
     def get_num_upvotes(self):
         post_votes = db.session.execute(text('SELECT COUNT(*) FROM "post_vote" WHERE user_id = :user_id AND effect > 0'), {'user_id': self.id}).scalar()
@@ -1143,9 +1169,10 @@ class User(UserMixin, db.Model):
         return result
 
     def created_recently(self):
-        if self.is_admin():
-            return False
         return self.created and self.created > utcnow() - timedelta(days=7)
+
+    def created_very_recently(self):
+        return self.created and self.created > utcnow() - timedelta(days=1)
 
     def has_blocked_instance(self, instance_id: int):
         instance_block = InstanceBlock.query.filter_by(user_id=self.id, instance_id=instance_id).first()
@@ -1240,7 +1267,6 @@ class User(UserMixin, db.Model):
     def has_read_post(self, post):
         return self.read_post.filter(read_posts.c.read_post_id == post.id).count() > 0
 
-    @cache.memoize(timeout=500)
     def get_note(self, by_user):
         user_note = self.user_notes.filter(UserNote.target_id == self.id, UserNote.user_id == by_user.id).first()
         if user_note:
@@ -1427,6 +1453,7 @@ class Post(db.Model):
                     return None
 
         file_path = None
+        alt_text = None
         if ('attachment' in request_json['object'] and
             isinstance(request_json['object']['attachment'], list) and
             len(request_json['object']['attachment']) > 0 and
@@ -1460,7 +1487,16 @@ class Post(db.Model):
             post.url = embed_url
             if is_image_url(post.url):
                 post.type = constants.POST_TYPE_IMAGE
-                image = File(source_url=post.url)
+
+                # PDQ hash of image
+                image_hash = None
+                if current_app.config['IMAGE_HASHING_ENDPOINT']:
+                    from app.utils import retrieve_image_hash, hash_matches_blocked_image
+                    image_hash = retrieve_image_hash(post.url)
+                    if image_hash and hash_matches_blocked_image(image_hash):
+                        return None
+
+                image = File(source_url=post.url, hash=image_hash)
                 if alt_text:
                     image.alt_text = alt_text
                 if file_path:
@@ -1534,8 +1570,8 @@ class Post(db.Model):
                 language = find_language(next(iter(request_json['object']['contentMap'])))
                 post.language_id = language.id if language else None
             else:
-                from app.utils import english_language_id
-                post.language_id = english_language_id()
+                from app.utils import site_language_id
+                post.language_id = site_language_id()
             if 'licence' in request_json['object'] and isinstance(request_json['object']['licence'], dict):
                 licence = find_licence_or_create(request_json['object']['licence']['name'])
                 post.licence = licence
@@ -1558,7 +1594,7 @@ class Post(db.Model):
             post.ranking_scaled = int(post.ranking + community.scale_by())
             community.post_count += 1
             community.last_active = utcnow()
-            user.post_count += 1
+            db.session.execute(text('UPDATE "user" SET post_count = post_count + 1 WHERE id = :user_id'), {'user_id': user.id})
             db.session.execute(text('UPDATE "site" SET last_active = NOW()'))
             try:
                 db.session.commit()
@@ -1603,8 +1639,12 @@ class Post(db.Model):
                 db.session.commit()
 
             if post.image_id and not post.type == constants.POST_TYPE_VIDEO:
-                make_image_sizes(post.image_id, 170, 512, 'posts',
-                                 community.low_quality)  # the 512 sized image is for masonry view
+                if post.type == constants.POST_TYPE_IMAGE:
+                    make_image_sizes(post.image_id, 512, 1200, 'posts',
+                                     community.low_quality)  # the 512 sized image is for masonry view
+                else:
+                    make_image_sizes(post.image_id, 170, None, 'posts',
+                                     community.low_quality)  # the 512 sized image is for masonry view
 
             # Update list of cross posts
             if post.url:
@@ -1619,7 +1659,6 @@ class Post(db.Model):
             if user.is_local():
                 cache.delete_memoized(recently_upvoted_posts, user.id)
             if user.reputation > 100:
-                post.up_votes += 1
                 post.score += 1
                 post.ranking = post.post_ranking(post.score, post.posted_at)
                 post.ranking_scaled = int(post.ranking + community.scale_by())
@@ -1687,6 +1726,9 @@ class Post(db.Model):
         if self.image_id:
             file = File.query.get(self.image_id)
             file.delete_from_disk()
+
+    def has_been_reported(self):
+        return self.reports > 0 and current_user.is_authenticated and self.community.is_moderator()
 
     def youtube_embed(self, rel=True) -> str:
         if self.url:
@@ -1779,12 +1821,21 @@ class Post(db.Model):
                                  'id': f'https://{current_app.config["SERVER_NAME"]}/c/{self.community.link()}/tag/{flair.id}',
                                  'display_name': flair.flair,
                                  'text_color': flair.text_color,
-                                 'background_color': flair.background_color})
+                                 'background_color': flair.background_color,
+                                 'blur_images': flair.blur_images})
         for tag in self.tags:
             return_value.append({'type': 'Hashtag',
                                  'href': f'https://{current_app.config["SERVER_NAME"]}/tag/{tag.name}',
                                  'name': f'#{tag.name}'})
         return return_value
+    
+    def spoiler_flair(self):
+        for flair in self.flair:
+            if flair.blur_images:
+                return True
+        
+        return False
+
 
     def post_reply_count_recalculate(self):
         self.post_reply_count = db.session.execute(text('SELECT COUNT(id) as c FROM "post_reply" WHERE post_id = :post_id AND deleted is false'),
@@ -1822,7 +1873,9 @@ class Post(db.Model):
         undo = None
         if existing_vote:
             if not self.community.low_quality:
-                self.author.reputation -= existing_vote.effect
+                with db.session.begin_nested():
+                    db.session.execute(text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
+                                       {'effect': existing_vote.effect, 'user_id': self.user_id})
             if existing_vote.effect > 0:  # previous vote was up
                 if vote_direction == 'upvote':  # new vote is also up, so remove it
                     db.session.delete(existing_vote)
@@ -1908,10 +1961,6 @@ class Post(db.Model):
                               "ranking_scaled": new_ranking_scaled, 
                               "post_id": self.id})
         
-        # Update user's attitude in another separate transaction
-        with db.session.begin_nested():
-            user.recalculate_attitude()
-        
         db.session.commit()
         return undo
 
@@ -1935,7 +1984,7 @@ class PostReply(db.Model):
     body_html_safe = db.Column(db.Boolean, default=False)
     score = db.Column(db.Integer, default=0, index=True)    # used for 'top' sorting
     nsfw = db.Column(db.Boolean, default=False, index=True)
-    nsfl = db.Column(db.Boolean, default=False, index=True)
+    distinguished = db.Column(db.Boolean, default=False)
     notify_author = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, index=True, default=utcnow)
     posted_at = db.Column(db.DateTime, index=True, default=utcnow)
@@ -1980,7 +2029,7 @@ class PostReply(db.Model):
     )
 
     @classmethod
-    def new(cls, user: User, post: Post, in_reply_to, body, body_html, notify_author, language_id, request_json: dict = None, announce_id=None):
+    def new(cls, user: User, post: Post, in_reply_to, body, body_html, notify_author, language_id, distinguished, request_json: dict = None, announce_id=None):
 
         from app.utils import shorten_string, blocked_phrases, recently_upvoted_post_replies, reply_already_exists, reply_is_just_link_to_gif_reaction, reply_is_stupid
         from app.activitypub.util import notify_about_post_reply
@@ -2002,9 +2051,10 @@ class PostReply(db.Model):
                           depth=depth,
                           community_id=post.community.id, body=body,
                           body_html=body_html, body_html_safe=True,
-                          from_bot=user.bot, nsfw=post.nsfw, nsfl=post.nsfl,
+                          from_bot=user.bot, nsfw=post.nsfw,
                           notify_author=notify_author, instance_id=user.instance_id,
                           language_id=language_id,
+                          distinguished=distinguished,
                           ap_id=request_json['object']['id'] if request_json else None,
                           ap_create_id=request_json['id'] if request_json else None,
                           ap_announce_id=announce_id)
@@ -2023,11 +2073,15 @@ class PostReply(db.Model):
         if reply_already_exists(user_id=user.id, post_id=post.id, parent_id=reply.parent_id, body=reply.body):
             raise Exception('Duplicate reply')
 
-        if reply_is_just_link_to_gif_reaction(reply.body):
+        site = Site.query.get(1)
+        if site is None:
+            site = Site()
+        
+        if reply_is_just_link_to_gif_reaction(reply.body) and site.enable_gif_reply_rep_decrease:
             user.reputation -= 1
             raise Exception('Gif comment ignored')
 
-        if reply_is_stupid(reply.body):
+        if reply_is_stupid(reply.body) and site.enable_this_comment_filter:
             raise Exception('Low quality reply')
 
         try:
@@ -2068,7 +2122,6 @@ class PostReply(db.Model):
 
         reply.ap_id = reply.profile_id()
         if user.reputation > 100:
-            reply.up_votes += 1
             reply.score += 1
             reply.ranking += 1
         elif user.reputation < -100:
@@ -2078,7 +2131,7 @@ class PostReply(db.Model):
             post.reply_count += 1
             post.community.post_reply_count += 1
             post.community.last_active = post.last_active = utcnow()
-        user.post_reply_count += 1
+        db.session.execute(text('UPDATE "user" SET post_reply_count = post_reply_count + 1 WHERE id = :user_id'), {'user_id': user.id})
         db.session.execute(text('UPDATE "site" SET last_active = NOW()'))
         db.session.commit()
 
@@ -2163,6 +2216,9 @@ class PostReply(db.Model):
         reply = PostReply.query.filter_by(parent_id=self.id).filter(PostReply.deleted == False).first()
         return reply is not None
 
+    def has_been_reported(self):
+        return self.reports > 0 and current_user.is_authenticated and self.community.is_moderator()
+
     def blocked_by_content_filter(self, content_filters):
         lowercase_body = self.body.lower()
         for name, keywords in content_filters.items() if content_filters else {}:
@@ -2215,6 +2271,9 @@ class PostReply(db.Model):
         assert vote_direction == 'upvote' or vote_direction == 'downvote'
         undo = None
         if existing_vote:
+            with db.session.begin_nested():
+                db.session.execute(text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
+                                   {'effect': existing_vote.effect, 'user_id': self.user_id})
             if existing_vote.effect > 0:  # previous vote was up
                 if vote_direction == 'upvote':  # new vote is also up, so remove it
                     db.session.delete(existing_vote)
@@ -2273,10 +2332,6 @@ class PostReply(db.Model):
         with db.session.begin_nested():
             db.session.execute(text("UPDATE post_reply SET ranking=:ranking WHERE id=:post_reply_id"),
                              {"ranking": new_ranking, "post_reply_id": self.id})
-        
-        # Update user's attitude in another separate transaction
-        with db.session.begin_nested():
-            user.recalculate_attitude()
         
         db.session.commit()
         return undo
@@ -2411,7 +2466,6 @@ class CommunityBan(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)             # person who is banned, not the banner
     community_id = db.Column(db.Integer, db.ForeignKey('community.id'), primary_key=True)
     banned_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    banned_until = db.Column(db.DateTime)
     reason = db.Column(db.String(256))
     created_at = db.Column(db.DateTime, default=utcnow)
     ban_until = db.Column(db.DateTime)
@@ -2452,6 +2506,7 @@ class Interest(db.Model):
 
 class CommunityJoinRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(UUID(as_uuid=True), index=True, default=uuid.uuid4)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     community_id = db.Column(db.Integer, db.ForeignKey('community.id'), index=True)
     joined_via_feed = db.Column(db.Boolean, default=False)
@@ -2471,6 +2526,7 @@ class UserRegistration(db.Model):
     created_at = db.Column(db.DateTime, default=utcnow)
     approved_at = db.Column(db.DateTime)
     approved_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    warning = db.Column(db.String(100))
     user = db.relationship('User', foreign_keys=[user_id], lazy='joined')
 
 
@@ -2639,6 +2695,25 @@ class PollChoiceVote(db.Model):
     created_at = db.Column(db.DateTime, default=utcnow)
 
 
+class Event(db.Model):
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), primary_key=True)
+    start = db.Column(db.DateTime, index=True)
+    end = db.Column(db.DateTime)
+    max_attendees = db.Column(db.Integer, default=0)
+    full = db.Column(db.Boolean, default=False)
+    online_link = db.Column(db.String(1024))
+    location = db.Column(db.Text)
+    buy_tickets_link = db.Column(db.String(1024))
+    event_fee_currency = db.Column(db.String(4))
+    event_fee_amount = db.Column(db.Float, default=0)
+
+
+event_user = db.Table('event_user', db.Column('post_id', db.Integer, db.ForeignKey('post.id')),
+                                    db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
+                                    db.Column('status', db.Integer),
+                                    db.PrimaryKeyConstraint('post_id', 'user_id'))
+
+
 class PostBookmark(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
@@ -2710,6 +2785,9 @@ class Site(db.Model):
     public_key = db.Column(db.Text)
     private_key = db.Column(db.Text)
     enable_downvotes = db.Column(db.Boolean, default=True)
+    enable_gif_reply_rep_decrease = db.Column(db.Boolean, default=False)
+    enable_chan_image_filter = db.Column(db.Boolean, default=False)
+    enable_this_comment_filter = db.Column(db.Boolean, default=False)
     allow_local_image_posts = db.Column(db.Boolean, default=True)
     remote_image_cache_days = db.Column(db.Integer, default=30)
     enable_nsfw = db.Column(db.Boolean, default=False)
@@ -2732,16 +2810,18 @@ class Site(db.Model):
     contact_email = db.Column(db.String(255), default='')
     about = db.Column(db.Text, default='')
     logo = db.Column(db.String(40), default='')
+    logo_180 = db.Column(db.String(40), default='')
     logo_152 = db.Column(db.String(40), default='')
     logo_32 = db.Column(db.String(40), default='')
     logo_16 = db.Column(db.String(40), default='')
     show_inoculation_block = db.Column(db.Boolean, default=True)
     additional_css = db.Column(db.Text)
     private_instance = db.Column(db.Boolean, default=False)
+    language_id = db.Column(db.Integer)
 
     @staticmethod
     def admins() -> List[User]:
-        return User.query.filter_by(deleted=False, banned=False).join(user_role).filter(user_role.c.role_id == ROLE_ADMIN).order_by(User.id).all()
+        return User.query.filter_by(deleted=False, banned=False).join(user_role).filter(or_(user_role.c.role_id == ROLE_ADMIN, User.id == 1)).order_by(User.id).all()
 
     @staticmethod
     def staff() -> List[User]:
@@ -2829,8 +2909,9 @@ class Feed(db.Model):
 
     search_vector = db.Column(TSVectorType('name', 'description'))
 
-    icon = db.relationship('File', foreign_keys=[icon_id], single_parent=True, backref='feed', cascade="all, delete-orphan")
-    image = db.relationship('File', foreign_keys=[image_id], single_parent=True, cascade="all, delete-orphan")
+    icon = db.relationship('File', lazy='joined', foreign_keys=[icon_id], single_parent=True, backref='feed', cascade="all, delete-orphan")
+    image = db.relationship('File', lazy='joined', foreign_keys=[image_id], single_parent=True, cascade="all, delete-orphan")
+    parent = db.relationship('Feed', remote_side=[id], backref=db.backref('children', lazy='dynamic'))
 
     def __repr__(self):
         return '<Feed {}_{}>'.format(self.name, self.id)
@@ -2976,6 +3057,7 @@ class Feed(db.Model):
 
 class FeedJoinRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(UUID(as_uuid=True), index=True, default=uuid.uuid4)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     feed_id = db.Column(db.Integer, db.ForeignKey('feed.id'), index=True)
 
@@ -2986,6 +3068,7 @@ class CommunityFlair(db.Model):
     flair = db.Column(db.String(50), index=True)
     text_color = db.Column(db.String(50))
     background_color = db.Column(db.String(50))
+    blur_images = db.Column(db.Boolean, default=False)
 
 
 class UserFlair(db.Model):
@@ -3007,6 +3090,24 @@ class SendQueue(db.Model):
     retry_reason = db.Column(db.String(255))
     created = db.Column(db.DateTime, default=utcnow)
     send_after = db.Column(db.DateTime, default=utcnow, index=True)
+
+
+class BlockedImage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    file_name = db.Column(db.String(255), index=True)
+    note = db.Column(db.String(255))
+    hash = db.Column(BIT(256), index=True)
+
+
+class CmsPage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    url = db.Column(db.String(100), index=True)
+    title = db.Column(db.String(255))
+    body = db.Column(db.Text)
+    body_html = db.Column(db.Text)
+    last_edited_by = db.Column(db.String(50))
+    created_at = db.Column(db.DateTime, default=utcnow)
+    edited_at = db.Column(db.DateTime, default=utcnow)
 
 
 def _large_community_subscribers() -> float:

@@ -3,7 +3,7 @@
 {% else %}
     {% extends "base.html" %}
 {% endif %}
-{% from 'bootstrap/form.html' import render_form %}
+{% from 'bootstrap5/form.html' import render_form %}
 {% set active_child = 'public_feeds' %}
 
 
@@ -33,7 +33,7 @@
             </td>
             <td nowrap="nowrap">{{ '--' * depth }}
                 {% if depth == 0 %}<strong>{% endif %}
-                    <a href="/f/{{ feed['feed'].ap_id if feed['feed'].ap_id else feed['feed'].name }}">{{ feed['feed'].title }}</a>
+                    <a href="/f/{{ feed['feed'].link() }}">{{ feed['feed'].title }}</a>
                 {% if depth == 0 %}</strong>{% endif %}
             </td>
             <td>{{ feed['feed'].num_communities }}</td>

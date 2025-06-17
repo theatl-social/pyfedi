@@ -71,7 +71,7 @@ def join_community(send_async, user_id, community_id, src):
         db.session.add(join_request)
         db.session.commit()
 
-        follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+        follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
         follow = {
           'id': follow_id,
           'type': 'Follow',
@@ -118,7 +118,7 @@ def leave_community(send_async, user_id, community_id):
        instance_banned(community.instance.domain)):
         return
 
-    follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+    follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
     follow = {
       'id': follow_id,
       'type': 'Follow',

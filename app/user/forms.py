@@ -62,12 +62,14 @@ class SettingsForm(FlaskForm):
     sorts = [('hot', _l('Hot')),
              ('top', _l('Top')),
              ('new', _l('New')),
+             ('old', _l('Old')),
              ('active', _l('Active')),
              ('scaled', _l('Scaled')),
              ]
     default_sort = SelectField(_l('Default post sort'), choices=sorts, validators=[DataRequired()], coerce=str,
                                render_kw={'class': 'form-select'})
     filters = [('subscribed', _l('Subscribed')),
+               ('moderating', _l('Moderating')),
                ('local', _l('Local')),
                ('popular', _l('Popular')),
                ('all', _l('All')),
@@ -76,11 +78,18 @@ class SettingsForm(FlaskForm):
                                  render_kw={'class': 'form-select'})
     theme = SelectField(_l('Theme'), coerce=str, render_kw={'class': 'form-select'})
     compact_levels = [
-        ('', _l('No')),
-        ('compact-min', _l('Yes')),
-        ('compact-min compact-max', _l('YEESSS')),  # this will apply both classes to the body tag
+        ('', _l('No - expand images')),
+        ('compact-min', _l('Yes - thumbnails only')),
+        ('compact-min compact-max', _l('YEESSS - no images, only text')),  # this will apply both classes to the body tag
     ]
     compaction = SelectField(_l('Compact UI'), choices=compact_levels, coerce=str, render_kw={'class': 'form-select'})
+    fonts = [('', _l('Theme default - fastest')),
+             ('atkinson', _l('Atkinson Hyperlegible - low vision')),
+             ('inter', _l('Inter - pretty')),
+             ('roboto', _l('Roboto - pretty')),
+             ]
+    font = SelectField(_l('Font'), choices=fonts, validators=[Optional()], coerce=str,
+                               render_kw={'class': 'form-select'})
     accept_from = [
         ('0', _l('None')),
         ('1', _l('This instance')),
@@ -88,6 +97,7 @@ class SettingsForm(FlaskForm):
         ('3', _l('All instances')),
     ]
     accept_private_messages = SelectField(_l('Accept private messages from'), choices=accept_from, coerce=int, render_kw={'class': 'form-select'})
+    additional_css = TextAreaField(_l('Additional CSS'))
     submit = SubmitField(_l('Save settings'))
 
 
@@ -99,6 +109,13 @@ class ImportExportForm(FlaskForm):
 
 class DeleteAccountForm(FlaskForm):
     submit = SubmitField(_l('Yes, delete my account'))
+
+
+class BanUserForm(FlaskForm):
+    reason = TextAreaField(_l('Reason'))
+    ip_address = BooleanField(_l('Ban IP address'))
+    purge = BooleanField(_l('Delete all content by this account'))
+    submit = SubmitField(_l('Ban'), render_kw={'autofocus': True})
 
 
 class ReportUserForm(FlaskForm):
@@ -144,6 +161,7 @@ class FilterForm(FlaskForm):
                             default=1, coerce=int, render_kw={'class': 'form-select'})
     reply_collapse_threshold = IntegerField(_l('Reply collapse threshold'))
     reply_hide_threshold = IntegerField(_l('Reply hide threshold'))
+    hide_low_quality = BooleanField(_l('Hide posts in low quality communities'))
     submit = SubmitField(_l('Save settings'))
 
 

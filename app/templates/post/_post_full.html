@@ -1,5 +1,5 @@
 <div class="row position-relative post_full">
-        <div class="col post_col {% if post.type == POST_TYPE_IMAGE %}post_col post_type_image{% else %}post_type_normal{% endif %} {{ 'reported' if post.reports and post.reports != -1 }}">
+        <div class="col post_col {% if post.type == POST_TYPE_IMAGE %}post_col post_type_image{% else %}post_type_normal{% endif %} {{ 'reported' if post.has_been_reported() }}">
             {% include "post/_breadcrumb_nav.html" %}
             <h1 class="mt-2 post_title" lang="{{ post.language_code() }}">{{ post.title }}
                 {% if post.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif -%}
@@ -14,7 +14,8 @@
             <div class="mb-2">{% if post.reports > 0 and current_user.is_authenticated and post.community.is_moderator(current_user) -%}
                     <span class="red fe fe-report" title="{{ _('Reported. Check post for issues.') }}"></span>
                 {% endif -%}<small>submitted <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post.posted_at).humanize(locale=locale) }}</time> by
-                {{ render_username(post.author, htmx_redirect_back_to=request.path) }}
+                {{ render_username(post.author, htmx_redirect_back_to=request.path, user_notes=user_notes, current_user=current_user, admin_ids=admin_ids, low_bandwidth=low_bandwidth) }}
+                {% if user_flair and post.author.id in user_flair %}<span class="user_flair">{{ user_flair[post.author.id] }}</span>{% endif %}
                 {% if post.edited_at -%} edited <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post.edited_at).humanize(locale=locale) }}</time>{% endif -%}</small>
             </div>
             {% if post.type == POST_TYPE_IMAGE -%}
@@ -28,10 +29,20 @@
                                  width="{{ post.image.width }}" height="{{ post.image.height }}" /></a>
                         {% else -%}
                             <a href="{{ post.image.view_url() }}" rel="nofollow ugc">
-                                <img src="{{ post.image.view_url(resize=True) }}" lowsrc="{{ post.image.medium_url() }}"
-                                     sizes="(max-width: 512px) 100vw, 854px" srcset="{{ post.image.medium_url() }} 512w, {{ post.image.view_url(resize=True) }} 1024w"
+                                {% if post.image.height and post.image.width -%}
+                                    {% set is_portrait = post.image.height > post.image.width * 1.2 -%}
+                                {% endif -%}
+                                {% if is_portrait -%}
+                                <img src="{{ post.image.medium_url() }}"
                                      alt="{{ post.image.alt_text if post.image.alt_text else post.title }}"
                                      fetchpriority="high" referrerpolicy="same-origin" >
+                                {% else -%}
+                                <img src="{{ post.image.medium_url() }}"
+                                     sizes="(max-width: 512px) 100vw, 100vw"
+                                     srcset="{{ post.image.thumbnail_url() }} 512w, {{ post.image.medium_url() }} 1024w"
+                                     alt="{{ post.image.alt_text if post.image.alt_text else post.title }}"
+                                     fetchpriority="high" referrerpolicy="same-origin" >
+                                {% endif -%}
                             </a>
                         {% endif -%}
                     {% else -%}
@@ -62,7 +73,7 @@
                 {% endif -%}
                 {% if 'youtube.com' in post.url -%}
                     <p><a href="https://piped.video/watch?v={{ post.youtube_embed() }}">{{ _('Watch on piped.video') }} <span class="fe fe-external"></span></a></p>
-                    <div style="padding-bottom: 56.25%; position: relative;"><iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="https://www.youtube.com/embed/{{ post.youtube_embed() }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
+                    <div style="padding-bottom: 56.25%; position: relative;"><iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="https://www.youtube-nocookie.com/embed/{{ post.youtube_embed() }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
                 {% endif -%}
             {% elif post.type == POST_TYPE_VIDEO -%}
                 <p><a href="{{ post.url }}" rel="nofollow ugc" target="_blank" class="post_link" aria-label="Go to post url">{{ post.url|shorten_url }}
@@ -76,6 +87,8 @@
                             <source src="{{ post.url }}" type="video/webm" />
                         {% endif -%}
                         </video></p>
+                {% elif post.url.startswith('https://vimeo.com') -%}
+                    <div style="padding-bottom: 56.25%; position: relative;"><iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('vimeo.com/', 'player.vimeo.com/video/') }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
                 {% elif post.url.startswith('https://streamable.com') -%}
                     <div style="padding-bottom: 56.25%; position: relative;"><iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('streamable.com/', 'streamable.com/e/') }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
                 {% elif post.url.startswith('https://www.redgifs.com/watch/') -%}
@@ -83,7 +96,7 @@
                 {% endif -%}
                 {% if 'youtube.com' in post.url -%}
                     <p><a href="https://piped.video/watch?v={{ post.youtube_embed() }}">{{ _('Watch on piped.video') }} <span class="fe fe-external"></span></a></p>
-                    <div style="padding-bottom: 56.25%; position: relative;"><iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="https://www.youtube.com/embed/{{ post.youtube_embed() }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
+                    <div style="padding-bottom: 56.25%; position: relative;"><iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="https://www.youtube-nocookie.com/embed/{{ post.youtube_embed() }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
                 {% endif -%}
                 {% if 'videos/watch' in post.url -%}
                     <div style="padding-bottom: 56.25%; position: relative;"><iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.peertube_embed() }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
@@ -100,7 +113,7 @@
                 {% endif -%}
             {% endif -%}
             <div class="post_body" lang="{{ post.language_code() }}">
-                {{ post.body_html | community_links | person_links | safe if post.body_html else '' }}
+                {{ post.body_html | community_links | feed_links| person_links | safe if post.body_html else '' }}
                 {% if archive_link -%}
                     <p><a href="{{ archive_link }}" rel="nofollow ucg noindex" target="_blank">{{ _('Archive.ph link') }} <span class="fe fe-external"></span></a></p>
                 {% endif -%}

@@ -10,6 +10,7 @@ from PIL import Image, ImageOps
 from flask import request, abort, g, current_app, json
 from flask_login import current_user
 from pillow_heif import register_heif_opener
+from psycopg2 import IntegrityError
 
 from app import db, cache, celery
 from app.activitypub.signature import post_request, default_context, send_post_request
@@ -108,6 +109,11 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                         else:
                             new_membership = CommunityMember(community_id=community.id, user_id=mod.id, is_moderator=True)
                             db.session.add(new_membership)
+                        try:
+                            db.session.commit()
+                        except IntegrityError as e:
+                            db.session.rollback()
+
         elif community_json and 'attributedTo' in community_json:
             mods = community_json['attributedTo']
             if isinstance(mods, list):
@@ -121,6 +127,10 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                             else:
                                 new_membership = CommunityMember(community_id=community.id, user_id=mod.id, is_moderator=True)
                                 db.session.add(new_membership)
+                            try:
+                                db.session.commit()
+                            except IntegrityError as e:
+                                db.session.rollback()
         if is_peertube:
             community.restricted_to_mods = True
         db.session.commit()
@@ -156,8 +166,6 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                         is_wordpress = True
                     if not activity:
                         return
-                    if not ensure_domains_match(activity):
-                        continue
                     if is_peertube:
                         user = mod
                     elif 'attributedTo' in activity and isinstance(activity['attributedTo'], str):
@@ -586,3 +594,12 @@ def community_in_list(community_id, community_list):
 def find_local_users(search: str) -> List[User]:
     return User.query.filter(User.banned == False, User.deleted == False, User.ap_id == None, User.user_name.ilike(f"%{search}%")).\
         order_by(desc(User.reputation)).all()
+
+
+def find_potential_moderators(search: str) -> List[User]:
+    if not '@' in search:
+        return User.query.filter(User.banned == False, User.deleted == False, User.user_name.ilike(f"%{search}%")).\
+          order_by(desc(User.reputation)).all()
+    else:
+        return User.query.filter(User.banned == False, User.deleted == False, User.ap_id == search.lower()).\
+          order_by(desc(User.reputation)).all()

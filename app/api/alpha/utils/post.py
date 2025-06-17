@@ -5,15 +5,16 @@ from app.constants import *
 from app.models import Post, PostVote, Community, CommunityMember, utcnow, User
 from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, subscribe_post, make_post, edit_post, \
                             delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post
-from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, recently_upvoted_posts
+from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, recently_upvoted_posts, \
+    site_language_id
 
 from datetime import timedelta
 from sqlalchemy import desc, text
 
 
-def get_post_list(auth, data, user_id=None, search_type='Posts'):
+def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     type = data['type_'] if data and 'type_' in data else "All"
-    sort = data['sort'].lower() if data and 'sort' in data else "hot"
+    sort = data['sort'] if data and 'sort' in data else "Hot"
     page = int(data['page_cursor']) if data and 'page_cursor' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 50
     liked_only = data['liked_only'] if data and 'liked_only' in data else 'false'
@@ -94,15 +95,25 @@ def get_post_list(auth, data, user_id=None, search_type='Posts'):
         u_rp_ids = db.session.execute(text('SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id'), {"user_id": user_id}).scalars()
         posts = posts.filter(Post.id.not_in(u_rp_ids))
 
-    if sort == "hot":
+    if sort == "Hot":
         posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
-    elif sort == "top":
+    elif sort == "Top" or sort == "TopDay":
         posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=1)).order_by(desc(Post.up_votes - Post.down_votes))
-    elif sort == "new":
+    elif sort == "TopHour":
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(hours=1)).order_by(desc(Post.up_votes - Post.down_votes))
+    elif sort == "TopSixHour":
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(hours=6)).order_by(desc(Post.up_votes - Post.down_votes))
+    elif sort == "TopTwelveHour":
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(hours=12)).order_by(desc(Post.up_votes - Post.down_votes))
+    elif sort == "TopWeek":
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=7)).order_by(desc(Post.up_votes - Post.down_votes))
+    elif sort == "TopMonth":
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=28)).order_by(desc(Post.up_votes - Post.down_votes))
+    elif sort == "New":
         posts = posts.order_by(desc(Post.posted_at))
-    elif sort == "scaled":
-        posts = posts.order_by(desc(Post.ranking_scaled)).order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
-    elif sort == "active":
+    elif sort == "Scaled":
+        posts = posts.filter(Post.ranking_scaled != None).order_by(desc(Post.ranking_scaled)).order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
+    elif sort == "Active":
         posts = posts.order_by(desc(Post.last_active))
 
     posts = posts.paginate(page=page, per_page=limit, error_out=False)
@@ -115,7 +126,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts'):
             continue
     list_json = {
         "posts": postlist,
-        "next_page": str(posts.next_num)
+        "next_page": str(posts.next_num) if posts.next_num is not None else None
     }
 
     return list_json
@@ -189,9 +200,9 @@ def post_post(auth, data):
     body = data['body'] if 'body' in data else ''
     url = data['url'] if 'url' in data else None
     nsfw = data['nsfw'] if 'nsfw' in data else False
-    language_id = data['language_id'] if 'language_id' in data else 2       # FIXME: use site language
+    language_id = data['language_id'] if 'language_id' in data else site_language_id()
     if language_id < 2:
-        language_id = 2
+        language_id = site_language_id()
 
     # change when Polls are supported
     type = POST_TYPE_ARTICLE
@@ -221,7 +232,7 @@ def put_post(auth, data):
     nsfw = data['nsfw'] if 'nsfw' in data else post.nsfw
     language_id = data['language_id'] if 'language_id' in data else post.language_id
     if language_id < 2:
-        language_id = 2   # FIXME: use site language
+        language_id = site_language_id()
 
     # change when Polls are supported
     type = POST_TYPE_ARTICLE

@@ -11,7 +11,7 @@ from app.instance import bp
 from app.models import Instance, User, Post, read_posts
 from app.utils import render_template, moderating_communities, joined_communities, menu_topics, blocked_domains, \
     blocked_instances, blocked_communities, blocked_users, user_filters_home, recently_upvoted_posts, \
-    recently_downvoted_posts, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds
+    recently_downvoted_posts, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, reported_posts
 from app.shared.site import block_remote_instance, unblock_remote_instance
 
 
@@ -48,8 +48,7 @@ def list_instances():
     return render_template('instance/list_instances.html', instances=instances,
                            title=title, search=search, filter=filter,
                            next_url=next_url, prev_url=prev_url,
-                           low_bandwidth=low_bandwidth,
-                           site=g.site, )
+                           low_bandwidth=low_bandwidth)
 
 
 @bp.route('/instance/<instance_domain>', methods=['GET'])
@@ -61,7 +60,7 @@ def instance_overview(instance_domain):
         abort(404)
 
     return render_template('instance/overview.html', instance=instance,
-                           site=g.site,
+                           
                            title=_('%(instance)s overview', instance=instance.domain),
                            )
 
@@ -88,7 +87,7 @@ def instance_people(instance_domain):
     prev_url = url_for('instance.instance_people', page=people.prev_num, instance_domain=instance_domain) if people.has_prev and page != 1 else None
 
     return render_template('instance/people.html', people=people, instance=instance, next_url=next_url, prev_url=prev_url,
-                           site=g.site,
+                           
                            title=_('People from %(instance)s', instance=instance.domain),
                            )
 
@@ -168,12 +167,11 @@ def instance_posts(instance_domain):
                            low_bandwidth=low_bandwidth, recently_upvoted=recently_upvoted, breadcrumbs=breadcrumbs,
                            recently_downvoted=recently_downvoted,
                            next_url=next_url, prev_url=prev_url,
+                           reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
                            #rss_feed=f"https://{current_app.config['SERVER_NAME']}/feed",
                            #rss_feed_name=f"Posts on " + g.site.name,
                            title=_("Posts from %(instance)s", instance=instance.domain),
-                           content_filters=content_filters,
-                           site=g.site,
-                           )
+                           content_filters=content_filters)
 
 
 @bp.route('/instance/<int:instance_id>/block', methods=['GET'])

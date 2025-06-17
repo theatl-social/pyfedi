@@ -6,7 +6,7 @@
 {% macro render_username(user, add_domain=True, htmx_redirect_back_to=None) -%}
 <div class="render_username">
     {% if user.deleted -%}
-        {% if current_user.is_authenticated and current_user.is_admin() -%}
+        {% if current_user.is_authenticated and current_user.get_id() in admin_ids -%}
             <a href="/u/{{ user.link() }}" title="{{ user.ap_id if user.ap_id != none else user.user_name }}" aria-label="{{ _('Author') }}">[deleted]</a>
         {% else -%}
             [deleted]
@@ -52,14 +52,14 @@
                 <span class="visually-hidden">by</span>
                 {{ render_username(post_reply.author, htmx_redirect_back_to=request.path + '#comment_' + str(post_reply.id)) }}
                 {% if post_reply.author.id == post_reply.post.author.id -%}
-                    <span title="Submitter of original post" aria-label="{{ _('Post creator') }}" class="small"> [OP]</span>
+                    <span title="Submitter of original post" aria-label="{{ _('Post creator') }}" class="user_flair original_poster">OP</span>
                 {% endif -%}
             </div>
             <div class="col-auto text-muted small pt-05">
                 <time datetime="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post_reply.posted_at).humanize(locale=locale) }}</time>{% if post_reply.edited_at -%}, edited <time datetime="{{ arrow.get(post_reply.posted_at) }}" title="{{ arrow.get(post_reply.posted_at) }}">{{ arrow.get(post_reply.edited_at).humanize(locale=locale) }}</time>{% endif -%}
             </div>
             <div class="col-auto">
-                {% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) -%}
+                {% if post_reply.has_been_reported() -%}
                     <span class="red fe fe-report" title="{{ _('Reported. Check comment for issues.') }}"></span>
                 {% endif -%}
             </div>
@@ -73,9 +73,9 @@
             </div>
         </div>
 
-        <div class="row comment_body hidable{% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) %} reported{% endif %}">
+        <div class="row comment_body hidable{% if post_reply.has_been_reported() %} reported{% endif %}">
             <div class="col-12 pr-0">
-                {{ post_reply.body_html | community_links | person_links | safe }}
+                {{ post_reply.body_html | community_links | feed_links | person_links | safe }}
             </div>
         </div>
         <div class="comment_actions hidable">

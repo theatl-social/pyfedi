@@ -3,20 +3,36 @@
 {% else %}
     {% extends "base.html" %}
 {% endif %}
-{% from 'bootstrap/form.html' import render_form %}
+{% from 'bootstrap5/form.html' import render_form %}
 
 {% block app_content %}
 
 <div class="row">
     <div class="col">
-        {% include 'admin/_nav.html' %}
+        {% include 'admin/_tabbed_nav.html' %}
     </div>
 </div>
 
 <div class="row">
-    <div class="col">
-        <p>Welcome to the admin area. This page will eventually have some helpful guides and links for new admins but
-        for now it does not.</p>
+    <div class="col mt-4">
+        <p>{{ _('Load average: ') }}
+        {% if load1 > num_cores %}
+            <span class="blink red">{{ '%.2f' % load1 }}</span>
+        {% else %}
+            {{ '%.2f' % load1 }}
+        {% endif -%}
+        {% if load5 > num_cores %}
+            <span class="blink red">{{ '%.2f' % load5 }}</span>
+        {% else %}
+            {{ '%.2f' % load5 }}
+        {% endif -%}
+        {% if load15 > num_cores %}
+            <span class="blink red">{{ '%.2f' % load15 }}</span>
+        {% else %}
+            {{ '%.2f' % load15 }}
+        {% endif -%}
+        </p>
+        <p>{{ disk_usage | safe }}</p>
     </div>
 </div>
 {% endblock %}

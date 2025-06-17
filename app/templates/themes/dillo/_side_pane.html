@@ -31,7 +31,7 @@
                  <h2>{{ community.title }}</h2>
             </div>
             <div class="card-body">
-                <p>{{ community.description_html|community_links|safe if community.description_html else '' }}</p>
+                <p>{{ community.description_html|community_links|feed_links|safe if community.description_html else '' }}</p>
                 <p>{{ community.rules_html|safe if community.rules_html else '' }}</p>
                 <p>{{ _('Members') if community.is_local() else _('Local members') }}: {{ community.subscriptions_count }}<br>
                     {{ _('Posts') }}: {{ community.post_count }}<br>
@@ -41,7 +41,7 @@
                     <h3>Moderators</h3>
                     <ul class="moderator_list">
                         {% for mod in mods -%}
-                            <li>{{ render_username(mod) }}</li>
+                            <li>{{ render_username(mod, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</li>
                         {% endfor -%}
                     </ul>
                     {% if un_moderated -%}

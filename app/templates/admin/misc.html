@@ -3,7 +3,7 @@
 {% else %}
     {% extends "base.html" %}
 {% endif %}
-{% from 'bootstrap/form.html' import render_field %}
+{% from 'bootstrap5/form.html' import render_field %}
 {% set active_child = 'admin_misc' %}
 
 {% block app_content %}
@@ -20,22 +20,30 @@
             <p class="small field_hint">{{ _('CSS in this field will be added to every page.') }}</p>
             {{ render_field(form.default_filter) }}
             {{ render_field(form.enable_downvotes) }}
+            {{ render_field(form.enable_gif_reply_rep_decrease) }}
+            {{ render_field(form.enable_chan_image_filter) }}
+            {{ render_field(form.enable_this_comment_filter) }}
+            {{ render_field(form.meme_comms_low_quality) }}
             {{ render_field(form.allow_local_image_posts) }}
             {{ render_field(form.remote_image_cache_days) }}
             {{ render_field(form.enable_nsfw) }}
             {{ render_field(form.enable_nsfl) }}
             {{ render_field(form.community_creation_admin_only) }}
             {{ render_field(form.reports_email_admins) }}
+            {{ render_field(form.language_id) }}
             <hr>
             <h3>{{ _('Registration') }}</h3>
             {{ render_field(form.registration_mode) }}
             {{ render_field(form.application_question) }}
             {{ render_field(form.email_verification) }}
+            {{ render_field(form.captcha_enabled) }}
             {{ render_field(form.choose_topics) }}
             {{ render_field(form.filter_selection) }}
             {{ render_field(form.auto_decline_countries) }}
             <p class="small field_hint">{{ _('Use 2-letter country codes, one per line. Requires IPinfo API.') }}</p>
             {{ render_field(form.auto_decline_referrers) }}
+            {{ render_field(form.ban_check_servers) }}
+            <p class="small field_hint">{{ _('PieFed instances only. One per line, no https:// on the front.') }}</p>
             {{ render_field(form.registration_approved_email) }}
             <p class="small field_hint">{{ _('This will be sent after their application is approved. Use markdown.') }}</p>
             <hr>

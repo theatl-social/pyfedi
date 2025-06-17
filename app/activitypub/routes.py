@@ -1,13 +1,14 @@
 from datetime import timedelta
 from random import randint
 
-from flask import request, current_app, abort, jsonify, json, g, url_for, redirect, make_response
+from flask import request, current_app, abort, jsonify, json, g, url_for, redirect, make_response, flash
 from flask_login import current_user
+from flask_babel import _
 from psycopg2 import IntegrityError
 from sqlalchemy import desc, or_, text
 import werkzeug.exceptions
 
-from app import db, constants, cache, celery
+from app import db, constants, cache, celery, limiter
 from app.activitypub import bp
 
 from app.activitypub.signature import HttpSignature, VerificationError, default_context, LDSignature, \
@@ -20,7 +21,8 @@ from app.user.routes import show_profile
 from app.constants import *
 from app.models import User, Community, CommunityJoinRequest, CommunityMember, CommunityBan, ActivityPubLog, Post, \
     PostReply, Instance, PostVote, PostReplyVote, File, AllowedInstances, BannedInstances, utcnow, Site, Notification, \
-    ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice, Feed, FeedItem, FeedMember, FeedJoinRequest
+    ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice, Feed, FeedItem, FeedMember, FeedJoinRequest, \
+    IpBan
 from app.activitypub.util import public_key, users_total, active_half_year, active_month, local_posts, local_comments, \
     post_to_activity, find_actor_or_create, find_reply_parent, find_liked_object, \
     lemmy_site_data, is_activitypub_request, delete_post_or_comment, community_members, \
@@ -251,6 +253,35 @@ def domain_blocks():
                 'comment': domain.reason if domain.reason else ''
             })
     return jsonify(retval)
+
+
+@bp.route('/api/is_ip_banned', methods=['POST'])
+@limiter.limit("60 per 1 minutes", methods=['POST'])
+def api_is_ip_banned():
+    result = []
+    counter = 0
+    for ip in request.form.get('ip_addresses').split(','):
+        banned_ip = IpBan.query.filter(IpBan.ip_address == ip).first()
+        result.append(banned_ip is not None)
+        counter += 1
+        if counter >= 10:
+            break
+    return jsonify(result)
+
+
+@bp.route('/api/is_email_banned', methods=['POST'])
+@limiter.limit("60 per 1 minutes", methods=['POST'])
+def api_is_email_banned():
+    result = []
+    counter = 0
+    for email in request.form.get('emails').split(','):
+        user_id = db.session.query(User.id).filter(User.banned == True, User.email == email.strip(), User.ap_id == None).scalar()
+        result.append(user_id is not None)
+        counter += 1
+        if counter >= 10:
+            break
+
+    return jsonify(result)
 
 
 @bp.route('/api/v3/site')
@@ -486,7 +517,17 @@ def community_profile(actor):
         else:   # browser request - return html
             return show_community(community)
     else:
-        abort(404)
+        if is_activitypub_request():
+            abort(404)
+        elif current_user.is_authenticated and "@" in actor:
+            flash(_("Community not found on this instance"))
+            part = actor.split('@')
+            return redirect(url_for("community.lookup", community=part[0], domain=part[1]))
+        elif current_user.is_authenticated:
+            flash(_("Community not found on this instance"))
+            return redirect(url_for("community.add_local"))
+        else:
+            abort(404)
 
 
 @bp.route('/inbox', methods=['POST'])
@@ -506,19 +547,16 @@ def shared_inbox():
         return '', 200
 
     id = request_json['id']
-    missing_actor_in_announce_object = False     # nodebb
     if request_json['type'] == 'Announce' and isinstance(request_json['object'], dict):
         object = request_json['object']
-        if not 'actor' in object:
-            missing_actor_in_announce_object = True
-        if not 'id' in object or not 'type' in object or not 'object' in object:
+        if not 'id' in object or not 'type' in object or not 'actor' in object or not 'object' in object:
             if 'type' in object and (object['type'] == 'Page' or object['type'] == 'Note'):
                 log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_IGNORED, saved_json, 'Intended for Mastodon')
             else:
                 log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Missing minimum expected fields in JSON Announce object')
             return '', 200
 
-        if not missing_actor_in_announce_object and isinstance(object['actor'], str) and object['actor'].startswith('https://' + current_app.config['SERVER_NAME']):
+        if isinstance(object['actor'], str) and object['actor'].startswith('https://' + current_app.config['SERVER_NAME']):
             log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json, 'Activity about local content which is already present')
             return '', 200
 
@@ -598,12 +636,6 @@ def shared_inbox():
             process_delete_request.delay(request_json, store_ap_json)
         return ''
 
-    if missing_actor_in_announce_object:
-        if ((request_json['object']['type'] == 'Create' or request_json['object']['type'] == 'Update') and
-            'attributedTo' in request_json['object']['object'] and isinstance(request_json['object']['object']['attributedTo'], str)):
-            log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_MONITOR, request_json, 'nodebb: Actor is missing in the Create')
-            request_json['object']['actor'] = request_json['object']['object']['attributedTo']
-
     if current_app.debug:
         process_inbox_request(request_json, store_ap_json)
     else:
@@ -633,20 +665,16 @@ def replay_inbox_request(request_json):
         return
 
     id = request_json['id']
-    missing_actor_in_announce_object = False     # nodebb
     if request_json['type'] == 'Announce' and isinstance(request_json['object'], dict):
         object = request_json['object']
-        if not 'actor' in object:
-            missing_actor_in_announce_object = True
-            log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_MONITOR, request_json, 'REPLAY: Actor is missing in Announce object')
-        if not 'id' in object or not 'type' in object or not 'object' in object:
+        if not 'id' in object or not 'type' in object or not 'actor' in object or not 'object' in object:
             if 'type' in object and (object['type'] == 'Page' or object['type'] == 'Note'):
                 log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_IGNORED, request_json, 'REPLAY: Intended for Mastodon')
             else:
                 log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'REPLAY: Missing minimum expected fields in JSON Announce object')
             return
 
-        if not missing_actor_in_announce_object and isinstance(object['actor'], str) and object['actor'].startswith('https://' + current_app.config['SERVER_NAME']):
+        if isinstance(object['actor'], str) and object['actor'].startswith('https://' + current_app.config['SERVER_NAME']):
             log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, request_json, 'REPLAY: Activity about local content which is already present')
             return
 
@@ -681,11 +709,6 @@ def replay_inbox_request(request_json):
     if account_deletion == True:
         process_delete_request(request_json, True)
         return
-
-    if missing_actor_in_announce_object:
-        if ((request_json['object']['type'] == 'Create' or request_json['object']['type'] == 'Update') and
-            'attributedTo' in request_json['object']['object'] and isinstance(request_json['object']['object']['attributedTo'], str)):
-            request_json['object']['actor'] = request_json['object']['object']['attributedTo']
 
     process_inbox_request(request_json, True)
 
@@ -875,7 +898,11 @@ def process_inbox_request(request_json, store_ap_json):
             user = None
             if isinstance(core_activity['object'], str): # a.gup.pe accepts using a string with the ID of the follow request
                 join_request_parts = core_activity['object'].split('/')
-                join_request = CommunityJoinRequest.query.get(join_request_parts[-1])
+                try:
+                    join_request = CommunityJoinRequest.query.filter_by(uuid=join_request_parts[-1]).first()
+                except Exception as e:  # old style join requests were just a number
+                    db.session.rollback()
+                    join_request = CommunityJoinRequest.query.get(join_request_parts[-1])
                 if join_request:
                     user = User.query.get(join_request.user_id)
             elif core_activity['object']['type'] == 'Follow':
@@ -1132,9 +1159,11 @@ def process_inbox_request(request_json, store_ap_json):
                     log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json, 'Does not have permission')
                     return
                 target = core_activity['target']
+                if not community.ap_featured_url:
+                    community.ap_featured_url = community.ap_profile_id + '/featured'
                 featured_url = community.ap_featured_url
                 moderators_url = community.ap_moderators_url
-                if target == featured_url:
+                if target.lower() == featured_url.lower():
                     post = Post.get_by_ap_id(core_activity['object'])
                     if post:
                         post.sticky = True
@@ -1195,7 +1224,7 @@ def process_inbox_request(request_json, store_ap_json):
                                         if community_to_remove.instance.domain == 'a.gup.pe':
                                             join_request = CommunityJoinRequest.query.filter_by(user_id=fm_user.id, community_id=community_to_remove.id).first()
                                             if join_request:
-                                                follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+                                                follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
                                         undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
                                         follow = {'actor': fm_user.public_url(), 'to': [community_to_remove.public_url()], 'object': community_to_remove.public_url(), 'type': 'Follow', 'id': follow_id}
                                         undo = {'actor': fm_user.public_url(), 'to': [community_to_remove.public_url()], 'type': 'Undo', 'id': undo_id, 'object': follow}
@@ -1212,9 +1241,11 @@ def process_inbox_request(request_json, store_ap_json):
                     log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json, 'Does not have permission')
                     return
                 target = core_activity['target']
+                if not community.ap_featured_url:
+                    community.ap_featured_url = community.ap_profile_id + '/featured'
                 featured_url = community.ap_featured_url
                 moderators_url = community.ap_moderators_url
-                if target == featured_url:
+                if target.lower() == featured_url.lower():
                     post = Post.get_by_ap_id(core_activity['object'])
                     if post:
                         post.sticky = False
@@ -1271,43 +1302,50 @@ def process_inbox_request(request_json, store_ap_json):
                 return
 
             remove_data = core_activity['removeData'] if 'removeData' in core_activity else False
-            target = core_activity['target']
-            if target.count('/') < 4:   # site ban
-                if not blocker.is_instance_admin():
-                    log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, saved_json, 'Does not have permission')
-                    return
-                if blocked.is_local():
-                    log_incoming_ap(id, APLOG_USERBAN, APLOG_MONITOR, request_json, 'Remote Admin in banning one of our users from their site')
-                    current_app.logger.error('Remote Admin in banning one of our users from their site: ' + str(request_json))
-                    return
-                if blocked.instance_id != blocker.instance_id:
-                    log_incoming_ap(id, APLOG_USERBAN, APLOG_MONITOR, request_json, 'Remote Admin is banning a user of a different instance from their site')
-                    current_app.logger.error('Remote Admin is banning a user of a different instance from their site: ' + str(request_json))
-                    return
+            if 'target' in core_activity:
+                target = core_activity['target']
+                if target.count('/') < 4:   # site ban
+                    if not blocker.is_instance_admin():
+                        log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, saved_json, 'Does not have permission')
+                        return
+                    if blocked.is_local():
+                        log_incoming_ap(id, APLOG_USERBAN, APLOG_MONITOR, request_json, 'Remote Admin in banning one of our users from their site')
+                        current_app.logger.error('Remote Admin in banning one of our users from their site: ' + str(request_json))
+                        return
+                    if blocked.instance_id != blocker.instance_id:
+                        log_incoming_ap(id, APLOG_USERBAN, APLOG_MONITOR, request_json, 'Remote Admin is banning a user of a different instance from their site')
+                        current_app.logger.error('Remote Admin is banning a user of a different instance from their site: ' + str(request_json))
+                        return
 
-                blocked.banned = True
-                if 'expires' in core_activity:
-                    blocked.banned_until = core_activity['expires']
-                elif 'endTime' in core_activity:
-                    blocked.banned_until = core_activity['endTime']
-                db.session.commit()
+                    blocked.banned = True
+                    if 'expires' in core_activity:
+                        blocked.ban_until = core_activity['expires']
+                    elif 'endTime' in core_activity:
+                        blocked.ban_until = core_activity['endTime']
+                    db.session.commit()
 
-                if remove_data:
-                    site_ban_remove_data(blocker.id, blocked)
-                log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, saved_json)
-            else:                       # community ban (community will already known if activity was Announced)
-                community = community if community else find_actor_or_create(target, create_if_not_found=False, community_only=True)
-                if not community:
-                    log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, saved_json, 'Blocked or unfound community')
-                    return
-                if not community.is_moderator(blocker) and not community.is_instance_admin(blocker):
-                    log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, saved_json, 'Does not have permission')
-                    return
+                    if remove_data:
+                        site_ban_remove_data(blocker.id, blocked)
+                    log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, saved_json)
+                else:                       # community ban (community will already known if activity was Announced)
+                    community = community if community else find_actor_or_create(target, create_if_not_found=False, community_only=True)
+                    if not community:
+                        log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, saved_json, 'Blocked or unfound community')
+                        return
+                    if not community.is_moderator(blocker) and not community.is_instance_admin(blocker):
+                        log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, saved_json, 'Does not have permission')
+                        return
 
-                if remove_data:
-                    community_ban_remove_data(blocker.id, community.id, blocked)
-                ban_user(blocker, blocked, community, core_activity)
-                log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, saved_json)
+                    if remove_data:
+                        community_ban_remove_data(blocker.id, community.id, blocked)
+                    ban_user(blocker, blocked, community, core_activity)
+                    log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, saved_json)
+            else:   # Mastodon does not have a target when blocking, only object
+                if 'object' in core_activity and isinstance(core_activity['object'], str):
+                    if not blocker.has_blocked_user(blocked.id):
+                        db.session.add(UserBlock(blocker_id=blocker.id, blocked_id=blocked.id))
+                        db.session.commit()
+
             return
 
         if core_activity['type'] == 'Undo':
@@ -1525,6 +1563,8 @@ def community_outbox(actor):
             community_data['orderedItems'].append(post_to_activity(post, community))
 
         return jsonify(community_data)
+    else:
+        abort(404)
 
 
 @bp.route('/c/<actor>/featured', methods=['GET'])
@@ -1546,6 +1586,8 @@ def community_featured(actor):
             community_data['orderedItems'].append(post_to_page(post))
 
         return jsonify(community_data)
+    else:
+        abort(404)
 
 
 @bp.route('/c/<actor>/moderators', methods=['GET'])
@@ -1952,6 +1994,9 @@ def feed_profile(actor):
                         "type": "Image",
                         "url": f"https://{current_app.config['SERVER_NAME']}{feed.header_image()}"
                     }
+            actor_data['childFeeds'] = []
+            for child_feed in feed.children.all():
+                actor_data['childFeeds'].append(child_feed.ap_profile_id)
             resp = jsonify(actor_data)
             resp.content_type = 'application/activity+json'
             resp.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/f/{actor}>; rel="alternate"; type="text/html"')
@@ -1994,7 +2039,7 @@ def feed_outbox(actor):
     result = {
         "@context": default_context(),
         "id": feed.ap_outbox_url,
-        "type": "OrderedCollection",
+        "type": "Collection",
         "totalItems": len(items),
         "items": items
     }
@@ -2027,7 +2072,7 @@ def feed_following(actor):
     result = {
         "@context": default_context(),
         "id": feed.ap_following_url,
-        "type": "OrderedCollection",
+        "type": "Collection",
         "totalItems": len(items),
         "items": items
     }

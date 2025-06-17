@@ -3,7 +3,8 @@
 {% else %}
     {% extends "base.html" %}
 {% endif %}
-{% from 'bootstrap/form.html' import render_form %}
+{% from 'bootstrap5/form.html' import render_form %}
+{% from "_macros.html" import render_username %}
 {% set active_child = 'admin_users' %}
 
 {% block app_content %}
@@ -78,7 +79,7 @@
             </tr>
             {% for user in users.items %}
                 <tr>
-                    <td><span title="{{ _('Name') }}">{{ render_username(user) }}</span></td>
+                    <td><span title="{{ _('Name') }}">{{ render_username(user, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</span></td>
                     <td><span title="{{ _('Banned') }}">{{ '<span class="red">Banned</span>'|safe if user.banned }}
                         {{ '<span class="red">Banned posts</span>'|safe if user.ban_posts }}
                         {{ '<span class="red">Banned comments</span>'|safe if user.ban_comments }}</span></td>
@@ -86,15 +87,14 @@
                     <td><span title="{{ _('Attitude') }}">{% if user.attitude %}{{ (user.attitude * 100) | round | int }}%{% endif %}</span></td>
                     <td><span title="{{ _('Reputation') }}">{% if user.reputation %}R {{ user.reputation | round | int }}{% endif %}</span></td>
                     <td><span title="{{ _('Last Seen') }}: {{ user.last_seen }}">{{ arrow.get(user.last_seen).humanize(locale=locale) }}</span></td>
-                    <td><a href="{{ url_for('admin.admin_user_edit', user_id=user.id) }}">Edit</a>,
-                        <a href="{{ url_for('admin.admin_user_delete', user_id=user.id) }}" class="confirm_first">Delete</a>,
+                    <td><a href="{{ url_for('admin.admin_user_edit', user_id=user.id) }}">{{ ('Edit') }}</a>,
+                        <a href="{{ url_for('admin.admin_user_delete', user_id=user.id) }}" class="confirm_first">{{ ('Delete') }}</a>,
                         <br />
                         {% if user.banned %}
-                            <a href="{{ url_for('user.unban_profile', actor=user.link()) }}" class="confirm_first">Ban</a>,
+                            <a href="{{ url_for('user.unban_profile', actor=user.link()) }}" class="confirm_first">{{ ('Unban') }}</a>
                         {% else %}
-                            <a href="{{ url_for('user.ban_profile', actor=user.link()) }}" class="confirm_first">Ban</a>,
+                            <a href="{{ url_for('user.ban_profile', actor=user.link()) }}" class="">{{ ('Ban') }}</a>
                         {% endif %}
-                        <a href="{{ url_for('user.ban_purge_profile', actor=user.link()) }}" class="confirm_first">Purge</a>
                     </td>
                 </tr>
             {% endfor %}

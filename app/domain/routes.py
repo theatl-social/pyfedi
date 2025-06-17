@@ -8,16 +8,17 @@ from flask_babel import _
 
 from app import db, constants, cache, limiter
 from app.constants import POST_STATUS_REVIEWING
+from app.domain.forms import PostWarningForm
 from app.inoculation import inoculation
 from app.models import Post, Domain, Community, DomainBlock, read_posts
 from app.domain import bp
 from app.utils import render_template, permission_required, user_filters_posts, blocked_domains, blocked_instances, \
     recently_upvoted_posts, recently_downvoted_posts, mimetype_from_url, request_etag_matches, \
-    return_304, joined_or_modding_communities, login_required_if_private_instance
+    return_304, joined_or_modding_communities, login_required_if_private_instance, reported_posts
 from sqlalchemy import desc, or_
 
 
-@bp.route('/d/<domain_id>', methods=['GET'])
+@bp.route('/d/<domain_id>', methods=['GET', 'POST'])
 @login_required_if_private_instance
 def show_domain(domain_id):
     with limiter.limit('60/minute'):
@@ -30,6 +31,15 @@ def show_domain(domain_id):
             if domain.banned:
                 domain = None
         if domain:
+            if current_user.is_authenticated and (current_user.is_staff() or current_user.is_admin()):
+                form = PostWarningForm()
+                if form.validate_on_submit():
+                    domain.post_warning = form.post_warning.data
+                    db.session.commit()
+                    flash(_('Saved'))
+                form.post_warning.data = domain.post_warning
+            else:
+                form = None
             if current_user.is_anonymous or current_user.ignore_bots == 1:
                 posts = Post.query.join(Community, Community.id == Post.community_id).\
                     filter(Post.from_bot == False, Post.domain_id == domain.id, Community.banned == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING).\
@@ -66,9 +76,10 @@ def show_domain(domain_id):
             return render_template('domain/domain.html', domain=domain, title=domain.name, posts=posts,
                                    POST_TYPE_IMAGE=constants.POST_TYPE_IMAGE, POST_TYPE_LINK=constants.POST_TYPE_LINK,
                                    POST_TYPE_VIDEO=constants.POST_TYPE_VIDEO,
-                                   next_url=next_url, prev_url=prev_url,
+                                   next_url=next_url, prev_url=prev_url, form=form,
                                    content_filters=content_filters, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
-                                   site=g.site, joined_communities=joined_or_modding_communities(current_user.get_id()),
+                                   reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
+                                   joined_communities=joined_or_modding_communities(current_user.get_id()),
                                    rss_feed=f"https://{current_app.config['SERVER_NAME']}/d/{domain.id}/feed" if domain.post_count > 0 else None,
                                    rss_feed_name=f"{domain.name} on {g.site.name}" if domain.post_count > 0 else None,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
@@ -146,9 +157,8 @@ def domains():
 
     ban_visibility_permission = False
 
-    if not current_user.is_anonymous:
-        if not current_user.created_recently() and current_user.reputation > 100 or current_user.is_admin():
-            ban_visibility_permission = True
+    if current_user.is_authenticated and current_user.is_admin_or_staff():
+        ban_visibility_permission = True
 
     next_url = url_for('domain.domains', page=domains.next_num) if domains.has_next else None
     prev_url = url_for('domain.domains', page=domains.prev_num) if domains.has_prev and page != 1 else None

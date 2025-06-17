@@ -9,13 +9,14 @@ from flask_login import current_user
 from app import create_app, db, cli
 import arrow
 from flask import session, g, json, request, current_app
+from sqlalchemy import text
 from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_ARTICLE, POST_TYPE_VIDEO, POST_TYPE_POLL, \
-    SUBSCRIPTION_MODERATOR, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_PENDING
+    SUBSCRIPTION_MODERATOR, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_PENDING, ROLE_ADMIN
 from app.models import Site
 from app.utils import getmtime, gibberish, shorten_string, shorten_url, digits, user_access, community_membership, \
     can_create_post, can_upvote, can_downvote, shorten_number, ap_datetime, current_theme, community_link_to_href, \
     in_sorted_list, role_access, first_paragraph, person_link_to_href, feed_membership, html_to_text, remove_images, \
-    notif_id_to_string
+    notif_id_to_string, feed_link_to_href
 
 app = create_app()
 cli.register(app)
@@ -24,7 +25,9 @@ cli.register(app)
 @app.context_processor
 def app_context_processor():
     return dict(getmtime=getmtime, instance_domain=current_app.config['SERVER_NAME'], debug_mode=current_app.debug,
-                arrow=arrow, locale=g.locale if hasattr(g, 'locale') else None,
+                arrow=arrow, locale=g.locale if hasattr(g, 'locale') else None, notif_server=current_app.config['NOTIF_SERVER'],
+                site=g.site if hasattr(g, 'site') else None, nonce=g.nonce if hasattr(g, 'nonce') else None,
+                admin_ids=g.admin_ids if hasattr(g, 'admin_ids') else [],
                 POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE, notif_id_to_string=notif_id_to_string,
                 POST_TYPE_ARTICLE=POST_TYPE_ARTICLE, POST_TYPE_VIDEO=POST_TYPE_VIDEO, POST_TYPE_POLL=POST_TYPE_POLL,
                 SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
@@ -56,6 +59,7 @@ with app.app_context():
     app.jinja_env.globals['first_paragraph'] = first_paragraph
     app.jinja_env.globals['html_to_text'] = html_to_text
     app.jinja_env.filters['community_links'] = community_link_to_href
+    app.jinja_env.filters['feed_links'] = feed_link_to_href
     app.jinja_env.filters['person_links'] = person_link_to_href
     app.jinja_env.filters['shorten'] = shorten_string
     app.jinja_env.filters['shorten_url'] = shorten_url
@@ -64,14 +68,27 @@ with app.app_context():
 
 @app.before_request
 def before_request():
-    session['nonce'] = gibberish()
+    # Handle CORS preflight requests for all routes
+    if request.method == 'OPTIONS':
+        return '', 200
+    
+    # Store nonce in g (g is per-request, unlike session)
+    g.nonce = gibberish()
     g.locale = str(get_locale())
     if request.path != '/inbox' and not request.path.startswith('/static/'):        # do not load g.site on shared inbox, to increase chance of duplicate detection working properly
         g.site = Site.query.get(1)
+        g.admin_ids = list(db.session.execute(
+            text('SELECT DISTINCT u.id FROM "user" u LEFT JOIN user_role ur ON u.id = ur.user_id WHERE (ur.role_id = :role_admin AND u.deleted = false AND u.banned = false) OR u.id = 1 ORDER BY u.id'),
+            {'role_admin': ROLE_ADMIN}
+        ).scalars())
     if current_user.is_authenticated:
         current_user.last_seen = datetime.utcnow()
         current_user.email_unread_sent = False
     else:
+        if 'Windows' in request.user_agent.string:
+            current_user.font = 'inter'
+        else:
+            current_user.font = ''
         if session.get('Referer') is None and \
                 request.headers.get('Referer') is not None and \
                 current_app.config['SERVER_NAME'] not in request.headers.get('Referer'):
@@ -80,10 +97,25 @@ def before_request():
 
 @app.after_request
 def after_request(response):
-    if 'auth/register' not in request.path:
-        response.headers['Content-Security-Policy'] = f"script-src 'self' 'nonce-{session['nonce']}'"
-        response.headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains; preload'
-        response.headers['X-Content-Type-Options'] = 'nosniff'
-        if '/embed' not in request.path:
-            response.headers['X-Frame-Options'] = 'DENY'
+    # Add CORS headers to all responses
+    response.headers['Access-Control-Allow-Origin'] = current_app.config.get('CORS_ALLOW_ORIGIN', '*')
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
+    
+    # Don't set cookies for static resources or ActivityPub responses to make them cachable
+    if request.path.startswith('/static/') or request.path.startswith('/bootstrap/static/') or response.content_type == 'application/activity+json':
+        # Remove session cookies that mess up caching
+        if 'Set-Cookie' in response.headers:
+            del response.headers['Set-Cookie']
+        # Cache headers for static resources
+        if request.path.startswith('/static/') or request.path.startswith('/bootstrap/static/'):
+            response.headers['Cache-Control'] = 'public, max-age=31536000'  # 1 year
+    else:
+        if 'auth/register' not in request.path:
+            if hasattr(g, 'nonce'):
+                response.headers['Content-Security-Policy'] = f"script-src 'self' 'nonce-{g.nonce}'"
+            response.headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains; preload'
+            response.headers['X-Content-Type-Options'] = 'nosniff'
+            if '/embed' not in request.path:
+                response.headers['X-Frame-Options'] = 'DENY'
     return response

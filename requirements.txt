@@ -38,3 +38,4 @@ captcha
 pytest
 stripe~=12.0.0
 Authlib~=1.5.0
+webauthn~=2.5.0

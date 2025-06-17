@@ -5,21 +5,22 @@ from app.models import Notification, PostReply, Post
 from app.constants import *
 from app.shared.reply import vote_for_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, make_reply, edit_reply, \
                              delete_reply, restore_reply, report_reply, mod_remove_reply, mod_restore_reply
-from app.utils import authorise_api_user, blocked_users, blocked_instances
+from app.utils import authorise_api_user, blocked_users, blocked_instances, site_language_id
 
 from sqlalchemy import desc, or_, text
 
 
 def get_reply_list(auth, data, user_id=None):
-    sort = data['sort'].lower() if data and 'sort' in data else "new"
+    sort = data['sort'] if data and 'sort' in data else "New"
     max_depth = data['max_depth'] if data and 'max_depth' in data else None
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 10
     post_id = data['post_id'] if data and 'post_id' in data else None
     parent_id = data['parent_id'] if data and 'parent_id' in data else None
     person_id = data['person_id'] if data and 'person_id' in data else None
+    community_id = data['community_id'] if data and 'community_id' in data else None
 
-    if data and not (post_id or parent_id or person_id):
+    if data and not (post_id or parent_id or person_id or community_id):
         raise Exception('missing parameters for reply')
 
     # user_id: the logged in user
@@ -42,6 +43,8 @@ def get_reply_list(auth, data, user_id=None):
             replies = PostReply.query.filter(PostReply.id.in_(reply_ids))
     elif person_id:
         replies = PostReply.query.filter_by(user_id=person_id)
+    elif community_id:
+        replies = PostReply.query.filter_by(community_id=community_id)
 
     if max_depth:
         replies = replies.filter(PostReply.depth <= max_depth)
@@ -54,21 +57,25 @@ def get_reply_list(auth, data, user_id=None):
         if blocked_instance_ids:
             replies = replies.filter(PostReply.instance_id.not_in(blocked_instance_ids))
 
-    if sort == "hot":
+    if sort == "Hot":
         replies = replies.order_by(desc(PostReply.ranking)).order_by(desc(PostReply.posted_at))
-    elif sort == "top":
+    elif sort == "Top":
         replies = replies.order_by(desc(PostReply.up_votes - PostReply.down_votes))
-    elif sort == "new":
+    elif sort == "New":
         replies = replies.order_by(desc(PostReply.posted_at))
 
-    replies = replies.paginate(page=page, per_page=limit, error_out=False)
+    if page is not None:
+        replies = replies.paginate(page=page, per_page=limit, error_out=False)
+    else:
+        replies = replies.all()
 
     replylist = []
     for reply in replies:
         replylist.append(reply_view(reply=reply, variant=2, user_id=user_id))
 
     list_json = {
-        "comments": replylist
+        "comments": replylist,
+        "next_page": str(replies.next_num) if replies.next_num is not None else None
     }
 
     return list_json
@@ -139,9 +146,9 @@ def post_reply(auth, data):
     body = data['body']
     post_id = data['post_id']
     parent_id = data['parent_id'] if 'parent_id' in data else None
-    language_id = data['language_id'] if 'language_id' in data else 2       # FIXME: use site language
+    language_id = data['language_id'] if 'language_id' in data else site_language_id()
     if language_id < 2:
-        language_id = 2                                                     # FIXME: use site language
+        language_id = site_language_id()
 
     input = {'body': body, 'notify_author': True, 'language_id': language_id}
     post = Post.query.filter_by(id=post_id).one()
@@ -156,16 +163,18 @@ def put_reply(auth, data):
     required(['comment_id'], data)
     string_expected(['body',], data)
     integer_expected(['comment_id', 'language_id'], data)
+    boolean_expected(['distinguished'], data)
 
     reply_id = data['comment_id']
     reply = PostReply.query.filter_by(id=reply_id).one()
 
     body = data['body'] if 'body' in data else reply.body
     language_id = data['language_id'] if 'language_id' in data else reply.language_id
+    distinguished = data['distinguished'] if 'distinguished' in data else False
     if language_id < 2:
-        language_id = 2                                                     # FIXME: use site language
+        language_id = site_language_id()
 
-    input = {'body': body, 'notify_author': True, 'language_id': language_id}
+    input = {'body': body, 'notify_author': True, 'language_id': language_id, 'distinguished': distinguished}
     post = Post.query.filter_by(id=reply.post_id).one()
 
     user_id, reply = edit_reply(input, reply, post, SRC_API, auth)

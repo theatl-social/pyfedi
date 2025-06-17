@@ -3,13 +3,13 @@
 {% else %}
     {% extends "base.html" %}
 {% endif %}
-{% from 'bootstrap/form.html' import render_form %}
+{% from 'bootstrap5/form.html' import render_form %}
 {% set active_child = 'settings' %}
 
 {% block app_content %}
 
 <div class="row">
-    <main class="col-12 col-md-8 position-relative main_pane">
+    <main class="col-12 col-lg-8 position-relative main_pane">
         <nav class="mb-2" aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
           <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
@@ -23,7 +23,7 @@
 
         {% if send_to %}
         <div id="redirectMessage"></div>
-        <script defer nonce="{{ session['nonce'] }}">
+        <script defer nonce="{{ nonce }}">
             window.addEventListener("load", function () {
                 var redirectTimeout;
                 var cookieName = "remote_instance_url";

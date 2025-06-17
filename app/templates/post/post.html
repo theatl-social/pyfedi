@@ -3,18 +3,28 @@
 {% else -%}
     {% extends "base.html" -%}
 {% endif -%} -%}
-{% from 'bootstrap/form.html' import render_form -%}
+{% from 'bootstrap5/form.html' import render_field -%}
+{% from "_macros.html" import render_username, render_communityname, render_feedname -%}
+{% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video -%}
+{% from "post/reply/_macros.html" import render_comment_voting_buttons, render_reply_notification_toggle -%}
+
+{% block schema_org %}
+    {% if post.indexable and post.instance_id == 1 -%}
+        {% include "post/_schema_org.html" %}
+    {%- endif %}
+{% endblock %}
 
 {% block app_content -%}
-<script type="text/javascript" nonce="{{ session['nonce'] }}">
+<script src="/static/js/coolfieldset.js?v=3"></script>
+<script type="text/javascript" nonce="{{ nonce }}">
     var toBeHidden = Array();   // this list of comment IDs will be iterated over in setupHideButtons() and the 'hide' button clicked
 </script>
 <div class="row">
-    <main class="col-12 col-md-8 position-relative main_pane">
+    <main class="col-12 col-lg-8 position-relative main_pane">
         {% include 'post/_post_full.html' -%}
         {% if post.comments_enabled -%}
             {% if current_user.is_authenticated -%}
-                {% if current_user.verified -%}
+                {% if current_user.verified and not banned_from_community -%}
                     <div class="row post_reply_form">
                         <hr class="mt-1" />
                         <div class="col">
@@ -25,10 +35,20 @@
                                 {% if post.community.posting_warning -%}
                                     <p align="center">{{ post.community.posting_warning|safe }}</p>
                                 {% endif -%}
-                                {{ render_form(form) }}
+                                <form method="post" role="form">
+                                    {{ form.csrf_token() }}
+                                    {{ render_field(form.body) }}
+                                    <fieldset id="post_reply_more_options" class="mt-2 coolfieldset {{ 'collapsed' if request.cookies.get('fieldset_post_reply_more_options_state', 'collapsed') == 'collapsed' }}">
+                                        <legend>{{ _('More options') }}</legend>
+                                        {{ render_field(form.notify_author) }}
+                                        {{ render_field(form.distinguished) }}
+                                        {{ render_field(form.language_id) }}
+                                    </fieldset>
+                                    {{ render_field(form.submit) }}
+                                </form>
                                 {% if not low_bandwidth -%}
                                     {% if markdown_editor -%}
-                                        <script nonce="{{ session['nonce'] }}">
+                                        <script nonce="{{ nonce }}">
                                             window.addEventListener("load", function () {
                                                 var downarea = new DownArea({
                                                     elem: document.querySelector('#body'),
@@ -50,7 +70,9 @@
                         {% endif -%}
                     </div>
                 {% else -%}
-                    <p><a href="{{ url_for('auth.validation_required') }}">{{ _('Verify your email address to comment') }}</a></p>
+                    {% if not current_user.verified -%}
+                        <p><a href="{{ url_for('auth.validation_required') }}">{{ _('Verify your email address to comment') }}</a></p>
+                    {% endif -%}
                 {% endif -%}
             {% else -%}
                 <p><a href="{{ url_for('auth.login', next='/post/' + str(post.id)) }}">{{ _('Log in to comment') }}</a></p>
@@ -72,6 +94,9 @@
                     <a href="?sort=new#post_replies" title="{{ _('Show newest first') }}" class="btn  btn-sm {{ 'btn-primary' if request.args.get('sort', '') == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex">
                         {{ _('New') }}
                     </a>
+                    <a href="?sort=old#post_replies" title="{{ _('Show oldest first') }}" class="btn btn-sm {{ 'btn-primary' if request.args.get('sort', '') == 'old' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                        {{ _('Old') }}
+                    </a>
                 </div>
 
                 <div id="replies" class="comments" role="tree" aria-label="{{ _('Comments') }}" aria-expanded="true">
@@ -88,7 +113,9 @@
                     {% for community, replies in more_replies.items() -%}
                         <div class="row mt-4">
                             <div class="col-10">
-                                <h4 class="mt-1"><a href="/post/{{ replies[0]['comment'].post_id }}#post_replies">{{ _('Comments in %(name)s', name=community.display_name()) }}</a></h4>
+                                <h4 class="mt-1"><a href="/post/{{ replies[0]['comment'].post_id }}#post_replies">{{ _('Comments in %(name)s', name=community.display_name()) }}</a>
+                                    {% if community.description %}<a data-id="{{ community.id }}" href="/community/get_sidebar/{{ community.id }}" class="showPopupCommunitySidebar"><span class="small fe fe-rules"></span></a>{% endif -%}
+                                </h4>
                             </div>
                             <div class="col-2" style="text-align: right; padding-right: 20px;">
                                 {% if current_user.is_authenticated -%}
@@ -106,6 +133,8 @@
                                                      <span class="fe fe-plus"></span> {{ _('Join') }}</a></li>
                                                 <li><hr class="dropdown-divider"></li>
                                             {% endif -%}
+                                            <li><a href="/community/get_sidebar/{{ community.id }}" class="dropdown-item no-underline white-space-normal" rel="nofollow">
+                                                <span class="fe fe-rules"></span> {{ _('Community description') }}</a></li>
                                             <li><a href="{{ url_for('community.community_block', community_id=community.id) }}" class="dropdown-item no-underline white-space-normal" rel="nofollow">
                                                 <span class="fe fe-delete"></span> {{ _('Block community %(community_name)s', community_name=community.display_name()) }}</a></li>
                                         </ul>
@@ -133,7 +162,8 @@
         {% include "_side_pane.html" %}
     {% endwith -%}
 </div>
-<script nonce="{{ session['nonce'] }}">
+<dialog id="communitySidebar"></dialog>
+<script nonce="{{ nonce }}">
     window.addEventListener("load", function () {
         currentPost = document.querySelector('.post_col');  // set the current post, so A and Z voting keys work when viewing a post page
     });

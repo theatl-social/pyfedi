@@ -32,7 +32,7 @@
                         {{ render_field(form.nsfw) }}
                         {{ render_field(form.nsfl) }}
                         {{ render_field(form.public) }}
-                        {% if current_user.is_admin() %}
+                        {% if current_user.get_id() in admin_ids %}
                             {{ render_field(form.is_instance_feed) }}
                         {% endif %}
                         {{ render_field(form.submit) }}

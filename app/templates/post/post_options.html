@@ -3,7 +3,7 @@
         <li><a href="{{ url_for('post.post_edit', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-edit"></span>
             {{ _('Edit') }}</a></li>
     {% endif -%}
-    {% if post.user_id == current_user.id or post.community.is_moderator() or post.community.is_owner() or current_user.is_admin() -%}
+    {% if post.user_id == current_user.id or post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids -%}
         {% if post.deleted -%}
             <li><a href="{{ url_for('post.post_restore', post_id=post.id) }}" hx-get="{{ url_for('post.post_restore', post_id=post.id) }}" hx-confirm="Are you sure?" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-arrow-up"></span>
                 {{ _('Restore') }}</a></li>
@@ -14,7 +14,9 @@
                 {{ _('Delete') }}</a></li>
         {% endif -%}
     {% endif -%}
-    {% if post.community.is_moderator() or post.community.is_owner() or current_user.is_admin() -%}
+    {% if post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids -%}
+        <li><a href="{{ url_for('post.post_set_flair', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-label"></span>
+                {{ _('Set flair') }}</a></li>
         {% if post.sticky -%}
             <li><a href="{{ url_for('post.post_sticky', post_id=post.id, mode='no') }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-unsticky"></span>
                 {{ _('Un-sticky') }}</a></li>
@@ -50,7 +52,7 @@
             {{ _('Block post author @%(author_name)s', author_name=post.author.user_name) }}</a></li>
         <li><a href="{{ url_for('post.post_block_community', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline"><span class="fe fe-block"></span>
             {{ _('Block community %(community_name)s', community_name=post.community.display_name()) }}</a></li>
-        {% if post.community.is_moderator() or current_user.is_admin() -%}
+        {% if post.community.is_moderator() or current_user.get_id() in admin_ids -%}
             <li><a href="{{ url_for('community.community_ban_user', community_id=post.community.id, user_id=post.author.id) }}" style="white-space: normal" class="dropdown-item no-underline"><span class="fe fe-block red"></span>
                 {{ _('Ban post author @%(author_name)s from %(community_name)s', author_name=post.author.user_name, community_name=post.community.title) }}</a></li>
         {% endif -%}
@@ -63,16 +65,20 @@
             {{ _("Hide every post from author's instance: %(name)s", name=post.instance.domain) }}</a></li>
         {% endif -%}
     {% endif -%}
+    {% if post.type == POST_TYPE_IMAGE and post.image.hash and (current_user.get_id() in admin_ids or current_user.is_staff()) -%}
+        <li><a href="{{ url_for('post.post_block_image', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline"><span class="fe fe-block red"></span>
+            {{ _('Ban image everywhere forever') }}</a></li>
+    {% endif -%}
 {% endif -%}
 {% if post.ap_id -%}
-    <li><a href="{{ post.ap_id }}" style="white-space: normal" rel="nofollow noindex" class="dropdown-item no-underline"><span class="fe fe-external"></span>
+    <li><a href="{{ post.ap_id }}" style="white-space: normal" rel="nofollow noindex" class="dropdown-item no-underline"><img src="/static/images/fediverse_logo.svg" class="options_fediverse_logo">
         {{ _('View original on %(domain)s', domain=post.instance.domain) }}</a></li>
 {% endif -%}
 <li><a href="{{ url_for('post.post_report', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-report"></span>
         {{ _('Report to moderators') }}</a></li>
 <li><a href="{{ url_for('post.post_embed_code', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-embed"></span>
         {{ _('Get embed code') }}</a></li>
-{% if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()) -%}
+{% if current_user.is_authenticated and (current_user.get_id() in admin_ids or current_user.is_staff()) -%}
     <li><a href="{{ url_for('post.post_view_voting_activity', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-sticky-left"></span>
                 {{ _('View Voting Activity') }}</a></li>
     <li><a href="{{ url_for('post.post_fixup_from_remote', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-sticky-right"></span>

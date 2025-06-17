@@ -3,13 +3,13 @@
 {% else %}
     {% extends "base.html" %}
 {% endif %}
-{% from 'bootstrap/form.html' import render_field %}
+{% from 'bootstrap5/form.html' import render_field %}
 {% set active_child = 'settings' %}
 
 {% block app_content %}
 
 <div class="row">
-    <main class="col-12 col-md-8 position-relative main_pane">
+    <main class="col-12 col-lg-8 position-relative main_pane">
         <nav class="mb-2" aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
           <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
@@ -21,39 +21,47 @@
         {% include "user/_user_nav.html" %}
         <form method='post' enctype="multipart/form-data" role="form">
             {{ form.csrf_token() }}
-            <h5> Mail Settings </h5>
+            <h5>{{ _('Mail Settings') }}</h5>
             {{ render_field(form.newsletter) }}
             {{ render_field(form.email_unread) }}
             <hr>
-            <h5> Visibility </h5>
+            <h5>{{ _('Visibility') }}</h5>
             {{ render_field(form.searchable) }}
             {{ render_field(form.indexable) }}
             {{ render_field(form.hide_read_posts) }}
             <hr>
-            <h5> Preferences </h5>
+            <h5>{{ _('User interface') }}</h5>
             {{ render_field(form.interface_language) }}
             <small class="field_hint">{{ _('This is used for menus and labels in the user interface') }}</small>
+            {{ render_field(form.markdown_editor) }}
+            {{ render_field(form.theme) }}
+            {{ render_field(form.compaction) }}
+            {{ render_field(form.font) }}
+            <table style="width: 100%; max-width: 400px;">
+                <tr>
+                    <td><a href="#" id="increase_font_size">{{ _('Increase font size') }}</a></td>
+                    <td align="right"><a href="#" id="decrease_font_size">{{ _('Decrease font size') }}</a></td>
+                </tr>
+            </table>
+            {{ render_field(form.additional_css) }}
+            <small class="field_hint">{{ _('Do not blindly copy and paste CSS from random strangers on the internet.') }}</small>
+            <hr>
+            <h5>{{ _('Preferences') }}</h5>
             {{ render_field(form.read_languages) }}
             <small class="field_hint">{{ _('Only posts and replies in these selected languages will be visible. Choose none to allow all.') }}</small>
-            {{ render_field(form.markdown_editor) }}
             {{ render_field(form.accept_private_messages) }}
             {{ render_field(form.default_sort) }}
             {{ render_field(form.default_filter) }}
-            {{ render_field(form.theme) }}
-            {{ render_field(form.compaction) }}
             {{ render_field(form.vote_privately) }}
             <small class="field_hint">{{ _('Votes will be sent to <a href="/instances?filter=trusted">untrusted instances</a> using an alt') }}</small>
             <hr>
-            <h5> Feeds </h5>
+            <h5>{{ _('Feeds') }}</h5>
             {{ render_field(form.feed_auto_follow) }}
             {{ render_field(form.feed_auto_leave) }}
             <small class="field_hint">{{ _('Communities joined outside of a feed will not be auto unsubscribed.') }}</small>
             <br>
             {{ render_field(form.submit) }}
         </form>
-        <p class="mt-4 pt-4">
-            <a class="btn btn-warning" href="{{ url_for('user.delete_account') }}">{{ _('Delete account') }}</a>
-        </p>
   </main>
 </div>
 {% endblock %}

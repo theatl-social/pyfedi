@@ -2,12 +2,12 @@ from flask_wtf import FlaskForm
 from flask_wtf.file import FileRequired, FileAllowed
 from sqlalchemy import func
 from wtforms import StringField, PasswordField, SubmitField, EmailField, HiddenField, BooleanField, TextAreaField, \
-    SelectField, FileField, IntegerField, FloatField
+    SelectField, FileField, IntegerField, FloatField, RadioField
 from wtforms.fields.choices import SelectMultipleField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Optional
 from flask_babel import _, lazy_gettext as _l
 
-from app.models import Community, User
+from app.models import Community, User, CmsPage
 
 
 class SiteProfileForm(FlaskForm):
@@ -25,6 +25,10 @@ class SiteProfileForm(FlaskForm):
 
 class SiteMiscForm(FlaskForm):
     enable_downvotes = BooleanField(_l('Enable downvotes'))
+    enable_gif_reply_rep_decrease = BooleanField(_l('Decrease reputation when posting only a gif as a comment'))
+    enable_chan_image_filter = BooleanField(_l('Decrease reputation when an image post matches the 4chan filter'))
+    enable_this_comment_filter = BooleanField(_l('Filter out comments that are simply a form of "this"'))
+    meme_comms_low_quality = BooleanField(_l('Meme communities = low-quality'))
     allow_local_image_posts = BooleanField(_l('Allow local image posts'))
     remote_image_cache_days = IntegerField(_l('Days to cache images from remote instances for'), render_kw={'placeholder': _l('0 means cache forever')})
     enable_nsfw = BooleanField(_l('Allow NSFW communities'))
@@ -32,6 +36,7 @@ class SiteMiscForm(FlaskForm):
     community_creation_admin_only = BooleanField(_l('Only admins can create new local communities'))
     reports_email_admins = BooleanField(_l('Notify admins about reports, not just moderators'))
     email_verification = BooleanField(_l('Require new accounts to verify their email address'))
+    captcha_enabled = BooleanField(_l('Require CAPTCHA for new account registration'))
     types = [('Open', _l('Open')), ('RequireApplication', _l('Require application')), ('Closed', _l('Closed'))]
     registration_mode = SelectField(_l('Registration mode'), choices=types, default=1, coerce=str, render_kw={'class': 'form-select'})
     application_question = TextAreaField(_l('Question to ask people applying for an account'))
@@ -41,6 +46,8 @@ class SiteMiscForm(FlaskForm):
     filter_selection = BooleanField(_l('Trump Musk filter setup'))
     auto_decline_countries = TextAreaField(_l('Ignore registrations from these countries'))
     auto_decline_referrers = TextAreaField(_l('Block registrations from these referrers (one per line)'))
+    ban_check_servers = TextAreaField(_l('Warn if new account banned from these instances'))
+    language_id = SelectField(_l('Primary language'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
     default_theme = SelectField(_l('Default theme'), coerce=str, render_kw={'class': 'form-select'})
     additional_css = TextAreaField(_l('Additional CSS'))
     filters = [('subscribed', _l('Subscribed')),
@@ -59,9 +66,11 @@ class SiteMiscForm(FlaskForm):
 
 
 class FederationForm(FlaskForm):
-    use_allowlist = BooleanField(_l('Allowlist instead of blocklist'))
+    federation_mode = RadioField(_l('Federation mode'), choices=[
+        ('blocklist', _l('Blocklist - deny federation with specified instances')),
+        ('allowlist', _l('Allowlist - only allow federation with specified instances'))
+    ], default='blocklist')
     allowlist = TextAreaField(_l('Allow federation with these instances'))
-    use_blocklist = BooleanField(_l('Blocklist instead of allowlist'))
     blocklist = TextAreaField(_l('Deny federation with these instances'))
     defederation_subscription = TextAreaField(_l('Auto-defederate from any instance defederated by'))
     blocked_phrases = TextAreaField(_l('Discard all posts, comments and PMs with these phrases (one per line)'))
@@ -95,7 +104,7 @@ class EditCommunityForm(FlaskForm):
     icon_file = FileField(_l('Icon image'))
     banner_file = FileField(_l('Banner image'))
     rules = TextAreaField(_l('Rules'))
-    nsfw = BooleanField(_l('Porn community'))
+    nsfw = BooleanField(_l('NSFW community'))
     banned = BooleanField(_l('Banned - no new posts accepted'))
     local_only = BooleanField(_l('Only accept posts from current instance'))
     restricted_to_mods = BooleanField(_l('Only moderators can post'))
@@ -158,8 +167,23 @@ class EditInstanceForm(FlaskForm):
     submit = SubmitField(_l('Save'))
 
 
+class EditBlockedImageForm(FlaskForm):
+    hash = TextAreaField(_l('Hash'), validators=[DataRequired(), Length(min=256, max=256)])
+    file_name = StringField(_l('Filename'), validators=[Optional(), Length(max=256)])
+    note = StringField(_l('Note'), validators=[Optional(), Length(max=256)])
+    submit = SubmitField(_l('Save'))
+
+
+class AddBlockedImageForm(FlaskForm):
+    url = StringField(_l('Url'), validators=[Optional()])
+    hash = TextAreaField(_l('Hash'), validators=[Optional(), Length(min=256, max=256)])
+    file_name = StringField(_l('Filename'), validators=[Optional(), Length(max=256)])
+    note = StringField(_l('Note'), validators=[Optional(), Length(max=256)])
+    submit = SubmitField(_l('Save'))
+
+
 class AddUserForm(FlaskForm):
-    user_name = StringField(_l('User name'), validators=[DataRequired()],
+    user_name = StringField(_l('User name'), validators=[DataRequired(), Length(max=50)],
                             render_kw={'autofocus': True, 'autocomplete': 'off'})
     email = StringField(_l('Email address'), validators=[Optional(), Length(max=255)])
     password = PasswordField(_l('Password'), validators=[DataRequired(), Length(min=8, max=50)],
@@ -271,3 +295,25 @@ class MoveCommunityForm(FlaskForm):
         existing_community = Community.query.filter(Community.ap_id == None, Community.name == new_url.data.lower()).first()
         if existing_community:
             raise ValidationError(_l('A local community at that url already exists'))
+
+
+class CmsPageForm(FlaskForm):
+    url = StringField(_l('URL path'), validators=[DataRequired(), Length(max=100)], 
+                      render_kw={'placeholder': _l('e.g., /about-us')})
+    title = StringField(_l('Page title'), validators=[DataRequired(), Length(max=255)])
+    body = TextAreaField(_l('Content (Markdown)'), validators=[DataRequired()], 
+                        render_kw={'rows': 15, 'placeholder': _l('Write your content in Markdown format...')})
+    submit = SubmitField(_l('Save'))
+
+    def __init__(self, original_page=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.original_page = original_page
+
+    def validate_url(self, url):
+        if not url.data.startswith('/'):
+            url.data = '/' + url.data
+        
+        # Check if another page already uses this URL (excluding the current page if editing)
+        existing_page = CmsPage.query.filter_by(url=url.data).first()
+        if existing_page and (not self.original_page or existing_page.id != self.original_page.id):
+            raise ValidationError(_l('A page with this URL already exists.'))

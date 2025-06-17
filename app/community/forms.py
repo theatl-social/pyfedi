@@ -1,6 +1,9 @@
+import re
+
 from flask import request, g
 from flask_login import current_user
 from flask_wtf import FlaskForm
+from sqlalchemy import func
 from wtforms import StringField, SubmitField, TextAreaField, BooleanField, HiddenField, SelectField, FileField, \
     DateField
 from wtforms.fields.choices import SelectMultipleField
@@ -11,7 +14,7 @@ from flask_babel import _, lazy_gettext as _l
 from app import db
 from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_MEMBERS, DOWNVOTE_ACCEPT_INSTANCE, \
     DOWNVOTE_ACCEPT_TRUSTED
-from app.models import Community, utcnow
+from app.models import Community, Site, utcnow, User, Feed
 from app.utils import domain_from_url, MultiCheckboxField
 from PIL import Image, ImageOps, UnidentifiedImageError
 from io import BytesIO
@@ -20,11 +23,10 @@ import pytesseract
 
 class AddCommunityForm(FlaskForm):
     community_name = StringField(_l('Name'), validators=[DataRequired()])
-    url = StringField(_l('Url'))
+    url = StringField(_l('Url'), validators=[Length(max=50)])
     description = TextAreaField(_l('Description'))
     icon_file = FileField(_l('Icon image'), render_kw={'accept': 'image/*'})
     banner_file = FileField(_l('Banner image'), render_kw={'accept': 'image/*'})
-    rules = TextAreaField(_l('Rules'))
     nsfw = BooleanField('NSFW')
     local_only = BooleanField('Local only')
     languages = SelectMultipleField(_l('Languages'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
@@ -40,9 +42,26 @@ class AddCommunityForm(FlaskForm):
             if '-' in self.url.data.strip():
                 self.url.errors.append(_l('- cannot be in Url. Use _ instead?'))
                 return False
+
+            # Allow alphanumeric characters and underscores (a-z, A-Z, 0-9, _)
+            if not re.match(r'^[a-zA-Z0-9_]+$', self.url.data):
+                self.url.errors.append(_l('Community urls can only contain letters, numbers, and underscores.'))
+                return False
+
             community = Community.query.filter(Community.name == self.url.data.strip().lower(), Community.ap_id == None).first()
             if community is not None:
                 self.url.errors.append(_l('A community with this url already exists.'))
+                return False
+            user = User.query.filter(func.lower(User.user_name) == func.lower(self.url.data.strip())).filter_by(ap_id=None).first()
+            if user is not None:
+                if user.deleted:
+                    self.url.errors.append(_l('This name was used in the past and cannot be reused.'))
+                else:
+                    self.url.errors.append(_l('This name is in use already.'))
+                return False
+            feed = Feed.query.filter(Feed.name == self.url.data.strip().lower(), Feed.ap_id == None).first()
+            if feed is not None:
+                self.url.errors.append(_('This name is in use already.'))
                 return False
         return True
 
@@ -52,8 +71,7 @@ class EditCommunityForm(FlaskForm):
     description = TextAreaField(_l('Description'))
     icon_file = FileField(_l('Icon image'), render_kw={'accept': 'image/*'})
     banner_file = FileField(_l('Banner image'), render_kw={'accept': 'image/*'})
-    rules = TextAreaField(_l('Rules'))
-    nsfw = BooleanField(_l('Porn community'))
+    nsfw = BooleanField(_l('NSFW community'))
     local_only = BooleanField(_l('Only accept posts from current instance'))
     restricted_to_mods = BooleanField(_l('Only moderators can post'))
     new_mods_wanted = BooleanField(_l('New moderators wanted'))
@@ -116,7 +134,10 @@ class BanUserCommunityForm(FlaskForm):
 
 
 class CreatePostForm(FlaskForm):
-    communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
+    communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select',
+                                                                                                   'hx-get': '/community/community_changed',
+                                                                                                   'hx-params': '*',
+                                                                                                   'hx-target': '#communityFlair'})
     title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])
     body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=50000)], render_kw={'rows': 5})
     tags = StringField(_l('Tags'), validators=[Optional(), Length(min=3, max=5000)])
@@ -194,24 +215,41 @@ class CreateImageForm(CreatePostForm):
 
     def validate(self, extra_validators=None) -> bool:
         uploaded_file = request.files['image_file']
-        if uploaded_file and uploaded_file.filename != '' and not uploaded_file.filename.endswith('.svg'):
+        if uploaded_file and uploaded_file.filename != '' and not uploaded_file.filename.endswith('.svg') and not uploaded_file.filename.endswith('.gif'):
             Image.MAX_IMAGE_PIXELS = 89478485
-            # Do not allow fascist meme content
-            try:
-                if '.avif' in uploaded_file.filename:
-                    import pillow_avif
-                image_text = pytesseract.image_to_string(Image.open(BytesIO(uploaded_file.read())).convert('L'))
-            except FileNotFoundError:
-                image_text = ''
-            except UnidentifiedImageError:
-                image_text = ''
-            if 'Anonymous' in image_text and (
-                    'No.' in image_text or ' N0' in image_text):  # chan posts usually contain the text 'Anonymous' and ' No.12345'
-                self.image_file.errors.append(
-                    "This image is an invalid file type.")  # deliberately misleading error message
-                current_user.reputation -= 1
-                db.session.commit()
+
+            site = Site.query.get(1)
+            if site is None:
+                site = Site()
+            
+            if site.enable_chan_image_filter:
+                # Do not allow fascist meme content
+                try:
+                    if '.avif' in uploaded_file.filename:
+                        import pillow_avif
+                    image_text = pytesseract.image_to_string(Image.open(BytesIO(uploaded_file.read())).convert('L'))
+                except FileNotFoundError:
+                    image_text = ''
+                except UnidentifiedImageError:
+                    image_text = ''
+
+                if 'Anonymous' in image_text and (
+                        'No.' in image_text or ' N0' in image_text):  # chan posts usually contain the text 'Anonymous' and ' No.12345'
+                    self.image_file.errors.append(
+                        "This image is an invalid file type.")  # deliberately misleading error message
+                    current_user.reputation -= 1
+                    db.session.commit()
+                    return False
+        if uploaded_file.filename.endswith('.gif'):
+            max_size_in_mb = 10 * 1024 * 1024  # 10 MB
+            if len(uploaded_file.read()) > max_size_in_mb:
+                error_message = "This image filesize is too large."
+                if not isinstance(self.image_file.errors, list):
+                    self.image_file.errors = [error_message]
+                else:
+                    self.image_file.errors.append(error_message)
                 return False
+            uploaded_file.seek(0)
         if self.communities:
             community = Community.query.get(self.communities.data)
             if community.is_local() and g.site.allow_local_image_posts is False:
@@ -312,6 +350,10 @@ class InviteCommunityForm(FlaskForm):
     to = TextAreaField(_l('To'), validators=[DataRequired()], render_kw={'placeholder': _l('Email addresses or fediverse handles, one per line'), 'autofocus': True})
     submit = SubmitField(_l('Invite'))
 
+    def validate_to(self, field):
+        if ',' in field.data:
+            raise ValidationError(_l('Use new lines instead of commas.'))
+
 
 class MoveCommunityForm(FlaskForm):
     old_community_locked = BooleanField(_l('The old community is locked'), validators=[DataRequired()])
@@ -323,4 +365,5 @@ class EditCommunityFlairForm(FlaskForm):
     flair = StringField(_l('Flair'), validators=[DataRequired()])
     text_color = StringField(_l('Text color'), render_kw={"type": "color"})
     background_color = StringField(_l('Background color'), render_kw={"type": "color"})
+    blur_images = BooleanField(_l('Blur images and thumbnails for posts with this flair'))
     submit = SubmitField(_l('Save'))

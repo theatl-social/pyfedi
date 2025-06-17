@@ -164,9 +164,10 @@ while `RedisCache` **should** be used in production. If using `RedisCache`, set 
 
 * `CELERY_BROKER_URL` is similar to `CACHE_REDIS_URL` but with a different number on the end: `redis://localhost:6379/0`.
  If using unix socket, try something like `CELERY_BROKER_URL='redis+socket:///var/run/redis/redis.sock?virtual_host=0'`
- Make sure to not have a password set for the default user. (
 
-* `MAIL_*` is for sending email using a SMTP server. Leave `MAIL_SERVER` empty to send email using AWS SES instead.
+* `MAIL_*` is for sending email using a SMTP server. Leave `MAIL_SERVER` empty to send email using AWS SES instead. Set MAIL_FROM to a no-reply inbox.
+
+* Set ERRORS_TO to an email address that will receive error reports. Only do this if debugging problems and you have MAIL_* set.
 
 * `AWS_REGION` is the name of the AWS region where you chose to set up SES, if using SES. [SES credentials are stored in `~/.aws/credentials`](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html). That file has a format like
 
@@ -185,11 +186,34 @@ If it does not work check the log file at logs/pyfedi.log for clues.
 will be treated as bounces and deleted after extracting the email addresses in them. Use a dedicated inbox
 for bounces, not a inbox you also use for other purposes.
 
+* Set FLAG_THROWAWAY_EMAILS = 1 to see a warning on throwaway email addresses during registration approvals - https://piefed.social/post/758768
+
+* Enable [image blocking](https://piefed.social/post/751901) by setting IMAGE_HASHING_ENDPOINT to the url of [a PDQ hashing instance](https://piefed.social/post/759065).
+
+* If the home page is loading slowly, set PAGE_LENGTH to a lower number.
+
 ### Development mode
 
 Setting `FLASK_DEBUG=1` in the `.env` file will enable the `<your-site>/dev/tools` page. It will expose some various testing routes as well. See the [testing section](#testing).
 
 That page can be accessed from the `Admin` navigation drop down, or nav bar as `Dev Tools`. That page has buttons that can create/delete communities and topics. The communities and topics will all begin with "dev_".
+
+Note that SSL is not a hard requirement for local testing or development. By including `HTTP_PROTOCOL='http'` in the `.env` file, some features will play a little nicer without SSL. This is not a teribly well-vetted workflow, so there might still be cases in which SSL is expected/required (such as S3 usage). This is primarily intended to ease development of basic features or UI changes.
+
+### Verify your configuration
+
+After setting up your .env file, you can verify your configuration is correct by running:
+
+```bash
+export FLASK_APP=pyfedi.py
+source venv/bin/activate
+flask init-db
+flask config_check
+```
+
+This command will check your environment variables for proper format, test database and Redis connections, verify directory
+permissions, and identify common configuration issues. Fix any errors reported before proceeding. For warnings you'll need to use
+your judgement.
 
 <div id="initialise-database-and-setup-admin-account"></div>
 
@@ -198,7 +222,6 @@ That page can be accessed from the `Admin` navigation drop down, or nav bar as `
 ```bash
 export FLASK_APP=pyfedi.py
 flask db upgrade
-flask init-db
 ```
 
 (choose a new username, email address, and password for your PyFedi admin account)
@@ -293,6 +316,10 @@ To assess whether to accept a registration application it can be helpful to know
 automatically discovered by using [the ipinfo service](https://ipinfo.io/) - register with them to get an API token and put it into your .env file.
 
 If the search function is not returning any results, you need to [add some database triggers](https://codeberg.org/rimu/pyfedi/issues/358#issuecomment-2475019).
+
+Enable the API for use by mobile apps by setting the ENABLE_ALPHA_API environment variable to 'true' (a string, with quotes).
+
+To limit which domains can access the API, set the CORS_ALLOW_ORIGIN environment variable. This defaults to '*' (allowing requests from any origin) but can be set to a specific domain like 'https://example.com' for security.
 
 <div id="background-services"></div>
 
@@ -507,6 +534,8 @@ Every few minutes PieFed will retry federation sending attempts that failed prev
 */5 * * * * rimu cd /home/rimu/pyfedi && /home/rimu/pyfedi/send_queue.sh
 ```
 
+The send_queue cron job is also needed to make scheduled posts publish themselves.
+
 
 ### Email
 
@@ -573,6 +602,25 @@ Log into Piefed then go to https://yourdomain/test_email to trigger a test email
 which environment variables you defined in .env. If `MAIL_SERVER` is empty it will try SES. Then if `AWS_REGION` is empty it'll
 silently do nothing.
 
+
+#### Log in with Google (OAuth)
+
+You need to set these two environment variables:
+
+ - GOOGLE_OAUTH_CLIENT_ID
+ - GOOGLE_OAUTH_SECRET
+
+The values for them are found by registering your instance with Google as 'an app'. Go to https://console.cloud.google.com/
+to begin. Create a new project, enable the People API, go to APIs & Services > Credentials and create a new OAuth client ID.
+Under "Authorized Redirect URIs", use `https://yourdomain.tld/auth/google_authorize`.
+
+#### CMS
+
+At /admin/pages there is a markdown-based CMS which you can use to add pages to your instance. Create one with the url
+'privacy' to override the default privacy policy. Create one with the url 'about' and it will be appended to the existing about page.
+
+All other urls have no special behaviour and will just display the page.
+
 ---
 
 <div id="stripe"></div>
@@ -610,6 +658,8 @@ variable set to 1 for these to work.
  - https://yourinstance.tld/test_s3 - tests your S3 config
  - https://yourinstance.tld/test_email - tests email sending
  - https://yourinstance.tld/test_redis - tests the connection to redis
+
+You can also run `flask config_check` to validate your configuration and identify potential issues with environment variables, database connections, and file permissions.
 
 ---
 

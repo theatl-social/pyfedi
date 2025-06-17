@@ -7,92 +7,89 @@
 {% set active_child = 'list_communities' -%}
 
 {% block app_content -%}
-<script src="/static/js/coolfieldset.js?v=3"></script>
-<div class="row mt-3">
+<div class="row align-items-center my-3">
+  <div class="col-auto me-auto">
+    <div class="btn-group" role="group">
+      <a href="/communities" aria-label="{{ _('All communities') }}" class="btn {{ 'btn-primary' if request.path == '/communities' else 'btn-outline-secondary' }}">
+        {{ _('All') }}
+      </a>
+      <a href="/communities/local" aria-label="{{ _('Communities on this server') }}" class="btn {{ 'btn-primary' if request.path == '/communities/local' else 'btn-outline-secondary' }}">
+        {{ _('Local') }}
+      </a>
+      {% if current_user.is_authenticated -%}
+        <a href="/communities/subscribed" aria-label="{{ _('Joined communities') }}" class="btn {{ 'btn-primary' if request.path == '/communities/subscribed' else 'btn-outline-secondary' }}">
+          {{ _('Joined') }}
+        </a>
+        <a href="/communities/notsubscribed" aria-label="{{ _('Not Joined communities') }}" class="btn {{ 'btn-primary' if request.path == '/communities/notsubscribed' else 'btn-outline-secondary' }}">
+          {{ _('Not Joined') }}
+        </a>
+      {% endif -%}
+    </div>
+  </div>
+  {% if current_user.is_authenticated -%}
     <div class="col-auto">
-        <div class="btn-group">
-            <a href="{{ url_for('community.add_local') }}" class="btn btn-outline-secondary" aria-label="{{ _('Create local community') }}">{{ _('Create local community') }}</a>
-            <a href="{{ url_for('community.add_remote') }}" class="btn btn-outline-secondary" aria-label="{{ _('Add community from another instance') }}">{{ _('Add remote community') }}</a>
+      <div class="d-flex justify-content-end align-items-center">
+        {% if is_admin or not create_admin_only -%}
+          <div class="p-1">
+            <a href="{{ url_for('community.add_local') }}" class="btn btn-sm btn-primary" aria-label="{{ _('Create local community') }}">{{ _('Create local community') }}</a>
+          </div>
+        {% endif -%}
+        <div class="p-1">
+          <a href="{{ url_for('community.add_remote') }}" class="btn btn-sm btn-primary" aria-label="{{ _('Add community from another instance') }}">{{ _('Add remote community') }}</a>
         </div>
+      </div>
     </div>
+  {% endif -%}
 </div>
-<div class="row">
-    <div class="col-12">
-        <fieldset id="community_filters" class="mt-4 mb-1 pb-3 coolfieldset  {{ 'collapsed' if request.cookies.get('fieldset_community_filters_state', 'collapsed') == 'collapsed' and request.args.get('search', '') == '' }}">
-            <legend class="w-auto">{{ _('Filters') }}</legend>
-            <div class="row mb-3">
-                <div class="col-auto">
-                    <div class="btn-group">
-                        <a href="/communities" aria-label="{{ _('All communities') }}" class="btn {{ 'btn-primary' if request.path == '/communities' else 'btn-outline-secondary' }}">
-                            {{ _('All') }}
-                        </a>
-                        <a href="/communities/local" aria-label="{{ _('Communities on this server') }}" class="btn {{ 'btn-primary' if request.path == '/communities/local' else 'btn-outline-secondary' }}">
-                            {{ _('Local') }}
-                        </a>
-                        {% if current_user.is_authenticated -%}
-                            <a href="/communities/subscribed" aria-label="{{ _('Joined communities') }}" class="btn {{ 'btn-primary' if request.path == '/communities/subscribed' else 'btn-outline-secondary' }}">
-                                {{ _('Joined') }}
-                            </a>
-                            <a href="/communities/notsubscribed" aria-label="{{ _('Not Joined communities') }}" class="btn {{ 'btn-primary' if request.path == '/communities/notsubscribed' else 'btn-outline-secondary' }}">
-                                {{ _('Not Joined') }}
-                            </a>
-                        {% endif -%}
-                    </div>
-                </div>
-            </div>
-             <form id="searchCommunities" method="get" class="row">
-                  {% if topics -%}
-                      <div class="col-3">
-                          <label for="topic_id">{{ _('Topic') }}:</label>
-                          <select name="topic_id" id="topic_id"
-                                  class="form-control-sm form-select submit_on_change"
-                                  aria-label="{{ _('Choose a topic to filter communities by') }}"
-                                >
-                              <option value="0">{{ _('All') }}</option>
-                              {% for topic in topics -%}
-                                  <option value="{{ topic.id }}" {{ 'selected' if topic.id == topic_id }}>{{ topic.name }}
-                                  </option>
-                              {% endfor -%}
-                          </select>
-                      </div>
-                  {% endif -%}
-                  {% if server_has_feeds -%}
-                            <div class="col-3">
-                                <label for="feed_id">{{ _('Feed') }}:</label>
-                                <select name="feed_id" id="feed_id" class="form-control-sm form-select submit_on_change"
-                                        aria-label="{{ _('Choose a public feed to filter communities by') }}">
-                                    <option value="0">{{ _('All') }}</option>
-                                    {% for feed in public_feeds -%}
-                                        <option value="{{ feed.id }}" {{ 'selected' if feed.id == feed_id }}>{{ feed.title }}
-                                        </option>
-                                    {% endfor -%}
-                                </select></label>
-                            </div>
-                  {% endif -%}
-                  {% if languages -%}
-                      <div class="col-3">
-                          <label for="language_id">{{ _('Language') }}:</label>
-                          <select name="language_id" id="language_id" class="form-control-sm form-select submit_on_change"
-                                  aria-label="{{ _('Choose a language to filter communities by') }}">
-                              <option value="0">{{ _('All') }}</option>
-                              {% for language in languages -%}
-                                  <option value="{{ language.id }}" {{ 'selected' if language.id == language_id }}>{{ language.name }}
-                                  </option>
-                              {% endfor -%}
-                          </select>
-                      </div>
-                  {% endif -%}
-                  <div class="col-3">
-                      <label for="search_text">{{ _('Search') }}:<br></label>
-                      <input id="search_text" class="form-control" type="search"
-                             name="search"
-                             placeholder=""
-                             value="{{ search }}">
-                  </div>
-              </form>
-        </fieldset>
+<form id="searchCommunities" method="get" class="row">
+  {% if topics -%}
+    <div class="col">
+      <label for="topic_id">{{ _('Topic') }}:</label>
+      <select name="topic_id" id="topic_id"
+          class="form-control-sm form-select submit_on_change"
+          aria-label="{{ _('Choose a topic to filter communities by') }}">
+        <option value="0">{{ _('All') }}</option>
+        {% for topic in topics -%}
+          <option value="{{ topic.id }}" {{ 'selected' if topic.id == topic_id }}>{{ topic.name }}
+          </option>
+        {% endfor -%}
+      </select>
     </div>
-</div>
+  {% endif -%}
+  {% if server_has_feeds -%}
+    <div class="col">
+      <label for="feed_id">{{ _('Feed') }}:</label>
+      <select name="feed_id" id="feed_id" class="form-control-sm form-select submit_on_change"
+          aria-label="{{ _('Choose a public feed to filter communities by') }}">
+        <option value="0">{{ _('All') }}</option>
+        {% for feed in public_feeds -%}
+          <option value="{{ feed.id }}" {{ 'selected' if feed.id == feed_id }}>{{ feed.title }}
+          </option>
+        {% endfor -%}
+      </select></label>
+    </div>
+  {% endif -%}
+  {% if languages -%}
+    <div class="col">
+      <label for="language_id">{{ _('Language') }}:</label>
+      <select name="language_id" id="language_id" class="form-control-sm form-select submit_on_change"
+          aria-label="{{ _('Choose a language to filter communities by') }}">
+        <option value="0">{{ _('All') }}</option>
+        {% for language in languages -%}
+          <option value="{{ language.id }}" {{ 'selected' if language.id == language_id }}>{{ language.name }}
+          </option>
+        {% endfor -%}
+      </select>
+    </div>
+  {% endif -%}
+  <div class="col">
+    <label for="search_text">{{ _('Search') }}:<br></label>
+    <input id="search_text" class="form-control" type="search"
+        name="search"
+        placeholder=""
+        value="{{ search }}">
+  </div>
+</form>
 {% if communities and communities.items -%}
     <div class="table-responsive-md">
         <table class="communities_table table table-striped table-hover w-100">
@@ -107,7 +104,7 @@
                             name="sort_by"
                             value="title{{ ' asc' if sort_by == 'title desc' else ' desc' }}" 
                             title="{{ _('Sort by name') }}"
-                            class="btn"
+                            class="btn text-nowrap"
                         >
                             {{ _('Community') }}
                             <span class="{{ 'fe fe-chevron-up' if sort_by == 'title asc' }}{{ 'fe fe-chevron-down' if sort_by == 'title desc' }}"></span>
@@ -118,9 +115,22 @@
                             form="searchCommunities"
                             hx-boost="true"
                             name="sort_by"
+                            value="subscriptions_count{{ ' asc' if sort_by == 'subscriptions_count desc' else ' desc' }}" 
+                            title="{{ _('Sort by post count') }}"
+                            class="btn text-nowrap"
+                        >
+                            {{ _('Subscribers') }}
+                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'subscriptions_count asc' }}{{ 'fe fe-chevron-down' if sort_by == 'subscriptions_count desc' }}"></span>
+                        </button>
+                    </th>
+                    <th scope="col">
+                        <button 
+                            form="searchCommunities"
+                            hx-boost="true"
+                            name="sort_by"
                             value="post_count{{ ' asc' if sort_by == 'post_count desc' else ' desc' }}" 
                             title="{{ _('Sort by post count') }}"
-                            class="btn"
+                            class="btn text-nowrap"
                         >
                             {{ _('Posts') }}
                             <span class="{{ 'fe fe-chevron-up' if sort_by == 'post_count asc' }}{{ 'fe fe-chevron-down' if sort_by == 'post_count desc' }}"></span>
@@ -133,7 +143,7 @@
                             name="sort_by"
                             value="post_reply_count{{ ' asc' if sort_by == 'post_reply_count desc' else ' desc' }}" 
                             title="{{ _('Comments') }}"
-                            class="btn"
+                            class="btn text-nowrap"
                         >
                             {{ _('Comments') }}
                             <span class="{{ 'fe fe-chevron-up' if sort_by == 'post_reply_count asc' }}{{ 'fe fe-chevron-down' if sort_by == 'post_reply_count desc' }}"></span>
@@ -146,7 +156,7 @@
                             name="sort_by"
                             value="last_active{{ ' asc' if sort_by == 'last_active desc' else ' desc' }}" 
                             title="{{ _('Sort by recent activity') }}"
-                            class="btn"
+                            class="btn text-nowrap"
                         >
                             {{ _('Active') }}
                             <span class="{{ 'fe fe-chevron-up' if sort_by == 'last_active asc' }}{{ 'fe fe-chevron-down' if sort_by == 'last_active desc' }}"></span>
@@ -161,16 +171,16 @@
                     {% set blur_content = (current_user.hide_nsfw == 2 and community.nsfw)
                                         or (current_user.hide_nsfl == 2 and community.nsfl) -%}
                     <tr class="{{ 'blocked' if content_blocked }}{{ 'blur' if blur_content }}">
-                        <td width="70">{% if current_user.is_authenticated -%}
+                        <td width="100">{% if current_user.is_authenticated -%}
                                 {% if community.id in pending_communities and community.id not in joined_communities -%}
                                     <a class="btn btn-outline-secondary btn-sm" href="/community/{{ community.link() }}/unsubscribe" rel="nofollow">{{ _('Pending') }}</a>
                                 {% elif community.id in joined_communities -%}
-                                    <a class="btn btn-primary btn-sm" href="/community/{{ community.link() }}/unsubscribe" rel="nofollow" aria-label="{{ _('Leave %(name)s', name=community.display_name()) }}">{{ _('Leave') }}</a>
+                                    {% include "community/_leave_button.html" %}
                                 {% else -%}
-                                    <a class="btn btn-primary btn-sm" href="/community/{{ community.link() }}/subscribe" rel="nofollow" aria-label="{{ _('Join %(name)s', name=community.display_name()) }}">{{ _('Join') }}</a>
+                                    {% include "community/_join_button.html" %}
                                 {% endif -%}
                             {% else -%}
-                                <a class="btn btn-primary btn-sm" href="/community/{{ community.link() }}/subscribe" rel="nofollow" aria-label="{{ _('Join %(name)s', name=community.display_name()) }}">{{ _('Join') }}</a>
+                                    {% include "community/_join_button.html" %}
                             {% endif -%}</td>
                         {% if not low_bandwidth -%}
                             <td width="46">
@@ -178,6 +188,7 @@
                             </td>
                         {% endif -%}
                         <th scope="row" class="pl-0"><a href="/c/{{ community.link() }}" aria-label="{{ _('Browse %(name)s', name=community.display_name()) }}">{{ community.display_name() }}</a></th>
+                        <td>{{ community.subscriptions_count }}</td>
                         <td>{{ community.post_count }}</td>
                         <td>{{ community.post_reply_count }}</td>
                         <td>{{ arrow.get(community.last_active).humanize(locale=locale) }}</td>
@@ -205,5 +216,7 @@
         <p class="mt-4">{{ _('No communities match your search.') }}</p>
     {% endif -%}
 {% endif -%}
-<p class="mt-4"><a href="/topics" class="btn btn-primary">{{ _('Browse topics') }}</a></p>
+<p class="mt-4"><a href="/topics" class="btn btn-primary">{{ _('Browse topics') }}</a>
+    {% if current_user.is_authenticated -%}
+    <a class="btn btn-primary confirm_first" href="{{ url_for('community.community_leave_all') }}" style="float: right;">{{ _('Leave all communities') }}</a>{% endif %}</p>
 {% endblock -%}

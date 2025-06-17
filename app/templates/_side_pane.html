@@ -1,39 +1,64 @@
-<aside id="side_pane" class="col-12 {{ 'col-md-3 col-lg-2' if post_layout == 'masonry_wide' else 'col-md-4' }} side_pane" role="complementary">
+<aside id="side_pane" class="col-12 {{ 'col-lg-2' if post_layout == 'masonry_wide' else 'col-lg-4' }} side_pane" role="complementary" {{ oob }}>
 {% if community %}
     {% block community_actions %}
+        {% if not hide_community_actions -%}
         <div class="card">
             <div class="card-body">
-                <div class="row">
-                    {% if not community.restricted_to_mods or (community.restricted_to_mods and current_user.is_authenticated and community_membership(current_user, community) in [SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER]) -%}
+                <div class="row mb-2">
+                    {% if not banned_from_community -%}
+                        {% if not community.restricted_to_mods or (community.restricted_to_mods and current_user.is_authenticated and community_membership(current_user, community) in [SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER]) -%}
+                            <div class="col-6">
+                                <a class="w-100 btn btn-primary" href="/community/{{ community.link() }}/submit">{{ _('Create post') }}</a>
+                            </div>
+                        {% endif -%}
                         <div class="col-6">
-                            <a class="w-100 btn btn-primary" href="/community/{{ community.link() }}/submit">{{ _('Create post') }}</a>
+                            {% if current_user.is_authenticated and community_membership(current_user, community) in [SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER] -%}
+                                <a class="w-100 btn btn-primary" href="/community/{{ community.link() }}/unsubscribe" rel="nofollow">{{ _('Leave') }}</a>
+                            {% elif current_user.is_authenticated and community_membership(current_user, community) == SUBSCRIPTION_PENDING -%}
+                                <a class="w-100 btn btn-outline-secondary" href="/community/{{ community.link() }}/unsubscribe" rel="nofollow">{{ _('Pending') }}</a>
+                            {% else -%}
+                                <a class="w-100 btn btn-primary" href="/community/{{ community.link() }}/subscribe" rel="nofollow">{{ _('Join') }}</a>
+                            {% endif -%}
                         </div>
                     {% endif -%}
-                    <div class="col-6">
-                        {% if current_user.is_authenticated and community_membership(current_user, community) in [SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER] -%}
-                            <a class="w-100 btn btn-primary" href="/community/{{ community.link() }}/unsubscribe" rel="nofollow">{{ _('Leave') }}</a>
-                        {% elif current_user.is_authenticated and community_membership(current_user, community) == SUBSCRIPTION_PENDING -%}
-                            <a class="w-100 btn btn-outline-secondary" href="/community/{{ community.link() }}/unsubscribe" rel="nofollow">{{ _('Pending') }}</a>
-                        {% else -%}
-                            <a class="w-100 btn btn-primary" href="/community/{{ community.link() }}/subscribe" rel="nofollow">{{ _('Join') }}</a>
-                        {% endif -%}
-                    </div>
                 </div>
+                {% if is_moderator or is_owner or is_admin -%}
+                  <div class="row mb-2">
+                    <div class="col-6">
+                      <a href="{{ url_for('community.community_edit', community_id=community.id) }}" class="w-100 btn btn-primary">{{ _('Settings') }}</a>
+                    </div>
+                    <div class="col-6">
+                      <a class="w-100 btn btn-primary" href="/community/{{ community.link() }}/invite" rel="nofollow noindex">{{ _('Invite others') }}</a>
+                    </div>
+                  </div>
+                {% endif %}
                 <form method="get" action="/search">
-                    <input type="search" id="search_community" name="q" class="form-control mt-2" placeholder="{{ _('Search this community') }}" />
+                    <input type="search" id="search_community" name="q" class="form-control" placeholder="{{ _('Search this community') }}" />
                     <input type="hidden" name="community" value="{{ community.id }}">
                 </form>
+                {% if community_flair and len(community_flair) > 0 -%}
+                    <div class="post_flair_sidepane">
+                        {% for flair in community_flair -%}
+                            <span class="post_flair" style="color: {{ flair.text_color}}; background-color: {{ flair.background_color }}" title="{{ _('Show only %(flair_name)s', flair_name=flair.flair) }}"><a href="{{ url_for('activitypub.community_profile', actor=community.link(), flair=flair.flair) }}" style="color: {{ flair.text_color}}">{{ flair.flair }}</a></span>
+                        {% endfor -%}
+                    </div>
+                {% endif %}
             </div>
         </div>
+        {% endif -%}
     {% endblock %}
     {% block about_community %}
-        <div class="card mt-3" id="about_community">
+        <div class="card {% if not hide_community_actions -%}mt-3{% endif %}" id="about_community">
             <div class="card-header">
                  <h2>{{ community.title }}</h2>
             </div>
             <div class="card-body">
-                <p>{{ community.description_html|community_links|safe if community.description_html else '' }}</p>
-                <p>{{ community.rules_html|safe if community.rules_html else '' }}</p>
+                {% if community.local_only -%}
+                    <p class="border bg-body-secondary border-secondary rounded-pill text-center px-3 py-1">
+                      {{ _('This community does not federate with other instances.') }}
+                    </p>
+                {% endif %}
+                <p>{{ community.description_html|community_links|feed_links|safe if community.description_html else '' }}</p>
                 <p>{{ _('Members') if community.is_local() else _('Local members') }}: {{ community.subscriptions_count }}
                     <a href="/community/{{ community.link() }}/invite" rel="nofollow noindex">{{ _('Invite people to join') }}</a>
                     <br>
@@ -43,14 +68,7 @@
                 {% if current_user.is_authenticated or (community_flair and len(community_flair) > 0) -%}
                     <h3>{{ _('Flair') }}</h3>
                 {% endif -%}
-                {% if community_flair and len(community_flair) > 0 -%}
-                    <div class="post_flair_sidepane">
-                        {% for flair in community_flair -%}
-                            <span class="post_flair" style="color: {{ flair.text_color}}; background-color: {{ flair.background_color }}" title="{{ _('Show only %(flair_name)s', flair_name=flair.flair) }}"><a href="{{ url_for('activitypub.community_profile', actor=community.link(), flair=flair.flair) }}" style="color: {{ flair.text_color}}">{{ flair.flair }}</a></span>
-                        {% endfor -%}
-                    </div>
-                {% endif %}
-                {% if current_user.is_authenticated -%}
+                {% if current_user.is_authenticated and not banned_from_community -%}
                 <p>{{ current_user.display_name() }} {% if current_user.id in user_flair %}<span class="user_flair">{{ user_flair[current_user.id] }}</span>{% endif %}
                 <a href="{{ url_for('community.community_my_flair', actor=community.link()) }}">{{ _('Set my flair')}}</a></p>
                 {% endif %}
@@ -58,7 +76,7 @@
                     <h3>Moderators</h3>
                     <ul class="moderator_list">
                         {% for mod in mods -%}
-                            <li>{{ render_username(mod) }}</li>
+                            <li>{{ render_username(mod, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</li>
                         {% endfor -%}
                     </ul>
                     {% if un_moderated -%}
@@ -73,9 +91,6 @@
                         {% endif -%}
                         <li><p><a href="{{ url_for('search.retrieve_remote_post') }}">{{ _('Retrieve a post from the original server') }}</a></p></li>
                     </ul>
-                {% endif -%}
-                {% if community.local_only -%}
-                <p>{{ _('Only people on %(instance_domain)s can post or reply in this community.', instance_domain=instance_domain) }}</p>
                 {% endif -%}
                 {% if rss_feed -%}
                 <p class="mt-4">
@@ -118,25 +133,6 @@
                     <p class="mt-4"><a class="btn btn-primary" href="/feeds">{{ _('More feeds') }}</a></p>
                 </div>
             </div>
-        {% endif -%}
-    {% endblock %}
-    {% block community_settings %}
-        {% if is_moderator or is_admin -%}
-        <div class="card mt-3">
-            <div class="card-header">
-                 <h2>{{ _('Community Settings') }}</h2>
-            </div>
-            <div class="card-body">
-                <p><a class="btn btn-primary" href="/community/{{ community.link() }}/invite" rel="nofollow noindex">{{ _('Invite people to join') }}</a></p>
-                {% if is_moderator or is_owner or is_admin -%}
-                <p><a href="/community/{{ community.link() }}/moderate" class="btn btn-primary">{{ _('Moderate') }}</a></p>
-                <p><a href="{{ url_for('community.community_edit', community_id=community.id) }}" class="btn btn-primary">{{ _('Settings') }}</a></p>
-                {% endif -%}
-                {% if community.is_local() and (community.is_owner() or current_user.is_admin()) -%}
-                    <p><a class="btn btn-primary btn-warning" href="{{ url_for('community.community_delete', community_id=community.id) }}" rel="nofollow">Delete community</a></p>
-                {% endif -%}
-            </div>
-        </div>
         {% endif -%}
     {% endblock %}
 {% endif %}

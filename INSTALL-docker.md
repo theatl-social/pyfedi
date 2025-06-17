@@ -30,12 +30,11 @@ sudo nano compose.yaml
 ```
 
 #### CREATE REQUIRED FOLDERS WITH REQUIRED PERMISSIONS
-- Replace `<USERNAME>` with account username
+
+Do not skip this. Enter your sudo password when prompted.
+
 ```bash
-sudo mkdir pgdata
-sudo chown -R <USERNAME>:<USERNAME> ./pgdata
-sudo mkdir media
-sudo chown -R <USERNAME>:<USERNAME> ./media
+./docker-dirs.sh
 ```
 
 #### BUILD PIEFED
@@ -43,7 +42,8 @@ sudo chown -R <USERNAME>:<USERNAME> ./media
 export DOCKER_BUILDKIT=1
 sudo docker compose up --build
 ```
-- Wait until text in terminal stops scrolling
+- Wait until text in terminal stops scrolling. Ignore the configuration check errors at this point.
+- If you see many permission-related errors, try repeating the previous step (with the chown using 1000 instead of your username)
 - Test external access from browser (On port 8030). Watch for movement in terminal window. Browser will show "Internal Server Error" message. Proceed to initialize database to address this error message.
 
 #### INITIALIZE DATABASE
@@ -51,6 +51,9 @@ sudo docker compose up --build
 ```bash
 sudo docker exec -it piefed_app1 sh
 ```
+
+The above command will get you into a shell inside the container. Then, inside that shell run this:
+
 ```bash
 export FLASK_APP=pyfedi.py
 flask init-db
@@ -67,6 +70,9 @@ exit
 ```bash
 sudo docker compose up -d
 ```
+
+- During startup, you might see "Running configuration check..." followed by validation messages. Checkmarks (✅)
+indicate successful configuration, warnings (⚠️) are usually fine to ignore, but X marks (❌) indicate critical issues that need fixing.
 
 #### SETUP CRON (AUTOMATED) JOBS
 ```bash

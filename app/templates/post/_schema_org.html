@@ -1,0 +1,56 @@
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SocialMediaPosting",
+  "headline": {{ post.title|tojson }},
+  {% if post.body -%}
+  "text": {{ post.body|tojson }},
+  {% endif -%}
+  {% if post.url -%}
+  "url": {{ post.url|tojson }},
+  {% endif -%}
+  {% if post.image and post.type == POST_TYPE_LINK -%}
+  "image": {{ post.image.source_url|tojson }},
+  {% endif -%}
+  "datePublished": {{ post.posted_at.isoformat()|tojson }},
+  {% if post.edited_at -%}
+  "dateModified": {{ post.edited_at.isoformat()|tojson }},
+  {% endif -%}
+  "author": {
+    "@type": "Person",
+    "name": {{ post.author.display_name()|tojson }},
+    {% if post.author.ap_profile_id -%}
+    "url": {{ post.author.ap_profile_id|tojson }}
+    {% else -%}
+    "url": {{ (request.host_url.rstrip('/') + '/u/' + post.author.user_name)|tojson }}
+    {% endif -%}
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": {{ post.community.display_name()|tojson }},
+    {% if post.community.ap_profile_id -%}
+    "url": {{ post.community.ap_profile_id|tojson }}
+    {% else -%}
+    "url": {{ (request.host_url.rstrip('/') + '/c/' + post.community.name)|tojson }}
+    {% endif -%}
+  },
+  {% if post.language -%}
+  "inLanguage": {{ post.language.code|tojson }},
+  {% endif -%}
+  {% if post.nsfw or post.nsfl -%}
+  "isFamilyFriendly": false,
+  {% endif -%}
+  "interactionStatistic": [
+    {
+      "@type": "InteractionCounter",
+      "interactionType": "https://schema.org/LikeAction",
+      "userInteractionCount": {{ post.up_votes }}
+    },
+    {
+      "@type": "InteractionCounter",
+      "interactionType": "https://schema.org/CommentAction",
+      "userInteractionCount": {{ post.reply_count }}
+    }
+  ]
+}
+</script>

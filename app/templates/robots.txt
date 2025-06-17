@@ -46,8 +46,20 @@ Disallow: /
 User-agent: Barkrowler
 Disallow: /
 
+User-agent: YandexBot
+Disallow: /
+
 User-Agent: ImagesiftBot
 Crawl-delay: 5
 
 User-Agent: VelenPublicWebCrawler
+Disallow: /
+
+User-agent: meta-externalagent
+User-agent: Meta-ExternalAgent
+User-agent: meta-externalfetcher
+User-agent: Meta-ExternalFetcher
+User-agent: TikTokSpider
+User-agent: DuckAssistBot
+User-agent: anthropic-ai
 Disallow: /

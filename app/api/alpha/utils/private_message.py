@@ -25,6 +25,7 @@ def get_private_message_list(auth, data):
         pm_list.append(private_message_view(private_message, user_id, ap_id))
 
     pm_json = {
-        "private_messages": pm_list
+        "private_messages": pm_list,
+        'next_page': str(private_messages.next_num) if private_messages.next_num else None
     }
     return pm_json

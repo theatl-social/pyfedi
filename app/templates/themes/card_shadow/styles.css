@@ -29,6 +29,7 @@
     /* shadow horizontal-offset vertical-offset blur spread color */
     box-shadow: 0 3px 5px 0 rgba(0,0,0,0.1);
     transition: 0.3s;
+    /* display: inline-flex!important; */
 }
 
 /* this is used in the big list of posts to browse  */
@@ -92,4 +93,8 @@
 
 .voting_buttons > div {
     box-shadow: 0 3px 5px 0 rgba(0,0,0,0.1);
+}
+
+.dropdown-menu.show {
+    box-shadow: 0 3px 5px 0 rgba(0,0,0,0.15);
 }

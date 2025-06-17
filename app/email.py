@@ -39,11 +39,12 @@ def send_registration_approved_email(user):
         body = render_template('email/welcome.html', user=user, email_body=markdown_to_html(body))
     else:
         body = render_template('email/welcome.html', user=user, email_body=markdown_to_html(f'\n\nYour account at https://{current_app.config["SERVER_NAME"]} has been approved. Welcome!\n\n'))
+    mail_from = current_app.config["MAIL_FROM"] if current_app.config["MAIL_FROM"] else g.site.contact_email
     send_email(subject,
-               sender=f'{g.site.name} <{g.site.contact_email}>',
+               sender=f'{g.site.name} <{mail_from}>',
                recipients=[user.email],
                text_body=markdown_to_text(body),
-               html_body=body)
+               html_body=body, reply_to=g.site.contact_email)
 
 
 def send_topic_suggestion(communities_for_topic, user, recipients, subject, topic_name):
@@ -273,7 +274,8 @@ class SMTPEmailService:
         """
         if self.use_tls:
             self.smtpserver.starttls()
-        self.smtpserver.login(self.username, self.password)
+        if self.username and self.password:
+            self.smtpserver.login(self.username, self.password)
         self.connected = True
         print("Connected to {}".format(self.server_name))
 

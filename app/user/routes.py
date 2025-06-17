@@ -18,10 +18,10 @@ from app.email import send_verification_email
 from app.models import Post, Community, CommunityMember, User, PostReply, PostVote, Notification, utcnow, File, Site, \
     Instance, Report, UserBlock, CommunityBan, CommunityJoinRequest, CommunityBlock, Filter, Domain, DomainBlock, \
     InstanceBlock, NotificationSubscription, PostBookmark, PostReplyBookmark, read_posts, Topic, UserNote, \
-    UserExtraField, Feed, FeedMember
+    UserExtraField, Feed, FeedMember, IpBan
 from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, \
-    FilterForm, KeywordFilterEditForm, RemoteFollowForm, ImportExportForm, UserNoteForm
+    FilterForm, KeywordFilterEditForm, RemoteFollowForm, ImportExportForm, UserNoteForm, BanUserForm
 from app.user.utils import purge_user_then_delete, unsubscribe_from_community, search_for_user
 from app.utils import render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     gibberish, file_get_contents, community_membership, user_filters_home, \
@@ -29,7 +29,8 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     blocked_users, add_to_modlog, \
     blocked_communities, piefed_markdown_to_lemmy_markdown, \
     read_language_choices, request_etag_matches, return_304, mimetype_from_url, notif_id_to_string, \
-    login_required_if_private_instance
+    login_required_if_private_instance, recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
+    recently_downvoted_post_replies, reported_posts, user_notes
 from sqlalchemy import desc, or_, text, asc
 from sqlalchemy.orm.exc import NoResultFound
 import os
@@ -51,6 +52,67 @@ def show_profile_by_id(user_id):
     return show_profile(user)
 
 
+def _get_user_posts(user, post_page):
+    """Get posts for a user based on current user's permissions."""
+    base_query = Post.query.filter_by(user_id=user.id)
+    
+    if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()):
+        # Admins see everything
+        return base_query.order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=20, error_out=False)
+    elif current_user.is_authenticated and current_user.id == user.id:
+        # Users see their own posts including soft-deleted ones they deleted
+        return base_query.filter(
+            or_(Post.deleted == False, Post.status > POST_STATUS_REVIEWING, Post.deleted_by == user.id)
+        ).order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=20, error_out=False)
+    else:
+        # Everyone else sees only public, non-deleted posts
+        return base_query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=20, error_out=False)
+
+
+def _get_user_post_replies(user, replies_page):
+    """Get post replies for a user based on current user's permissions."""
+    base_query = PostReply.query.filter_by(user_id=user.id)
+    
+    if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()):
+        # Admins see everything
+        return base_query.order_by(desc(PostReply.posted_at)).paginate(page=replies_page, per_page=20, error_out=False)
+    elif current_user.is_authenticated and current_user.id == user.id:
+        # Users see their own replies including soft-deleted ones they deleted
+        return base_query.filter(or_(PostReply.deleted == False, PostReply.deleted_by == user.id)).order_by(desc(PostReply.posted_at)).paginate(page=replies_page, per_page=20, error_out=False)
+    else:
+        # Everyone else sees only non-deleted replies
+        return base_query.filter(PostReply.deleted == False).order_by(
+            desc(PostReply.posted_at)).paginate(page=replies_page, per_page=20, error_out=False)
+
+
+def _get_user_moderates(user):
+    """Get communities moderated by user."""
+
+    moderates = Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == user.id).\
+        filter(or_(CommunityMember.is_moderator, CommunityMember.is_owner))
+    
+    # Hide private mod communities unless user is admin or viewing their own profile
+    if current_user.is_anonymous or (user.id != current_user.id and not current_user.is_admin()):
+        moderates = moderates.filter(Community.private_mods == False)
+    
+    return moderates.all()
+
+
+def _get_user_upvoted_posts(user):
+    """Get posts upvoted by user (only for user themselves or admins)."""
+    if current_user.is_authenticated and (user.id == current_user.get_id() or current_user.is_admin()):
+        return Post.query.join(PostVote, PostVote.post_id == Post.id).filter(PostVote.effect > 0, PostVote.user_id == user.id).\
+            order_by(desc(PostVote.created_at)).limit(10).all()
+    return []
+
+
+def _get_user_subscribed_communities(user):
+    """Get communities subscribed to by user."""
+    if current_user.is_authenticated and (user.id == current_user.get_id() or current_user.is_staff() or current_user.is_admin()):
+        return Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == user.id).all()
+    return []
+
+
 @login_required_if_private_instance
 def show_profile(user):
     if (user.deleted or user.banned) and current_user.is_anonymous:
@@ -64,28 +126,19 @@ def show_profile(user):
     post_page = request.args.get('post_page', 1, type=int)
     replies_page = request.args.get('replies_page', 1, type=int)
 
-    moderates = Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == user.id)\
-        .filter(or_(CommunityMember.is_moderator, CommunityMember.is_owner))
-    if current_user.is_authenticated and (user.id == current_user.get_id() or current_user.is_admin()):
-        upvoted = Post.query.join(PostVote, PostVote.post_id == Post.id).filter(PostVote.effect > 0, PostVote.user_id == user.id).order_by(desc(PostVote.created_at)).limit(10).all()
-    else:
-        upvoted = []
-    subscribed = Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == user.id).all()
-    if current_user.is_anonymous or (user.id != current_user.id and not current_user.is_admin()):
-        moderates = moderates.filter(Community.private_mods == False)
-        posts = Post.query.filter_by(user_id=user.id).filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=20, error_out=False)
-        post_replies = PostReply.query.filter_by(user_id=user.id, deleted=False).order_by(desc(PostReply.posted_at)).paginate(page=replies_page, per_page=20, error_out=False)
-    elif current_user.is_admin():
-        posts = Post.query.filter_by(user_id=user.id).order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=20, error_out=False)
-        post_replies = PostReply.query.filter_by(user_id=user.id).order_by(desc(PostReply.posted_at)).paginate(page=replies_page, per_page=20, error_out=False)
-    elif current_user.id == user.id:
-        posts = Post.query.filter_by(user_id=user.id).filter(or_(Post.deleted == False, Post.status > POST_STATUS_REVIEWING, Post.deleted_by == user.id)).order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=20, error_out=False)
-        post_replies = PostReply.query.filter_by(user_id=user.id).filter(or_(PostReply.deleted == False, PostReply.deleted_by == user.id)).order_by(desc(PostReply.posted_at)).paginate(page=replies_page, per_page=20, error_out=False)
+    # Get data using helper functions
+    moderates = _get_user_moderates(user)
+    upvoted = _get_user_upvoted_posts(user)
+    subscribed = _get_user_subscribed_communities(user)
+    posts = _get_user_posts(user, post_page)
+    post_replies = _get_user_post_replies(user, replies_page)
 
     # profile info
     canonical = user.ap_public_url if user.ap_public_url else None
     description = shorten_string(markdown_to_text(user.about), 150) if user.about else None
     user.recalculate_post_stats()
+    if current_user.is_authenticated and current_user.is_admin_or_staff():
+        user.recalculate_attitude()
     db.session.commit()
 
     # find all user feeds marked as public
@@ -106,19 +159,18 @@ def show_profile(user):
                        replies_page=post_replies.prev_num) if post_replies.has_prev and replies_page != 1 else None
 
     return render_template('user/show_profile.html', user=user, posts=posts, post_replies=post_replies,
-                           moderates=moderates.all(), canonical=canonical, title=_('Posts by %(user_name)s',
+                           moderates=moderates, canonical=canonical, title=_('Posts by %(user_name)s',
                                                                                    user_name=user.user_name),
                            description=description, subscribed=subscribed, upvoted=upvoted, disable_voting=True,
+                           user_notes=user_notes(current_user.get_id()),
                            post_next_url=post_next_url, post_prev_url=post_prev_url,
                            replies_next_url=replies_next_url, replies_prev_url=replies_prev_url,
                            noindex=not user.indexable, show_post_community=True, hide_vote_buttons=True,
-                           site=g.site,
+                           reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
                            rss_feed=f"https://{current_app.config['SERVER_NAME']}/u/{user.link()}/feed" if user.post_count > 0 else None,
                            rss_feed_name=f"{user.display_name()} on {g.site.name}" if user.post_count > 0 else None,
                            user_has_public_feeds=user_has_public_feeds,
-                           user_public_feeds=user_public_feeds,
-                           
-                           )
+                           user_public_feeds=user_public_feeds)
 
 
 @bp.route('/u/<actor>/profile', methods=['GET', 'POST'])
@@ -130,6 +182,7 @@ def edit_profile(actor):
         abort(404)
     if current_user.id != user.id:
         abort(401)
+    delete_form = DeleteAccountForm()
     form = ProfileForm()
     old_email = user.email
     if form.validate_on_submit() and not current_user.banned:
@@ -172,8 +225,6 @@ def edit_profile(actor):
             file = save_icon_file(profile_file, 'users')
             if file:
                 current_user.avatar = file
-                cache.delete_memoized(User.avatar_image, current_user)
-                cache.delete_memoized(User.avatar_thumbnail, current_user)
         banner_file = request.files['banner_file']
         if banner_file and banner_file.filename != '':
             # remove old cover
@@ -208,9 +259,7 @@ def edit_profile(actor):
         form.password_field.data = ''
 
     return render_template('user/edit_profile.html', title=_('Edit profile'), form=form, user=current_user,
-                           markdown_editor=current_user.markdown_editor,
-                           site=g.site,
-                           
+                           markdown_editor=current_user.markdown_editor, delete_form=delete_form,
                            )
 
 
@@ -225,8 +274,6 @@ def remove_avatar():
             current_user.avatar_id = None
             db.session.delete(file)
             db.session.commit()
-            cache.delete_memoized(User.avatar_image, current_user)
-            cache.delete_memoized(User.avatar_thumbnail, current_user)
     return _('Avatar removed!')
 
 
@@ -423,13 +470,14 @@ def user_settings():
         current_user.feed_auto_leave = form.feed_auto_leave.data
         current_user.read_language_ids = form.read_languages.data
         current_user.accept_private_messages = form.accept_private_messages.data
+        current_user.font = form.font.data
+        current_user.additional_css = form.additional_css.data
         session['ui_language'] = form.interface_language.data
         session['compact_level'] = form.compaction.data
+        current_user.vote_privately = form.vote_privately.data
         if form.vote_privately.data:
             if current_user.alt_user_name is None or current_user.alt_user_name == '':
                 current_user.alt_user_name = gibberish(randint(8, 20))
-        else:
-            current_user.alt_user_name = ''
         if propagate_indexable:
             db.session.execute(text('UPDATE "post" set indexable = :indexable WHERE user_id = :user_id'),
                                {'user_id': current_user.id,
@@ -450,16 +498,16 @@ def user_settings():
         form.theme.data = current_user.theme
         form.markdown_editor.data = current_user.markdown_editor
         form.interface_language.data = current_user.interface_language
-        form.vote_privately.data = current_user.vote_privately()
+        form.vote_privately.data = current_user.vote_privately
         form.feed_auto_follow.data = current_user.feed_auto_follow
         form.feed_auto_leave.data = current_user.feed_auto_leave
         form.read_languages.data = current_user.read_language_ids
         form.compaction.data = session.get('compact_level', '')
         form.accept_private_messages.data = current_user.accept_private_messages
+        form.font.data = current_user.font
+        form.additional_css.data = current_user.additional_css
 
-    return render_template('user/edit_settings.html', title=_('Edit profile'), form=form, user=current_user,
-                           site=g.site,
-                           
+    return render_template('user/edit_settings.html', title=_('Change settings'), form=form, user=current_user,
                            )
 
 
@@ -508,10 +556,7 @@ def user_settings_import_export():
         flash(_('Your changes have been saved.'), 'success')
         return redirect(url_for('user.user_settings_import_export'))
 
-    return render_template('user/import_export.html', title=_('Import & Export'), form=form, user=current_user,
-                           site=g.site,
-                           
-                           )
+    return render_template('user/import_export.html', title=_('Import & Export'), form=form, user=current_user)
 
 
 @bp.route('/user/<int:user_id>/notification', methods=['GET', 'POST'])
@@ -523,10 +568,11 @@ def user_notification(user_id: int):
         abort(404)
 
 
-@bp.route('/u/<actor>/ban', methods=['GET'])
+@bp.route('/u/<actor>/ban', methods=['GET', 'POST'])
 @login_required
 def ban_profile(actor):
-    if user_access('ban users', current_user.id):
+    form = BanUserForm()
+    if user_access('ban users', current_user.id) or user_access('manage users', current_user.id):
         actor = actor.strip()
         user = User.query.filter_by(user_name=actor, deleted=False).first()
         if user is None:
@@ -536,22 +582,69 @@ def ban_profile(actor):
 
         if user.id == current_user.id:
             flash(_('You cannot ban yourself.'), 'error')
+            goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
+            return redirect(goto)
         else:
-            user.banned = True
-            db.session.commit()
+            if form.validate_on_submit():
+                user.banned = True
+                db.session.commit()
 
-            add_to_modlog('ban_user', link_text=user.display_name(), link=user.link())
+                # Purge content
+                if form.purge.data:
+                    if user.is_instance_admin():
+                        flash(_('Purged user was a remote instance admin.'), 'warning')
+                    if user.is_admin() or user.is_staff():
+                        flash(_('Purged user with role permissions.'), 'warning')
 
-            if user.is_instance_admin():
-                flash(_('Banned user was a remote instance admin.'), 'warning')
-            if user.is_admin() or user.is_staff():
-                flash(_('Banned user with role permissions.'), 'warning')
-            flash(_('%(actor)s has been banned.', actor=actor))
+                    # federate deletion
+                    if user.is_local():
+                        user.deleted_by = current_user.id
+                        purge_user_then_delete(user.id)
+                        flash(_('%(actor)s has been banned, deleted and all their content deleted. This might take a few minutes.',
+                              actor=actor))
+                    else:
+                        user.deleted = True
+                        user.deleted_by = current_user.id
+                        user.delete_dependencies()
+                        user.purge_content()
+                        db.session.commit()
+                        flash(_('%(actor)s has been banned, deleted and all their content deleted.', actor=actor))
+
+                    add_to_modlog('delete_user', reason=form.reason.data, link_text=user.display_name(), link=user.link())
+                else:
+                    add_to_modlog('ban_user', reason=form.reason.data, link_text=user.display_name(), link=user.link())
+
+                    if user.is_instance_admin():
+                        flash(_('Banned user was a remote instance admin.'), 'warning')
+                    if user.is_admin() or user.is_staff():
+                        flash(_('Banned user with role permissions.'), 'warning')
+                    else:
+                        flash(_('%(actor)s has been banned.', actor=actor))
+
+                # IP address ban
+                if form.ip_address.data and user.ip_address:
+                    existing_ip_ban = IpBan.query.filter(IpBan.ip_address == user.ip_address).first()
+                    if not existing_ip_ban:
+                        db.session.add(IpBan(ip_address=user.ip_address, notes=form.reason.data))
+                        db.session.commit()
+
+                goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
+                return redirect(goto)
+
+            form.ip_address.data = True
+            form.purge.data = True
+            if not user_access('manage users', current_user.id):
+                form.purge.render_kw = {'disabled': True}
+                form.purge.data = False
+            if user.ip_address is None or user.ip_address == '':
+                form.ip_address.render_kw = {'disabled': True}
+                form.ip_address.data = False
+
+            return render_template('generic_form.html', form=form, title=_('Ban %(name)s', name=actor))
     else:
         abort(401)
 
-    goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
-    return redirect(goto)
+
 
 
 @bp.route('/u/<actor>/unban', methods=['GET'])
@@ -703,7 +796,7 @@ def report_profile(actor):
         elif request.method == 'GET':
             form.report_remote.data = True
 
-    return render_template('user/user_report.html', title=_('Report user'), form=form, user=user, site=g.site)
+    return render_template('user/user_report.html', title=_('Report user'), form=form, user=user)
 
 
 @bp.route('/u/<actor>/delete', methods=['GET'])
@@ -786,10 +879,7 @@ def delete_account():
     elif request.method == 'GET':
         ...
 
-    return render_template('user/delete_account.html', title=_('Delete my account'), form=form, user=current_user,
-                           site=g.site,
-                           
-                           )
+    return render_template('user/delete_account.html', title=_('Delete my account'), form=form, user=current_user)
 
 
 @celery.task
@@ -884,7 +974,8 @@ def notifications():
 
     notification_types = defaultdict(int)
     notification_links = defaultdict(set)
-    notification_list = Notification.query.filter_by(user_id=current_user.id).order_by(desc(Notification.created_at)).all()
+    notification_list = Notification.query.filter_by(user_id=current_user.id).order_by(desc(Notification.created_at)).limit(100).all()
+    # Build a list of the types of notifications this person has, by going through all their notifications
     for notification in notification_list:
         has_notifications = True
         if notification.notif_type != NOTIF_DEFAULT:
@@ -989,7 +1080,7 @@ def import_settings_task(user_id, filename):
                               "to": [community.public_url()],
                               "object": community.public_url(),
                               "type": "Follow",
-                              "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.id}"
+                              "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
                             }
                             send_post_request(community.ap_inbox_url, follow, user.private_key,
                                               user.public_url() + '#main-key')
@@ -1037,6 +1128,7 @@ def user_settings_filters():
         current_user.hide_nsfl = form.hide_nsfl.data
         current_user.reply_collapse_threshold = form.reply_collapse_threshold.data
         current_user.reply_hide_threshold = form.reply_hide_threshold.data
+        current_user.hide_low_quality = form.hide_low_quality.data
         db.session.commit()
 
         flash(_('Your changes have been saved.'), 'success')
@@ -1047,6 +1139,7 @@ def user_settings_filters():
         form.hide_nsfl.data = current_user.hide_nsfl
         form.reply_collapse_threshold.data = current_user.reply_collapse_threshold
         form.reply_hide_threshold.data = current_user.reply_hide_threshold
+        form.hide_low_quality.data = current_user.hide_low_quality
     filters = Filter.query.filter_by(user_id=current_user.id).order_by(Filter.title).all()
     blocked_users = User.query.filter_by(deleted=False).join(UserBlock, UserBlock.blocked_id == User.id).\
         filter(UserBlock.blocker_id == current_user.id).order_by(User.user_name).all()
@@ -1058,10 +1151,7 @@ def user_settings_filters():
         filter(InstanceBlock.user_id == current_user.id).order_by(Instance.domain).all()
     return render_template('user/filters.html', form=form, filters=filters, user=current_user,
                            blocked_users=blocked_users, blocked_communities=blocked_communities,
-                           blocked_domains=blocked_domains, blocked_instances=blocked_instances,
-                           site=g.site,
-                           
-                           )
+                           blocked_domains=blocked_domains, blocked_instances=blocked_instances)
 
 
 @bp.route('/user/settings/filters/add', methods=['GET', 'POST'])
@@ -1082,10 +1172,7 @@ def user_settings_filters_add():
         flash(_('Your changes have been saved.'), 'success')
         return redirect(url_for('user.user_settings_filters'))
 
-    return render_template('user/edit_filters.html', title=_('Add filter'), form=form, user=current_user,
-                           site=g.site,
-                           
-                           )
+    return render_template('user/edit_filters.html', title=_('Add filter'), form=form, user=current_user)
 
 
 @bp.route('/user/settings/filters/<int:filter_id>/edit', methods=['GET', 'POST'])
@@ -1122,10 +1209,7 @@ def user_settings_filters_edit(filter_id):
         form.keywords.data = content_filter.keywords
         form.expire_after.data = content_filter.expire_after
 
-    return render_template('user/edit_filters.html', title=_('Edit filter'), form=form, content_filter=content_filter, user=current_user,
-                           site=g.site,
-                           
-                           )
+    return render_template('user/edit_filters.html', title=_('Edit filter'), form=form, content_filter=content_filter, user=current_user)
 
 
 @bp.route('/user/settings/filters/<int:filter_id>/delete', methods=['GET', 'POST'])
@@ -1175,12 +1259,14 @@ def user_bookmarks():
     next_url = url_for('user.user_bookmarks', page=posts.next_num) if posts.has_next else None
     prev_url = url_for('user.user_bookmarks', page=posts.prev_num) if posts.has_prev and page != 1 else None
 
+    # Voting history
+    recently_upvoted = recently_upvoted_posts(current_user.id)
+    recently_downvoted = recently_downvoted_posts(current_user.id)
+
     return render_template('user/bookmarks.html', title=_('Bookmarks'), posts=posts, show_post_community=True,
                            low_bandwidth=low_bandwidth, user=current_user,
-                           site=g.site,
-                           next_url=next_url, prev_url=prev_url,
-                           
-                           )
+                            recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
+                           next_url=next_url, prev_url=prev_url)
 
 
 @bp.route('/bookmarks/comments')
@@ -1197,12 +1283,14 @@ def user_bookmarks_comments():
     next_url = url_for('user.user_bookmarks_comments', page=post_replies.next_num) if post_replies.has_next else None
     prev_url = url_for('user.user_bookmarks_comments', page=post_replies.prev_num) if post_replies.has_prev and page != 1 else None
 
+    # Voting history
+    recently_upvoted_replies = recently_upvoted_post_replies(current_user.id)
+    recently_downvoted_replies = recently_downvoted_post_replies(current_user.id)
+
     return render_template('user/bookmarks_comments.html', title=_('Comment bookmarks'), post_replies=post_replies, show_post_community=True,
                            low_bandwidth=low_bandwidth, user=current_user,
-                           site=g.site,
-                           next_url=next_url, prev_url=prev_url,
-                           
-                           )
+                            recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies,
+                           next_url=next_url, prev_url=prev_url)
 
 
 @bp.route('/alerts')
@@ -1252,6 +1340,12 @@ def user_alerts(type='posts', filter='all'):
                         filter_by(type=NOTIF_TOPIC, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
         title = _('Topic Alerts')
 
+    elif type == 'feeds':
+        # ignore filter
+        entities = Feed.query.join(NotificationSubscription, NotificationSubscription.entity_id == Feed.id).\
+                        filter_by(type=NOTIF_FEED, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+        title = _('Feed Alerts')
+
     elif type == 'users':
         # ignore filter
         entities = User.query.join(NotificationSubscription, NotificationSubscription.entity_id == User.id).\
@@ -1279,10 +1373,7 @@ def user_alerts(type='posts', filter='all'):
 
     return render_template('user/alerts.html', title=title, entities=entities,
                            low_bandwidth=low_bandwidth, user=current_user, type=type, filter=filter,
-                           site=g.site,
-                           next_url=next_url, prev_url=prev_url,
-                           
-                           )
+                           next_url=next_url, prev_url=prev_url)
 
 
 @bp.route('/u/<actor>/fediverse_redirect', methods=['GET', 'POST'])
@@ -1357,10 +1448,7 @@ def user_read_posts(sort=None):
 
     return render_template('user/read_posts.html', title=_('Read posts'), posts=posts, show_post_community=True,
                            sort=sort, low_bandwidth=low_bandwidth, user=current_user,
-                           site=g.site,
-                           next_url=next_url, prev_url=prev_url,
-                           
-                           )
+                           next_url=next_url, prev_url=prev_url)
 
 
 @bp.route('/read-posts/delete')
@@ -1395,7 +1483,6 @@ def edit_user_note(actor):
             usernote = UserNote(target_id=user.id, user_id=current_user.id, body=text)
             db.session.add(usernote)
         db.session.commit()
-        cache.delete_memoized(User.get_note, user, current_user)
 
         flash(_('Your changes have been saved.'), 'success')
         if return_to:
@@ -1406,8 +1493,7 @@ def edit_user_note(actor):
     elif request.method == 'GET':
         form.note.data = user.get_note(current_user)
 
-    return render_template('user/edit_note.html', title=_('Edit note'), form=form, user=user, return_to=return_to,
-                           site=g.site, )
+    return render_template('user/edit_note.html', title=_('Edit note'), form=form, user=user, return_to=return_to)
 
 
 @bp.route('/user/<int:user_id>/preview')

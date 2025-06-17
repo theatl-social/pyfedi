@@ -3,7 +3,8 @@
 {% else -%}
     {% extends "base.html" -%}
 {% endif -%} -%}
-{% from 'bootstrap/form.html' import render_form -%}
+{% from 'bootstrap5/form.html' import render_form -%}
+{% from "_macros.html" import render_username -%}
 
 {% block app_content -%}
     <div class="row">
@@ -12,7 +13,7 @@
                 <summary>Upvoters</summary>
                 <ul>
                     {% for upvoter in upvoters -%}
-                        <li>{{ render_username(upvoter) }}</li>
+                        <li>{{ render_username(upvoter, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</li>
                     {% endfor -%}
                 </ul>
             </details>
@@ -21,7 +22,7 @@
                 <summary>Downvoters</summary>    
                 <ul>
                     {% for downvoter in downvoters -%}
-                        <li>{{ render_username(downvoter) }}</li>
+                        <li>{{ render_username(downvoter, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</li>
                     {% endfor -%}
                 </ul>
             </details>

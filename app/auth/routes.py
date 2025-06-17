@@ -1,4 +1,4 @@
-import json
+import os.path
 from datetime import date, datetime
 from random import randint
 from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, g
@@ -12,11 +12,12 @@ from app import db, cache, limiter, oauth
 from app.auth import bp
 from app.auth.forms import LoginForm, RegistrationForm, ResetPasswordRequestForm, ResetPasswordForm
 from app.auth.util import random_token, normalize_utf, ip2location, no_admins_logged_in_recently
-from app.constants import NOTIF_REGISTRATION
-from app.email import send_verification_email, send_password_reset_email
+from app.constants import NOTIF_REGISTRATION, NOTIF_REPORT
+from app.email import send_verification_email, send_password_reset_email, send_registration_approved_email
 from app.models import User, utcnow, IpBan, UserRegistration, Notification, Site
+from app.shared.tasks import task_selector
 from app.utils import render_template, ip_address, user_ip_banned, user_cookie_banned, banned_ip_addresses, \
-    finalize_user_setup, blocked_referrers, gibberish, get_setting
+    finalize_user_setup, blocked_referrers, gibberish, get_setting, notify_admin
 
 
 @bp.route('/login', methods=['GET', 'POST'])
@@ -119,8 +120,8 @@ def register():
             if form.user_name.data in disallowed_usernames:
                 flash(_('Sorry, you cannot use that user name'), 'error')
             else:
-                # Nazis use 88 and 14 in their user names very often.
-                if '88' in form.user_name.data or '14' in form.user_name.data:
+                # Nazis use 88 in their user names very often.
+                if '88' in form.user_name.data:
                     resp = make_response(redirect(url_for('auth.please_wait')))
                     resp.set_cookie('sesion', '17489047567495', expires=datetime(year=2099, month=12, day=30))
                     return resp
@@ -136,7 +137,8 @@ def register():
                 if ip_address_info and ip_address_info['country']:
                     for country_code in get_setting('auto_decline_countries', '').split('\n'):
                         if country_code and country_code.strip().upper() == ip_address_info['country'].upper():
-                            return redirect(url_for('auth.please_wait'))
+                            return render_template('generic_message.html', title=_('Application declined'),
+                                                   message=_('Sorry, we are not accepting registrations from your country.'))
 
                 verification_token = random_token(16)
                 form.user_name.data = form.user_name.data.strip()
@@ -144,10 +146,13 @@ def register():
                 form.user_name.data = normalize_utf(form.user_name.data)
                 if before_normalize != form.user_name.data:
                     flash(_('Your username contained special letters so it was changed to %(name)s.', name=form.user_name.data), 'warning')
+                font = ''
+                if 'Windows' in request.user_agent.string:
+                    font = 'inter'  # the default font on Windows doesn't look great so defaut to Inter. A windows computer will tend to have a connection that won't notice the 300KB font file.
                 user = User(user_name=form.user_name.data, title=form.user_name.data, email=form.real_email.data,
                             verification_token=verification_token, instance_id=1, ip_address=ip_address(),
                             banned=user_ip_banned() or user_cookie_banned(), email_unread_sent=False,
-                            referrer=session.get('Referer', ''), alt_user_name=gibberish(randint(8, 20)))
+                            referrer=session.get('Referer', ''), alt_user_name=gibberish(randint(8, 20)), font=font)
                 user.set_password(form.password.data)
                 user.ip_address_country = ip_address_info['country'] if ip_address_info else ''
                 user.timezone = form.timezone.data
@@ -173,8 +178,19 @@ def register():
                         db.session.add(notify)
                         # todo: notify everyone with the "approve registrations" permission, instead of just all admins
                     db.session.commit()
+                    if get_setting('ban_check_servers', 'piefed.social'):
+                        task_selector('check_application', application_id=application.id)
                     return redirect(url_for('auth.please_wait'))
                 else:
+                    if current_app.config['FLAG_THROWAWAY_EMAILS'] and os.path.isfile('app/static/tmp/disposable_domains.txt'):
+                        with open('app/static/tmp/disposable_domains.txt', 'r', encoding='utf-8') as f:
+                            disposable_domains = [line.rstrip('\n') for line in f]
+                        if user.email_domain() in disposable_domains:
+                            # todo: notify everyone with the "approve registrations" permission, instead of just all admins?
+                            targets_data = {'suspect_user_id': user.id, 'reporter_id': 1}
+                            notify_admin(_('Throwaway email used for account %(username)s', username=user.user_name),
+                                         url=f'/u/{user.link()}', author_id=1, notif_type=NOTIF_REPORT,
+                                         subtype='user_reported', targets=targets_data)
                     if user.verified:
                         finalize_user_setup(user)
                         login_user(user, remember=True)
@@ -191,18 +207,18 @@ def register():
             form.question.label = Label('question', g.site.application_question)
         if g.site.registration_mode != 'RequireApplication':
             del form.question
-        return render_template('auth/register.html', title=_('Register'), form=form, site=g.site,
+        return render_template('auth/register.html', title=_('Register'), form=form, 
                                google_oauth=current_app.config['GOOGLE_OAUTH_CLIENT_ID'])
 
 
 @bp.route('/please_wait', methods=['GET'])
 def please_wait():
-    return render_template('auth/please_wait.html', title=_('Account under review'), site=g.site)
+    return render_template('auth/please_wait.html', title=_('Account under review'))
 
 
 @bp.route('/check_email', methods=['GET'])
 def check_email():
-    return render_template('auth/check_email.html', title=_('Check your email'), site=g.site)
+    return render_template('auth/check_email.html', title=_('Check your email'))
 
 
 @bp.route('/reset_password_request', methods=['GET', 'POST'])
@@ -267,6 +283,13 @@ def verify_email(token):
         if user.waiting_for_approval():
             return redirect(url_for('auth.please_wait'))
         else:
+            # Two things need to happen - email verification and (usually) admin approval. They can happen in any order.
+            if g.site.registration_mode == 'RequireApplication':
+                send_registration_approved_email(user)
+            else:
+                ...
+                #send_welcome_email(user) #not written yet
+
             login_user(user, remember=True)
             if len(user.communities()) == 0:
                 return redirect(url_for('auth.trump_musk'))
@@ -312,6 +335,11 @@ def google_authorize():
         if user:
             user.google_oauth_id = google_id
         else:
+            # Check if registrations are closed
+            if g.site.registration_mode == 'Closed':
+                flash(_('Account registrations are currently closed.'), 'error')
+                return redirect(url_for('auth.login'))
+
             # Country-based registration blocking
             ip_address_info = ip2location(ip_address())
             if ip_address_info and ip_address_info['country']:
@@ -342,6 +370,8 @@ def google_authorize():
                 db.session.add(notify)
                 # todo: notify everyone with the "approve registrations" permission, instead of just all admins
             db.session.commit()
+            if get_setting('ban_check_servers', 'piefed.social'):
+                task_selector('check_application', application_id=application.id)
             return redirect(url_for('auth.please_wait'))
         else:
             if user.verified:

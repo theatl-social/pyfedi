@@ -14,7 +14,7 @@
 {% else -%}
     {% set collapsed = (post_reply.score <= -10) and not no_collapse -%}
 {% endif -%}
-<div class="container comment{% if post_reply.score and post_reply.score <= -10 %} low_score{% endif %}{% if post_reply.author.id == post_reply.post.author.id %} original_poster{% endif %}" id="comment_{{ post_reply.id }}"{% if post_reply.language_id and post_reply.language.code != 'en' %} lang="{{ post_reply.language.code }}"{% endif %} aria-level="{{ post_reply.depth+1 }}" role="treeitem">
+<div class="container comment{% if post_reply.score and post_reply.score <= -10 %} low_score{% endif %}{% if post_reply.distinguished %} distinguished{% endif %}{% if post_reply.author.id == post_reply.post.author.id %} original_poster{% endif %}" id="comment_{{ post_reply.id }}"{% if post_reply.language_id and post_reply.language.code != 'en' %} lang="{{ post_reply.language.code }}"{% endif %} aria-level="{{ post_reply.depth+1 }}" role="treeitem">
     {% if not post_reply.author.indexable -%}<!--googleoff: all-->{% endif -%}
     {% if teaser -%}
     <div class="row">
@@ -24,16 +24,18 @@
             {% else -%}
                 reply to: <a href="{{ url_for('activitypub.post_ap', post_id=post_reply.post.id, _anchor='comment_' + str(post_reply.id)) }}">{{ post_reply.post.title | truncate(80, True) }}</a>
             {% endif -%}
-            <span class="comment_community">in {{ render_communityname(post_reply.post.community) }}</span>
+            <span class="comment_community">in {{ render_communityname(post_reply.post.community, low_bandwidth=low_bandwidth, collapsed=collapsed) }}</span>
         </div>
     </div>
     {% endif -%}
     <div class="row">
         <div class="col-auto comment_author">
             <span class="visually-hidden">by</span>
-            {{ render_username(post_reply.author, htmx_redirect_back_to=request.path + '#comment_' + str(post_reply.id)) }}
+            {{ render_username(post_reply.author, htmx_redirect_back_to=request.path + '#comment_' + str(post_reply.id), current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}
+            {% if user_flair and post_reply.author.id in user_flair %}<span class="user_flair">{{ user_flair[post_reply.author.id] }}</span>{% endif %}
+            {% if post_reply.distinguished -%}<span class="fe fe-distinguished orangered" title="{{ _('Moderator') }}"></span>{% endif -%}
             {% if post_reply.author.id == post_reply.post.author.id -%}
-                <span title="Submitter of original post" aria-label="{{ _('Post creator') }}" class="small"> [OP]</span>
+                <span title="Submitter of original post" aria-label="{{ _('Post creator') }}" class="user_flair original_poster">OP</span>
             {% endif -%}
             <span class="comment_time"><a href="/post/{{ post_reply.post_id }}#comment_{{ post_reply.id }}">
                 {% if post_reply.edited_at -%}
@@ -54,7 +56,7 @@
         </div>
     </div>
 
-    <div class="row comment_body hidable{% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) %} reported{% endif %}">
+    <div class="row comment_body hidable{% if post_reply.has_been_reported() %} reported{% endif %}">
         <div class="col-12 pr-0" lang="{{ post_reply.language_code() }}">
             {% if post_reply.deleted and not show_deleted -%}
                 {% if post_reply.deleted_by is none or post_reply.deleted_by != post_reply.user_id -%}
@@ -63,10 +65,11 @@
                     <p>{{ _('Deleted by author') }}</p>
                 {% endif -%}
             {% else -%}
-                {{ post_reply.body_html | community_links | person_links | safe }}
+                {{ post_reply.body_html | community_links | feed_links | person_links | safe }}
             {% endif -%}
         </div>
     </div>
+    {% if not banned_from_community %}
     <div class="comment_actions hidable">
         <div class="post_replies_link">
             {% if post_reply.post.comments_enabled -%}
@@ -86,9 +89,7 @@
             {% endif -%}
         </div>
         <div class="voting_buttons_new">
-            {% with comment=post_reply, community=post_reply.post.community -%}
-                {% include "post/_comment_voting_buttons.html" -%}
-            {% endwith -%}
+            {{ render_comment_voting_buttons(post_reply, post_reply.post.community, current_user=current_user, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, communities_banned_from_list=communities_banned_from_list, disable_voting=disable_voting, recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies, upvoted_class=upvoted_class, downvoted_class=downvoted_class) }}
         </div>
         <div class="hide_button">
             {% if collapsed -%}
@@ -99,32 +100,29 @@
         </div>
         <div class="notify_toggle pull-right">
             {% if current_user.is_authenticated and current_user.verified -%}
-                {% with comment=dict(comment=post_reply) -%}
-                    {% include "post/_reply_notification_toggle.html" -%}
-                {% endwith -%}
+                {{ render_reply_notification_toggle(dict(comment=post_reply), current_user=current_user) }}
             {% endif -%}
         </div>
         <div class="comment_actions_link">
-            {% if not post_reply.post.deleted -%}
-                <div class="dropdown">
-                    <a 
-                        href="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) if low_bandwidth else '#' }}"
-                        data-bs-toggle="dropdown" rel="nofollow noindex" 
-                        aria-label="{{ _('Comment options') }}">
-                        <span class="fe fe-options" title="Options"> </span>
-                    </a>
-                    <ul class="dropdown-menu" style="width: 320px">
-                        <div 
-                            hx-get="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) }}"
-                            hx-trigger="intersect once"
-                            hx-target="this"
-                            hx-swap="outerHTML"
-                        ></div>
-                    </ul>
-                </div>
-            {% endif -%}
+            <div class="dropdown">
+                <a 
+                    href="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) if low_bandwidth else '#' }}"
+                    data-bs-toggle="dropdown" rel="nofollow noindex" 
+                    aria-label="{{ _('Comment options') }}">
+                    <span class="fe fe-options" title="Options"> </span>
+                </a>
+                <ul class="dropdown-menu" style="width: 320px">
+                    <div 
+                        hx-get="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) }}"
+                        hx-trigger="intersect once"
+                        hx-target="this"
+                        hx-swap="outerHTML"
+                    ></div>
+                </ul>
+            </div>
         </div>
     </div>
+    {% endif -%}
     <div id="reply_to_{{ post_reply.id }}" class="hidable"></div>
     {% if not post_reply.author.indexable -%}<!--googleon all-->{% endif -%}
 
@@ -145,7 +143,7 @@
     {% endif -%}
 
     {% if collapsed -%}
-        <script nonce="{{ session['nonce'] }}" type="text/javascript">
+        <script nonce="{{ nonce }}" type="text/javascript">
             if (typeof(toBeHidden) === 'undefined') {
                 toBeHidden = Array();
             }

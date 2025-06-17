@@ -3,14 +3,24 @@
 {% else %}
     {% extends "base.html" %}
 {% endif %}
-{% from 'bootstrap/form.html' import render_form %}
+{% from 'bootstrap5/form.html' import render_form %}
+{% from "_macros.html" import render_username, render_communityname %}
+{% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video %}
+{% from "post/reply/_macros.html" import render_comment_voting_buttons, render_reply_notification_toggle %}
 
 {% if current_user.is_authenticated and user.id == current_user.id %}
     {% set active_child = 'view_profile' %}
 {% endif %}
+
+{% block schema_org %}
+    {% if user.indexable and user.searchable and user.instance_id == 1 -%}
+        {% include "user/_schema_org.html" %}
+    {%- endif %}
+{% endblock %}
+
 {% block app_content %}
 <div class="row">
-    <main class="col-12 col-md-8 position-relative main_pane">
+    <main class="col-12 col-lg-8 position-relative main_pane">
         {% if user.cover_image() != '' %}
             <div class="community_header" style="height: 240px; background-image: url({{ user.cover_image() }});">
                 <nav aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
@@ -116,16 +126,16 @@
         {% endif %}
         </div>
         <p class="small">{{ _('Instance') }}: <a href="{{ url_for('instance.instance_overview', instance_domain=user.instance_domain()) }}">{{ user.instance_domain() }}</a>
-            {% if user.is_instance_admin() or (user.is_local() and user.is_admin()) %}<span class="red">({{ _('Admin') }})</span>{% endif %}<br />
-            {% if user.is_admin() or user.is_staff() %}{{ _('Role permissions') }}: {% if user.is_admin() %}{{ _('Admin') }}{% endif %} {% if user.is_staff() %}{{ _('Staff') }}{% endif %}<br />{% endif %}
+            {% if user.is_instance_admin() or (user.is_local() and user.get_id() in admin_ids) %}<span class="red">({{ _('Admin') }})</span>{% endif %}<br />
+            {% if user.get_id() in admin_ids or user.is_staff() %}{{ _('Role permissions') }}: {% if user.get_id() in admin_ids %}{{ _('Admin') }}{% endif %} {% if user.is_staff() %}{{ _('Staff') }}{% endif %}<br />{% endif %}
             {% if user.bot %}{{ _('Bot Account') }}<br />{% endif %}
             {% if current_user.is_authenticated %}{{ _('Note') }}: {{ user.get_note(current_user) }}<br />{% endif %}
             {{ _('Joined') }}: {{ arrow.get(user.created).humanize(locale=locale) }}<br />
             {% if current_user.is_authenticated %}{{ _('Attitude') }}: <span title="{{ _('Ratio of upvotes cast to downvotes cast. Higher is more positive.') }}">{% if user.attitude %}{{ (user.attitude * 100) | round | int }}%{% endif %}</span><br />{% endif %}
-            {% if current_user.is_authenticated and current_user.is_admin() and user.reputation %}{{ _('Reputation') }}: <span title="{{ _('Reputation: The Karma of the account. Total up votes minus down votes they got.') }}">{{ user.reputation | round | int }}</span><br />{% endif %}
+            {% if current_user.is_authenticated and current_user.get_id() in admin_ids and user.reputation %}{{ _('Reputation') }}: <span title="{{ _('Reputation: The Karma of the account. Total up votes minus down votes they got.') }}">{{ user.reputation | round | int }}</span><br />{% endif %}
             {{ _('Posts') }}: {{ user.post_count }}<br />
             {{ _('Comments') }}: {{ user.post_reply_count }}<br />
-            {% if current_user.is_authenticated and current_user.is_admin() -%}
+            {% if current_user.is_authenticated and current_user.get_id() in admin_ids -%}
                 {{ _('Votes') }}: {{ user.get_num_upvotes() }} / {{ user.get_num_downvotes() }}<br />
                 {% if user.referrer %}{{ _('Referer') }}: <span title="{{ _('Which website linked to PieFed when the user initially registered.') }}">{{ user.referrer }}</span><br />{% endif %}
                 {% if user.ip_address %}{{ _('IP and country code') }}: <span title="{{ _('IP address of last interaction.') }}">{{ user.ip_address }} ({{ user.ip_address_country if user.ip_address_country }})</span><br />{% endif %}
@@ -151,61 +161,79 @@
                 {% endfor -%}
             </ul>
         {% endif -%}
-        {% if posts %}
-            {% if rss_feed -%}
-                <p class="mt-4 d-block" style="float: right;">
-                    <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
-                </p>
-            {% endif -%}
-            <h2 class="mt-4">Posts</h2>
-            <div class="post_list">
-                {% for post in posts.items %}
-                    {% include 'post/_post_teaser.html' %}
-                {% endfor %}
+        <ul class="nav nav-tabs nav-justified mt-4">
+          <li class="nav-item">
+            <a href="#post_list_tab" class="nav-link {{ 'active' if replies_prev_url is none }}" id="post-pill" data-bs-toggle="pill" role="tab" aria-current="page">Posts</a>
+          </li>
+          <li class="nav-item">
+            <a href="#comments_tab" class="nav-link {{ 'active' if replies_prev_url is not none }}" id="comments-pill" data-bs-toggle="pill" role="tab">Comments</a>
+          </li>
+        </ul>
+        <div class="tab-content">
+          {% if posts %}
+            <div class="tab-pane border-0 {{ 'active' if replies_prev_url is none }}" id="post_list_tab" role="tabpanel" aria-labelled-by="post-pill">
+              {% if rss_feed -%}
+                  <p class="mt-2 d-block" style="float: right;">
+                      <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
+                  </p>
+              {% endif -%}
+              <h4 class="mt-2">Posts by {{ user.display_name() if user.is_local()  else user.display_name() + ', ' + user.ap_id }}</h4>
+              <div class="post_list">
+                  {% for post in posts.items %}
+                      {% include 'post/_post_teaser.html' %}
+                  {% endfor %}
+              </div>
+              <nav aria-label="{{ _('Post pagination') }}" class="mt-4" role="navigation">
+                      {% if post_prev_url %}
+                          <a href="{{ post_prev_url }}" class="btn btn-primary">
+                              <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
+                          </a>
+                      {% endif %}
+                      {% if post_next_url %}
+                          <a href="{{ post_next_url }}" class="btn btn-primary">
+                              {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
+                          </a>
+                      {% endif %}
+              </nav>
             </div>
-            <nav aria-label="{{ _('Post pagination') }}" class="mt-4" role="navigation">
-                    {% if post_prev_url %}
-                        <a href="{{ post_prev_url }}" class="btn btn-primary">
-                            <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
-                        </a>
-                    {% endif %}
-                    {% if post_next_url %}
-                        <a href="{{ post_next_url }}" class="btn btn-primary">
-                            {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
-                        </a>
-                    {% endif %}
-            </nav>
-        {% else %}
-            <p>{{ _('No posts yet.') }}</p>
-        {% endif %}
+          {% else %}
+            <div class="tab-pane border-0 {{ 'active' if replies_prev_url is none }}" id="post_list_tab" role="tabpanel" aria-labelled-by="post-pill">
+              <p>{{ _('No posts yet.') }}</p>
+            </div>
+          {% endif %}
 
-        {% if post_replies %}
-            <h2 class="mt-4" id="comments">Comments</h2>
-            <div class="post_list comments">
-                {% for post_reply in post_replies.items %}
-                    {% with teaser=True %}
-                        {% include 'post/_post_reply_teaser.html' %}
-                    {% endwith %}
-                {% endfor %}
+          {% if post_replies %}
+            <div class="tab-pane border-0 {{ 'active' if replies_prev_url is not none }}" id="comments_tab" role="tabpanel" aria-labelled-by="comments-pill">
+              <h4 class="mt-2" id="comments">Comments by {{ user.display_name() if user.is_local()  else user.display_name() + ', ' + user.ap_id }}</h4>
+              <div class="post_list comments">
+                  {% for post_reply in post_replies.items %}
+                      {% with teaser=True %}
+                          {% include 'post/_post_reply_teaser.html' %}
+                      {% endwith %}
+                  {% endfor %}
+              </div>
+              <nav aria-label="{{ _('Comment pagination') }}" class="mt-4" role="navigation">
+                      {% if replies_prev_url %}
+                          <a href="{{ replies_prev_url }}#comments" class="btn btn-primary">
+                              <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
+                          </a>
+                      {% endif %}
+                      {% if replies_next_url %}
+                          <a href="{{ replies_next_url }}#comments" class="btn btn-primary">
+                              {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
+                          </a>
+                      {% endif %}
+              </nav>
             </div>
-            <nav aria-label="{{ _('Comment pagination') }}" class="mt-4" role="navigation">
-                    {% if replies_prev_url %}
-                        <a href="{{ replies_prev_url }}#comments" class="btn btn-primary">
-                            <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
-                        </a>
-                    {% endif %}
-                    {% if replies_next_url %}
-                        <a href="{{ replies_next_url }}#comments" class="btn btn-primary">
-                            {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
-                        </a>
-                    {% endif %}
-            </nav>
-        {% else %}
-            <p>{{ _('No comments yet.') }}</p>
-        {% endif %}
+          {% else %}
+            <div class="tab-pane border-0 {{ 'active' if replies_prev_url is not none }}" id="comments_tab" role="tabpanel" aria-labelled-by="comments-pill">
+              <p>{{ _('No comments yet.') }}</p>
+            </div>
+          {% endif %}
+        </div>
     </main>
 
-    <aside id="side_pane" class="col-12 col-md-4 side_pane" role="complementary">
+    <aside id="side_pane" class="col-12 col-lg-4 side_pane" role="complementary">
         {% if current_user.is_authenticated and current_user.id == user.id %}
             <div class="card mb-3">
                 <div class="card-header">
@@ -259,24 +287,16 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        {% if user_access('ban users', current_user.id) %}
+                        {% if user_access('ban users', current_user.id) or user_access('manage users', current_user.id) %}
                             {% if user.banned %}
                                 <div class="col-4">
                                     <a class="w-100 btn btn-primary confirm_first" href="/u/{{ user.link() }}/unban">{{ _('Unban') }}</a>
                                 </div>
                             {% else %}
                                 <div class="col-4">
-                                    <a class="w-100 btn btn-primary confirm_first" href="/u/{{ user.link() }}/ban">{{ _('Ban') }}</a>
+                                    <a class="w-100 btn btn-primary" href="/u/{{ user.link() }}/ban">{{ _('Ban') }}</a>
                                 </div>
                             {% endif %}
-                        {% endif %}
-                        {% if user_access('manage users', current_user.id) %}
-                            <div class="col-4">
-                                <a class="w-100 btn btn-primary confirm_first" href="/u/{{ user.link() }}/delete">{{ _('Delete') }}</a>
-                            </div>
-                            <div class="col-4">
-                                <a class="w-100 btn btn-primary confirm_first" href="/u/{{ user.link() }}/ban_purge">{{ _('Ban + Purge') }}</a>
-                            </div>
                         {% endif %}
                     </div>
                 </div>

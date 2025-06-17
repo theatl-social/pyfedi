@@ -82,15 +82,27 @@ def edit_community(send_async, user_id, community_id):
     if community.description:
         group['source'] = {'content': community.description, 'mediaType': 'text/markdown'}
     if community.icon_id:
-        group['icon'] = {
-          'type': 'Image',
-          'url': f"https://{current_app.config['SERVER_NAME']}{community.icon_image()}"
-        }
+        if community.icon_image().startswith('http'):
+            group["icon"] = {
+                "type": "Image",
+                "url": community.icon_image()
+            }
+        else:
+            group['icon'] = {
+                'type': 'Image',
+                'url': f"https://{current_app.config['SERVER_NAME']}{community.icon_image()}"
+            }
     if community.image_id:
-        group['image'] = {
-          'type': 'Image',
-          'url': f"https://{current_app.config['SERVER_NAME']}{community.header_image()}"
-    }
+        if community.header_image().startswith('http'):
+            group["image"] = {
+                "type": "Image",
+                "url": community.header_image()
+            }
+        else:
+            group['image'] = {
+                'type': 'Image',
+                'url': f"https://{current_app.config['SERVER_NAME']}{community.header_image()}"
+            }
     language = []
     for community_language in community.languages:
         language.append({'identifier': community_language.code, 'name': community_language.name})

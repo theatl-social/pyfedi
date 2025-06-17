@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from datetime import timedelta, datetime, timezone
 from json import JSONDecodeError
 from random import randint
@@ -213,7 +214,7 @@ def comment_model_to_json(reply: PostReply) -> dict:
         'mediaType': 'text/html',
         'source': {'content': reply.body, 'mediaType': 'text/markdown'},
         'published': ap_datetime(reply.created_at),
-        'distinguished': False,
+        'distinguished': reply.distinguished,
         'audience': reply.community.public_url(),
         'language': {
             'identifier': reply.language_code(),
@@ -335,7 +336,8 @@ def find_flair_or_create(flair: dict, community_id: int) -> CommunityFlair:
         return existing_flair
     else:
         new_flair = CommunityFlair(flair=flair['display_name'].strip(), community_id=community_id,
-                                   text_color=flair['text_color'], background_color=flair['background_color'])
+                                   text_color=flair['text_color'], background_color=flair['background_color'],
+                                   blur_images=flair['blur_images'] if 'blur_images' in flair else False)
         return new_flair
 
 
@@ -482,8 +484,6 @@ def refresh_user_profile_task(user_id):
             session.commit()
             if user.avatar_id and avatar_changed:
                 make_image_sizes(user.avatar_id, 40, 250, 'users')
-                cache.delete_memoized(User.avatar_image, user)
-                cache.delete_memoized(User.avatar_thumbnail, user)
             if user.cover_id and cover_changed:
                 make_image_sizes(user.cover_id, 700, 1600, 'users')
                 cache.delete_memoized(User.cover_image, user)
@@ -552,10 +552,6 @@ def refresh_community_profile_task(community_id, activity_json):
                 else:
                     community.description = html_to_text(community.description_html)
 
-            if 'rules' in activity_json:
-                community.rules_html = allowlist_html(activity_json['rules'])
-                community.rules = html_to_text(community.rules_html)
-
             icon_changed = cover_changed = False
             if 'icon' in activity_json:
                 if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
@@ -598,13 +594,15 @@ def refresh_community_profile_task(community_id, activity_json):
             session.commit()
 
             if 'lemmy:tagsForPosts' in activity_json and isinstance(activity_json['lemmy:tagsForPosts'], list):
-                if community.flair.count() == 0:    # for now, all we do is populate community flair if there is not yet any. simpler.
+                if len(community.flair) == 0:    # for now, all we do is populate community flair if there is not yet any. simpler.
                     for flair in activity_json['lemmy:tagsForPosts']:
                         flair_dict = {'display_name': flair['display_name']}
                         if 'text_color' in flair:
                             flair_dict['text_color'] = flair['text_color']
                         if 'background_color' in flair:
                             flair_dict['background_color'] = flair['background_color']
+                        if 'blur_images' in flair:
+                            flair_dict['blur_images'] = flair['blur_images']
                         community.flair.append(find_flair_or_create(flair_dict, community.id))
                     session.commit()
 
@@ -919,10 +917,10 @@ def actor_json_to_model(activity_json, address, server):
                               ap_domain=server.lower(),
                               public_key=activity_json['publicKey']['publicKeyPem'],
                               # language=community_json['language'][0]['identifier'] # todo: language
-                              instance_id=find_instance_id(server),
-                              low_quality='memes' in activity_json['preferredUsername']
+                              instance_id=find_instance_id(server)
                               )
-
+        if get_setting('meme_comms_low_quality', False):
+            community.low_quality = 'memes' in activity_json['preferredUsername'] or 'shitpost' in activity_json['preferredUsername']
         description_html = ''
         if 'summary' in activity_json:
             description_html = activity_json['summary']
@@ -940,10 +938,6 @@ def actor_json_to_model(activity_json, address, server):
                 community.description_html = markdown_to_html(community.description)          # prefer Markdown if provided, overwrite version obtained from HTML
             else:
                 community.description = html_to_text(community.description_html)
-
-        if 'rules' in activity_json:
-            community.rules_html = allowlist_html(activity_json['rules'])
-            community.rules = html_to_text(community.rules_html)
 
         if 'icon' in activity_json and activity_json['icon'] is not None:
             if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
@@ -1121,6 +1115,10 @@ def actor_json_to_model(activity_json, address, server):
             make_image_sizes(feed.icon_id, 60, 250, 'feeds')
         if feed.image_id:
             make_image_sizes(feed.image_id, 700, 1600, 'feeds')
+
+        if 'childFeeds' in activity_json:
+            for child_feed in activity_json['childFeeds']:
+                populate_child_feed(feed.id, child_feed)
         return feed
 
 
@@ -1189,7 +1187,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
 
                             # set up the storage directory
                             if store_files_in_s3():
-                                directory = f'app/static/tmp'
+                                directory = 'app/static/tmp'
                             else:
                                 directory = f'app/static/media/{directory}/' + new_filename[0:2] + '/' + new_filename[2:4]
                             ensure_directory_exists(directory)
@@ -1212,7 +1210,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                             # Resize the image to medium
                             if medium_width:
                                 if img_width > medium_width:
-                                    image.thumbnail((medium_width, medium_width))
+                                    image.thumbnail((medium_width, sys.maxsize))
                                 image.save(final_place)
                                 if store_files_in_s3():
                                     content_type = guess_mime_type(final_place)
@@ -1266,24 +1264,29 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                 s3.close()
                             session.commit()
 
+                            site = Site.query.get(1)
+                            if site is None:
+                                site = Site()
+
                             # Alert regarding fascist meme content
-                            if toxic_community and img_width < 2000:    # images > 2000px tend to be real photos instead of 4chan screenshots.
-                                try:
-                                    image_text = pytesseract.image_to_string(Image.open(BytesIO(source_image)).convert('L'), timeout=30)
-                                except Exception:
-                                    image_text = ''
-                                if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):   # chan posts usually contain the text 'Anonymous' and ' No.12345'
-                                    post = Post.query.filter_by(image_id=file.id).first()
-                                    targets_data = {'post_id': post.id}
-                                    notification = Notification(title='Review this',
-                                                                user_id=1,
-                                                                author_id=post.user_id,
-                                                                url=url_for('activitypub.post_ap', post_id=post.id),
-                                                                notif_type=NOTIF_REPORT,
-                                                                subtype='post_with_suspicious_image',
-                                                                targets=targets_data)
-                                    session.add(notification)
-                                    session.commit()
+                            if site.enable_chan_image_filter and toxic_community and img_width < 2000:    # images > 2000px tend to be real photos instead of 4chan screenshots.
+                                if os.environ.get('ALLOW_4CHAN', None) is None:
+                                    try:
+                                        image_text = pytesseract.image_to_string(Image.open(BytesIO(source_image)).convert('L'), timeout=30)
+                                    except Exception:
+                                        image_text = ''
+                                    if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):   # chan posts usually contain the text 'Anonymous' and ' No.12345'
+                                        post = Post.query.filter_by(image_id=file.id).first()
+                                        targets_data = {'post_id': post.id}
+                                        notification = Notification(title='Review this',
+                                                                    user_id=1,
+                                                                    author_id=post.user_id,
+                                                                    url=url_for('activitypub.post_ap', post_id=post.id),
+                                                                    notif_type=NOTIF_REPORT,
+                                                                    subtype='post_with_suspicious_image',
+                                                                    targets=targets_data)
+                                        session.add(notification)
+                                        session.commit()
 
 
 def find_reply_parent(in_reply_to: str) -> Tuple[int, int, int]:
@@ -1353,8 +1356,8 @@ def find_instance_id(server):
     else:
         # Our instance does not know about {server} yet. Initially, create a sparse row in the 'instance' table and spawn a background
         # task to update the row with more details later
-        new_instance = Instance(domain=server, software='unknown', inbox=f'https://{server}/inbox', created_at=utcnow(),
-                                trusted=server == 'piefed.social')
+        new_instance = Instance(domain=server, software='unknown', inbox=f'https://{server}/inbox', created_at=utcnow())
+        
         try:
             db.session.add(new_instance)
             db.session.commit()
@@ -1702,7 +1705,7 @@ def unban_user(blocker, blocked, community, core_activity):
     if blocked.is_local():
         # Notify unbanned person
         targets_data = {'community_id': community.id}
-        notify = Notification(title=shorten_string('You have been unbanned from ' + community.title),
+        notify = Notification(title=shorten_string('You have been unbanned from ' + community.display_name()),
                               url=f'/chat/ban_from_mod/{blocked.id}/{community.id}', user_id=blocked.id, 
                               author_id=blocker.id, notif_type=NOTIF_UNBAN,
                               subtype='user_unbanned_from_community',
@@ -1768,8 +1771,10 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
             language = find_language(next(iter(request_json['object']['contentMap'])))  # Combination of next and iter gets the first key in a dict
             language_id = language.id if language else None
         else:
-            from app.utils import english_language_id
-            language_id = english_language_id()
+            from app.utils import site_language_id
+            language_id = site_language_id()
+
+        distinguished = request_json['object']['distinguished'] if 'distinguished' in request_json['object'] else False
 
         if 'attachment' in request_json['object']:
             attachment_list = []
@@ -1811,7 +1816,7 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
             db.session.commit()
         try:
             post_reply = PostReply.new(user, post, parent_comment, notify_author=False, body=body, body_html=body_html,
-                                       language_id=language_id, request_json=request_json, announce_id=announce_id)
+                                       language_id=language_id, distinguished=distinguished, request_json=request_json, announce_id=announce_id)
             for lutn in local_users_to_notify:
                 recipient = User.query.filter_by(ap_profile_id=lutn, ap_id=None).first()
                 if recipient:
@@ -1870,7 +1875,7 @@ def notify_about_post_task(post_id):
     for notify_id in user_send_notifs_to:
         if notify_id != post.user_id and notify_id not in notifications_sent_to:
             targets_data = {'post_id': post.id,'author_id':post.user_id}
-            new_notification = Notification(title=shorten_string(post.title, 50), url=f"/post/{post.id}",
+            new_notification = Notification(title=shorten_string(post.title, 150), url=f"/post/{post.id}",
                                             user_id=notify_id, author_id=post.user_id,
                                             notif_type=NOTIF_USER, 
                                             subtype='new_post_from_followed_user',
@@ -1886,7 +1891,7 @@ def notify_about_post_task(post_id):
     for notify_id in community_send_notifs_to:
         if notify_id != post.user_id and notify_id not in notifications_sent_to:
             targets_data = {'post_id': post.id,'community_id':post.community_id}
-            new_notification = Notification(title=shorten_string(post.title, 50), url=f"/post/{post.id}",
+            new_notification = Notification(title=shorten_string(post.title, 150), url=f"/post/{post.id}",
                                             user_id=notify_id, author_id=post.user_id,
                                             notif_type=NOTIF_COMMUNITY,
                                             subtype='new_post_in_followed_community',
@@ -1902,7 +1907,7 @@ def notify_about_post_task(post_id):
     for notify_id in topic_send_notifs_to:
         if notify_id != post.user_id and notify_id not in notifications_sent_to:
             targets_data = {'post_id': post.id,'author_id':post.user_id}
-            new_notification = Notification(title=shorten_string(post.title, 50), url=f"/post/{post.id}",
+            new_notification = Notification(title=shorten_string(post.title, 150), url=f"/post/{post.id}",
                                             user_id=notify_id, author_id=post.user_id,
                                             notif_type=NOTIF_TOPIC,
                                             subtype='new_post_in_followed_topic',
@@ -1923,7 +1928,7 @@ def notify_about_post_task(post_id):
         for notify_id in feed_send_notifs_to:
             if notify_id != post.user_id and notify_id not in notifications_sent_to:
                 targets_data = {'post_id':post.id,'feed_id':feed.id}
-                new_notification = Notification(title=shorten_string(post.title, 50), url=f"/post/{post.id}",
+                new_notification = Notification(title=shorten_string(post.title, 150), url=f"/post/{post.id}",
                                                 user_id=notify_id, author_id=post.user_id,
                                                 notif_type=NOTIF_FEED,
                                                 subtype='new_post_in_followed_feed',
@@ -1943,7 +1948,7 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
             if new_reply.user_id != notify_id:
                 targets_data = {'post_id':new_reply.post.id,'comment_id':new_reply.id}
                 new_notification = Notification(title=shorten_string(_('Reply to %(post_title)s',
-                                                                       post_title=new_reply.post.title), 50),
+                                                                       post_title=new_reply.post.title), 150),
                                                 url=f"/post/{new_reply.post.id}#comment_{new_reply.id}",
                                                 user_id=notify_id, author_id=new_reply.user_id,
                                                 notif_type=NOTIF_POST,
@@ -1961,7 +1966,7 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
                 if new_reply.depth <= THREAD_CUTOFF_DEPTH:
                     targets_data = {'post_id':parent_reply.post.id,'comment_id':new_reply.id,'author_id':new_reply.user_id}
                     new_notification = Notification(title=shorten_string(_('Reply to comment on %(post_title)s',
-                                                                           post_title=parent_reply.post.title), 50),
+                                                                           post_title=parent_reply.post.title), 150),
                                                     url=f"/post/{parent_reply.post.id}#comment_{new_reply.id}",
                                                     user_id=notify_id, author_id=new_reply.user_id,
                                                     notif_type=NOTIF_REPLY,
@@ -1970,7 +1975,7 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
                 else:
                     targets_data = {'post_id':parent_reply.post.id,'parent_comment_id':parent_reply.id,'comment_id':new_reply.id,'author_id':new_reply.user_id}
                     new_notification = Notification(title=shorten_string(_('Reply to comment on %(post_title)s',
-                                                                           post_title=parent_reply.post.title), 50),
+                                                                           post_title=parent_reply.post.title), 150),
                                                     url=f"/post/{parent_reply.post.id}/comment/{parent_reply.id}#comment_{new_reply.id}",
                                                     user_id=notify_id, author_id=new_reply.user_id,
                                                     notif_type=NOTIF_REPLY,
@@ -2005,6 +2010,11 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
     if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
         language = find_language_or_create(request_json['object']['language']['identifier'], request_json['object']['language']['name'])
         reply.language_id = language.id
+
+    # Distinguished
+    if 'distinguished' in request_json['object']:
+        reply.distinguished = request_json['object']['distinguished']
+
     reply.edited_at = utcnow()
 
     if 'attachment' in request_json['object']:
@@ -2126,6 +2136,9 @@ def update_post_from_activity(post: Post, request_json: dict):
     # Tags
     if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
         post.tags.clear()
+        # change back when lemmy supports flairs
+        #post.flair.clear()
+        flair_tags = []
         for json_tag in request_json['object']['tag']:
             if json_tag['type'] == 'Hashtag':
                 if json_tag['name'][1:].lower() != post.community.name.lower():             # Lemmy adds the community slug as a hashtag on every post in the community, which we want to ignore
@@ -2133,9 +2146,11 @@ def update_post_from_activity(post: Post, request_json: dict):
                     if hashtag:
                         post.tags.append(hashtag)
             if json_tag['type'] == 'lemmy:CommunityTag':
-                flair = find_flair_or_create(json_tag, post.community_id)
-                if flair:
-                    post.flair.append(flair)
+                # change back when lemmy supports flairs
+                #flair = find_flair_or_create(json_tag, post.community_id)
+                #if flair:
+                #    post.flair.append(flair)
+                flair_tags.append(json_tag)
             if 'type' in json_tag and json_tag['type'] == 'Mention':
                 profile_id = json_tag['href'] if 'href' in json_tag else None
                 if profile_id and isinstance(profile_id, str) and profile_id.startswith('https://' + current_app.config['SERVER_NAME']):
@@ -2154,6 +2169,14 @@ def update_post_from_activity(post: Post, request_json: dict):
                                                             targets=targets_data)
                                 recipient.unread_notifications += 1
                                 db.session.add(notification)
+        # remove when lemmy supports flairs
+        # for now only clear tags if there's new ones or if maybe another PieFed instance is trying to remove them
+        if len(flair_tags) > 0 or post.instance.software == 'piefed':
+            post.flair.clear()
+            for ft in flair_tags:
+                flair = find_flair_or_create(ft, post.community_id)
+                if flair:
+                    post.flair.append(flair)
 
     post.comments_enabled = request_json['object']['commentsEnabled'] if 'commentsEnabled' in request_json['object'] else True
     try:
@@ -2369,7 +2392,9 @@ def undo_vote(comment, post, target_ap_id, user):
         post = voted_on
         existing_vote = PostVote.query.filter_by(user_id=user.id, post_id=post.id).first()
         if existing_vote:
-            post.author.reputation -= existing_vote.effect
+            with db.session.begin_nested():
+                db.session.execute(text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
+                                   {'effect': existing_vote.effect, 'user_id': post.user_id})
             if existing_vote.effect < 0:  # Lemmy sends 'like' for upvote and 'dislike' for down votes. Cool! When it undoes an upvote it sends an 'Undo Like'. Fine. When it undoes a downvote it sends an 'Undo Like' - not 'Undo Dislike'?!
                 post.down_votes -= 1
             else:
@@ -2382,7 +2407,9 @@ def undo_vote(comment, post, target_ap_id, user):
         comment = voted_on
         existing_vote = PostReplyVote.query.filter_by(user_id=user.id, post_reply_id=comment.id).first()
         if existing_vote:
-            comment.author.reputation -= existing_vote.effect
+            with db.session.begin_nested():
+                db.session.execute(text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
+                                   {'effect': existing_vote.effect, 'user_id': comment.user_id})
             if existing_vote.effect < 0:  # Lemmy sends 'like' for upvote and 'dislike' for down votes. Cool! When it undoes an upvote it sends an 'Undo Like'. Fine. When it undoes a downvote it sends an 'Undo Like' - not 'Undo Dislike'?!
                 comment.down_votes -= 1
             else:
@@ -2396,12 +2423,18 @@ def undo_vote(comment, post, target_ap_id, user):
 
 
 def process_report(user, reported, request_json):
-    if len(request_json['summary']) < 15:
-        reasons = request_json['summary']
+    if 'summary' not in request_json:   # reports from peertube have no summary
+        reasons = ''
         description = ''
+        if 'content' in request_json:
+            reasons = request_json['content']
     else:
-        reasons = request_json['summary'][:15]
-        description = request_json['summary'][15:]
+        if len(request_json['summary']) < 15:
+            reasons = request_json['summary']
+            description = ''
+        else:
+            reasons = request_json['summary'][:15]
+            description = request_json['summary'][15:]
     if isinstance(reported, User):
         if reported.reports == -1:
             return
@@ -2512,7 +2545,7 @@ def lemmy_site_data():
           "application_email_admins": True,
           "actor_name_max_length": 20,
           "federation_enabled": True,
-          "captcha_enabled": True,
+          "captcha_enabled": get_setting('captcha_enabled', True),
           "captcha_difficulty": "medium",
           "published": site.created_at.isoformat(),
           "updated": site.updated.isoformat(),
@@ -2596,7 +2629,7 @@ def lemmy_site_data():
             "comment_count": 0,
             "comment_score": 0
         }
-        data['admins'].append({'person': person, 'counts': counts})
+        data['admins'].append({'person': person, 'counts': counts, 'is_admin': True})
     return data
 
 
@@ -2696,14 +2729,18 @@ def resolve_remote_post(uri: str, community, announce_id, store_ap_json, nodebb=
     announce_actor_domain = parsed_url.netloc
     if announce_actor_domain != 'a.gup.pe' and not nodebb and announce_actor_domain != uri_domain:
         return None
-    actor_domain = None
-    actor = None
 
     post_data = remote_object_to_json(uri)
     if not post_data:
         return None
 
+    return create_resolved_object(uri, post_data, uri_domain, community, announce_id, store_ap_json)
+
+
+def create_resolved_object(uri, post_data, uri_domain, community, announce_id, store_ap_json):
     # find the author. Make sure their domain matches the site hosting it to mitigate impersonation attempts
+    actor_domain = None
+    actor = None
     if 'attributedTo' in post_data:
         attributed_to = post_data['attributedTo']
         if isinstance(attributed_to, str):
@@ -2768,6 +2805,7 @@ def resolve_remote_post(uri: str, community, announce_id, store_ap_json, nodebb=
     return None
 
 
+
 @celery.task
 def get_nodebb_replies_in_background(replies_uri_list, community_id):
     max = 10 if not current_app.debug else 2           # magic number alert
@@ -2780,6 +2818,23 @@ def get_nodebb_replies_in_background(replies_uri_list, community_id):
         resolve_remote_post(uri, community, None, False, nodebb=True)
         if reply_count >= max:
             break
+
+
+def populate_child_feed(feed_id, child_feed):
+    if current_app.debug:
+        populate_child_feed_worker(feed_id, child_feed)
+    else:
+        populate_child_feed_worker.delay(feed_id, child_feed)
+
+
+@celery.task
+def populate_child_feed_worker(feed_id, child_feed):
+    from app.feed.util import search_for_feed
+    server, feed = extract_domain_and_actor(child_feed)
+    new_feed = search_for_feed('~' + feed + '@' + server)
+    new_feed.parent_feed_id = feed_id
+    db.session.commit()
+
 
 
 # called from UI, via 'search' option in navbar, or 'Retrieve a post from the original server' in community sidebar
@@ -2992,33 +3047,22 @@ def find_community(request_json):
                             if potential_community:
                                 return potential_community
 
-    # used for manual retrieval of a PeerTube vid
-    if request_json['type'] == 'Video':
-        if 'attributedTo' in request_json and isinstance(request_json['attributedTo'], list):
-            for a in request_json['attributedTo']:
-                if a['type'] == 'Group':
-                    potential_community = Community.query.filter_by(ap_profile_id=a['id'].lower()).first()
-                    if potential_community:
-                        return potential_community
-
-    # change this if manual retrieval of comments is allowed in future
-    if not 'object' in request_json:
-        return None
+    rj = request_json['object'] if 'object' in request_json else request_json
 
     # Create/Update Note from platform that didn't include the Community in 'audience', 'cc', or 'to' (e.g. Mastodon reply to Lemmy post)
-    if 'inReplyTo' in request_json['object'] and request_json['object']['inReplyTo'] is not None:
-        post_being_replied_to = Post.get_by_ap_id(request_json['object']['inReplyTo'])
+    if 'inReplyTo' in rj and rj['inReplyTo'] is not None:
+        post_being_replied_to = Post.get_by_ap_id(rj['inReplyTo'])
         if post_being_replied_to:
             return post_being_replied_to.community
         else:
-            comment_being_replied_to = PostReply.get_by_ap_id(request_json['object']['inReplyTo'])
+            comment_being_replied_to = PostReply.get_by_ap_id(rj['inReplyTo'])
             if comment_being_replied_to:
                 return comment_being_replied_to.community
 
     # Update / Video from PeerTube (possibly an edit, more likely an invite to query Likes / Replies endpoints)
-    if request_json['object']['type'] == 'Video':
-        if 'attributedTo' in request_json['object'] and isinstance(request_json['object']['attributedTo'], list):
-            for a in request_json['object']['attributedTo']:
+    if rj['type'] == 'Video':
+        if 'attributedTo' in rj and isinstance(rj['attributedTo'], list):
+            for a in rj['attributedTo']:
                 if a['type'] == 'Group':
                     potential_community = Community.query.filter_by(ap_profile_id=a['id'].lower()).first()
                     if potential_community:

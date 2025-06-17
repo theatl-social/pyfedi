@@ -38,11 +38,27 @@ document.addEventListener("DOMContentLoaded", function () {
     setupSelectNavigation();
     setupUserPopup();
     preventDoubleFormSubmissions();
+    setupSelectAllCheckbox();
+    setupFontSizeChangers();
+    setupAddPassKey();
+    setupFancySelects();
+    setupImagePreview();
+    setupNotificationPermission();
+    setupFederationModeToggle();
+    setupMegaMenuNavigation();
+    setupPopupCommunitySidebar();
+    setupVideoSpoilers();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
     if(timezoneField && timezoneField.type === 'hidden') {
         timezoneField.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    }
+
+    // iOS doesn't support beforeinstallprompt, so detect iOS and show PWA button manually
+    if(/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+        document.getElementById('btn_add_home_screen').style.display = 'inline-block';
+        document.body.classList.add('ios');
     }
 
 });
@@ -226,7 +242,15 @@ function setupLightboxTeaser() {
     if(typeof baguetteBox !== 'undefined') {
         function popStateListener(event) {
             baguetteBox.hide();
-        }
+        };
+        function baguetteBoxClickImg(event) {
+          if (this.style.width != "100vw" && this.offsetWidth < window.innerWidth) {
+            this.style.width = "100vw";
+            this.style.maxHeight = "none";
+          } else {
+            baguetteBox.hide();
+          }
+        };
         baguetteBox.run('.post_teaser', {
             fullScreen: false,
             noScrollbars: true,
@@ -236,26 +260,19 @@ function setupLightboxTeaser() {
             afterShow: function() {
                 window.history.pushState('#lightbox', document.title, document.location+'#lightbox');
                 window.addEventListener('popstate', popStateListener);
-
-                function baguetteBoxClickImg(event) {
-                  if (this.style.width != "100vw" && this.offsetWidth < window.innerWidth) {
-                    this.style.width = "100vw";
-                    this.style.maxHeight = "none";
-                  } else {
-                    this.style.width = "";
-                    this.style.maxHeight = "";
-                    this.removeEventListener('click', baguetteBoxClickImg);
-                    baguetteBox.hide();
-                  }
-                };
                 for (const el of document.querySelectorAll('div#baguetteBox-overlay img')) {
                   el.addEventListener('click', baguetteBoxClickImg);
                 }
             },
             afterHide: function() {
                 if (window.history.state === '#lightbox') {
-                  window.history.back();
+                  for (const el of document.querySelectorAll('div#baguetteBox-overlay img')) {
+                    el.style.width = "";
+                    el.style.maxHeight = "";
+                    el.removeEventListener('click', baguetteBoxClickImg);
+                  }
                   window.removeEventListener('popstate', popStateListener);
+                  window.history.back();
                 }
             },
         });
@@ -655,6 +672,10 @@ function setupKeyboardShortcuts() {
             if(document.activeElement.classList.contains('skip-link')) {
                 return;
             }
+            // Don't intercept keyboard shortcuts when modifier keys are pressed
+            if (event.ctrlKey || event.metaKey || event.altKey) {
+                return;
+            }
             var didSomething = false;
             if(event.shiftKey && event.key === '?') {
                 location.href = '/keyboard_shortcuts';
@@ -873,13 +894,286 @@ function setupAddPollChoice() {
 
 function preventDoubleFormSubmissions() {
     let submitting = false;
-    document.querySelector('form').addEventListener('submit', function (e) {
-      if (submitting) {
-        e.preventDefault();
-      } else {
-        submitting = true;
-      }
+    const form = document.querySelector('form');
+    if (form) {
+      form.addEventListener('submit', function (e) {
+          if (submitting) {
+            e.preventDefault();
+          } else {
+            submitting = true;
+          }
+      });
+    }
+}
+
+function setupSelectAllCheckbox() {
+    const selectAllCheckbox = document.getElementById("select_all");
+
+    if(selectAllCheckbox) {
+        selectAllCheckbox.addEventListener("change", function() {
+            const checkboxes = document.querySelectorAll("input.can_select_all");
+            checkboxes.forEach(cb => {
+                cb.checked = selectAllCheckbox.checked;
+            });
+        });
+    }
+}
+
+function setupFontSizeChangers() {
+    const increaseFontSize = document.getElementById('increase_font_size');
+    if(increaseFontSize) {
+        document.getElementById('increase_font_size').addEventListener('click', (e) => {
+            e.preventDefault();
+            let current = getCurrentFontSize();
+            current += 0.1;
+            applyFontSize(current);
+            setCookie('fontSize', current, 100000);
+        });
+        document.getElementById('decrease_font_size').addEventListener('click', (e) => {
+            e.preventDefault();
+            let current = getCurrentFontSize();
+            current = Math.max(0.5, current - 0.1); // Prevent too small
+            applyFontSize(current);
+            setCookie('fontSize', current, 100000);
+        });
+    }
+}
+
+function setupAddPassKey() {
+    const passkeyButton = document.getElementById('add_passkey_button');
+    if(passkeyButton) {
+        document.getElementById('add_passkey_button').addEventListener('click', () => {
+           const { startRegistration } = SimpleWebAuthnBrowser;
+           fetch('/user/passkeys/registration/options')
+              .then(response => {
+                if (!response.ok) {
+                  throw new Error(`Options request failed: ${response.statusText}`);
+                }
+                return response.json();
+              })
+              .then(registrationOptionsJSON => {
+                // Start WebAuthn registration
+                startRegistration({ optionsJSON: registrationOptionsJSON })
+                  .then(regResp => {
+                    const device = prompt(`Enter a name for this passkey:`);
+
+                    fetch('/user/passkeys/registration/verification', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json'
+                      },
+                      body: JSON.stringify({
+                        response: regResp,
+                        device: device
+                      })
+                    })
+                      .then(response => {
+                        if (!response.ok) {
+                          throw new Error(`Verification request failed: ${response.statusText}`);
+                        }
+                        return response.text();
+                      })
+                      .then(result => {
+                        if (result === 'FAILED') {
+                          console.log(`Verification request failed.`);
+                          alert(`Something went wrong, and we couldn't register the passkey.`);
+                        } else {
+                          setCookie('passkey', result.trim(), 365);
+                          location.href = `/user/passkeys`;
+                        }
+                      })
+                      .catch(error => {
+                        alert(error.message);
+                        alert(`Something went wrong, and we couldn't register the passkey.`);
+                      });
+                  })
+                  .catch(error => {
+                    alert(error.message);
+                    alert(`Something went wrong, and we couldn't register the passkey.`);
+                  });
+              })
+              .catch(error => {
+                alert(error.message);
+                alert(`Something went wrong, and we couldn't register the passkey.`);
+              });
+
+        });
+    }
+
+    const logInWithPasskey = document.getElementById('log_in_with_passkey');
+    if(logInWithPasskey) {
+        document.getElementById('log_in_with_passkey').addEventListener('click', async () => {
+            const { browserSupportsWebAuthn } = SimpleWebAuthnBrowser;
+            let passkeyUsername = getCookie('passkey');
+            if(!passkeyUsername) {
+                passkeyUsername = document.getElementById('user_name').value;
+                if(!passkeyUsername) {
+                   passkeyUsername = prompt('What is your user name?');
+                }
+            }
+
+            const { startAuthentication, browserSupportsWebAuthnAutofill } = SimpleWebAuthnBrowser;
+            let redirect = getValueFromQueryString('next');
+            // Submit options
+            const apiAuthOptsResp = await fetch('/auth/passkeys/login_options', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    username: passkeyUsername,
+                }),
+            });
+            const authenticationOptionsJSON = await apiAuthOptsResp.json();
+
+            console.log('AUTHENTICATION OPTIONS');
+            console.log(JSON.stringify(authenticationOptionsJSON, null, 2));
+
+            if (authenticationOptionsJSON.error) {
+                $.prompt(authenticationOptionsJSON.error);
+                return;
+            }
+
+            // Start WebAuthn authentication
+            const authResp = await startAuthentication({ optionsJSON: authenticationOptionsJSON, useBrowserAutofill: false });
+
+            console.log('AUTHENTICATION RESPONSE');
+            console.log(JSON.stringify(authResp, null, 2));
+
+            // Submit response
+            const apiAuthVerResp = await fetch('/auth/passkeys/login_verification', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    username: passkeyUsername,
+                    redirect: redirect,
+                    response: authResp,
+                }),
+            });
+            const verificationJSON = await apiAuthVerResp.json()
+
+            if (verificationJSON.verified === true) {
+                setCookie('passkey', passkeyUsername, 1000);
+                location.href = verificationJSON.redirectTo;
+            } else {
+                console.log(`Authentication failed: ${verificationJSON.message}`);
+                $.prompt(verificationJSON.message);
+            }
+        });
+    }
+}
+
+function setupFancySelects() {
+    var crossPostCommunity = document.getElementById('which_community');
+    if(crossPostCommunity && crossPostCommunity.type === 'select-one') {
+        new TomSelect('#which_community', {maxOptions: null, maxItems: 1});
+    }
+
+    var communities = document.getElementById('communities');
+    if(communities && communities.type === 'select-one') {
+        new TomSelect('#communities', {maxOptions: null, maxItems: 1});
+    }
+
+    var community = document.getElementById('community');
+    if(community && community.type === 'select-one') {
+        new TomSelect('#community', {maxOptions: null, maxItems: 1});
+    }
+}
+
+function setupImagePreview() {
+    const input = document.getElementById('image_file');
+    const preview = document.getElementById('image_preview');
+
+    if(input) {
+        input.addEventListener('change', () => {
+            const file = input.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                preview.src = url;
+                preview.style.display = 'block';
+
+                // revoke the object URL later to free memory
+                preview.onload = () => URL.revokeObjectURL(url);
+            } else {
+                preview.src = '';
+                preview.style.display = 'none';
+            }
+        });
+    }
+}
+
+function setupNotificationPermission() {
+    const permissionButton = document.getElementById('enableNotifications');
+    if(permissionButton) {
+        if(Notification.permission !== "granted") {
+            permissionButton.addEventListener('click', () => {
+                Notification.requestPermission().then((permission) => {
+                  permissionButton.innerText = 'Granted'
+                });
+            });
+        }
+        else {
+            const enableNotificationWrapper = document.getElementById('enableNotificationWrapper');
+            if(enableNotificationWrapper)
+                enableNotificationWrapper.style.display = 'none';
+        }
+    }
+}
+
+function setupFederationModeToggle() {
+    const federationModeRadios = document.querySelectorAll('input[name="federation_mode"]');
+    const allowlistField = document.getElementById('allowlist');
+    const blocklistField = document.getElementById('blocklist');
+    
+    if (federationModeRadios.length === 0 || !allowlistField || !blocklistField) {
+        return; // Exit if we're not on the federation page
+    }
+    
+    // Get the form groups containing the textarea fields
+    const allowlistGroup = allowlistField.closest('.form-group');
+    const blocklistGroup = blocklistField.closest('.form-group');
+    
+    function toggleFields() {
+        const selectedMode = document.querySelector('input[name="federation_mode"]:checked').value;
+        
+        if (selectedMode === 'allowlist') {
+            allowlistGroup.style.display = '';
+            blocklistGroup.style.display = 'none';
+        } else {
+            allowlistGroup.style.display = 'none';
+            blocklistGroup.style.display = '';
+        }
+    }
+    
+    // Set initial state
+    toggleFields();
+    
+    // Add event listeners to radio buttons
+    federationModeRadios.forEach(radio => {
+        radio.addEventListener('change', toggleFields);
     });
+}
+
+function getCurrentFontSize() {
+    const fontSize = getComputedStyle(document.body).fontSize;
+    return parseFloat(fontSize) / parseFloat(getComputedStyle(document.documentElement).fontSize);
+}
+
+// Apply font size to target elements
+function applyFontSize(sizeRem) {
+    document.body.style.fontSize = sizeRem + 'rem';
+    document.querySelectorAll('.form-control').forEach(el => {
+        el.style.fontSize = sizeRem + 'rem';
+    });
+}
+
+
+// ------------------- Utilities -------------------
+
+
+// Retrieve a value from the query string by key
+function getValueFromQueryString(key) {
+    const queryString = window.location.search;
+    const params = new URLSearchParams(queryString);
+    return params.get(key);
 }
 
 function getCookie(name) {
@@ -916,7 +1210,7 @@ function eraseCookie(name) {
 /* register a service worker */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('/static/service_worker.js', {scope: '/static/'}).then(function(registration) {
+    navigator.serviceWorker.register('/service_worker.js', {scope: '/'}).then(function(registration) {
       // Registration was successful
       // console.log('ServiceWorker2 registration successful with scope: ', registration.scope);
     }, function(err) {
@@ -940,14 +1234,148 @@ window.addEventListener('beforeinstallprompt', function (e) {
 });
 
 document.getElementById('btn_add_home_screen').addEventListener('click', function () {
-    document.getElementById('btn_add_home_screen').style.display = 'none';
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(function (choiceResult) {
-        if (choiceResult.outcome === 'accepted') {
-            console.log('User accepted the A2HS prompt');
-        } else {
-            console.log('User dismissed the A2HS prompt');
-        }
-        deferredPrompt = null;
-    });
+    // iOS doesn't support beforeinstallprompt, so show manual instructions
+    if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+        alert('To add this app to your home screen:\n\n1. Tap the Share button at the bottom of the screen\n2. Select "Add to Home Screen" from the menu\n3. Tap "Add" to confirm');
+    } else if (deferredPrompt) {
+        // For other browsers that support beforeinstallprompt
+        document.getElementById('btn_add_home_screen').style.display = 'none';
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(function (choiceResult) {
+            if (choiceResult.outcome === 'accepted') {
+                console.log('User accepted the A2HS prompt');
+            } else {
+                console.log('User dismissed the A2HS prompt');
+            }
+            deferredPrompt = null;
+        });
+    }
 });
+
+function setupMegaMenuNavigation() {
+    // Custom dropdown management since Bootstrap's data-bs-toggle gets in the way
+    const dropdownToggle = document.querySelector('.nav-link.dropdown-toggle[href="/communities"]');
+    const dropdownMenu = document.querySelector('.dropdown-menu.communities_menu');
+    
+    if (dropdownToggle && dropdownMenu) {
+        // Handle dropdown toggle click
+        dropdownToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const isVisible = dropdownMenu.style.display === 'block';
+            if (isVisible) {
+                hideDropdown();
+            } else {
+                const accountMenu = document.querySelector('.account_menu_parent');
+                if(accountMenu) {
+                    const accountAnchor = accountMenu.querySelector('a');
+                    if(accountAnchor) {
+                        accountAnchor.classList.remove('show');
+                        accountAnchor.setAttribute('aria-expanded', 'false');
+                    }
+                    const accountUl = accountMenu.querySelector('ul');
+                    if(accountUl) {
+                        accountUl.classList.remove('show');
+                        accountUl.removeAttribute('data-bs-popper');
+                    }
+                }
+                const adminMenu = document.querySelector('.admin_menu_parent');
+                if(adminMenu) {
+                    const adminAnchor = adminMenu.querySelector('a');
+                    if(adminAnchor) {
+                        adminAnchor.classList.remove('show');
+                        adminAnchor.setAttribute('aria-expanded', 'false');
+                    }
+                    const adminUl = adminMenu.querySelector('ul');
+                    if(adminUl) {
+                        adminUl.classList.remove('show');
+                        adminUl.removeAttribute('data-bs-popper');
+                    }
+                }
+                showDropdown();
+            }
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!dropdownToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                hideDropdown();
+            }
+        });
+
+    }
+    
+    function showDropdown() {
+        dropdownMenu.classList.add('show');
+        dropdownMenu.style.setProperty('display', 'block', 'important');
+        dropdownToggle.setAttribute('aria-expanded', 'true');
+        dropdownToggle.parentElement.classList.add('show');
+    }
+    
+    function hideDropdown() {
+        dropdownMenu.classList.remove('show');
+        dropdownMenu.style.setProperty('display', 'none', 'important');
+        dropdownToggle.setAttribute('aria-expanded', 'false');
+        dropdownToggle.parentElement.classList.remove('show');
+    }
+}
+
+function setupPopupCommunitySidebar() {
+    const dialog = document.getElementById('communitySidebar');
+
+    document.querySelectorAll('.showPopupCommunitySidebar').forEach(anchor => {
+        anchor.addEventListener('click', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const communityId = this.getAttribute('data-id');
+
+            if (communityId && dialog) {
+                fetch(`/community/get_sidebar/${communityId}`)
+                    .then(response => response.text())
+                    .then(html => {
+                        dialog.innerHTML = `
+                            <div style="position: relative;">
+                                <button id="closeCommunitySidebar" style="position: absolute; top: -10px; right: 0; background: none; border: none; font-size: 24px; cursor: pointer; z-index: 1000;" aria-label="Close">&times;</button>
+                                ${html}
+                            </div>
+                        `;
+
+                        const closeButton = dialog.querySelector('#closeCommunitySidebar');
+                        if (closeButton) {
+                            closeButton.addEventListener('click', function() {
+                                dialog.close();
+                            });
+                        }
+
+                        dialog.showModal();
+                    })
+                    .catch(error => {
+                        console.error('Error fetching community sidebar:', error);
+                    });
+            }
+        });
+    });
+
+    if (dialog) {
+        dialog.addEventListener('click', function(event) {
+            if (event.target === dialog) {
+                dialog.close();
+            }
+        });
+    }
+}
+
+function setupVideoSpoilers() {
+    const videosBlurred = document.querySelectorAll('.responsive-video.blur');
+
+    videosBlurred.forEach(function(vid) {
+        vid.addEventListener('play', function(playing) {
+            vid.classList.remove("blur");
+        });
+        vid.addEventListener('pause', function(paused) {
+            vid.classList.add("blur");
+        });
+    });
+}

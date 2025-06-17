@@ -1,11 +1,8 @@
-<div class="view_filter btn-group mt-1 mb-2" aria-label="{{ _('Alert filters: ') }}">
-    <a href="/alerts/{{ type }}/all" class="btn {{ 'btn-primary' if filter == 'all' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('All authors') }}">
-        {{ _('All') }}
-    </a>
-    <a href="/alerts/{{ type }}/mine" class="btn {{ 'btn-primary' if filter == 'mine' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Only Mine') }}">
-        {{ _('Mine') }}
-    </a>
-    <a href="/alerts/{{ type }}/others" class="btn {{ 'btn-primary' if filter == 'others' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Only Others') }}">
-        {{ _('Others') }}
-    </a>
+<div class="col-6">
+  <select class="form-control form-select navigate_on_change" name="filter_by">
+    <option value="/alerts/{{ type }}/all" aria-label="{{ _('All') }}" {{ 'selected' if filter == 'all' }}>{{ _('All') }}</option>
+    <option value="/alerts/{{ type }}/mine" aria-label="{{ _('Mine') }}" {{ 'selected' if filter == 'mine' }}>{{ _('Mine') }}</option>
+    <option value="/alerts/{{ type }}/others" aria-label="{{ _('Others') }}" {{ 'selected' if filter == 'others' }}>{{ _('Others') }}</option>
+  </select>
 </div>
+

@@ -186,6 +186,6 @@ def tools():
                                topics_form=topics_form,
                                delete_communities_form=delete_communities_form,
                                delete_topics_form=delete_topics_form,
-                               site=g.site,
+                               
                                inoculation=inoculation[random.randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                                )

@@ -10,8 +10,13 @@ from app.utils import MultiCheckboxField
 class NewReplyForm(FlaskForm):
     body = TextAreaField(_l('Body'), render_kw={'placeholder': 'What are your thoughts?', 'rows': 5}, validators=[DataRequired(), Length(min=1, max=10000)])
     notify_author = BooleanField(_l('Notify about replies'))
-    language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select language-float-right'})
+    distinguished = BooleanField(_l('Distinguish as moderator comment'))
+    language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Comment'))
+
+
+class EditReplyForm(NewReplyForm):
+    submit = SubmitField(_l('Save'))
 
 
 class ReportPostForm(FlaskForm):
@@ -54,6 +59,19 @@ class ConfirmationForm(FlaskForm):
     submit = SubmitField(_l('Yes'), render_kw={'autofocus': True})
 
 
+class DeleteConfirmationForm(FlaskForm):
+    referrer = HiddenField()
+    reason = StringField(_l('Reason'), validators=[Length(max=512)])
+    submit = SubmitField(_l('Yes'), render_kw={'autofocus': True})
+
+
 class ConfirmationMultiDeleteForm(FlaskForm):
+    reason = StringField(_l('Reason'), validators=[Length(max=512)])
     also_delete_replies = BooleanField(_l('Also delete replies to this comment'))
     submit = SubmitField(_l('Yes'), render_kw={'autofocus': True})
+
+
+class FlairPostForm(FlaskForm):
+    referrer = HiddenField()
+    flair = MultiCheckboxField(_l('Flair'), coerce=int, render_kw={'class': 'form-multicheck-columns'})
+    submit = SubmitField(_l('Save'))

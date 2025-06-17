@@ -1,13 +1,27 @@
-from flask import render_template
+from flask import render_template, request
 from app import db
 from app.errors import bp
+from app.models import CmsPage
 
 
-# 404 error handler removed because a lot of 404s are just images in /static/* and it doesn't make sense to waste cpu cycles presenting a nice page.
-# Also rendering a page requires populating g.site which means hitting the DB.
-# @bp.app_errorhandler(404)
-# def not_found_error(error):
-#     return render_template('errors/404.html'), 404
+@bp.app_errorhandler(404)
+def not_found_error(error):
+    # Skip page lookup for static files and known non-page paths to avoid unnecessary DB hits
+    if (request.path.startswith('/static/') or 
+        request.path.startswith('/api/') or
+        request.path.startswith('/.well-known/') or
+        request.path.startswith('/admin/') or
+        request.path.startswith('/auth/') or
+        request.path.endswith(('.jpg', '.jpeg', '.png', '.gif', '.css', '.js', '.ico', '.svg', '.woff', '.woff2', '.ttf', '.webp', '.txt'))):
+        return render_template('errors/404.html'), 404
+    
+    # Check if there's a page for this URL
+    cms_page = CmsPage.query.filter(CmsPage.url == request.path).first()
+    if cms_page:
+        return render_template('cms_page.html', page=cms_page)
+    
+    # Fall back to standard 404 page
+    return 'not found', 404
 
 
 @bp.app_errorhandler(500)
