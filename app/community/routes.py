@@ -12,7 +12,7 @@ from slugify import slugify
 from sqlalchemy import or_, asc, desc, text
 from sqlalchemy.orm.exc import NoResultFound
 
-from app import db, cache, celery, httpx_client
+from app import db, cache, celery, httpx_client, limiter
 from app.activitypub.signature import RsaKeys, post_request, send_post_request
 from app.activitypub.util import extract_domain_and_actor
 from app.chat.util import send_message
@@ -1944,6 +1944,7 @@ def community_leave_all():
 
 
 @bp.route('/<actor>/invite', methods=['GET', 'POST'])
+@limiter.limit("5 per 1 minutes", methods=['POST'])
 @login_required
 def community_invite(actor):
     if current_user.banned:
@@ -1961,6 +1962,7 @@ def community_invite(actor):
             chat_invites = 0
             email_invites = 0
             total_invites = 0
+            sent_to = set()
             for line in form.to.data.split('\n'):
                 line = line.strip()
                 if line != '':
@@ -1970,7 +1972,9 @@ def community_invite(actor):
                         if line.startswith('@') or instance_software(domain_from_email(line)):
                             chat_invites += invite_with_chat(community.id, line, SRC_WEB)
                         else:
-                            email_invites += invite_with_email(community.id, line, SRC_WEB)
+                            if line not in sent_to:
+                                email_invites += invite_with_email(community.id, line, SRC_WEB)
+                                sent_to.add(line)
                         total_invites += 1
 
             flash(_('Invited %(total_invites)d people using %(chat_invites)d chat messages and %(email_invites)d emails.',

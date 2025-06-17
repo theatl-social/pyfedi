@@ -353,6 +353,9 @@ class InviteCommunityForm(FlaskForm):
     def validate_to(self, field):
         if ',' in field.data:
             raise ValidationError(_l('Use new lines instead of commas.'))
+        lines = field.data.split('\n')
+        if len(lines) > 50:
+            raise ValidationError(_l('Maximum of 50 at a time.'))
 
 
 class MoveCommunityForm(FlaskForm):
