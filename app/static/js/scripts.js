@@ -489,7 +489,7 @@ function setupConfirmFirst() {
 
 // Handle custom POST requests for destructive actions
 function setupSendPost() {
-    const sendPostElements = document.querySelectorAll('.send_post');
+    const sendPostElements = document.querySelectorAll('a.send_post');
     sendPostElements.forEach(element => {
         element.addEventListener("click", function(event) {
             // Check if the event was cancelled by confirm_first
