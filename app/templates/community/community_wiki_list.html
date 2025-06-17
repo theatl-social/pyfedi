@@ -51,8 +51,8 @@
                                 <li><a class="dropdown-item"
                                        href="{{ url_for('community.community_wiki_edit', actor=community.link(), page_id=page.id, return='list') }}">
                                     {{ _('Edit') }}</a></li>
-                                <li><a class="confirm_first dropdown-item"
-                                       href="{{ url_for('community.community_wiki_delete', actor=community.link(), page_id=page.id) }}">
+                                <li><a class="confirm_first dropdown-item send_post"
+                                       href="#" data-url="{{ url_for('community.community_wiki_delete', actor=community.link(), page_id=page.id) }}">
                                     {{ _('Delete') }}</a></li>
                               </ul>
                             </div>

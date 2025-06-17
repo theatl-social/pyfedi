@@ -129,7 +129,7 @@ def chat_options(conversation_id):
                             )
 
 
-@bp.route('/chat/<int:conversation_id>/delete', methods=['GET', 'POST'])
+@bp.route('/chat/<int:conversation_id>/delete', methods=['POST'])
 @login_required
 def chat_delete(conversation_id):
     conversation = Conversation.query.get_or_404(conversation_id)

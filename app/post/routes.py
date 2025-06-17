@@ -813,7 +813,7 @@ def post_delete_post(community: Community, post: Post, user_id: int, reason: str
                       link=f'post/{post.id}')
 
 
-@bp.route('/post/<int:post_id>/restore', methods=['GET', 'POST'])
+@bp.route('/post/<int:post_id>/restore', methods=['POST'])
 @login_required
 def post_restore(post_id: int):
     post = Post.query.get_or_404(post_id)
@@ -886,7 +886,7 @@ def post_restore(post_id: int):
     return redirect(url_for('activitypub.post_ap', post_id=post.id))
 
 
-@bp.route('/post/<int:post_id>/purge', methods=['GET', 'POST'])
+@bp.route('/post/<int:post_id>/purge', methods=['POST'])
 @login_required
 def post_purge(post_id: int):
     post = Post.query.get_or_404(post_id)
@@ -903,7 +903,7 @@ def post_purge(post_id: int):
     return redirect(url_for('user.show_profile_by_id', user_id=post.user_id))
 
 
-@bp.route('/post/<int:post_id>/bookmark', methods=['GET', 'POST'])
+@bp.route('/post/<int:post_id>/bookmark', methods=['POST'])
 @login_required
 def post_bookmark(post_id: int):
     try:
@@ -914,7 +914,7 @@ def post_bookmark(post_id: int):
     return redirect(referrer(url_for('activitypub.post_ap', post_id=post_id)))
 
 
-@bp.route('/post/<int:post_id>/remove_bookmark', methods=['GET', 'POST'])
+@bp.route('/post/<int:post_id>/remove_bookmark', methods=['POST'])
 @login_required
 def post_remove_bookmark(post_id: int):
     try:
@@ -925,7 +925,7 @@ def post_remove_bookmark(post_id: int):
     return redirect(referrer(url_for('activitypub.post_ap', post_id=post_id)))
 
 
-@bp.route('/post/<int:post_id>/comment/<int:comment_id>/remove_bookmark', methods=['GET', 'POST'])
+@bp.route('/post/<int:post_id>/comment/<int:comment_id>/remove_bookmark', methods=['POST'])
 @login_required
 def post_reply_remove_bookmark(post_id: int, comment_id: int):
     try:
@@ -1009,7 +1009,7 @@ def post_report(post_id: int):
     return render_template('post/post_report.html', title=_('Report post'), form=form, post=post)
 
 
-@bp.route('/post/<int:post_id>/block_user', methods=['GET', 'POST'])
+@bp.route('/post/<int:post_id>/block_user', methods=['POST'])
 @login_required
 def post_block_user(post_id: int):
     post = Post.query.get_or_404(post_id)
@@ -1025,7 +1025,7 @@ def post_block_user(post_id: int):
     return redirect(post.community.local_url())
 
 
-@bp.route('/post/<int:post_id>/block_domain', methods=['GET', 'POST'])
+@bp.route('/post/<int:post_id>/block_domain', methods=['POST'])
 @login_required
 def post_block_domain(post_id: int):
     post = Post.query.get_or_404(post_id)
@@ -1038,7 +1038,7 @@ def post_block_domain(post_id: int):
     return redirect(post.community.local_url())
 
 
-@bp.route('/post/<int:post_id>/block_community', methods=['GET', 'POST'])
+@bp.route('/post/<int:post_id>/block_community', methods=['POST'])
 @login_required
 def post_block_community(post_id: int):
     post = Post.query.get_or_404(post_id)
@@ -1051,7 +1051,7 @@ def post_block_community(post_id: int):
     return redirect(post.community.local_url())
 
 
-@bp.route('/post/<int:post_id>/block_instance', methods=['GET', 'POST'])
+@bp.route('/post/<int:post_id>/block_instance', methods=['POST'])
 @login_required
 def post_block_instance(post_id: int):
     post = Post.query.get_or_404(post_id)
@@ -1199,7 +1199,7 @@ def post_reply_report(post_id: int, comment_id: int):
     return render_template('post/post_reply_report.html', title=_('Report comment'), form=form, post=post, post_reply=post_reply)
 
 
-@bp.route('/post/<int:post_id>/comment/<int:comment_id>/bookmark', methods=['GET'])
+@bp.route('/post/<int:post_id>/comment/<int:comment_id>/bookmark', methods=['POST'])
 @login_required
 def post_reply_bookmark(post_id: int, comment_id: int):
     try:
@@ -1210,7 +1210,7 @@ def post_reply_bookmark(post_id: int, comment_id: int):
     return redirect(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{comment_id}'))
 
 
-@bp.route('/post/<int:post_id>/comment/<int:comment_id>/block_user', methods=['GET', 'POST'])
+@bp.route('/post/<int:post_id>/comment/<int:comment_id>/block_user', methods=['POST'])
 @login_required
 def post_reply_block_user(post_id: int, comment_id: int):
     post = Post.query.get_or_404(post_id)
@@ -1227,7 +1227,7 @@ def post_reply_block_user(post_id: int, comment_id: int):
     return redirect(url_for('activitypub.post_ap', post_id=post.id))
 
 
-@bp.route('/post/<int:post_id>/comment/<int:comment_id>/block_instance', methods=['GET', 'POST'])
+@bp.route('/post/<int:post_id>/comment/<int:comment_id>/block_instance', methods=['POST'])
 @login_required
 def post_reply_block_instance(post_id: int, comment_id: int):
     post_reply = PostReply.query.get_or_404(comment_id)
@@ -1268,7 +1268,7 @@ def post_reply_edit(post_id: int, comment_id: int):
         abort(401)
 
 
-@bp.route('/post/<int:post_id>/comment/<int:comment_id>/delete', methods=['GET', 'POST'])
+@bp.route('/post/<int:post_id>/comment/<int:comment_id>/delete', methods=['POST'])
 @login_required
 def post_reply_delete(post_id: int, comment_id: int):
     post = Post.query.get_or_404(post_id)
@@ -1319,7 +1319,7 @@ def post_reply_delete(post_id: int, comment_id: int):
         return render_template('generic_form.html', title=_('Are you sure you want to delete this comment?'), form=form)
 
 
-@bp.route('/post/<int:post_id>/comment/<int:comment_id>/restore', methods=['GET', 'POST'])
+@bp.route('/post/<int:post_id>/comment/<int:comment_id>/restore', methods=['POST'])
 @login_required
 def post_reply_restore(post_id: int, comment_id: int):
     post = Post.query.get_or_404(post_id)
@@ -1399,7 +1399,7 @@ def post_reply_restore(post_id: int, comment_id: int):
     return redirect(url_for('activitypub.post_ap', post_id=post.id))
 
 
-@bp.route('/post/<int:post_id>/comment/<int:comment_id>/purge', methods=['GET', 'POST'])
+@bp.route('/post/<int:post_id>/comment/<int:comment_id>/purge', methods=['POST'])
 @login_required
 def post_reply_purge(post_id: int, comment_id: int):
     post = Post.query.get_or_404(post_id)
@@ -1474,7 +1474,7 @@ def post_block_image(post_id: int):
     return redirect(referrer())
 
 
-@bp.route('/post/<int:post_id>/block_image_purge_posts', methods=['GET', 'POST'])
+@bp.route('/post/<int:post_id>/block_image_purge_posts', methods=['POST'])
 @login_required
 @permission_required('change instance settings')
 def post_block_image_purge_posts(post_id: int):
@@ -1530,7 +1530,7 @@ def post_reply_view_voting_activity(comment_id: int):
                            reply_text=reply_text, upvoters=upvoters, downvoters=downvoters)
 
 
-@bp.route('/post/<int:post_id>/fixup_from_remote', methods=['GET'])
+@bp.route('/post/<int:post_id>/fixup_from_remote', methods=['POST'])
 @login_required
 @permission_required('change instance settings')
 def post_fixup_from_remote(post_id: int):

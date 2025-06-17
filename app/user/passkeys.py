@@ -22,7 +22,7 @@ def user_passkey_list():
 
 
 # ----------------------------------------------------------------------
-@bp.route('/user/passkeys/delete/<int:passkey_id>', methods=['GET'])
+@bp.route('/user/passkeys/delete/<int:passkey_id>', methods=['POST'])
 def user_passkey_delete(passkey_id):
     passkey = Passkey.query.filter(Passkey.id == passkey_id, Passkey.user_id == current_user.id).first()
     if passkey:

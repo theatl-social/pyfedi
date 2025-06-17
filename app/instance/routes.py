@@ -174,7 +174,7 @@ def instance_posts(instance_domain):
                            content_filters=content_filters)
 
 
-@bp.route('/instance/<int:instance_id>/block', methods=['GET'])
+@bp.route('/instance/<int:instance_id>/block', methods=['POST'])
 @login_required
 def instance_block(instance_id):
     instance = Instance.query.get_or_404(instance_id)
@@ -184,7 +184,7 @@ def instance_block(instance_id):
     return redirect(goto)
 
 
-@bp.route('/instance/<int:instance_id>/unblock', methods=['GET'])
+@bp.route('/instance/<int:instance_id>/unblock', methods=['POST'])
 @login_required
 def instance_unblock(instance_id):
     instance = Instance.query.get_or_404(instance_id)

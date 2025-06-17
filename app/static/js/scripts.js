@@ -21,6 +21,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupCommunityNameInput();
     setupShowMoreLinks();
     setupConfirmFirst();
+    setupSendPost();
     setupSubmitOnInputChange();
     setupTimeTracking();
     setupMobileNav();
@@ -48,6 +49,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupMegaMenuNavigation();
     setupPopupCommunitySidebar();
     setupVideoSpoilers();
+    setupDynamicContentObserver();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
@@ -460,8 +462,10 @@ function setupConfirmFirst() {
         element.addEventListener("click", function(event) {
             if (!confirm("Are you sure?")) {
               event.preventDefault(); // As the user clicked "Cancel" in the dialog, prevent the default action.
+              event.stopImmediatePropagation(); // Stop other event listeners from running
+              event.action_cancelled = true; // Custom flag for setupSendPost handlers
             }
-        });
+        }, true); // Use capture phase to run before other handlers
     });
 
     const go_back = document.querySelectorAll('.go_back');
@@ -479,6 +483,32 @@ function setupConfirmFirst() {
             location.href = '/auth/login';
             event.preventDefault();
             return false;
+        });
+    });
+}
+
+// Handle custom POST requests for destructive actions
+function setupSendPost() {
+    const sendPostElements = document.querySelectorAll('.send_post');
+    sendPostElements.forEach(element => {
+        element.addEventListener("click", function(event) {
+            // Check if the event was cancelled by confirm_first
+            if (event.action_cancelled) {
+                return;
+            }
+            
+            event.preventDefault();
+            
+            const url = element.getAttribute('data-url');
+            if (!url) return;
+            
+            // Create a form and submit it to preserve flash messages
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = url;
+            form.style.display = 'none';
+            document.body.appendChild(form);
+            form.submit();
         });
     });
 }
@@ -1378,4 +1408,56 @@ function setupVideoSpoilers() {
             vid.classList.add("blur");
         });
     });
+}
+
+// Setup MutationObserver to detect dynamically loaded content (e.g., from htmx)
+function setupDynamicContentObserver() {
+    const observer = new MutationObserver(function(mutations) {
+        let shouldResetup = false;
+        
+        mutations.forEach(function(mutation) {
+            // Check if new nodes were added
+            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                mutation.addedNodes.forEach(function(node) {
+                    // Only process element nodes (not text nodes)
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        // Check if the added content contains elements that need event handlers
+                        if (node.querySelector && (
+                            node.querySelector('.send_post') ||
+                            node.querySelector('.confirm_first') ||
+                            node.querySelector('.showElement') ||
+                            node.querySelector('.show-more') ||
+                            node.querySelector('.user_preview') ||
+                            node.classList.contains('send_post') ||
+                            node.classList.contains('confirm_first') ||
+                            node.classList.contains('showElement')
+                        )) {
+                            shouldResetup = true;
+                        }
+                    }
+                });
+            }
+        });
+        
+        // Re-run setup functions for the new content
+        if (shouldResetup) {
+            setupDynamicContent();
+        }
+    });
+    
+    // Start observing
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+}
+
+// Re-run specific setup functions for dynamically loaded content
+function setupDynamicContent() {
+    // These are the key functions needed for post options and other dynamic content
+    setupConfirmFirst();
+    setupSendPost();
+    setupShowElementLinks();
+    setupShowMoreLinks();
+    setupUserPopup();
 }

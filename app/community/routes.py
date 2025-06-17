@@ -968,7 +968,7 @@ def community_edit(community_id: int):
         abort(401)
 
 
-@bp.route('/community/<int:community_id>/remove_icon', methods=['GET', 'POST'])
+@bp.route('/community/<int:community_id>/remove_icon', methods=['POST'])
 @login_required
 def remove_icon(community_id):
     community = Community.query.get_or_404(community_id)
@@ -983,7 +983,7 @@ def remove_icon(community_id):
     return _('Icon removed!')
 
 
-@bp.route('/community/<int:community_id>/remove_header', methods=['GET', 'POST'])
+@bp.route('/community/<int:community_id>/remove_header', methods=['POST'])
 @login_required
 def remove_header(community_id):
     community = Community.query.get_or_404(community_id)
@@ -1079,7 +1079,7 @@ def community_find_moderator(community_id: int):
         abort(401)
 
 
-@bp.route('/community/<int:community_id>/moderators/remove/<int:user_id>', methods=['GET', 'POST'])
+@bp.route('/community/<int:community_id>/moderators/remove/<int:user_id>', methods=['POST'])
 @login_required
 def community_remove_moderator(community_id: int, user_id: int):
     if current_user.banned:
@@ -1361,7 +1361,7 @@ def community_moderate_comments(actor):
                                    disable_voting=True, community=community, current='comments')
 
 
-@bp.route('/community/<int:community_id>/<int:user_id>/kick_user_community', methods=['GET', 'POST'])
+@bp.route('/community/<int:community_id>/<int:user_id>/kick_user_community', methods=['POST'])
 @login_required
 def community_kick_user(community_id: int, user_id: int):
     community = Community.query.get_or_404(community_id)
@@ -1634,7 +1634,7 @@ def community_wiki_revisions(actor, page_id):
         abort(404)
 
 
-@bp.route('/<actor>/moderate/wiki/<int:page_id>/delete', methods=['GET'])
+@bp.route('/<actor>/moderate/wiki/<int:page_id>/delete', methods=['POST'])
 @login_required
 def community_wiki_delete(actor, page_id):
     community = actor_to_community(actor)
@@ -1875,7 +1875,7 @@ def community_flair_edit(community_id, flair_id):
         abort(401)
 
 
-@bp.route('/community/<int:community_id>/flair/<int:flair_id>/delete', methods=['GET'])
+@bp.route('/community/<int:community_id>/flair/<int:flair_id>/delete', methods=['POST'])
 @login_required
 def community_flair_delete(community_id, flair_id):
     community = Community.query.get_or_404(community_id)

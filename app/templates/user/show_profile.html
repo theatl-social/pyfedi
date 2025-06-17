@@ -107,15 +107,15 @@
                   <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="{{ user.ap_profile_id }}" title="{{ _('View user profile on original server') }}" rel="nofollow"><span class="fe fe-external"></span>{{ _('View original profile') }}</a></li>
                     {% if current_user.has_blocked_user(user.id) -%}
-                        <li><a class="dropdown-item" href="{{ url_for('user.unblock_profile', actor=user.link()) }}" rel="nofollow">{{ _('Unblock') }}</a></li>
+                        <li><a class="dropdown-item send_post" href='#' data-url="{{ url_for('user.unblock_profile', actor=user.link()) }}" rel="nofollow">{{ _('Unblock') }}</a></li>
                     {% else -%}
-                        <li><a class="dropdown-item confirm_first" href="{{ url_for('user.block_profile', actor=user.link()) }}" rel="nofollow">{{ _('Block %(user_name)s', user_name=user.display_name()) }}</a></li>
+                        <li><a class="dropdown-item confirm_first send_post" href='#' data-url="{{ url_for('user.block_profile', actor=user.link()) }}" rel="nofollow">{{ _('Block %(user_name)s', user_name=user.display_name()) }}</a></li>
                     {% endif -%}
                     {% if not user.is_local() -%}
                         {% if current_user.has_blocked_instance(user.instance_id) -%}
-                            <li><a class="dropdown-item" href="{{ url_for('instance.instance_unblock', instance_id=user.instance_id, redirect='/u/' + user.link()) }}" rel="nofollow">{{ _('Unblock %(instance_name)s', instance_name=user.ap_domain) }}</a></li>
+                            <li><a class="dropdown-item send_post" href='#' data-url="{{ url_for('instance.instance_unblock', instance_id=user.instance_id, redirect='/u/' + user.link()) }}" rel="nofollow">{{ _('Unblock %(instance_name)s', instance_name=user.ap_domain) }}</a></li>
                         {% else %}
-                            <li><a class="dropdown-item confirm_first" href="{{ url_for('user.user_block_instance', actor=user.link()) }}" rel="nofollow">{{ _('Block everyone from %(instance_name)s', instance_name=user.ap_domain) }}</a></li>
+                            <li><a class="dropdown-item confirm_first send_post" href='#' data-url="{{ url_for('user.user_block_instance', actor=user.link()) }}" rel="nofollow">{{ _('Block everyone from %(instance_name)s', instance_name=user.ap_domain) }}</a></li>
                         {% endif -%}
                     {% endif -%}
                     <li><a class="dropdown-item" href="{{ url_for('user.report_profile', actor=user.link()) }}" rel="nofollow">{{ _('Report') }}</a></li>
@@ -290,7 +290,7 @@
                         {% if user_access('ban users', current_user.id) or user_access('manage users', current_user.id) %}
                             {% if user.banned %}
                                 <div class="col-4">
-                                    <a class="w-100 btn btn-primary confirm_first" href="/u/{{ user.link() }}/unban">{{ _('Unban') }}</a>
+                                    <a class="w-100 btn btn-primary confirm_first send_post" href='#' data-url="/u/{{ user.link() }}/unban">{{ _('Unban') }}</a>
                                 </div>
                             {% else %}
                                 <div class="col-4">

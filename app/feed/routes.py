@@ -239,7 +239,7 @@ def feed_edit(feed_id: int):
     return render_template('feed/feed_edit.html', form=edit_feed_form, )
 
 
-@bp.route('/feed/<int:feed_id>/delete', methods=['GET','POST'])
+@bp.route('/feed/<int:feed_id>/delete', methods=['POST'])
 @login_required
 def feed_delete(feed_id: int):
     # get the user_id
@@ -495,7 +495,7 @@ def _feed_add_community(community_id: int, current_feed_id: int, feed_id: int, u
         do_subscribe(actor, user_id, joined_via_feed=True)
 
 
-@bp.route('/feed/remove_community', methods=['GET'])
+@bp.route('/feed/remove_community', methods=['POST'])
 @login_required
 def feed_remove_community():
     # this takes a user_id, new_feed_id (0), current_feed_id,

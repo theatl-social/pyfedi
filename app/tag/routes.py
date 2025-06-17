@@ -163,7 +163,7 @@ def tags_blocked_list():
                            next_url=next_url, prev_url=prev_url, search=search)
 
 
-@bp.route('/tag/<tag>/ban')
+@bp.route('/tag/<tag>/ban', methods=['POST'])
 @login_required
 @permission_required('manage users')
 def tag_ban(tag):
@@ -176,7 +176,7 @@ def tag_ban(tag):
         return redirect(url_for('tag.tags'))
 
 
-@bp.route('/tag/<tag>/unban')
+@bp.route('/tag/<tag>/unban', methods=['POST'])
 @login_required
 @permission_required('manage users')
 def tag_unban(tag):

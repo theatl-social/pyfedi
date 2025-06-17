@@ -58,21 +58,21 @@
                     <div class="row">
                         {% if domain.blocked_by(current_user) %}
                             <div class="col-4">
-                                <a class="w-100 btn btn-primary" href="/d/{{ domain.id }}/unblock">{{ _('Unblock') }}</a>
+                                <a class="w-100 btn btn-primary send_post" href="#" data-url="/d/{{ domain.id }}/unblock">{{ _('Unblock') }}</a>
                             </div>
                         {% else %}
                             <div class="col-4">
-                                <a class="w-100 btn btn-primary" href="/d/{{ domain.id }}/block">{{ _('Block') }}</a>
+                                <a class="w-100 btn btn-primary send_post" href="#" data-url="/d/{{ domain.id }}/block">{{ _('Block') }}</a>
                             </div>
                         {% endif %}
                         {% if user_access('ban users', current_user.id) or user_access('manage users', current_user.id) %}
                             {% if domain.banned %}
                                 <div class="col-8">
-                                    <a class="w-100 btn btn-primary confirm_first" href="/d/{{ domain.id }}/unban">{{ _('Unban') }}</a>
+                                    <a class="w-100 btn btn-primary confirm_first send_post" href="#" data-url="/d/{{ domain.id }}/unban">{{ _('Unban') }}</a>
                                 </div>
                             {% else %}
                                 <div class="col-8">
-                                    <a class="w-100 btn btn-primary confirm_first" href="/d/{{ domain.id }}/ban">{{ _('Ban instance-wide') }}</a>
+                                    <a class="w-100 btn btn-primary confirm_first send_post" href="#" data-url="/d/{{ domain.id }}/ban">{{ _('Ban instance-wide') }}</a>
                                 </div>
                             {% endif %}
                         {% endif %}

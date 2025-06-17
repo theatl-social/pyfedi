@@ -647,7 +647,7 @@ def ban_profile(actor):
 
 
 
-@bp.route('/u/<actor>/unban', methods=['GET'])
+@bp.route('/u/<actor>/unban', methods=['POST'])
 @login_required
 def unban_profile(actor):
     if user_access('ban users', current_user.id):
@@ -706,7 +706,7 @@ def block_profile(actor):
     return redirect(goto)
 
 
-@bp.route('/u/<actor>/block_instance', methods=['GET', 'POST'])
+@bp.route('/u/<actor>/block_instance', methods=['POST'])
 @login_required
 def user_block_instance(actor):
     actor = actor.strip()
@@ -719,7 +719,7 @@ def user_block_instance(actor):
     return redirect(goto)
 
 
-@bp.route('/u/<actor>/unblock', methods=['GET'])
+@bp.route('/u/<actor>/unblock', methods=['POST'])
 @login_required
 def unblock_profile(actor):
     actor = actor.strip()
@@ -799,7 +799,7 @@ def report_profile(actor):
     return render_template('user/user_report.html', title=_('Report user'), form=form, user=user)
 
 
-@bp.route('/u/<actor>/delete', methods=['GET'])
+@bp.route('/u/<actor>/delete', methods=['POST'])
 @login_required
 def delete_profile(actor):
     if user_access('manage users', current_user.id):
@@ -832,7 +832,7 @@ def delete_profile(actor):
     return redirect(goto)
 
 
-@bp.route('/user/community/<int:community_id>/unblock', methods=['GET'])
+@bp.route('/user/community/<int:community_id>/unblock', methods=['POST'])
 @login_required
 def user_community_unblock(community_id):
     community = Community.query.get_or_404(community_id)
@@ -1212,7 +1212,7 @@ def user_settings_filters_edit(filter_id):
     return render_template('user/edit_filters.html', title=_('Edit filter'), form=form, content_filter=content_filter, user=current_user)
 
 
-@bp.route('/user/settings/filters/<int:filter_id>/delete', methods=['GET', 'POST'])
+@bp.route('/user/settings/filters/<int:filter_id>/delete', methods=['POST'])
 @login_required
 def user_settings_filters_delete(filter_id):
     content_filter = Filter.query.get_or_404(filter_id)
@@ -1451,7 +1451,7 @@ def user_read_posts(sort=None):
                            next_url=next_url, prev_url=prev_url)
 
 
-@bp.route('/read-posts/delete')
+@bp.route('/read-posts/delete', methods=['POST'])
 @login_required
 def user_read_posts_delete():
     db.session.execute(text('DELETE FROM "read_posts" WHERE user_id = :user_id'), {'user_id': current_user.id})

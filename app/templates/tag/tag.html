@@ -51,11 +51,11 @@
                         {% if user_access('ban users', current_user.id) or user_access('manage users', current_user.id) %}
                             {% if tag.banned %}
                                 <div class="col-8">
-                                    <a class="w-100 btn btn-primary confirm_first" href="/tag/{{ tag.name }}/unban">{{ _('Unban') }}</a>
+                                    <a class="w-100 btn btn-primary confirm_first send_post" href='#' data-url="/tag/{{ tag.name }}/unban">{{ _('Unban') }}</a>
                                 </div>
                             {% else %}
                                 <div class="col-8">
-                                    <a class="w-100 btn btn-primary confirm_first" href="/tag/{{ tag.name }}/ban">{{ _('Ban instance-wide') }}</a>
+                                    <a class="w-100 btn btn-primary confirm_first send_post" href='#' data-url="/tag/{{ tag.name }}/ban">{{ _('Ban instance-wide') }}</a>
                                 </div>
                             {% endif %}
                         {% endif %}
