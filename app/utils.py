@@ -268,7 +268,7 @@ def mime_type_using_head(url):
 
 allowed_tags = ['p', 'strong', 'a', 'ul', 'ol', 'li', 'em', 'blockquote', 'cite', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre',
                 'code', 'img', 'details', 'summary', 'table', 'tr', 'td', 'th', 'tbody', 'thead', 'hr', 'span', 'small', 'sub', 'sup',
-                's', 'tg-spoiler']
+                's', 'tg-spoiler', 'ruby', 'rt', 'rp']
 
 # sanitise HTML using an allow list
 def allowlist_html(html: str, a_target='_blank') -> str:
@@ -362,6 +362,10 @@ def allowlist_html(html: str, a_target='_blank') -> str:
     # replace the 'static' for images hotlinked to fandom sites with 'vignette'
     re_fandom_hotlink = re.compile(r'<img alt="(.*?)" loading="lazy" src="https://static.wikia.nocookie.net')
     clean_html = re_fandom_hotlink.sub(r'<img alt="\1" loading="lazy" src="https://vignette.wikia.nocookie.net', clean_html)
+
+    # replace ruby markdown like {漢字|かんじ}
+    re_ruby = re.compile(r'\{(.+?)\|(.+?)\}')
+    clean_html = re_ruby.sub(r'<ruby>\1<rp>(</rp><rt>\2</rt><rp>)</rp></ruby>', clean_html)
 
     return clean_html
 
