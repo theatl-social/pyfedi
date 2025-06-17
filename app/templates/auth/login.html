@@ -27,13 +27,13 @@
                     </p>
                     {% endif -%}
                     {% if mastodon_oauth -%}
-                    <p align="center">OR<br><br>
-                        <a href="/auth/mastodon_login" class="btn btn-outline-primary">{{ _('Sign In With Mastodon') }}
+                    <p align="center">
+                        <a href="/auth/mastodon_login" class="btn btn-outline-primary">{{ _('Log in with Mastodon') }}
                             <img src="/static/images/mastodon_ico.png" width="16" alt="Logo"></a>
 
                     </p>
-                    <p align="center">{{ _('or use a username and password:') }}</p>
                     {% endif -%}
+                    <p align="center">{{ _('or use a username and password:') }}</p>
                     <hr />
                     <p>{{ _('New User?') }} <a href="{{ url_for('auth.register') }}">{{ _('Register new account') }}</a></p>
                     <p class="mb-0">

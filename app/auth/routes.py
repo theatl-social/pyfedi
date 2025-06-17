@@ -12,7 +12,7 @@ from urllib.request import urlretrieve
 from app import db, cache, limiter, oauth
 from app.auth import bp
 from app.auth.forms import LoginForm, RegistrationForm, ResetPasswordRequestForm, ResetPasswordForm, RegisterByMastodonForm
-from app.auth.util import random_token, normalize_utf, ip2location, no_admins_logged_in_recently, check_if_ip_banned, create_user_application
+from app.auth.util import random_token, normalize_utf, ip2location, no_admins_logged_in_recently,  create_user_application
 from app.constants import NOTIF_REGISTRATION, NOTIF_REPORT
 from app.email import send_verification_email, send_password_reset_email, send_registration_approved_email
 from app.models import User, utcnow, IpBan, UserRegistration, Notification, Site
@@ -345,7 +345,7 @@ def google_authorize():
             if g.site.registration_mode == 'Closed':
                 flash(_('Account registrations are currently closed.'), 'error')
                 return redirect(url_for('auth.login'))
-            if check_if_ip_banned():
+            if user_ip_banned():
                 return redirect(url_for('auth.please_wait'))
 
             user = User(user_name=find_new_username(email), title=name, email=email, verified=True,
@@ -360,14 +360,13 @@ def google_authorize():
 
             create_user_application(user, "Signed in with Google")
             return redirect(url_for('auth.please_wait'))
-        else:
-            if user.verified:
-                finalize_user_setup(user)
-                login_user(user, remember=True)
-                return redirect(url_for('auth.trump_musk'))
-            else:
-                return redirect(url_for('auth.check_email'))
     else:
+        if user.verified:
+            finalize_user_setup(user)
+            login_user(user, remember=True)
+            return redirect(url_for('auth.trump_musk'))
+        else:
+            return redirect(url_for('auth.check_email'))
         # user already exists
         if user.id != 1 and (user.banned or user_ip_banned() or user_cookie_banned()):
             flash(_('You have been banned.'), 'error')
@@ -430,7 +429,7 @@ def mastodon_authorize():
         if g.site.registration_mode == 'Closed':
             flash(_('Account registrations are currently closed.'), 'error')
             return redirect(url_for('auth.login'))
-        if check_if_ip_banned():
+        if user_ip_banned():
             return redirect(url_for('auth.please_wait'))
         # if IP is not banned and there is no user just display form to fill additional data
         form = RegisterByMastodonForm()

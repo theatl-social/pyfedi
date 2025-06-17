@@ -59,16 +59,6 @@ def no_admins_logged_in_recently():
     return True
 
 
-def check_if_ip_banned() -> bool:
-    # Country based registration blocking
-    ip_address_info = ip2location(ip_address())
-    if ip_address_info and ip_address_info['country']:
-        for country_code in get_setting('auto_decline_countries', '').split('\n'):
-            if country_code and country_code.strip().upper() == ip_address_info['country'].upper():
-                return True
-    return False
-
-
 def create_user_application(user: User, registration_answer: str):
     application = UserRegistration(user_id=user.id, answer='Signed in with Google')
     db.session.add(application)

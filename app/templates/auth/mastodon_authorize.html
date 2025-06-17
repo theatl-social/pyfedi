@@ -19,7 +19,9 @@
             <div class="card mt-5">
                 <div class="card-body p-6">
                     <div class="card-title text-center">{{ _('Fill Mastodon data') }}</div>
-                    {{ render_form(form) }}
+                        <form metgod="post">
+                            {{ render_form(form) }}
+                        </form>
                 </div>
             </div>
         </div>

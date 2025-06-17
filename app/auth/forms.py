@@ -122,9 +122,5 @@ class ChooseTopicsForm(FlaskForm):
 
 class RegisterByMastodonForm(FlaskForm):
     email = EmailField(_l('Email'), validators=[DataRequired(), Email()], render_kw={'autofocus': True})
-    password = PasswordField(_l('Password'), validators=[DataRequired()], render_kw={'autofocus': True})
-    password2 = PasswordField(
-        _l('Repeat password'), validators=[DataRequired(),
-                                           EqualTo('password')])
-    submit = SubmitField(_l("Set password"))
+    submit = SubmitField(_l("Set email"))
 
