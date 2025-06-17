@@ -169,9 +169,10 @@ def feed_edit(feed_id: int):
         edit_feed_form.url.render_kw = {'disabled': True}
     
     if edit_feed_form.validate_on_submit():
-        edit_feed_form.url.data = slugify(edit_feed_form.url.data, separator='_').lower()
+        if edit_feed_form.url.data:
+            edit_feed_form.url.data = slugify(edit_feed_form.url.data, separator='_').lower()
+            feed_to_edit.name = edit_feed_form.url.data
         feed_to_edit.title = edit_feed_form.title.data
-        feed_to_edit.name = edit_feed_form.url.data
         feed_to_edit.machine_name = edit_feed_form.url.data
         feed_to_edit.description = piefed_markdown_to_lemmy_markdown(edit_feed_form.description.data)
         feed_to_edit.description_html = markdown_to_html(edit_feed_form.description.data)
@@ -868,7 +869,7 @@ def do_feed_subscribe(actor, user_id):
         abort(404)
 
 
-@bp.route('/<actor>/unsubscribe', methods=['GET'])
+@bp.route('/feed/<actor>/unsubscribe', methods=['GET'])
 @login_required
 def feed_unsubscribe(actor):
     feed = actor_to_feed(actor)

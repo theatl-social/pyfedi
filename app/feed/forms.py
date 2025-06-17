@@ -86,10 +86,15 @@ class EditFeedForm(FlaskForm):
     def validate(self, extra_validators=None):
         if not super().validate():
             return False
-        feed = Feed.query.filter(Feed.name == self.url.data.strip().lower()).first()
-        if feed is not None and feed.id != self.feed_id:
-            self.url.errors.append(_l('Url is already used by another feed.'))
-            return False
+        if self.url.data is not None:   # when editing a feed with subscribers this field is disabled
+            if self.url.data.strip() == '':
+                self.url.errors.append(_l('This field is required.'))
+                return False
+            else:
+                feed = Feed.query.filter(Feed.name == self.url.data.strip().lower()).first()
+                if feed is not None and feed.id != self.feed_id:
+                    self.url.errors.append(_l('Url is already used by another feed.'))
+                    return False
         
         input_communities = self.communities.data.strip().split('\n')
         for community_ap_id in input_communities:
