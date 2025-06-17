@@ -814,15 +814,17 @@ def do_feed_subscribe(actor, user_id):
             db.session.commit()
 
             # also subscribe the user to the feeditem communities
-            from app.community.routes import do_subscribe
-            feed_items = FeedItem.query.filter_by(feed_id=feed.id).all()
-            for fi in feed_items:
-                community = Community.query.get(fi.community_id)
-                actor = community.ap_id if community.ap_id else community.name
-                if current_app.debug:
-                    do_subscribe(actor, user.id, joined_via_feed=True)
-                else:
-                    do_subscribe.delay(actor, user.id, joined_via_feed=True)
+            # if they have feed_auto_follow turned on
+            if user.feed_auto_follow:
+                from app.community.routes import do_subscribe
+                feed_items = FeedItem.query.filter_by(feed_id=feed.id).all()
+                for fi in feed_items:
+                    community = Community.query.get(fi.community_id)
+                    actor = community.ap_id if community.ap_id else community.name
+                    if current_app.debug:
+                        do_subscribe(actor, user.id, joined_via_feed=True)
+                    else:
+                        do_subscribe.delay(actor, user.id, joined_via_feed=True)
  
             # feed is remote
             if remote:
@@ -844,13 +846,15 @@ def do_feed_subscribe(actor, user_id):
                     res = get_request(feed.ap_following_url)
                     following_collection = res.json()
 
-                    # for each of those subscribe the user to the communities
+                    # for each of those add the communities
+                    # subscribe the user if they have feed_auto_follow turned on
                     for fci in following_collection['items']:
                         community_ap_id = fci 
                         community = find_actor_or_create(community_ap_id, community_only=True)
                         if community and isinstance(community, Community):
                             actor = community.ap_id if community.ap_id else community.name
-                            do_subscribe(actor, user.id, joined_via_feed=True)
+                            if user.feed_auto_follow:
+                                do_subscribe(actor, user.id, joined_via_feed=True)
                             # also make a feeditem in the local db
                             feed_item = FeedItem(feed_id=feed.id, community_id=community.id)
                             db.session.add(feed_item)

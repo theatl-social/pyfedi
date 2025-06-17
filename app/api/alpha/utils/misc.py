@@ -143,7 +143,7 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
                                 community = potential_community
                                 break
 
-        if 'inReplyTo' in ap_json and ap_json['inReplyTo'] is not None:
+        if not community and 'inReplyTo' in ap_json and ap_json['inReplyTo'] is not None:
             comment_being_replied_to = None
             post_being_replied_to = Post.get_by_ap_id(ap_json['inReplyTo'])
             if post_being_replied_to:
