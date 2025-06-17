@@ -1,5 +1,9 @@
 # if commands in this file are not working (e.g. 'flask translate') make sure you set the FLASK_APP environment variable.
 # e.g. export FLASK_APP=pyfedi.py
+
+# This file is part of PieFed, which is licensed under the GNU General Public License (GPL) version 3.0.
+# You should have received a copy of the GPL along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 import imaplib
 import re
 from datetime import datetime, timedelta
