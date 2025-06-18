@@ -788,7 +788,7 @@ def login_required(func):
 
         # Validate CSRF token for POST requests
         if request.method == 'POST':
-            validate_csrf(request.form.get('csrf_token'))
+            validate_csrf(request.form.get('csrf_token', request.headers.get('x-csrftoken')))
 
         # flask 1.x compatibility
         # current_app.ensure_sync is only available in Flask >= 2.0

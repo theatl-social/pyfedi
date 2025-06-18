@@ -12,7 +12,7 @@
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="HandheldFriendly" content="True">
         <meta name="MobileOptimized" content="320">
-        <meta name="csrf-token" content="{{ csrf_token() }}">
+        <meta name="csrf-token" content="{{ csrf_token }}">
         <link rel="expect" blocking="render" href="#navbarSupportedContent">
         {% if current_user.is_anonymous -%}
             <script src="/static/js/enable_low_bandwidth.js" type="text/javascript" fetchpriority="high"></script>
@@ -96,7 +96,7 @@
     {% block schema_org %}
     {% endblock %}
   </head>
-  <body class="d-flex flex-column{{ ' low_bandwidth' if low_bandwidth }} {{ session.get('compact_level', '') }}">
+  <body class="d-flex flex-column{{ ' low_bandwidth' if low_bandwidth }} {{ session.get('compact_level', '') }}" hx-headers='{"x-csrftoken": "{{ csrf_token }}"}'>
     {% if 'fontSize' in request.cookies -%}
         <style>
             body, .form-control, .btn, .dropdown-item {
