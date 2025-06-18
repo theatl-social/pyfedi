@@ -28,7 +28,7 @@ def app_context_processor():
     return dict(getmtime=getmtime, instance_domain=current_app.config['SERVER_NAME'], debug_mode=current_app.debug,
                 arrow=arrow, locale=g.locale if hasattr(g, 'locale') else None, notif_server=current_app.config['NOTIF_SERVER'],
                 site=g.site if hasattr(g, 'site') else None, nonce=g.nonce if hasattr(g, 'nonce') else None,
-                admin_ids=g.admin_ids if hasattr(g, 'admin_ids') else [],
+                admin_ids=g.admin_ids if hasattr(g, 'admin_ids') else [], csrf_token=generate_csrf(),
                 POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE, notif_id_to_string=notif_id_to_string,
                 POST_TYPE_ARTICLE=POST_TYPE_ARTICLE, POST_TYPE_VIDEO=POST_TYPE_VIDEO, POST_TYPE_POLL=POST_TYPE_POLL,
                 SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
@@ -59,7 +59,6 @@ with app.app_context():
     app.jinja_env.globals['file_exists'] = os.path.exists
     app.jinja_env.globals['first_paragraph'] = first_paragraph
     app.jinja_env.globals['html_to_text'] = html_to_text
-    app.jinja_env.globals['csrf_token'] = generate_csrf
     app.jinja_env.filters['community_links'] = community_link_to_href
     app.jinja_env.filters['feed_links'] = feed_link_to_href
     app.jinja_env.filters['person_links'] = person_link_to_href
