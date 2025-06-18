@@ -201,6 +201,7 @@ That page can be accessed from the `Admin` navigation drop down, or nav bar as `
 Note that SSL is not a hard requirement for local testing or development. By including `HTTP_PROTOCOL='http'` in the `.env` file, some features will play a little nicer without SSL. This is not a teribly well-vetted workflow, so there might still be cases in which SSL is expected/required (such as S3 usage). This is primarily intended to ease development of basic features or UI changes.
 
 <div id="initialise-database-and-setup-admin-account"></div>
+
 ## Initialise database, and set up admin account
 
 ```bash
