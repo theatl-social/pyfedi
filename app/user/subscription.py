@@ -1,12 +1,12 @@
 import httpx
 from flask import redirect, url_for, flash, request, current_app
-from flask_login import logout_user, current_user, login_required
+from flask_login import logout_user, current_user
 from flask_babel import _, lazy_gettext as _l
 
 from app import db, cache, celery
 from app.models import User
 from app.user import bp
-from app.utils import render_template
+from app.utils import render_template, login_required
 
 
 @bp.route('/donate')

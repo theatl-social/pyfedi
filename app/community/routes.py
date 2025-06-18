@@ -6,7 +6,7 @@ import flask
 from bs4 import BeautifulSoup
 
 from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, g, json
-from flask_login import current_user, login_required
+from flask_login import current_user
 from flask_babel import _
 from slugify import slugify
 from sqlalchemy import or_, asc, desc, text
@@ -46,7 +46,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     blocked_users, languages_for_form, menu_topics, add_to_modlog, \
     blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, \
     instance_software, domain_from_email, referrer, flair_for_form, find_flair_id, login_required_if_private_instance, \
-    possible_communities, reported_posts, user_notes
+    possible_communities, reported_posts, user_notes, login_required
 from app.shared.post import make_post, sticky_post
 from app.shared.tasks import task_selector
 from feedgen.feed import FeedGenerator

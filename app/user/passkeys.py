@@ -5,12 +5,12 @@ from webauthn.helpers import parse_registration_credential_json
 from webauthn.helpers.exceptions import InvalidRegistrationResponse
 from webauthn.helpers.structs import PublicKeyCredentialDescriptor, \
     AttestationConveyancePreference, AuthenticatorSelectionCriteria, AuthenticatorAttachment, ResidentKeyRequirement
-from flask_login import current_user, login_required
+from flask_login import current_user
 
 from app import db, cache
 from app.user import bp
 from app.models import Passkey
-from app.utils import render_template
+from app.utils import render_template, login_required
 
 
 # ----------------------------------------------------------------------

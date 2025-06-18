@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from random import randint
 
 from flask import redirect, url_for, flash, current_app, abort, request, g, make_response, jsonify
-from flask_login import current_user, login_required
+from flask_login import current_user
 from flask_babel import _
 from sqlalchemy import text, desc
 from sqlalchemy.orm.exc import NoResultFound
@@ -41,7 +41,7 @@ from app.utils import render_template, markdown_to_html, validation_required, \
     permission_required, blocked_users, get_request, is_local_image_url, is_video_url, can_upvote, can_downvote, \
     referrer, can_create_post_reply, communities_banned_from, \
     block_bots, flair_for_form, login_required_if_private_instance, retrieve_image_hash, posts_with_blocked_images, \
-    possible_communities, user_notes
+    possible_communities, user_notes, login_required
 from app.post.util import post_type_to_form_url_type
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, \
     delete_reply, mod_remove_reply, vote_for_reply

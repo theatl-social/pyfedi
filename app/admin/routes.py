@@ -7,7 +7,7 @@ import json as python_json
 import shutil
 
 from flask import request, flash, json, url_for, current_app, redirect, g, abort, send_file
-from flask_login import login_required, current_user
+from flask_login import current_user
 from flask_babel import _
 from slugify import slugify
 from sqlalchemy import text, desc, or_
@@ -35,7 +35,7 @@ from app.shared.tasks import task_selector
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
     topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents, \
-    download_defeds, instance_banned, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, referrer, \
+    download_defeds, instance_banned, login_required, referrer, \
     community_membership, retrieve_image_hash, posts_with_blocked_images, user_access, reported_posts, user_notes
 from app.admin import bp
 
@@ -1081,7 +1081,6 @@ def admin_community_edit(community_id):
 @login_required
 def admin_community_delete(community_id):
     community = Community.query.get_or_404(community_id)
-    
 
     community.banned = True  # Unsubscribing everyone could take a long time so until that is completed hide this community from the UI by banning it.
     community.last_active = utcnow()

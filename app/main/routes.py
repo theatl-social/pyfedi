@@ -18,7 +18,7 @@ from app.email import send_email, send_registration_approved_email
 from app.inoculation import inoculation
 from app.main import bp
 from flask import g, session, flash, request, current_app, url_for, redirect, make_response, jsonify, send_file
-from flask_login import current_user, login_required
+from flask_login import current_user
 from flask_babel import _, get_locale
 from sqlalchemy import desc, text
 
@@ -32,7 +32,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     feed_tree_public, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, html_to_text, \
     get_redis_connection, subscribed_feeds, joined_or_modding_communities, login_required_if_private_instance, \
     pending_communities, retrieve_image_hash, possible_communities, remove_tracking_from_link, reported_posts, \
-    moderating_communities_ids, user_notes
+    moderating_communities_ids, user_notes, login_required
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, Feed, FeedItem, CmsPage
 

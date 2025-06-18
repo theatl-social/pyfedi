@@ -1,5 +1,5 @@
 from flask import request, flash, json, url_for, current_app, redirect, g, abort
-from flask_login import login_required, current_user
+from flask_login import current_user
 from flask_babel import _
 from sqlalchemy import or_, desc, text
 
@@ -7,10 +7,9 @@ from app import limiter, db
 from app.constants import POST_STATUS_REVIEWING
 from app.models import Post, Language, Community, Instance, PostReply
 from app.search import bp
-from app.utils import moderating_communities, joined_communities, render_template, blocked_domains, blocked_instances, \
+from app.utils import render_template, blocked_domains, blocked_instances, \
     communities_banned_from, recently_upvoted_posts, recently_downvoted_posts, blocked_users, menu_topics, \
-    blocked_communities, show_ban_message, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, \
-    login_required_if_private_instance
+    blocked_communities, show_ban_message, login_required, login_required_if_private_instance
 from app.community.forms import RetrieveRemotePost
 from app.activitypub.util import resolve_remote_post_from_search
 

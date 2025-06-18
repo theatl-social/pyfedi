@@ -1,7 +1,7 @@
 from collections import namedtuple
 
 from flask import request, url_for, g, abort, flash, redirect
-from flask_login import current_user, login_required
+from flask_login import current_user
 from flask_babel import _
 from sqlalchemy import or_, desc
 
@@ -11,7 +11,7 @@ from app.instance import bp
 from app.models import Instance, User, Post, read_posts
 from app.utils import render_template, moderating_communities, joined_communities, menu_topics, blocked_domains, \
     blocked_instances, blocked_communities, blocked_users, user_filters_home, recently_upvoted_posts, \
-    recently_downvoted_posts, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, reported_posts
+    recently_downvoted_posts, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, reported_posts, login_required
 from app.shared.site import block_remote_instance, unblock_remote_instance
 
 

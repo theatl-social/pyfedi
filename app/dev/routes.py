@@ -1,6 +1,6 @@
 import random
 from flask import request, flash, url_for, current_app, redirect, g, abort
-from flask_login import login_required, current_user
+from flask_login import current_user
 from flask_babel import _
 
 from app import db, cache
@@ -11,7 +11,7 @@ from app.dev.forms import AddTestCommunities, AddTestTopics, DeleteTestCommuniti
 from app.inoculation import inoculation
 from app.models import Site, User, Community, CommunityMember, Language, Topic, utcnow
 from app.utils import render_template, community_membership, moderating_communities, joined_communities, menu_topics, \
-    markdown_to_html, permission_required, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds
+    markdown_to_html, permission_required, login_required
 
 
 # a page for handy dev tools
