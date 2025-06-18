@@ -12,6 +12,7 @@
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="HandheldFriendly" content="True">
         <meta name="MobileOptimized" content="320">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
         <link rel="expect" blocking="render" href="#navbarSupportedContent">
         {% if current_user.is_anonymous -%}
             <script src="/static/js/enable_low_bandwidth.js" type="text/javascript" fetchpriority="high"></script>

@@ -1,5 +1,5 @@
 from flask import request, flash, json, url_for, current_app, redirect, g, abort
-from flask_login import login_required, current_user
+from flask_login import current_user
 from flask_babel import _
 from sqlalchemy import desc, or_, and_, text
 
@@ -9,7 +9,7 @@ from app.chat.util import send_message
 from app.constants import NOTIF_REPORT, SRC_WEB
 from app.models import Site, User, Report, ChatMessage, Notification, Conversation, conversation_member, CommunityBan, ModLog
 from app.user.forms import ReportUserForm
-from app.utils import render_template, moderating_communities, joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, \
+from app.utils import render_template, login_required, joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, \
     menu_subscribed_feeds
 from app.chat import bp
 from app.shared.site import block_remote_instance

@@ -5,7 +5,7 @@ from io import BytesIO
 
 from feedgen.feed import FeedGenerator
 from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, json, g, send_file
-from flask_login import logout_user, current_user, login_required
+from flask_login import logout_user, current_user
 from flask_babel import _, lazy_gettext as _l
 
 from app import db, cache, celery
@@ -30,7 +30,7 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     blocked_communities, piefed_markdown_to_lemmy_markdown, \
     read_language_choices, request_etag_matches, return_304, mimetype_from_url, notif_id_to_string, \
     login_required_if_private_instance, recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
-    recently_downvoted_post_replies, reported_posts, user_notes
+    recently_downvoted_post_replies, reported_posts, user_notes, login_required
 from sqlalchemy import desc, or_, text, asc
 from sqlalchemy.orm.exc import NoResultFound
 import os

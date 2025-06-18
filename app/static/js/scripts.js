@@ -502,11 +502,22 @@ function setupSendPost() {
             const url = element.getAttribute('data-url');
             if (!url) return;
             
+            // Get CSRF token from meta tag
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            
             // Create a form and submit it to preserve flash messages
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = url;
             form.style.display = 'none';
+            
+            // Add CSRF token as hidden input
+            const tokenInput = document.createElement('input');
+            tokenInput.type = 'hidden';
+            tokenInput.name = 'csrf_token';
+            tokenInput.value = csrfToken;
+            form.appendChild(tokenInput);
+            
             document.body.appendChild(form);
             form.submit();
         });

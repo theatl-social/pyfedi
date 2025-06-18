@@ -5,6 +5,7 @@ import os
 
 from flask_babel import get_locale
 from flask_login import current_user
+from flask_wtf.csrf import generate_csrf
 
 from app import create_app, db, cli
 import arrow
@@ -58,6 +59,7 @@ with app.app_context():
     app.jinja_env.globals['file_exists'] = os.path.exists
     app.jinja_env.globals['first_paragraph'] = first_paragraph
     app.jinja_env.globals['html_to_text'] = html_to_text
+    app.jinja_env.globals['csrf_token'] = generate_csrf
     app.jinja_env.filters['community_links'] = community_link_to_href
     app.jinja_env.filters['feed_links'] = feed_link_to_href
     app.jinja_env.filters['person_links'] = person_link_to_href
