@@ -22,6 +22,7 @@ from app.activitypub.util import instance_allowed, extract_domain_and_actor
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm, \
     EditInstanceForm, RemoteInstanceScanForm, MoveCommunityForm, EditBlockedImageForm, AddBlockedImageForm, CmsPageForm
+from flask_wtf import FlaskForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form, move_community_images_to_here
 from app.community.util import save_icon_file, save_banner_file, search_for_community
@@ -1519,6 +1520,7 @@ def newsletter():
 @permission_required('change user roles')
 @login_required
 def admin_permissions():
+    form = FlaskForm()
     if request.method == 'POST':
         permissions = db.session.execute(text('SELECT DISTINCT permission FROM "role_permission"')).fetchall()
         db.session.execute(text('DELETE FROM "role_permission"'))
@@ -1538,7 +1540,7 @@ def admin_permissions():
     permissions = db.session.execute(text('SELECT DISTINCT permission FROM "role_permission"')).fetchall()
 
     return render_template('admin/permissions.html', title=_('Role permissions'), roles=roles,
-                           permissions=permissions)
+                           form=form, permissions=permissions)
 
 
 @bp.route('/instances', methods=['GET', 'POST'])
@@ -1731,6 +1733,7 @@ def admin_blocked_image_add():
 @permission_required('administer all communities')
 @login_required
 def admin_blocked_image_purge_posts():
+    form = FlaskForm()
     if request.method == 'POST':
         post_ids = request.form.getlist('post_ids')
 
@@ -1742,7 +1745,7 @@ def admin_blocked_image_purge_posts():
 
     posts = Post.query.filter(Post.id.in_(posts_with_blocked_images()), Post.deleted == False).order_by(desc(Post.posted_at)).all()
     return render_template('post/post_block_image_purge_posts.html', posts=posts, title=_('Posts containing blocked images'),
-                           referrer=request.args.get('referrer'))
+                           form=form, referrer=request.args.get('referrer'))
 
 
 @bp.route('/blocked_image/<int:image_id>/delete', methods=['POST'])
