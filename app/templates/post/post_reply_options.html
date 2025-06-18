@@ -12,43 +12,43 @@
     {% if not post_reply.deleted -%}
         {# Normal delete permissions (unchanged) #}
         {% if post_reply.user_id == current_user.id or post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids -%}
-            <li><a href="{{ url_for('post.post_reply_delete', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-delete"></span>
+            <li><a href='#' data-url="{{ url_for('post.post_reply_delete', post_id=post.id, comment_id=post_reply.id) }}" class="confirm_first send_post dropdown-item no-underline" rel="nofollow"><span class="fe fe-delete"></span>
                 {{ _('Delete') }}</a></li>
         {% endif -%}
     {% else -%}
         {# Special restore permissions for deleted posts #}
         {% if post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids -%}
-            <li><a href="{{ url_for('post.post_reply_restore', post_id=post.id, comment_id=post_reply.id) }}" hx-get="{{ url_for('post.post_reply_restore', post_id=post.id, comment_id=post_reply.id) }}" hx-confirm="Are you sure?" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-arrow-up"></span>
+            <li><a href='#' data-url="{{ url_for('post.post_reply_restore', post_id=post.id, comment_id=post_reply.id) }}" class="confirm_first send_post dropdown-item no-underline" rel="nofollow"><span class="fe fe-arrow-up"></span>
                 {{ _('Restore') }}</a></li>
         {% elif post_reply.user_id == current_user.id and (current_user.is_staff() or current_user.get_id() in admin_ids) -%}
-            <li><a href="{{ url_for('post.post_reply_restore', post_id=post.id, comment_id=post_reply.id) }}" hx-get="{{ url_for('post.post_reply_restore', post_id=post.id, comment_id=post_reply.id) }}" hx-confirm="Are you sure?" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-arrow-up"></span>
+            <li><a href='#' data-url="{{ url_for('post.post_reply_restore', post_id=post.id, comment_id=post_reply.id) }}" class="confirm_first send_post dropdown-item no-underline" rel="nofollow"><span class="fe fe-arrow-up"></span>
                 {{ _('Restore') }}</a></li>
         {% endif -%}
         
         {# Purge option - keep as is #}
         {% if not post_reply.has_replies() -%}
             {% if post.community.is_moderator() or current_user.get_id() in admin_ids or (post_reply.user_id == current_user.id and post_reply.deleted_by == post_reply.user_id) -%}
-                <li><a href="{{ url_for('post.post_reply_purge', post_id=post.id, comment_id=post_reply.id) }}" hx-get="{{ url_for('post.post_reply_purge', post_id=post.id, comment_id=post_reply.id) }}" hx-confirm="Are you sure?" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-delete red"></span>
+                <li><a href='#' data-url="{{ url_for('post.post_reply_purge', post_id=post.id, comment_id=post_reply.id) }}" class="confirm_first send_post dropdown-item no-underline" rel="nofollow"><span class="fe fe-delete red"></span>
                 {{ _('Purge') }}</a></li>
             {% endif -%}
         {% endif -%}
     {% endif -%}
     {% if existing_bookmark -%}
-        <li><a href="{{ url_for('post.post_reply_remove_bookmark', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-bookmark"></span>
+        <li><a href="#" data-url="{{ url_for('post.post_reply_remove_bookmark', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline send_post" rel="nofollow"><span class="fe fe-bookmark"></span>
                 {{ _('Remove bookmark') }}</a></li>
     {% else -%}
-    <li><a href="{{ url_for('post.post_reply_bookmark', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-bookmark"></span>
+    <li><a href="#" data-url="{{ url_for('post.post_reply_bookmark', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline send_post" rel="nofollow"><span class="fe fe-bookmark"></span>
                 {{ _('Bookmark') }}</a></li>
     {% endif -%}
     {% if post_reply.user_id != current_user.id -%}
-        <li><a href="{{ url_for('post.post_reply_block_user', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline"><span class="fe fe-block"></span>
+        <li><a href="#" data-url="{{ url_for('post.post_reply_block_user', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline send_post"><span class="fe fe-block"></span>
             {{ _('Block author @%(author_name)s', author_name=post_reply.author.user_name) }}</a></li>
         {% if post.community.is_moderator() or current_user.get_id() in admin_ids -%}
             <li><a href="{{ url_for('community.community_ban_user', community_id=post.community.id, user_id=post_reply.author.id) }}" style="white-space: normal" class="dropdown-item no-underline"><span class="fe fe-block red"></span>
                 {{ _('Ban @%(author_name)s from %(community_name)s', author_name=post_reply.author.user_name, community_name=post.community.title) }}</a></li>
         {% endif -%}
         {% if post_reply.instance_id and post_reply.instance_id != 1 -%}
-        <li><a href="{{ url_for('post.post_reply_block_instance', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline"><span class="fe fe-block"></span>
+        <li><a href="#" data-url="{{ url_for('post.post_reply_block_instance', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline send_post"><span class="fe fe-block"></span>
             {{ _("Hide content from author's instance: %(name)s", name=post_reply.instance.domain) }}</a></li>
         {% endif -%}
     {% endif -%}
@@ -58,7 +58,7 @@
     {% endif -%}
 {% endif -%}
 {% if post_reply.ap_id -%}
-  <li><a href="{{ post_reply.ap_id }}" rel="nofollow" class="dropdown-item no-underline"><span class="fe fe-external"></span>
+  <li><a href="{{ post_reply.ap_id }}" rel="nofollow" class="dropdown-item no-underline"><img src="/static/images/fediverse_logo.svg" class="options_fediverse_logo">
     {{ _('View original on %(domain)s', domain=post_reply.instance.domain) }}</a></li>
 {% endif -%}
 <li><a href="{{ url_for('post.post_reply_report', post_id=post.id, comment_id=post_reply.id) }}" rel="nofollow" class="dropdown-item no-underline"><span class="fe fe-report"></span>

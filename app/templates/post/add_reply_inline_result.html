@@ -75,7 +75,7 @@
 
         <div class="row comment_body hidable{% if post_reply.has_been_reported() %} reported{% endif %}">
             <div class="col-12 pr-0">
-                {{ post_reply.body_html | community_links | person_links | safe }}
+                {{ post_reply.body_html | community_links | feed_links | person_links | safe }}
             </div>
         </div>
         <div class="comment_actions hidable">

@@ -36,7 +36,7 @@
                     <td class="nowrap"><p>{{ passkey.device }}</p></td>
                     <td class="nowrap"><p>{{ passkey.used.strftime('%e %b %Y') if passkey.used else '' }}</p></td>
                     <td class="nowrap"><p>{{ passkey.counter }}</p></td>
-                    <td class="nowrap text-center"><p><a href="{{ url_for('user.user_passkey_delete', passkey_id=passkey.id) }}" class="confirm_first"><span class="fe fe-delete"></span></a></p></td>
+                    <td class="nowrap text-center"><p><a href="#" data-url="{{ url_for('user.user_passkey_delete', passkey_id=passkey.id) }}" class="confirm_first send_post"><span class="fe fe-delete"></span></a></p></td>
                 </tr>
                 {% endfor %}
             </table>

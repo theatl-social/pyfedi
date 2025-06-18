@@ -1356,8 +1356,8 @@ def find_instance_id(server):
     else:
         # Our instance does not know about {server} yet. Initially, create a sparse row in the 'instance' table and spawn a background
         # task to update the row with more details later
-        new_instance = Instance(domain=server, software='unknown', inbox=f'https://{server}/inbox', created_at=utcnow(),
-                                trusted=server == 'piefed.social')
+        new_instance = Instance(domain=server, software='unknown', inbox=f'https://{server}/inbox', created_at=utcnow())
+        
         try:
             db.session.add(new_instance)
             db.session.commit()
@@ -2729,14 +2729,18 @@ def resolve_remote_post(uri: str, community, announce_id, store_ap_json, nodebb=
     announce_actor_domain = parsed_url.netloc
     if announce_actor_domain != 'a.gup.pe' and not nodebb and announce_actor_domain != uri_domain:
         return None
-    actor_domain = None
-    actor = None
 
     post_data = remote_object_to_json(uri)
     if not post_data:
         return None
 
+    return create_resolved_object(uri, post_data, uri_domain, community, announce_id, store_ap_json)
+
+
+def create_resolved_object(uri, post_data, uri_domain, community, announce_id, store_ap_json):
     # find the author. Make sure their domain matches the site hosting it to mitigate impersonation attempts
+    actor_domain = None
+    actor = None
     if 'attributedTo' in post_data:
         attributed_to = post_data['attributedTo']
         if isinstance(attributed_to, str):
@@ -2799,6 +2803,7 @@ def resolve_remote_post(uri: str, community, announce_id, store_ap_json, nodebb=
                 return post
 
     return None
+
 
 
 @celery.task
@@ -3042,33 +3047,22 @@ def find_community(request_json):
                             if potential_community:
                                 return potential_community
 
-    # used for manual retrieval of a PeerTube vid
-    if request_json['type'] == 'Video':
-        if 'attributedTo' in request_json and isinstance(request_json['attributedTo'], list):
-            for a in request_json['attributedTo']:
-                if a['type'] == 'Group':
-                    potential_community = Community.query.filter_by(ap_profile_id=a['id'].lower()).first()
-                    if potential_community:
-                        return potential_community
-
-    # change this if manual retrieval of comments is allowed in future
-    if not 'object' in request_json:
-        return None
+    rj = request_json['object'] if 'object' in request_json else request_json
 
     # Create/Update Note from platform that didn't include the Community in 'audience', 'cc', or 'to' (e.g. Mastodon reply to Lemmy post)
-    if 'inReplyTo' in request_json['object'] and request_json['object']['inReplyTo'] is not None:
-        post_being_replied_to = Post.get_by_ap_id(request_json['object']['inReplyTo'])
+    if 'inReplyTo' in rj and rj['inReplyTo'] is not None:
+        post_being_replied_to = Post.get_by_ap_id(rj['inReplyTo'])
         if post_being_replied_to:
             return post_being_replied_to.community
         else:
-            comment_being_replied_to = PostReply.get_by_ap_id(request_json['object']['inReplyTo'])
+            comment_being_replied_to = PostReply.get_by_ap_id(rj['inReplyTo'])
             if comment_being_replied_to:
                 return comment_being_replied_to.community
 
     # Update / Video from PeerTube (possibly an edit, more likely an invite to query Likes / Replies endpoints)
-    if request_json['object']['type'] == 'Video':
-        if 'attributedTo' in request_json['object'] and isinstance(request_json['object']['attributedTo'], list):
-            for a in request_json['object']['attributedTo']:
+    if rj['type'] == 'Video':
+        if 'attributedTo' in rj and isinstance(rj['attributedTo'], list):
+            for a in rj['attributedTo']:
                 if a['type'] == 'Group':
                     potential_community = Community.query.filter_by(ap_profile_id=a['id'].lower()).first()
                     if potential_community:

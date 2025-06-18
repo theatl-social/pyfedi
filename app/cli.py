@@ -1,5 +1,9 @@
 # if commands in this file are not working (e.g. 'flask translate') make sure you set the FLASK_APP environment variable.
 # e.g. export FLASK_APP=pyfedi.py
+
+# This file is part of PieFed, which is licensed under the GNU General Public License (GPL) version 3.0.
+# You should have received a copy of the GPL along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 import imaplib
 import re
 from datetime import datetime, timedelta
@@ -155,6 +159,7 @@ def register(app):
             admin_role.permissions.append(RolePermission(permission='change instance settings'))
             admin_role.permissions.append(RolePermission(permission='administer all communities'))
             admin_role.permissions.append(RolePermission(permission='administer all users'))
+            admin_role.permissions.append(RolePermission(permission='edit cms pages'))
             db.session.add(admin_role)
 
             # Admin user
@@ -293,6 +298,7 @@ def register(app):
             # update and sync defederation subscriptions
             print(f'update and sync defederation subscriptions {datetime.now()}')
             db.session.execute(text('DELETE FROM banned_instances WHERE subscription_id is not null'))
+            db.session.commit()
             for defederation_sub in DefederationSubscription.query.all():
                 download_defeds(defederation_sub.id, defederation_sub.domain)
 

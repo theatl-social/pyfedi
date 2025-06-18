@@ -901,6 +901,7 @@ def process_inbox_request(request_json, store_ap_json):
                 try:
                     join_request = CommunityJoinRequest.query.filter_by(uuid=join_request_parts[-1]).first()
                 except Exception as e:  # old style join requests were just a number
+                    db.session.rollback()
                     join_request = CommunityJoinRequest.query.get(join_request_parts[-1])
                 if join_request:
                     user = User.query.get(join_request.user_id)
@@ -1554,16 +1555,12 @@ def community_outbox(actor):
             "@context": default_context(),
             "type": "OrderedCollection",
             "id": f"https://{current_app.config['SERVER_NAME']}/c/{actor}/outbox",
+            "totalItems": len(posts),
             "orderedItems": []
         }
 
-        valid_post_count = 0
         for post in posts:
-            activity = post_to_activity(post, community)
-            if ensure_domains_match(activity['object']['object']):
-                valid_post_count += 1
-                community_data['orderedItems'].append(activity)
-        community_data['totalItems'] = valid_post_count
+            community_data['orderedItems'].append(post_to_activity(post, community))
 
         return jsonify(community_data)
     else:

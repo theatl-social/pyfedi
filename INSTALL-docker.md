@@ -30,16 +30,11 @@ sudo nano compose.yaml
 ```
 
 #### CREATE REQUIRED FOLDERS WITH REQUIRED PERMISSIONS
-- Replace `<USERNAME>` with your login.
+
+Do not skip this. Enter your sudo password when prompted.
+
 ```bash
-sudo mkdir pgdata
-sudo chown -R <USERNAME>:<USERNAME> ./pgdata
-sudo mkdir media
-sudo chown -R <USERNAME>:<USERNAME> ./media
-sudo mkdir logs
-sudo chown -R <USERNAME>:<USERNAME> ./logs
-sudo mkdir tmp
-sudo chown -R <USERNAME>:<USERNAME> ./tmp
+./docker-dirs.sh
 ```
 
 #### BUILD PIEFED

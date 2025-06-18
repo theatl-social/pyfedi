@@ -88,7 +88,7 @@
                     <td><span title="{{ _('Reputation') }}">{% if user.reputation %}R {{ user.reputation | round | int }}{% endif %}</span></td>
                     <td><span title="{{ _('Last Seen') }}: {{ user.last_seen }}">{{ arrow.get(user.last_seen).humanize(locale=locale) }}</span></td>
                     <td><a href="{{ url_for('admin.admin_user_edit', user_id=user.id) }}">{{ ('Edit') }}</a>,
-                        <a href="{{ url_for('admin.admin_user_delete', user_id=user.id) }}" class="confirm_first">{{ ('Delete') }}</a>,
+                        <a href="#" data-url="{{ url_for('admin.admin_user_delete', user_id=user.id) }}" class="confirm_first send_post">{{ ('Delete') }}</a>,
                         <br />
                         {% if user.banned %}
                             <a href="{{ url_for('user.unban_profile', actor=user.link()) }}" class="confirm_first">{{ ('Unban') }}</a>

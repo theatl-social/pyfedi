@@ -10,11 +10,12 @@ from flask_login import current_user
 from app import db, cache
 from app.user import bp
 from app.models import Passkey
-from app.utils import render_template
+from app.utils import render_template, login_required
 
 
 # ----------------------------------------------------------------------
 @bp.route('/user/passkeys', methods=['GET'])
+@login_required
 def user_passkey_list():
     return render_template('user/passkeys.html',
             title = 'Passkeys', add_passkey = request.args.get('add') is not None,
@@ -22,7 +23,8 @@ def user_passkey_list():
 
 
 # ----------------------------------------------------------------------
-@bp.route('/user/passkeys/delete/<int:passkey_id>', methods=['GET'])
+@bp.route('/user/passkeys/delete/<int:passkey_id>', methods=['POST'])
+@login_required
 def user_passkey_delete(passkey_id):
     passkey = Passkey.query.filter(Passkey.id == passkey_id, Passkey.user_id == current_user.id).first()
     if passkey:
@@ -33,6 +35,7 @@ def user_passkey_delete(passkey_id):
 
 # ----------------------------------------------------------------------
 @bp.route('/user/passkeys/registration/options', methods=['GET', 'POST'])
+@login_required
 def user_passkey_options():
     options = generate_registration_options(
         rp_id=request.host,
@@ -81,6 +84,7 @@ def generate_user_handle() -> bytes:
 
 # ----------------------------------------------------------------------
 @bp.route('/user/passkeys/registration/verification', methods=['POST'])
+@login_required
 def user_passkey_verification():
     request_json = request.get_json(force=True)
     registration_credential = parse_registration_credential_json(request_json['response'])

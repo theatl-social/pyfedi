@@ -7,7 +7,7 @@ import json as python_json
 import shutil
 
 from flask import request, flash, json, url_for, current_app, redirect, g, abort, send_file
-from flask_login import login_required, current_user
+from flask_login import current_user
 from flask_babel import _
 from slugify import slugify
 from sqlalchemy import text, desc, or_
@@ -35,7 +35,7 @@ from app.shared.tasks import task_selector
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
     topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents, \
-    download_defeds, instance_banned, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, referrer, \
+    download_defeds, instance_banned, login_required, referrer, \
     community_membership, retrieve_image_hash, posts_with_blocked_images, user_access, reported_posts, user_notes
 from app.admin import bp
 
@@ -1076,12 +1076,11 @@ def admin_community_edit(community_id):
     return render_template('admin/edit_community.html', title=_('Edit community'), form=form, community=community)
 
 
-@bp.route('/community/<int:community_id>/delete', methods=['GET'])
+@bp.route('/community/<int:community_id>/delete', methods=['POST'])
 @permission_required('administer all communities')
 @login_required
 def admin_community_delete(community_id):
     community = Community.query.get_or_404(community_id)
-    
 
     community.banned = True  # Unsubscribing everyone could take a long time so until that is completed hide this community from the UI by banning it.
     community.last_active = utcnow()
@@ -1179,7 +1178,7 @@ def admin_topic_edit(topic_id):
     return render_template('admin/edit_topic.html', title=_('Edit topic'), form=form, topic=topic)
 
 
-@bp.route('/topic/<int:topic_id>/delete', methods=['GET'])
+@bp.route('/topic/<int:topic_id>/delete', methods=['POST'])
 @permission_required('administer all communities')
 @login_required
 def admin_topic_delete(topic_id):
@@ -1319,7 +1318,7 @@ def admin_approve_registrations():
                           )
 
 
-@bp.route('/approve_registrations/<int:user_id>/approve', methods=['GET'])
+@bp.route('/approve_registrations/<int:user_id>/approve', methods=['POST'])
 @permission_required('approve registrations')
 @login_required
 def admin_approve_registrations_approve(user_id):
@@ -1451,7 +1450,7 @@ def admin_users_add():
     return render_template('admin/add_user.html', title=_('Add user'), form=form, user=user)
 
 
-@bp.route('/user/<int:user_id>/delete', methods=['GET'])
+@bp.route('/user/<int:user_id>/delete', methods=['POST'])
 @permission_required('administer all users')
 @login_required
 def admin_user_delete(user_id):
@@ -1746,7 +1745,7 @@ def admin_blocked_image_purge_posts():
                            referrer=request.args.get('referrer'))
 
 
-@bp.route('/blocked_image/<int:image_id>/delete', methods=['GET'])
+@bp.route('/blocked_image/<int:image_id>/delete', methods=['POST'])
 @permission_required('administer all communities')
 @login_required
 def admin_blocked_image_delete(image_id):
@@ -1806,12 +1805,11 @@ def admin_cms_page_edit(page_id):
     return render_template('admin/cms_page_edit.html', form=form, page=page, title=_('Edit page'))
 
 
-@bp.route('/pages/<int:page_id>/delete', methods=['GET'])
+@bp.route('/pages/<int:page_id>/delete', methods=['POST'])
 @permission_required('edit cms pages')
 @login_required
 def admin_cms_page_delete(page_id):
     page = CmsPage.query.get_or_404(page_id)
-
     db.session.delete(page)
     db.session.commit()
     flash(_('Page deleted.'))

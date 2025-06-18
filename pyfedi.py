@@ -1,10 +1,11 @@
-# This file is part of pyfedi, which is licensed under the GNU General Public License (GPL) version 3.0.
+# This file is part of PieFed, which is licensed under the GNU General Public License (GPL) version 3.0.
 # You should have received a copy of the GPL along with this program. If not, see <http://www.gnu.org/licenses/>.
 from datetime import datetime
 import os
 
 from flask_babel import get_locale
 from flask_login import current_user
+from flask_wtf.csrf import generate_csrf
 
 from app import create_app, db, cli
 import arrow
@@ -16,7 +17,7 @@ from app.models import Site
 from app.utils import getmtime, gibberish, shorten_string, shorten_url, digits, user_access, community_membership, \
     can_create_post, can_upvote, can_downvote, shorten_number, ap_datetime, current_theme, community_link_to_href, \
     in_sorted_list, role_access, first_paragraph, person_link_to_href, feed_membership, html_to_text, remove_images, \
-    notif_id_to_string
+    notif_id_to_string, feed_link_to_href
 
 app = create_app()
 cli.register(app)
@@ -58,7 +59,9 @@ with app.app_context():
     app.jinja_env.globals['file_exists'] = os.path.exists
     app.jinja_env.globals['first_paragraph'] = first_paragraph
     app.jinja_env.globals['html_to_text'] = html_to_text
+    app.jinja_env.globals['csrf_token'] = generate_csrf
     app.jinja_env.filters['community_links'] = community_link_to_href
+    app.jinja_env.filters['feed_links'] = feed_link_to_href
     app.jinja_env.filters['person_links'] = person_link_to_href
     app.jinja_env.filters['shorten'] = shorten_string
     app.jinja_env.filters['shorten_url'] = shorten_url

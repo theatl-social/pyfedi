@@ -383,6 +383,10 @@ h1 .fe-bell, h1 .fe-no-bell {
   content: "\e9be";
 }
 
+.fe-rules::before {
+  content: "\e907";
+}
+
 .fe-cross-post::before {
   content: "\e9ba";
 }
@@ -1118,6 +1122,13 @@ ul.form-multicheck-columns {
   text-overflow: ellipsis;
   white-space: normal;
 }
+.post_teaser_article_preview.blur, .post_teaser_link_preview.blur {
+  overflow: hidden;
+}
+.post_teaser_article_preview.blur p, .post_teaser_link_preview.blur p {
+  filter: blur(6px);
+  user-select: none;
+}
 
 .post_teaser_image_preview {
   text-align: center;
@@ -1191,6 +1202,8 @@ time {
   max-width: 512px;
   display: inline-block;
   width: 100%;
+  overflow: hidden;
+  border-radius: 5px;
 }
 
 .post_utilities_bar {
@@ -2018,6 +2031,9 @@ h1 .warning_badge {
   max-width: 100%;
   max-height: 90vh;
 }
+.responsive-video.blur {
+  filter: blur(24px);
+}
 
 @media (min-width: 768px) {
   .post_language_chooser label {
@@ -2484,6 +2500,28 @@ form h5 {
 
 #typeTab a:not(.btn):active {
   border-width: 1px;
+}
+
+#communitySidebar {
+  color: var(--bs-body-color);
+  background-color: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+  max-width: 345px;
+  max-height: 90vh;
+  padding: 1rem;
+  box-shadow: var(--bs-box-shadow);
+}
+#communitySidebar::backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+#communitySidebar img {
+  max-width: 100%;
+}
+
+.options_fediverse_logo {
+  width: 16px;
+  height: 16px;
 }
 
 .blink {

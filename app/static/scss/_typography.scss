@@ -327,6 +327,10 @@ h1 {
   content: "\e9be";
 }
 
+.fe-rules::before {
+  content: "\e907";
+}
+
 .fe-cross-post::before {
   content: "\e9ba";
 }

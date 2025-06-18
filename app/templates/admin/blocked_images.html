@@ -27,7 +27,7 @@
                     <td><span title="{{ _('File') }}">{{ blocked_image.file_name  }}</span></td>
                     <td><span title="{{ _('Note') }}">{{ blocked_image.note  }}</span></td>
                     <td><a href="{{ url_for('admin.admin_blocked_image_edit', image_id=blocked_image.id) }}">{{ _('Edit') }}</a> |
-                    <a href="{{ url_for('admin.admin_blocked_image_delete', image_id=blocked_image.id) }}" class="confirm_first">Delete</a></td>
+                    <a href="#" data-url="{{ url_for('admin.admin_blocked_image_delete', image_id=blocked_image.id) }}" class="confirm_first send_post">Delete</a></td>
                 </tr>
             {% else %}
                 <tr>

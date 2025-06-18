@@ -15,7 +15,7 @@ from app.models import Site
 from app.utils import gibberish, shorten_number, community_membership, getmtime, digits, user_access, ap_datetime, \
     can_create_post, can_upvote, can_downvote, current_theme, shorten_string, shorten_url, feed_membership, role_access, \
     in_sorted_list, first_paragraph, html_to_text, community_link_to_href, person_link_to_href, remove_images, \
-    notif_id_to_string
+    notif_id_to_string, feed_link_to_href
 from app.constants import *
 
 app = create_app()
@@ -52,6 +52,7 @@ with app.app_context():
     app.jinja_env.globals['first_paragraph'] = first_paragraph
     app.jinja_env.globals['html_to_text'] = html_to_text
     app.jinja_env.filters['community_links'] = community_link_to_href
+    app.jinja_env.filters['feed_links'] = feed_link_to_href
     app.jinja_env.filters['person_links'] = person_link_to_href
     app.jinja_env.filters['shorten'] = shorten_string
     app.jinja_env.filters['shorten_url'] = shorten_url

@@ -37,7 +37,7 @@
                         <td>{{ arrow.get(page.edited_at).humanize(locale=locale) }}</td>
                         <td>
                             <a href="{{ url_for('admin.admin_cms_page_edit', page_id=page.id) }}">{{ _('Edit') }}</a>
-                            <a href="{{ url_for('admin.admin_cms_page_delete', page_id=page.id) }}" class="confirm_first">{{ _('Delete') }}</a>
+                            <a href='#' data-url="{{ url_for('admin.admin_cms_page_delete', page_id=page.id) }}" class="confirm_first send_post">{{ _('Delete') }}</a>
                         </td>
                     </tr>
                     {% endfor %}

@@ -1,13 +1,17 @@
-
+# Basque translations for PROJECT.
+# Copyright (C) 2025 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2025.
+#
 msgid ""
 msgstr ""
-"Project-Id-Version:  piefed\n"
+"Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-06-18 17:00+1200\n"
-"PO-Revision-Date: 2024-05-21 07:43+0000\n"
-"Last-Translator: \n"
-"Language: ca\n"
-"Language-Team: Catalan\n"
+"PO-Revision-Date: 2025-06-18 17:00+1200\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: eu\n"
+"Language-Team: eu <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
@@ -16,43 +20,41 @@ msgstr ""
 
 #: app/__init__.py:43
 msgid "Please log in to access this page."
-msgstr "Si us plau, inicia sessió per visualitzar aquesta pàgina."
+msgstr ""
 
 #: app/cli.py:736 app/main/routes.py:720
 msgid "[PieFed] You have unread notifications"
-msgstr "[PieFed] Tens notificacions no llegides"
+msgstr ""
 
 #: app/cli.py:856 app/shared/post.py:127
-#, fuzzy, python-format
+#, python-format
 msgid "Replies to my post %(post_title)s"
-msgstr "Respondre a %(post_title)s"
+msgstr ""
 
 #: app/cli.py:865 app/models.py:2108 app/shared/reply.py:116
-#, fuzzy, python-format
+#, python-format
 msgid "Replies to my comment on %(post_title)s"
-msgstr "Respondre a %(post_title)s"
+msgstr ""
 
 #: app/email.py:18
 msgid "[PieFed] Reset Your Password"
-msgstr "[PieFed] Reinicia la teva paraula de pas"
+msgstr ""
 
 #: app/email.py:28
 msgid "[PieFed] Please verify your email address"
-msgstr "[PieFed] Si us plau verifica la teva adreça de correu electrònic"
+msgstr ""
 
 #: app/email.py:36
 msgid "Your application has been approved - welcome to PieFed"
-msgstr "La vostra sol·licitud s'ha aprovat - Benvingut a PieFed"
+msgstr ""
 
 #: app/models.py:2747
-#, fuzzy
 msgid "Added moderator"
-msgstr "Abandonat pels moderadors"
+msgstr ""
 
 #: app/models.py:2748
-#, fuzzy
 msgid "Removed moderator"
-msgstr "Esborra l'avatar"
+msgstr ""
 
 #: app/models.py:2749
 msgid "Featured post"
@@ -71,18 +73,16 @@ msgid "Un-deleted post"
 msgstr ""
 
 #: app/models.py:2753
-#, fuzzy
 msgid "Deleted comment"
-msgstr "També esborra tots els seus comentaris"
+msgstr ""
 
 #: app/models.py:2754
 msgid "Un-deleted comment"
 msgstr ""
 
 #: app/models.py:2755
-#, fuzzy
 msgid "Deleted community"
-msgstr "Comunitat"
+msgstr ""
 
 #: app/models.py:2756
 msgid "Deleted account"
@@ -93,9 +93,8 @@ msgid "Restored account"
 msgstr ""
 
 #: app/models.py:2758
-#, fuzzy
 msgid "Banned account"
-msgstr "Expulsat"
+msgstr ""
 
 #: app/models.py:2759
 msgid "Un-banned account"
@@ -120,18 +119,17 @@ msgstr ""
 
 #: app/admin/forms.py:211 app/admin/forms.py:271 app/utils.py:2165
 msgid "User"
-msgstr "Usuari"
+msgstr ""
 
 #: app/community/forms.py:137 app/templates/admin/communities.html:40
 #: app/templates/list_communities.html:109 app/templates/search/start.html:33
 #: app/utils.py:2167
 msgid "Community"
-msgstr "Comunitat"
+msgstr ""
 
 #: app/utils.py:2169 app/utils.py:2175
-#, fuzzy
 msgid "Topic/feed"
-msgstr "Tema"
+msgstr ""
 
 #: app/post/forms.py:15 app/templates/post/add_reply_inline.html:14
 #: app/utils.py:2171 app/utils.py:2173 app/utils.py:2177
@@ -151,7 +149,7 @@ msgstr ""
 #: app/templates/user/user_preview.html:15 app/utils.py:2181 app/utils.py:2183
 #: app/utils.py:2185 app/utils.py:2189 app/utils.py:2193 app/utils.py:2195
 msgid "Admin"
-msgstr "Administrador/a"
+msgstr ""
 
 #: app/admin/forms.py:56 app/templates/_view_filter_nav.html:11
 #: app/templates/_view_filter_nav.html:27
@@ -170,51 +168,48 @@ msgid "All"
 msgstr ""
 
 #: app/activitypub/routes.py:523 app/activitypub/routes.py:527
-#, fuzzy
 msgid "Community not found on this instance"
-msgstr "Només accepta publicacions de la instància actual"
+msgstr ""
 
 #: app/activitypub/util.py:1950
-#, fuzzy, python-format
+#, python-format
 msgid "Reply to %(post_title)s"
-msgstr "Respondre a %(post_title)s"
+msgstr ""
 
 #: app/activitypub/util.py:1968 app/activitypub/util.py:1977
-#, fuzzy, python-format
+#, python-format
 msgid "Reply to comment on %(post_title)s"
-msgstr "Respondre a %(post_title)s"
+msgstr ""
 
 #: app/activitypub/util.py:2472 app/post/routes.py:960 app/shared/post.py:591
 msgid "A post has been reported"
-msgstr "Una publicació ha estat denunciada"
+msgstr ""
 
 #: app/activitypub/util.py:2496 app/post/routes.py:1152 app/shared/reply.py:305
 msgid "A comment has been reported"
-msgstr "S'ha informat d'un comentari"
+msgstr ""
 
 #: app/admin/forms.py:14
-#, fuzzy
 msgid "Site Name"
-msgstr "Nom d'usuari"
+msgstr ""
 
 #: app/admin/forms.py:15
 msgid "Tagline"
-msgstr "Eslògan"
+msgstr ""
 
 #: app/admin/forms.py:16
 msgid "Icon"
-msgstr "Icona"
+msgstr ""
 
 #: app/admin/forms.py:18
 msgid "Sidebar"
-msgstr "Barra lateral"
+msgstr ""
 
 #: app/admin/forms.py:19 app/templates/base.html:238
 #: app/templates/instance/people.html:25
 #: app/templates/themes/dillo/base.html:204
-#, fuzzy
 msgid "About"
-msgstr "Disposició"
+msgstr ""
 
 #: app/admin/forms.py:20
 msgid "Announcement at top of home page"
@@ -222,7 +217,7 @@ msgstr ""
 
 #: app/admin/forms.py:21
 msgid "Legal information"
-msgstr "Informació legal"
+msgstr ""
 
 #: app/admin/forms.py:22
 msgid "General instance contact email address"
@@ -237,11 +232,11 @@ msgstr ""
 #: app/feed/forms.py:84 app/post/forms.py:19 app/post/forms.py:77
 #: app/templates/admin/permissions.html:36 app/user/forms.py:179
 msgid "Save"
-msgstr "Desa"
+msgstr ""
 
 #: app/admin/forms.py:27
 msgid "Enable downvotes"
-msgstr "Habilta vots negatius"
+msgstr ""
 
 #: app/admin/forms.py:28
 msgid "Decrease reputation when posting only a gif as a comment"
@@ -256,17 +251,16 @@ msgid "Filter out comments that are simply a form of \"this\""
 msgstr ""
 
 #: app/admin/forms.py:31
-#, fuzzy
 msgid "Meme communities = low-quality"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/admin/forms.py:32
 msgid "Allow local image posts"
-msgstr "Permet publicacions d'imatges locals"
+msgstr ""
 
 #: app/admin/forms.py:33
 msgid "Days to cache images from remote instances for"
-msgstr "Dies per emmagatzemar imatges a la memòria cau d'instàncies remotes"
+msgstr ""
 
 #: app/admin/forms.py:33
 msgid "0 means cache forever"
@@ -274,24 +268,23 @@ msgstr ""
 
 #: app/admin/forms.py:34
 msgid "Allow NSFW communities"
-msgstr "Permet comunitats NSFW"
+msgstr ""
 
 #: app/admin/forms.py:35
 msgid "Allow NSFL communities and posts"
-msgstr "Permet comunitats i publicacions NSFL"
+msgstr ""
 
 #: app/admin/forms.py:36
 msgid "Only admins can create new local communities"
-msgstr "Només els administradors poden crear noves comunitats noves"
+msgstr ""
 
 #: app/admin/forms.py:37
 msgid "Notify admins about reports, not just moderators"
-msgstr "Notifica als administradors sobre els informes, no només als moderadors"
+msgstr ""
 
 #: app/admin/forms.py:38
-#, fuzzy
 msgid "Require new accounts to verify their email address"
-msgstr "[PieFed] Si us plau verifica la teva adreça de correu electrònic"
+msgstr ""
 
 #: app/admin/forms.py:39
 msgid "Require CAPTCHA for new account registration"
@@ -299,28 +292,27 @@ msgstr ""
 
 #: app/admin/forms.py:40
 msgid "Open"
-msgstr "Obre"
+msgstr ""
 
 #: app/admin/forms.py:40
 msgid "Require application"
-msgstr "Requereix aplicació"
+msgstr ""
 
 #: app/admin/forms.py:40
 msgid "Closed"
-msgstr "Tancat"
+msgstr ""
 
 #: app/admin/forms.py:41
 msgid "Registration mode"
-msgstr "Mode de registre"
+msgstr ""
 
 #: app/admin/forms.py:42
 msgid "Question to ask people applying for an account"
-msgstr "Pregunta per fer a les persones que sol·liciten un compte"
+msgstr ""
 
 #: app/admin/forms.py:43
-#, fuzzy
 msgid "Registration approved email"
-msgstr "Mode de registre"
+msgstr ""
 
 #: app/admin/forms.py:45
 msgid "Provide a list of topics to subscribe to"
@@ -331,18 +323,16 @@ msgid "Trump Musk filter setup"
 msgstr ""
 
 #: app/admin/forms.py:47
-#, fuzzy
 msgid "Ignore registrations from these countries"
-msgstr "Bloqueja els registres d'aquests referits (un per línia)"
+msgstr ""
 
 #: app/admin/forms.py:48
 msgid "Block registrations from these referrers (one per line)"
-msgstr "Bloqueja els registres d'aquests referits (un per línia)"
+msgstr ""
 
 #: app/admin/forms.py:49
-#, fuzzy
 msgid "Warn if new account banned from these instances"
-msgstr "Incompleix les regles de la instància"
+msgstr ""
 
 #: app/admin/forms.py:50
 msgid "Primary language"
@@ -350,7 +340,7 @@ msgstr ""
 
 #: app/admin/forms.py:51
 msgid "Default theme"
-msgstr "Tema per defecte"
+msgstr ""
 
 #: app/admin/forms.py:52 app/user/forms.py:100
 msgid "Additional CSS"
@@ -377,13 +367,12 @@ msgid "Popular"
 msgstr ""
 
 #: app/admin/forms.py:58 app/user/forms.py:77
-#, fuzzy
 msgid "Default home filter"
-msgstr "Tema per defecte"
+msgstr ""
 
 #: app/admin/forms.py:60
 msgid "Log ActivityPub JSON for debugging"
-msgstr "Registre ActivityPub JSON per a la depuració"
+msgstr ""
 
 #: app/admin/forms.py:61
 msgid "Show moderation actions publicly"
@@ -398,65 +387,52 @@ msgid "Show Rational Discourse Toolkit in sidebar"
 msgstr ""
 
 #: app/admin/forms.py:69
-#, fuzzy
 msgid "Federation mode"
-msgstr "Mode de registre"
+msgstr ""
 
 #: app/admin/forms.py:70
-#, fuzzy
 msgid "Blocklist - deny federation with specified instances"
-msgstr "Denegar la federació amb aquests casos"
+msgstr ""
 
 #: app/admin/forms.py:71
-#, fuzzy
 msgid "Allowlist - only allow federation with specified instances"
-msgstr "Permet la federació amb aquestes instàncies"
+msgstr ""
 
 #: app/admin/forms.py:73
 msgid "Allow federation with these instances"
-msgstr "Permet la federació amb aquestes instàncies"
+msgstr ""
 
 #: app/admin/forms.py:74
 msgid "Deny federation with these instances"
-msgstr "Denegar la federació amb aquests casos"
+msgstr ""
 
 #: app/admin/forms.py:75
 msgid "Auto-defederate from any instance defederated by"
 msgstr ""
 
 #: app/admin/forms.py:76
-#, fuzzy
 msgid "Discard all posts, comments and PMs with these phrases (one per line)"
 msgstr ""
-"Descarta totes les publicacions i comentaris amb aquestes frases (una per"
-" línia)"
 
 #: app/admin/forms.py:77
-#, fuzzy
 msgid ""
 "Discard all posts and comments by users with these words in their name "
 "(one per line)"
 msgstr ""
-"Descarta totes les publicacions i comentaris amb aquestes frases (una per"
-" línia)"
 
 #: app/admin/forms.py:78
-#, fuzzy
 msgid ""
 "Discard all posts and comments by users with these phrases in their bio "
 "(one per line)"
 msgstr ""
-"Descarta totes les publicacions i comentaris amb aquestes frases (una per"
-" línia)"
 
 #: app/admin/forms.py:83 app/admin/forms.py:88
 msgid "Number of Communities to add"
 msgstr ""
 
 #: app/admin/forms.py:84
-#, fuzzy
 msgid "Add Communities"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/admin/forms.py:87
 msgid "Remote Server"
@@ -483,127 +459,124 @@ msgid "Import Bans List Json File"
 msgstr ""
 
 #: app/admin/forms.py:96 app/user/forms.py:107
-#, fuzzy
 msgid "Import"
-msgstr "Informe"
+msgstr ""
 
 #: app/admin/forms.py:97 app/user/forms.py:106
-#, fuzzy
 msgid "Export"
-msgstr "Informe"
+msgstr ""
 
 #: app/admin/forms.py:101 app/community/forms.py:70 app/community/forms.py:95
 #: app/community/forms.py:141 app/templates/admin/cms_pages.html:24
 #: app/templates/post/post_block_image_purge_posts.html:18
 msgid "Title"
-msgstr "Títol"
+msgstr ""
 
 #: app/admin/forms.py:102 app/admin/forms.py:178 app/community/forms.py:26
 #: app/feed/forms.py:17 app/feed/forms.py:73
 #: app/templates/community/community_wiki_list.html:34
 msgid "Url"
-msgstr "URL"
+msgstr ""
 
 #: app/admin/forms.py:103 app/community/forms.py:27 app/community/forms.py:71
 #: app/feed/forms.py:18 app/feed/forms.py:74
 #: app/templates/community/community_moderate.html:40
 msgid "Description"
-msgstr "Descripció"
+msgstr ""
 
 #: app/admin/forms.py:104 app/community/forms.py:28 app/community/forms.py:72
 #: app/feed/forms.py:22 app/feed/forms.py:78
 msgid "Icon image"
-msgstr "Imatge d'icona"
+msgstr ""
 
 #: app/admin/forms.py:105 app/community/forms.py:29 app/community/forms.py:73
 #: app/feed/forms.py:23 app/feed/forms.py:79
 msgid "Banner image"
-msgstr "Imatge de bàner"
+msgstr ""
 
 #: app/admin/forms.py:106
 msgid "Rules"
-msgstr "Normes"
+msgstr ""
 
 #: app/admin/forms.py:107 app/community/forms.py:74
-#, fuzzy
 msgid "NSFW community"
-msgstr "Comunitat pornogràfica"
+msgstr ""
 
 #: app/admin/forms.py:108
 msgid "Banned - no new posts accepted"
-msgstr "Prohibit - no s'accepta cap publicació nova"
+msgstr ""
 
 #: app/admin/forms.py:109 app/community/forms.py:75
 msgid "Only accept posts from current instance"
-msgstr "Només accepta publicacions de la instància actual"
+msgstr ""
 
 #: app/admin/forms.py:110 app/community/forms.py:76
 msgid "Only moderators can post"
-msgstr "Només els moderadors poden publicar"
+msgstr ""
 
 #: app/admin/forms.py:111 app/community/forms.py:77
 msgid "New moderators wanted"
-msgstr "Es busquen nous moderadors"
+msgstr ""
 
 #: app/admin/forms.py:112
 msgid "Posts can be popular"
-msgstr "Les publicacions poden ser populars"
+msgstr ""
 
 #: app/admin/forms.py:113
 msgid "Posts show in All list"
-msgstr "Les publicacions es mostren a tota la llista"
+msgstr ""
 
 #: app/admin/forms.py:114
 msgid "Low quality / toxic - upvotes in here don't add to reputation"
-msgstr "Baixa qualitat / tòxic - els vots a favor aquí no augmenten la reputació"
+msgstr ""
 
 #: app/admin/forms.py:115
 msgid "Forever"
-msgstr "Per sempre"
+msgstr ""
 
 #: app/admin/forms.py:116
 msgid "1 week"
-msgstr "1 setmana"
+msgstr ""
 
 #: app/admin/forms.py:117
 msgid "2 weeks"
-msgstr "2 setmanes"
+msgstr ""
 
 #: app/admin/forms.py:118
 msgid "1 month"
-msgstr "Un mes"
+msgstr ""
 
 #: app/admin/forms.py:119
 msgid "2 months"
-msgstr "2 mesos"
+msgstr ""
 
 #: app/admin/forms.py:120
 msgid "3 months"
-msgstr "3 mesos"
+msgstr ""
 
 #: app/admin/forms.py:121
 msgid "6 months"
-msgstr "6 mesos"
+msgstr ""
 
 #: app/admin/forms.py:122
 msgid "1 year"
-msgstr "Un any"
+msgstr ""
 
 #: app/admin/forms.py:123
 msgid "2 years"
-msgstr "2 anys"
+msgstr ""
 
 #: app/admin/forms.py:124
 msgid "5 years"
-msgstr "5 anys"
+msgstr ""
 
 #: app/admin/forms.py:125
 msgid "10 years"
-msgstr "10 anys"
+msgstr ""
 
 #: app/admin/forms.py:127
 msgid "Retain content"
-msgstr "Retenir el contingut"
+msgstr ""
 
 #: app/admin/forms.py:128 app/community/forms.py:85
 #: app/templates/admin/communities.html:45
@@ -611,7 +584,7 @@ msgstr "Retenir el contingut"
 #: app/templates/admin/communities.html:99
 #: app/templates/list_communities.html:47
 msgid "Topic"
-msgstr "Tema"
+msgstr ""
 
 #: app/admin/forms.py:129 app/community/forms.py:87
 #: app/templates/community/_community_nav.html:33
@@ -619,7 +592,7 @@ msgstr "Tema"
 #: app/templates/community/_community_nav.html:168
 #: app/templates/feed/_feed_nav.html:51
 msgid "List"
-msgstr "Llista"
+msgstr ""
 
 #: app/admin/forms.py:130 app/community/forms.py:88
 msgid "Masonry"
@@ -635,7 +608,7 @@ msgstr ""
 #: app/templates/community/_community_nav.html:31
 #: app/templates/community/_community_nav.html:107
 msgid "Layout"
-msgstr "Disposició"
+msgstr ""
 
 #: app/admin/forms.py:133 app/admin/forms.py:165
 msgid "Posting warning"
@@ -651,7 +624,7 @@ msgstr ""
 
 #: app/admin/forms.py:142 app/community/forms.py:39 app/feed/forms.py:34
 msgid "Url is required."
-msgstr "URL és obligatori"
+msgstr ""
 
 #: app/admin/forms.py:153 app/community/forms.py:25 app/feed/forms.py:16
 #: app/feed/forms.py:72 app/templates/admin/approve_registrations.html:22
@@ -665,7 +638,7 @@ msgstr "URL és obligatori"
 #: app/templates/user/filters.html:122 app/templates/user/filters.html:140
 #: app/user/forms.py:169
 msgid "Name"
-msgstr "Nom"
+msgstr ""
 
 #: app/admin/forms.py:153
 msgid "Human readable name for the topic."
@@ -681,7 +654,7 @@ msgstr ""
 
 #: app/admin/forms.py:155
 msgid "Parent topic"
-msgstr "Tema principal"
+msgstr ""
 
 #: app/admin/forms.py:156
 msgid "Show posts from child topics"
@@ -701,9 +674,8 @@ msgstr ""
 #: app/admin/forms.py:163 app/templates/admin/instances.html:22
 #: app/templates/admin/instances.html:100
 #: app/templates/instance/list_instances.html:21
-#, fuzzy
 msgid "Gone forever"
-msgstr "Per sempre"
+msgstr ""
 
 #: app/admin/forms.py:164 app/templates/admin/instances.html:23
 #: app/templates/admin/instances.html:55 app/templates/admin/instances.html:56
@@ -722,69 +694,67 @@ msgid "Hash"
 msgstr ""
 
 #: app/admin/forms.py:172 app/admin/forms.py:180
-#, fuzzy
 msgid "Filename"
-msgstr "Nom d'usuari"
+msgstr ""
 
 #: app/admin/forms.py:173 app/admin/forms.py:181
 #: app/templates/admin/blocked_images.html:21
 #: app/templates/admin/blocked_images.html:28
 #: app/templates/user/show_profile.html:132
 #: app/templates/user/user_preview.html:22
-#, fuzzy
 msgid "Note"
-msgstr "Altres"
+msgstr ""
 
 #: app/admin/forms.py:186 app/auth/forms.py:14 app/auth/forms.py:22
 #: app/community/forms.py:108
 msgid "User name"
-msgstr "Nom d'usuari"
+msgstr ""
 
 #: app/admin/forms.py:188 app/user/forms.py:13
 msgid "Email address"
-msgstr "Adreça de correu electrònic"
+msgstr ""
 
 #: app/admin/forms.py:189 app/auth/forms.py:15 app/auth/forms.py:25
 #: app/auth/forms.py:101
 msgid "Password"
-msgstr "Paraula de pas"
+msgstr ""
 
 #: app/admin/forms.py:191 app/auth/forms.py:27 app/auth/forms.py:103
 msgid "Repeat password"
-msgstr "Repeteix la paraula de pas"
+msgstr ""
 
 #: app/admin/forms.py:192 app/user/forms.py:16
 msgid "Bio"
-msgstr "Biografia"
+msgstr ""
 
 #: app/admin/forms.py:193 app/user/forms.py:25
 msgid "Matrix User ID"
-msgstr "Usuari de Matrix"
+msgstr ""
 
 #: app/admin/forms.py:194 app/user/forms.py:27
 msgid "Avatar image"
-msgstr "Imatge d'avatar"
+msgstr ""
 
 #: app/admin/forms.py:195 app/user/forms.py:28
 msgid "Top banner image"
-msgstr "Imatge del banner superior"
+msgstr ""
 
 #: app/admin/forms.py:196 app/admin/forms.py:258 app/user/forms.py:29
 msgid "This profile is a bot"
-msgstr "Aquest compte és un robot"
+msgstr ""
 
 #: app/admin/forms.py:197 app/admin/forms.py:259
 msgid "Email address is verified"
-msgstr "Adreça de correu electrònic verificada"
+msgstr ""
 
 #: app/admin/forms.py:198 app/admin/forms.py:260
 #: app/templates/admin/users.html:50 app/templates/admin/users.html:83
 msgid "Banned"
-msgstr "Expulsat"
+msgstr ""
 
 #: app/admin/forms.py:199 app/user/forms.py:47
 msgid "Subscribe to email newsletter"
-msgstr "Subscriu-te al butlletí per correu electrònic"
+msgstr ""
 
 #: app/admin/forms.py:200 app/admin/forms.py:263 app/user/forms.py:152
 msgid "Show"
@@ -805,130 +775,121 @@ msgstr ""
 
 #: app/admin/forms.py:204 app/user/forms.py:49 app/user/forms.py:156
 msgid "Hide posts by bots"
-msgstr "Amaga les publicacions dels robots"
+msgstr ""
 
 #: app/admin/forms.py:206 app/admin/forms.py:267 app/user/forms.py:50
 #: app/user/forms.py:158
 msgid "Show NSFW posts"
-msgstr "Mostra les publicacions NSFW"
+msgstr ""
 
 #: app/admin/forms.py:208 app/admin/forms.py:269 app/user/forms.py:51
 #: app/user/forms.py:160
 msgid "Show NSFL posts"
-msgstr "Mostra les publicacions NSFL"
+msgstr ""
 
 #: app/admin/forms.py:212 app/admin/forms.py:272
 #: app/templates/admin/permissions.html:21
 #: app/templates/user/show_profile.html:130
 #: app/templates/user/user_preview.html:15
 msgid "Staff"
-msgstr "Personal"
+msgstr ""
 
 #: app/admin/forms.py:215 app/admin/forms.py:275
 msgid "Role"
-msgstr "Rol"
+msgstr ""
 
 #: app/admin/forms.py:221 app/auth/forms.py:43
 msgid "An account with this email address already exists."
-msgstr "Ja existeix un compte amb aquesta adreça de correu electrònic."
+msgstr ""
 
 #: app/admin/forms.py:225 app/auth/forms.py:50
 msgid "User names cannot contain @."
-msgstr "Els noms d'usuari no poden contenir @."
+msgstr ""
 
 #: app/admin/forms.py:229 app/auth/forms.py:59
 msgid "This username was used in the past and cannot be reused."
-msgstr "Aquest nom d'usuari es va utilitzar en el passat i no es pot reutilitzar."
+msgstr ""
 
 #: app/admin/forms.py:231 app/auth/forms.py:61
 msgid "An account with this user name already exists."
-msgstr "Ja existeix un compte amb aquest nom."
+msgstr ""
 
 #: app/admin/forms.py:234
 msgid "A community with this name exists so it cannot be used for a user."
 msgstr ""
-"Existeix una comunitat amb aquest nom, de manera que no es pot utilitzar "
-"per a un usuari."
 
 #: app/admin/forms.py:241 app/admin/forms.py:254 app/auth/forms.py:76
 #: app/auth/forms.py:92
 msgid "This password is too common."
-msgstr "La contrasenya és massa comuna."
+msgstr ""
 
 #: app/admin/forms.py:251 app/auth/forms.py:89
 msgid "This password is not secure."
-msgstr "Aquesta paraula de pas no és segura."
+msgstr ""
 
 #: app/admin/forms.py:261
-#, fuzzy
 msgid "Ban posts"
-msgstr "Informe"
+msgstr ""
 
 #: app/admin/forms.py:262
-#, fuzzy
 msgid "Ban comments"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/admin/forms.py:276
 msgid "Remove avatar"
-msgstr "Esborra l'avatar"
+msgstr ""
 
 #: app/admin/forms.py:277
 msgid "Remove banner"
-msgstr "Esborra el bàner"
+msgstr ""
 
 #: app/admin/forms.py:282
 msgid "Subject"
-msgstr "Assumpte"
+msgstr ""
 
 #: app/admin/forms.py:283
 msgid "Body (text)"
-msgstr "Text del cos"
+msgstr ""
 
 #: app/admin/forms.py:284
 msgid "Body (html)"
-msgstr "Text del cost (HTML)"
+msgstr ""
 
 #: app/admin/forms.py:285
 msgid "Test mode"
-msgstr "Mode de prova"
+msgstr ""
 
 #: app/admin/forms.py:286 app/admin/routes.py:1515
 msgid "Send newsletter"
-msgstr "Envia butlletí"
+msgstr ""
 
 #: app/admin/forms.py:290
-#, fuzzy
 msgid "New url"
-msgstr "URL"
+msgstr ""
 
 #: app/admin/forms.py:291
 msgid "Set new owner"
 msgstr ""
 
 #: app/admin/forms.py:292 app/topic/forms.py:12
-#, fuzzy
 msgid "Submit"
-msgstr "Assumpte"
+msgstr ""
 
 #: app/admin/forms.py:297
-#, fuzzy
 msgid "A local community at that url already exists"
-msgstr "Ja existeix un compte amb aquest nom."
+msgstr ""
 
 #: app/admin/forms.py:301
 msgid "URL path"
 msgstr ""
 
 #: app/admin/forms.py:302
-#, fuzzy
 msgid "e.g., /about-us"
-msgstr "Disposició"
+msgstr ""
 
 #: app/admin/forms.py:303
-#, fuzzy
 msgid "Page title"
-msgstr "Títol"
+msgstr ""
 
 #: app/admin/forms.py:304
 msgid "Content (Markdown)"
@@ -939,24 +900,22 @@ msgid "Write your content in Markdown format..."
 msgstr ""
 
 #: app/admin/forms.py:319
-#, fuzzy
 msgid "A page with this URL already exists."
-msgstr "Ja existeix un compte amb aquest nom."
+msgstr ""
 
 #: app/admin/routes.py:146 app/admin/routes.py:205 app/feed/routes.py:218
-#, fuzzy
 msgid "Settings saved."
-msgstr "S'ha desat la configuració de l'administrador"
+msgstr ""
 
 #: app/admin/routes.py:155 app/templates/admin/_nav.html:5
 #: app/templates/admin/site.html:16
 msgid "Site profile"
-msgstr "Perfil del lloc"
+msgstr ""
 
 #: app/admin/routes.py:236 app/templates/admin/_nav.html:6
 #: app/templates/admin/misc.html:14
 msgid "Misc settings"
-msgstr "Altres Configuracions"
+msgstr ""
 
 #: app/admin/routes.py:311
 #, python-format
@@ -994,11 +953,11 @@ msgstr ""
 
 #: app/admin/routes.py:737
 msgid "Admin settings saved"
-msgstr "S'ha desat la configuració de l'administrador"
+msgstr ""
 
 #: app/admin/routes.py:752
 msgid "Federation settings"
-msgstr "Configuració de la Federació"
+msgstr ""
 
 #: app/admin/routes.py:880
 msgid ""
@@ -1008,11 +967,11 @@ msgstr ""
 
 #: app/admin/routes.py:901
 msgid "ActivityPub Log"
-msgstr "Registre d'ActivityPub"
+msgstr ""
 
 #: app/admin/routes.py:910 app/templates/admin/activity_json.html:13
 msgid "Activity JSON"
-msgstr "Activitat JSON"
+msgstr ""
 
 #: app/admin/routes.py:944 app/community/routes.py:418
 #: app/community/routes.py:1476 app/community/routes.py:1528
@@ -1040,17 +999,15 @@ msgstr "Activitat JSON"
 #: app/templates/user/notifications.html:71
 #: app/templates/user/show_profile.html:257
 msgid "Communities"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/admin/routes.py:966
-#, fuzzy
 msgid "Communities with no topic"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/admin/routes.py:986
-#, fuzzy
 msgid "Communities with low_quality == True"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/admin/routes.py:1053 app/admin/routes.py:1148 app/admin/routes.py:1171
 #: app/admin/routes.py:1377 app/admin/routes.py:1602 app/admin/routes.py:1695
@@ -1058,7 +1015,7 @@ msgstr "Comunitats"
 #: app/community/routes.py:1424 app/community/routes.py:1592
 #: app/community/routes.py:1813 app/domain/routes.py:39
 msgid "Saved"
-msgstr "S'ha desat"
+msgstr ""
 
 #: app/admin/routes.py:1057
 msgid ""
@@ -1119,9 +1076,8 @@ msgid "Likely spam"
 msgstr ""
 
 #: app/admin/routes.py:1270
-#, fuzzy
 msgid "Deleted content"
-msgstr "Retenir el contingut"
+msgstr ""
 
 #: app/admin/routes.py:1336
 msgid "Registration approved."
@@ -1163,28 +1119,25 @@ msgid "Reports"
 msgstr ""
 
 #: app/admin/routes.py:1512
-#, fuzzy
 msgid "Newsletter sent"
-msgstr "Envia butlletí"
+msgstr ""
 
 #: app/admin/routes.py:1535
-#, fuzzy
 msgid "Settings saved"
-msgstr "S'ha desat la configuració de l'administrador"
+msgstr ""
 
 #: app/admin/routes.py:1540 app/templates/user/show_profile.html:130
 msgid "Role permissions"
 msgstr ""
 
 #: app/admin/routes.py:1612
-#, fuzzy
 msgid "Edit instance"
-msgstr "Instància bloquejada."
+msgstr ""
 
 #: app/admin/routes.py:1623
-#, fuzzy, python-format
+#, python-format
 msgid "Set community owner to %(user_name)s"
-msgstr "Nou missatge de \"%(community_name)s\""
+msgstr ""
 
 #: app/admin/routes.py:1662
 #, python-format
@@ -1198,19 +1151,16 @@ msgid "Ensure this community has the right moderators."
 msgstr ""
 
 #: app/admin/routes.py:1669
-#, fuzzy
 msgid "Move community"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/admin/routes.py:1679 app/templates/admin/_nav.html:34
-#, fuzzy
 msgid "Blocked images"
-msgstr "Tancat"
+msgstr ""
 
 #: app/admin/routes.py:1702
-#, fuzzy
 msgid "Edit blocked image"
-msgstr "Esborra el bàner"
+msgstr ""
 
 #: app/admin/routes.py:1725
 msgid ""
@@ -1224,9 +1174,9 @@ msgid "Add blocked image"
 msgstr ""
 
 #: app/admin/routes.py:1739 app/post/routes.py:1487
-#, fuzzy, python-format
+#, python-format
 msgid "%(count)s posts deleted."
-msgstr "S'ha suprimit la conversa"
+msgstr ""
 
 #: app/admin/routes.py:1744 app/post/routes.py:1497
 #: app/templates/post/post_block_image_purge_posts.html:14
@@ -1234,37 +1184,32 @@ msgid "Posts containing blocked images"
 msgstr ""
 
 #: app/admin/routes.py:1757
-#, fuzzy
 msgid "Blocked image deleted"
-msgstr "S'ha suprimit la conversa"
+msgstr ""
 
 #: app/admin/routes.py:1768
 msgid "CMS Pages"
 msgstr ""
 
 #: app/admin/routes.py:1781 app/admin/routes.py:1802
-#, fuzzy
 msgid "Page saved."
-msgstr "S'ha desat"
+msgstr ""
 
 #: app/admin/routes.py:1784
 msgid "Add CMS Page"
 msgstr ""
 
 #: app/admin/routes.py:1805
-#, fuzzy
 msgid "Edit page"
-msgstr "Fer un xat amb %(name)s"
+msgstr ""
 
 #: app/admin/routes.py:1815
-#, fuzzy
 msgid "Page deleted."
-msgstr "S'ha suprimit la conversa"
+msgstr ""
 
 #: app/admin/util.py:87
-#, fuzzy
 msgid "No recipients"
-msgstr "Notificar sobre les respostes"
+msgstr ""
 
 #: app/admin/util.py:110 app/community/forms.py:152 app/feed/util.py:17
 #: app/user/forms.py:94
@@ -1303,20 +1248,17 @@ msgid "Register"
 msgstr ""
 
 #: app/auth/forms.py:48
-#, fuzzy
 msgid "User names cannot contain spaces."
-msgstr "Els noms d'usuari no poden contenir @."
+msgstr ""
 
 #: app/auth/forms.py:54
-#, fuzzy
 msgid "User names can only contain letters, numbers, and underscores."
-msgstr "Els noms d'usuari no poden contenir @."
+msgstr ""
 
 #: app/auth/forms.py:65 app/auth/forms.py:69 app/community/forms.py:60
 #: app/community/forms.py:64 app/feed/forms.py:59
-#, fuzzy
 msgid "This name is in use already."
-msgstr "Aquesta paraula de pas no és segura."
+msgstr ""
 
 #: app/auth/forms.py:79
 msgid "Maximum password length is 128 characters."
@@ -1399,9 +1341,8 @@ msgid "Sorry, you cannot use that user name"
 msgstr ""
 
 #: app/auth/routes.py:140
-#, fuzzy
 msgid "Application declined"
-msgstr "S'ha suprimit la conversa"
+msgstr ""
 
 #: app/auth/routes.py:141
 msgid "Sorry, we are not accepting registrations from your country."
@@ -1487,144 +1428,138 @@ msgstr ""
 
 #: app/chat/forms.py:20 app/post/forms.py:24 app/user/forms.py:125
 msgid "Threatening violence"
-msgstr "Amenaça de violència"
+msgstr ""
 
 #: app/chat/forms.py:21 app/user/forms.py:126
 msgid "Promoting hate / genocide"
-msgstr "Promoció de l'odi/genocidi"
+msgstr ""
 
 #: app/chat/forms.py:22 app/post/forms.py:25 app/user/forms.py:127
 msgid "Misinformation / disinformation"
-msgstr "Informació falsa"
+msgstr ""
 
 #: app/chat/forms.py:23 app/post/forms.py:26 app/user/forms.py:128
 msgid "Racism, sexism, transphobia"
-msgstr "Racisme, Sexisme, Transfòbia"
+msgstr ""
 
 #: app/chat/forms.py:24 app/post/forms.py:28 app/user/forms.py:131
 msgid "Minor abuse or sexualization"
-msgstr "Maltractament menor o sexualització"
+msgstr ""
 
 #: app/chat/forms.py:25 app/post/forms.py:29 app/user/forms.py:132
 msgid "Non-consensual intimate media"
-msgstr "Mitjans íntims no consensuats"
+msgstr ""
 
 #: app/chat/forms.py:26 app/post/forms.py:30 app/user/forms.py:133
 msgid "Prohibited transaction"
-msgstr "Transacció prohibida"
+msgstr ""
 
 #: app/chat/forms.py:26 app/post/forms.py:30 app/user/forms.py:133
 msgid "Impersonation"
-msgstr "Suplantació"
+msgstr ""
 
 #: app/chat/forms.py:27 app/post/forms.py:31 app/user/forms.py:134
 msgid "Copyright violation"
-msgstr "Vulneració dels drets d'autor"
+msgstr ""
 
 #: app/chat/forms.py:27 app/post/forms.py:31 app/user/forms.py:134
 msgid "Trademark violation"
-msgstr "Vulneració de una marca registrada"
+msgstr ""
 
 #: app/chat/forms.py:28 app/post/forms.py:32 app/user/forms.py:135
 msgid "Self-harm or suicide"
-msgstr "Autolesions i suïcidi"
+msgstr ""
 
 #: app/chat/forms.py:29 app/community/forms.py:319 app/post/forms.py:33
 #: app/user/forms.py:136
 msgid "Other"
-msgstr "Altres"
+msgstr ""
 
 #: app/chat/forms.py:30 app/community/forms.py:129 app/community/forms.py:321
 #: app/post/forms.py:34 app/post/forms.py:64 app/post/forms.py:69
 #: app/user/forms.py:115 app/user/forms.py:137
 msgid "Reason"
-msgstr "Motiu"
+msgstr ""
 
 #: app/chat/forms.py:31 app/community/forms.py:322 app/post/forms.py:35
 #: app/user/forms.py:138
 msgid "More info"
-msgstr "Més informació"
+msgstr ""
 
 #: app/chat/forms.py:33 app/community/forms.py:324 app/post/forms.py:37
 #: app/templates/user/show_profile.html:121 app/user/forms.py:140
 msgid "Report"
-msgstr "Informe"
+msgstr ""
 
 #: app/chat/routes.py:55
 #, python-format
 msgid "Chat with %(name)s"
-msgstr "Fer un xat amb %(name)s"
+msgstr ""
 
 #: app/chat/routes.py:74
 msgid "Send"
-msgstr "Envia"
+msgstr ""
 
 #: app/chat/routes.py:84 app/templates/chat/new_message.html:14
 #, python-format
 msgid "New message to \"%(recipient_name)s\""
-msgstr "Nou missatge de \"%(recipient_name)s\""
+msgstr ""
 
 #: app/chat/routes.py:140
 msgid "Conversation deleted"
-msgstr "S'ha suprimit la conversa"
+msgstr ""
 
 #: app/chat/routes.py:148
 msgid "Instance blocked."
-msgstr "Instància bloquejada."
+msgstr ""
 
 #: app/chat/routes.py:181
 msgid "This conversation has been reported, thank you!"
-msgstr "S'ha informat d'aquesta conversa, gràcies!"
+msgstr ""
 
 #: app/chat/routes.py:186
 msgid "Report conversation"
-msgstr "Informa d'una conversa"
+msgstr ""
 
 #: app/chat/util.py:72
 msgid "Message sent."
-msgstr "S'ha enviat el missatge."
+msgstr ""
 
 #: app/community/forms.py:33
 msgid "Create"
-msgstr "Crea"
+msgstr ""
 
 #: app/community/forms.py:43 app/feed/forms.py:38
 msgid "- cannot be in Url. Use _ instead?"
-msgstr "- no pot estar a l'Url. Utilitzeu _?"
+msgstr ""
 
 #: app/community/forms.py:48
 msgid "Community urls can only contain letters, numbers, and underscores."
 msgstr ""
 
 #: app/community/forms.py:53 app/feed/forms.py:52
-#, fuzzy
 msgid "A community with this url already exists."
-msgstr "Ja existeix un compte amb aquest nom."
+msgstr ""
 
 #: app/community/forms.py:58 app/feed/forms.py:57
-#, fuzzy
 msgid "This name was used in the past and cannot be reused."
-msgstr "Aquest nom d'usuari es va utilitzar en el passat i no es pot reutilitzar."
+msgstr ""
 
 #: app/community/forms.py:78
-#, fuzzy
 msgid "Everyone"
-msgstr "Motiu"
+msgstr ""
 
 #: app/community/forms.py:79 app/community/forms.py:100
-#, fuzzy
 msgid "Community members"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/community/forms.py:80 app/user/forms.py:95
-#, fuzzy
 msgid "This instance"
-msgstr "Instància bloquejada."
+msgstr ""
 
 #: app/community/forms.py:81 app/instance/routes.py:32 app/user/forms.py:96
-#, fuzzy
 msgid "Trusted instances"
-msgstr "Incompleix les regles de la instància"
+msgstr ""
 
 #: app/community/forms.py:84
 msgid "Accept downvotes from"
@@ -1632,7 +1567,7 @@ msgstr ""
 
 #: app/community/forms.py:97 app/community/forms.py:142 app/post/forms.py:11
 msgid "Body"
-msgstr "Cos"
+msgstr ""
 
 #: app/community/forms.py:98
 msgid "Mods and admins"
@@ -1643,9 +1578,8 @@ msgid "Trusted accounts"
 msgstr ""
 
 #: app/community/forms.py:101
-#, fuzzy
 msgid "Any account"
-msgstr "Prohibició fins"
+msgstr ""
 
 #: app/community/forms.py:103
 msgid "Who can edit"
@@ -1657,28 +1591,28 @@ msgstr ""
 
 #: app/community/forms.py:113
 msgid "Amend the report description if necessary"
-msgstr "Modificar la descripció de l'informe si fos necessari"
+msgstr ""
 
 #: app/community/forms.py:114
 msgid "Escalate report"
-msgstr "Escala l'informe"
+msgstr ""
 
 #: app/community/forms.py:118
 msgid "Note for mod log"
-msgstr "Nota del registre pel moderador"
+msgstr ""
 
 #: app/community/forms.py:119
 msgid "Also resolve all other reports about the same thing."
-msgstr "Resoldre també tots els altres informes sobre el mateix."
+msgstr ""
 
 #: app/community/forms.py:120
 #: app/templates/community/community_moderate_report_resolve.html:13
 msgid "Resolve report"
-msgstr "Resoldre informe"
+msgstr ""
 
 #: app/community/forms.py:124
 msgid "Community address"
-msgstr "Adreça de la comunitat"
+msgstr ""
 
 #: app/community/forms.py:125 app/feed/forms.py:109 app/search/routes.py:168
 #: app/templates/admin/communities.html:19
@@ -1694,26 +1628,26 @@ msgstr "Adreça de la comunitat"
 #: app/templates/tag/tags.html:29 app/templates/tag/tags_blocked.html:29
 #: app/templates/themes/dillo/base.html:68
 msgid "Search"
-msgstr "Cerca"
+msgstr ""
 
 #: app/community/forms.py:130
 msgid "Ban until"
-msgstr "Prohibició fins"
+msgstr ""
 
 #: app/community/forms.py:131
 msgid "Also delete all their posts"
-msgstr "També esborra totes les seves publicacions"
+msgstr ""
 
 #: app/community/forms.py:132
 msgid "Also delete all their comments"
-msgstr "També esborra tots els seus comentaris"
+msgstr ""
 
 #: app/community/forms.py:133
 #: app/templates/community/community_moderate_subscribers.html:56
 #: app/templates/domain/domains_blocked.html:48
 #: app/templates/user/show_profile.html:297 app/user/forms.py:118
 msgid "Ban"
-msgstr "Expulsar"
+msgstr ""
 
 #: app/community/forms.py:143 app/templates/tag/tag.html:16
 #: app/templates/tag/tags.html:12 app/templates/tag/tags.html:21
@@ -1734,22 +1668,22 @@ msgstr ""
 
 #: app/community/forms.py:146 app/templates/post/post_options.html:25
 msgid "Sticky"
-msgstr "Fixat"
+msgstr ""
 
 #: app/community/forms.py:147
 msgid "NSFW"
-msgstr "NSFW"
+msgstr ""
 
 #: app/community/forms.py:148
 msgid "Gore/gross"
-msgstr "Gore/Brut"
+msgstr ""
 
 #: app/community/forms.py:149 app/post/forms.py:12
 #: app/templates/post/_post_notification_toggle.html:5
 #: app/templates/post/_reply_notification_toggle.html:4
 #: app/templates/post/reply/_macros.html:35
 msgid "Notify about replies"
-msgstr "Notificar sobre les respostes"
+msgstr ""
 
 #: app/community/forms.py:150 app/post/forms.py:14
 #: app/templates/list_communities.html:74 app/templates/search/start.html:51
@@ -1761,37 +1695,32 @@ msgid "Publish at"
 msgstr ""
 
 #: app/community/forms.py:152
-#, fuzzy
 msgid "Repeat"
-msgstr "Per sempre"
+msgstr ""
 
 #: app/community/forms.py:152
 msgid "Daily"
 msgstr ""
 
 #: app/community/forms.py:152
-#, fuzzy
 msgid "Weekly"
-msgstr "1 setmana"
+msgstr ""
 
 #: app/community/forms.py:152
-#, fuzzy
 msgid "Monthly"
-msgstr "Un mes"
+msgstr ""
 
 #: app/community/forms.py:155
 msgid "Publish"
 msgstr ""
 
 #: app/community/forms.py:160
-#, fuzzy
 msgid "NSFW posts are not allowed."
-msgstr "No es permeten enllaços a %(domain)s."
+msgstr ""
 
 #: app/community/forms.py:167
-#, fuzzy
 msgid "NSFL posts are not allowed."
-msgstr "No es permeten enllaços a %(domain)s."
+msgstr ""
 
 #: app/community/forms.py:173
 msgid "Choose a time in the future."
@@ -1800,40 +1729,38 @@ msgstr ""
 #: app/community/forms.py:183 app/community/forms.py:201
 #: app/templates/admin/cms_pages.html:25
 msgid "URL"
-msgstr "URL"
+msgstr ""
 
 #: app/community/forms.py:191 app/community/forms.py:195
 #, python-format
 msgid "Links to %(domain)s are not allowed."
-msgstr "No es permeten enllaços a %(domain)s."
+msgstr ""
 
 #: app/community/forms.py:207
-#, fuzzy, python-format
+#, python-format
 msgid "Videos from %(domain)s are not allowed."
-msgstr "No es permeten enllaços a %(domain)s."
+msgstr ""
 
 #: app/community/forms.py:213
 msgid "Alt text"
-msgstr "Text alternatiu"
+msgstr ""
 
 #: app/community/forms.py:214 app/community/forms.py:262
 #: app/templates/community/add_post.html:14 app/templates/search/start.html:46
 msgid "Image"
-msgstr "Imatge"
+msgstr ""
 
 #: app/community/forms.py:256 app/community/forms.py:268
 msgid "Images cannot be posted to local communities."
-msgstr "Les imatges no es poden publicar a les comunitats locals."
+msgstr ""
 
 #: app/community/forms.py:261
-#, fuzzy
 msgid "Replace Image"
-msgstr "Esborra el bàner"
+msgstr ""
 
 #: app/community/forms.py:273
-#, fuzzy
 msgid "Mode"
-msgstr "Mode de prova"
+msgstr ""
 
 #: app/community/forms.py:273
 msgid "Voters choose one option"
@@ -1844,9 +1771,8 @@ msgid "Voters choose many options"
 msgstr ""
 
 #: app/community/forms.py:275
-#, fuzzy
 msgid "30 minutes"
-msgstr "3 mesos"
+msgstr ""
 
 #: app/community/forms.py:276 app/templates/_home_nav.html:9
 #: app/templates/_home_nav.html:26
@@ -1880,9 +1806,8 @@ msgid "End voting in"
 msgstr ""
 
 #: app/community/forms.py:284
-#, fuzzy
 msgid "Accept votes from this instance only"
-msgstr "Només accepta publicacions de la instància actual"
+msgstr ""
 
 #: app/community/forms.py:304
 msgid "Polls need options for people to choose from"
@@ -1894,11 +1819,11 @@ msgstr ""
 
 #: app/community/forms.py:313
 msgid "Breaks instance rules"
-msgstr "Incompleix les regles de la instància"
+msgstr ""
 
 #: app/community/forms.py:314
 msgid "Abandoned by moderators"
-msgstr "Abandonat pels moderadors"
+msgstr ""
 
 #: app/community/forms.py:315
 msgid "Cult"
@@ -1937,9 +1862,8 @@ msgid "Email addresses or fediverse handles, one per line"
 msgstr ""
 
 #: app/community/forms.py:351 app/templates/community/invite.html:16
-#, fuzzy
 msgid "Invite"
-msgstr "Administrador/a"
+msgstr ""
 
 #: app/community/forms.py:355
 msgid "Use new lines instead of commas."
@@ -1950,19 +1874,16 @@ msgid "Maximum of 50 at a time."
 msgstr ""
 
 #: app/community/forms.py:362
-#, fuzzy
 msgid "The old community is locked"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/community/forms.py:363
-#, fuzzy
 msgid "Move notification post in old community"
-msgstr "Nou missatge de \"%(community_name)s\""
+msgstr ""
 
 #: app/community/forms.py:364
-#, fuzzy
 msgid "Request move"
-msgstr "Mode de prova"
+msgstr ""
 
 #: app/community/forms.py:369
 msgid "Text color"
@@ -2022,9 +1943,8 @@ msgid "You have been banned from this community until %(when)s."
 msgstr ""
 
 #: app/community/routes.py:259 app/post/routes.py:97
-#, fuzzy
 msgid "You have been banned from this community."
-msgstr "Comunitat"
+msgstr ""
 
 #: app/community/routes.py:386 app/community/routes.py:1448
 #: app/community/routes.py:1500 app/instance/routes.py:154
@@ -2079,14 +1999,14 @@ msgstr ""
 
 #: app/community/routes.py:620 app/community/routes.py:729
 #: app/shared/tasks/follows.py:91
-#, fuzzy, python-format
+#, python-format
 msgid "You joined %(community_name)s"
-msgstr "Nou missatge de \"%(community_name)s\""
+msgstr ""
 
 #: app/community/routes.py:682 app/feed/routes.py:590
-#, fuzzy, python-format
+#, python-format
 msgid "You left %(community_name)s"
-msgstr "Nou missatge de \"%(community_name)s\""
+msgstr ""
 
 #: app/community/routes.py:688 app/feed/routes.py:595 app/feed/routes.py:934
 #: app/shared/community.py:68
@@ -2115,14 +2035,12 @@ msgid "Report community"
 msgstr ""
 
 #: app/community/routes.py:983
-#, fuzzy
 msgid "Icon removed!"
-msgstr "Imatge d'icona"
+msgstr ""
 
 #: app/community/routes.py:999 app/user/routes.py:292
-#, fuzzy
 msgid "Banner removed!"
-msgstr "Imatge de bàner"
+msgstr ""
 
 #: app/community/routes.py:1044
 #: app/templates/community/community_mod_list.html:24
@@ -2175,9 +2093,8 @@ msgid "Moderation of %(community)s"
 msgstr ""
 
 #: app/community/routes.py:1393
-#, fuzzy
 msgid "Community Wiki"
-msgstr "Comunitat"
+msgstr ""
 
 #: app/community/routes.py:1427
 #: app/templates/community/community_wiki_list.html:26
@@ -2202,9 +2119,9 @@ msgid "Page deleted"
 msgstr ""
 
 #: app/community/routes.py:1674
-#, fuzzy, python-format
+#, python-format
 msgid "Mod Log of %(community)s"
-msgstr "Comunitat pornogràfica"
+msgstr ""
 
 #: app/community/routes.py:1703
 msgid "Admin has been notified about this report."
@@ -2219,14 +2136,14 @@ msgid "Report ignored."
 msgstr ""
 
 #: app/community/routes.py:1818
-#, fuzzy, python-format
+#, python-format
 msgid "Set your flair in %(community_name)s"
-msgstr "Nou missatge de \"%(community_name)s\""
+msgstr ""
 
 #: app/community/routes.py:1835 app/templates/community/community_flair.html:23
-#, fuzzy, python-format
+#, python-format
 msgid "Flair in %(community)s"
-msgstr "Nou missatge de \"%(community_name)s\""
+msgstr ""
 
 #: app/community/routes.py:1856
 msgid "Flair added."
@@ -2237,19 +2154,18 @@ msgid "Flair updated."
 msgstr ""
 
 #: app/community/routes.py:1872
-#, fuzzy, python-format
+#, python-format
 msgid "Edit %(flair_name)s in %(community_name)s"
-msgstr "Nou missatge de \"%(community_name)s\""
+msgstr ""
 
 #: app/community/routes.py:1872
-#, fuzzy, python-format
+#, python-format
 msgid "Add flair in %(community_name)s"
-msgstr "Nou missatge de \"%(community_name)s\""
+msgstr ""
 
 #: app/community/routes.py:1887
-#, fuzzy
 msgid "Flair deleted."
-msgstr "S'ha suprimit la conversa"
+msgstr ""
 
 #: app/community/routes.py:1957
 msgid "Sorry your account is too new to do this."
@@ -2263,9 +2179,8 @@ msgid ""
 msgstr ""
 
 #: app/community/routes.py:1984
-#, fuzzy
 msgid "Invite to community"
-msgstr "Comunitat"
+msgstr ""
 
 #: app/community/routes.py:2022
 msgid "Search result for remote community"
@@ -2276,24 +2191,20 @@ msgid "Searching for remote communities requires login"
 msgstr ""
 
 #: app/dev/forms.py:12
-#, fuzzy
 msgid "Populate Communities"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/dev/forms.py:15
-#, fuzzy
 msgid "Populate Topics"
-msgstr "Tema principal"
+msgstr ""
 
 #: app/dev/forms.py:18
-#, fuzzy
 msgid "Delete Communities"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/dev/forms.py:21
-#, fuzzy
 msgid "Delete Topics"
-msgstr "Tema principal"
+msgstr ""
 
 #: app/dev/routes.py:147
 #, python-format
@@ -2301,9 +2212,8 @@ msgid "%(num_communities)d dev communities deleted"
 msgstr ""
 
 #: app/domain/forms.py:7
-#, fuzzy
 msgid "Warning on posts"
-msgstr "També esborra totes les seves publicacions"
+msgstr ""
 
 #: app/domain/routes.py:202
 #, python-format
@@ -2326,18 +2236,16 @@ msgid "%(name)s un-banned for all users."
 msgstr ""
 
 #: app/feed/forms.py:19 app/feed/forms.py:75
-#, fuzzy
 msgid "Parent feed"
-msgstr "Tema principal"
+msgstr ""
 
 #: app/feed/forms.py:43
 msgid "Feed urls can only contain letters, numbers, and underscores."
 msgstr ""
 
 #: app/feed/forms.py:48
-#, fuzzy
 msgid "A Feed with this url already exists."
-msgstr "Ja existeix un compte amb aquest nom."
+msgstr ""
 
 #: app/feed/forms.py:65 app/feed/forms.py:102
 msgid ""
@@ -2346,28 +2254,24 @@ msgid ""
 msgstr ""
 
 #: app/feed/forms.py:91
-#, fuzzy
 msgid "This field is required."
-msgstr "URL és obligatori"
+msgstr ""
 
 #: app/feed/forms.py:96
 msgid "Url is already used by another feed."
 msgstr ""
 
 #: app/feed/forms.py:108
-#, fuzzy
 msgid "Feed address"
-msgstr "Adreça de correu electrònic"
+msgstr ""
 
 #: app/feed/routes.py:93 app/feed/routes.py:373
-#, fuzzy
 msgid "Your new Feed has been created."
-msgstr "Una publicació ha estat denunciada"
+msgstr ""
 
 #: app/feed/routes.py:106 app/templates/feed/public_feeds.html:15
-#, fuzzy
 msgid "Create a Feed"
-msgstr "Crea"
+msgstr ""
 
 #: app/feed/routes.py:140 app/feed/routes.py:1068
 msgid "Feed not found."
@@ -2384,9 +2288,8 @@ msgid "Add remote feed"
 msgstr ""
 
 #: app/feed/routes.py:278
-#, fuzzy
 msgid "Feed deleted"
-msgstr "S'ha suprimit la conversa"
+msgstr ""
 
 #: app/feed/routes.py:648
 msgid "Could not find that feed or it is not public. Try one of these instead..."
@@ -2427,9 +2330,8 @@ msgid "Online instances"
 msgstr ""
 
 #: app/instance/routes.py:38
-#, fuzzy
 msgid "Dormant instances"
-msgstr "Incompleix les regles de la instància"
+msgstr ""
 
 #: app/instance/routes.py:41
 msgid "Gone forever instances"
@@ -2446,19 +2348,19 @@ msgid "People from %(instance)s"
 msgstr ""
 
 #: app/instance/routes.py:173 app/templates/instance/posts.html:21
-#, fuzzy, python-format
+#, python-format
 msgid "Posts from %(instance)s"
-msgstr "Només accepta publicacions de la instància actual"
+msgstr ""
 
 #: app/instance/routes.py:182
-#, fuzzy, python-format
+#, python-format
 msgid "Content from %(instance_domain)s will be hidden."
-msgstr "Instància bloquejada."
+msgstr ""
 
 #: app/instance/routes.py:192
-#, fuzzy, python-format
+#, python-format
 msgid "%(instance_domain)s has been unblocked."
-msgstr "Instància bloquejada."
+msgstr ""
 
 #: app/main/forms.py:9 app/post/forms.py:53
 msgid "Community to post this link to"
@@ -2479,24 +2381,20 @@ msgid "Browse by topic"
 msgstr ""
 
 #: app/main/routes.py:331
-#, fuzzy
 msgid "Local Communities"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/main/routes.py:419
-#, fuzzy
 msgid "Joined Communities"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/main/routes.py:508
-#, fuzzy
 msgid "Not Joined Communities"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/main/routes.py:545
-#, fuzzy
 msgid "Moderation Log"
-msgstr "Configuració de la Federació"
+msgstr ""
 
 #: app/main/routes.py:870
 msgid "Please click the link in your email inbox to verify your account."
@@ -2521,14 +2419,12 @@ msgstr ""
 
 #: app/post/forms.py:59 app/post/forms.py:65 app/post/forms.py:71
 #: app/templates/admin/instances.html:95
-#, fuzzy
 msgid "Yes"
-msgstr "5 anys"
+msgstr ""
 
 #: app/post/forms.py:70
-#, fuzzy
 msgid "Also delete replies to this comment"
-msgstr "També esborra tots els seus comentaris"
+msgstr ""
 
 #: app/post/routes.py:64 app/post/routes.py:270 app/post/routes.py:436
 msgid ""
@@ -2556,14 +2452,13 @@ msgid "Your reply was not accepted because %(reason)s"
 msgstr ""
 
 #: app/post/routes.py:349 app/templates/post/post_embed_code.html:23
-#, fuzzy, python-format
+#, python-format
 msgid "Embed code for %(post_title)s"
-msgstr "Respondre a %(post_title)s"
+msgstr ""
 
 #: app/post/routes.py:396
-#, fuzzy
 msgid "Vote has been cast."
-msgstr "Una publicació ha estat denunciada"
+msgstr ""
 
 #: app/post/routes.py:457 app/post/routes.py:514
 #, python-format
@@ -2571,9 +2466,8 @@ msgid "Discussing %(title)s"
 msgstr ""
 
 #: app/post/routes.py:476 app/post/routes.py:535
-#, fuzzy
 msgid "Comments have been disabled."
-msgstr "S'ha informat d'un comentari"
+msgstr ""
 
 #: app/post/routes.py:489 app/post/routes.py:540
 #, python-format
@@ -2609,9 +2503,8 @@ msgid "Post deleted."
 msgstr ""
 
 #: app/post/routes.py:885
-#, fuzzy
 msgid "Post has been restored."
-msgstr "Una publicació ha estat denunciada"
+msgstr ""
 
 #: app/post/routes.py:899
 msgid "Post purged."
@@ -2628,9 +2521,8 @@ msgid "Post has already been reported, thank you!"
 msgstr ""
 
 #: app/post/routes.py:972
-#, fuzzy
 msgid "Reported content"
-msgstr "Retenir el contingut"
+msgstr ""
 
 #: app/post/routes.py:1004
 msgid "Post has been reported, thank you!"
@@ -2656,19 +2548,19 @@ msgid "Content from %(name)s will be hidden."
 msgstr ""
 
 #: app/post/routes.py:1086
-#, fuzzy, python-format
+#, python-format
 msgid "%(name)s has been stickied."
-msgstr "Una publicació ha estat denunciada"
+msgstr ""
 
 #: app/post/routes.py:1088
-#, fuzzy, python-format
+#, python-format
 msgid "%(name)s has been un-stickied."
-msgstr "Una publicació ha estat denunciada"
+msgstr ""
 
 #: app/post/routes.py:1111
-#, fuzzy, python-format
+#, python-format
 msgid "Set flair for %(post_title)s"
-msgstr "Respondre a %(post_title)s"
+msgstr ""
 
 #: app/post/routes.py:1134
 msgid ""
@@ -2693,18 +2585,17 @@ msgid "Edit comment"
 msgstr ""
 
 #: app/post/routes.py:1316
-#, fuzzy, python-format
+#, python-format
 msgid "Deleted %(num_deleted)s comments."
-msgstr "També esborra tots els seus comentaris"
+msgstr ""
 
 #: app/post/routes.py:1319
 msgid "Are you sure you want to delete this comment?"
 msgstr ""
 
 #: app/post/routes.py:1342 app/shared/reply.py:264 app/shared/reply.py:393
-#, fuzzy
 msgid "Comment restored."
-msgstr "S'ha informat d'un comentari"
+msgstr ""
 
 #: app/post/routes.py:1414
 msgid "Comment purged."
@@ -2715,9 +2606,8 @@ msgid "Comments that have been replied to cannot be purged."
 msgstr ""
 
 #: app/post/routes.py:1464
-#, fuzzy
 msgid "Image blocked. Now delete matching posts."
-msgstr "També esborra totes les seves publicacions"
+msgstr ""
 
 #: app/post/routes.py:1470
 msgid "Are you sure you want to block this image?"
@@ -2752,14 +2642,13 @@ msgid "Retrieve Remote Post"
 msgstr ""
 
 #: app/shared/community.py:62
-#, fuzzy
 msgid "You have left the community"
-msgstr "Comunitat"
+msgstr ""
 
 #: app/shared/community.py:372
-#, fuzzy, python-format
+#, python-format
 msgid "New posts in %(community_name)s"
-msgstr "Nou missatge de \"%(community_name)s\""
+msgstr ""
 
 #: app/shared/community.py:456
 msgid "Moderator added"
@@ -2779,29 +2668,26 @@ msgid "Bookmark added."
 msgstr ""
 
 #: app/shared/post.py:87 app/shared/reply.py:76
-#, fuzzy
 msgid "Bookmark has been removed."
-msgstr "Una publicació ha estat denunciada"
+msgstr ""
 
 #: app/shared/post.py:550 app/shared/post.py:738
-#, fuzzy
 msgid "Post restored."
-msgstr "S'ha informat d'un comentari"
+msgstr ""
 
 #: app/shared/post.py:646
-#, fuzzy, python-format
+#, python-format
 msgid "%(name)s has been locked."
-msgstr "Una publicació ha estat denunciada"
+msgstr ""
 
 #: app/shared/post.py:650
-#, fuzzy, python-format
+#, python-format
 msgid "%(name)s has been unlocked."
-msgstr "Una publicació ha estat denunciada"
+msgstr ""
 
 #: app/shared/reply.py:175
-#, fuzzy
 msgid "Your comment has been added."
-msgstr "S'ha informat d'un comentari"
+msgstr ""
 
 #: app/shared/reply.py:359
 msgid "Comment deleted."
@@ -2857,9 +2743,8 @@ msgstr ""
 
 #: app/templates/_home_nav.html:5 app/templates/_home_nav.html:35
 #: app/templates/user/_read_posts_nav.html:5
-#, fuzzy
 msgid "Oldest posts"
-msgstr "També esborra totes les seves publicacions"
+msgstr ""
 
 #: app/templates/_home_nav.html:5 app/templates/_home_nav.html:36
 #: app/templates/community/_community_nav.html:15
@@ -2867,9 +2752,8 @@ msgstr "També esborra totes les seves publicacions"
 #: app/templates/community/_community_nav.html:145
 #: app/templates/feed/_feed_nav.html:42 app/templates/post/post.html:98
 #: app/user/forms.py:65
-#, fuzzy
 msgid "Old"
-msgstr "Rol"
+msgstr ""
 
 #: app/templates/_home_nav.html:6 app/templates/_home_nav.html:37
 #: app/templates/themes/dillo/_home_nav.html:12
@@ -2893,15 +2777,13 @@ msgstr ""
 
 #: app/templates/_home_nav.html:7 app/templates/_home_nav.html:39
 #: app/templates/user/_user_nav.html:8 app/templates/user/_user_nav.html:9
-#, fuzzy
 msgid "Trending in niche communities"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/templates/_home_nav.html:7 app/templates/_home_nav.html:40
 #: app/user/forms.py:67
-#, fuzzy
 msgid "Scaled"
-msgstr "S'ha desat"
+msgstr ""
 
 #: app/templates/_home_nav.html:8 app/templates/_home_nav.html:23
 #: app/templates/community/_community_nav.html:9
@@ -2939,18 +2821,16 @@ msgid "Most upvotes in the last week"
 msgstr ""
 
 #: app/templates/_home_nav.html:13 app/templates/_home_nav.html:30
-#, fuzzy
 msgid "Week"
-msgstr "1 setmana"
+msgstr ""
 
 #: app/templates/_home_nav.html:14
 msgid "Most upvotes in the last month"
 msgstr ""
 
 #: app/templates/_home_nav.html:14 app/templates/_home_nav.html:31
-#, fuzzy
 msgid "Month"
-msgstr "Un mes"
+msgstr ""
 
 #: app/templates/_home_nav.html:18 app/templates/themes/dillo/_home_nav.html:1
 #: app/templates/themes/dillo/_home_nav.html:2
@@ -2982,9 +2862,9 @@ msgid "Go to community %(name)s"
 msgstr ""
 
 #: app/templates/_macros.html:65
-#, fuzzy, python-format
+#, python-format
 msgid "Go to feed %(name)s"
-msgstr "Fer un xat amb %(name)s"
+msgstr ""
 
 #: app/templates/_side_pane.html:11
 #: app/templates/community/_community_nav.html:49
@@ -3042,9 +2922,8 @@ msgid "Settings"
 msgstr ""
 
 #: app/templates/_side_pane.html:31
-#, fuzzy, python-format
 msgid "Invite others"
-msgstr "Fer un xat amb %(name)s"
+msgstr ""
 
 #: app/templates/_side_pane.html:36
 #: app/templates/themes/dillo/_side_pane.html:22
@@ -3058,9 +2937,8 @@ msgid "Show only %(flair_name)s"
 msgstr ""
 
 #: app/templates/_side_pane.html:58
-#, fuzzy
 msgid "This community does not federate with other instances."
-msgstr "Denegar la federació amb aquests casos"
+msgstr ""
 
 #: app/templates/_side_pane.html:62 app/templates/admin/communities.html:58
 #: app/templates/themes/dillo/_side_pane.html:36
@@ -3069,9 +2947,8 @@ msgstr ""
 
 #: app/templates/_side_pane.html:62
 #: app/templates/themes/dillo/_side_pane.html:36
-#, fuzzy
 msgid "Local members"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/templates/_side_pane.html:63
 #: app/templates/community/_community_nav.html:51
@@ -3130,9 +3007,9 @@ msgid "View community on original server"
 msgstr ""
 
 #: app/templates/_side_pane.html:90
-#, fuzzy, python-format
+#, python-format
 msgid "Move community to %(instance_domain)s"
-msgstr "Només accepta publicacions de la instància actual"
+msgstr ""
 
 #: app/templates/_side_pane.html:92
 #: app/templates/themes/dillo/_side_pane.html:54
@@ -3151,19 +3028,16 @@ msgstr ""
 #: app/templates/themes/dillo/_side_pane.html:120
 #: app/templates/themes/dillo/index.html:33
 #: app/templates/topic/show_topic.html:114
-#, fuzzy
 msgid "More communities"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/templates/_side_pane.html:133
-#, fuzzy
 msgid "More feeds"
-msgstr "Tema principal"
+msgstr ""
 
 #: app/templates/_view_filter_nav.html:5 app/templates/_view_filter_nav.html:17
-#, fuzzy
 msgid "Posts from communities you moderate"
-msgstr "Nou missatge de \"%(community_name)s\""
+msgstr ""
 
 #: app/templates/_view_filter_nav.html:5 app/templates/_view_filter_nav.html:18
 #: app/templates/communities_menu.html:48 app/templates/topics_menu.html:14
@@ -3173,15 +3047,13 @@ msgstr ""
 
 #: app/templates/_view_filter_nav.html:7 app/templates/_view_filter_nav.html:20
 #: app/templates/themes/dillo/_view_filter_nav.html:4
-#, fuzzy
 msgid "Posts from joined communities"
-msgstr "Nou missatge de \"%(community_name)s\""
+msgstr ""
 
 #: app/templates/_view_filter_nav.html:9 app/templates/_view_filter_nav.html:22
 #: app/templates/themes/dillo/_view_filter_nav.html:8
-#, fuzzy
 msgid "Posts on this instance"
-msgstr "Només accepta publicacions de la instància actual"
+msgstr ""
 
 #: app/templates/_view_filter_nav.html:10
 #: app/templates/_view_filter_nav.html:24
@@ -3210,23 +3082,20 @@ msgid "About %(site_name)s"
 msgstr ""
 
 #: app/templates/about.html:16
-#, fuzzy
 msgid "Team"
-msgstr "Nom d'usuari"
+msgstr ""
 
 #: app/templates/about.html:21
 msgid "Contact"
 msgstr ""
 
 #: app/templates/about.html:23
-#, fuzzy
 msgid "About Us"
-msgstr "Disposició"
+msgstr ""
 
 #: app/templates/about.html:31
-#, fuzzy
 msgid "Legal Information"
-msgstr "Informació legal"
+msgstr ""
 
 #: app/templates/about.html:33
 msgid "Our Privacy Policy"
@@ -3238,9 +3107,8 @@ msgid "PieFed"
 msgstr ""
 
 #: app/templates/base.html:125 app/templates/themes/dillo/base.html:62
-#, fuzzy
 msgid "To home page"
-msgstr "Les publicacions es mostren a la pàgina d'inici"
+msgstr ""
 
 #: app/templates/base.html:127 app/templates/base.html:203
 #: app/templates/themes/dillo/base.html:78
@@ -3285,19 +3153,16 @@ msgid "Bookmarks"
 msgstr ""
 
 #: app/templates/base.html:174 app/templates/themes/dillo/base.html:153
-#, fuzzy
 msgid "Activity Alerts"
-msgstr "Activitat JSON"
+msgstr ""
 
 #: app/templates/base.html:177
-#, fuzzy
 msgid "Manage donations"
-msgstr "Tema principal"
+msgstr ""
 
 #: app/templates/base.html:180 app/templates/themes/dillo/base.html:156
-#, fuzzy
 msgid "Read Posts"
-msgstr "Informe"
+msgstr ""
 
 #: app/templates/base.html:182 app/templates/themes/dillo/base.html:158
 msgid "Log out"
@@ -3306,9 +3171,8 @@ msgstr ""
 #: app/templates/admin/_nav.html:36 app/templates/base.html:194
 #: app/templates/community/community_modlog.html:18
 #: app/templates/themes/dillo/base.html:166
-#, fuzzy
 msgid "Modlog"
-msgstr "Mode de prova"
+msgstr ""
 
 #: app/templates/admin/_nav.html:38 app/templates/base.html:196
 #: app/templates/dev/tools.html:10 app/templates/themes/dillo/base.html:168
@@ -3357,9 +3221,8 @@ msgstr ""
 
 #: app/templates/communities_menu.html:45
 #: app/templates/communities_menu.html:82
-#, fuzzy
 msgid "Local communities"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/templates/communities_menu.html:46
 #: app/templates/communities_menu.html:83
@@ -3377,9 +3240,8 @@ msgstr ""
 #: app/templates/communities_menu.html:74
 #: app/templates/themes/dillo/base.html:90
 #: app/templates/themes/dillo/base.html:115 app/templates/topics_menu.html:7
-#, fuzzy
 msgid "More topics"
-msgstr "Tema principal"
+msgstr ""
 
 #: app/templates/donate.html:11 app/templates/user/choose_plan.html:63
 msgid ""
@@ -3450,9 +3312,8 @@ msgid "Next page"
 msgstr ""
 
 #: app/templates/index.html:52 app/templates/themes/dillo/_side_pane.html:108
-#, fuzzy
 msgid "New communities"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/templates/index.html:68 app/templates/search/results.html:75
 #: app/templates/themes/dillo/_side_pane.html:116
@@ -3507,9 +3368,8 @@ msgid "Joined"
 msgstr ""
 
 #: app/templates/list_communities.html:23
-#, fuzzy
 msgid "Not Joined communities"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/templates/list_communities.html:24
 msgid "Not Joined"
@@ -3530,9 +3390,8 @@ msgid "Choose a topic to filter communities by"
 msgstr ""
 
 #: app/templates/list_communities.html:61
-#, fuzzy
 msgid "Feed"
-msgstr "Per sempre"
+msgstr ""
 
 #: app/templates/list_communities.html:63
 msgid "Choose a public feed to filter communities by"
@@ -3575,14 +3434,12 @@ msgid "There are no communities yet."
 msgstr ""
 
 #: app/templates/list_communities.html:216
-#, fuzzy
 msgid "No communities match your search."
-msgstr "Comunitats"
+msgstr ""
 
 #: app/templates/list_communities.html:221
-#, fuzzy
 msgid "Leave all communities"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/templates/list_topics.html:25
 msgid "Choose a topic"
@@ -3593,9 +3450,8 @@ msgid "Suggest a topic"
 msgstr ""
 
 #: app/templates/modlog.html:12
-#, fuzzy
 msgid "Moderation log"
-msgstr "Configuració de la Federació"
+msgstr ""
 
 #: app/templates/community/community_modlog.html:32
 #: app/templates/community/community_wiki_revisions.html:31
@@ -3605,20 +3461,18 @@ msgstr ""
 
 #: app/templates/community/community_modlog.html:33
 #: app/templates/modlog.html:19 app/templates/post/_post_reply_teaser.html:36
-#, fuzzy
 msgid "Moderator"
-msgstr "Mode de prova"
+msgstr ""
 
 #: app/templates/modlog.html:45
-#, fuzzy, python-format
+#, python-format
 msgid " in %(community_name)s"
-msgstr "Nou missatge de \"%(community_name)s\""
+msgstr ""
 
 #: app/templates/community/community_modlog.html:49
 #: app/templates/modlog.html:48
-#, fuzzy
 msgid "Reason:"
-msgstr "Motiu"
+msgstr ""
 
 #: app/templates/modlog.html:56
 msgid "There are no moderation actions to show."
@@ -3629,14 +3483,13 @@ msgid "Privacy"
 msgstr ""
 
 #: app/templates/share.html:16
-#, fuzzy, python-format
+#, python-format
 msgid "Share %(title)s"
-msgstr "Respondre a %(post_title)s"
+msgstr ""
 
 #: app/templates/share.html:18
-#, fuzzy
 msgid "This link has already been shared in these communities:"
-msgstr "Les imatges no es poden publicar a les comunitats locals."
+msgstr ""
 
 #: app/templates/admin/_nav.html:2
 msgid "Admin navigation"
@@ -3649,9 +3502,8 @@ msgstr ""
 #: app/templates/admin/_nav.html:16 app/templates/admin/_tabbed_nav.html:19
 #: app/templates/admin/content.html:17 app/user/forms.py:18
 #: app/user/forms.py:20 app/user/forms.py:22 app/user/forms.py:24
-#, fuzzy
 msgid "Content"
-msgstr "Retenir el contingut"
+msgstr ""
 
 #: app/templates/admin/_nav.html:19
 msgid "Registration applications"
@@ -3685,33 +3537,29 @@ msgid "Permissions"
 msgstr ""
 
 #: app/templates/admin/_tabbed_nav.html:5
-#, fuzzy
 msgid "Site"
-msgstr "Títol"
+msgstr ""
 
 #: app/templates/admin/_tabbed_nav.html:6
 msgid "Misc"
 msgstr ""
 
 #: app/templates/admin/_tabbed_nav.html:16 app/templates/admin/misc.html:35
-#, fuzzy
 msgid "Registration"
-msgstr "Mode de registre"
+msgstr ""
 
 #: app/templates/admin/_tabbed_nav.html:23
 #: app/templates/admin/cms_pages.html:15
-#, fuzzy
 msgid "Pages"
-msgstr "Imatge"
+msgstr ""
 
 #: app/templates/admin/add_user.html:12
 msgid "Add new user"
 msgstr ""
 
 #: app/templates/admin/approve_registrations.html:14
-#, fuzzy
 msgid "Registrations"
-msgstr "Mode de registre"
+msgstr ""
 
 #: app/templates/admin/approve_registrations.html:16
 #, python-format
@@ -3720,15 +3568,13 @@ msgstr ""
 
 #: app/templates/admin/approve_registrations.html:24
 #: app/templates/admin/approve_registrations.html:65
-#, fuzzy
 msgid "Email verifed"
-msgstr "Adreça de correu electrònic verificada"
+msgstr ""
 
 #: app/templates/admin/approve_registrations.html:25
 #: app/templates/admin/approve_registrations.html:66
-#, fuzzy
 msgid "Answer"
-msgstr "Usuari"
+msgstr ""
 
 #: app/templates/admin/approve_registrations.html:26
 #: app/templates/admin/approve_registrations.html:67
@@ -3754,9 +3600,8 @@ msgstr ""
 #: app/templates/community/community_moderate_subscribers.html:50
 #: app/templates/community/community_wiki_revisions.html:43
 #: app/templates/feed/_feed_nav.html:6 app/templates/feed/public_feeds.html:72
-#, fuzzy
 msgid "Actions"
-msgstr "Mode de registre"
+msgstr ""
 
 #: app/templates/admin/approve_registrations.html:36
 msgid "Throwaway email account, the kind spammers and trolls use."
@@ -3794,9 +3639,8 @@ msgstr ""
 
 #: app/templates/admin/blocked_images.html:20
 #: app/templates/admin/blocked_images.html:27
-#, fuzzy
 msgid "File"
-msgstr "Títol"
+msgstr ""
 
 #: app/templates/admin/blocked_images.html:29
 #: app/templates/admin/cms_pages.html:39
@@ -3813,9 +3657,8 @@ msgid "Edit"
 msgstr ""
 
 #: app/templates/admin/cms_page_delete.html:15
-#, fuzzy
 msgid "Delete CMS Page"
-msgstr "També esborra tots els seus comentaris"
+msgstr ""
 
 #: app/templates/admin/cms_page_delete.html:16
 msgid "Back to Pages"
@@ -3834,42 +3677,36 @@ msgid "Page Details"
 msgstr ""
 
 #: app/templates/admin/cms_page_delete.html:29
-#, fuzzy
 msgid "Title:"
-msgstr "Títol"
+msgstr ""
 
 #: app/templates/admin/cms_page_delete.html:30
-#, fuzzy
 msgid "URL:"
-msgstr "URL"
+msgstr ""
 
 #: app/templates/admin/cms_page_delete.html:31
 msgid "Last edited by:"
 msgstr ""
 
 #: app/templates/admin/cms_page_delete.html:32
-#, fuzzy
 msgid "Last edited:"
-msgstr "Envia"
+msgstr ""
 
 #: app/templates/admin/cms_page_delete.html:33
-#, fuzzy
 msgid "Created:"
-msgstr "Crea"
+msgstr ""
 
 #: app/templates/admin/cms_page_delete.html:36
-#, fuzzy
 msgid "Content preview:"
-msgstr "Retenir el contingut"
+msgstr ""
 
 #: app/templates/admin/cms_page_delete.html:46
 msgid "Yes, Delete This Page"
 msgstr ""
 
 #: app/templates/admin/cms_page_delete.html:47
-#, fuzzy
 msgid "Cancel"
-msgstr "Eslògan"
+msgstr ""
 
 #: app/templates/admin/cms_page_edit.html:24
 msgid "The URL path where this page will be accessible (e.g., /about-us)"
@@ -3883,9 +3720,8 @@ msgstr ""
 
 #: app/templates/admin/cms_page_edit.html:38
 #: app/templates/post/post_edit.html:74
-#, fuzzy
 msgid "Preview"
-msgstr "Per sempre"
+msgstr ""
 
 #: app/templates/admin/cms_page_edit.html:54
 msgid "Markdown Help"
@@ -3900,24 +3736,20 @@ msgid "Lists, tables, and other Markdown features are supported."
 msgstr ""
 
 #: app/templates/admin/cms_pages.html:16
-#, fuzzy
 msgid "Add new page"
-msgstr "Fer un xat amb %(name)s"
+msgstr ""
 
 #: app/templates/admin/cms_pages.html:26
-#, fuzzy
 msgid "Last Edited By"
-msgstr "Envia"
+msgstr ""
 
 #: app/templates/admin/cms_pages.html:27
-#, fuzzy
 msgid "Last Edited"
-msgstr "Envia"
+msgstr ""
 
 #: app/templates/admin/cms_pages.html:48
-#, fuzzy
 msgid "No pages have been created yet."
-msgstr "Només accepta publicacions de la instància actual"
+msgstr ""
 
 #: app/templates/admin/communities.html:57
 #: app/templates/admin/communities.html:101
@@ -3930,21 +3762,18 @@ msgid "Content retention duration"
 msgstr ""
 
 #: app/templates/admin/communities.html:64
-#, fuzzy
 msgid "Retention"
-msgstr "Mode de registre"
+msgstr ""
 
 #: app/templates/admin/communities.html:70
 #: app/templates/admin/communities.html:104
-#, fuzzy
 msgid "Posts can be popular."
-msgstr "Les publicacions poden ser populars"
+msgstr ""
 
 #: app/templates/admin/communities.html:76
 #: app/templates/admin/communities.html:105
-#, fuzzy
 msgid "Posts show in the All feed."
-msgstr "Les publicacions es mostren a tota la llista"
+msgstr ""
 
 #: app/templates/admin/communities.html:82
 #: app/templates/admin/communities.html:106
@@ -3960,9 +3789,8 @@ msgid "Number of posts"
 msgstr ""
 
 #: app/templates/admin/communities.html:107
-#, fuzzy
 msgid "Last activity"
-msgstr "Activitat JSON"
+msgstr ""
 
 #: app/templates/admin/communities.html:109
 #: app/templates/community/_community_nav.html:64
@@ -3972,19 +3800,17 @@ msgstr ""
 
 #: app/templates/admin/community_move.html:12
 #: app/templates/community/community_move.html:20
-#, fuzzy, python-format
+#, python-format
 msgid "Move %(community)s to %(instance_domain)s"
-msgstr "Només accepta publicacions de la instància actual"
+msgstr ""
 
 #: app/templates/admin/content.html:49
-#, fuzzy
 msgid "No posts."
-msgstr "També esborra totes les seves publicacions"
+msgstr ""
 
 #: app/templates/admin/content.html:74
-#, fuzzy
 msgid "No comments."
-msgstr "També esborra tots els seus comentaris"
+msgstr ""
 
 #: app/templates/admin/edit_blocked_image.html:13
 #, python-format
@@ -4001,9 +3827,8 @@ msgid "Will not be overwritten by remote server"
 msgstr ""
 
 #: app/templates/admin/edit_community.html:61
-#, fuzzy
 msgid "Convert to local community"
-msgstr "Comunitat"
+msgstr ""
 
 #: app/templates/admin/edit_instance.html:13
 #, python-format
@@ -4061,14 +3886,12 @@ msgstr ""
 #: app/templates/instance/list_instances.html:19
 #: app/templates/instance/list_instances.html:34
 #: app/templates/instance/list_instances.html:51
-#, fuzzy
 msgid "Online"
-msgstr "Eslògan"
+msgstr ""
 
 #: app/templates/admin/instances.html:24
-#, fuzzy
 msgid "Blocked"
-msgstr "Tancat"
+msgstr ""
 
 #: app/templates/admin/instances.html:28 app/templates/admin/instances.html:29
 #: app/templates/admin/instances.html:88
@@ -4084,14 +3907,12 @@ msgstr ""
 #: app/templates/admin/instances.html:40 app/templates/admin/instances.html:41
 #: app/templates/admin/instances.html:90
 #: app/templates/instance/list_instances.html:31
-#, fuzzy
 msgid "Version"
-msgstr "Motiu"
+msgstr ""
 
 #: app/templates/admin/instances.html:45 app/templates/admin/instances.html:91
-#, fuzzy
 msgid "Known Communities"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/templates/admin/instances.html:46 app/templates/admin/instances.html:92
 msgid "Known Users"
@@ -4107,18 +3928,16 @@ msgid "When an Activity was received from them"
 msgstr ""
 
 #: app/templates/admin/instances.html:62 app/templates/admin/users.html:74
-#, fuzzy
 msgid "Seen"
-msgstr "Envia"
+msgstr ""
 
 #: app/templates/admin/instances.html:67
 msgid "When we successfully sent them an Activity"
 msgstr ""
 
 #: app/templates/admin/instances.html:68 app/templates/admin/instances.html:97
-#, fuzzy
 msgid "Sent"
-msgstr "Envia"
+msgstr ""
 
 #: app/templates/admin/instances.html:73
 msgid "How many times we failed to send (reset to 0 after every successful send)"
@@ -4139,14 +3958,12 @@ msgid "Status"
 msgstr ""
 
 #: app/templates/admin/instances.html:96 app/templates/admin/users.html:89
-#, fuzzy
 msgid "Last Seen"
-msgstr "Envia"
+msgstr ""
 
 #: app/templates/admin/misc.html:17
-#, fuzzy
 msgid "Content settings"
-msgstr "Altres Configuracions"
+msgstr ""
 
 #: app/templates/admin/misc.html:20
 msgid "CSS in this field will be added to every page."
@@ -4204,9 +4021,8 @@ msgid "This user has been banned."
 msgstr ""
 
 #: app/templates/admin/users.html:55
-#, fuzzy
 msgid "How often a user has been reported."
-msgstr "Una publicació ha estat denunciada"
+msgstr ""
 
 #: app/templates/admin/users.html:61
 msgid "Attitude: Percentage of up votes vs. down votes the account made."
@@ -4228,9 +4044,8 @@ msgstr ""
 #: app/templates/admin/users.html:68 app/templates/admin/users.html:88
 #: app/templates/user/show_profile.html:135
 #: app/templates/user/user_preview.html:25
-#, fuzzy
 msgid "Reputation"
-msgstr "Mode de registre"
+msgstr ""
 
 #: app/templates/admin/users.html:73
 msgid "Last seen."
@@ -4313,9 +4128,8 @@ msgid ""
 msgstr ""
 
 #: app/templates/auth/register.html:28
-#, fuzzy
 msgid "List of open PieFed instances"
-msgstr "Només accepta publicacions de la instància actual"
+msgstr ""
 
 #: app/templates/auth/register.html:28
 msgid "Try PieFed"
@@ -4493,9 +4307,8 @@ msgstr ""
 
 #: app/templates/community/_community_nav.html:39
 #: app/templates/community/_community_nav.html:115
-#, fuzzy
 msgid "Content type"
-msgstr "Retenir el contingut"
+msgstr ""
 
 #: app/templates/community/_community_nav.html:45
 #: app/templates/community/_community_nav.html:121
@@ -4504,26 +4317,22 @@ msgstr ""
 
 #: app/templates/community/_community_nav.html:53
 #: app/templates/feed/_feed_nav.html:11
-#, fuzzy
 msgid "About community"
-msgstr "Comunitat pornogràfica"
+msgstr ""
 
 #: app/templates/community/_community_nav.html:125
 #: app/templates/topic/show_topic.html:96
-#, fuzzy
 msgid "Create feed"
-msgstr "Crea"
+msgstr ""
 
 #: app/templates/community/_community_nav.html:152
-#, fuzzy
 msgid "Show posts"
-msgstr "Mostra les publicacions NSFW"
+msgstr ""
 
 #: app/templates/community/_community_nav.html:156
 #: app/templates/community/_community_nav.html:160
-#, fuzzy
 msgid "Show comments"
-msgstr "També esborra tots els seus comentaris"
+msgstr ""
 
 #: app/templates/community/_join_button.html:2
 #: app/templates/feed/_feed_table_row.html:7
@@ -4614,9 +4423,8 @@ msgid "Found a community:"
 msgstr ""
 
 #: app/templates/community/check_url_posted.html:2
-#, fuzzy
 msgid "This link has already been posted to these communities:"
-msgstr "Les imatges no es poden publicar a les comunitats locals."
+msgstr ""
 
 #: app/templates/community/community.html:30
 #: app/templates/community/community.html:52
@@ -4689,21 +4497,19 @@ msgstr ""
 #: app/templates/community/community_find_moderator.html:33
 #: app/templates/community/community_flair.html:26
 msgid "Add"
-msgstr "Afegeix"
+msgstr ""
 
 #: app/templates/community/community_find_moderator.html:35
-#, fuzzy
 msgid "Already a moderator"
-msgstr "Abandonat pels moderadors"
+msgstr ""
 
 #: app/templates/community/community_find_moderator.html:43
 msgid "No people found"
 msgstr ""
 
 #: app/templates/community/community_flair.html:27
-#, fuzzy
 msgid "Posts can be categorized using flair."
-msgstr "Les publicacions poden ser populars"
+msgstr ""
 
 #: app/templates/community/community_flair.html:48
 msgid "This community has no flair yet."
@@ -4734,9 +4540,8 @@ msgid "Local/Remote"
 msgstr ""
 
 #: app/templates/community/community_moderate.html:39
-#, fuzzy
 msgid "Reasons"
-msgstr "Motiu"
+msgstr ""
 
 #: app/templates/community/community_moderate.html:41
 #: app/templates/search/start.html:41
@@ -4744,9 +4549,8 @@ msgid "Type"
 msgstr ""
 
 #: app/templates/community/community_moderate.html:42
-#, fuzzy
 msgid "Created"
-msgstr "Crea"
+msgstr ""
 
 #: app/templates/community/community_moderate.html:68
 msgid "Escalate"
@@ -4765,9 +4569,9 @@ msgid "No reports yet"
 msgstr ""
 
 #: app/templates/community/community_moderate_comments.html:30
-#, fuzzy, python-format
+#, python-format
 msgid "Review comments in %(community)s"
-msgstr "Nou missatge de \"%(community_name)s\""
+msgstr ""
 
 #: app/templates/community/community_moderate_comments.html:40
 #: app/templates/user/show_profile.html:215
@@ -4795,9 +4599,8 @@ msgid "See who is subscribed to %(community)s"
 msgstr ""
 
 #: app/templates/community/community_moderate_subscribers.html:58
-#, fuzzy
 msgid "Kick"
-msgstr "Fixat"
+msgstr ""
 
 #: app/templates/community/community_moderate_subscribers.html:80
 msgid "This community has no subscribers"
@@ -4824,9 +4627,9 @@ msgid "No banned people yet"
 msgstr ""
 
 #: app/templates/community/community_modlog.html:24
-#, fuzzy, python-format
+#, python-format
 msgid "Moderation actions in %(community)s"
-msgstr "Nou missatge de \"%(community_name)s\""
+msgstr ""
 
 #: app/templates/community/community_modlog.html:26
 msgid "See things moderators have done in this community."
@@ -4837,9 +4640,8 @@ msgid "This community has had no moderation actions yet."
 msgstr ""
 
 #: app/templates/community/community_move.html:16
-#, fuzzy
 msgid "Move"
-msgstr "Mode de prova"
+msgstr ""
 
 #: app/templates/community/community_move.html:22
 msgid "The process to move a community to this instance is:"
@@ -4886,14 +4688,13 @@ msgid ""
 msgstr ""
 
 #: app/templates/community/community_wiki_list.html:23
-#, fuzzy, python-format
+#, python-format
 msgid "Wiki pages for %(community)s"
-msgstr "Nou missatge de \"%(community_name)s\""
+msgstr ""
 
 #: app/templates/community/community_wiki_list.html:49
-#, fuzzy
 msgid "View page"
-msgstr "Fer un xat amb %(name)s"
+msgstr ""
 
 #: app/templates/community/community_wiki_list.html:50
 msgid "View revisions"
@@ -4908,19 +4709,18 @@ msgid "There are no wiki pages in this community."
 msgstr ""
 
 #: app/templates/community/community_wiki_revisions.html:23
-#, fuzzy, python-format
+#, python-format
 msgid "Revisions of %(title)s"
-msgstr "Respondre a %(post_title)s"
+msgstr ""
 
 #: app/templates/community/community_wiki_revisions.html:49
-#, fuzzy
 msgid "Revert"
-msgstr "Per sempre"
+msgstr ""
 
 #: app/templates/community/invite.html:20
-#, fuzzy, python-format
+#, python-format
 msgid "Invite to %(name)s"
-msgstr "Fer un xat amb %(name)s"
+msgstr ""
 
 #: app/templates/community/invite.html:25
 msgid ""
@@ -4939,19 +4739,16 @@ msgid ""
 msgstr ""
 
 #: app/templates/dev/tools.html:16
-#, fuzzy
 msgid "Add Dev Communities"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/templates/dev/tools.html:26
-#, fuzzy
 msgid "Add Dev Topics"
-msgstr "Tema principal"
+msgstr ""
 
 #: app/templates/dev/tools.html:38
-#, fuzzy
 msgid "Delete Dev Communities"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/templates/dev/tools.html:48
 msgid "Delete Dev Topics"
@@ -5026,9 +4823,8 @@ msgid "Sorry, access is denied"
 msgstr ""
 
 #: app/templates/errors/401.html:15
-#, fuzzy
 msgid "You cannot access this area."
-msgstr "Si us plau, inicia sessió per visualitzar aquesta pàgina."
+msgstr ""
 
 #: app/templates/errors/401.html:16 app/templates/errors/429.html:19
 #: app/templates/errors/500.html:16 app/templates/user/edit_note.html:47
@@ -5110,9 +4906,9 @@ msgstr ""
 
 #: app/templates/feed/_feed_table_row.html:5
 #: app/templates/feed/public_feeds.html:26
-#, fuzzy, python-format
+#, python-format
 msgid "Unsubscribe %(name)s"
-msgstr "Fer un xat amb %(name)s"
+msgstr ""
 
 #: app/templates/feed/_feed_table_row.html:5
 #: app/templates/feed/lookup_remote.html:21
@@ -5129,9 +4925,8 @@ msgid "Edit Feed"
 msgstr ""
 
 #: app/templates/feed/_notification_toggle.html:5
-#, fuzzy
 msgid "Notify about every new post. Not advisable in high traffic feeds!"
-msgstr "Notificar sobre les respostes"
+msgstr ""
 
 #: app/templates/feed/add_remote.html:30
 #: app/templates/feed/lookup_remote.html:15
@@ -5164,28 +4959,25 @@ msgstr ""
 #: app/templates/feed/feed_create_post.html:38
 #: app/templates/topic/topic_create_post.html:23
 #: app/templates/topic/topic_create_post.html:38
-#, fuzzy, python-format
+#, python-format
 msgid "View %(name)s"
-msgstr "Fer un xat amb %(name)s"
+msgstr ""
 
 #: app/templates/feed/feed_new.html:13
-#, fuzzy
 msgid "Create Feed"
-msgstr "Crea"
+msgstr ""
 
 #: app/templates/feed/public_feeds.html:16
-#, fuzzy
 msgid "Add a Feed from another instance"
-msgstr "Incompleix les regles de la instància"
+msgstr ""
 
 #: app/templates/feed/public_feeds.html:16
 msgid "Add remote Feed"
 msgstr ""
 
 #: app/templates/feed/public_feeds.html:71
-#, fuzzy
 msgid "Creator"
-msgstr "Crea"
+msgstr ""
 
 #: app/templates/feed/public_feeds.html:84
 msgid "No Public Feeds yet..."
@@ -5197,21 +4989,18 @@ msgid "Sub-feeds"
 msgstr ""
 
 #: app/templates/feed/show_feed.html:117
-#, fuzzy
 msgid "No posts in this feed yet."
-msgstr "Només accepta publicacions de la instància actual"
+msgstr ""
 
 #: app/templates/feed/show_feed.html:172
-#, fuzzy
 msgid "Feed communities"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/templates/instance/list_instances.html:28
 #: app/templates/user/show_profile.html:128
 #: app/templates/user/user_preview.html:13
-#, fuzzy
 msgid "Instance"
-msgstr "Instància bloquejada."
+msgstr ""
 
 #: app/templates/instance/list_instances.html:29
 msgid "More details"
@@ -5222,9 +5011,8 @@ msgid "Heard from"
 msgstr ""
 
 #: app/templates/instance/list_instances.html:33
-#, fuzzy
 msgid "Sent to"
-msgstr "Tema principal"
+msgstr ""
 
 #: app/templates/instance/list_instances.html:47
 msgid "Gone"
@@ -5260,9 +5048,8 @@ msgid "No people to show"
 msgstr ""
 
 #: app/templates/instance/posts.html:27
-#, fuzzy
 msgid "No posts from this instance yet."
-msgstr "Només accepta publicacions de la instància actual"
+msgstr ""
 
 #: app/templates/post/_comment_voting_buttons.html:4
 #: app/templates/post/reply/_macros.html:8
@@ -5307,9 +5094,8 @@ msgid "Archive.ph link"
 msgstr ""
 
 #: app/templates/post/_post_full.html:121
-#, fuzzy
 msgid "Licence"
-msgstr "Eslògan"
+msgstr ""
 
 #: app/templates/post/_post_full.html:127
 msgid "The poll has finished, yet no votes were cast."
@@ -5325,9 +5111,8 @@ msgid "Poll closes"
 msgstr ""
 
 #: app/templates/post/_post_full.html:161
-#, fuzzy
 msgid "Vote"
-msgstr "Altres"
+msgstr ""
 
 #: app/templates/post/_post_full.html:170
 msgid "Hashtags"
@@ -5363,19 +5148,16 @@ msgstr ""
 
 #: app/templates/post/_post_reply_teaser.html:51
 #: app/templates/post/add_reply_inline_result.html:68
-#, fuzzy
 msgid "Comment deleted"
-msgstr "S'ha suprimit la conversa"
+msgstr ""
 
 #: app/templates/post/_post_reply_teaser.html:63
-#, fuzzy
 msgid "Deleted by moderator"
-msgstr "Abandonat pels moderadors"
+msgstr ""
 
 #: app/templates/post/_post_reply_teaser.html:65
-#, fuzzy
 msgid "Deleted by author"
-msgstr "També esborra totes les seves publicacions"
+msgstr ""
 
 #: app/templates/post/_post_reply_teaser.html:111
 #: app/templates/post/add_reply_inline_result.html:113
@@ -5426,9 +5208,8 @@ msgstr ""
 #: app/templates/post/add_reply.html:28 app/templates/post/post.html:42
 #: app/templates/post/post_edit.html:145
 #: app/templates/post/post_reply_edit.html:27
-#, fuzzy
 msgid "More options"
-msgstr "Tema principal"
+msgstr ""
 
 #: app/templates/post/add_reply.html:49 app/templates/post/post.html:63
 #: app/templates/post/post_edit.html:90 app/templates/user/edit_profile.html:44
@@ -5460,53 +5241,47 @@ msgid "Show newest first"
 msgstr ""
 
 #: app/templates/post/post.html:97
-#, fuzzy
 msgid "Show oldest first"
-msgstr "Mostra les publicacions NSFW"
+msgstr ""
 
 #: app/templates/post/post.html:111
-#, fuzzy
 msgid "Comments from other communities"
-msgstr "Nou missatge de \"%(community_name)s\""
+msgstr ""
 
 #: app/templates/post/post.html:116
-#, fuzzy, python-format
+#, python-format
 msgid "Comments in %(name)s"
-msgstr "Fer un xat amb %(name)s"
+msgstr ""
 
 #: app/templates/post/post.html:127
-#, fuzzy
 msgid "Community options"
-msgstr "Adreça de la comunitat"
+msgstr ""
 
 #: app/templates/post/post.html:137
-#, fuzzy
 msgid "Community description"
-msgstr "Adreça de la comunitat"
+msgstr ""
 
 #: app/templates/post/post.html:139 app/templates/post/post_options.html:54
-#, fuzzy, python-format
+#, python-format
 msgid "Block community %(community_name)s"
-msgstr "Nou missatge de \"%(community_name)s\""
+msgstr ""
 
 #: app/templates/post/post_block_image_purge_posts.html:13
-#, fuzzy, python-format
+#, python-format
 msgid "Delete %(count)s posts"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/templates/post/post_block_image_purge_posts.html:17
 msgid "Select all"
 msgstr ""
 
 #: app/templates/post/post_block_image_purge_posts.html:19
-#, fuzzy
 msgid "Poster"
-msgstr "Altres"
+msgstr ""
 
 #: app/templates/post/post_block_image_purge_posts.html:20
-#, fuzzy
 msgid "Date"
-msgstr "Crea"
+msgstr ""
 
 #: app/templates/post/post_cross_post.html:18
 #, python-format
@@ -5540,9 +5315,8 @@ msgid ""
 msgstr ""
 
 #: app/templates/post/post_edit.html:170
-#, fuzzy
 msgid "Share on PieFed"
-msgstr "Tema principal"
+msgstr ""
 
 #: app/templates/post/post_embed_code.html:28
 msgid "Copy to clipboard"
@@ -5567,9 +5341,8 @@ msgstr ""
 #: app/templates/post/post_options.html:9
 #: app/templates/post/post_reply_options.html:22
 #: app/templates/post/post_reply_options.html:25
-#, fuzzy
 msgid "Restore"
-msgstr "Mode de prova"
+msgstr ""
 
 #: app/templates/post/post_options.html:11
 #: app/templates/post/post_reply_options.html:32
@@ -5581,9 +5354,8 @@ msgid "Set flair"
 msgstr ""
 
 #: app/templates/post/post_options.html:22
-#, fuzzy
 msgid "Un-sticky"
-msgstr "Fixat"
+msgstr ""
 
 #: app/templates/post/post_options.html:29
 msgid "Lock"
@@ -5595,9 +5367,8 @@ msgstr ""
 
 #: app/templates/post/post_options.html:37
 #: app/templates/post/post_reply_options.html:38
-#, fuzzy
 msgid "Remove bookmark"
-msgstr "Esborra el bàner"
+msgstr ""
 
 #: app/templates/post/post_options.html:40
 #: app/templates/post/post_reply_options.html:41
@@ -5618,9 +5389,9 @@ msgid "Block post author @%(author_name)s"
 msgstr ""
 
 #: app/templates/post/post_options.html:57
-#, fuzzy, python-format
+#, python-format
 msgid "Ban post author @%(author_name)s from %(community_name)s"
-msgstr "Nou missatge de \"%(community_name)s\""
+msgstr ""
 
 #: app/templates/post/post_options.html:61
 #, python-format
@@ -5643,9 +5414,8 @@ msgid "View original on %(domain)s"
 msgstr ""
 
 #: app/templates/post/post_options.html:80
-#, fuzzy
 msgid "Get embed code"
-msgstr "Mode de prova"
+msgstr ""
 
 #: app/templates/post/post_options.html:83
 #: app/templates/post/post_reply_options.html:57
@@ -5662,9 +5432,9 @@ msgid "Block author @%(author_name)s"
 msgstr ""
 
 #: app/templates/post/post_reply_options.html:48
-#, fuzzy, python-format
+#, python-format
 msgid "Ban @%(author_name)s from %(community_name)s"
-msgstr "Nou missatge de \"%(community_name)s\""
+msgstr ""
 
 #: app/templates/post/post_reply_options.html:52
 #, python-format
@@ -5687,27 +5457,25 @@ msgid "Report \"%(post_title)s\""
 msgstr ""
 
 #: app/templates/post/post_voting_activity.html:11
-#, fuzzy, python-format
+#, python-format
 msgid "Voting Activity for \"%(post_title)s\""
-msgstr "Respondre a %(post_title)s"
+msgstr ""
 
 #: app/templates/post/post_teaser/_macros.html:27
 msgid "All posts about this domain"
 msgstr ""
 
 #: app/templates/post/post_teaser/_macros.html:43
-#, fuzzy
 msgid "Post deleted"
-msgstr "S'ha suprimit la conversa"
+msgstr ""
 
 #: app/templates/post/post_teaser/_macros.html:61
 msgid "Number of comments:"
 msgstr ""
 
 #: app/templates/post/post_teaser/_macros.html:128
-#, fuzzy
 msgid "Join this community"
-msgstr "Comunitat"
+msgstr ""
 
 #: app/templates/post/post_teaser/_macros.html:153
 #: app/templates/post/post_teaser/_macros.html:155
@@ -5736,9 +5504,8 @@ msgid "No posts match your search."
 msgstr ""
 
 #: app/templates/search/start.html:18
-#, fuzzy
 msgid "Search for..."
-msgstr "Cerca"
+msgstr ""
 
 #: app/templates/search/start.html:20
 msgid "What to search for: "
@@ -5753,9 +5520,8 @@ msgid "optional"
 msgstr ""
 
 #: app/templates/search/start.html:59
-#, fuzzy
 msgid "Instance Software"
-msgstr "Instància bloquejada."
+msgstr ""
 
 #: app/templates/search/start.html:69
 msgid "Sort by"
@@ -5844,9 +5610,8 @@ msgid "Tags containing \"%(search)s\""
 msgstr ""
 
 #: app/templates/tag/tags.html:24 app/templates/tag/tags_blocked.html:24
-#, fuzzy
 msgid "Banned tags"
-msgstr "Expulsat"
+msgstr ""
 
 #: app/templates/tag/tags.html:38 app/templates/tag/tags_blocked.html:38
 msgid "How many times has something using this tag been posted"
@@ -5894,28 +5659,24 @@ msgid "Which community within %(topic)s to post in?"
 msgstr ""
 
 #: app/templates/user/_notification_toggle.html:5
-#, fuzzy
 msgid "Notify about every new post by this person."
-msgstr "Notificar sobre les respostes"
+msgstr ""
 
 #: app/templates/user/_read_posts_nav.html:2
-#, fuzzy
 msgid "Newest posts"
-msgstr "També esborra totes les seves publicacions"
+msgstr ""
 
 #: app/templates/user/_read_posts_nav.html:3
 msgid "Newest"
 msgstr ""
 
 #: app/templates/user/_read_posts_nav.html:6
-#, fuzzy
 msgid "Oldest"
-msgstr "Rol"
+msgstr ""
 
 #: app/templates/user/_user_nav.html:3
-#, fuzzy
 msgid "More settings:"
-msgstr "Altres Configuracions"
+msgstr ""
 
 #: app/templates/user/_user_nav.html:6 app/templates/user/_user_nav.html:19
 #: app/templates/user/edit_profile.html:27
@@ -5958,9 +5719,9 @@ msgid ""
 msgstr ""
 
 #: app/templates/user/choose_plan.html:10
-#, fuzzy, python-format
+#, python-format
 msgid "Donate to %(instance_name)s"
-msgstr "Només accepta publicacions de la instància actual"
+msgstr ""
 
 #: app/templates/user/choose_plan.html:12
 #, python-format
@@ -5992,14 +5753,12 @@ msgid "Update credit card details"
 msgstr ""
 
 #: app/templates/user/choose_plan.html:39
-#, fuzzy
 msgid "Donation"
-msgstr "Suplantació"
+msgstr ""
 
 #: app/templates/user/choose_plan.html:51
-#, fuzzy
 msgid "Generous donation"
-msgstr "Suplantació"
+msgstr ""
 
 #: app/templates/user/choose_plan.html:60
 msgid "Prices are in US dollars."
@@ -6117,23 +5876,20 @@ msgstr ""
 
 #: app/templates/user/edit_profile.html:80
 #: app/templates/user/edit_profile.html:91
-#, fuzzy
 msgid "Remove image"
-msgstr "Esborra el bàner"
+msgstr ""
 
 #: app/templates/user/edit_settings.html:24
-#, fuzzy
 msgid "Mail Settings"
-msgstr "Altres Configuracions"
+msgstr ""
 
 #: app/templates/user/edit_settings.html:28
 msgid "Visibility"
 msgstr ""
 
 #: app/templates/user/edit_settings.html:33
-#, fuzzy
 msgid "User interface"
-msgstr "Nom d'usuari"
+msgstr ""
 
 #: app/templates/user/edit_settings.html:35
 msgid "This is used for menus and labels in the user interface"
@@ -6152,9 +5908,8 @@ msgid "Do not blindly copy and paste CSS from random strangers on the internet."
 msgstr ""
 
 #: app/templates/user/edit_settings.html:49
-#, fuzzy
 msgid "Preferences"
-msgstr "Per sempre"
+msgstr ""
 
 #: app/templates/user/edit_settings.html:51
 msgid ""
@@ -6190,9 +5945,8 @@ msgstr ""
 
 #: app/templates/user/fediverse_redirect.html:17
 #: app/templates/user/fediverse_redirect.html:20
-#, fuzzy
 msgid "Follow on remote instance"
-msgstr "Permet la federació amb aquestes instàncies"
+msgstr ""
 
 #: app/templates/user/fediverse_redirect.html:21
 msgid ""
@@ -6294,15 +6048,13 @@ msgid "Add passkey"
 msgstr ""
 
 #: app/templates/user/passkeys.html:44
-#, fuzzy
 msgid "No passkeys created yet."
-msgstr "Només accepta publicacions de la instància actual"
+msgstr ""
 
 #: app/templates/user/read_posts.html:17 app/templates/user/read_posts.html:20
 #: app/user/routes.py:1449
-#, fuzzy
 msgid "Read posts"
-msgstr "Informe"
+msgstr ""
 
 #: app/templates/user/read_posts.html:29
 #: app/templates/user/show_profile.html:201
@@ -6331,18 +6083,16 @@ msgid "Follow"
 msgstr ""
 
 #: app/templates/user/show_profile.html:105
-#, fuzzy
 msgid "More"
-msgstr "Mode de prova"
+msgstr ""
 
 #: app/templates/user/show_profile.html:108
 msgid "View user profile on original server"
 msgstr ""
 
 #: app/templates/user/show_profile.html:108
-#, fuzzy
 msgid "View original profile"
-msgstr "Perfil del lloc"
+msgstr ""
 
 #: app/templates/user/show_profile.html:112
 #, python-format
@@ -6355,9 +6105,8 @@ msgstr ""
 
 #: app/templates/user/show_profile.html:123
 #: app/templates/user/user_preview.html:59 app/user/routes.py:1496
-#, fuzzy
 msgid "Edit note"
-msgstr "Instància bloquejada."
+msgstr ""
 
 #: app/templates/user/show_profile.html:131
 #: app/templates/user/user_preview.html:21
@@ -6371,14 +6120,12 @@ msgstr ""
 
 #: app/templates/user/show_profile.html:139
 #: app/templates/user/user_preview.html:29
-#, fuzzy
 msgid "Votes"
-msgstr "Altres"
+msgstr ""
 
 #: app/templates/user/show_profile.html:140
-#, fuzzy
 msgid "Referer"
-msgstr "Per sempre"
+msgstr ""
 
 #: app/templates/user/show_profile.html:140
 msgid "Which website linked to PieFed when the user initially registered."
@@ -6427,23 +6174,20 @@ msgid ""
 msgstr ""
 
 #: app/templates/user/stripe_result.html:16
-#, fuzzy
 msgid "Continue"
-msgstr "Eslògan"
+msgstr ""
 
 #: app/templates/user/user_feeds.html:13
-#, fuzzy
 msgid "New Feed"
-msgstr "Per sempre"
+msgstr ""
 
 #: app/templates/user/user_feeds.html:38
 msgid "You do not have any Feeds yet.."
 msgstr ""
 
 #: app/templates/user/user_preview.html:15
-#, fuzzy
 msgid "Roles"
-msgstr "Rol"
+msgstr ""
 
 #: app/templates/user/user_public_feeds.html:30
 msgid "User has no Public Feeds yet.."
@@ -6473,9 +6217,8 @@ msgid "You will be notified of new posts in these communities"
 msgstr ""
 
 #: app/templates/user/alerts/_communities.html:8
-#, fuzzy
 msgid "Visit Community"
-msgstr "Comunitat"
+msgstr ""
 
 #: app/templates/user/alerts/_communities.html:16
 msgid ""
@@ -6498,14 +6241,12 @@ msgid ""
 msgstr ""
 
 #: app/templates/user/alerts/_filter.html:4
-#, fuzzy
 msgid "Mine"
-msgstr "Administrador/a"
+msgstr ""
 
 #: app/templates/user/alerts/_filter.html:5
-#, fuzzy
 msgid "Others"
-msgstr "Altres"
+msgstr ""
 
 #: app/templates/user/alerts/_posts.html:3
 msgid "You will be notified of top-level replies to these posts"
@@ -6522,9 +6263,8 @@ msgid "You will be notified of new posts in communities covered by these topics"
 msgstr ""
 
 #: app/templates/user/alerts/_topics.html:7
-#, fuzzy
 msgid "Visit Topic"
-msgstr "Tema"
+msgstr ""
 
 #: app/templates/user/alerts/_topics.html:15
 msgid ""
@@ -6555,9 +6295,8 @@ msgid "New topic name here..."
 msgstr ""
 
 #: app/topic/forms.py:10
-#, fuzzy
 msgid "Suggested communities"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/topic/forms.py:11
 msgid "Comma seperated list of community suggestions"
@@ -6635,9 +6374,8 @@ msgid "Interface language"
 msgstr ""
 
 #: app/user/forms.py:45
-#, fuzzy
 msgid "Content language"
-msgstr "Retenir el contingut"
+msgstr ""
 
 #: app/user/forms.py:48
 msgid "Receive email about missed notifications"
@@ -6686,18 +6424,16 @@ msgid "Enable Automatic Leave of Feed Communities."
 msgstr ""
 
 #: app/user/forms.py:69
-#, fuzzy
 msgid "Default post sort"
-msgstr "Tema per defecte"
+msgstr ""
 
 #: app/user/forms.py:79
 msgid "Theme"
 msgstr ""
 
 #: app/user/forms.py:81
-#, fuzzy
 msgid "No - expand images"
-msgstr "Tancat"
+msgstr ""
 
 #: app/user/forms.py:82
 msgid "Yes - thumbnails only"
@@ -6712,9 +6448,8 @@ msgid "Compact UI"
 msgstr ""
 
 #: app/user/forms.py:86
-#, fuzzy
 msgid "Theme default - fastest"
-msgstr "Tema per defecte"
+msgstr ""
 
 #: app/user/forms.py:87
 msgid "Atkinson Hyperlegible - low vision"
@@ -6729,14 +6464,12 @@ msgid "Roboto - pretty"
 msgstr ""
 
 #: app/user/forms.py:91
-#, fuzzy
 msgid "Font"
-msgstr "Un mes"
+msgstr ""
 
 #: app/user/forms.py:97
-#, fuzzy
 msgid "All instances"
-msgstr "Instància bloquejada."
+msgstr ""
 
 #: app/user/forms.py:99
 msgid "Accept private messages from"
@@ -6755,9 +6488,8 @@ msgid "Yes, delete my account"
 msgstr ""
 
 #: app/user/forms.py:116
-#, fuzzy
 msgid "Ban IP address"
-msgstr "Adreça de correu electrònic"
+msgstr ""
 
 #: app/user/forms.py:117
 msgid "Delete all content by this account"
@@ -6776,9 +6508,8 @@ msgid "Make post semi-transparent"
 msgstr ""
 
 #: app/user/forms.py:164
-#, fuzzy, python-format
 msgid "Hide posts in low quality communities"
-msgstr "Nou missatge de \"%(community_name)s\""
+msgstr ""
 
 #: app/user/forms.py:170
 msgid "Home feed"
@@ -6829,23 +6560,20 @@ msgid "Pixelfed"
 msgstr ""
 
 #: app/user/forms.py:193
-#, fuzzy
 msgid "Instance type"
-msgstr "Instància bloquejada."
+msgstr ""
 
 #: app/user/forms.py:194
 msgid "View profile on remote instance"
 msgstr ""
 
 #: app/user/forms.py:198
-#, fuzzy
 msgid "User note"
-msgstr "Nom d'usuari"
+msgstr ""
 
 #: app/user/forms.py:199
-#, fuzzy
 msgid "Save note"
-msgstr "Envia"
+msgstr ""
 
 #: app/user/routes.py:124
 msgid "This user has been deleted."
@@ -6863,9 +6591,8 @@ msgid ""
 msgstr ""
 
 #: app/user/routes.py:277
-#, fuzzy
 msgid "Avatar removed!"
-msgstr "Imatge d'avatar"
+msgstr ""
 
 #: app/user/routes.py:447
 msgid "Auto-detect"
@@ -6942,14 +6669,14 @@ msgid "Banned user with role permissions."
 msgstr ""
 
 #: app/user/routes.py:622
-#, fuzzy, python-format
+#, python-format
 msgid "%(actor)s has been banned."
-msgstr "Una publicació ha estat denunciada"
+msgstr ""
 
 #: app/user/routes.py:643
-#, fuzzy, python-format
+#, python-format
 msgid "Ban %(name)s"
-msgstr "Fer un xat amb %(name)s"
+msgstr ""
 
 #: app/user/routes.py:662
 msgid "You cannot unban yourself."
@@ -6961,14 +6688,14 @@ msgid "%(actor)s has been unbanned."
 msgstr ""
 
 #: app/user/routes.py:702
-#, fuzzy, python-format
+#, python-format
 msgid "%(actor)s has been blocked."
-msgstr "Una publicació ha estat denunciada"
+msgstr ""
 
 #: app/user/routes.py:744
-#, fuzzy, python-format
+#, python-format
 msgid "%(actor)s has been unblocked."
-msgstr "Una publicació ha estat denunciada"
+msgstr ""
 
 #: app/user/routes.py:761
 msgid ""
@@ -7003,14 +6730,14 @@ msgid "Deleted user with role permissions."
 msgstr ""
 
 #: app/user/routes.py:827
-#, fuzzy, python-format
+#, python-format
 msgid "%(actor)s has been deleted."
-msgstr "Una publicació ha estat denunciada"
+msgstr ""
 
 #: app/user/routes.py:844
-#, fuzzy, python-format
+#, python-format
 msgid "%(community_name)s has been unblocked."
-msgstr "Nou missatge de \"%(community_name)s\""
+msgstr ""
 
 #: app/user/routes.py:877
 msgid "Account deletion in progress. Give it a few minutes."
@@ -7041,23 +6768,20 @@ msgid "Reply Alerts"
 msgstr ""
 
 #: app/user/routes.py:1335
-#, fuzzy
 msgid "Community Alerts"
-msgstr "Adreça de la comunitat"
+msgstr ""
 
 #: app/user/routes.py:1341
 msgid "Topic Alerts"
 msgstr ""
 
 #: app/user/routes.py:1347
-#, fuzzy
 msgid "Feed Alerts"
-msgstr "Nom d'usuari"
+msgstr ""
 
 #: app/user/routes.py:1353
-#, fuzzy
 msgid "User Alerts"
-msgstr "Nom d'usuari"
+msgstr ""
 
 #: app/user/routes.py:1368
 msgid "Post Alerts"
@@ -7068,9 +6792,8 @@ msgid "Lemmy can't follow profiles, sorry"
 msgstr ""
 
 #: app/user/routes.py:1459
-#, fuzzy
 msgid "Reading history has been deleted"
-msgstr "Una publicació ha estat denunciada"
+msgstr ""
 
 #: app/user/routes.py:1527
 #, python-format
@@ -7112,281 +6835,6 @@ msgid "Regular donation cancelled"
 msgstr ""
 
 #: app/user/subscription.py:161
-#, fuzzy
 msgid "Your donation has been cancelled."
-msgstr "S'ha informat d'un comentari"
-
-#~ msgid "Allow search engines to index this profile"
-#~ msgstr "Suchmaschinen erlauben, dieses Profil zu indizieren"
-
-#~ msgid "Title is required."
-#~ msgstr "Titel ist erforderlich."
-
-#~ msgid "URL is required."
-#~ msgstr "URL ist erforderlich."
-
-#~ msgid "File is required."
-#~ msgstr "Datei ist erforderlich."
-
-#~ msgid "Poll not implemented yet."
-#~ msgstr "Umfrage noch nicht implementiert."
-
-#~ msgid "Crush"
-#~ msgstr "Zerkleinern"
-
-#~ msgid "Most downvoted in the last 3 days"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "This post is hosted on lemmy.ml "
-#~ "which will ban you for saying "
-#~ "anything negative about China, Russia or"
-#~ " Putin. Tread carefully."
-#~ msgstr ""
-
-#~ msgid "Unsubscribe"
-#~ msgstr ""
-
-#~ msgid "Subscribe"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "There was a problem while trying "
-#~ "to communicate with remote server. If"
-#~ " other people have already joined "
-#~ "this community it won't matter."
-#~ msgstr ""
-
-#~ msgid "Account not found"
-#~ msgstr ""
-
-#~ msgid "Local communities"
-#~ msgstr ""
-
-#~ msgid "We have upvoted the post for you."
-#~ msgstr ""
-
-#~ msgid ""
-#~ "You have already upvoted the post, "
-#~ "you do not need to say \"this\""
-#~ " also."
-#~ msgstr ""
-
-#~ msgid "All posts"
-#~ msgstr ""
-
-#~ msgid "Communities - no topic"
-#~ msgstr "Comunitats"
-
-#~ msgid "Explore communities"
-#~ msgstr ""
-
-#~ msgid "About community"
-#~ msgstr ""
-
-#~ msgid "Only people on %(instance_name)s can post or reply in this community."
-#~ msgstr ""
-
-#~ msgid "Go to community"
-#~ msgstr ""
-
-#~ msgid "Settings & Moderation"
-#~ msgstr ""
-
-#~ msgid "View context"
-#~ msgstr ""
-
-#~ msgid "Ban post author @%(author_name)s from<br>%(community_name)s"
-#~ msgstr ""
-
-#~ msgid "By default, sort posts by"
-#~ msgstr ""
-
-#~ msgid "Problematic users"
-#~ msgstr ""
-
-#~ msgid "Bad posts"
-#~ msgstr ""
-
-#~ msgid "Your post to %(name)s has been made."
-#~ msgstr ""
-
-#~ msgid "This type of comment is not accepted, sorry."
-#~ msgstr ""
-
-#~ msgid "We have upvoted the comment for you."
-#~ msgstr ""
-
-#~ msgid ""
-#~ "You have already upvoted the comment,"
-#~ " you do not need to say "
-#~ "\"this\" also."
-#~ msgstr ""
-
-#~ msgid "You have been mentioned in a comment"
-#~ msgstr ""
-
-#~ msgid "Edit profile & settings"
-#~ msgstr ""
-
-#~ msgid "Monitoring - users"
-#~ msgstr ""
-
-#~ msgid "Monitoring - content"
-#~ msgstr "Retenir el contingut"
-
-#~ msgid "Monitoring - spammy content"
-#~ msgstr ""
-
-#~ msgid "Light mode"
-#~ msgstr ""
-
-#~ msgid "Dark mode"
-#~ msgstr ""
-
-#~ msgid "Create local"
-#~ msgstr ""
-
-#~ msgid "Add remote"
-#~ msgstr ""
-
-#~ msgid "Sort by reply count"
-#~ msgstr ""
-
-#~ msgid "Watch"
-#~ msgstr ""
-
-#~ msgid "Posts show on home page."
-#~ msgstr "Les publicacions es mostren a la pàgina d'inici"
-
-#~ msgid "Most downvoted posts in the last 3 days"
-#~ msgstr ""
-
-#~ msgid "Options for conversation with \"%(member_names)s\""
-#~ msgstr ""
-
-#~ msgid "When: "
-#~ msgstr ""
-
-#~ msgid "Cross-posts for \"%(post_title)s\""
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Posts to the same url have also"
-#~ " been created in the following "
-#~ "communities:"
-#~ msgstr ""
-
-#~ msgid "Options for \"%(post_title)s\""
-#~ msgstr ""
-
-#~ msgid ""
-#~ "If you want to perform more than"
-#~ " one of these (e.g. block and "
-#~ "report), hold down Ctrl and click, "
-#~ "then complete the operation in the "
-#~ "new tabs that open."
-#~ msgstr ""
-
-#~ msgid "Options for comment on \"%(post_title)s\""
-#~ msgstr ""
-
-#~ msgid ""
-#~ "You have joined some communities "
-#~ "relating to those interests. Find them"
-#~ " on the Topics menu or browse "
-#~ "the home page."
-#~ msgstr ""
-
-#~ msgid "Message failed to send to %(name)s."
-#~ msgstr "No s'ha enviat el missatge a %(name)s."
-
-#~ msgid "There was a problem while trying to unsubscribe"
-#~ msgstr ""
-
-#~ msgid "Your post was not accepted because %(reason)s"
-#~ msgstr ""
-
-#~ msgid "Failed to send delete to remote server"
-#~ msgstr ""
-
-#~ msgid "This post has already been bookmarked."
-#~ msgstr ""
-
-#~ msgid "Failed to send report to remote server"
-#~ msgstr ""
-
-#~ msgid "This comment has already been bookmarked."
-#~ msgstr "S'ha informat d'un comentari"
-
-#~ msgid "This comment has already been bookmarked"
-#~ msgstr "S'ha informat d'un comentari"
-
-#~ msgid "Search for posts"
-#~ msgstr ""
-
-#~ msgid "Welcome to PieFed"
-#~ msgstr "Benvingut a PieFed"
-
-#~ msgid "Cannot delete feed with communities assigned to it."
-#~ msgstr ""
-
-#~ msgid "You cannot block the local instance."
-#~ msgstr ""
-
-#~ msgid "Post Replies"
-#~ msgstr "Notificar sobre les respostes"
-
-#~ msgid "Posts and replies in these languages will be visible"
-#~ msgstr ""
-
-#~ msgid "Alert filters: "
-#~ msgstr ""
-
-#~ msgid "All authors"
-#~ msgstr ""
-
-#~ msgid "Only Mine"
-#~ msgstr ""
-
-#~ msgid "Only Others"
-#~ msgstr "Altres"
-
-#~ msgid "Alert type: "
-#~ msgstr "Text alternatiu"
-
-#~ msgid "You cannot block your instance."
-#~ msgstr ""
-
-#~ msgid "Allowlist instead of blocklist"
-#~ msgstr "Llista permesa en lloc de llista de bloqueig"
-
-#~ msgid "Blocklist instead of allowlist"
-#~ msgstr "Llista de bloqueig en lloc de llista d'autorització"
-
-#~ msgid "Sorry your account it too new to do this."
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Configure the flair the instance, by "
-#~ "giving it a name, ashort slogan, "
-#~ "basic info for the sidebar and a"
-#~ " logo. This information appears in "
-#~ "link previews in social media."
-#~ msgstr ""
-
-#~ msgid "Only local accounts can be added as moderators."
-#~ msgstr ""
-
-#~ msgid "Delete account"
-#~ msgstr ""
-
-#~ msgid "Ban + Purge"
-#~ msgstr ""
-
-#~ msgid "No"
-#~ msgstr "Altres"
-
-#~ msgid "YEESSS"
-#~ msgstr "5 anys"
+msgstr ""
 

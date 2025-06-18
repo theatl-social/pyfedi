@@ -11,15 +11,16 @@ from sqlalchemy import desc, or_, text
 
 
 def get_reply_list(auth, data, user_id=None):
-    sort = data['sort'].lower() if data and 'sort' in data else "new"
+    sort = data['sort'] if data and 'sort' in data else "New"
     max_depth = data['max_depth'] if data and 'max_depth' in data else None
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 10
     post_id = data['post_id'] if data and 'post_id' in data else None
     parent_id = data['parent_id'] if data and 'parent_id' in data else None
     person_id = data['person_id'] if data and 'person_id' in data else None
+    community_id = data['community_id'] if data and 'community_id' in data else None
 
-    if data and not (post_id or parent_id or person_id):
+    if data and not (post_id or parent_id or person_id or community_id):
         raise Exception('missing parameters for reply')
 
     # user_id: the logged in user
@@ -42,6 +43,8 @@ def get_reply_list(auth, data, user_id=None):
             replies = PostReply.query.filter(PostReply.id.in_(reply_ids))
     elif person_id:
         replies = PostReply.query.filter_by(user_id=person_id)
+    elif community_id:
+        replies = PostReply.query.filter_by(community_id=community_id)
 
     if max_depth:
         replies = replies.filter(PostReply.depth <= max_depth)
@@ -54,11 +57,11 @@ def get_reply_list(auth, data, user_id=None):
         if blocked_instance_ids:
             replies = replies.filter(PostReply.instance_id.not_in(blocked_instance_ids))
 
-    if sort == "hot":
+    if sort == "Hot":
         replies = replies.order_by(desc(PostReply.ranking)).order_by(desc(PostReply.posted_at))
-    elif sort == "top":
+    elif sort == "Top":
         replies = replies.order_by(desc(PostReply.up_votes - PostReply.down_votes))
-    elif sort == "new":
+    elif sort == "New":
         replies = replies.order_by(desc(PostReply.posted_at))
 
     if page is not None:

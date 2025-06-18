@@ -2916,6 +2916,7 @@ class Feed(db.Model):
     def __repr__(self):
         return '<Feed {}_{}>'.format(self.name, self.id)
 
+    @cache.memoize(timeout=500)
     def icon_image(self, size='default') -> str:
         if self.icon_id is not None:
             if size == 'default':
@@ -3056,6 +3057,7 @@ class Feed(db.Model):
 
 class FeedJoinRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(UUID(as_uuid=True), index=True, default=uuid.uuid4)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     feed_id = db.Column(db.Integer, db.ForeignKey('feed.id'), index=True)
 

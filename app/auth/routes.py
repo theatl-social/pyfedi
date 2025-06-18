@@ -137,7 +137,8 @@ def register():
                 if ip_address_info and ip_address_info['country']:
                     for country_code in get_setting('auto_decline_countries', '').split('\n'):
                         if country_code and country_code.strip().upper() == ip_address_info['country'].upper():
-                            return redirect(url_for('auth.please_wait'))
+                            return render_template('generic_message.html', title=_('Application declined'),
+                                                   message=_('Sorry, we are not accepting registrations from your country.'))
 
                 verification_token = random_token(16)
                 form.user_name.data = form.user_name.data.strip()

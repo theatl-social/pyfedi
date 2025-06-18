@@ -35,6 +35,7 @@ from furl import furl
 from flask import current_app, json, redirect, url_for, request, make_response, Response, g, flash, abort
 from flask_babel import _, lazy_gettext as _l
 from flask_login import current_user, logout_user
+from flask_wtf.csrf import validate_csrf
 from sqlalchemy import text, or_, desc, asc, event
 from sqlalchemy.orm import Session
 from wtforms.fields  import SelectField, SelectMultipleField, StringField
@@ -515,10 +516,17 @@ def first_paragraph(html):
     else:
         return ''
 
+
 def community_link_to_href(link: str) -> str:
     pattern = r"!([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
     server = r'<a href=https://' + current_app.config['SERVER_NAME'] + r'/community/lookup/'
     return re.sub(pattern, server + r'\g<1>/\g<2>>' + r'!\g<1>@\g<2></a>', link)
+
+
+def feed_link_to_href(link: str) -> str:
+    pattern = r"~([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
+    server = r'<a href=https://' + current_app.config['SERVER_NAME'] + r'/feed/lookup/'
+    return re.sub(pattern, server + r'\g<1>/\g<2>>' + r'~\g<1>@\g<2></a>', link)
 
 
 def person_link_to_href(link: str) -> str:
@@ -767,6 +775,28 @@ def permission_required(permission):
         return decorated_view
 
     return decorator
+
+
+def login_required(func):
+
+    @wraps(func)
+    def decorated_view(*args, **kwargs):
+        if request.method in {"OPTIONS"} or current_app.config.get("LOGIN_DISABLED"):
+            pass
+        elif not current_user.is_authenticated:
+            return current_app.login_manager.unauthorized()
+
+        # Validate CSRF token for POST requests
+        if request.method == 'POST':
+            validate_csrf(request.form.get('csrf_token', request.headers.get('x-csrftoken')))
+
+        # flask 1.x compatibility
+        # current_app.ensure_sync is only available in Flask >= 2.0
+        if callable(getattr(current_app, "ensure_sync", None)):
+            return current_app.ensure_sync(func)(*args, **kwargs)
+        return func(*args, **kwargs)
+
+    return decorated_view
 
 
 def debug_mode_only(func):

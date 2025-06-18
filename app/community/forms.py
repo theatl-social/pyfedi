@@ -1,6 +1,9 @@
+import re
+
 from flask import request, g
 from flask_login import current_user
 from flask_wtf import FlaskForm
+from sqlalchemy import func
 from wtforms import StringField, SubmitField, TextAreaField, BooleanField, HiddenField, SelectField, FileField, \
     DateField
 from wtforms.fields.choices import SelectMultipleField
@@ -11,7 +14,7 @@ from flask_babel import _, lazy_gettext as _l
 from app import db
 from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_MEMBERS, DOWNVOTE_ACCEPT_INSTANCE, \
     DOWNVOTE_ACCEPT_TRUSTED
-from app.models import Community, Site, utcnow
+from app.models import Community, Site, utcnow, User, Feed
 from app.utils import domain_from_url, MultiCheckboxField
 from PIL import Image, ImageOps, UnidentifiedImageError
 from io import BytesIO
@@ -39,9 +42,26 @@ class AddCommunityForm(FlaskForm):
             if '-' in self.url.data.strip():
                 self.url.errors.append(_l('- cannot be in Url. Use _ instead?'))
                 return False
+
+            # Allow alphanumeric characters and underscores (a-z, A-Z, 0-9, _)
+            if not re.match(r'^[a-zA-Z0-9_]+$', self.url.data):
+                self.url.errors.append(_l('Community urls can only contain letters, numbers, and underscores.'))
+                return False
+
             community = Community.query.filter(Community.name == self.url.data.strip().lower(), Community.ap_id == None).first()
             if community is not None:
                 self.url.errors.append(_l('A community with this url already exists.'))
+                return False
+            user = User.query.filter(func.lower(User.user_name) == func.lower(self.url.data.strip())).filter_by(ap_id=None).first()
+            if user is not None:
+                if user.deleted:
+                    self.url.errors.append(_l('This name was used in the past and cannot be reused.'))
+                else:
+                    self.url.errors.append(_l('This name is in use already.'))
+                return False
+            feed = Feed.query.filter(Feed.name == self.url.data.strip().lower(), Feed.ap_id == None).first()
+            if feed is not None:
+                self.url.errors.append(_('This name is in use already.'))
                 return False
         return True
 
@@ -51,7 +71,7 @@ class EditCommunityForm(FlaskForm):
     description = TextAreaField(_l('Description'))
     icon_file = FileField(_l('Icon image'), render_kw={'accept': 'image/*'})
     banner_file = FileField(_l('Banner image'), render_kw={'accept': 'image/*'})
-    nsfw = BooleanField(_l('Porn community'))
+    nsfw = BooleanField(_l('NSFW community'))
     local_only = BooleanField(_l('Only accept posts from current instance'))
     restricted_to_mods = BooleanField(_l('Only moderators can post'))
     new_mods_wanted = BooleanField(_l('New moderators wanted'))
@@ -114,7 +134,10 @@ class BanUserCommunityForm(FlaskForm):
 
 
 class CreatePostForm(FlaskForm):
-    communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
+    communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select',
+                                                                                                   'hx-get': '/community/community_changed',
+                                                                                                   'hx-params': '*',
+                                                                                                   'hx-target': '#communityFlair'})
     title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])
     body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=50000)], render_kw={'rows': 5})
     tags = StringField(_l('Tags'), validators=[Optional(), Length(min=3, max=5000)])
@@ -330,6 +353,9 @@ class InviteCommunityForm(FlaskForm):
     def validate_to(self, field):
         if ',' in field.data:
             raise ValidationError(_l('Use new lines instead of commas.'))
+        lines = field.data.split('\n')
+        if len(lines) > 50:
+            raise ValidationError(_l('Maximum of 50 at a time.'))
 
 
 class MoveCommunityForm(FlaskForm):

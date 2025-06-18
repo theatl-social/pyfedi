@@ -1,3 +1,4 @@
+{% set cs = csrf_token() -%}
 <!doctype html>
 <html lang="{{ 'en' if current_user.is_anonymous else current_user.interface_language }}">
   <head>
@@ -12,6 +13,7 @@
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="HandheldFriendly" content="True">
         <meta name="MobileOptimized" content="320">
+        <meta name="csrf-token" content="{{ cs }}">
         <link rel="expect" blocking="render" href="#navbarSupportedContent">
         {% if current_user.is_anonymous -%}
             <script src="/static/js/enable_low_bandwidth.js" type="text/javascript" fetchpriority="high"></script>
@@ -95,7 +97,7 @@
     {% block schema_org %}
     {% endblock %}
   </head>
-  <body class="d-flex flex-column{{ ' low_bandwidth' if low_bandwidth }} {{ session.get('compact_level', '') }}">
+  <body class="d-flex flex-column{{ ' low_bandwidth' if low_bandwidth }} {{ session.get('compact_level', '') }}" hx-headers='{"x-csrftoken": "{{ cs }}"}'>
     {% if 'fontSize' in request.cookies -%}
         <style>
             body, .form-control, .btn, .dropdown-item {
@@ -243,10 +245,8 @@
 
     {% block scripts -%}
     {% endblock -%}
-    {% if not low_bandwidth -%}
-        {{ str(bootstrap.load_js()).replace('<script ', '<script nonce="' + nonce + '" ')|safe }}
-        <script src="{{ url_for('static', filename='js/lightbox/baguetteBox.js') }}" nonce="{{ nonce }}"></script>
-    {% endif -%}
+    {{ str(bootstrap.load_js()).replace('<script ', '<script nonce="' + nonce + '" ')|safe }}
+    <script src="{{ url_for('static', filename='js/lightbox/baguetteBox.js') }}" nonce="{{ nonce }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/scripts.js', changed=getmtime('js/scripts.js')) }}"></script>
     {% if not low_bandwidth -%}
