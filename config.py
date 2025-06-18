@@ -57,6 +57,8 @@ class Config(object):
 
     IPINFO_TOKEN = os.environ.get('IPINFO_TOKEN') or ''
 
+    NUM_CPU = int(os.environ.get('NUM_CPU') or 0)
+
     DB_POOL_SIZE = os.environ.get('DB_POOL_SIZE') or 10
     DB_MAX_OVERFLOW = os.environ.get('DB_MAX_OVERFLOW') or 30
 
