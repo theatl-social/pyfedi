@@ -33,6 +33,10 @@ def upgrade():
         batch_op.create_index(batch_op.f('ix_cms_page_url'), ['url'], unique=False)
 
     # ### end Alembic commands ###
+    conn = op.get_bind()
+    exists = conn.execute(text('SELECT id FROM "role" WHERE name = :name'), {"name": "Admin"}).scalar()
+    if exists:
+        conn.execute(text('INSERT INTO "role_permission" (role_id, permission) VALUES (4, \'edit cms pages\')'))
 
 
 def downgrade():
