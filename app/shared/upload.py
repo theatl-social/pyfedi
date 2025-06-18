@@ -31,6 +31,8 @@ def process_upload(image_file, destination='posts'):
     image_file.seek(0)
     image_file.save(final_place)
 
+    final_ext = file_ext # track file extension for conversion
+
     if file_ext.lower() == '.heic':
         register_heif_opener()
     if file_ext.lower() == '.avif':
@@ -38,16 +40,26 @@ def process_upload(image_file, destination='posts'):
 
     Image.MAX_IMAGE_PIXELS = 89478485
 
-    # limit full sized version to 2000px
-    if not final_place.endswith('.svg'):
+    # Use environment variables to determine image max dimension, format, and quality
+    image_max_dimension = int(os.getenv('MEDIA_IMAGE_MAX_DIMENSION', 2000))
+    image_format = os.getenv('MEDIA_IMAGE_FORMAT')
+    image_quality = os.getenv('MEDIA_IMAGE_QUALITY')
+
+    if not final_place.endswith('.svg') and not final_place.endswith('.gif'):
         img = Image.open(final_place)
         if '.' + img.format.lower() in allowed_extensions:
             img = ImageOps.exif_transpose(img)
+            img.thumbnail((image_max_dimension, image_max_dimension))
 
-            img.thumbnail((2000, 2000))
-            img.save(final_place)
+            kwargs = {}
+            if image_format:
+                kwargs['format'] = image_format.upper()
+                final_ext = '.' + image_format.lower()
+                final_place = os.path.splitext(final_place)[0] + final_ext
+            if image_quality:
+                kwargs['quality'] = int(image_quality)
 
-            url = f"https://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
+            img.save(final_place, **kwargs)
         else:
             raise Exception('filetype not allowed')
     else:
@@ -64,10 +76,10 @@ def process_upload(image_file, destination='posts'):
             aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
         )
         s3.upload_file(final_place, current_app.config['S3_BUCKET'], destination + '/' +
-                       new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + file_ext,
+                       new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext,
                        ExtraArgs={'ContentType': guess_mime_type(final_place)})
         url = f"https://{current_app.config['S3_PUBLIC_URL']}/{destination}/" + \
-              new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + file_ext
+              new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext
         s3.close()
         os.unlink(final_place)
 
