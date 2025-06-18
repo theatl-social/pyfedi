@@ -44,7 +44,10 @@ from app.admin import bp
 @login_required
 def admin_home():
     load1, load5, load15 = os.getloadavg()
-    num_cores = os.cpu_count()
+    if current_app.config["NUM_CPU"] and current_app.config["NUM_CPU"] != 0:
+        num_cores = current_app.config["NUM_CPU"]
+    else:
+        num_cores = os.cpu_count()
     path = os.getcwd()
     usage = shutil.disk_usage(path)
 
