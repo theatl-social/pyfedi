@@ -28,12 +28,17 @@ translations:
 
 See https://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-xiii-i18n-and-l10n-2018
 
-to add a new language which can be worked on:
+To add a new language, you use:
 
-pybabel init -i messages.pot -d app/translations -l <language code>
+flask translate init <language-code>
 
-after changes to the files in app/translations/* are mode, they need to be compiled
-pybabel compile -d app/translations
+To update all the languages after making changes to the _() and _l() language markers:
+
+flask translate update
+
+And to compile all languages after updating the translation files:
+
+flask translate compile
 
 
 
