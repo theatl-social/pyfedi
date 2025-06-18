@@ -4,13 +4,14 @@ from flask_login import logout_user, current_user
 from flask_babel import _, lazy_gettext as _l
 
 from app import db, cache, celery
-from app.models import User
+from app.models import User, CmsPage
 from app.user import bp
 from app.utils import render_template, login_required
 
 
 @bp.route('/donate')
 def choose_plan():
+    cms_page = CmsPage.query.filter(CmsPage.url == '/donate').first()
     if current_user.is_authenticated:
         # inspired by https://stripe.com/docs/payments/checkout/subscriptions/starting
         if current_user.stripe_subscription_id is not None:
@@ -23,11 +24,11 @@ def choose_plan():
                                    monthly_big_text=current_app.config['STRIPE_MONTHLY_BIG_TEXT']
                                    )
         else:
-            return render_template('donate.html', title=_('Donate'))
+            return render_template('donate.html', title=_('Donate'), cms_page=cms_page)
     else:
         if current_app.config['STRIPE_SECRET_KEY']:
             flash(_('Log in to donate to %(instance_name)s or donate to the PieFed project using the button below.', instance_name=current_app.config['SERVER_NAME']))
-        return render_template('donate.html', title=_('Donate'))
+        return render_template('donate.html', title=_('Donate'), cms_page=cms_page)
 
 
 @bp.route('/stripe_redirect/<plan>', methods=['GET'])
