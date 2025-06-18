@@ -1509,9 +1509,12 @@ def process_delete_request(request_json, store_ap_json):
 
 
 
-def announce_activity_to_followers(community, creator, activity):
+def announce_activity_to_followers(community: Community, creator: User, activity):
     # avoid announcing activity sent to local users unless it is also in a local community
     if not community.is_local():
+        return
+
+    if creator.banned:
         return
 
     # remove context from what will be inner object
