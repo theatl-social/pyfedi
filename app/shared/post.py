@@ -12,7 +12,7 @@ from app.utils import render_template, authorise_api_user, shorten_string, gibbe
     piefed_markdown_to_lemmy_markdown, markdown_to_html, fixup_url, domain_from_url, \
     opengraph_parse, url_to_thumbnail_file, can_create_post, is_video_hosting_site, recently_upvoted_posts, \
     is_image_url, add_to_modlog_activitypub, store_files_in_s3, guess_mime_type, retrieve_image_hash, \
-    hash_matches_blocked_image
+    hash_matches_blocked_image, can_upvote, can_downvote
 
 from flask import abort, flash, request, current_app, g
 from flask_babel import _
@@ -28,6 +28,10 @@ def vote_for_post(post_id: int, vote_direction, src, auth=None):
     if src == SRC_API:
         post = Post.query.filter_by(id=post_id).one()
         user = authorise_api_user(auth, return_type='model')
+        if vote_direction == 'upvote' and not can_upvote(user, post.community):
+            return user.id
+        elif vote_direction == 'downvote' and not can_downvote(user, post.community):
+            return user.id
     else:
         post = Post.query.get_or_404(post_id)
         user = current_user

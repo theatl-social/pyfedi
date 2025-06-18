@@ -8,7 +8,8 @@ from app.constants import *
 from app.models import Instance, Notification, NotificationSubscription, Post, PostReply, PostReplyBookmark, Report, Site, User, utcnow
 from app.shared.tasks import task_selector
 from app.utils import gibberish, instance_banned, render_template, authorise_api_user, recently_upvoted_post_replies, recently_downvoted_post_replies, shorten_string, \
-                      piefed_markdown_to_lemmy_markdown, markdown_to_html, ap_datetime, add_to_modlog_activitypub, can_create_post_reply
+                      piefed_markdown_to_lemmy_markdown, markdown_to_html, ap_datetime, add_to_modlog_activitypub, can_create_post_reply, \
+                      can_upvote, can_downvote
 
 from flask import abort, current_app, flash, redirect, request, url_for
 from flask_babel import _
@@ -19,6 +20,10 @@ def vote_for_reply(reply_id: int, vote_direction, src, auth=None):
     if src == SRC_API:
         reply = PostReply.query.filter_by(id=reply_id).one()
         user = authorise_api_user(auth, return_type='model')
+        if vote_direction == 'upvote' and not can_upvote(user, reply.community):
+            return user.id
+        elif vote_direction == 'downvote' and not can_downvote(user, reply.community):
+            return user.id
     else:
         reply = PostReply.query.get_or_404(reply_id)
         user = current_user
