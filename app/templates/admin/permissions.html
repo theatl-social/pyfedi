@@ -33,6 +33,7 @@
                 </tr>
                 {% endfor -%}
             </table>
+            {{ form.csrf_token() }}
             <input type="submit" class="btn btn-primary" value="{{ _('Save') }}">
         </form>
     </div>
