@@ -100,29 +100,25 @@ def register(app):
             db.session.add(Settings(name='allow_local_image_posts', value=json.dumps(True)))
             db.session.add(Settings(name='allow_remote_image_posts', value=json.dumps(True)))
             db.session.add(Settings(name='federation', value=json.dumps(True)))
-            banned_instances = ['anonib.al','lemmygrad.ml', 'gab.com', 'rqd2.net', 'exploding-heads.com', 'hexbear.net',
-                                'threads.net', 'noauthority.social', 'pieville.net', 'links.hackliberty.org',
-                                'poa.st', 'freespeechextremist.com', 'bae.st', 'nicecrew.digital', 'detroitriotcity.com',
-                                'pawoo.net', 'shitposter.club', 'spinster.xyz', 'catgirl.life', 'gameliberty.club',
-                                'yggdrasil.social', 'beefyboys.win', 'brighteon.social', 'cum.salon', 'wizard.casa']
+            banned_instances = []
             for bi in banned_instances:
                 db.session.add(BannedInstances(domain=bi))
                 print("Added banned instance", bi)
 
             # Load initial domain block list
-            block_list = retrieve_block_list()
-            if block_list:
-                for domain in block_list.split('\n'):
-                    db.session.add(Domain(name=domain.strip(), banned=True))
-                print("Added 'No-QAnon' blocklist, see https://github.com/rimu/no-qanon")
+            #block_list = retrieve_block_list()
+            #if block_list:
+            #    for domain in block_list.split('\n'):
+            #        db.session.add(Domain(name=domain.strip(), banned=True))
+            #    print("Added 'No-QAnon' blocklist, see https://github.com/rimu/no-qanon")
 
             # Load peertube domain block list
-            block_list = retrieve_peertube_block_list()
-            if block_list:
-                for domain in block_list.split('\n'):
-                    db.session.add(Domain(name=domain.strip(), banned=True))
-                    db.session.add(BannedInstances(domain=domain.strip()))
-                print("Added 'Peertube Isolation' blocklist, see https://peertube_isolation.frama.io/")
+            #block_list = retrieve_peertube_block_list()
+            #if block_list:
+            #    for domain in block_list.split('\n'):
+            #        db.session.add(Domain(name=domain.strip(), banned=True))
+            #        db.session.add(BannedInstances(domain=domain.strip()))
+            #    print("Added 'Peertube Isolation' blocklist, see https://peertube_isolation.frama.io/")
 
             # Initial languages
             db.session.add(Language(name='Undetermined', code='und'))
@@ -159,6 +155,7 @@ def register(app):
             admin_role.permissions.append(RolePermission(permission='change instance settings'))
             admin_role.permissions.append(RolePermission(permission='administer all communities'))
             admin_role.permissions.append(RolePermission(permission='administer all users'))
+            admin_role.permissions.append(RolePermission(permission='edit cms pages'))
             db.session.add(admin_role)
 
             # Admin user
