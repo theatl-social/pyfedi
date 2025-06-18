@@ -215,7 +215,8 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
             db.session.commit()
             raise e
 
-    notify_about_post(post)
+    if post.status == POST_STATUS_PUBLISHED:
+        notify_about_post(post)
 
     if src == SRC_API:
         return user.id, post

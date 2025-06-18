@@ -100,9 +100,8 @@ def show_post(post_id: int):
         form = NewReplyForm()
         form.language_id.choices = languages_for_form() if current_user.is_authenticated else []
 
-        if current_user.is_authenticated and (current_user.id == post.user_id or current_user.is_admin() or current_user.is_staff()):
-            if post.status == POST_STATUS_SCHEDULED:
-                flash(_('This post is scheduled to be published at %(when)s', when=str(post.scheduled_for)))    # todo: convert into current_user.timezone
+        if post.status == POST_STATUS_SCHEDULED:
+            flash(_('This post is scheduled to be published at %(when)s UTC', when=str(post.scheduled_for)))    # todo: convert into current_user.timezone
 
         if current_user.is_authenticated:
             if not post.community.is_moderator() and not post.community.is_owner() and not current_user.is_staff() and not current_user.is_admin():
