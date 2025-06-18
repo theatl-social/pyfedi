@@ -781,6 +781,9 @@ def process_inbox_request(request_json, store_ap_json):
                 user_ap_id = request_json['object']['actor']
                 user = find_actor_or_create(user_ap_id)
                 if user and isinstance(user, User):
+                    if user.banned:
+                        log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, f'{user_ap_id} is banned')
+                        return
                     user.last_seen = utcnow()
                     user.instance.last_seen = utcnow()
                     user.instance.dormant = False
