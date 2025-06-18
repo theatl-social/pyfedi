@@ -8,16 +8,17 @@ msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-05-19 20:23+1200\n"
-"PO-Revision-Date: 2025-04-13 03:47+0000\n"
+"PO-Revision-Date: 2025-06-07 14:47+0000\n"
 "Last-Translator: fxomt <services.thaw171@slmail.me>\n"
+"Language-Team: Arabic <http://translate.piefed.social/projects/piefed/"
+"main-web-app/ar/>\n"
 "Language: ar\n"
-"Language-Team: Arabic <http://translate.piefed.social/projects/piefed"
-"/main-web-app/ar/>\n"
-"Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : "
-"n%100>=3 && n%100<=10 ? 3 : n%100>=0 && n%100<=2 ? 4 : 5);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 "
+"&& n%100<=10 ? 3 : n%100>=0 && n%100<=2 ? 4 : 5);\n"
+"X-Generator: Weblate 5.10.4\n"
 "Generated-By: Babel 2.12.1\n"
 
 #: app/__init__.py:43
@@ -34,9 +35,9 @@ msgid "Replies to my post %(post_title)s"
 msgstr "ردود لمنشوري %(post_title)s"
 
 #: app/cli.py:811 app/models.py:2087 app/shared/reply.py:116
-#, fuzzy, python-format
+#, python-format
 msgid "Replies to my comment on %(post_title)s"
-msgstr "ردود على تعليقي حول %(post_title)s"
+msgstr "ردود على تعليقي على %(post_title)s"
 
 #: app/email.py:18
 msgid "[PieFed] Reset Your Password"
@@ -121,26 +122,26 @@ msgstr "نَص الكابتشا غلط."
 
 #: app/admin/forms.py:202 app/admin/forms.py:262 app/utils.py:2025
 msgid "User"
-msgstr ""
+msgstr "مستخدم"
 
 #: app/community/forms.py:119 app/templates/admin/communities.html:38
 #: app/templates/list_communities.html:112 app/templates/search/start.html:28
 #: app/utils.py:2027
 msgid "Community"
-msgstr ""
+msgstr "مجتمع"
 
 #: app/utils.py:2029 app/utils.py:2035
 msgid "Topic/feed"
-msgstr ""
+msgstr "موضوع/تغذية"
 
 #: app/post/forms.py:14 app/templates/post/add_reply_inline.html:14
 #: app/utils.py:2031 app/utils.py:2033 app/utils.py:2037
 msgid "Comment"
-msgstr ""
+msgstr "علِّق"
 
 #: app/templates/chat/conversation.html:37 app/utils.py:2039
 msgid "Chat"
-msgstr ""
+msgstr "دردشة"
 
 #: app/admin/forms.py:204 app/admin/forms.py:264 app/admin/routes.py:45
 #: app/templates/admin/permissions.html:22 app/templates/base.html:257
@@ -151,7 +152,7 @@ msgstr ""
 #: app/templates/user/user_preview.html:15 app/utils.py:2041 app/utils.py:2043
 #: app/utils.py:2045 app/utils.py:2049 app/utils.py:2053 app/utils.py:2055
 msgid "Admin"
-msgstr ""
+msgstr "مدير"
 
 #: app/admin/forms.py:49 app/templates/_view_filter_nav.html:6
 #: app/templates/_view_filter_nav.html:18
@@ -167,7 +168,7 @@ msgstr ""
 #: app/templates/user/notifications.html:23 app/user/forms.py:73
 #: app/utils.py:2059
 msgid "All"
-msgstr ""
+msgstr "الكل"
 
 #: app/activitypub/util.py:1945
 #, python-format
@@ -181,11 +182,11 @@ msgstr "رد على التعليق على %(post_title)s"
 
 #: app/activitypub/util.py:2440 app/post/routes.py:938 app/shared/post.py:579
 msgid "A post has been reported"
-msgstr ""
+msgstr "تم الإبلاغ عن منشور"
 
 #: app/activitypub/util.py:2464 app/post/routes.py:1106 app/shared/reply.py:301
 msgid "A comment has been reported"
-msgstr ""
+msgstr "تم الإبلاغ عن تعليق"
 
 #: app/admin/forms.py:14
 msgid "Site Name"
@@ -230,11 +231,11 @@ msgstr "عنوان البريد الإلكتروني العام للاتصال �
 #: app/feed/forms.py:58 app/templates/admin/permissions.html:36
 #: app/user/forms.py:168
 msgid "Save"
-msgstr ""
+msgstr "إحفظ"
 
 #: app/admin/forms.py:27
 msgid "Enable downvotes"
-msgstr ""
+msgstr "تفعيل التصويت السلبي"
 
 #: app/admin/forms.py:28
 msgid "Allow local image posts"
@@ -6474,4 +6475,3 @@ msgstr "إنك منحظر"
 
 #~ msgid "You cannot block your instance."
 #~ msgstr ""
-

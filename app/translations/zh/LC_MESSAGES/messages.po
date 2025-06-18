@@ -4,15 +4,16 @@ msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-05-19 20:23+1200\n"
-"PO-Revision-Date: 2025-03-21 03:54+0000\n"
+"PO-Revision-Date: 2025-05-22 07:47+0000\n"
 "Last-Translator: Poesty Li <poesty7450@gmail.com>\n"
+"Language-Team: Chinese (Simplified Han script) <http://"
+"translate.piefed.social/projects/piefed/main-web-app/zh_Hans/>\n"
 "Language: zh\n"
-"Language-Team: Chinese (Simplified Han script) "
-"<http://translate.piefed.social/projects/piefed/main-web-app/zh_Hans/>\n"
-"Plural-Forms: nplurals=1; plural=0;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Weblate 5.10.4\n"
 "Generated-By: Babel 2.12.1\n"
 
 #: app/__init__.py:43
@@ -125,9 +126,8 @@ msgid "Community"
 msgstr "社区"
 
 #: app/utils.py:2029 app/utils.py:2035
-#, fuzzy
 msgid "Topic/feed"
-msgstr "主题已删除"
+msgstr "主题/订阅源"
 
 #: app/post/forms.py:14 app/templates/post/add_reply_inline.html:14
 #: app/utils.py:2031 app/utils.py:2033 app/utils.py:2037
@@ -260,9 +260,8 @@ msgid "Notify admins about reports, not just moderators"
 msgstr "通知管理员有关举报，而不仅仅是管理员"
 
 #: app/admin/forms.py:34
-#, fuzzy
 msgid "Require new accounts to verify their email address"
-msgstr "[PieFed] 请验证您的电子邮件地址"
+msgstr "需要新账号验证邮箱"
 
 #: app/admin/forms.py:35
 msgid "Open"
@@ -285,23 +284,20 @@ msgid "Question to ask people applying for an account"
 msgstr "询问申请账号的人的问题"
 
 #: app/admin/forms.py:38
-#, fuzzy
 msgid "Registration approved email"
-msgstr "注册已批准。"
+msgstr "注册批准邮件"
 
 #: app/admin/forms.py:40
 msgid "Provide a list of topics to subscribe to"
-msgstr ""
+msgstr "提供订阅的主题列表"
 
 #: app/admin/forms.py:41
-#, fuzzy
 msgid "Trump Musk filter setup"
-msgstr "内容过滤器设置"
+msgstr "特朗普马斯克过滤设置"
 
 #: app/admin/forms.py:42
-#, fuzzy
 msgid "Ignore registrations from these countries"
-msgstr "阻止来自这些推荐者的注册（每行一个）"
+msgstr "忽略来自这些国家的注册"
 
 #: app/admin/forms.py:43
 msgid "Block registrations from these referrers (one per line)"
@@ -313,7 +309,7 @@ msgstr "默认主题"
 
 #: app/admin/forms.py:45
 msgid "Additional CSS"
-msgstr ""
+msgstr "附加 CSS"
 
 #: app/admin/forms.py:46 app/templates/_view_filter_nav.html:3
 #: app/templates/_view_filter_nav.html:12
@@ -349,7 +345,7 @@ msgstr "公开显示管理操作"
 
 #: app/admin/forms.py:55
 msgid "Private instance - require login to browse"
-msgstr ""
+msgstr "私有实例 - 需要登录才能浏览"
 
 #: app/admin/forms.py:56
 msgid "Show Rational Discourse Toolkit in sidebar"
@@ -651,18 +647,16 @@ msgstr "受信任"
 
 #: app/admin/forms.py:157
 msgid "Inbox"
-msgstr ""
+msgstr "收件箱"
 
 #: app/admin/forms.py:162 app/admin/forms.py:170
 #: app/templates/admin/blocked_images.html:19
-#, fuzzy
 msgid "Hash"
-msgstr "标签"
+msgstr "哈希"
 
 #: app/admin/forms.py:163 app/admin/forms.py:171
-#, fuzzy
 msgid "Filename"
-msgstr "网站名称"
+msgstr "文件名"
 
 #: app/admin/forms.py:164 app/admin/forms.py:172
 #: app/templates/admin/blocked_images.html:21
@@ -831,23 +825,20 @@ msgid "Send newsletter"
 msgstr "发送电子邮件通讯"
 
 #: app/admin/forms.py:281
-#, fuzzy
 msgid "New url"
-msgstr "新用户？"
+msgstr "新网址"
 
 #: app/admin/forms.py:282
-#, fuzzy
 msgid "Set new owner"
-msgstr "设置新密码"
+msgstr "设置新所有者"
 
 #: app/admin/forms.py:283 app/topic/forms.py:12
 msgid "Submit"
 msgstr "提交"
 
 #: app/admin/forms.py:288
-#, fuzzy
 msgid "A local community at that url already exists"
-msgstr "此 URL 的社区已存在。"
+msgstr "该网址已存在一个本地社区"
 
 #: app/admin/routes.py:125 app/admin/routes.py:176 app/feed/routes.py:213
 msgid "Settings saved."
@@ -913,7 +904,7 @@ msgstr "联邦设置"
 msgid ""
 "LOG_ACTIVITYPUB_TO_DB is off so no incoming activities are being logged "
 "to the database."
-msgstr ""
+msgstr "由于 LOG_ACTIVITYPUB_TO_DB 关闭，未将活动记录到数据库中。"
 
 #: app/admin/routes.py:869
 msgid "ActivityPub Log"
@@ -1078,63 +1069,57 @@ msgid "Edit instance"
 msgstr "编辑实例"
 
 #: app/admin/routes.py:1596
-#, fuzzy, python-format
+#, python-format
 msgid "Set community owner to %(user_name)s"
-msgstr "前往社区 %(name)s"
+msgstr "将社区所有者设置为 %(user_name)s"
 
 #: app/admin/routes.py:1626
 #, python-format
 msgid ""
 "%(community_name)s is now %(new_url)s. Contact the initiator of this "
 "request to let them know."
-msgstr ""
+msgstr "%(community_name)s 现为 %(new_url)s。请联系此请求的发起人通知他们。"
 
 #: app/admin/routes.py:1628
-#, fuzzy
 msgid "Ensure this community has the right moderators."
-msgstr "此社区尚未有任何管理操作。"
+msgstr "确保该社区拥有合适的版主。"
 
 #: app/admin/routes.py:1633
-#, fuzzy
 msgid "Move community"
-msgstr "更多社区"
+msgstr "移动社区"
 
 #: app/admin/routes.py:1643 app/templates/admin/_nav.html:34
-#, fuzzy
 msgid "Blocked images"
-msgstr "被屏蔽的域名"
+msgstr "屏蔽图片"
 
 #: app/admin/routes.py:1668
-#, fuzzy
 msgid "Edit blocked image"
-msgstr "替换图片"
+msgstr "编辑屏蔽图片"
 
 #: app/admin/routes.py:1692
 msgid ""
 "Provide the url of an image or the hash (and file name) of it, but not "
 "both."
-msgstr ""
+msgstr "提供图片的 URL 或哈希（以及文件名），但不能两个都提供。"
 
 #: app/admin/routes.py:1694 app/templates/admin/blocked_images.html:14
 #: app/templates/admin/edit_blocked_image.html:15
-#, fuzzy
 msgid "Add blocked image"
-msgstr "没有被屏蔽的实例"
+msgstr "添加屏蔽图片"
 
 #: app/admin/routes.py:1707 app/post/routes.py:1433
-#, fuzzy, python-format
+#, python-format
 msgid "%(count)s posts deleted."
-msgstr "帖子已删除。"
+msgstr "%(count)s 条帖子已删除。"
 
 #: app/admin/routes.py:1712 app/post/routes.py:1443
 #: app/templates/post/post_block_image_purge_posts.html:13
 msgid "Posts containing blocked images"
-msgstr ""
+msgstr "包含屏蔽图片的帖子"
 
 #: app/admin/routes.py:1725
-#, fuzzy
 msgid "Blocked image deleted"
-msgstr "页面已删除"
+msgstr "屏蔽图片已删除"
 
 #: app/admin/util.py:87
 msgid "No recipients"
@@ -1182,7 +1167,7 @@ msgstr "用户名不能包含空格。"
 
 #: app/auth/forms.py:63
 msgid "Maximum password length is 128 characters."
-msgstr ""
+msgstr "最大密码长度为 128 个字符。"
 
 #: app/auth/forms.py:81
 msgid "Request password reset"
@@ -1198,7 +1183,7 @@ msgstr "请让它停止"
 
 #: app/auth/forms.py:94
 msgid "A little is ok"
-msgstr ""
+msgstr "一点点可以"
 
 #: app/auth/forms.py:95
 msgid "Bring it on"
@@ -1217,11 +1202,10 @@ msgid "Choose some topics you are interested in"
 msgstr "选择一些您感兴趣的主题"
 
 #: app/auth/onboarding.py:52
-#, fuzzy
 msgid ""
 "You have joined some communities relating to those interests. Find more "
 "on the Topics menu or browse the home page."
-msgstr "您已加入一些与这些兴趣相关的社区。可以在主题菜单中找到它们或浏览主页。"
+msgstr "您已加入一些与这些兴趣相关的社区。在主题菜单中找到更多，或浏览主页。"
 
 #: app/auth/onboarding.py:56
 msgid ""
@@ -1233,7 +1217,7 @@ msgstr "您没有选择任何主题。您想选择单独的社区吗？"
 msgid ""
 "Please join some communities you're interested in and then go to the home"
 " page by clicking on the logo above."
-msgstr ""
+msgstr "请加入一些您感兴趣的社区，然后点击上方的 logo 返回主页。"
 
 #: app/auth/routes.py:39 app/auth/routes.py:42 app/shared/auth.py:35
 msgid "No account exists with that user name."
@@ -1269,7 +1253,7 @@ msgstr "您的用户名包含特殊字符，因此已更改为 %(name)s。"
 #: app/auth/routes.py:187
 #, python-format
 msgid "Throwaway email used for account %(username)s"
-msgstr ""
+msgstr "用于账号 %(username)s 的临时邮箱"
 
 #: app/auth/routes.py:212
 msgid "Account under review"
@@ -1312,7 +1296,7 @@ msgstr "电子邮件地址验证失败。"
 
 #: app/auth/routes.py:317
 msgid "Login failed due to a problem with Google."
-msgstr ""
+msgstr "由于 Google 问题，登录失败。"
 
 #: app/chat/forms.py:13
 msgid "Message"
@@ -1559,7 +1543,7 @@ msgstr "标签"
 #: app/templates/community/community_flair.html:32
 #: app/templates/post/_post_full.html:168
 msgid "Flair"
-msgstr ""
+msgstr "标签"
 
 #: app/community/forms.py:125 app/templates/post/post_options.html:23
 msgid "Sticky"
@@ -1585,48 +1569,40 @@ msgid "Language"
 msgstr "语言"
 
 #: app/community/forms.py:130
-#, fuzzy
 msgid "Publish at"
-msgstr "公开订阅源"
+msgstr "发布于"
 
 #: app/community/forms.py:131
-#, fuzzy
 msgid "Repeat"
-msgstr "还原"
+msgstr "重复"
 
 #: app/community/forms.py:131
-#, fuzzy
 msgid "Daily"
-msgstr "1 天"
+msgstr "每日"
 
 #: app/community/forms.py:131
-#, fuzzy
 msgid "Weekly"
-msgstr "1 周"
+msgstr "每周"
 
 #: app/community/forms.py:131
-#, fuzzy
 msgid "Monthly"
-msgstr "1 个月"
+msgstr "每月"
 
 #: app/community/forms.py:134
-#, fuzzy
 msgid "Publish"
-msgstr "公开订阅源"
+msgstr "发布"
 
 #: app/community/forms.py:139
-#, fuzzy
 msgid "NSFW posts are not allowed."
-msgstr "不允许链接到 %(domain)s。"
+msgstr "不允许 NSFW 帖子。"
 
 #: app/community/forms.py:146
-#, fuzzy
 msgid "NSFL posts are not allowed."
-msgstr "不允许链接到 %(domain)s。"
+msgstr "不允许 NSFL 帖子。"
 
 #: app/community/forms.py:152
 msgid "Choose a time in the future."
-msgstr ""
+msgstr "选择未来的时间。"
 
 #: app/community/forms.py:162 app/community/forms.py:180
 msgid "URL"
@@ -1755,9 +1731,8 @@ msgid "Retrieve"
 msgstr "检索"
 
 #: app/community/forms.py:312
-#, fuzzy
 msgid "To"
-msgstr "最佳"
+msgstr "至"
 
 #: app/community/forms.py:312
 msgid "Email addresses or fediverse handles, one per line"
@@ -1768,27 +1743,24 @@ msgid "Invite"
 msgstr "邀请"
 
 #: app/community/forms.py:317
-#, fuzzy
 msgid "The old community is locked"
-msgstr "还没有社区。"
+msgstr "旧社区已锁定"
 
 #: app/community/forms.py:318
-#, fuzzy
 msgid "Move notification post in old community"
-msgstr "您将收到这些社区的新帖子通知"
+msgstr "在旧社区中移动通知帖子"
 
 #: app/community/forms.py:319
-#, fuzzy
 msgid "Request move"
-msgstr "请求限制："
+msgstr "请求移动"
 
 #: app/community/forms.py:324
 msgid "Text color"
-msgstr ""
+msgstr "文本颜色"
 
 #: app/community/forms.py:325
 msgid "Background color"
-msgstr ""
+msgstr "背景颜色"
 
 #: app/community/routes.py:99
 msgid "Your new community has been created."
@@ -1894,9 +1866,9 @@ msgid "You need to make someone else the owner before unsubscribing."
 msgstr "您需要先让其他人成为所有者才能退订。"
 
 #: app/community/routes.py:753
-#, fuzzy, python-format
+#, python-format
 msgid "Your post was not accepted because %(reason)s"
-msgstr "您的编辑未被接受，因为 %(reason)s"
+msgstr "您的帖子未被接受，因为 %(reason)s"
 
 #: app/community/routes.py:795
 msgid "Add post to community"
@@ -1977,9 +1949,8 @@ msgid "%(name)s has been unbanned."
 msgstr "%(name)s 已被解禁。"
 
 #: app/community/routes.py:1282
-#, fuzzy
 msgid "Your request has been sent to the site admins."
-msgstr "感谢您的主题建议，它已发送给网站管理员。"
+msgstr "您的请求已发送给站点管理员。"
 
 #: app/community/routes.py:1311 app/community/routes.py:1344
 #, python-format
@@ -2030,39 +2001,36 @@ msgid "Report ignored."
 msgstr "举报已被忽略。"
 
 #: app/community/routes.py:1846
-#, fuzzy, python-format
+#, python-format
 msgid "Set your flair in %(community_name)s"
-msgstr "您加入了 %(community_name)s"
+msgstr "在 %(community_name)s 设置您的标签"
 
 #: app/community/routes.py:1863 app/templates/community/community_flair.html:23
-#, fuzzy, python-format
+#, python-format
 msgid "Flair in %(community)s"
-msgstr "编辑 %(community)s"
+msgstr "在 %(community)s 设置标签"
 
 #: app/community/routes.py:1884
-#, fuzzy
 msgid "Flair added."
-msgstr "书签已添加。"
+msgstr "标签已添加。"
 
 #: app/community/routes.py:1886
-#, fuzzy
 msgid "Flair updated."
-msgstr "过滤器已删除。"
+msgstr "标签已更新。"
 
 #: app/community/routes.py:1898
-#, fuzzy, python-format
+#, python-format
 msgid "Edit %(flair_name)s in %(community_name)s"
-msgstr "封禁 @%(author_name)s 自 %(community_name)s"
+msgstr "在 %(community_name)s 中编辑 %(flair_name)s"
 
 #: app/community/routes.py:1898
-#, fuzzy, python-format
+#, python-format
 msgid "Add flair in %(community_name)s"
-msgstr " 在 %(community_name)s"
+msgstr "在 %(community_name)s 中添加标签"
 
 #: app/community/routes.py:1913
-#, fuzzy
 msgid "Flair deleted."
-msgstr "过滤器已删除。"
+msgstr "标签已删除。"
 
 #: app/community/routes.py:1929
 msgid "Sorry your account it too new to do this."
@@ -2137,28 +2105,24 @@ msgid "A Feed with this url already exists."
 msgstr "此 URL 的订阅源已存在。"
 
 #: app/feed/forms.py:65
-#, fuzzy
 msgid "Url is already used by another feed."
-msgstr "该电子邮件地址已被其他账号使用"
+msgstr "URL 已被其它订阅源使用。"
 
 #: app/feed/forms.py:71
 msgid "Feed address"
 msgstr "订阅源地址"
 
 #: app/feed/routes.py:93 app/feed/routes.py:368
-#, fuzzy
 msgid "Your new Feed has been created."
-msgstr "您的新社区已创建。"
+msgstr "您的新订阅源已创建。"
 
 #: app/feed/routes.py:106 app/templates/feed/public_feeds.html:15
-#, fuzzy
 msgid "Create a Feed"
 msgstr "创建订阅源"
 
 #: app/feed/routes.py:140
-#, fuzzy
 msgid "Feed not found."
-msgstr "未找到帖子。"
+msgstr "未找到订阅源。"
 
 #: app/feed/routes.py:142
 msgid ""
@@ -2167,14 +2131,12 @@ msgid ""
 msgstr "未找到订阅源。如果您正在寻找 NSFW 订阅源，它已被此实例屏蔽。"
 
 #: app/feed/routes.py:145
-#, fuzzy
 msgid "Add remote feed"
 msgstr "添加远程订阅源"
 
 #: app/feed/routes.py:273
-#, fuzzy
 msgid "Feed deleted"
-msgstr "用户已删除"
+msgstr "订阅源已删除"
 
 #: app/feed/routes.py:642
 msgid "Could not find that feed or it is not public. Try one of these instead..."
@@ -2225,9 +2187,9 @@ msgid "Posts from %(instance)s"
 msgstr "来自 %(instance)s 的帖子"
 
 #: app/instance/routes.py:184
-#, fuzzy, python-format
+#, python-format
 msgid "Content from %(instance_domain)s will be hidden."
-msgstr "来自 %(name)s 的内容将被隐藏。"
+msgstr "来自 %(instance_domain)s 的内容将被隐藏。"
 
 #: app/instance/routes.py:194
 #, python-format
@@ -2291,9 +2253,8 @@ msgid "Yes"
 msgstr "是"
 
 #: app/post/forms.py:58
-#, fuzzy
 msgid "Also delete replies to this comment"
-msgstr "也删除他们的所有评论"
+msgstr "同时删除对此评论的回复"
 
 #: app/post/routes.py:61 app/post/routes.py:251 app/post/routes.py:417
 msgid ""
@@ -2313,7 +2274,7 @@ msgstr "%(name)s 表示他在这个帖子中犯了错误。"
 #: app/post/routes.py:90
 #, python-format
 msgid "This post is scheduled to be published at %(when)s"
-msgstr ""
+msgstr "此帖子计划在 %(when)s 发布"
 
 #: app/post/routes.py:96 app/post/routes.py:483
 #, python-format
@@ -2321,9 +2282,9 @@ msgid "Your reply was not accepted because %(reason)s"
 msgstr "您的回复未被接受，因为 %(reason)s"
 
 #: app/post/routes.py:330 app/templates/post/post_embed_code.html:22
-#, fuzzy, python-format
+#, python-format
 msgid "Embed code for %(post_title)s"
-msgstr "回复对 %(post_title)s 的评论"
+msgstr "%(post_title)s 的嵌入代码"
 
 #: app/post/routes.py:377
 msgid "Vote has been cast."
@@ -2365,7 +2326,7 @@ msgstr "编辑帖子"
 #: app/post/routes.py:725
 #, python-format
 msgid "Are you sure you want to delete the post \"%(post_title)s\"?"
-msgstr ""
+msgstr "您确定要删除帖子 \"%(post_title)s\" 吗？"
 
 #: app/post/routes.py:738 app/shared/post.py:512 app/shared/post.py:694
 msgid "Post deleted."
@@ -2413,9 +2374,9 @@ msgid "Content from %(name)s will be hidden."
 msgstr "来自 %(name)s 的内容将被隐藏。"
 
 #: app/post/routes.py:1064
-#, fuzzy, python-format
+#, python-format
 msgid "%(name)s has been stickied."
-msgstr "%(name)s 已被取消置顶。"
+msgstr "%(name)s 已被置顶。"
 
 #: app/post/routes.py:1066
 #, python-format
@@ -2445,13 +2406,13 @@ msgid "Edit comment"
 msgstr "编辑评论"
 
 #: app/post/routes.py:1262
-#, fuzzy, python-format
+#, python-format
 msgid "Deleted %(num_deleted)s comments."
-msgstr "已删除评论"
+msgstr "已删除 %(num_deleted)s 条评论。"
 
 #: app/post/routes.py:1265
 msgid "Are you sure you want to delete this comment?"
-msgstr ""
+msgstr "您确定要删除这条评论吗？"
 
 #: app/post/routes.py:1288 app/shared/reply.py:260 app/shared/reply.py:389
 msgid "Comment restored."
@@ -2466,19 +2427,18 @@ msgid "Comments that have been replied to cannot be purged."
 msgstr "已被回复的评论无法清除。"
 
 #: app/post/routes.py:1410
-#, fuzzy
 msgid "Image blocked. Now delete matching posts."
-msgstr "也删除他们的所有帖子"
+msgstr "图片已屏蔽。现在删除匹配的帖子。"
 
 #: app/post/routes.py:1416
 msgid "Are you sure you want to block this image?"
-msgstr ""
+msgstr "您确定要屏蔽这张图片吗？"
 
 #: app/post/routes.py:1417
 msgid ""
 "All posts that use this image will be deleted and future posts of the "
 "image will be rejected."
-msgstr ""
+msgstr "所有使用此图片的帖子将被删除，未来关于此图片的帖子也将被拒绝。"
 
 #: app/post/routes.py:1459 app/post/routes.py:1477
 msgid "Voting Activity"
@@ -2607,15 +2567,13 @@ msgid "Active"
 msgstr "活跃"
 
 #: app/templates/_home_nav.html:6 app/templates/_home_nav.html:36
-#, fuzzy
 msgid "Trending in niche communities"
-msgstr "社区中的帖子"
+msgstr "在小众社区中热门"
 
 #: app/templates/_home_nav.html:6 app/templates/_home_nav.html:37
 #: app/user/forms.py:66
-#, fuzzy
 msgid "Scaled"
-msgstr "已保存"
+msgstr "扩展"
 
 #: app/templates/_home_nav.html:7 app/templates/_home_nav.html:22
 #: app/templates/community/_community_nav.html:9
@@ -2629,55 +2587,46 @@ msgid "Top"
 msgstr "最佳"
 
 #: app/templates/_home_nav.html:8
-#, fuzzy
 msgid "Most upvotes in the last hour"
-msgstr "最近 24 小时最多赞"
+msgstr "过去一小时最多点赞"
 
 #: app/templates/_home_nav.html:9
-#, fuzzy
 msgid "Most upvotes in the last 6h"
-msgstr "最近 24 小时最多赞"
+msgstr "过去 6 小时最多点赞"
 
 #: app/templates/_home_nav.html:10
-#, fuzzy
 msgid "Most upvotes in the last 12h"
-msgstr "最近 24 小时最多赞"
+msgstr "过去 12 小时最多点赞"
 
 #: app/templates/_home_nav.html:11
-#, fuzzy
 msgid "Most upvotes in the last day"
-msgstr "最近 24 小时最多赞"
+msgstr "过去一天最多点赞"
 
 #: app/templates/_home_nav.html:11 app/templates/_home_nav.html:28
-#, fuzzy
 msgid "Day"
-msgstr "1 天"
+msgstr "天"
 
 #: app/templates/_home_nav.html:12
-#, fuzzy
 msgid "Most upvotes in the last week"
-msgstr "最近 24 小时最多赞"
+msgstr "过去一周最多点赞"
 
 #: app/templates/_home_nav.html:12 app/templates/_home_nav.html:29
-#, fuzzy
 msgid "Week"
-msgstr "1 周"
+msgstr "周"
 
 #: app/templates/_home_nav.html:13
-#, fuzzy
 msgid "Most upvotes in the last month"
-msgstr "最近 24 小时最多赞"
+msgstr "过去一个月最多点赞"
 
 #: app/templates/_home_nav.html:13 app/templates/_home_nav.html:30
-#, fuzzy
 msgid "Month"
-msgstr "1 个月"
+msgstr "月"
 
 #: app/templates/_home_nav.html:17 app/templates/themes/dillo/_home_nav.html:1
 #: app/templates/themes/dillo/_home_nav.html:2
 #: app/templates/user/_read_posts_nav.html:1
 msgid "Sorting methods: "
-msgstr "排序方法："
+msgstr "排序方法: "
 
 #: app/templates/_inoculation_links.html:4
 msgid "Rational Discourse Toolkit"
@@ -2780,13 +2729,13 @@ msgstr "评论"
 
 #: app/templates/_side_pane.html:51 app/templates/post/_post_full.html:170
 #: app/templates/post/post_teaser/_title.html:26
-#, fuzzy, python-format
+#, python-format
 msgid "Show only %(flair_name)s"
-msgstr "由 %(user_name)s 发布的帖子"
+msgstr "仅显示 %(flair_name)s"
 
 #: app/templates/_side_pane.html:57
 msgid "Set my flair"
-msgstr ""
+msgstr "设置我的标签"
 
 #: app/templates/_side_pane.html:67
 #: app/templates/themes/dillo/_side_pane.html:48
@@ -2799,9 +2748,9 @@ msgid "View community on original server"
 msgstr "在原始服务器上查看社区"
 
 #: app/templates/_side_pane.html:74
-#, fuzzy, python-format
+#, python-format
 msgid "Move community to %(instance_domain)s"
-msgstr "编辑 %(instance_name)s"
+msgstr "将社区移动到 %(instance_domain)s"
 
 #: app/templates/_side_pane.html:76
 #: app/templates/themes/dillo/_side_pane.html:54
@@ -2830,9 +2779,8 @@ msgid "More communities"
 msgstr "更多社区"
 
 #: app/templates/_side_pane.html:120
-#, fuzzy
 msgid "More feeds"
-msgstr "我的订阅源"
+msgstr "更多订阅源"
 
 #: app/templates/_side_pane.html:129
 #: app/templates/themes/dillo/_side_pane.html:89
@@ -2886,7 +2834,7 @@ msgstr "无过滤器"
 #: app/templates/themes/dillo/_view_filter_nav.html:1
 #: app/templates/themes/dillo/_view_filter_nav.html:2
 msgid "Post filters: "
-msgstr "帖子过滤器："
+msgstr "帖子过滤器: "
 
 #: app/templates/about.html:10 app/templates/donate.html:22
 #: app/templates/index.html:92 app/templates/keyboard_shortcuts.html:63
@@ -3014,9 +2962,8 @@ msgid "Activity Alerts"
 msgstr "活动提醒"
 
 #: app/templates/base.html:246
-#, fuzzy
 msgid "Manage donations"
-msgstr "被封禁域名"
+msgstr "管理捐赠"
 
 #: app/templates/base.html:249 app/templates/themes/dillo/base.html:227
 msgid "Read Posts"
@@ -3048,7 +2995,7 @@ msgstr "颜色模式"
 
 #: app/templates/base.html:304
 msgid "Install PieFed app"
-msgstr ""
+msgstr "安装 PieFed 应用"
 
 #: app/templates/base.html:305 app/templates/donate.html:10
 #: app/templates/themes/dillo/base.html:274 app/user/subscription.py:27
@@ -3068,10 +3015,13 @@ msgid ""
 " are vital in supporting the PieFed development effort, allowing us to "
 "expand and enhance PieFed with new features."
 msgstr ""
+"PieFed 是自由开源软件，在没有广告、盈利或依赖风险投资的情况下运行。"
+"您的捐赠对于支持 PieFed 的开发至关重要，使我们能够扩展和增强 PieFed "
+"的新功能。"
 
 #: app/templates/donate.html:14 app/templates/user/choose_plan.html:65
 msgid "Donate using Patreon"
-msgstr ""
+msgstr "通过 Patreon 捐赠"
 
 #: app/templates/feeds_menu.html:9 app/templates/feeds_menu.html:19
 #: app/templates/themes/dillo/base.html:203
@@ -3226,7 +3176,6 @@ msgid "Choose a topic to filter communities by"
 msgstr "选择一个主题以按此过滤社区"
 
 #: app/templates/list_communities.html:61
-#, fuzzy
 msgid "Feed"
 msgstr "订阅源"
 
@@ -3278,9 +3227,8 @@ msgid "There are no communities yet."
 msgstr "还没有社区。"
 
 #: app/templates/list_communities.html:205
-#, fuzzy
 msgid "No communities match your search."
-msgstr "没有帖子符合您的搜索。"
+msgstr "没有符合您搜索的社区。"
 
 #: app/templates/list_topics.html:25
 msgid "Choose a topic"
@@ -3435,7 +3383,7 @@ msgstr "操作"
 
 #: app/templates/admin/approve_registrations.html:36
 msgid "Throwaway email account, the kind spammers and trolls use."
-msgstr ""
+msgstr "一次性邮箱账号，垃圾邮件者和喷子使用的那种。"
 
 #: app/templates/admin/approve_registrations.html:42
 msgid "Approve"
@@ -3469,9 +3417,8 @@ msgstr "最近批准的"
 
 #: app/templates/admin/blocked_images.html:20
 #: app/templates/admin/blocked_images.html:27
-#, fuzzy
 msgid "File"
-msgstr "失败"
+msgstr "文件"
 
 #: app/templates/admin/blocked_images.html:29
 #: app/templates/admin/communities.html:106
@@ -3529,9 +3476,9 @@ msgstr "最后活动"
 
 #: app/templates/admin/community_move.html:12
 #: app/templates/community/community_move.html:20
-#, fuzzy, python-format
+#, python-format
 msgid "Move %(community)s to %(instance_domain)s"
-msgstr "编辑 %(instance_name)s"
+msgstr "将 %(community)s 移动到 %(instance_domain)s"
 
 #: app/templates/admin/content.html:46
 msgid "No posts."
@@ -3542,9 +3489,9 @@ msgid "No comments."
 msgstr "没有评论。"
 
 #: app/templates/admin/edit_blocked_image.html:13
-#, fuzzy, python-format
+#, python-format
 msgid "Edit %(image_file_name)s"
-msgstr "编辑 %(instance_name)s"
+msgstr "编辑 %(image_file_name)s"
 
 #: app/templates/admin/edit_community.html:12
 #, python-format
@@ -3556,9 +3503,8 @@ msgid "Will not be overwritten by remote server"
 msgstr "不会被远程服务器覆盖"
 
 #: app/templates/admin/edit_community.html:61
-#, fuzzy
 msgid "Convert to local community"
-msgstr "创建本地社区"
+msgstr "转换为本地社区"
 
 #: app/templates/admin/edit_instance.html:13
 #, python-format
@@ -3691,21 +3637,20 @@ msgid "Last Seen"
 msgstr "最后在线"
 
 #: app/templates/admin/misc.html:17
-#, fuzzy
 msgid "Content settings"
-msgstr "更改设置"
+msgstr "内容设置"
 
 #: app/templates/admin/misc.html:20
 msgid "CSS in this field will be added to every page."
-msgstr ""
+msgstr "此字段中的 CSS 将添加到每个页面。"
 
 #: app/templates/admin/misc.html:37
 msgid "Use 2-letter country codes, one per line. Requires IPinfo API."
-msgstr ""
+msgstr "使用 2 字母国家代码，每行一个。需要 IPinfo API。"
 
 #: app/templates/admin/misc.html:40
 msgid "This will be sent after their application is approved. Use markdown."
-msgstr ""
+msgstr "在他们的申请被批准后将会发送。使用 markdown。"
 
 #: app/templates/admin/site.html:19
 msgid ""
@@ -3788,13 +3733,12 @@ msgid "Please choose at least 3 topics that interest you."
 msgstr "请至少选择 3 个您感兴趣的主题。"
 
 #: app/templates/auth/login.html:20 app/templates/auth/register.html:18
-#, fuzzy
 msgid "Log in with Google"
-msgstr "登录以发表评论"
+msgstr "用 Google 登录"
 
 #: app/templates/auth/login.html:23
 msgid "Log in with a passkey"
-msgstr ""
+msgstr "使用通行密钥登录"
 
 #: app/templates/auth/login.html:27
 msgid "New User?"
@@ -3837,9 +3781,8 @@ msgid "Create new account"
 msgstr "创建新账号"
 
 #: app/templates/auth/register.html:22
-#, fuzzy
 msgid "or use a username and password:"
-msgstr "重置您的密码"
+msgstr "或使用用户名和密码："
 
 #: app/templates/auth/register.html:26
 msgid "Registration is closed. Only admins can create accounts."
@@ -4030,15 +3973,13 @@ msgstr "宽图块"
 
 #: app/templates/community/_community_nav.html:36
 #: app/templates/community/_community_nav.html:109
-#, fuzzy
 msgid "Content type"
-msgstr "内容"
+msgstr "内容类型"
 
 #: app/templates/community/_community_nav.html:42
 #: app/templates/community/_community_nav.html:115
-#, fuzzy
 msgid "Apply filters"
-msgstr "提醒过滤器："
+msgstr "应用过滤器"
 
 #: app/templates/community/_community_nav.html:50
 #: app/templates/feed/_feed_nav.html:11
@@ -4051,15 +3992,13 @@ msgid "Create feed"
 msgstr "创建订阅源"
 
 #: app/templates/community/_community_nav.html:143
-#, fuzzy
 msgid "Show posts"
-msgstr "显示 NSFW 帖子"
+msgstr "显示帖子"
 
 #: app/templates/community/_community_nav.html:147
 #: app/templates/community/_community_nav.html:151
-#, fuzzy
 msgid "Show comments"
-msgstr "没有评论。"
+msgstr "显示评论"
 
 #: app/templates/community/_notification_toggle.html:5
 msgid "Notify about every new post. Not advisable in high traffic communities!"
@@ -4225,14 +4164,12 @@ msgid "Only local accounts can be added as moderators."
 msgstr "只能添加本地账号作为版主。"
 
 #: app/templates/community/community_flair.html:27
-#, fuzzy
 msgid "Posts can be categorized using flair."
-msgstr "帖子可能会受欢迎。"
+msgstr "帖子可以用标签分类。"
 
 #: app/templates/community/community_flair.html:48
-#, fuzzy
 msgid "This community has no flair yet."
-msgstr "该社区没有订阅者"
+msgstr "此社区尚未设置标签。"
 
 #: app/templates/community/community_mod_list.html:25
 msgid "See and change who moderates this community"
@@ -4288,9 +4225,9 @@ msgid "No reports yet"
 msgstr "尚无举报"
 
 #: app/templates/community/community_moderate_comments.html:28
-#, fuzzy, python-format
+#, python-format
 msgid "Review comments in %(community)s"
-msgstr "在 %(community_name)s 中的新帖子"
+msgstr "在 %(community)s 中查看评论"
 
 #: app/templates/community/community_moderate_comments.html:38
 #: app/templates/user/show_profile.html:191
@@ -4359,13 +4296,12 @@ msgid "This community has had no moderation actions yet."
 msgstr "此社区尚未有任何管理操作。"
 
 #: app/templates/community/community_move.html:16
-#, fuzzy
 msgid "Move"
-msgstr "移除"
+msgstr "移动"
 
 #: app/templates/community/community_move.html:22
 msgid "The process to move a community to this instance is:"
-msgstr ""
+msgstr "将社区迁移到此实例的流程如下："
 
 #: app/templates/community/community_move.html:24
 msgid ""
@@ -4374,38 +4310,44 @@ msgid ""
 "            will not copy posts so having an account on this instance "
 "subscribed to it for a while is the only way to get old posts here."
 msgstr ""
+"确保此实例上的社区副本已活跃足够长时间以接收一定数量的帖子。迁移过程不会复制"
+"帖子，\n"
+"            因此在此实例上订阅该社区的账号一段时间是获取旧帖子的唯一途径。"
 
 #: app/templates/community/community_move.html:26
 msgid ""
 "Lock the old community to by setting it to 'moderators only' so no one "
 "else can post in it."
-msgstr ""
+msgstr "将旧社区锁定为“仅限管理员”，以便没有其他人可以发帖。"
 
 #: app/templates/community/community_move.html:27
 #, python-format
 msgid ""
 "Create a post in the old community announcing the impending move to "
 "%(instance_domain)s. Paste the url of that post into the field below."
-msgstr ""
+msgstr "在旧社区创建一条公告，宣布即将迁移到 %(instance_domain)s。将该帖的 URL "
+"粘贴到下面的字段中。"
 
 #: app/templates/community/community_move.html:28
 #, python-format
 msgid "Submit the form to send the request to %(instance_domain)s admins."
-msgstr ""
+msgstr "提交表单以将请求发送给 %(instance_domain)s 管理员。"
 
 #: app/templates/community/community_move.html:29
 #, python-format
 msgid ""
 "%(instance_domain)s admins will review your request, turn this community "
 "into a local one and contact you."
-msgstr ""
+msgstr "%(instance_domain)s "
+"管理员将审核您的请求，将此社区转变为本地社区，并与您联系。"
 
 #: app/templates/community/community_move.html:30
 #, python-format
 msgid ""
 "Update your announcement post in the old community to encourage people to"
 " join the new community at<br>!%(community_name)s@%(instance_domain)s."
-msgstr ""
+msgstr "在旧社区中更新您的公告帖，鼓励人们加入新社区<br>!%(community_name)s@%(instanc"
+"e_domain)s。"
 
 #: app/templates/community/community_wiki_list.html:23
 #, python-format
@@ -4947,19 +4889,17 @@ msgid "Show newest first"
 msgstr "显示最新的评论"
 
 #: app/templates/post/post.html:86
-#, fuzzy
 msgid "Comments from other communities"
-msgstr "来自已加入社区的帖子"
+msgstr "来自其他社区的评论"
 
 #: app/templates/post/post.html:91
-#, fuzzy, python-format
+#, python-format
 msgid "Comments in %(name)s"
-msgstr "在 %(name)s 中发布"
+msgstr "%(name)s 中的评论"
 
 #: app/templates/post/post.html:100
-#, fuzzy
 msgid "Community options"
-msgstr "评论选项"
+msgstr "社区选项"
 
 #: app/templates/post/post.html:110 app/templates/post/post_options.html:52
 #, python-format
@@ -4967,23 +4907,21 @@ msgid "Block community %(community_name)s"
 msgstr "屏蔽社区 %(community_name)s"
 
 #: app/templates/post/post_block_image_purge_posts.html:12
-#, fuzzy, python-format
+#, python-format
 msgid "Delete %(count)s posts"
-msgstr "删除账号"
+msgstr "删除 %(count)s 条帖子"
 
 #: app/templates/post/post_block_image_purge_posts.html:16
 msgid "Select all"
-msgstr ""
+msgstr "全选"
 
 #: app/templates/post/post_block_image_purge_posts.html:18
-#, fuzzy
 msgid "Poster"
-msgstr "帖子"
+msgstr "发帖人"
 
 #: app/templates/post/post_block_image_purge_posts.html:19
-#, fuzzy
 msgid "Date"
-msgstr "捐赠"
+msgstr "日期"
 
 #: app/templates/post/post_cross_post.html:12
 #, python-format
@@ -5020,7 +4958,7 @@ msgstr "更多选项"
 
 #: app/templates/post/post_embed_code.html:27
 msgid "Copy to clipboard"
-msgstr ""
+msgstr "复制到剪贴板"
 
 #: app/templates/post/post_mea_culpa.html:15
 msgid ""
@@ -5101,7 +5039,7 @@ msgstr "隐藏来自作者实例的每个帖子： %(name)s"
 
 #: app/templates/post/post_options.html:69
 msgid "Ban image everywhere forever"
-msgstr ""
+msgstr "永久屏蔽图片"
 
 #: app/templates/post/post_options.html:73
 #, python-format
@@ -5109,9 +5047,8 @@ msgid "View original on %(domain)s"
 msgstr "在 %(domain)s 上查看原始内容"
 
 #: app/templates/post/post_options.html:78
-#, fuzzy
 msgid "Get embed code"
-msgstr "测试模式"
+msgstr "获取嵌入代码"
 
 #: app/templates/post/post_options.html:81
 #: app/templates/post/post_reply_options.html:57
@@ -5133,9 +5070,9 @@ msgid "Ban @%(author_name)s from %(community_name)s"
 msgstr "封禁 @%(author_name)s 自 %(community_name)s"
 
 #: app/templates/post/post_reply_options.html:52
-#, fuzzy, python-format
+#, python-format
 msgid "Hide content from author's instance: %(name)s"
-msgstr "隐藏来自作者实例的每个帖子： %(name)s"
+msgstr "隐藏作者实例的内容：%(name)s"
 
 #: app/templates/post/post_reply_report.html:13
 #, python-format
@@ -5188,9 +5125,8 @@ msgid "Number of comments:"
 msgstr "评论数量："
 
 #: app/templates/post/post_teaser/_utilities_bar.html:44
-#, fuzzy
 msgid "Join this community"
-msgstr "您无法加入此社区"
+msgstr "加入此社区"
 
 #: app/templates/search/results.html:11
 msgid "Search results for"
@@ -5201,13 +5137,12 @@ msgid "No posts match your search."
 msgstr "没有帖子符合您的搜索。"
 
 #: app/templates/search/start.html:13
-#, fuzzy
 msgid "Search for..."
-msgstr "搜索帖子"
+msgstr "搜索..."
 
 #: app/templates/search/start.html:15
 msgid "What to search for: "
-msgstr ""
+msgstr "搜索内容： "
 
 #: app/templates/search/start.html:25
 msgid "Keyword"
@@ -5383,7 +5318,7 @@ msgstr "导入与导出"
 #: app/templates/user/_user_nav.html:17 app/templates/user/passkeys.html:17
 #: app/templates/user/passkeys.html:20
 msgid "Passkeys"
-msgstr ""
+msgstr "通行密钥"
 
 #: app/templates/user/alerts.html:15
 msgid "Alerts"
@@ -5406,52 +5341,50 @@ msgid ""
 msgstr "尚未书签任何评论。使用每个评论的三个点找到书签功能。"
 
 #: app/templates/user/choose_plan.html:10
-#, fuzzy, python-format
+#, python-format
 msgid "Donate to %(instance_name)s"
-msgstr "编辑 %(instance_name)s"
+msgstr "向 %(instance_name)s 捐款"
 
 #: app/templates/user/choose_plan.html:12
 #, python-format
 msgid ""
 "By supporting %(instance_name)s financially you will be helping to build "
 "a better internet for everyone."
-msgstr ""
+msgstr "通过财务支持 %(instance_name)s，您将帮助建设一个更好的互联网。"
 
 #: app/templates/user/choose_plan.html:14
 msgid "Please choose from one of the plans below."
-msgstr ""
+msgstr "请从以下计划中选择一个。"
 
 #: app/templates/user/choose_plan.html:21
 msgid "Manage existing donation plan"
-msgstr ""
+msgstr "管理现有捐款计划"
 
 #: app/templates/user/choose_plan.html:25
 msgid "Cancel regular donation"
-msgstr ""
+msgstr "取消定期捐款"
 
 #: app/templates/user/choose_plan.html:28
 msgid ""
 "When your credit card expires you will need to add a new one to continue "
 "your donations."
-msgstr ""
+msgstr "当您的信用卡过期时，您需要添加一张新卡以继续您的捐款。"
 
 #: app/templates/user/choose_plan.html:29
 msgid "Update credit card details"
-msgstr ""
+msgstr "更新信用卡信息"
 
 #: app/templates/user/choose_plan.html:39
-#, fuzzy
 msgid "Donation"
-msgstr "捐赠"
+msgstr "捐款"
 
 #: app/templates/user/choose_plan.html:51
-#, fuzzy
 msgid "Generous donation"
-msgstr "冒充"
+msgstr "慷慨的捐赠"
 
 #: app/templates/user/choose_plan.html:60
 msgid "Prices are in US dollars."
-msgstr ""
+msgstr "价格以美元计价。"
 
 #: app/templates/user/delete_account.html:15
 #: app/templates/user/edit_settings.html:17
@@ -5489,7 +5422,9 @@ msgid ""
 "We will tell other websites (fediverse instances) that your account is "
 "gone. But it's up to them to decide what to do with any copies they have "
 "of your stuff. Some websites work differently than ours."
-msgstr ""
+msgstr "我们会通知其他网站（fediverse "
+"实例）您的账号已删除。但由他们决定如何处理他们拥有的您的内容副本。有些网站的"
+"运作方式不同于我们。"
 
 #: app/templates/user/delete_account.html:23
 msgid ""
@@ -5563,43 +5498,38 @@ msgid "Delete account"
 msgstr "删除账号"
 
 #: app/templates/user/edit_settings.html:24
-#, fuzzy
 msgid "Mail Settings"
-msgstr "杂项设置"
+msgstr "邮件设置"
 
 #: app/templates/user/edit_settings.html:28
-#, fuzzy
 msgid "Visibility"
-msgstr "不可见"
+msgstr "可见性"
 
 #: app/templates/user/edit_settings.html:33
-#, fuzzy
 msgid "User interface"
-msgstr "用户备注"
+msgstr "用户界面"
 
 #: app/templates/user/edit_settings.html:35
 msgid "This is used for menus and labels in the user interface"
-msgstr ""
+msgstr "用于菜单和界面标签"
 
 #: app/templates/user/edit_settings.html:42
 msgid "Increase font size"
-msgstr ""
+msgstr "放大字体"
 
 #: app/templates/user/edit_settings.html:43
 msgid "Decrease font size"
-msgstr ""
+msgstr "缩小字体"
 
 #: app/templates/user/edit_settings.html:47
-#, fuzzy
 msgid "Preferences"
-msgstr "来源"
+msgstr "偏好设置"
 
 #: app/templates/user/edit_settings.html:49
-#, fuzzy
 msgid ""
 "Only posts and replies in these selected languages will be visible. "
 "Choose none to allow all."
-msgstr "链接到 %(name)s 的帖子将被隐藏。"
+msgstr "仅显示所选语言的帖子和回复。选择“无”以允许所有内容。"
 
 #: app/templates/user/edit_settings.html:54
 msgid ""
@@ -5699,9 +5629,8 @@ msgid "Mark all as read"
 msgstr "标记全部为已读"
 
 #: app/templates/user/notifications.html:22
-#, fuzzy
 msgid "Filter notifications"
-msgstr "通知"
+msgstr "过滤通知"
 
 #: app/templates/user/notifications.html:50
 msgid "No notifications to show."
@@ -5719,14 +5648,12 @@ msgid "Upvoted"
 msgstr "已点赞"
 
 #: app/templates/user/passkeys.html:24
-#, fuzzy
 msgid "Add passkey"
-msgstr "添加用户"
+msgstr "添加通行密钥"
 
 #: app/templates/user/passkeys.html:44
-#, fuzzy
 msgid "No passkeys created yet."
-msgstr "此订阅源下尚无帖子。"
+msgstr "尚未创建通行密钥。"
 
 #: app/templates/user/read_posts.html:15 app/templates/user/read_posts.html:18
 #: app/user/routes.py:1376
@@ -5778,7 +5705,7 @@ msgstr "屏蔽 %(user_name)s"
 
 #: app/templates/user/show_profile.html:112
 msgid "Lemmyverse.link"
-msgstr ""
+msgstr "Lemmyverse.link"
 
 #: app/templates/user/show_profile.html:113
 #: app/templates/user/user_preview.html:59 app/user/routes.py:1427
@@ -5813,9 +5740,8 @@ msgid "IP address of last interaction."
 msgstr "最后一次互动的 IP 地址。"
 
 #: app/templates/user/show_profile.html:133
-#, fuzzy
 msgid "Donor"
-msgstr "点踩"
+msgstr "捐赠者"
 
 #: app/templates/user/show_profile.html:166
 msgid "Post pagination"
@@ -5827,39 +5753,37 @@ msgstr "成员"
 
 #: app/templates/user/show_profile.html:258
 msgid "Moderate user"
-msgstr "适度用户"
+msgstr "管理用户"
 
 #: app/templates/user/show_profile.html:278
 msgid "Ban + Purge"
 msgstr "禁用 + 清除"
 
 #: app/templates/user/stripe_redirect.html:10 app/user/subscription.py:86
-#, fuzzy
 msgid "Please wait..."
-msgstr "请让它停止"
+msgstr "请稍候..."
 
 #: app/templates/user/stripe_redirect.html:11
 msgid "You are being sent to our payment system, please wait a moment."
-msgstr ""
+msgstr "您正被引导至我们的支付系统，请稍等片刻。"
 
 #: app/templates/user/stripe_result.html:10
 msgid "Payment result"
-msgstr ""
+msgstr "支付结果"
 
 #: app/templates/user/stripe_result.html:12
 msgid "Thank you for your donation!"
-msgstr ""
+msgstr "感谢您的捐赠！"
 
 #: app/templates/user/stripe_result.html:14
 msgid ""
 "Something went wrong during the payment process. No changes have been "
 "made to your account."
-msgstr ""
+msgstr "在支付过程中出现问题。您的账号未被更改。"
 
 #: app/templates/user/stripe_result.html:16
-#, fuzzy
 msgid "Continue"
-msgstr "在线"
+msgstr "继续"
 
 #: app/templates/user/user_feeds.html:13
 msgid "New Feed"
@@ -5911,21 +5835,18 @@ msgid ""
 msgstr "您尚未订阅任何社区的新内容提醒。请使用每个社区中的铃铛图标进行订阅。"
 
 #: app/templates/user/alerts/_feeds.html:2
-#, fuzzy
 msgid "You will be notified of new posts in communities covered by these feeds"
-msgstr "您将收到这些主题所涵盖的社区的新帖子通知"
+msgstr "您将收到有关这些订阅源覆盖的社区中新帖子的通知"
 
 #: app/templates/user/alerts/_feeds.html:7
-#, fuzzy
 msgid "Visit Feed"
-msgstr "编辑订阅源"
+msgstr "访问订阅源"
 
 #: app/templates/user/alerts/_feeds.html:15
-#, fuzzy
 msgid ""
 "You have not subscribed to any feeds. Use the bell icon on each feed to "
 "do so."
-msgstr "您尚未订阅任何帖子。请使用每个帖子的铃铛图标进行订阅。"
+msgstr "您尚未订阅任何订阅源。请使用每个订阅源上的铃铛图标进行订阅。"
 
 #: app/templates/user/alerts/_filter.html:4
 msgid "Mine"
@@ -6061,9 +5982,8 @@ msgid "Interface language"
 msgstr "界面语言"
 
 #: app/user/forms.py:45
-#, fuzzy
 msgid "Content language"
-msgstr "界面语言"
+msgstr "内容语言"
 
 #: app/user/forms.py:48
 msgid "Receive email about missed notifications"
@@ -6120,50 +6040,44 @@ msgid "Theme"
 msgstr "主题"
 
 #: app/user/forms.py:79
-#, fuzzy
 msgid "No"
-msgstr "备注"
+msgstr "否"
 
 #: app/user/forms.py:81
-#, fuzzy
 msgid "YEESSS"
-msgstr "是"
+msgstr "YESSSS"
 
 #: app/user/forms.py:83
 msgid "Compact UI"
-msgstr ""
+msgstr "紧凑界面"
 
 #: app/user/forms.py:84
-#, fuzzy
 msgid "Theme default - fastest"
-msgstr "默认帖子排序"
+msgstr "主题默认 - 速度最快"
 
 #: app/user/forms.py:85
 msgid "Atkinson Hyperlegible - low vision"
-msgstr ""
+msgstr "Atkinson Hyperlegible - 低视力"
 
 #: app/user/forms.py:86
 msgid "Inter - pretty"
-msgstr ""
+msgstr "Inter - 美观"
 
 #: app/user/forms.py:87
 msgid "Roboto - pretty"
-msgstr ""
+msgstr "Roboto - 美观"
 
 #: app/user/forms.py:89
-#, fuzzy
 msgid "Font"
-msgstr "1 个月"
+msgstr "字体"
 
 #: app/user/forms.py:95
-#, fuzzy
 msgid "All instances"
-msgstr "实例"
+msgstr "所有实例"
 
 #: app/user/forms.py:97
-#, fuzzy
 msgid "Accept private messages from"
-msgstr "接受点踩来自"
+msgstr "接受来自的私信"
 
 #: app/user/forms.py:98 app/user/forms.py:154
 msgid "Save settings"
@@ -6211,7 +6125,7 @@ msgstr "触发此过滤器的关键词"
 
 #: app/user/forms.py:167
 msgid "Expire after"
-msgstr "过期后"
+msgstr "过期于"
 
 #: app/user/forms.py:172
 msgid "Your remote instance:"
@@ -6323,9 +6237,8 @@ msgid "Banned user was a remote instance admin."
 msgstr "已封禁用户是远程实例管理员。"
 
 #: app/user/routes.py:551
-#, fuzzy
 msgid "Banned user with role permissions."
-msgstr "已清除具有角色权限的用户。"
+msgstr "被禁用户，具有角色权限。"
 
 #: app/user/routes.py:552
 #, python-format
@@ -6380,9 +6293,8 @@ msgid "Deleted user was a remote instance admin."
 msgstr "已删除用户是远程实例管理员。"
 
 #: app/user/routes.py:736
-#, fuzzy
 msgid "Deleted user with role permissions."
-msgstr "已清除具有角色权限的用户。"
+msgstr "已删除用户，具有角色权限。"
 
 #: app/user/routes.py:737
 #, python-format
@@ -6451,9 +6363,8 @@ msgid "Topic Alerts"
 msgstr "主题提醒"
 
 #: app/user/routes.py:1271
-#, fuzzy
 msgid "Feed Alerts"
-msgstr "用户提醒"
+msgstr "订阅源提醒"
 
 #: app/user/routes.py:1277
 msgid "User Alerts"
@@ -6485,36 +6396,34 @@ msgstr "搜索远程用户需要登录"
 msgid ""
 "Thank you for supporting %(instance_name)s! Any choice you make below "
 "will replace your current donation plan."
-msgstr ""
+msgstr "感谢您支持 %(instance_name)s！您在下方的任何选择都将替换您当前的捐赠计划。"
 
 #: app/user/subscription.py:21
-#, fuzzy
 msgid "Choose a donation plan"
-msgstr "选择一个主题"
+msgstr "选择一个捐赠计划"
 
 #: app/user/subscription.py:30
 #, python-format
 msgid ""
 "Log in to donate to %(instance_name)s or donate to the PieFed project "
 "using the button below."
-msgstr ""
+msgstr "登录以向 %(instance_name)s 捐款或使用下面的按钮向 PieFed 项目捐款。"
 
 #: app/user/subscription.py:153
 msgid "You are not donating"
-msgstr ""
+msgstr "您尚未进行捐款"
 
 #: app/user/subscription.py:153
 msgid "There are no regular donations set to occur in the future."
-msgstr ""
+msgstr "未来没有设置定期捐款。"
 
 #: app/user/subscription.py:159
 msgid "Regular donation cancelled"
-msgstr ""
+msgstr "定期捐款已取消"
 
 #: app/user/subscription.py:159
-#, fuzzy
 msgid "Your donation has been cancelled."
-msgstr "您的评论已添加。"
+msgstr "您的捐款已被取消。"
 
 #~ msgid "Edit profile & settings"
 #~ msgstr "编辑个人资料和设置"
@@ -6572,4 +6481,3 @@ msgstr "您的评论已添加。"
 
 #~ msgid "You cannot block your instance."
 #~ msgstr "您无法屏蔽您的实例。"
-
