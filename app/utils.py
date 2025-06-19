@@ -1661,6 +1661,7 @@ def languages_for_form(all=False):
             if id:
                 used_languages.append((id, ""))
 
+    other_languages = []
     for language in Language.query.order_by(Language.name).all():
         try:
             i = used_languages.index((language.id, ""))
@@ -1668,8 +1669,6 @@ def languages_for_form(all=False):
         except:
             if all and language.code != "und":
                 other_languages.append((language.id, language.name))
-    else:
-        other_languages = []
 
     return used_languages + other_languages
 
