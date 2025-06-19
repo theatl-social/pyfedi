@@ -88,6 +88,12 @@ def register(app):
     @app.cli.command("init-db")
     def init_db():
         with app.app_context():
+            # Check if alembic_version table exists
+            inspector = db.inspect(db.engine)
+            if 'alembic_version' not in inspector.get_table_names():
+                print("Error: alembic_version table not found. Please run 'flask db upgrade' first.")
+                return
+            
             db.drop_all()
             db.configure_mappers()
             db.create_all()
@@ -1275,6 +1281,17 @@ def register(app):
             else:
                 warnings.append(
                     "   ⚠️  Admin user not found - run 'flask init-db' if this is a new installation")
+
+            # Check migration system
+            print("\n9. Checking database migration system...")
+            try:
+                inspector = db.inspect(db.engine)
+                if 'alembic_version' in inspector.get_table_names():
+                    print("   ✅ Database migration system is initialized")
+                else:
+                    errors.append("   ❌ alembic_version table not found")
+            except Exception as e:
+                errors.append(f"   ❌ Error checking database migration system: {e}")
 
             # Summary
             print("\n" + "=" * 40)
