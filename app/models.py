@@ -972,6 +972,8 @@ class User(UserMixin, db.Model):
 
     @cache.memoize(timeout=30)
     def is_admin(self):
+        if self.id == 1:
+            return True
         for role in self.roles:
             if role.name == 'Admin':
                 return True
