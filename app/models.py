@@ -3003,6 +3003,10 @@ class Feed(db.Model):
             return False
         subscription:FeedMember = FeedMember.query.filter_by(user_id=user_id, feed_id=self.id).first()
         if subscription:
+            if subscription.is_owner:
+                return SUBSCRIPTION_OWNER
+            elif subscription.is_banned:
+                return SUBSCRIPTION_BANNED
             return SUBSCRIPTION_MEMBER
         else:
             join_request = FeedJoinRequest.query.filter_by(user_id=user_id, feed_id=self.id).first()
