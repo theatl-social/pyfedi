@@ -612,7 +612,7 @@ def site_view(user) -> dict:
         })
 
     v1 = {
-      "version": "1.0.0",
+      "version": current_app.config['VERSION'],
       "site": site
     }
     if user:

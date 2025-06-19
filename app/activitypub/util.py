@@ -2583,7 +2583,7 @@ def lemmy_site_data():
         }
       },
       "admins": [],
-      "version": "1.0.0",
+      "version": current_app.config['VERSION'],
       "all_languages": [],
       "discussion_languages": [],
       "taglines": [],
