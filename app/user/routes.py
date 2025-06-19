@@ -85,6 +85,45 @@ def _get_user_post_replies(user, replies_page):
             desc(PostReply.posted_at)).paginate(page=replies_page, per_page=20, error_out=False)
 
 
+def _get_user_posts_and_replies(user, page):
+    """Get list of posts and replies in reverse chronological order based on current user's permissions"""
+    engine = db.session.get_bind()
+    connection = engine.connect()
+    returned_list = []
+    user_id = user.id
+    per_page = 20
+    offset_val = (page - 1) * per_page
+    next_page = False
+
+    if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()):
+        # Admins see everything
+        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id}"
+        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id = {user_id}"
+    elif current_user.is_authenticated and current_user.id == user_id:
+        # Users see their own replies including soft-deleted ones they deleted
+        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND (deleted = 'False' OR deleted_by = {user_id})"
+        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND (deleted = 'False' OR deleted_by = {user_id})"
+    else:
+        # Everyone else sees only non-deleted replies
+        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND deleted = 'False'"
+        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND deleted = 'False'"
+
+    full_query = post_select + " UNION " + reply_select + f" ORDER BY posted_at DESC LIMIT {per_page + 1} OFFSET {offset_val};"
+    query_result = connection.execute(text(full_query))
+
+    for row in query_result:
+        if row.type == "post":
+            returned_list.append(Post.query.get(row.id))
+        elif row.type == "reply":
+            returned_list.append(PostReply.query.get(row.id))
+    
+    if len(returned_list) > per_page:
+        next_page = True
+        returned_list = returned_list[:-1]
+    
+    return (returned_list, next_page)
+
+
 def _get_user_moderates(user):
     """Get communities moderated by user."""
 
@@ -125,6 +164,7 @@ def show_profile(user):
 
     post_page = request.args.get('post_page', 1, type=int)
     replies_page = request.args.get('replies_page', 1, type=int)
+    overview_page = request.args.get('overview_page', 1, type=int)
 
     # Get data using helper functions
     moderates = _get_user_moderates(user)
@@ -132,6 +172,7 @@ def show_profile(user):
     subscribed = _get_user_subscribed_communities(user)
     posts = _get_user_posts(user, post_page)
     post_replies = _get_user_post_replies(user, replies_page)
+    overview_items, overview_has_next_page = _get_user_posts_and_replies(user, overview_page)
 
     # profile info
     canonical = user.ap_public_url if user.ap_public_url else None
@@ -157,6 +198,10 @@ def show_profile(user):
                        replies_page=post_replies.next_num) if post_replies.has_next else None
     replies_prev_url = url_for('activitypub.user_profile', actor=user.ap_id if user.ap_id is not None else user.user_name,
                        replies_page=post_replies.prev_num) if post_replies.has_prev and replies_page != 1 else None
+    overview_next_url = url_for('activitypub.user_profile', actor=user.ap_id if user.ap_id is not None else user.user_name,
+                        overview_page=overview_page + 1) if overview_has_next_page else None
+    overview_prev_url = url_for('activitypub.user_profile', actor=user.ap_id if user.ap_id is not None else user.user_name,
+                        overview_page=overview_page - 1) if overview_page != 1 else None
 
     return render_template('user/show_profile.html', user=user, posts=posts, post_replies=post_replies,
                            moderates=moderates, canonical=canonical, title=_('Posts by %(user_name)s',
@@ -169,8 +214,9 @@ def show_profile(user):
                            reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
                            rss_feed=f"https://{current_app.config['SERVER_NAME']}/u/{user.link()}/feed" if user.post_count > 0 else None,
                            rss_feed_name=f"{user.display_name()} on {g.site.name}" if user.post_count > 0 else None,
-                           user_has_public_feeds=user_has_public_feeds,
-                           user_public_feeds=user_public_feeds)
+                           user_has_public_feeds=user_has_public_feeds, user_public_feeds=user_public_feeds,
+                           overview_items=overview_items, overview_next_url=overview_next_url,
+                           overview_prev_url=overview_prev_url)
 
 
 @bp.route('/u/<actor>/profile', methods=['GET', 'POST'])
