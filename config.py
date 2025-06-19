@@ -1,6 +1,8 @@
 import os
 from dotenv import load_dotenv
 
+import app.constants
+
 basedir = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(os.path.join(basedir, '.env'))
 
@@ -97,3 +99,5 @@ class Config(object):
     CORS_ALLOW_ORIGIN = os.environ.get('CORS_ALLOW_ORIGIN') or '*'
 
     PAGE_LENGTH = int(os.environ.get('PAGE_LENGTH') or 100)
+
+    VERSION = app.constants.VERSION
