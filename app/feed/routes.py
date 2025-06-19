@@ -803,7 +803,7 @@ def do_feed_subscribe(actor, user_id):
         feed = Feed.query.filter_by(name=actor, ap_id=None).first()
     
     if feed is not None:
-        if feed_membership(user, feed) != SUBSCRIPTION_MEMBER and feed_membership(user, feed) != SUBSCRIPTION_PENDING:
+        if feed_membership(user, feed) == SUBSCRIPTION_NONMEMBER:
             success = True
 
             # for local feeds, joining is instant
