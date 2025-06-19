@@ -3,7 +3,7 @@
 {% else -%}
     {% extends "base.html" -%}
 {% endif -%}
-{% from 'bootstrap5/form.html' import render_field %}
+{% from 'bootstrap5/form.html' import render_field, render_form %}
 {% from "_macros.html" import render_username, render_communityname, render_feedname -%}
 
 {% block app_content %}
@@ -79,7 +79,7 @@
         {% else %}
             <p>{{ _('This community has no subscribers') }}</p>
         {% endif %}
-        <h1 class="mt-2">{{ _('Banned People') }}</h1>
+        <h1 class="mt-2">{{ _('Currently Banned People') }}</h1>
         <p>{{ _('See and manage who is banned from %(community)s', community=community.display_name()) }}</p>
         {% if banned_people %}
             <form method="get">
@@ -125,6 +125,9 @@
         {% else %}
             <p>{{ _('No banned people yet') }}</p>
         {% endif %}
+        <h1 class="mt-2">{{ _('Ban A User') }}</h1>
+        <p>{{ _('Create a ban from %(community)s', community=community.display_name()) }}</p>
+        {{ render_form(ban_user_form)  }}
     </main>
 </div>
 {% endblock %}
