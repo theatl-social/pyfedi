@@ -168,6 +168,7 @@ def register(app):
             db.session.add(admin_role)
 
             # Admin user
+            print('The admin user created here should be reserved for admin tasks and not used as a primary daily identity (unless this instance will only be for personal use).')
             user_name = input("Admin user name (ideally not 'admin'): ")
             email = input("Admin email address: ")
             password = input("Admin password: ")
