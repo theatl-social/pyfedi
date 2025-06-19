@@ -100,11 +100,11 @@ def _get_user_posts_and_replies(user, page):
         post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id}"
         reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id = {user_id}"
     elif current_user.is_authenticated and current_user.id == user_id:
-        # Users see their own replies including soft-deleted ones they deleted
+        # Users see their own posts/replies including soft-deleted ones they deleted
         post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND (deleted = 'False' OR deleted_by = {user_id})"
         reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND (deleted = 'False' OR deleted_by = {user_id})"
     else:
-        # Everyone else sees only non-deleted replies
+        # Everyone else sees only non-deleted posts/replies
         post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND deleted = 'False'"
         reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND deleted = 'False'"
 
