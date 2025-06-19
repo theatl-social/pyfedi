@@ -812,6 +812,9 @@ def delete_profile(actor):
         if user.id == current_user.id:
             flash(_('You cannot delete yourself.'), 'error')
         else:
+            if user.id == 1:
+                flash('This user cannot be deleted.')
+                return redirect(request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}')
             user.banned = True
             user.deleted = True
             user.deleted_by = current_user.id
@@ -877,7 +880,9 @@ def delete_account():
         flash(_('Account deletion in progress. Give it a few minutes.'), 'success')
         return redirect(url_for('main.index'))
     elif request.method == 'GET':
-        ...
+        if current_user.id == 1:
+            flash('This user cannot be deleted.')
+            return redirect(url_for('main.index'))
 
     return render_template('user/delete_account.html', title=_('Delete my account'), form=form, user=current_user)
 

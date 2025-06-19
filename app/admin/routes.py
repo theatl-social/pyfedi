@@ -1458,6 +1458,9 @@ def admin_users_add():
 @permission_required('administer all users')
 @login_required
 def admin_user_delete(user_id):
+    if user_id == 1:
+        flash(_('This user cannot be deleted.'))
+        return redirect(referrer())
     user = User.query.get_or_404(user_id)
 
     user.banned = True  # Unsubscribing everyone could take a long time so until that is completed hide this user from the UI by banning it.

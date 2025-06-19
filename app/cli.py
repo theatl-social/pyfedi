@@ -144,7 +144,6 @@ def register(app):
             # These roles will create rows in the 'role' table with IDs of 1,2,3,4. There are some constants (ROLE_*) in
             # constants.py that will need to be updated if the role IDs ever change.
             anon_role = Role(name='Anonymous user', weight=0)
-            anon_role.permissions.append(RolePermission(permission='register'))
             db.session.add(anon_role)
 
             auth_role = Role(name='Authenticated user', weight=1)
