@@ -141,7 +141,7 @@ def chat_delete(conversation_id):
     return redirect(url_for('chat.chat_home'))
 
 
-@bp.route('/chat/<int:instance_id>/block_instance', methods=['GET', 'POST'])
+@bp.route('/chat/<int:instance_id>/block_instance', methods=['POST'])
 @login_required
 def block_instance(instance_id):
     block_remote_instance(instance_id, SRC_WEB)

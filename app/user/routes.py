@@ -674,7 +674,7 @@ def unban_profile(actor):
     return redirect(goto)
 
 
-@bp.route('/u/<actor>/block', methods=['GET'])
+@bp.route('/u/<actor>/block', methods=['POST'])
 @login_required
 def block_profile(actor):
     actor = actor.strip()

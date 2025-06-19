@@ -2,12 +2,12 @@
     {{ _('Delete conversation') }}</a></li>
 {% for member in conversation.members %}
     {% if member.id != current_user.id %}
-        <li><a href="{{ url_for('user.block_profile', actor=member.link()) }}" class="dropdown-item no-underline text-wrap"><span class="fe fe-block"></span>
+        <li><a href='#' data-url="{{ url_for('user.block_profile', actor=member.link()) }}" class="dropdown-item no-underline text-wrap send_post"><span class="fe fe-block"></span>
             {{ _('Block @%(author_name)s', author_name=member.display_name()) }}</a></li>
     {% endif %}
 {% endfor %}
 {% for instance in conversation.instances() %}
-    <li><a href="{{ url_for('chat.block_instance', instance_id=instance.id) }}" class="dropdown-item no-underline text-wrap"><span class="fe fe-block"></span>
+    <li><a href='#' data-url="{{ url_for('chat.block_instance', instance_id=instance.id) }}" class="dropdown-item no-underline text-wrap send_post"><span class="fe fe-block"></span>
         {{ _("Block chats and posts from instance: %(name)s", name=instance.domain) }}</a></li>
 {% endfor %}
 <li><a href="{{ url_for('chat.chat_report', conversation_id=conversation.id) }}" class="dropdown-item no-underline text-wrap" rel="nofollow"><span class="fe fe-report"></span>
