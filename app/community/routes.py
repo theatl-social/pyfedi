@@ -1329,7 +1329,7 @@ def community_moderate_subscribers(actor):
             low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
             subscribers = User.query.join(CommunityMember, CommunityMember.user_id == User.id).filter(CommunityMember.community_id == community.id)
-            subscribers = subscribers.filter(CommunityMember.is_banned == False)
+            subscribers = subscribers.filter(CommunityMember.is_banned == False).order_by(desc(User.last_seen))
 
             # Pagination
             subscribers = subscribers.paginate(page=page, per_page=100 if not low_bandwidth else 50, error_out=False)
