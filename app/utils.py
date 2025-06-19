@@ -1470,14 +1470,14 @@ def current_theme():
         if current_user.theme is not None and current_user.theme != '':
             return current_user.theme
         else:
-            return site.default_theme if site.default_theme is not None else ''
+            return site.default_theme if site.default_theme is not None else 'piefed'
     else:
-        return site.default_theme if site.default_theme is not None else ''
+        return site.default_theme if site.default_theme is not None else 'piefed'
 
 
 def theme_list():
     """ All the themes available, by looking in the templates/themes directory """
-    result = [('', 'PieFed')]
+    result = [('piefed', 'PieFed')]
     for root, dirs, files in os.walk('app/templates/themes'):
         for dir in dirs:
             if os.path.exists(f'app/templates/themes/{dir}/{dir}.json'):

@@ -1393,7 +1393,7 @@ def new_instance_profile_task(instance_id: int):
         except Exception:
             instance_json = {}
         if 'type' in instance_json and instance_json['type'] == 'Application':
-            instance.inbox = instance_json['inbox']
+            instance.inbox = instance_json['inbox'] if 'inbox' in instance_json else f"https://{instance.domain}/inbox"
             instance.outbox = instance_json['outbox']
         else:   # it's pretty much always /inbox so just assume that it is for whatever this instance is running
             instance.inbox = f"https://{instance.domain}/inbox"
