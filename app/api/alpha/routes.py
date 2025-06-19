@@ -562,6 +562,8 @@ def get_alpha_user():
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
         return jsonify(get_user(auth, data))
+    except NoResultFound:
+        return jsonify({"error": "User not found"}), 400
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
