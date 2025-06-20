@@ -484,7 +484,8 @@ class Community(db.Model):
     description_html = db.Column(db.Text)   # html equivalent of above markdown
     rules = db.Column(db.Text)              # this is unused but do not remove, it breaks everything
     content_warning = db.Column(db.Text)        # "Are you sure you want to view this community?"
-    subscriptions_count = db.Column(db.Integer, default=0)
+    subscriptions_count = db.Column(db.Integer, default=0)          # Local subscribers
+    total_subscriptions_count = db.Column(db.Integer, default=0)    # Local AND remote
     post_count = db.Column(db.Integer, default=0)
     post_reply_count = db.Column(db.Integer, default=0)
     nsfw = db.Column(db.Boolean, default=False)
