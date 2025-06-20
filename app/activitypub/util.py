@@ -1207,11 +1207,34 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
 
                             boto3_session = None
                             s3 = None
+
+                            # Use environment variables to determine medium and thumbnail format and quality
+
+                            medium_image_format = os.getenv('MEDIA_IMAGE_MEDIUM_FORMAT')
+                            medium_image_quality = os.getenv('MEDIA_IMAGE_MEDIUM_QUALITY')
+                            thumbnail_image_format = os.getenv('MEDIA_IMAGE_THUMBNAIL_FORMAT', 'WEBP')
+                            thumbnail_image_quality = os.getenv('MEDIA_IMAGE_THUMBNAIL_QUALITY', 93)
+
+                            final_ext = file_ext # track file extension for conversion
+
                             # Resize the image to medium
                             if medium_width:
+                                final_place = os.path.join(directory, new_filename + file_ext)
+
                                 if img_width > medium_width:
-                                    image.thumbnail((medium_width, sys.maxsize))
-                                image.save(final_place)
+                                    image = image.convert('RGBA') # fixes images from being completely crushed when downscaling
+                                    image.thumbnail((medium_width, sys.maxsize), resample=Image.LANCZOS)
+
+                                kwargs = {}
+                                if medium_image_format:
+                                    kwargs['format'] = medium_image_format.upper()
+                                    final_ext = '.' + medium_image_format.lower()
+                                    final_place = os.path.splitext(final_place)[0] + final_ext
+                                if medium_image_quality:
+                                    kwargs['quality'] = int(medium_image_quality)
+
+                                image.save(final_place, optimize=True, **kwargs)
+
                                 if store_files_in_s3():
                                     content_type = guess_mime_type(final_place)
                                     boto3_session = boto3.session.Session()
@@ -1223,11 +1246,11 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                         aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
                                     )
                                     s3.upload_file(final_place, current_app.config['S3_BUCKET'], original_directory + '/' +
-                                                   new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + file_ext,
+                                                   new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext,
                                                    ExtraArgs={'ContentType': content_type})
                                     os.unlink(final_place)
                                     final_place = f"https://{current_app.config['S3_PUBLIC_URL']}/{original_directory}/{new_filename[0:2]}/{new_filename[2:4]}" + \
-                                                  '/' + new_filename + file_ext
+                                                  '/' + new_filename + final_ext
 
                                 file.file_path = final_place
                                 file.width = image.width
@@ -1235,9 +1258,21 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
 
                             # Resize the image to a thumbnail (webp)
                             if thumbnail_width:
+                                final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail' + final_ext)
+
                                 if img_width > thumbnail_width:
-                                    image.thumbnail((thumbnail_width, thumbnail_width))
-                                image.save(final_place_thumbnail, format="WebP", quality=93)
+                                    image.thumbnail((thumbnail_width, thumbnail_width), resample=Image.LANCZOS)
+
+                                kwargs = {}
+                                if thumbnail_image_format:
+                                    kwargs['format'] = thumbnail_image_format.upper()
+                                    final_ext = '.' + thumbnail_image_format.lower()
+                                    final_place_thumbnail = os.path.splitext(final_place_thumbnail)[0] + final_ext
+                                if thumbnail_image_quality:
+                                    kwargs['quality'] = int(thumbnail_image_quality)
+
+                                image.save(final_place_thumbnail, optimize=True, **kwargs)
+
                                 if store_files_in_s3():
                                     content_type = guess_mime_type(final_place_thumbnail)
                                     if boto3_session is None and s3 is None:
@@ -1251,11 +1286,11 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                         )
                                     s3.upload_file(final_place_thumbnail, current_app.config['S3_BUCKET'],
                                                    original_directory + '/' +
-                                                   new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + '_thumbnail.webp',
+                                                   new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + '_thumbnail' + final_ext,
                                                    ExtraArgs={'ContentType': content_type})
                                     os.unlink(final_place_thumbnail)
                                     final_place_thumbnail = f"https://{current_app.config['S3_PUBLIC_URL']}/{original_directory}/{new_filename[0:2]}/{new_filename[2:4]}" + \
-                                                            '/' + new_filename + '_thumbnail.webp'
+                                                            '/' + new_filename + '_thumbnail' + final_ext
                                 file.thumbnail_path = final_place_thumbnail
                                 file.thumbnail_width = image.width
                                 file.thumbnail_height = image.height

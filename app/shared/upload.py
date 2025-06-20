@@ -49,7 +49,8 @@ def process_upload(image_file, destination='posts'):
         img = Image.open(final_place)
         if '.' + img.format.lower() in allowed_extensions:
             img = ImageOps.exif_transpose(img)
-            img.thumbnail((image_max_dimension, image_max_dimension))
+            img = img.convert('RGBA') # fixes images from being completely crushed when downscaling
+            img.thumbnail((image_max_dimension, image_max_dimension), resample=Image.LANCZOS)
 
             kwargs = {}
             if image_format:
@@ -59,7 +60,9 @@ def process_upload(image_file, destination='posts'):
             if image_quality:
                 kwargs['quality'] = int(image_quality)
 
-            img.save(final_place, **kwargs)
+            img.save(final_place, optimize=True, **kwargs)
+
+            url = f"https://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
         else:
             raise Exception('filetype not allowed')
     else:
