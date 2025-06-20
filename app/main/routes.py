@@ -798,8 +798,8 @@ def test_email():
 @bp.route('/test_redis')
 @debug_mode_only
 def test_redis():
-    redis = get_redis_connection()
-    if redis and redis.memory_stats():
+    from app import redis_client
+    if redis_client and redis_client.memory_stats():
         return 'Redis connection is ok'
     else:
         return 'Redis error'

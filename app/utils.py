@@ -43,7 +43,7 @@ from wtforms.widgets import Select, html_params, ListWidget, CheckboxInput, Text
 from wtforms.validators import ValidationError
 from markupsafe import Markup
 import boto3
-from app import db, cache, httpx_client, celery
+from app import db, cache, httpx_client, celery, redis_client
 from app.constants import *
 import re
 from PIL import Image, ImageOps
@@ -1993,11 +1993,10 @@ def paginate_post_ids(post_ids, page: int, page_length: int):
 
 
 def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) -> List[int]:
+    from app import redis_client
     if community_ids is None or len(community_ids) == 0:
         return []
-    redis_client = None
     if result_id:
-        redis_client = get_redis_connection()
         if redis_client.exists(result_id):
             return json.loads(redis_client.get(result_id))
 

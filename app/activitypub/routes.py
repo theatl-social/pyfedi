@@ -8,7 +8,7 @@ from psycopg2 import IntegrityError
 from sqlalchemy import desc, or_, text
 import werkzeug.exceptions
 
-from app import db, constants, cache, celery, limiter
+from app import db, constants, cache, celery, limiter, redis_client
 from app.activitypub import bp
 
 from app.activitypub.signature import HttpSignature, VerificationError, default_context, LDSignature, \
@@ -532,6 +532,7 @@ def community_profile(actor):
 
 @bp.route('/inbox', methods=['POST'])
 def shared_inbox():
+    from app import redis_client
     try:
         request_json = request.get_json(force=True)
     except werkzeug.exceptions.BadRequest as e:
@@ -562,7 +563,6 @@ def shared_inbox():
 
         id = object['id']
 
-    redis_client = get_redis_connection()
     if redis_client.exists(id):                 # Something is sending same activity multiple times
         log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json, 'Already aware of this activity')
         return '', 200
@@ -740,10 +740,10 @@ def process_inbox_request(request_json, store_ap_json):
             if actor and isinstance(actor, User):
                 user = actor
                 # Update user's last_seen in a separate transaction to avoid deadlocks
-                with db.session.begin_nested():
+                with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=2):
                     db.session.execute(text('UPDATE "user" SET last_seen=:last_seen WHERE id = :user_id'),
                                      {"last_seen": utcnow(), "user_id": user.id})
-                db.session.commit()
+                    db.session.commit()
             elif actor and isinstance(actor, Community):                  # Process a few activities from NodeBB and a.gup.pe
                 if request_json['type'] == 'Add' or request_json['type'] == 'Remove':
                     log_incoming_ap(id, APLOG_ADD, APLOG_IGNORED, saved_json, 'NodeBB Topic Management')
@@ -784,12 +784,13 @@ def process_inbox_request(request_json, store_ap_json):
                     if user.banned:
                         log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, f'{user_ap_id} is banned')
                         return
-                    user.last_seen = utcnow()
-                    user.instance.last_seen = utcnow()
-                    user.instance.dormant = False
-                    user.instance.gone_forever = False
-                    user.instance.failures = 0
-                    db.session.commit()
+                    with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=2):
+                        user.last_seen = utcnow()
+                        user.instance.last_seen = utcnow()
+                        user.instance.dormant = False
+                        user.instance.gone_forever = False
+                        user.instance.failures = 0
+                        db.session.commit()
                 else:
                     log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Blocked or unfound user for Announce object actor ' + user_ap_id)
                     return
@@ -2124,16 +2125,16 @@ def feed_followers(actor):
         abort(400)
     else:
         feed: Feed = Feed.query.filter_by(name=actor.lower(), ap_id=None).first()
-    if feed is not None:
-        result = {
-            "@context": default_context(),
-            "id": f'https://{current_app.config["SERVER_NAME"]}/f/{actor}/followers',
-            "type": "Collection",
-            "totalItems": FeedMember.query.filter_by(feed_id=feed.id).count(),
-            "items": []
-        }
-        resp = jsonify(result)
-        resp.content_type = 'application/activity+json'
-        return resp
-    else:
-        abort(404)
+        if feed is not None:
+            result = {
+                "@context": default_context(),
+                "id": f'https://{current_app.config["SERVER_NAME"]}/f/{actor}/followers',
+                "type": "Collection",
+                "totalItems": FeedMember.query.filter_by(feed_id=feed.id).count(),
+                "items": []
+            }
+            resp = jsonify(result)
+            resp.content_type = 'application/activity+json'
+            return resp
+        else:
+            abort(404)

@@ -18,7 +18,7 @@ from sqlalchemy.ext.mutable import MutableList
 from flask_sqlalchemy import BaseQuery
 from sqlalchemy_searchable import SearchQueryMixin
 from sqlalchemy.dialects.postgresql import BIT
-from app import db, login, cache, celery, httpx_client, constants
+from app import db, login, cache, celery, httpx_client, constants, redis_client
 import jwt
 import os
 import math
@@ -1862,6 +1862,7 @@ class Post(db.Model):
         return round(sign * order + seconds / 45000, 7)
 
     def vote(self, user: User, vote_direction: str):
+        from app import redis_client
         if vote_direction == 'downvote':
             if self.author.has_blocked_user(user.id) or self.author.has_blocked_instance(user.instance_id):
                 return None
@@ -1875,9 +1876,10 @@ class Post(db.Model):
         undo = None
         if existing_vote:
             if not self.community.low_quality:
-                with db.session.begin_nested():
+                with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=2):
                     db.session.execute(text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
                                        {'effect': existing_vote.effect, 'user_id': self.user_id})
+                    db.session.commit()
             if existing_vote.effect > 0:  # previous vote was up
                 if vote_direction == 'upvote':  # new vote is also up, so remove it
                     db.session.delete(existing_vote)
@@ -1937,33 +1939,27 @@ class Post(db.Model):
             # upvotes do not increase reputation in low quality communities
             if self.community.low_quality and effect > 0:
                 effect = 0
-            with db.session.begin_nested():
+            with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=2):
                 db.session.execute(text('UPDATE "user" SET reputation = reputation + :effect WHERE id = :user_id'),
                                    {'effect': effect, 'user_id': self.user_id})
+                db.session.commit()
             db.session.add(vote)
 
-        db.session.commit()
-            
-        # Update user's last_seen in a separate transaction to avoid deadlocks
-        with db.session.begin_nested():
-            db.session.execute(text('UPDATE "user" SET last_seen=:last_seen WHERE id=:user_id'),
-                             {"last_seen": utcnow(), "user_id": user.id})
         db.session.commit()
         
         # Calculate new ranking values
         new_ranking = self.post_ranking(self.score, self.created_at)
         new_ranking_scaled = int(new_ranking + self.community.scale_by())
         
-        # Update post ranking in a separate transaction to avoid deadlocks
-        with db.session.begin_nested():
+        # Update post ranking
+        with redis_client.lock(f"lock:post:{self.id}", timeout=10, blocking_timeout=2):
             db.session.execute(text("""UPDATE "post" 
                                SET ranking=:ranking, ranking_scaled=:ranking_scaled 
                                WHERE id=:post_id"""),
                              {"ranking": new_ranking, 
                               "ranking_scaled": new_ranking_scaled, 
                               "post_id": self.id})
-        
-        db.session.commit()
+            db.session.commit()
         return undo
 
 
@@ -2264,6 +2260,7 @@ class PostReply(db.Model):
             return cls._confidence(ups, downs)
 
     def vote(self, user: User, vote_direction: str):
+        from app import redis_client
         existing_vote = PostReplyVote.query.filter_by(user_id=user.id, post_reply_id=self.id).first()
         if existing_vote and vote_direction == 'reversal':                            # api sends '1' for upvote, '-1' for downvote, and '0' for reversal
             if existing_vote.effect == 1:
@@ -2273,9 +2270,10 @@ class PostReply(db.Model):
         assert vote_direction == 'upvote' or vote_direction == 'downvote'
         undo = None
         if existing_vote:
-            with db.session.begin_nested():
+            with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=2):
                 db.session.execute(text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
                                    {'effect': existing_vote.effect, 'user_id': self.user_id})
+                db.session.commit()
             if existing_vote.effect > 0:  # previous vote was up
                 if vote_direction == 'upvote':  # new vote is also up, so remove it
                     db.session.delete(existing_vote)
@@ -2315,27 +2313,20 @@ class PostReply(db.Model):
             self.score += effect
             vote = PostReplyVote(user_id=user.id, post_reply_id=self.id, author_id=self.author.id,
                                  effect=effect)
-            with db.session.begin_nested():
+            with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=2):
                 db.session.execute(text('UPDATE "user" SET reputation = reputation + :effect WHERE id = :user_id'),
                                    {'effect': effect, 'user_id': self.user_id})
+                db.session.commit()
             db.session.add(vote)
-        db.session.commit()
-        
-        # Update user and ranking in separate transactions to avoid deadlocks
-        with db.session.begin_nested():
-            db.session.execute(text('UPDATE "user" SET last_seen=:last_seen WHERE id=:user_id'),
-                             {"last_seen": utcnow(), "user_id": user.id})
         db.session.commit()
         
         # Calculate the new ranking value
         new_ranking = PostReply.confidence(self.up_votes, self.down_votes)
         
-        # Update ranking in a separate transaction to avoid deadlocks
-        with db.session.begin_nested():
+        with redis_client.lock(f"lock:post_reply:{self.id}", timeout=10, blocking_timeout=2):
             db.session.execute(text("UPDATE post_reply SET ranking=:ranking WHERE id=:post_reply_id"),
-                             {"ranking": new_ranking, "post_reply_id": self.id})
-        
-        db.session.commit()
+                              {"ranking": new_ranking, "post_reply_id": self.id})
+            db.session.commit()
         return undo
 
 
