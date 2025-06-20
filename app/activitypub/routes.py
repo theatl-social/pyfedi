@@ -8,7 +8,7 @@ from psycopg2 import IntegrityError
 from sqlalchemy import desc, or_, text
 import werkzeug.exceptions
 
-from app import db, constants, cache, celery, limiter, redis_client
+from app import db, constants, cache, celery, limiter
 from app.activitypub import bp
 
 from app.activitypub.signature import HttpSignature, VerificationError, default_context, LDSignature, \
@@ -784,6 +784,7 @@ def process_inbox_request(request_json, store_ap_json):
                     if user.banned:
                         log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, f'{user_ap_id} is banned')
                         return
+                    from app import redis_client
                     with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=2):
                         user.last_seen = utcnow()
                         user.instance.last_seen = utcnow()
