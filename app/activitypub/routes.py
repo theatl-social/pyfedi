@@ -911,7 +911,7 @@ def process_inbox_request(request_json, store_ap_json):
             elif core_activity['object']['type'] == 'Follow':
                 user_ap_id = core_activity['object']['actor']
                 user = find_actor_or_create(user_ap_id, create_if_not_found=False)
-                if user.banned:
+                if user and user.banned:
                     log_incoming_ap(id, APLOG_ACCEPT, APLOG_FAILURE, saved_json, f'{user_ap_id} is banned')
                     return
             if not user:
