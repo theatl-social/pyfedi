@@ -1,5 +1,5 @@
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
-from app.api.alpha.views import site_view
+from app.api.alpha.views import site_view, federated_instances_view
 from app.utils import authorise_api_user
 from app.models import InstanceBlock
 from app.constants import SRC_API
@@ -14,6 +14,10 @@ def get_site(auth):
 
     site_json = site_view(user)
     return site_json
+
+
+def get_federated_instances(data):
+    return federated_instances_view()
 
 
 def post_site_block(auth, data):
