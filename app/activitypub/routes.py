@@ -718,6 +718,7 @@ def replay_inbox_request(request_json):
 @celery.task
 def process_inbox_request(request_json, store_ap_json):
     with current_app.app_context():
+        from app import redis_client
         # For an Announce, Accept, or Reject, we have the community/feed, and need to find the user
         # For everything else, we have the user, and need to find the community/feed
         # Benefits of always using request_json['actor']:
@@ -784,7 +785,7 @@ def process_inbox_request(request_json, store_ap_json):
                     if user.banned:
                         log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, f'{user_ap_id} is banned')
                         return
-                    from app import redis_client
+
                     with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=2):
                         user.last_seen = utcnow()
                         user.instance.last_seen = utcnow()
