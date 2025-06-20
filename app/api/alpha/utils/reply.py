@@ -32,14 +32,14 @@ def get_reply_list(auth, data, user_id=None):
     if parent_id and post_id:
         replies = PostReply.query.filter(PostReply.root_id == parent_id, PostReply.post_id == post_id)
         if replies.count() == 0:
-            reply_ids = db.session.execute(text('select id from post_reply where :id = ANY(path)'), {"id": parent_id}).scalars()
+            reply_ids = db.session.execute(text('select id from "post_reply" where path @> ARRAY[:id]'), {"id": int(parent_id)}).scalars()
             replies = PostReply.query.filter(PostReply.id.in_(reply_ids), PostReply.post_id == post_id)
     elif post_id:
         replies = PostReply.query.filter(PostReply.post_id == post_id)
     elif parent_id:
         replies = PostReply.query.filter(PostReply.root_id == parent_id)
         if replies.count() == 0:
-            reply_ids = db.session.execute(text('select id from post_reply where :id = ANY(path)'), {"id": parent_id}).scalars()
+            reply_ids = db.session.execute(text('SELECT id FROM "post_reply" WHERE path @> ARRAY[:id]'), {"id": int(parent_id)}).scalars()
             replies = PostReply.query.filter(PostReply.id.in_(reply_ids))
     elif person_id:
         replies = PostReply.query.filter_by(user_id=person_id)
