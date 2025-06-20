@@ -12,6 +12,7 @@
                 <div class="card-body p-6">
                     <div class="card-title text-center">{{ _('Which community within %(feed)s to post in?', feed=feed.title) }}</div>
                     <form method="post" id="choose_community">
+                        <input type="hidden" name="csrf_token" value="{{ cs }}" />
                         <input type="hidden" name="community_id" id="community_id" />
                         <table class="communities_table table table-hover w-100">
                             <tbody>
