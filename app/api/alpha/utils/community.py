@@ -55,6 +55,8 @@ def get_community_list(auth, data):
 
     if sort == 'New':
         communities = communities.order_by(desc(Community.created_at))
+    elif sort.startswith('Top'):
+        communities = communities.order_by(desc(Community.post_count))
     else:
         communities = communities.order_by(desc(Community.last_active))
 
