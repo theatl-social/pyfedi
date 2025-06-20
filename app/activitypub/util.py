@@ -1193,8 +1193,8 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                             ensure_directory_exists(directory)
 
                             # file path and names to store the resized images on disk
-                            final_place = os.path.join(directory, new_filename + file_ext)
-                            final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail.webp')
+                            final_place = os.path.join(directory, new_filename + file_ext) # moved these to respective "medium" and "thumbnail" sections below
+                            final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail.webp') # can probably delete these lines
 
                             if file_ext == '.avif': # this is quite a big package so we'll only load it if necessary
                                 import pillow_avif
@@ -1219,10 +1219,13 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
 
                             # Resize the image to medium
                             if medium_width:
-                                final_place = os.path.join(directory, new_filename + file_ext)
+                                final_place = os.path.join(directory, new_filename + final_ext)
 
                                 if img_width > medium_width:
-                                    image = image.convert('RGBA') # fixes images from being completely crushed when downscaling
+                                    if medium_image_format == 'JPEG':
+                                        image = image.convert('RGB')  # JPEG needs to use RGB
+                                    else:
+                                        image = image.convert('RGBA') # while everything else like PNG and WEBP can use RGBA
                                     image.thumbnail((medium_width, sys.maxsize), resample=Image.LANCZOS)
 
                                 kwargs = {}
@@ -1261,6 +1264,10 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                 final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail' + final_ext)
 
                                 if img_width > thumbnail_width:
+                                    if thumbnail_image_format == 'JPEG':
+                                        image = image.convert('RGB')  # JPEG needs to use RGB
+                                    else:
+                                        image = image.convert('RGBA') # while everything else like PNG and WEBP can use RGBA
                                     image.thumbnail((thumbnail_width, thumbnail_width), resample=Image.LANCZOS)
 
                                 kwargs = {}

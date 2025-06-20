@@ -49,7 +49,10 @@ def process_upload(image_file, destination='posts'):
         img = Image.open(final_place)
         if '.' + img.format.lower() in allowed_extensions:
             img = ImageOps.exif_transpose(img)
-            img = img.convert('RGBA') # fixes images from being completely crushed when downscaling
+            if image_format == 'JPEG':
+                img = img.convert('RGB')  # JPEG needs to use RGB
+            else:
+                img = img.convert('RGBA') # while everything else like PNG and WEBP can use RGBA
             img.thumbnail((image_max_dimension, image_max_dimension), resample=Image.LANCZOS)
 
             kwargs = {}
