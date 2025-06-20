@@ -363,51 +363,12 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
 
         return v1
 
-    # Variant 2 - views/comment_view.dart - /comment/list api endpoint
-    if variant == 2:
-        # counts - models/comment/comment_aggregates.dart
-        counts = {'comment_id': reply.id, 'score': reply.score, 'upvotes': reply.up_votes, 'downvotes': reply.down_votes,
-                  'published': reply.posted_at.isoformat() + 'Z', 'child_count': reply.child_count if reply.child_count is not None else 0}
-
-        bookmarked = db.session.execute(text('SELECT user_id FROM "post_reply_bookmark" WHERE post_reply_id = :post_reply_id and user_id = :user_id'), {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
-        reply_sub = db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'), {'type': NOTIF_REPLY, 'entity_id': reply.id, 'user_id': user_id}).scalar()
-        banned = reply.community_id in communities_banned_from(user_id)
-        moderator = reply.community.is_moderator(reply.author) or reply.community.is_owner(reply.author)
-        admin = reply.author.is_admin()
-        if my_vote == 0 and user_id is not None:
-            reply_vote = db.session.execute(text('SELECT effect FROM "post_reply_vote" WHERE post_reply_id = :post_reply_id and user_id = :user_id'), {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
-            effect = reply_vote if reply_vote else 0
-        else:
-            effect = my_vote
-
-        my_vote = int(effect)
-        saved = True if bookmarked else False
-        activity_alert = True if reply_sub else False
-        creator_banned_from_community = True if banned else False
-        creator_is_moderator = True if moderator else False
-        creator_is_admin = True if admin else False
-
-        v2 = {'comment': reply_view(reply=reply, variant=1), 'counts': counts, 'banned_from_community': False, 'subscribed': 'NotSubscribed',
-              'saved': saved, 'creator_blocked': False, 'my_vote': my_vote, 'activity_alert': activity_alert,
-              'creator_banned_from_community': creator_banned_from_community, 'creator_is_moderator': creator_is_moderator, 'creator_is_admin': creator_is_admin}
-        creator = user_view(user=reply.author, variant=1, stub=True)
-        community = community_view(community=reply.community, variant=1, stub=True)
-        post = post_view(post=reply.post_id, variant=1)
-        if user_id:
-            user = User.query.get(user_id)
-            post_community = Community.query.get(post['community_id'])
-            can_auth_user_moderate = post_community.is_moderator(user) or post_community.is_owner(user)
-            v2.update({'canAuthUserModerate':can_auth_user_moderate})
-
-        v2.update({'creator': creator, 'community': community, 'post': post})
-
-        return v2
-
-    # Variant 3 - would be for /comment api endpoint
+    # Variant 2 - currently unused
+    # Variant 3 - currently unused
 
     # Variant 4 - models/comment/comment_response.dart - /comment/like api endpoint
     if variant == 4:
-        v4 = {'comment_view': reply_view(reply=reply, variant=2, user_id=user_id)}
+        v4 = {'comment_view': reply_view(reply=reply, variant=9, user_id=user_id)}
 
         return v4
 
@@ -452,14 +413,61 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
 
     # Variant 6 - from resolve_object
     if variant == 6:
-        v6 = {'comment': reply_view(reply=reply, variant=2, user_id=user_id)}
+        v6 = {'comment': reply_view(reply=reply, variant=9, user_id=user_id)}
 
         return v6
+
+    # Variant 7 - comments/list endpoint. post_view, community_view and canAuthModerateUser are the same for all, so get once in calling function
+    # Variant 8 - comments/list endpoint. community_view and canAuthModerateUser are the same for all, so get once in calling function
+    # Variant 9 - comments/list endpoint. post_view, community_view, and canAuthModerateUser can be different for each reply, so fetch each time
+    #           - also used for individual reply responses
+    # when they're the same for all replies
+    if variant == 7 or variant == 8 or variant == 9:
+        # counts - models/comment/comment_aggregates.dart
+        counts = {'comment_id': reply.id, 'score': reply.score, 'upvotes': reply.up_votes, 'downvotes': reply.down_votes,
+                  'published': reply.posted_at.isoformat() + 'Z', 'child_count': reply.child_count if reply.child_count is not None else 0}
+
+        bookmarked = db.session.execute(text('SELECT user_id FROM "post_reply_bookmark" WHERE post_reply_id = :post_reply_id and user_id = :user_id'), {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
+        reply_sub = db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'), {'type': NOTIF_REPLY, 'entity_id': reply.id, 'user_id': user_id}).scalar()
+        banned = reply.community_id in communities_banned_from(user_id)
+        moderator = reply.community.is_moderator(reply.author) or reply.community.is_owner(reply.author)
+        admin = reply.author.is_admin()
+        if my_vote == 0 and user_id is not None:
+            reply_vote = db.session.execute(text('SELECT effect FROM "post_reply_vote" WHERE post_reply_id = :post_reply_id and user_id = :user_id'), {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
+            effect = reply_vote if reply_vote else 0
+        else:
+            effect = my_vote
+
+        my_vote = int(effect)
+        saved = True if bookmarked else False
+        activity_alert = True if reply_sub else False
+        creator_banned_from_community = True if banned else False
+        creator_is_moderator = True if moderator else False
+        creator_is_admin = True if admin else False
+
+        v7 = {'comment': reply_view(reply=reply, variant=1), 'counts': counts, 'banned_from_community': False, 'subscribed': 'NotSubscribed',
+              'saved': saved, 'creator_blocked': False, 'my_vote': my_vote, 'activity_alert': activity_alert,
+              'creator_banned_from_community': creator_banned_from_community, 'creator_is_moderator': creator_is_moderator,
+              'creator_is_admin': creator_is_admin, 'creator': user_view(user=reply.author, variant=1, stub=True)}
+        if variant == 7:
+            return v7
+        if variant == 8:
+            v8 = v7
+            v8['post'] = post_view(post=reply.post, variant=1)
+            return v8
+        if variant == 9:
+            v9 = v7
+            v9['post'] = post_view(post=reply.post, variant=1)
+            v9['community'] = community_view(community=reply.community, variant=1, stub=True)
+            v9['canAuthUserModerate'] = False
+            if user_id:
+                v9['canAuthUserModerate'] = any(moderator.user_id == user_id for moderator in reply.community.moderators())
+            return v9
 
 
 def reply_report_view(report, reply_id, user_id) -> dict:
     # views/comment_report_view.dart - /comment/report api endpoint
-    reply_json = reply_view(reply=reply_id, variant=2, user_id=user_id)
+    reply_json = reply_view(reply=reply_id, variant=9, user_id=user_id)
     post_json = post_view(post=reply_json['comment']['post_id'], variant=1, stub=True)
     community_json = community_view(community=post_json['community_id'], variant=1, stub=True)
 
