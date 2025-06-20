@@ -1362,6 +1362,7 @@ def find_instance_id(server):
             db.session.add(new_instance)
             db.session.commit()
         except IntegrityError:
+            db.session.rollback()
             return Instance.query.filter_by(domain=server).one()
 
         # Spawn background task to fill in more details
