@@ -23,6 +23,7 @@ from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, \
     FilterForm, KeywordFilterEditForm, RemoteFollowForm, ImportExportForm, UserNoteForm, BanUserForm
 from app.user.utils import purge_user_then_delete, unsubscribe_from_community, search_for_user
+from app.ldap_utils import sync_user_to_ldap
 from app.utils import render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     gibberish, file_get_contents, community_membership, user_filters_home, \
     user_filters_posts, user_filters_replies, theme_list, \
@@ -196,8 +197,10 @@ def edit_profile(actor):
             send_verification_email(current_user)
             flash(_('You have changed your email address so we need to verify it. Please check your email inbox for a verification link.'), 'warning')
         current_user.email = form.email.data.strip()
+        password_updated = False
         if form.password_field.data.strip() != '':
             current_user.set_password(form.password_field.data)
+            password_updated = True
         current_user.about = piefed_markdown_to_lemmy_markdown(form.about.data)
         current_user.about_html = markdown_to_html(form.about.data)
         current_user.matrix_user_id = form.matrixuserid.data
@@ -241,6 +244,14 @@ def edit_profile(actor):
                 cache.delete_memoized(User.cover_image, current_user)
 
         db.session.commit()
+
+        # Sync to LDAP if password was provided
+        if password_updated:
+            try:
+                sync_user_to_ldap(current_user.user_name, current_user.email, form.password_field.data.strip())
+            except Exception as e:
+                # Log error but don't fail the profile update
+                current_app.logger.error(f"LDAP sync failed for user {current_user.user_name}: {e}")
 
         flash(_('Your changes have been saved.'), 'success')
 

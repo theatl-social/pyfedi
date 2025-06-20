@@ -100,4 +100,17 @@ class Config(object):
 
     PAGE_LENGTH = int(os.environ.get('PAGE_LENGTH') or 100)
 
+    # LDAP configuration
+    LDAP_SERVER = os.environ.get('LDAP_SERVER') or ''
+    LDAP_PORT = int(os.environ.get('LDAP_PORT') or 389)
+    LDAP_USE_SSL = os.environ.get('LDAP_USE_SSL', '0') in ('1', 'true', 'True')
+    LDAP_USE_TLS = os.environ.get('LDAP_USE_TLS', '0') in ('1', 'true', 'True')
+    LDAP_BIND_DN = os.environ.get('LDAP_BIND_DN') or ''
+    LDAP_BIND_PASSWORD = os.environ.get('LDAP_BIND_PASSWORD') or ''
+    LDAP_BASE_DN = os.environ.get('LDAP_BASE_DN') or ''
+    LDAP_USER_FILTER = os.environ.get('LDAP_USER_FILTER') or '(uid={username})'
+    LDAP_ATTR_USERNAME = os.environ.get('LDAP_ATTR_USERNAME') or 'uid'
+    LDAP_ATTR_EMAIL = os.environ.get('LDAP_ATTR_EMAIL') or 'mail'
+    LDAP_ATTR_PASSWORD = os.environ.get('LDAP_ATTR_PASSWORD') or 'userPassword'
+
     VERSION = app.constants.VERSION

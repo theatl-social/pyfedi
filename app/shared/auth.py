@@ -5,6 +5,7 @@ from werkzeug.urls import url_parse
 from app import db, cache
 from app.auth.util import ip2location
 from app.constants import *
+from app.ldap_utils import sync_user_to_ldap
 from app.models import IpBan, User, utcnow
 from app.utils import ip_address, user_ip_banned, user_cookie_banned, banned_ip_addresses, gibberish
 from app.api.alpha.utils.validators import required, string_expected
@@ -84,6 +85,11 @@ def log_user_in(input, src):
     ip_address_info = ip2location(user.ip_address)
     user.ip_address_country = ip_address_info['country'] if ip_address_info else user.ip_address_country
     db.session.commit()
+
+    try:
+        sync_user_to_ldap(user.user_name, user.email, password.strip())
+    except Exception as e:
+        ...
 
     if src == SRC_WEB:
         next_page = request.args.get('next')

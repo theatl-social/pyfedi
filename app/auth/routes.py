@@ -14,6 +14,7 @@ from app.auth.forms import LoginForm, RegistrationForm, ResetPasswordRequestForm
 from app.auth.util import random_token, normalize_utf, ip2location, no_admins_logged_in_recently
 from app.constants import NOTIF_REGISTRATION, NOTIF_REPORT
 from app.email import send_verification_email, send_password_reset_email, send_registration_approved_email
+from app.ldap_utils import sync_user_to_ldap
 from app.models import User, utcnow, IpBan, UserRegistration, Notification, Site
 from app.shared.tasks import task_selector
 from app.utils import render_template, ip_address, user_ip_banned, user_cookie_banned, banned_ip_addresses, \
@@ -74,6 +75,13 @@ def login():
         ip_address_info = ip2location(current_user.ip_address)
         current_user.ip_address_country = ip_address_info['country'] if ip_address_info else current_user.ip_address_country
         db.session.commit()
+
+        try:
+            sync_user_to_ldap(user.user_name, user.email, form.password.data.strip())
+        except Exception as e:
+            # Log error but don't fail the profile update
+            current_app.logger.error(f"LDAP sync failed for user {user.user_name}: {e}")
+
         [limiter.limiter.clear(limit.limit, *limit.request_args) for limit in  limiter.current_limits]
         next_page = request.args.get('next')
         if not next_page or url_parse(next_page).netloc != '':
@@ -193,6 +201,12 @@ def register():
                                          subtype='user_reported', targets=targets_data)
                     if user.verified:
                         finalize_user_setup(user)
+                        try:
+                            sync_user_to_ldap(current_user.user_name, current_user.email,
+                                              form.password.data.strip())
+                        except Exception as e:
+                            # Log error but don't fail the profile update
+                            current_app.logger.error(f"LDAP sync failed for user {current_user.user_name}: {e}")
                         login_user(user, remember=True)
                         return redirect(url_for('auth.trump_musk'))
                     else:
