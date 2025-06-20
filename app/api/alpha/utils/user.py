@@ -58,6 +58,7 @@ def get_user_list(auth, data):
 
     type = data['type_'] if data and 'type_' in data else "All"
     page = int(data['page']) if data and 'page' in data else 1
+    sort = data['sort'] if data and 'sort' in data else "Hot"
     limit = int(data['limit']) if data and 'limit' in data else 10
 
     query = data['q'] if data and 'q' in data else ''
@@ -65,15 +66,22 @@ def get_user_list(auth, data):
     user_id = authorise_api_user(auth) if auth else None
 
     if type == 'Local':
-        users = User.query.filter_by(instance_id=1, deleted=False).order_by(User.id)
+        users = User.query.filter_by(instance_id=1, deleted=False)
     else:
-        users = User.query.filter(User.instance_id != 1, User.deleted == False).order_by(desc(User.id))
+        users = User.query.filter(User.instance_id != 1, User.deleted == False)
 
     if query:
         if '@' in query:
             users = users.filter(User.ap_id.ilike(f"%{query}%"))
         else:
             users = users.filter(User.user_name.ilike(f"%{query}%"))
+
+    if sort == 'New':
+        users = users.order_by(desc(User.created_at))
+    elif sort.startswith('Top'):
+        users = users.order_by(desc(User.post_count))
+    else:
+        users = users.order_by(User.id)
 
     users = users.paginate(page=page, per_page=limit, error_out=False)
 
