@@ -15,7 +15,12 @@ from sqlalchemy import desc, text
 def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     type = data['type_'] if data and 'type_' in data else "All"
     sort = data['sort'] if data and 'sort' in data else "Hot"
-    page = int(data['page_cursor']) if data and 'page_cursor' in data else 1
+    if data and 'page_cursor' in data:
+        page = int(data['page_cursor'])
+    elif data and 'page' in data:
+        page = int(data['page'])
+    else:
+        page = 1
     limit = int(data['limit']) if data and 'limit' in data else 50
     liked_only = data['liked_only'] if data and 'liked_only' in data else 'false'
     liked_only = True if liked_only == 'true' else False
