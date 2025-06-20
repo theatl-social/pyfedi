@@ -77,7 +77,7 @@ def get_user_list(auth, data):
             users = users.filter(User.user_name.ilike(f"%{query}%"))
 
     if sort == 'New':
-        users = users.order_by(desc(User.created_at))
+        users = users.order_by(desc(User.created))
     elif sort.startswith('Top'):
         users = users.order_by(desc(User.post_count))
     else:
