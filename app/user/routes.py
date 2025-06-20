@@ -678,8 +678,12 @@ def unban_profile(actor):
 @login_required
 def block_profile(actor):
     actor = actor.strip()
-    user = User.query.filter_by(user_name=actor, deleted=False).first()
-    if user is None:
+    if "@" not in actor or actor.endswith("@" + current_app.config['SERVER_NAME']):
+        # Local user
+        user = User.query.filter_by(user_name=actor, deleted=False).filter(
+            or_(User.ap_id == None, User.ap_domain == current_app.config['SERVER_NAME'])).first()
+    else:
+        # Remote user
         user = User.query.filter_by(ap_id=actor, deleted=False).first()
         if user is None:
             abort(404)
@@ -723,8 +727,12 @@ def user_block_instance(actor):
 @login_required
 def unblock_profile(actor):
     actor = actor.strip()
-    user = User.query.filter_by(user_name=actor, deleted=False).first()
-    if user is None:
+    if "@" not in actor or actor.endswith("@" + current_app.config['SERVER_NAME']):
+        # Local user
+        user = User.query.filter_by(user_name=actor, deleted=False).filter(
+            or_(User.ap_id == None, User.ap_domain == current_app.config['SERVER_NAME'])).first()
+    else:
+        # Remote user
         user = User.query.filter_by(ap_id=actor, deleted=False).first()
         if user is None:
             abort(404)
