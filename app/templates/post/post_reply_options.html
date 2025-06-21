@@ -41,8 +41,8 @@
           hx-post="/post/{{ post.id }}/comment/{{ post_reply.id }}/bookmark" hx-trigger="click throttle:1s" hx-target="this" hx-swap="outerHTML" tabindex="0"><span class="fe fe-bookmark"></span> {{ _('Bookmark') }}</a></li>
     {% endif -%}
     {% if post_reply.user_id != current_user.id -%}
-        <li><a href="#" data-url="{{ url_for('post.post_reply_block_user', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline send_post"><span class="fe fe-block"></span>
-            {{ _('Block author @%(author_name)s', author_name=post_reply.author.user_name) }}</a></li>
+        <li><a class="dropdown-item no-underline send_post" role="button" style="white-space: normal" aria-label="{{ _('Block @%(author_name)s', author_name=post.author.user_name) }}"
+            hx-post="/post/{{ post.id }}/comment/{{ post_reply.id }}/block_user" hx-trigger="click throttle:1s"tabindex="0"><span class="fe fe-block"></span> {{ _('Block @%(author_name)s', author_name=post.author.user_name) }}</a></li>
         {% if post.community.is_moderator() or current_user.get_id() in admin_ids -%}
             <li><a href="{{ url_for('community.community_ban_user', community_id=post.community.id, user_id=post_reply.author.id) }}" style="white-space: normal" class="dropdown-item no-underline"><span class="fe fe-block red"></span>
                 {{ _('Ban @%(author_name)s from %(community_name)s', author_name=post_reply.author.user_name, community_name=post.community.title) }}</a></li>

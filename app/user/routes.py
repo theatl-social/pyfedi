@@ -716,6 +716,17 @@ def block_profile(actor):
 
         flash(_('%(actor)s has been blocked.', actor=actor))
         cache.delete_memoized(blocked_users, current_user.id)
+    
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        curr_url = request.headers.get('HX-Current-URL')
+
+        if "/user/" in curr_url:
+            resp.headers['HX-Redirect'] = curr_url
+        else:
+            resp.headers['HX-Redirect'] = url_for("main.index")
+        
+        return resp
 
     goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
     return redirect(goto)
@@ -762,6 +773,13 @@ def unblock_profile(actor):
 
         flash(_('%(actor)s has been unblocked.', actor=actor))
         cache.delete_memoized(blocked_users, current_user.id)
+    
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        curr_url = request.headers.get('HX-Current-URL')
+        resp.headers['HX-Redirect'] = curr_url
+        
+        return resp
 
     goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
     return redirect(goto)

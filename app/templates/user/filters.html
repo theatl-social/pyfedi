@@ -89,7 +89,7 @@
                 {% for user in blocked_users %}
                     <tr>
                         <td><a href="{{ url_for('activitypub.user_profile', actor=user.ap_id if user.ap_id is not none else user.user_name) }}">{{ user.display_name() }}</a></td>
-                        <td><a class="no-underline confirm_first send_post" href="#" data-url="{{ url_for('user.unblock_profile', actor=user.link()) }}" rel="nofollow"><span class="fe fe-delete"></span> {{ _('Unblock') }}</a></td>
+                        <td><a class="no-underline confirm_first send_post" role="button" aria-label="{{ _('Unblock @%(user_name)s', user_name=user.display_name) }}" hx-post="/u/{{ user.user_name if user.is_local() else user.ap_id }}/unblock" hx-trigger="click throttle:1s"><span class="fe fe-delete"></span> {{ _('Unblock %(user_name)s', user_name=user.display_name()) }}</a></td>
                     </tr>
                 {% endfor %}
                 </table>

@@ -1032,6 +1032,19 @@ def post_block_user(post_id: int):
     flash(_('%(name)s has been blocked.', name=post.author.user_name))
     cache.delete_memoized(blocked_users, current_user.id)
 
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        curr_url = request.headers.get('HX-Current-URL')
+
+        if "/post/" in curr_url:
+            resp.headers['HX-Redirect'] = post.community.local_url()
+        elif "/u/" in curr_url:
+            resp.headers['HX-Redirect'] = url_for("main.index")
+        else:
+            resp.headers['HX-Redirect'] = curr_url
+        
+        return resp
+
     # todo: federate block to post author instance
 
     return redirect(post.community.local_url())
@@ -1222,6 +1235,22 @@ def post_reply_block_user(post_id: int, comment_id: int):
         db.session.commit()
     flash(_('%(name)s has been blocked.', name=post_reply.author.user_name))
     cache.delete_memoized(blocked_users, current_user.id)
+
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        curr_url = request.headers.get('HX-Current-URL')
+        
+        if "/post/" in curr_url:
+            if post_reply.author.id != post.author.id:
+                resp.headers['HX-Redirect'] = url_for('activitypub.post_ap', post_id=post.id)
+            else:
+                resp.headers['HX-Redirect'] = post.community.local_url()
+        elif "/u/" in curr_url:
+            resp.headers['HX-Redirect'] = url_for("main.index")
+        else:
+            resp.headers['HX-Redirect'] = curr_url
+        
+        return resp
 
     # todo: federate block to post_reply author instance
 
