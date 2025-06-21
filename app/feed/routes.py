@@ -200,6 +200,11 @@ def feed_edit(feed_id: int):
             feed_to_edit.nsfw = edit_feed_form.nsfw.data
         if g.site.enable_nsfl:
             feed_to_edit.nsfl = edit_feed_form.nsfl.data
+        # unsubscribe every feed member except owner when moving from public to private
+        if feed_to_edit.public and not edit_feed_form.public.data:
+            db.session.query(FeedMember).filter(FeedMember.is_owner == False).delete()
+            db.session.query(FeedJoinRequest).filter_by(user_id=current_user.id, feed_id=feed_to_edit.id).delete()
+            feed_to_edit.subscriptions_count = db.session.query(FeedMember).filter(FeedMember.is_owner == False).count()
         feed_to_edit.public = edit_feed_form.public.data
         if current_user.is_admin():
             feed_to_edit.is_instance_feed = edit_feed_form.is_instance_feed.data
