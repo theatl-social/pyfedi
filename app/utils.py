@@ -783,26 +783,37 @@ def permission_required(permission):
     return decorator
 
 
-def login_required(func):
 
-    @wraps(func)
-    def decorated_view(*args, **kwargs):
-        if request.method in {"OPTIONS"} or current_app.config.get("LOGIN_DISABLED"):
-            pass
-        elif not current_user.is_authenticated:
-            return current_app.login_manager.unauthorized()
+def login_required(csrf=True):
+    def decorator(func):
+        @wraps(func)
+        def decorated_view(*args, **kwargs):
+            if request.method in {"OPTIONS"} or current_app.config.get("LOGIN_DISABLED"):
+                pass
+            elif not current_user.is_authenticated:
+                return current_app.login_manager.unauthorized()
 
-        # Validate CSRF token for POST requests
-        if request.method == 'POST':
-            validate_csrf(request.form.get('csrf_token', request.headers.get('x-csrftoken')))
+            # Validate CSRF token for POST requests
+            if request.method == 'POST' and csrf:
+                validate_csrf(request.form.get('csrf_token', request.headers.get('x-csrftoken')))
 
-        # flask 1.x compatibility
-        # current_app.ensure_sync is only available in Flask >= 2.0
-        if callable(getattr(current_app, "ensure_sync", None)):
-            return current_app.ensure_sync(func)(*args, **kwargs)
-        return func(*args, **kwargs)
+            # flask 1.x compatibility
+            # current_app.ensure_sync is only available in Flask >= 2.0
+            if callable(getattr(current_app, "ensure_sync", None)):
+                return current_app.ensure_sync(func)(*args, **kwargs)
+            return func(*args, **kwargs)
 
-    return decorated_view
+        return decorated_view
+    
+    # Handle both @login_required and @login_required()
+    if callable(csrf):
+        # Called as @login_required (csrf is actually the function)
+        func = csrf
+        csrf = True
+        return decorator(func)
+    else:
+        # Called as @login_required(csrf=False)
+        return decorator
 
 
 def debug_mode_only(func):

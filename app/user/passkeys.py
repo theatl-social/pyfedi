@@ -35,7 +35,7 @@ def user_passkey_delete(passkey_id):
 
 # ----------------------------------------------------------------------
 @bp.route('/user/passkeys/registration/options', methods=['GET', 'POST'])
-@login_required
+@login_required(csrf=False)
 def user_passkey_options():
     options = generate_registration_options(
         rp_id=request.host,
@@ -84,7 +84,7 @@ def generate_user_handle() -> bytes:
 
 # ----------------------------------------------------------------------
 @bp.route('/user/passkeys/registration/verification', methods=['POST'])
-@login_required
+@login_required(csrf=False)
 def user_passkey_verification():
     request_json = request.get_json(force=True)
     registration_credential = parse_registration_credential_json(request_json['response'])
