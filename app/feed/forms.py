@@ -43,7 +43,10 @@ class AddCopyFeedForm(FlaskForm):
                 self.url.errors.append(_l('Feed urls can only contain letters, numbers, and underscores.'))
                 return False
 
-            feed = Feed.query.filter(Feed.name == self.url.data.strip().lower()).first()
+            feed_url = self.url.data.strip().lower()
+            if not self.public.data and not "!" in self.url.data.strip():
+                feed_url = self.url.data.strip().lower() + "!" + current_user.user_name.lower()
+            feed = Feed.query.filter(Feed.name == feed_url).first()
             if feed is not None:
                 self.url.errors.append(_l('A Feed with this url already exists.'))
                 return False
