@@ -3,7 +3,7 @@ from __future__ import annotations
 from app import cache, db
 from app.constants import *
 from app.models import ChatMessage, Community, CommunityMember, Language, Instance, Post, PostReply, PostVote, User, \
-                       AllowedInstances, BannedInstances, utcnow
+                       AllowedInstances, BannedInstances, utcnow, Site
 from app.utils import blocked_communities, blocked_instances, blocked_users, communities_banned_from
 
 from flask import current_app, g
@@ -622,8 +622,11 @@ def site_view(user) -> dict:
 
     v1 = {
       "version": current_app.config['VERSION'],
+      "admins": [],
       "site": site
     }
+    for admin in Site.admins():
+        v1['admins'].append(user_view(user=admin, variant=2))
     if user:
         v1['my_user'] = user_view(user=user, variant=6)
 
