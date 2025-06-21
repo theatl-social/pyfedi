@@ -1006,7 +1006,6 @@ def admin_community_edit(community_id):
         community.description = form.description.data
         community.description_html = markdown_to_html(form.description.data)
         community.rules = form.rules.data
-        community.rules_html = markdown_to_html(form.rules.data)
         community.nsfw = form.nsfw.data
         community.banned = form.banned.data
         community.local_only = form.local_only.data

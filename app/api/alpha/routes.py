@@ -2,7 +2,7 @@ from app import limiter
 from app.api.alpha import bp
 from app.constants import *
 from app.shared.auth import log_user_in
-from app.api.alpha.utils.site import get_site, post_site_block
+from app.api.alpha.utils.site import get_site, post_site_block, get_federated_instances
 from app.api.alpha.utils.misc import get_search, get_resolve_object
 from app.api.alpha.utils.post import get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, \
     post_post, put_post, post_post_delete, post_post_report, post_post_lock, post_post_feature, post_post_remove
@@ -82,6 +82,17 @@ def get_alpha_resolve_object():
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
         return jsonify(get_resolve_object(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/federated_instances', methods=['GET'])
+def get_alpha_federated_instances():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'}), 400
+    try:
+        data = {"include_federation_state": False}
+        return jsonify(get_federated_instances(data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
@@ -777,7 +788,6 @@ def alpha_site():
 
 # Miscellaneous - not yet implemented
 @bp.route('/api/alpha/modlog', methods=['GET'])                                   # Get Modlog. Not usually public
-@bp.route('/api/alpha/federated_instances', methods=['GET'])                      # No plans to implement - only V3 version needed
 def alpha_miscellaneous():
     return jsonify({"error": "not_yet_implemented"}), 400
 
