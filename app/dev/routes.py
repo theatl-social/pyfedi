@@ -41,8 +41,7 @@ def tools():
             rules = "dev_Community_" + loop_num + "Rules"
             community = Community(title=title, name=name, description=description,
                                   rules=rules, nsfw=False, private_key=private_key,
-                                  public_key=public_key, description_html=markdown_to_html(description),
-                                  rules_html=markdown_to_html(rules), local_only=True,
+                                  public_key=public_key, description_html=markdown_to_html(description), local_only=True,
                                   ap_profile_id='https://' + current_app.config['SERVER_NAME'] + '/c/' + name.lower(),
                                   ap_public_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + name.lower(),
                                   ap_followers_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + name.lower() + '/followers',

@@ -306,7 +306,6 @@ def edit_community(input, community, src, auth=None, uploaded_icon_file=None, up
     community.rules = rules
     community.nsfw = nsfw
     community.description_html = markdown_to_html(description)
-    community.rules_html = markdown_to_html(rules)
     community.restricted_to_mods = restricted_to_mods
     community.local_only = local_only
     db.session.commit()
