@@ -1327,20 +1327,50 @@ def community_moderate_subscribers(actor):
 
             page = request.args.get('page', 1, type=int)
             low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+            sort_by = request.args.get('sort_by', 'last_seen DESC')
+            search = request.args.get('search', '')
+            
+            # Handle sort_by_btn redirects
+            sort_by_btn = request.args.get('sort_by_btn', '')
+            if sort_by_btn:
+                return redirect(url_for('community.community_moderate_subscribers', actor=actor, page=page, sort_by=sort_by_btn, search=search))
 
-            subscribers = User.query.join(CommunityMember, CommunityMember.user_id == User.id).filter(CommunityMember.community_id == community.id)
-            subscribers = subscribers.filter(CommunityMember.is_banned == False).order_by(desc(User.last_seen))
+            subscribers = db.session.query(User, CommunityMember.created_at).join(CommunityMember, CommunityMember.user_id == User.id).filter(CommunityMember.community_id == community.id)
+            subscribers = subscribers.filter(CommunityMember.is_banned == False)
+            
+            # Apply search filter
+            if search:
+                subscribers = subscribers.filter(User.user_name.ilike(f'%{search}%'))
+            
+            # Apply sorting
+            if sort_by.startswith('joined'):
+                if 'DESC' in sort_by:
+                    subscribers = subscribers.order_by(desc(CommunityMember.created_at))
+                else:
+                    subscribers = subscribers.order_by(CommunityMember.created_at)
+            elif sort_by.startswith('last_seen'):
+                if 'DESC' in sort_by:
+                    subscribers = subscribers.order_by(desc(User.last_seen))
+                else:
+                    subscribers = subscribers.order_by(User.last_seen)
+            elif sort_by.startswith('local_remote'):
+                if 'DESC' in sort_by:
+                    subscribers = subscribers.order_by(desc(User.ap_id.is_(None)))
+                else:
+                    subscribers = subscribers.order_by(User.ap_id.is_(None))
+            else:
+                subscribers = subscribers.order_by(desc(User.last_seen))
 
             # Pagination
             subscribers = subscribers.paginate(page=page, per_page=100 if not low_bandwidth else 50, error_out=False)
-            next_url = url_for('community.community_moderate_subscribers', actor=actor, page=subscribers.next_num) if subscribers.has_next else None
-            prev_url = url_for('community.community_moderate_subscribers', actor=actor, page=subscribers.prev_num) if subscribers.has_prev and page != 1 else None
+            next_url = url_for('community.community_moderate_subscribers', actor=actor, page=subscribers.next_num, sort_by=sort_by, search=search) if subscribers.has_next else None
+            prev_url = url_for('community.community_moderate_subscribers', actor=actor, page=subscribers.prev_num, sort_by=sort_by, search=search) if subscribers.has_prev and page != 1 else None
 
             banned_people = User.query.join(CommunityBan, CommunityBan.user_id == User.id).filter(CommunityBan.community_id == community.id).all()
 
             return render_template('community/community_moderate_subscribers.html', title=_('Moderation of %(community)s', community=community.display_name()),
                                    community=community, current='subscribers', subscribers=subscribers, banned_people=banned_people,
-                                   ban_user_form=ban_user_form,
+                                   ban_user_form=ban_user_form, sort_by=sort_by, search=search,
                                    next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
         else:
