@@ -109,7 +109,6 @@
                     {% if current_user.has_blocked_user(user.id) -%}
                         <li><a class="dropdown-item send_post" role="button" aria-label="{{ _('Unblock @%(user_name)s', user_name=user.display_name) }}"
                           hx-post="/u/{{ user.user_name if user.is_local() else user.ap_id }}/unblock" hx-trigger="click throttle:1s">{{ _('Unblock %(user_name)s', user_name=user.display_name()) }}</a></li>
-                        <!--<li><a class="dropdown-item send_post" href='#' data-url="{{ url_for('user.unblock_profile', actor=user.link()) }}" rel="nofollow">{{ _('Unblock') }}</a></li>-->
                     {% else -%}
                         <li><a class="dropdown-item send_post confirm_first" role="button" aria-label="{{ _('Block @%(user_name)s', user_name=user.display_name) }}"
                           hx-post="/u/{{ user.user_name if user.is_local() else user.ap_id }}/block" hx-trigger="click throttle:1s">{{ _('Block %(user_name)s', user_name=user.display_name()) }}</a></li>
