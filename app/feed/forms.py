@@ -39,7 +39,11 @@ class AddCopyFeedForm(FlaskForm):
                 return False
 
             # Allow alphanumeric characters and underscores (a-z, A-Z, 0-9, _)
-            if not re.match(r'^[a-zA-Z0-9_]+$', self.url.data):
+            if self.public.data:
+                regex = r'^[a-zA-Z0-9_]+$'
+            else:
+                regex = r'^[a-zA-Z0-9_]+(?:!' + current_user.user_name.lower() + ')?$'
+            if not re.match(regex, self.url.data):
                 self.url.errors.append(_l('Feed urls can only contain letters, numbers, and underscores.'))
                 return False
 
