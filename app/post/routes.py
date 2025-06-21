@@ -1046,6 +1046,7 @@ def post_block_user(post_id: int):
         return resp
 
     # todo: federate block to post author instance
+    # task_selector()...
 
     return redirect(post.community.local_url())
 
