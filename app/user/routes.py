@@ -614,11 +614,14 @@ def ban_profile(actor):
                         flash(_('%(actor)s has been banned, deleted and all their content deleted. This might take a few minutes.',
                               actor=actor))
                     else:
-                        user.deleted = True
-                        user.deleted_by = current_user.id
                         user.delete_dependencies()
                         user.purge_content()
-                        db.session.commit()
+                        from app import redis_client
+                        with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=2):
+                            user = User.query.get(user.id)
+                            user.deleted = True
+                            user.deleted_by = current_user.id
+                            db.session.commit()
                         flash(_('%(actor)s has been banned, deleted and all their content deleted.', actor=actor))
 
                     add_to_modlog('delete_user', reason=form.reason.data, link_text=user.display_name(), link=user.link())

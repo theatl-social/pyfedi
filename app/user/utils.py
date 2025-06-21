@@ -87,10 +87,13 @@ def purge_user_then_delete_task(user_id):
                     if instance.inbox and instance.online() and instance.id != 1:
                         send_post_request(instance.inbox, payload, user.private_key, user.public_url() + '#main-key')
 
-            user.deleted = True
             user.delete_dependencies()
             user.purge_content()
-            db.session.commit()
+            from app import redis_client
+            with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=2):
+                user = User.query.get(user_id)
+                user.deleted = True
+                db.session.commit()
 
 
 def unsubscribe_from_community(community, user):
