@@ -651,7 +651,7 @@ def ban_profile(actor):
                 form.ip_address.render_kw = {'disabled': True}
                 form.ip_address.data = False
 
-            return render_template('generic_form.html', form=form, title=_('Ban %(name)s', name=actor))
+            return render_template('user/user_ban.html', form=form, title=_('Ban %(name)s', name=actor))
     else:
         abort(401)
 

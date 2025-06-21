@@ -112,7 +112,7 @@ class DeleteAccountForm(FlaskForm):
 
 
 class BanUserForm(FlaskForm):
-    reason = TextAreaField(_l('Reason'))
+    reason = StringField(_l('Reason'), render_kw={'list': 'reasons'})
     ip_address = BooleanField(_l('Ban IP address'))
     purge = BooleanField(_l('Delete all content by this account'))
     submit = SubmitField(_l('Ban'), render_kw={'autofocus': True})
