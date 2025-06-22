@@ -43,7 +43,7 @@ from wtforms.widgets import Select, html_params, ListWidget, CheckboxInput, Text
 from wtforms.validators import ValidationError
 from markupsafe import Markup
 import boto3
-from app import db, cache, httpx_client, celery, redis_client
+from app import db, cache, httpx_client, celery
 from app.constants import *
 import re
 from PIL import Image, ImageOps
@@ -1787,7 +1787,6 @@ def authorise_api_user(auth, return_type=None, id_match=None) -> User | int:
     decoded = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
     if decoded:
         user_id = decoded['sub']
-        issued_at = decoded['iat']      # use to check against blacklisted JWTs
         user = User.query.filter_by(id=user_id, ap_id=None, verified=True, banned=False, deleted=False).one()
         if id_match and user.id != id_match:
             raise Exception('incorrect_login')
@@ -2004,6 +2003,7 @@ def paginate_post_ids(post_ids, page: int, page_length: int):
 
 
 def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) -> List[int]:
+    from app import redis_client
     if community_ids is None or len(community_ids) == 0:
         return []
     if result_id:
@@ -2099,8 +2099,6 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
     post_ids = dedupe_post_ids(post_ids)
 
     if current_user.is_authenticated:
-        if redis_client is None:
-            redis_client = get_redis_connection()
         redis_client.set(result_id, json.dumps(post_ids), ex=86400)    # 86400 is 1 day
     return post_ids
 

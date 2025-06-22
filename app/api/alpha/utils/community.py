@@ -457,9 +457,9 @@ def post_community_mod(auth, data):
     added = data['added']
 
     if added:
-        user_id = add_mod_to_community(community_id, person_id, SRC_API, auth)
+        add_mod_to_community(community_id, person_id, SRC_API, auth)
     else:
-        user_id = remove_mod_from_community(community_id, person_id, SRC_API, auth)
+        remove_mod_from_community(community_id, person_id, SRC_API, auth)
     cache.delete_memoized(cached_modlist_for_community)
     community_json = {
         'moderators': cached_modlist_for_community(community_id)

@@ -17,7 +17,7 @@ from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTIO
 from app.email import send_email, send_registration_approved_email
 from app.inoculation import inoculation
 from app.main import bp
-from flask import g, session, flash, request, current_app, url_for, redirect, make_response, jsonify, send_file
+from flask import g, flash, request, current_app, url_for, redirect, make_response, jsonify, send_file
 from flask_login import current_user
 from flask_babel import _, get_locale
 from sqlalchemy import desc, text
@@ -810,8 +810,8 @@ def test_redis():
 @debug_mode_only
 def test_s3():
     import boto3
-    session = boto3.session.Session()
-    s3 = session.client(
+    boto3_session = boto3.session.Session()
+    s3 = boto3_session.client(
         service_name='s3',
         region_name=current_app.config['S3_REGION'],
         endpoint_url=current_app.config['S3_ENDPOINT'],

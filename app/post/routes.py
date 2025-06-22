@@ -299,8 +299,6 @@ def post_embed_code(post_id):
     breadcrumbs.append(breadcrumb)
 
     if community.topic_id:
-        related_communities = Community.query.filter_by(topic_id=community.topic_id). \
-            filter(Community.id != community.id, Community.banned == False).order_by(Community.name)
         topics = []
         previous_topic = Topic.query.get(community.topic_id)
         topics.append(previous_topic)
@@ -328,7 +326,6 @@ def post_embed_code(post_id):
         breadcrumb.url = f'/post/{post.id}'
         breadcrumbs.append(breadcrumb)
     else:
-        related_communities = []
 
         breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
         breadcrumb.text = _('Communities')

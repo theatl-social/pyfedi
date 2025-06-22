@@ -177,7 +177,6 @@ def send_reply(reply_id, parent_id, edit=False):
         del create['@context']
 
         announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
-        actor = community.public_url()
         cc = [community.ap_followers_url]
         announce = {
           'id': announce_id,

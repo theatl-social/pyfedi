@@ -575,7 +575,6 @@ def _feed_remove_community(community_id: int, current_feed_id: int, user_id: int
             proceed = True
             # Undo the Follow
             if not community.is_local():    # this is a remote community, so activitypub is needed
-                success = True
                 if not community.instance.gone_forever:
                     follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
                     if community.instance.domain == 'a.gup.pe':
@@ -903,7 +902,6 @@ def feed_unsubscribe(actor):
                 proceed = True
                 # Undo the Follow
                 if '@' in actor:    # this is a remote feed, so activitypub is needed
-                    success = True
                     if not feed.instance.gone_forever:
                         follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
                         if feed.instance.domain == 'a.gup.pe':
