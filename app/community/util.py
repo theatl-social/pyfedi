@@ -408,7 +408,7 @@ def save_icon_file(icon_file, directory='communities') -> File:
     elif file_ext.lower() == '.avif':
         import pillow_avif
 
-    # resize if necessary
+    # resize if necessary or if using MEDIA_IMAGE_FORMAT
     if file_ext.lower() in allowed_extensions:
         if file_ext.lower() == '.svg':  # svgs don't need to be resized
             file = File(file_path=final_place, file_name=new_filename + file_ext, alt_text=f'{directory} icon',
@@ -431,7 +431,6 @@ def save_icon_file(icon_file, directory='communities') -> File:
                 s3.close()
                 os.unlink(final_place)
             db.session.add(file)
-                
             return file
         else:
             Image.MAX_IMAGE_PIXELS = 89478485
@@ -439,18 +438,47 @@ def save_icon_file(icon_file, directory='communities') -> File:
             img = ImageOps.exif_transpose(img)
             img_width = img.width
             img_height = img.height
-            if img.width > 250 or img.height > 250:
-                img.thumbnail((250, 250))
-                img.save(final_place)
+
+            image_format = os.getenv('MEDIA_IMAGE_FORMAT')
+            image_quality = os.getenv('MEDIA_IMAGE_QUALITY')
+            thumbnail_image_format = os.getenv('MEDIA_IMAGE_THUMBNAIL_FORMAT')
+            thumbnail_image_quality = os.getenv('MEDIA_IMAGE_THUMBNAIL_QUALITY')
+
+            final_ext = file_ext
+            thumbnail_ext = file_ext
+
+            if img.width > 250 or img.height > 250 or image_format or thumbnail_image_format:
+                img = img.convert('RGB' if image_format == 'JPEG' else 'RGBA')
+                img.thumbnail((250, 250), resample=Image.LANCZOS)
+
+                kwargs = {}
+                if image_format:
+                    kwargs['format'] = image_format.upper()
+                    final_ext = '.' + image_format.lower()
+                    final_place = os.path.splitext(final_place)[0] + final_ext
+                if image_quality:
+                    kwargs['quality'] = int(image_quality)
+                img.save(final_place, optimize=True, **kwargs)
+
                 img_width = img.width
                 img_height = img.height
             # save a second, smaller, version as a thumbnail
-            img.thumbnail((40, 40))
-            img.save(final_place_thumbnail, format="WebP", quality=93)
+            img = img.convert('RGB' if thumbnail_image_format == 'JPEG' else 'RGBA')
+            img.thumbnail((40, 40), resample=Image.LANCZOS)
+
+            kwargs = {}
+            if thumbnail_image_format:
+                kwargs['format'] = thumbnail_image_format.upper()
+                thumbnail_ext = '.' + thumbnail_image_format.lower()
+                final_place_thumbnail = os.path.splitext(final_place)[0] + thumbnail_ext
+            if thumbnail_image_quality:
+                kwargs['quality'] = int(image_quality)
+            img.save(final_place_thumbnail, optimize=True, **kwargs)
+
             thumbnail_width = img.width
             thumbnail_height = img.height
 
-            file = File(file_path=final_place, file_name=new_filename + file_ext, alt_text=f'{directory} icon',
+            file = File(file_path=final_place, file_name=new_filename + final_ext, alt_text=f'{directory} icon',
                         width=img_width, height=img_height, thumbnail_width=thumbnail_width,
                         thumbnail_height=thumbnail_height, thumbnail_path=final_place_thumbnail)
             db.session.add(file)
@@ -467,12 +495,12 @@ def save_icon_file(icon_file, directory='communities') -> File:
                     aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
                 )
                 # Upload main image
-                s3_path = f'{s3_directory}/{new_filename}{file_ext}'
+                s3_path = f'{s3_directory}/{new_filename}{final_ext}'
                 s3.upload_file(final_place, current_app.config['S3_BUCKET'], s3_path, ExtraArgs={'ContentType': guess_mime_type(final_place)})
                 file.file_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_path}"
                 
                 # Upload thumbnail
-                s3_thumbnail_path = f'{s3_directory}/{new_filename}_thumbnail.webp'
+                s3_thumbnail_path = f'{s3_directory}/{new_filename}_thumbnail{thumbnail_ext}'
                 s3.upload_file(final_place_thumbnail, current_app.config['S3_BUCKET'], s3_thumbnail_path, ExtraArgs={'ContentType': guess_mime_type(final_place_thumbnail)})
                 file.thumbnail_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_thumbnail_path}"
                 
@@ -495,13 +523,12 @@ def save_banner_file(banner_file, directory='communities') -> File:
     # set up the storage directory
     if store_files_in_s3():
         local_directory = 'app/static/tmp'
-        s3_directory = f'media/{directory}/{new_filename[0:2]}/{new_filename[2:4]}'
     else:
         local_directory = f'app/static/media/{directory}/{new_filename[0:2]}/{new_filename[2:4]}'
-        
     ensure_directory_exists(local_directory)
 
-    # save the file
+    # save the file or if using MEDIA_IMAGE_FORMAT
+    s3_directory = f'{directory}/{new_filename[0:2]}/{new_filename[2:4]}'
     final_place = os.path.join(local_directory, new_filename + file_ext)
     final_place_thumbnail = os.path.join(local_directory, new_filename + '_thumbnail.webp')
     banner_file.save(final_place)
@@ -516,21 +543,50 @@ def save_banner_file(banner_file, directory='communities') -> File:
     img = Image.open(final_place)
     if '.' + img.format.lower() in allowed_extensions:
         img = ImageOps.exif_transpose(img)
+
+        image_format = os.getenv('MEDIA_IMAGE_FORMAT')
+        image_quality = os.getenv('MEDIA_IMAGE_QUALITY')
+        thumbnail_image_format = os.getenv('MEDIA_IMAGE_THUMBNAIL_FORMAT', 'WEBP')
+        thumbnail_image_quality = os.getenv('MEDIA_IMAGE_THUMBNAIL_QUALITY', 93)
+
+        final_ext = file_ext
+        thumbnail_ext = file_ext
         img_width = img.width
         img_height = img.height
-        if img.width > 1600 or img.height > 600:
-            img.thumbnail((1600, 600))
-            img.save(final_place)
+
+        if img.width > 1600 or img.height > 600 or image_format or thumbnail_image_format:
+            img = img.convert('RGB' if image_format == 'JPEG' else 'RGBA')
+            img.thumbnail((1600, 600), resample=Image.LANCZOS)
+
+            kwargs = {}
+            if image_format:
+                kwargs['format'] = image_format.upper()
+                final_ext = '.' + image_format.lower()
+                final_place = os.path.splitext(final_place)[0] + final_ext
+            if image_quality:
+                kwargs['quality'] = int(image_quality)
+            img.save(final_place, optimize=True, **kwargs)
+
             img_width = img.width
             img_height = img.height
 
         # save a second, smaller, version as a thumbnail
-        img.thumbnail((878, 500))
-        img.save(final_place_thumbnail, format="WebP", quality=93)
+        img = img.convert('RGB' if thumbnail_image_format == 'JPEG' else 'RGBA')
+        img.thumbnail((878, 500), resample=Image.LANCZOS)
+
+        kwargs = {}
+        if thumbnail_image_format:
+            kwargs['format'] = thumbnail_image_format.upper()
+            thumbnail_ext = '.' + thumbnail_image_format.lower()
+            final_place_thumbnail = os.path.splitext(final_place)[0] + thumbnail_ext
+        if thumbnail_image_quality:
+            kwargs['quality'] = int(thumbnail_image_quality)
+        img.save(final_place_thumbnail, optimize=True, **kwargs)
+
         thumbnail_width = img.width
         thumbnail_height = img.height
 
-        file = File(file_path=final_place, file_name=new_filename + file_ext, alt_text=f'{directory} banner',
+        file = File(file_path=final_place, file_name=new_filename + final_ext, alt_text=f'{directory} banner',
                     width=img_width, height=img_height, thumbnail_path=final_place_thumbnail,
                     thumbnail_width=thumbnail_width, thumbnail_height=thumbnail_height)
         db.session.add(file)
@@ -547,12 +603,12 @@ def save_banner_file(banner_file, directory='communities') -> File:
                 aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
             )
             # Upload main image
-            s3_path = f'{s3_directory}/{new_filename}{file_ext}'
+            s3_path = f'{s3_directory}/{new_filename}{final_ext}'
             s3.upload_file(final_place, current_app.config['S3_BUCKET'], s3_path, ExtraArgs={'ContentType': guess_mime_type(final_place)})
             file.file_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_path}"
             
             # Upload thumbnail
-            s3_thumbnail_path = f'{s3_directory}/{new_filename}_thumbnail.webp'
+            s3_thumbnail_path = f'{s3_directory}/{new_filename}_thumbnail{thumbnail_ext}'
             s3.upload_file(final_place_thumbnail, current_app.config['S3_BUCKET'], s3_thumbnail_path, ExtraArgs={'ContentType': guess_mime_type(final_place_thumbnail)})
             file.thumbnail_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_thumbnail_path}"
             
