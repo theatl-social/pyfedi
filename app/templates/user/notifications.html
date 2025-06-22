@@ -29,7 +29,13 @@
             </div>
             <table class="table table-striped">
                 {% for notification in notifications %}
-                    <tr>
+                    {% if notification.targets.gen == "0" %}
+                        <p>gen one notif</p>
+                        {% include "user/notifs/" + str(notification.notif_type) + ".html" %}
+                    {% else %}
+                        {% include "user/notifs/" + str(notification.notif_type) + ".html" %}
+                    {% endif %}
+                    <!-- <tr>
                         <td class="text-nowrap" width="*">
                             <div class="overflow-ellipses-parent">
                                 <div class="child">
@@ -43,7 +49,7 @@
                             <a href="{{ url_for('user.notification_delete', notification_id=notification.id) }}"
                                class="no-underline"><span class="fe fe-delete"></span></a>
                         </td>
-                    </tr>
+                    </tr> -->
                 {% endfor %}
             </table>
         {% else %}

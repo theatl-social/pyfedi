@@ -874,7 +874,12 @@ def report_profile(actor):
 
             # Notify site admin
             already_notified = set()
-            targets_data = {'suspect_user_id': user.id,'reporter_id':current_user.id}
+            targets_data = {'gen':'0',
+                            'suspect_user_id': user.id,
+                            'suspect_user_user_name': user.ap_id if user.ap_id else user.user_name,
+                            'reporter_id':current_user.id,
+                            'reporter_user_name':current_user.user_name
+                            }
             for admin in Site.admins():
                 if admin.id not in already_notified:
                     notify = Notification(title='Reported user', url='/admin/reports', user_id=admin.id, 
@@ -1084,7 +1089,7 @@ def notifications():
     current_user.unread_notifications = Notification.query.filter_by(user_id=current_user.id, read=False).count()
     db.session.commit()
 
-    type = request.args.get('type', '')
+    type_ = request.args.get('type', '')
     current_filter = type
     has_notifications = False
 
@@ -1101,9 +1106,12 @@ def notifications():
                 notification_types[notif_id_to_string(notification.notif_type)] += 1
             notification_links[notif_id_to_string(notification.notif_type)].add(notification.notif_type)
 
-    if type:
-        type = tuple(int(x.strip()) for x in type.strip('{}').split(','))   # convert '{41, 10}' to a tuple containing 41 and 10
-        notification_list = Notification.query.filter_by(user_id=current_user.id).filter(Notification.notif_type.in_(type)).order_by(desc(Notification.created_at)).all()
+    if type_:
+        type_ = tuple(int(x.strip()) for x in type_.strip('{}').split(','))   # convert '{41, 10}' to a tuple containing 41 and 10
+        notification_list = Notification.query.filter_by(user_id=current_user.id).filter(Notification.notif_type.in_(type_)).order_by(desc(Notification.created_at)).all()
+
+    print(f'notification_list type: {type(notification_list)}')
+    print(f'entry 0: {notification_list[0]}')
 
     return render_template('user/notifications.html', title=_('Notifications'), notifications=notification_list,
                            notification_types=notification_types, has_notifications=has_notifications,
