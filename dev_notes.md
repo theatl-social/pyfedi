@@ -1,5 +1,34 @@
 # Development Notes
 
+A git pre-commit hook can be used to automatically run [ruff](https://docs.astral.sh/ruff/) before committing code:
+
+Save this as .git/hooks/pre-commit and make sure it’s executable with chmod +x .git/hooks/pre-commit:
+
+```
+#!/bin/sh
+
+# Absolute path to your ruff binary
+RUFF="/home/rimu/Documents/piefed/venv/bin/ruff"
+
+# Get all staged Python files
+STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep '\.py$')
+if [ -z "$STAGED" ]; then
+    exit 0
+fi
+
+echo "🔍 Running Ruff on staged files..."
+$RUFF check $STAGED
+STATUS=$?
+
+if [ $STATUS -ne 0 ]; then
+    echo "❌ Ruff found issues. Please fix them before committing."
+    exit 1
+else
+    echo "✅ Ruff passed!"
+    exit 0
+fi
+```
+
 ## ActivityPub Debugging
 
 In `.env`, set `LOG_ACTIVITYPUB_TO_DB = 1` so that incoming federation activities will appear in `yourdomain.tld/admin/activities`.
