@@ -1943,7 +1943,7 @@ def feed_profile(actor, feed_owner=None):
     actor = actor.strip()
     if feed_owner is not None:
         feed_owner = feed_owner.strip()
-        actor = actor + "/" + feed_owner
+        actor = actor + '/' + feed_owner
     if '@' in actor:
         # don't provide activitypub info for remote communities
         if 'application/ld+json' in request.headers.get('Accept', '') or 'application/activity+json' in request.headers.get('Accept', ''):
