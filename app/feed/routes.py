@@ -152,6 +152,7 @@ def feed_add_remote():
 @bp.route('/feed/<int:feed_id>/edit', methods=['GET','POST'])
 @login_required
 def feed_edit(feed_id: int):
+    url_changed = False
     if current_user.banned:
         return show_ban_message()
     # load the feed
@@ -226,15 +227,13 @@ def feed_edit(feed_id: int):
             _feed_remove_community(removed_community, feed_to_edit.id, current_user.id)
 
         flash(_('Settings saved.'))
-        try:
-            url_changed
-        except AttributeError:
-            return redirect(referrer())
-        else:
-            if redirect(referrer().endswith(feed_to_edit.name)):
+        if url_changed:
+            if referrer().endswith(feed_to_edit.name):
                 return redirect('/f/' + feed_to_edit.name)
             else:
                 return redirect(referrer())
+        else:
+            return redirect(referrer())
 
 
     # add the current data to the form
