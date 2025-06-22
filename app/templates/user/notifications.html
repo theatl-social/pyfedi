@@ -30,26 +30,24 @@
             <table class="table table-striped">
                 {% for notification in notifications %}
                     {% if notification.targets.gen == "0" %}
-                        <p>gen one notif</p>
                         {% include "user/notifs/" + str(notification.notif_type) + ".html" %}
                     {% else %}
-                        {% include "user/notifs/" + str(notification.notif_type) + ".html" %}
-                    {% endif %}
-                    <!-- <tr>
-                        <td class="text-nowrap" width="*">
-                            <div class="overflow-ellipses-parent">
-                                <div class="child">
-                                    <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}"
-                                        class="{% if not notification.read %}unread{% endif %}">{{ notification.title }}</a>
+                        <tr>
+                            <td class="text-nowrap" width="*">
+                                <div class="overflow-ellipses-parent">
+                                    <div class="child">
+                                        <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}"
+                                            class="{% if not notification.read %}unread{% endif %}">{{ notification.title }}</a>
+                                    </div>
                                 </div>
-                            </div>
-                        </td>
-                        <td class="text-nowrap" width="120">{{ arrow.get(notification.created_at).humanize(locale=locale) }}</td>
-                        <td width="30">
-                            <a href="{{ url_for('user.notification_delete', notification_id=notification.id) }}"
-                               class="no-underline"><span class="fe fe-delete"></span></a>
-                        </td>
-                    </tr> -->
+                            </td>
+                            <td class="text-nowrap" width="120">{{ arrow.get(notification.created_at).humanize(locale=locale) }}</td>
+                            <td width="30">
+                                <a href="{{ url_for('user.notification_delete', notification_id=notification.id) }}"
+                                class="no-underline"><span class="fe fe-delete"></span></a>
+                            </td>
+                        </tr>
+                    {% endif %}
                 {% endfor %}
             </table>
         {% else %}
