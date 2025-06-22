@@ -2369,27 +2369,28 @@ def apply_feed_url_rules(self):
         self.url.errors.append(_l('- cannot be in Url. Use _ instead?'))
         return False
 
-        # Allow alphanumeric characters and underscores (a-z, A-Z, 0-9, _)
+    if not self.public.data and not "/" in self.url.data.strip():
+        self.url.data = self.url.data.strip().lower() + "/" + current_user.user_name.lower()
+    elif self.public.data and "/" in self.url.data.strip():
+        self.url.data = self.url.data.strip().split("/", 1)[0]
+    else:
+        self.url.data = self.url.data.strip().lower()
+
+    # Allow alphanumeric characters and underscores (a-z, A-Z, 0-9, _)
     if self.public.data:
         regex = r'^[a-zA-Z0-9_]+$'
     else:
-        regex = r'^[a-zA-Z0-9_]+(?:!' + current_user.user_name.lower() + ')?$'
+        regex = r'^[a-zA-Z0-9_]+(?:/' + current_user.user_name.lower() + ')?$'
     if not re.match(regex, self.url.data):
         self.url.errors.append(_l('Feed urls can only contain letters, numbers, and underscores.'))
         return False
 
-    if not self.public.data and not "!" in self.url.data.strip():
-        feed_url = self.url.data.strip().lower() + "!" + current_user.user_name.lower()
-    elif self.public.data and "!" in self.url.data.strip():
-        feed_url = self.url.data.strip().split("!", 1)[0]
-    else:
-        feed_url = self.url.data.strip().lower()
     try:
         self.feed_id
     except AttributeError:
-        feed = Feed.query.filter(Feed.name == feed_url).first()
+        feed = Feed.query.filter(Feed.name == self.url.data).first()
     else:
-        feed = Feed.query.filter(Feed.name == feed_url).filter(Feed.id != self.feed_id).first()
+        feed = Feed.query.filter(Feed.name == self.url.data).filter(Feed.id != self.feed_id).first()
     if feed is not None:
         self.url.errors.append(_l('A Feed with this url already exists.'))
         return False

@@ -174,6 +174,7 @@ def feed_edit(feed_id: int):
             edit_feed_form.url.data = slugify(edit_feed_form.url.data.strip().split("!")[0], separator='_').lower()
             if not edit_feed_form.public.data:
                 edit_feed_form.url.data = slugify(edit_feed_form.url.data.strip(), separator='_').lower() + "!" + current_user.user_name.lower()
+            url_changed = feed_to_edit.name != edit_feed_form.url.data
             feed_to_edit.name = edit_feed_form.url.data
             feed_to_edit.machine_name = edit_feed_form.url.data
         feed_to_edit.title = edit_feed_form.title.data
@@ -225,7 +226,16 @@ def feed_edit(feed_id: int):
             _feed_remove_community(removed_community, feed_to_edit.id, current_user.id)
 
         flash(_('Settings saved.'))
-        return redirect(referrer())
+        try:
+            url_changed
+        except AttributeError:
+            return redirect(referrer())
+        else:
+            if redirect(referrer().endswith(feed_to_edit.name)):
+                return redirect('/f/' + feed_to_edit.name)
+            else:
+                return redirect(referrer())
+
 
     # add the current data to the form
     edit_feed_form.title.data = feed_to_edit.title
