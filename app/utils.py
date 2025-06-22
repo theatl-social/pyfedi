@@ -2004,7 +2004,6 @@ def paginate_post_ids(post_ids, page: int, page_length: int):
 
 
 def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) -> List[int]:
-    from app import redis_client
     if community_ids is None or len(community_ids) == 0:
         return []
     if result_id:
@@ -2136,7 +2135,7 @@ def move_file_to_s3(file_id, s3):
                     'app/static/media'):
                 if os.path.isfile(file.thumbnail_path):
                     content_type = guess_mime_type(file.thumbnail_path)
-                    new_path = file.thumbnail_path.replace('app/static/media/', f"")
+                    new_path = file.thumbnail_path.replace('app/static/media/', "")
                     s3.upload_file(file.thumbnail_path, current_app.config['S3_BUCKET'], new_path, ExtraArgs={'ContentType': content_type})
                     os.unlink(file.thumbnail_path)
                     file.thumbnail_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
@@ -2146,7 +2145,7 @@ def move_file_to_s3(file_id, s3):
                     'app/static/media'):
                 if os.path.isfile(file.file_path):
                     content_type = guess_mime_type(file.file_path)
-                    new_path = file.file_path.replace('app/static/media/', f"")
+                    new_path = file.file_path.replace('app/static/media/', "")
                     s3.upload_file(file.file_path, current_app.config['S3_BUCKET'], new_path, ExtraArgs={'ContentType': content_type})
                     os.unlink(file.file_path)
                     file.file_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
@@ -2156,7 +2155,7 @@ def move_file_to_s3(file_id, s3):
                     'app/static/media'):
                 if os.path.isfile(file.source_url):
                     content_type = guess_mime_type(file.source_url)
-                    new_path = file.source_url.replace('app/static/media/', f"")
+                    new_path = file.source_url.replace('app/static/media/', "")
                     s3.upload_file(file.source_url, current_app.config['S3_BUCKET'], new_path, ExtraArgs={'ContentType': content_type})
                     os.unlink(file.source_url)
                     file.source_url = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"

@@ -97,7 +97,7 @@ def user_passkey_verification():
             expected_rp_id = request.host,
             require_user_verification = False,
         )
-    except InvalidRegistrationResponse as err:
+    except InvalidRegistrationResponse:
         flash('Passkey registration failed.', 'error')
         return 'FAILED'
 

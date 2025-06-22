@@ -64,7 +64,7 @@ def passkey_verification():
                     if isinstance(passkey.public_key, str):
                         try:
                             credential_public_key = base64.b64decode(passkey.public_key)
-                        except Exception as e:
+                        except Exception:
                             credential_public_key = passkey.public_key.encode('utf-8')
                     else:
                         credential_public_key = passkey.public_key
@@ -83,7 +83,7 @@ def passkey_verification():
                     passkey.used = utcnow()
                     success = True
                     break
-                except InvalidAuthenticationResponse as e:
+                except InvalidAuthenticationResponse:
                     pass # try another passkey instead by continuing to loop through all their passkeys
             if not success:
                 error_message = f'No valid passkeys found for {username}'

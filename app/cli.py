@@ -615,7 +615,7 @@ def register(app):
             from app.utils import move_file_to_s3
             import boto3
             processed = 0
-            print(f'Beginning move of post images... this could take a long time. Use tmux.')
+            print('Beginning move of post images... this could take a long time. Use tmux.')
             local_post_image_ids = list(db.session.execute(text('SELECT image_id FROM "post" WHERE deleted is false and image_id is not null and instance_id = 1 ORDER BY id DESC')).scalars())
             remote_post_image_ids = list(db.session.execute(text('SELECT image_id FROM "post" WHERE deleted is false and image_id is not null and instance_id != 1 ORDER BY id DESC')).scalars())
             boto3_session = boto3.session.Session()
@@ -659,7 +659,7 @@ def register(app):
             for file_id in file_ids:
                 file = File.query.get(file_id)
                 content_type = guess_mime_type(file.source_url)
-                new_path = file.source_url.replace('/static/media/', f"/")
+                new_path = file.source_url.replace('/static/media/', "/")
                 s3_path = new_path.replace(f'https://{server_name}/', '')
                 new_path = new_path.replace(server_name, current_app.config['S3_PUBLIC_URL'])
                 local_file = file.source_url.replace(f'https://{server_name}/static/media/', 'app/static/media/')
@@ -1099,9 +1099,9 @@ def register(app):
                 errors.append("   ❌ SECRET_KEY is not set or using default value")
             elif len(secret_key) < 32:
                 warnings.append("   ⚠️  SECRET_KEY should be at least 32 characters long")
-                print(f"   ✅ SECRET_KEY is configured (but short)")
+                print("   ✅ SECRET_KEY is configured (but short)")
             else:
-                print(f"   ✅ SECRET_KEY is configured")
+                print("   ✅ SECRET_KEY is configured")
 
             # Check DATABASE_URL
             database_url = current_app.config.get('SQLALCHEMY_DATABASE_URI')
@@ -1109,11 +1109,11 @@ def register(app):
                 errors.append("   ❌ DATABASE_URL is not set")
             elif database_url.startswith('sqlite://'):
                 warnings.append("   ⚠️  Using SQLite database - consider PostgreSQL for production")
-                print(f"   ✅ DATABASE_URL is configured (SQLite)")
+                print("   ✅ DATABASE_URL is configured (SQLite)")
             elif database_url.startswith('postgresql'):
-                print(f"   ✅ DATABASE_URL is configured (PostgreSQL)")
+                print("   ✅ DATABASE_URL is configured (PostgreSQL)")
             else:
-                print(f"   ✅ DATABASE_URL is configured")
+                print("   ✅ DATABASE_URL is configured")
 
             # Check numeric environment variables
             print("\n   Checking numeric environment variables...")

@@ -41,7 +41,7 @@ def test_find_actor_or_create(app):
         assert remote_with_filter is None
 
         # Test with community_only flag - valid community
-        remote_with_filter = find_actor_or_create(f"https://piefed.social/c/piefed_meta",
+        remote_with_filter = find_actor_or_create("https://piefed.social/c/piefed_meta",
                                                 community_only=True,
                                                 create_if_not_found=True)
         assert remote_with_filter is not None

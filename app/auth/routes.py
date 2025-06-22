@@ -330,7 +330,7 @@ def google_login():
 def google_authorize():
     try:
         token = oauth.google.authorize_access_token()
-    except Exception as e:
+    except Exception:
         current_app.logger.exception("Google OAuth error")
         flash(_('Login failed due to a problem with Google.'), 'error')
         return redirect(url_for('auth.login'))

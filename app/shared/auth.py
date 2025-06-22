@@ -30,10 +30,10 @@ def log_user_in(input, src):
         password = input['password']
         try:
             user = User.query.filter_by(user_name=username, ap_id=None, deleted=False).one()
-        except NoResultFound as e:
+        except NoResultFound:
             try:
                 user = User.query.filter_by(email=username, ap_id=None, deleted=False).one()
-            except NoResultFound as e2:
+            except NoResultFound:
                 raise Exception('incorrect_login')
     else:
         return None
@@ -88,7 +88,7 @@ def log_user_in(input, src):
 
     try:
         sync_user_to_ldap(user.user_name, user.email, password.strip())
-    except Exception as e:
+    except Exception:
         ...
 
     if src == SRC_WEB:
