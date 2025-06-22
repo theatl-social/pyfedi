@@ -1218,6 +1218,9 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                             final_ext = file_ext # track file extension for conversion
                             thumbnail_ext = file_ext
 
+                            if image_format == 'AVIF' or thumbnail_image_format == 'AVIF':
+                                import pillow_avif
+
                             # Resize the image to medium
                             if medium_width:
                                 final_place = os.path.join(directory, new_filename + final_ext)

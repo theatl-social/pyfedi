@@ -447,6 +447,9 @@ def save_icon_file(icon_file, directory='communities') -> File:
             final_ext = file_ext
             thumbnail_ext = file_ext
 
+            if image_format == 'AVIF' or thumbnail_image_format == 'AVIF':
+                import pillow_avif
+
             if img.width > 250 or img.height > 250 or image_format or thumbnail_image_format:
                 img = img.convert('RGB' if (image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
                 img.thumbnail((250, 250), resample=Image.LANCZOS)

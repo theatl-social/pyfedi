@@ -45,6 +45,9 @@ def process_upload(image_file, destination='posts'):
     image_format = os.getenv('MEDIA_IMAGE_FORMAT')
     image_quality = os.getenv('MEDIA_IMAGE_QUALITY')
 
+    if image_format == 'AVIF':
+        import pillow_avif
+
     if not final_place.endswith('.svg') and not final_place.endswith('.gif'):
         img = Image.open(final_place)
         if '.' + img.format.lower() in allowed_extensions:
