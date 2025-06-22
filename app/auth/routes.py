@@ -156,7 +156,7 @@ def register():
                     flash(_('Your username contained special letters so it was changed to %(name)s.', name=form.user_name.data), 'warning')
                 font = ''
                 if 'Windows' in request.user_agent.string:
-                    font = 'inter'  # the default font on Windows doesn't look great so defaut to Inter. A windows computer will tend to have a connection that won't notice the 300KB font file.
+                    font = 'inter'  # the default font on Windows doesn't look great so default to Inter. A windows computer will tend to have a connection that won't notice the 300KB font file.
                 user = User(user_name=form.user_name.data, title=form.user_name.data, email=form.real_email.data,
                             verification_token=verification_token, instance_id=1, ip_address=ip_address(),
                             banned=user_ip_banned() or user_cookie_banned(), email_unread_sent=False,
@@ -186,7 +186,7 @@ def register():
                         db.session.add(notify)
                         # todo: notify everyone with the "approve registrations" permission, instead of just all admins
                     db.session.commit()
-                    if get_setting('ban_check_servers', 'piefed.social'):
+                    if get_setting('ban_check_servers', ''):
                         task_selector('check_application', application_id=application.id)
                     return redirect(url_for('auth.please_wait'))
                 else:
@@ -384,7 +384,7 @@ def google_authorize():
                 db.session.add(notify)
                 # todo: notify everyone with the "approve registrations" permission, instead of just all admins
             db.session.commit()
-            if get_setting('ban_check_servers', 'piefed.social'):
+            if get_setting('ban_check_servers', ''):
                 task_selector('check_application', application_id=application.id)
             return redirect(url_for('auth.please_wait'))
         else:
