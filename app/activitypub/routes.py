@@ -741,7 +741,7 @@ def process_inbox_request(request_json, store_ap_json):
             if actor and isinstance(actor, User):
                 user = actor
                 # Update user's last_seen in a separate transaction to avoid deadlocks
-                with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=2):
+                with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=6):
                     db.session.execute(text('UPDATE "user" SET last_seen=:last_seen WHERE id = :user_id'),
                                      {"last_seen": utcnow(), "user_id": user.id})
                     db.session.commit()
@@ -786,7 +786,7 @@ def process_inbox_request(request_json, store_ap_json):
                         log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, f'{user_ap_id} is banned')
                         return
 
-                    with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=2):
+                    with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=6):
                         user.last_seen = utcnow()
                         user.instance.last_seen = utcnow()
                         user.instance.dormant = False

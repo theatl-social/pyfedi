@@ -663,7 +663,7 @@ def ban_profile(actor):
                         user.delete_dependencies()
                         user.purge_content()
                         from app import redis_client
-                        with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=2):
+                        with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=6):
                             user = User.query.get(user.id)
                             user.deleted = True
                             user.deleted_by = current_user.id

@@ -90,7 +90,7 @@ def purge_user_then_delete_task(user_id):
             user.delete_dependencies()
             user.purge_content()
             from app import redis_client
-            with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=2):
+            with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=6):
                 user = User.query.get(user_id)
                 user.deleted = True
                 db.session.commit()

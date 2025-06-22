@@ -1882,7 +1882,7 @@ class Post(db.Model):
         undo = None
         if existing_vote:
             if not self.community.low_quality:
-                with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=2):
+                with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
                     db.session.execute(text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
                                        {'effect': existing_vote.effect, 'user_id': self.user_id})
                     db.session.commit()
@@ -1945,7 +1945,7 @@ class Post(db.Model):
             # upvotes do not increase reputation in low quality communities
             if self.community.low_quality and effect > 0:
                 effect = 0
-            with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=2):
+            with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
                 db.session.execute(text('UPDATE "user" SET reputation = reputation + :effect WHERE id = :user_id'),
                                    {'effect': effect, 'user_id': self.user_id})
                 db.session.commit()
@@ -1958,7 +1958,7 @@ class Post(db.Model):
         new_ranking_scaled = int(new_ranking + self.community.scale_by())
         
         # Update post ranking
-        with redis_client.lock(f"lock:post:{self.id}", timeout=10, blocking_timeout=2):
+        with redis_client.lock(f"lock:post:{self.id}", timeout=10, blocking_timeout=6):
             db.session.execute(text("""UPDATE "post" 
                                SET ranking=:ranking, ranking_scaled=:ranking_scaled 
                                WHERE id=:post_id"""),
@@ -2275,7 +2275,7 @@ class PostReply(db.Model):
         assert vote_direction == 'upvote' or vote_direction == 'downvote'
         undo = None
         if existing_vote:
-            with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=2):
+            with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
                 db.session.execute(text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
                                    {'effect': existing_vote.effect, 'user_id': self.user_id})
                 db.session.commit()
@@ -2318,7 +2318,7 @@ class PostReply(db.Model):
             self.score += effect
             vote = PostReplyVote(user_id=user.id, post_reply_id=self.id, author_id=self.author.id,
                                  effect=effect)
-            with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=2):
+            with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
                 db.session.execute(text('UPDATE "user" SET reputation = reputation + :effect WHERE id = :user_id'),
                                    {'effect': effect, 'user_id': self.user_id})
                 db.session.commit()
@@ -2328,7 +2328,7 @@ class PostReply(db.Model):
         # Calculate the new ranking value
         new_ranking = PostReply.confidence(self.up_votes, self.down_votes)
         
-        with redis_client.lock(f"lock:post_reply:{self.id}", timeout=10, blocking_timeout=2):
+        with redis_client.lock(f"lock:post_reply:{self.id}", timeout=10, blocking_timeout=6):
             db.session.execute(text("UPDATE post_reply SET ranking=:ranking WHERE id=:post_reply_id"),
                               {"ranking": new_ranking, "post_reply_id": self.id})
             db.session.commit()
