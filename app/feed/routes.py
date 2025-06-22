@@ -47,7 +47,9 @@ def feed_new():
     if form.validate_on_submit():
         if form.url.data.strip().lower().startswith('/f/'):
             form.url.data = form.url.data[3:]
-        form.url.data = slugify(form.url.data.strip(), separator='_').lower()
+        form.url.data = slugify(form.url.data.strip().split('/')[0], separator='_').lower()
+        if not form.public.data:
+            form.url.data = slugify(form.url.data.strip(), separator='_').lower() + '/' + current_user.user_name.lower()
         private_key, public_key = RsaKeys.generate_keypair()
         feed = Feed(user_id=current_user.id, title=form.title.data, name=form.url.data, machine_name=form.url.data,
                     description=piefed_markdown_to_lemmy_markdown(form.description.data),
@@ -169,7 +171,10 @@ def feed_edit(feed_id: int):
     
     if edit_feed_form.validate_on_submit():
         if edit_feed_form.url.data:
-            edit_feed_form.url.data = slugify(edit_feed_form.url.data, separator='_').lower()
+            edit_feed_form.url.data = slugify(edit_feed_form.url.data.strip().split('/')[0], separator='_').lower()
+            if not edit_feed_form.public.data:
+                edit_feed_form.url.data = slugify(edit_feed_form.url.data.strip(), separator='_').lower() + '/' + current_user.user_name.lower()
+            url_changed = feed_to_edit.name != edit_feed_form.url.data
             feed_to_edit.name = edit_feed_form.url.data
             feed_to_edit.machine_name = edit_feed_form.url.data
         feed_to_edit.title = edit_feed_form.title.data
@@ -196,6 +201,11 @@ def feed_edit(feed_id: int):
             feed_to_edit.nsfw = edit_feed_form.nsfw.data
         if g.site.enable_nsfl:
             feed_to_edit.nsfl = edit_feed_form.nsfl.data
+        # unsubscribe every feed member except owner when moving from public to private
+        if feed_to_edit.public and not edit_feed_form.public.data:
+            db.session.query(FeedMember).filter(FeedMember.is_owner == False).delete()
+            db.session.query(FeedJoinRequest).filter_by(user_id=current_user.id, feed_id=feed_to_edit.id).delete()
+            feed_to_edit.subscriptions_count = db.session.query(FeedMember).filter(FeedMember.is_owner == False).count()
         feed_to_edit.public = edit_feed_form.public.data
         if current_user.is_admin():
             feed_to_edit.is_instance_feed = edit_feed_form.is_instance_feed.data
@@ -216,7 +226,16 @@ def feed_edit(feed_id: int):
             _feed_remove_community(removed_community, feed_to_edit.id, current_user.id)
 
         flash(_('Settings saved.'))
-        return redirect(referrer())
+        try:
+            url_changed
+        except AttributeError:
+            return redirect(referrer())
+        else:
+            if redirect(referrer().endswith(feed_to_edit.name)):
+                return redirect('/f/' + feed_to_edit.name)
+            else:
+                return redirect(referrer())
+
 
     # add the current data to the form
     edit_feed_form.title.data = feed_to_edit.title
@@ -307,7 +326,10 @@ def feed_copy(feed_id: int):
     if copy_feed_form.validate_on_submit():
         if copy_feed_form.url.data.strip().lower().startswith('/f/'):
             copy_feed_form.url.data = copy_feed_form.url.data[3:]
-        copy_feed_form.url.data = slugify(copy_feed_form.url.data.strip(), separator='_').lower()
+        if copy_feed_form.public.data:
+            copy_feed_form.url.data = slugify(copy_feed_form.url.data, separator='_').lower()
+        else:
+            copy_feed_form.url.data = slugify(copy_feed_form.url.data.strip(), separator='_').lower() + '/' + current_user.user_name.lower()
         private_key, public_key = RsaKeys.generate_keypair()
         feed = Feed(user_id=current_user.id, title=copy_feed_form.title.data, name=copy_feed_form.url.data, machine_name=copy_feed_form.url.data, 
                     description=piefed_markdown_to_lemmy_markdown(copy_feed_form.description.data),

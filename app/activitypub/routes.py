@@ -1936,11 +1936,15 @@ def process_chat(user, store_ap_json, core_activity):
 
 # ---- Feeds ----
 
-@bp.route('/f/<actor>', methods=['GET'])
-def feed_profile(actor):
+@bp.route('/f/<actor>')
+@bp.route('/f/<actor>/<feed_owner>', methods=['GET'])
+def feed_profile(actor, feed_owner=None):
     """ Requests to this endpoint can be for a JSON representation of the feed, or an HTML rendering of it.
         The two types of requests are differentiated by the header """
     actor = actor.strip()
+    if feed_owner is not None:
+        feed_owner = feed_owner.strip()
+        actor = actor + '/' + feed_owner
     if '@' in actor:
         # don't provide activitypub info for remote communities
         if 'application/ld+json' in request.headers.get('Accept', '') or 'application/activity+json' in request.headers.get('Accept', ''):
