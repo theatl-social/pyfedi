@@ -165,15 +165,57 @@
         {% endif -%}
         <ul class="nav nav-tabs nav-justified mt-4">
           <li class="nav-item">
-            <a href="#post_list_tab" class="nav-link {{ 'active' if replies_prev_url is none }}" id="post-pill" data-bs-toggle="pill" role="tab" aria-current="page">Posts</a>
+            <a href="#overview_tab" class="nav-link {{ 'active' if post_prev_url is none and replies_prev_url is none }}" id="overview-pill" data-bs-toggle="pill" role="tab" aria-current="page">Overview</a>
+          </li>
+          <li class="nav-item">
+            <a href="#post_list_tab" class="nav-link {{ 'active' if post_prev_url is not none }}" id="post-pill" data-bs-toggle="pill" role="tab" aria-current="page">Posts</a>
           </li>
           <li class="nav-item">
             <a href="#comments_tab" class="nav-link {{ 'active' if replies_prev_url is not none }}" id="comments-pill" data-bs-toggle="pill" role="tab">Comments</a>
           </li>
         </ul>
         <div class="tab-content">
+          {% if overview_items %}
+            <div class="tab-pane border-0 {{ 'active' if post_prev_url is none and replies_prev_url is none }}" id="overview_tab" role="tabpanel" aria-labelled-by="overview-pill">
+              {% if rss_feed -%}
+                  <p class="mt-2 d-block" style="float: right;">
+                      <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
+                  </p>
+              {% endif -%}
+              <h4 class="mt-2">Posts and Comments by {{ user.display_name() if user.is_local()  else user.display_name() + ', ' + user.ap_id }}</h4>
+              <div class="post_list comments">
+                  {% for item in overview_items %}
+                    {% if item.__class__.__name__ == 'Post' %}
+                      {% with post=item %}
+                        {% include 'post/_post_teaser.html' %}
+                      {% endwith %}
+                    {% elif item.__class__.__name__ == 'PostReply' %}
+                      {% with post_reply=item, teaser=True %}
+                          {% include 'post/_post_reply_teaser.html' %}
+                      {% endwith %}
+                    {% endif %}
+                  {% endfor %}
+              </div>
+              <nav aria-label="{{ _('Overview pagination') }}" class="mt-4" role="navigation">
+                      {% if overview_prev_url %}
+                          <a href="{{ overview_prev_url }}" class="btn btn-primary">
+                              <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
+                          </a>
+                      {% endif %}
+                      {% if overview_next_url %}
+                          <a href="{{ overview_next_url }}" class="btn btn-primary">
+                              {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
+                          </a>
+                      {% endif %}
+              </nav>
+            </div>
+          {% else %}
+            <div class="tab-pane border-0 {{ 'active' if post_prev_url is none and replies_prev_url is none }}" id="overview_tab" role="tabpanel" aria-labelled-by="overview-pill">
+              <p>{{ _('No posts or comments yet.') }}</p>
+            </div>
+          {% endif %}
           {% if posts %}
-            <div class="tab-pane border-0 {{ 'active' if replies_prev_url is none }}" id="post_list_tab" role="tabpanel" aria-labelled-by="post-pill">
+            <div class="tab-pane border-0 {{ 'active' if post_prev_url is not none }}" id="post_list_tab" role="tabpanel" aria-labelled-by="post-pill">
               {% if rss_feed -%}
                   <p class="mt-2 d-block" style="float: right;">
                       <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
