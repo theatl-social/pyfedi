@@ -1074,6 +1074,19 @@ def post_block_community(post_id: int):
         db.session.commit()
         cache.delete_memoized(blocked_communities, current_user.id)
     flash(_('Posts in %(name)s will be hidden.', name=post.community.display_name()))
+    
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        curr_url = request.headers.get('HX-Current-URL')
+        redir_home = ["/c/", "/post/"]
+        
+        if any(found_str in curr_url for found_str in redir_home):
+            resp.headers['HX-Redirect'] = url_for("main.index")
+        else:
+            resp.headers['HX-Redirect'] = curr_url
+        
+        return resp
+    
     return redirect(post.community.local_url())
 
 
