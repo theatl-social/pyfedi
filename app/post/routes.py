@@ -25,7 +25,7 @@ from app.post.util import post_replies, get_comment_branch, tags_to_string, url_
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
     POST_TYPE_IMAGE, \
     POST_TYPE_ARTICLE, POST_TYPE_VIDEO, NOTIF_REPLY, NOTIF_POST, POST_TYPE_POLL, SRC_WEB, SRC_API
-from app.models import Post, PostReply, \
+from app.models import Post, PostReply, PostReplyValidationError, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, Report, Site, Community, \
     Topic, User, Instance, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
     PostReplyBookmark, CommunityBlock, File, CommunityFlair, UserFlair, BlockedImage, CommunityBan
@@ -543,9 +543,12 @@ def add_reply_inline(post_id: int, comment_id: int):
 
         if content == '':
             return f'<div id="reply_to_{comment_id}" class="hidable"></div>' # do nothing, just hide the form
-        reply = PostReply.new(current_user, post, in_reply_to=in_reply_to, body=piefed_markdown_to_lemmy_markdown(content),
-                              body_html=markdown_to_html(content), notify_author=True,
-                              language_id=language_id, distinguished=False)
+        try:
+            reply = PostReply.new(current_user, post, in_reply_to=in_reply_to, body=piefed_markdown_to_lemmy_markdown(content),
+                                  body_html=markdown_to_html(content), notify_author=True,
+                                  language_id=language_id, distinguished=False)
+        except PostReplyValidationError as e:
+            return '<div id="reply_to_{comment_id}" class="hidable"><span class="red">' + str(e) + '</span></div>'
 
         current_user.language_id = language_id
         reply.ap_id = reply.profile_id()

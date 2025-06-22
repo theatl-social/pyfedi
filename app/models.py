@@ -35,6 +35,11 @@ def utcnow():
     return datetime.utcnow()
 
 
+class PostReplyValidationError(Exception):
+    """Custom exception for PostReply validation errors"""
+    pass
+
+
 class FullTextSearchQuery(BaseQuery, SearchQueryMixin):
     pass
 
@@ -2028,15 +2033,14 @@ class PostReply(db.Model):
 
     @classmethod
     def new(cls, user: User, post: Post, in_reply_to, body, body_html, notify_author, language_id, distinguished, request_json: dict = None, announce_id=None):
-
         from app.utils import shorten_string, blocked_phrases, recently_upvoted_post_replies, reply_already_exists, reply_is_just_link_to_gif_reaction, reply_is_stupid
         from app.activitypub.util import notify_about_post_reply
 
         if not post.comments_enabled:
-            raise Exception('Comments are disabled on this post')
+            raise PostReplyValidationError(_('Comments are disabled on this post'))
 
         if user.ban_comments:
-            raise Exception('Banned from commenting')
+            raise PostReplyValidationError(_('Banned from commenting'))
 
         if in_reply_to is not None:
             parent_id = in_reply_to.id
@@ -2059,17 +2063,17 @@ class PostReply(db.Model):
         if reply.body:
             for blocked_phrase in blocked_phrases():
                 if blocked_phrase in reply.body:
-                    raise Exception('Blocked phrase in comment')
+                    raise PostReplyValidationError(_('Blocked phrase in comment'))
         if in_reply_to is None or in_reply_to.parent_id is None:
             notification_target = post
         else:
             notification_target = PostReply.query.get(in_reply_to.parent_id)
 
         if notification_target.author.has_blocked_user(reply.user_id):
-            raise Exception('Replier blocked')
+            raise PostReplyValidationError(_('Replier blocked'))
 
         if reply_already_exists(user_id=user.id, post_id=post.id, parent_id=reply.parent_id, body=reply.body):
-            raise Exception('Duplicate reply')
+            raise PostReplyValidationError(_('Duplicate reply'))
 
         site = Site.query.get(1)
         if site is None:
@@ -2077,10 +2081,10 @@ class PostReply(db.Model):
         
         if reply_is_just_link_to_gif_reaction(reply.body) and site.enable_gif_reply_rep_decrease:
             user.reputation -= 1
-            raise Exception('Gif comment ignored')
+            raise PostReplyValidationError(_('Gif comment ignored'))
 
         if reply_is_stupid(reply.body) and site.enable_this_comment_filter:
-            raise Exception('Low quality reply')
+            raise PostReplyValidationError(_('Low quality reply'))
 
         try:
             db.session.add(reply)
