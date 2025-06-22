@@ -65,6 +65,8 @@ def sync_user_to_ldap(username: str, email: str, password: str) -> bool:
     Returns:
         bool: True if sync was successful or skipped, False if failed
     """
+    username = username.lower()
+    
     # Skip if no password provided
     if not password or not password.strip():
         logger.info(f"No password provided for user {username}, skipping LDAP sync")
