@@ -153,6 +153,7 @@ def feed_add_remote():
 @login_required
 def feed_edit(feed_id: int):
     url_changed = False
+    old_url = None
     if current_user.banned:
         return show_ban_message()
     # load the feed
@@ -175,6 +176,7 @@ def feed_edit(feed_id: int):
             edit_feed_form.url.data = slugify(edit_feed_form.url.data.strip().split('/')[0], separator='_').lower()
             if not edit_feed_form.public.data:
                 edit_feed_form.url.data = slugify(edit_feed_form.url.data.strip(), separator='_').lower() + '/' + current_user.user_name.lower()
+            old_url = feed_to_edit.name
             url_changed = feed_to_edit.name != edit_feed_form.url.data
             feed_to_edit.name = edit_feed_form.url.data
             feed_to_edit.machine_name = edit_feed_form.url.data
@@ -227,8 +229,8 @@ def feed_edit(feed_id: int):
             _feed_remove_community(removed_community, feed_to_edit.id, current_user.id)
 
         flash(_('Settings saved.'))
-        if url_changed:
-            if referrer().endswith(feed_to_edit.name):
+        if url_changed and old_url is not None:
+            if referrer().endswith(old_url):
                 return redirect('/f/' + feed_to_edit.name)
             else:
                 return redirect(referrer())
