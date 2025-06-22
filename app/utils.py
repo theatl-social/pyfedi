@@ -2369,10 +2369,10 @@ def apply_feed_url_rules(self):
         self.url.errors.append(_l('- cannot be in Url. Use _ instead?'))
         return False
 
-    if not self.public.data and not "/" in self.url.data.strip():
-        self.url.data = self.url.data.strip().lower() + "/" + current_user.user_name.lower()
-    elif self.public.data and "/" in self.url.data.strip():
-        self.url.data = self.url.data.strip().split("/", 1)[0]
+    if not self.public.data and not '/' in self.url.data.strip():
+        self.url.data = self.url.data.strip().lower() + '/' + current_user.user_name.lower()
+    elif self.public.data and '/' in self.url.data.strip():
+        self.url.data = self.url.data.strip().split('/', 1)[0]
     else:
         self.url.data = self.url.data.strip().lower()
 
