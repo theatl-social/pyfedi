@@ -356,10 +356,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
             img = Image.open(final_place)
             if '.' + img.format.lower() in allowed_extensions:
                 img = ImageOps.exif_transpose(img)
-                if image_format == 'JPEG':
-                    img = img.convert('RGB')  # JPEG needs to use RGB
-                else:
-                    img = img.convert('RGBA') # while everything else like PNG and WEBP can use RGBA
+                img = img.convert('RGB' if (image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
                 img.thumbnail((image_max_dimension, image_max_dimension), resample=Image.LANCZOS)
 
                 kwargs = {}

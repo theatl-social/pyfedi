@@ -441,14 +441,14 @@ def save_icon_file(icon_file, directory='communities') -> File:
 
             image_format = os.getenv('MEDIA_IMAGE_FORMAT')
             image_quality = os.getenv('MEDIA_IMAGE_QUALITY')
-            thumbnail_image_format = os.getenv('MEDIA_IMAGE_THUMBNAIL_FORMAT')
-            thumbnail_image_quality = os.getenv('MEDIA_IMAGE_THUMBNAIL_QUALITY')
+            thumbnail_image_format = os.getenv('MEDIA_IMAGE_THUMBNAIL_FORMAT', 'WEBP')
+            thumbnail_image_quality = os.getenv('MEDIA_IMAGE_THUMBNAIL_QUALITY', 93)
 
             final_ext = file_ext
             thumbnail_ext = file_ext
 
             if img.width > 250 or img.height > 250 or image_format or thumbnail_image_format:
-                img = img.convert('RGB' if image_format == 'JPEG' else 'RGBA')
+                img = img.convert('RGB' if (image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
                 img.thumbnail((250, 250), resample=Image.LANCZOS)
 
                 kwargs = {}
@@ -472,7 +472,7 @@ def save_icon_file(icon_file, directory='communities') -> File:
                 thumbnail_ext = '.' + thumbnail_image_format.lower()
                 final_place_thumbnail = os.path.splitext(final_place)[0] + thumbnail_ext
             if thumbnail_image_quality:
-                kwargs['quality'] = int(image_quality)
+                kwargs['quality'] = int(thumbnail_image_quality)
             img.save(final_place_thumbnail, optimize=True, **kwargs)
 
             thumbnail_width = img.width
@@ -555,7 +555,7 @@ def save_banner_file(banner_file, directory='communities') -> File:
         img_height = img.height
 
         if img.width > 1600 or img.height > 600 or image_format or thumbnail_image_format:
-            img = img.convert('RGB' if image_format == 'JPEG' else 'RGBA')
+            img = img.convert('RGB' if (image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
             img.thumbnail((1600, 600), resample=Image.LANCZOS)
 
             kwargs = {}

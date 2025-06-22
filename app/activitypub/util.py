@@ -1222,10 +1222,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                 final_place = os.path.join(directory, new_filename + final_ext)
 
                                 if img_width > medium_width:
-                                    if medium_image_format == 'JPEG':
-                                        image = image.convert('RGB')  # JPEG needs to use RGB
-                                    else:
-                                        image = image.convert('RGBA') # while everything else like PNG and WEBP can use RGBA
+                                    image = image.convert('RGB' if (medium_image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
                                     image.thumbnail((medium_width, sys.maxsize), resample=Image.LANCZOS)
 
                                 kwargs = {}
@@ -1264,10 +1261,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                 final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail' + final_ext)
 
                                 if img_width > thumbnail_width:
-                                    if thumbnail_image_format == 'JPEG':
-                                        image = image.convert('RGB')  # JPEG needs to use RGB
-                                    else:
-                                        image = image.convert('RGBA') # while everything else like PNG and WEBP can use RGBA
+                                    image = image.convert('RGB' if thumbnail_image_format == 'JPEG' else 'RGBA')
                                     image.thumbnail((thumbnail_width, thumbnail_width), resample=Image.LANCZOS)
 
                                 kwargs = {}
