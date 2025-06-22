@@ -15,7 +15,7 @@
                         {{ form.csrf_token() }}
                         {{ render_field(form.title) }}
                         <div class="form-group">{{ form.url.label(class_="form-control-label required") }}
-                            /f/{{ form.url(class_="form-control", maxlength=255) }}
+                            /f/{{ form.url(class_="form-control", maxlength=255) }}<br>
                             {% for error in form.url.errors %}
                             <span style="color: red;">[{{ error }}]</span>
                             {% endfor %}

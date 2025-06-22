@@ -15,7 +15,12 @@
                         {{ form.csrf_token() }}
                         {{ render_field(form.title) }}
                         <div class="form-group">{{ form.url.label(class_="form-control-label required") }}
-                            /f/{{ form.url(class_="form-control", maxlength=255) }}<br>
+                            {% if form.url.render_kw %}
+                                /f/{{ form.url(class_="form-control opacity-50", maxlength=255) }}
+                                <span style="color: orange">{{ _('Feed has subscribers, cannot change Url.') }}</span><br>
+                            {%  else %}
+                                <span>/f/{{ form.url(class_="form-control", maxlength=255) }}</span><br>
+                            {%  endif %}
                             {% for error in form.url.errors %}
                             <span style="color: red;">{{ error }}</span>
                             {% endfor %}
