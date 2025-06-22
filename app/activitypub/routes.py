@@ -1936,6 +1936,7 @@ def process_chat(user, store_ap_json, core_activity):
 
 # ---- Feeds ----
 
+@bp.route('/f/<actor>')
 @bp.route('/f/<actor>/<feed_owner>', methods=['GET'])
 def feed_profile(actor, feed_owner=None):
     """ Requests to this endpoint can be for a JSON representation of the feed, or an HTML rendering of it.
