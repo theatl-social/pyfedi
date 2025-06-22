@@ -882,6 +882,17 @@ def user_community_unblock(community_id):
         db.session.commit()
         cache.delete_memoized(blocked_communities, current_user.id)
         flash(_('%(community_name)s has been unblocked.', community_name=community.display_name()))
+    
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        curr_url = request.headers.get('HX-Current-URL')
+
+        if "/user/" in curr_url:
+            resp.headers['HX-Redirect'] = curr_url
+        else:
+            resp.headers['HX-Redirect'] = url_for("main.index")
+        
+        return resp
 
     goto = request.args.get('redirect') if 'redirect' in request.args else url_for('user.user_settings_filters')
     return redirect(goto)
