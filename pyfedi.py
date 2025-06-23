@@ -28,7 +28,7 @@ def app_context_processor():
     return dict(getmtime=getmtime, instance_domain=current_app.config['SERVER_NAME'], debug_mode=current_app.debug,
                 arrow=arrow, locale=g.locale if hasattr(g, 'locale') else None, notif_server=current_app.config['NOTIF_SERVER'],
                 site=g.site if hasattr(g, 'site') else None, nonce=g.nonce if hasattr(g, 'nonce') else None,
-                admin_ids=g.admin_ids if hasattr(g, 'admin_ids') else [],
+                admin_ids=g.admin_ids if hasattr(g, 'admin_ids') else [], low_bandwidth=g.low_bandwidth if hasattr(g, 'low_bandwidth') else None,
                 POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE, notif_id_to_string=notif_id_to_string,
                 POST_TYPE_ARTICLE=POST_TYPE_ARTICLE, POST_TYPE_VIDEO=POST_TYPE_VIDEO, POST_TYPE_POLL=POST_TYPE_POLL,
                 SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
@@ -77,6 +77,7 @@ def before_request():
     # Store nonce in g (g is per-request, unlike session)
     g.nonce = gibberish()
     g.locale = str(get_locale())
+    g.low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
     if request.path != '/inbox' and not request.path.startswith('/static/'):        # do not load g.site on shared inbox, to increase chance of duplicate detection working properly
         g.site = Site.query.get(1)
         g.admin_ids = list(db.session.execute(

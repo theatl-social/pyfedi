@@ -516,11 +516,12 @@ def add_reply(post_id: int, comment_id: int):
                                )
 
 
-@bp.route('/post/<int:post_id>/comment/<int:comment_id>/reply_inline', methods=['GET', 'POST'])
+@bp.route('/post/<int:post_id>/comment/<int:comment_id>/reply_inline/<nonce>', methods=['GET', 'POST'])
 @login_required
-def add_reply_inline(post_id: int, comment_id: int):
+def add_reply_inline(post_id: int, comment_id: int, nonce):
     # this route is called by htmx and returns a html fragment representing a form that can be submitted to make a new reply
-    # it also accepts the POST from that form and makes the reply
+    # it also accepts the POST from that form and makes the reply. All the JS in the response needs a nonce from the parent page
+    # to keep CSP happy and that nonce needs to be used by any replies to this reply so it's nonces all the way down.
     if current_user.banned or current_user.ban_comments:
         return _('You have been banned.')
     post = Post.query.get_or_404(post_id)
@@ -536,7 +537,8 @@ def add_reply_inline(post_id: int, comment_id: int):
         return _('You cannot reply to %(name)s', name=in_reply_to.author.display_name())
 
     if request.method == 'GET':
-        return render_template('post/add_reply_inline.html', post_id=post_id, comment_id=comment_id, languages=languages_for_form())
+        return render_template('post/add_reply_inline.html', post_id=post_id, comment_id=comment_id, nonce=nonce,
+                               languages=languages_for_form(), markdown_editor=current_user.markdown_editor)
     else:
         content = request.form.get('body', '').strip()
         language_id = int(request.form.get('language_id'))
@@ -563,7 +565,7 @@ def add_reply_inline(post_id: int, comment_id: int):
                                                   UserFlair.user_id == current_user.id):
                 user_flair[u_flair.user_id] = u_flair.flair
 
-        return render_template('post/add_reply_inline_result.html', post_reply=reply, user_flair=user_flair)
+        return render_template('post/add_reply_inline_result.html', post_reply=reply, user_flair=user_flair, nonce=nonce)
 
 
 @bp.route('/post/<int:post_id>/options_menu', methods=['GET'])
