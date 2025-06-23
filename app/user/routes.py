@@ -768,7 +768,7 @@ def block_profile(actor):
     
     if request.headers.get('HX-Request'):
         resp = make_response()
-        curr_url = request.headers.get('HX-Current-URL')
+        curr_url = request.headers.get('HX-Current-Url')
 
         if "/user/" in curr_url:
             resp.headers['HX-Redirect'] = curr_url
@@ -825,7 +825,7 @@ def unblock_profile(actor):
     
     if request.headers.get('HX-Request'):
         resp = make_response()
-        curr_url = request.headers.get('HX-Current-URL')
+        curr_url = request.headers.get('HX-Current-Url')
         resp.headers['HX-Redirect'] = curr_url
         
         return resp
@@ -934,7 +934,7 @@ def user_community_unblock(community_id):
     
     if request.headers.get('HX-Request'):
         resp = make_response()
-        curr_url = request.headers.get('HX-Current-URL')
+        curr_url = request.headers.get('HX-Current-Url')
 
         if "/user/" in curr_url:
             resp.headers['HX-Redirect'] = curr_url

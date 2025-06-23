@@ -125,7 +125,7 @@
                 {% for domain in blocked_domains %}
                     <tr>
                         <td><a href="{{ url_for('domain.show_domain', domain_id=domain.id) }}">{{ domain.name }}</a></td>
-                        <td><a class="no-underline confirm_first" href="{{ url_for('domain.domain_unblock', domain_id=domain.id) }}" rel="nofollow"><span class="fe fe-delete"></span> {{ _('Unblock') }}</a></td>
+                        <td><a class="no-underline confirm_first" role="button" aria-label="{{ _('Unblock') }}" hx-post="/d/{{ domain.id }}/unblock" hx-trigger="click throttle:1s"tabindex="0"><span class="fe fe-delete"></span> {{ _('Unblock') }}</a></td>
                     </tr>
                 {% endfor %}
                 </table>

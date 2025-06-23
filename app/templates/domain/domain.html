@@ -62,7 +62,7 @@
                             </div>
                         {% else %}
                             <div class="col-4">
-                                <a class="w-100 btn btn-primary send_post" href="#" data-url="/d/{{ domain.id }}/block">{{ _('Block') }}</a>
+                              <a class="w-100 btn btn-primary" role="button" aria-label="{{ _('Block') }}" hx-post="/d/{{ domain.id }}/block" hx-trigger="click throttle:1s"tabindex="0">{{ _('Block') }}</a>
                             </div>
                         {% endif %}
                         {% if user_access('ban users', current_user.id) or user_access('manage users', current_user.id) %}
