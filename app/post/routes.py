@@ -1036,7 +1036,7 @@ def post_block_user(post_id: int):
 
     if request.headers.get('HX-Request'):
         resp = make_response()
-        curr_url = request.headers.get('HX-Current-URL')
+        curr_url = request.headers.get('HX-Current-Url')
 
         if "/post/" in curr_url:
             resp.headers['HX-Redirect'] = post.community.local_url()
@@ -1063,6 +1063,18 @@ def post_block_domain(post_id: int):
         db.session.commit()
         cache.delete_memoized(blocked_domains, current_user.id)
     flash(_('Posts linking to %(name)s will be hidden.', name=post.domain.name))
+    
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        curr_url = request.headers.get('HX-Current-Url')
+        
+        if "/post/" in curr_url:
+            resp.headers['HX-Redirect'] = url_for("main.index")
+        else:
+            resp.headers['HX-Redirect'] = curr_url
+        
+        return resp
+    
     return redirect(post.community.local_url())
 
 
@@ -1079,7 +1091,7 @@ def post_block_community(post_id: int):
     
     if request.headers.get('HX-Request'):
         resp = make_response()
-        curr_url = request.headers.get('HX-Current-URL')
+        curr_url = request.headers.get('HX-Current-Url')
         redir_home = ["/c/", "/post/"]
         
         if any(found_str in curr_url for found_str in redir_home):
@@ -1254,7 +1266,7 @@ def post_reply_block_user(post_id: int, comment_id: int):
 
     if request.headers.get('HX-Request'):
         resp = make_response()
-        curr_url = request.headers.get('HX-Current-URL')
+        curr_url = request.headers.get('HX-Current-Url')
         
         if "/post/" in curr_url:
             if post_reply.author.id != post.author.id:

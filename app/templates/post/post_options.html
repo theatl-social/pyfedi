@@ -57,8 +57,8 @@
                 {{ _('Ban post author @%(author_name)s from %(community_name)s', author_name=post.author.user_name, community_name=post.community.title) }}</a></li>
         {% endif -%}
         {% if post.domain_id -%}
-        <li><a href="#" data-url="{{ url_for('post.post_block_domain', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline send_post"><span class="fe fe-block"></span>
-            {{ _('Block domain %(domain)s', domain=post.domain.name) }}</a></li>
+        <li><a class="dropdown-item no-underline" role="button" style="white-space: normal" aria-label="{{ _('Block domain %(domain)s', domain=post.domain.name) }}"
+          hx-post="/post/{{ post.id }}/block_domain" hx-trigger="click throttle:1s"tabindex="0"><span class="fe fe-block"></span> {{ _('Block domain %(domain)s', domain=post.domain.name) }}</a></li>
         {% endif -%}
         {% if post.instance_id and post.instance_id != 1 -%}
         <li><a href="#" data-url="{{ url_for('post.post_block_instance', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline send_post"><span class="fe fe-block"></span>
