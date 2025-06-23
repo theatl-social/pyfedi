@@ -1666,10 +1666,6 @@ class Post(db.Model):
             db.session.add(vote)
             if user.is_local():
                 cache.delete_memoized(recently_upvoted_posts, user.id)
-            if user.reputation > 100:
-                post.score += 1
-                post.ranking = post.post_ranking(post.score, post.posted_at)
-                post.ranking_scaled = int(post.ranking + community.scale_by())
             db.session.commit()
 
         return post
@@ -2124,12 +2120,6 @@ class PostReply(db.Model):
             cache.delete_memoized(recently_upvoted_post_replies, user.id)
 
         reply.ap_id = reply.profile_id()
-        if user.reputation > 100:
-            reply.score += 1
-            reply.ranking += 1
-        elif user.reputation < -100:
-            reply.score -= 1
-            reply.ranking -= 1
         if not user.bot:
             post.reply_count += 1
             post.community.post_reply_count += 1
