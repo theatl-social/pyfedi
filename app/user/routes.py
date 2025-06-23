@@ -1090,7 +1090,7 @@ def notifications():
     db.session.commit()
 
     type_ = request.args.get('type', '')
-    current_filter = type
+    current_filter = type_
     has_notifications = False
 
     notification_types = defaultdict(int)
@@ -1109,9 +1109,6 @@ def notifications():
     if type_:
         type_ = tuple(int(x.strip()) for x in type_.strip('{}').split(','))   # convert '{41, 10}' to a tuple containing 41 and 10
         notification_list = Notification.query.filter_by(user_id=current_user.id).filter(Notification.notif_type.in_(type_)).order_by(desc(Notification.created_at)).all()
-
-    print(f'notification_list type: {type(notification_list)}')
-    print(f'entry 0: {notification_list[0]}')
 
     return render_template('user/notifications.html', title=_('Notifications'), notifications=notification_list,
                            notification_types=notification_types, has_notifications=has_notifications,
