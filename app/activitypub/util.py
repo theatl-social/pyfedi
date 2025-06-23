@@ -2233,6 +2233,7 @@ def update_post_from_activity(post: Post, request_json: dict):
                                 targets_data = {'gen':'0',
                                                 'post_id':post.id,
                                                 'post_title':post.title,
+                                                'post_body':post.body,
                                                 'author_user_name': author.ap_id if author.ap_id else author.user_name
                                                 }
                                 notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in post {post.id}"),
