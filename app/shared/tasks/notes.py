@@ -106,7 +106,7 @@ def send_reply(reply_id, parent_id, edit=False):
             else:
                 existing_notification = None
             if not existing_notification:
-                author = User.query.get(user.id).first()
+                author = User.query.get(user.id)
                 targets_data = {'gen':'0',
                                 'post_id':reply.post_id,
                                 'author_user_name': author.ap_id if author.ap_id else author.user_name,
