@@ -473,7 +473,7 @@ def save_icon_file(icon_file, directory='communities') -> File:
             if thumbnail_image_format:
                 kwargs['format'] = thumbnail_image_format.upper()
                 thumbnail_ext = '.' + thumbnail_image_format.lower()
-                final_place_thumbnail = os.path.splitext(final_place)[0] + thumbnail_ext
+                final_place_thumbnail = os.path.splitext(final_place_thumbnail)[0] + thumbnail_ext
             if thumbnail_image_quality:
                 kwargs['quality'] = int(thumbnail_image_quality)
             img.save(final_place_thumbnail, optimize=True, **kwargs)
@@ -557,6 +557,9 @@ def save_banner_file(banner_file, directory='communities') -> File:
         img_width = img.width
         img_height = img.height
 
+        if image_format == 'AVIF' or thumbnail_image_format == 'AVIF':
+            import pillow_avif
+
         if img.width > 1600 or img.height > 600 or image_format or thumbnail_image_format:
             img = img.convert('RGB' if (image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
             img.thumbnail((1600, 600), resample=Image.LANCZOS)
@@ -581,7 +584,7 @@ def save_banner_file(banner_file, directory='communities') -> File:
         if thumbnail_image_format:
             kwargs['format'] = thumbnail_image_format.upper()
             thumbnail_ext = '.' + thumbnail_image_format.lower()
-            final_place_thumbnail = os.path.splitext(final_place)[0] + thumbnail_ext
+            final_place_thumbnail = os.path.splitext(final_place_thumbnail)[0] + thumbnail_ext
         if thumbnail_image_quality:
             kwargs['quality'] = int(thumbnail_image_quality)
         img.save(final_place_thumbnail, optimize=True, **kwargs)
