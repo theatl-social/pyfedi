@@ -1930,7 +1930,7 @@ def notify_about_post_task(post_id):
 
     # NOTIF_TOPIC    
     topic_send_notifs_to = notification_subscribers(post.community.topic_id, NOTIF_TOPIC)
-    topic = Topic.query.get(post.community.topic_id)
+    topic = Topic.query.get(post.community.topic_id).first()
     for notify_id in topic_send_notifs_to:
         if notify_id != post.user_id and notify_id not in notifications_sent_to:
             targets_data = {'gen':'0',

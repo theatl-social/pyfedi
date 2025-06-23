@@ -121,7 +121,7 @@ def send_post(post_id, edit=False):
                                             url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
                                             author_id=user.id, notif_type=NOTIF_MENTION,
                                             subtype='post_mention',
-                                            targets_data=targets_data)
+                                            targets=targets_data)
                 recipient.unread_notifications += 1
                 db.session.add(notification)
                 db.session.commit()
