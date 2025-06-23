@@ -1937,7 +1937,8 @@ def notify_about_post_task(post_id):
                             'post_id': post.id,
                             'post_title': post.title,
                             'community_name': community.ap_id if community.ap_id else community.name,
-                            'topic_name': topic.name,
+                            'topic_name': topic.machine_name,
+                            'topic_machine_name': topic.name,
                             'author_id': post.user_id}
             new_notification = Notification(title=shorten_string(post.title, 150), url=f"/post/{post.id}",
                                             user_id=notify_id, author_id=post.user_id,
