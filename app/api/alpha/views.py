@@ -213,8 +213,8 @@ def user_view(user: User | int, variant, stub=False, user_id=None) -> dict:
              "comment_count": user.post_reply_count
             }
           },
-          "moderates": [], # moderating_communities(user),
-          "follows": [], # joined_communities(user),
+          "moderates": moderating_communities_view(user),
+          "follows": joined_communities_view(user),
           "community_blocks": blocked_communities_view(user),
           "instance_blocks": blocked_instances_view(user),
           "person_blocks": blocked_people_view(user),
@@ -693,25 +693,24 @@ def users_total():
         'SELECT COUNT(id) as c FROM "user" WHERE ap_id is null AND verified is true AND banned is false AND deleted is false')).scalar()
 
 
-"""
-@cache.memoize(timeout=60)
-def moderating_communities(user):
+# @cache.memoize(timeout=60)
+def moderating_communities_view(user):
     cms = CommunityMember.query.filter_by(user_id=user.id, is_moderator=True)
     moderates = []
+    inner_user_view = user_view(user, variant=1, stub=True)
     for cm in cms:
-        moderates.append({'community': community_view(cm.community_id, variant=1, stub=True), 'moderator': user_view(user, variant=1, stub=True)})
+        moderates.append({'community': community_view(cm.community_id, variant=1, stub=True), 'moderator': inner_user_view})
     return moderates
-"""
 
-"""
-@cache.memoize(timeout=60)
-def joined_communities(user):
+
+# @cache.memoize(timeout=60)
+def joined_communities_view(user):
     cms = CommunityMember.query.filter_by(user_id=user.id, is_banned=False)
     follows = []
+    inner_user_view = user_view(user, variant=1, stub=True)
     for cm in cms:
-        follows.append({'community': community_view(cm.community_id, variant=1, stub=True), 'follower': user_view(user, variant=1, stub=True)})
+        follows.append({'community': community_view(cm.community_id, variant=1, stub=True), 'follower': inner_user_view})
     return follows
-"""
 
 
 # @cache.memoize(timeout=86400)
