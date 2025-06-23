@@ -6,7 +6,7 @@
 {% from 'bootstrap5/form.html' import render_field %}
 
 {% block app_content %}
-    <h1>{{ _('Ban %(name)s', name=current_user.display_name()) }}</h1>
+    <h1>{{ _('Ban %(name)s', name=user.display_name()) }}</h1>
     <form method="post" enctype="multipart/form-data" id="add_local_community_form">
         {{ form.csrf_token() }}
         {{ render_field(form.reason) }}
