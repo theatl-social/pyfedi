@@ -53,14 +53,12 @@ def list_instances():
 
 @bp.route('/instance/<instance_domain>', methods=['GET'])
 def instance_overview(instance_domain):
-    low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
     instance = Instance.query.filter(Instance.domain == instance_domain).first()
     if instance is None:
         abort(404)
 
     return render_template('instance/overview.html', instance=instance,
-                           
                            title=_('%(instance)s overview', instance=instance.domain),
                            )
 
@@ -68,8 +66,6 @@ def instance_overview(instance_domain):
 @bp.route('/instance/<instance_domain>/people', methods=['GET'])
 def instance_people(instance_domain):
     page = request.args.get('page', 1, type=int)
-    search = request.args.get('search', '')
-    filter = request.args.get('filter', '')
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
     instance = Instance.query.filter(Instance.domain == instance_domain).first()
@@ -87,7 +83,6 @@ def instance_people(instance_domain):
     prev_url = url_for('instance.instance_people', page=people.prev_num, instance_domain=instance_domain) if people.has_prev and page != 1 else None
 
     return render_template('instance/people.html', people=people, instance=instance, next_url=next_url, prev_url=prev_url,
-                           
                            title=_('People from %(instance)s', instance=instance.domain),
                            )
 
