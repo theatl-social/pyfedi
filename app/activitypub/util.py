@@ -1193,8 +1193,8 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                             ensure_directory_exists(directory)
 
                             # file path and names to store the resized images on disk
-                            final_place = os.path.join(directory, new_filename + file_ext) # moved these to respective "medium" and "thumbnail" sections below
-                            final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail.webp') # can probably delete these lines
+                            final_place = os.path.join(directory, new_filename + file_ext)
+                            final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail.webp')
 
                             if file_ext == '.avif': # this is quite a big package so we'll only load it if necessary
                                 import pillow_avif
@@ -1218,14 +1218,12 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                             final_ext = file_ext # track file extension for conversion
                             thumbnail_ext = file_ext
 
-                            if image_format == 'AVIF' or thumbnail_image_format == 'AVIF':
+                            if medium_image_format == 'AVIF' or thumbnail_image_format == 'AVIF':
                                 import pillow_avif
 
                             # Resize the image to medium
                             if medium_width:
-                                final_place = os.path.join(directory, new_filename + final_ext)
-
-                                if img_width > medium_width:
+                                if img_width > medium_width or medium_image_format:
                                     image = image.convert('RGB' if (medium_image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
                                     image.thumbnail((medium_width, sys.maxsize), resample=Image.LANCZOS)
 
@@ -1262,7 +1260,6 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
 
                             # Resize the image to a thumbnail (webp)
                             if thumbnail_width:
-                                final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail' + thumbnail_ext)
                                 if img_width > thumbnail_width:
                                     image = image.convert('RGB' if thumbnail_image_format == 'JPEG' else 'RGBA')
                                     image.thumbnail((thumbnail_width, thumbnail_width), resample=Image.LANCZOS)
@@ -1326,6 +1323,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                                                     targets=targets_data)
                                         session.add(notification)
                                         session.commit()
+
 
 
 def find_reply_parent(in_reply_to: str) -> Tuple[int, int, int]:
