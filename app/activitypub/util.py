@@ -1930,7 +1930,7 @@ def notify_about_post_task(post_id):
 
     # NOTIF_TOPIC    
     topic_send_notifs_to = notification_subscribers(post.community.topic_id, NOTIF_TOPIC)
-    topic = Topic.query.get(post.community.topic_id).first()
+    topic = Topic.query.get(post.community.topic_id)
     for notify_id in topic_send_notifs_to:
         if notify_id != post.user_id and notify_id not in notifications_sent_to:
             targets_data = {'gen':'0',
@@ -2425,7 +2425,8 @@ def update_post_from_activity(post: Post, request_json: dict):
                         targets_data = {'gen':'0',
                                         'post_id': post.id,
                                         'orig_post_title': post.title,
-                                        'orig_post_body': post.body
+                                        'orig_post_body': post.body,
+                                        'orig_post_domain':post.domain,
                                         }
                         notify = Notification(title='Suspicious content', url=post.ap_id,
                                                   user_id=community_member.user_id,
@@ -2440,7 +2441,8 @@ def update_post_from_activity(post: Post, request_json: dict):
                             targets_data = {'gen':'0',
                                             'post_id': post.id,
                                             'orig_post_title': post.title,
-                                            'orig_post_body': post.body
+                                            'orig_post_body': post.body,
+                                            'orig_post_domain':post.domain,
                                             }
                             notify = Notification(title='Suspicious content',
                                                       url=post.ap_id, user_id=admin.id,
@@ -2532,7 +2534,7 @@ def process_report(user, reported, request_json):
             if admin.id not in already_notified:
                 targets_data = {'gen':'0',
                                 'suspect_user_id': reported.id,
-                                'suspect_user_username': reported.ap_id if reported.ap_id else reported.user_name,
+                                'suspect_user_user_name': reported.ap_id if reported.ap_id else reported.user_name,
                                 'reporter_id':user.id,
                                 'reporter_user_name': user.ap_id if user.ap_id else user.user_name,
                                 'source_instance_id':user.instance_id,

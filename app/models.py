@@ -1520,8 +1520,13 @@ class Post(db.Model):
             domain = domain_from_url(post.url)
             # notify about links to banned websites.
             already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
+            targets_data = {'gen':'0',
+                            'post_id': post.id,
+                            'orig_post_title': post.title,
+                            'orig_post_body': post.body,
+                            'orig_post_domain':post.domain,
+                            }
             if domain.notify_mods:
-                targets_data = {'post_id': post.id}
                 for community_member in post.community.moderators():
                     notify = Notification(title='Suspicious content', url=post.ap_id,
                                           user_id=community_member.user_id,

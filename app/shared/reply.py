@@ -306,7 +306,7 @@ def report_reply(reply_id, input, src, auth=None):
                     'suspect_user_id':reply.author.id,
                     'suspect_user_user_name':suspect_author.ap_id if suspect_author.ap_id else suspect_author.user_name,
                     'reporter_id':user_id,
-                    'reporter_user_user_name':reporter_user.ap_id if reporter_user.ap_id else reporter_user.user_name,
+                    'reporter_user_name':reporter_user.ap_id if reporter_user.ap_id else reporter_user.user_name,
                     'orig_comment_body':reply.body
                     }
     for mod in reply.community.moderators():
