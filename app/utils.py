@@ -2160,6 +2160,36 @@ def move_file_to_s3(file_id, s3):
                     db.session.commit()
 
 
+def days_to_add_for_next_month(today):
+    # Calculate the new month and year
+    new_month = today.month + 1
+    new_year = today.year
+
+    if new_month > 12:
+        new_month = 1
+        new_year += 1
+
+    # Get the last day of the new month
+    if new_month in {1, 3, 5, 7, 8, 10, 12}:
+        last_day = 31
+    elif new_month in {4, 6, 9, 11}:
+        last_day = 30
+    else:  # February
+        # Check for leap year
+        if (new_year % 4 == 0 and new_year % 100 != 0) or (new_year % 400 == 0):
+            last_day = 29
+        else:
+            last_day = 28
+
+    # Calculate the new day
+    new_day = min(today.day, last_day)
+
+    # Calculate the number of days to add
+    days_to_add = (datetime(new_year, new_month, new_day) - today).days + 1
+
+    return days_to_add
+
+
 def find_next_occurrence(post: Post) -> timedelta:
     if post.repeat is not None and post.repeat != 'none':
         if post.repeat == 'daily':
@@ -2167,7 +2197,9 @@ def find_next_occurrence(post: Post) -> timedelta:
         elif post.repeat == 'weekly':
             return timedelta(days=7)
         elif post.repeat == 'monthly':
-            return timedelta(days=28)
+            days_to_add = days_to_add_for_next_month(utcnow())
+            return timedelta(days=days_to_add)
+
     return timedelta(seconds=0)
 
 

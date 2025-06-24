@@ -172,7 +172,8 @@
                                   <li><a class="dropdown-item{% if active_child == 'chats' %} active{% endif %}" href="/chat">{{ _('Chats') }}</a></li>
                                   <li><a class="dropdown-item{% if active_child == 'bookmarks' %} active{% endif %}" href="/bookmarks">{{ _('Bookmarks') }}</a></li>
                                   <li><a class="dropdown-item{% if active_child == 'alerts' %} active{% endif %}" href="/alerts">{{ _('Activity Alerts') }}</a></li>
-                                  {% if current_user.is_authenticated -%}
+                                  <li><a class="dropdown-item{% if active_child == 'scheduled_posts' %} active{% endif %}" href="/scheduled_posts">{{ _('Scheduled posts') }}</a></li>
+                                          {% if current_user.is_authenticated -%}
                                     {% if current_user.stripe_subscription_id -%}
                                         <li><a class="dropdown-item{% if active_child == 'donate' %} active{% endif %}" href="/donate">{{ _('Manage donations') }}</a></li>
                                     {% endif -%}

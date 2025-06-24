@@ -1491,6 +1491,16 @@ def user_alerts(type='posts', filter='all'):
                            low_bandwidth=low_bandwidth, user=current_user, type=type, filter=filter,
                            next_url=next_url, prev_url=prev_url)
 
+@bp.route('/scheduled_posts')
+@login_required
+def user_scheduled_posts(type='posts', filter='all'):
+    low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+    entities = Post.query.filter(Post.deleted == False, Post.status == POST_STATUS_SCHEDULED, Post.user_id == current_user.id)
+    title = _('Scheduled posts')
+
+    return render_template('user/scheduled_posts.html', title=title, entities=entities,
+                           low_bandwidth=low_bandwidth, user=current_user, site=g.site,
+                           )
 
 @bp.route('/u/<actor>/fediverse_redirect', methods=['GET', 'POST'])
 def fediverse_redirect(actor):
