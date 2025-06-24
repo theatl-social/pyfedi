@@ -790,6 +790,20 @@ def user_block_instance(actor):
         abort(404)
     block_remote_instance(user.instance_id, SRC_WEB)
     flash(_('Content from %(name)s will be hidden.', name=user.ap_domain))
+
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        curr_url = request.headers.get('HX-Current-Url')
+
+        if user.ap_domain in curr_url:
+            resp.headers["HX-Redirect"] = url_for("main.index")
+        elif "/u/" in curr_url:
+            resp.headers["HX-Redirect"] = url_for("main.index")
+        else:
+            resp.headers["HX-Redirect"] = curr_url
+        
+        return resp
+
     goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
     return redirect(goto)
 

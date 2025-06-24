@@ -1,4 +1,4 @@
-from flask import request, flash, json, url_for, current_app, redirect, g, abort
+from flask import request, flash, json, url_for, current_app, redirect, g, abort, make_response
 from flask_login import current_user
 from flask_babel import _
 from sqlalchemy import desc, or_, and_, text
@@ -146,6 +146,18 @@ def chat_delete(conversation_id):
 def block_instance(instance_id):
     block_remote_instance(instance_id, SRC_WEB)
     flash(_('Instance blocked.'))
+
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        curr_url = request.headers.get('HX-Current-Url')
+
+        if "/chat/" in curr_url:
+            resp.headers["HX-Redirect"] = url_for("main.index")
+        else:
+            resp.headers["HX-Redirect"] = curr_url
+        
+        return resp
+
     return redirect(url_for('chat.chat_home'))
 
 

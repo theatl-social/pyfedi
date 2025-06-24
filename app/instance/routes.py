@@ -1,6 +1,6 @@
 from collections import namedtuple
 
-from flask import request, url_for, g, abort, flash, redirect
+from flask import request, url_for, g, abort, flash, redirect, make_response
 from flask_login import current_user
 from flask_babel import _
 from sqlalchemy import or_, desc
@@ -180,6 +180,13 @@ def instance_block(instance_id):
     instance = Instance.query.get_or_404(instance_id)
     block_remote_instance(instance_id, SRC_WEB)
     flash(_('Content from %(instance_domain)s will be hidden.', instance_domain=instance.domain))
+
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        resp.headers["HX-Redirect"] = url_for("instance.instance_overview", instance_domain=instance.domain)
+        
+        return resp
+
     goto = request.args.get('redirect') if 'redirect' in request.args else url_for('user.user_settings_filters')
     return redirect(goto)
 
@@ -190,5 +197,12 @@ def instance_unblock(instance_id):
     instance = Instance.query.get_or_404(instance_id)
     unblock_remote_instance(instance_id, SRC_WEB)
     flash(_('%(instance_domain)s has been unblocked.', instance_domain=instance.domain))
+
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        resp.headers["HX-Redirect"] = request.headers.get('HX-Current-Url')
+        
+        return resp
+
     goto = request.args.get('redirect') if 'redirect' in request.args else url_for('user.user_settings_filters')
     return redirect(goto)
