@@ -31,7 +31,7 @@
                  <h2>{{ community.title }}</h2>
             </div>
             <div class="card-body">
-                <p>{{ community.description_html|community_links|safe if community.description_html else '' }}</p>
+                <p>{{ community.description_html|community_links|feed_links|safe if community.description_html else '' }}</p>
                 <p>{{ community.rules_html|safe if community.rules_html else '' }}</p>
                 <p>{{ _('Members') if community.is_local() else _('Local members') }}: {{ community.subscriptions_count }}<br>
                     {{ _('Posts') }}: {{ community.post_count }}<br>

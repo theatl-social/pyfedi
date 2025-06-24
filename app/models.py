@@ -1,12 +1,12 @@
 import html
-from datetime import datetime, timedelta, date, timezone
+from datetime import datetime, timedelta
 from time import time
 from typing import List, Union, Type
-from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+from urllib.parse import urlparse, parse_qs, urlencode
 
 import arrow
 import boto3
-from flask import current_app, escape, url_for, render_template_string
+from flask import current_app
 from flask_login import UserMixin, current_user
 from sqlalchemy import or_, text, desc, Index
 from sqlalchemy.exc import IntegrityError
@@ -33,6 +33,11 @@ from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_MEMBER, SUBSCRIPT
 # datetime.utcnow() is depreciated in Python 3.12 so it will need to be swapped out eventually
 def utcnow():
     return datetime.utcnow()
+
+
+class PostReplyValidationError(Exception):
+    """Custom exception for PostReply validation errors"""
+    pass
 
 
 class FullTextSearchQuery(BaseQuery, SearchQueryMixin):
@@ -482,10 +487,10 @@ class Community(db.Model):
     title = db.Column(db.String(256))
     description = db.Column(db.Text)        # markdown
     description_html = db.Column(db.Text)   # html equivalent of above markdown
-    rules = db.Column(db.Text)
-    rules_html = db.Column(db.Text)
+    rules = db.Column(db.Text)              # this is unused but do not remove, it breaks everything
     content_warning = db.Column(db.Text)        # "Are you sure you want to view this community?"
-    subscriptions_count = db.Column(db.Integer, default=0)
+    subscriptions_count = db.Column(db.Integer, default=0)          # Local subscribers
+    total_subscriptions_count = db.Column(db.Integer, default=0)    # Local AND remote
     post_count = db.Column(db.Integer, default=0)
     post_reply_count = db.Column(db.Integer, default=0)
     nsfw = db.Column(db.Boolean, default=False)
@@ -743,6 +748,7 @@ class Community(db.Model):
         db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == self.id).delete()
         db.session.query(CommunityMember).filter(CommunityMember.community_id == self.id).delete()
         db.session.query(Report).filter(Report.suspect_community_id == self.id).delete()
+        db.session.query(UserFlair).filter(UserFlair.community_id == self.id).delete()
         db.session.query(ModLog).filter(ModLog.community_id == self.id).delete()
 
 
@@ -972,6 +978,8 @@ class User(UserMixin, db.Model):
 
     @cache.memoize(timeout=30)
     def is_admin(self):
+        if self.id == 1:
+            return True
         for role in self.roles:
             if role.name == 'Admin':
                 return True
@@ -1107,13 +1115,13 @@ class User(UserMixin, db.Model):
         else:
             new_attitude = None
         
-        # Update attitude with direct SQL query in nested transaction to avoid deadlocks
-        with db.session.begin_nested():
-            db.session.execute(text("""
-                UPDATE "user" 
-                SET attitude = :attitude
-                WHERE id = :user_id
-            """), {"attitude": new_attitude, "user_id": self.id})
+        # Update attitude
+        db.session.execute(text("""
+            UPDATE "user" 
+            SET attitude = :attitude
+            WHERE id = :user_id
+        """), {"attitude": new_attitude, "user_id": self.id})
+        db.session.commit()
 
     def get_num_upvotes(self):
         post_votes = db.session.execute(text('SELECT COUNT(*) FROM "post_vote" WHERE user_id = :user_id AND effect > 0'), {'user_id': self.id}).scalar()
@@ -1170,6 +1178,9 @@ class User(UserMixin, db.Model):
 
     def created_recently(self):
         return self.created and self.created > utcnow() - timedelta(days=7)
+
+    def created_very_recently(self):
+        return self.created and self.created > utcnow() - timedelta(days=1)
 
     def has_blocked_instance(self, instance_id: int):
         instance_block = InstanceBlock.query.filter_by(user_id=self.id, instance_id=instance_id).first()
@@ -1567,8 +1578,8 @@ class Post(db.Model):
                 language = find_language(next(iter(request_json['object']['contentMap'])))
                 post.language_id = language.id if language else None
             else:
-                from app.utils import english_language_id
-                post.language_id = english_language_id()
+                from app.utils import site_language_id
+                post.language_id = site_language_id()
             if 'licence' in request_json['object'] and isinstance(request_json['object']['licence'], dict):
                 licence = find_licence_or_create(request_json['object']['licence']['name'])
                 post.licence = licence
@@ -1655,10 +1666,6 @@ class Post(db.Model):
             db.session.add(vote)
             if user.is_local():
                 cache.delete_memoized(recently_upvoted_posts, user.id)
-            if user.reputation > 100:
-                post.score += 1
-                post.ranking = post.post_ranking(post.score, post.posted_at)
-                post.ranking_scaled = int(post.ranking + community.scale_by())
             db.session.commit()
 
         return post
@@ -1857,6 +1864,7 @@ class Post(db.Model):
         return round(sign * order + seconds / 45000, 7)
 
     def vote(self, user: User, vote_direction: str):
+        from app import redis_client
         if vote_direction == 'downvote':
             if self.author.has_blocked_user(user.id) or self.author.has_blocked_instance(user.instance_id):
                 return None
@@ -1870,9 +1878,10 @@ class Post(db.Model):
         undo = None
         if existing_vote:
             if not self.community.low_quality:
-                with db.session.begin_nested():
+                with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
                     db.session.execute(text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
                                        {'effect': existing_vote.effect, 'user_id': self.user_id})
+                    db.session.commit()
             if existing_vote.effect > 0:  # previous vote was up
                 if vote_direction == 'upvote':  # new vote is also up, so remove it
                     db.session.delete(existing_vote)
@@ -1932,37 +1941,27 @@ class Post(db.Model):
             # upvotes do not increase reputation in low quality communities
             if self.community.low_quality and effect > 0:
                 effect = 0
-            with db.session.begin_nested():
+            with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
                 db.session.execute(text('UPDATE "user" SET reputation = reputation + :effect WHERE id = :user_id'),
                                    {'effect': effect, 'user_id': self.user_id})
+                db.session.commit()
             db.session.add(vote)
 
-        db.session.commit()
-            
-        # Update user's last_seen in a separate transaction to avoid deadlocks
-        with db.session.begin_nested():
-            db.session.execute(text('UPDATE "user" SET last_seen=:last_seen WHERE id=:user_id'),
-                             {"last_seen": utcnow(), "user_id": user.id})
         db.session.commit()
         
         # Calculate new ranking values
         new_ranking = self.post_ranking(self.score, self.created_at)
         new_ranking_scaled = int(new_ranking + self.community.scale_by())
         
-        # Update post ranking in a separate transaction to avoid deadlocks
-        with db.session.begin_nested():
+        # Update post ranking
+        with redis_client.lock(f"lock:post:{self.id}", timeout=10, blocking_timeout=6):
             db.session.execute(text("""UPDATE "post" 
                                SET ranking=:ranking, ranking_scaled=:ranking_scaled 
                                WHERE id=:post_id"""),
                              {"ranking": new_ranking, 
                               "ranking_scaled": new_ranking_scaled, 
                               "post_id": self.id})
-        
-        # Update user's attitude in another separate transaction
-        with db.session.begin_nested():
-            user.recalculate_attitude()
-        
-        db.session.commit()
+            db.session.commit()
         return undo
 
 
@@ -2031,15 +2030,14 @@ class PostReply(db.Model):
 
     @classmethod
     def new(cls, user: User, post: Post, in_reply_to, body, body_html, notify_author, language_id, distinguished, request_json: dict = None, announce_id=None):
-
         from app.utils import shorten_string, blocked_phrases, recently_upvoted_post_replies, reply_already_exists, reply_is_just_link_to_gif_reaction, reply_is_stupid
         from app.activitypub.util import notify_about_post_reply
 
         if not post.comments_enabled:
-            raise Exception('Comments are disabled on this post')
+            raise PostReplyValidationError(_('Comments are disabled on this post'))
 
         if user.ban_comments:
-            raise Exception('Banned from commenting')
+            raise PostReplyValidationError(_('Banned from commenting'))
 
         if in_reply_to is not None:
             parent_id = in_reply_to.id
@@ -2062,17 +2060,17 @@ class PostReply(db.Model):
         if reply.body:
             for blocked_phrase in blocked_phrases():
                 if blocked_phrase in reply.body:
-                    raise Exception('Blocked phrase in comment')
+                    raise PostReplyValidationError(_('Blocked phrase in comment'))
         if in_reply_to is None or in_reply_to.parent_id is None:
             notification_target = post
         else:
             notification_target = PostReply.query.get(in_reply_to.parent_id)
 
         if notification_target.author.has_blocked_user(reply.user_id):
-            raise Exception('Replier blocked')
+            raise PostReplyValidationError(_('Replier blocked'))
 
         if reply_already_exists(user_id=user.id, post_id=post.id, parent_id=reply.parent_id, body=reply.body):
-            raise Exception('Duplicate reply')
+            raise PostReplyValidationError(_('Duplicate reply'))
 
         site = Site.query.get(1)
         if site is None:
@@ -2080,10 +2078,10 @@ class PostReply(db.Model):
         
         if reply_is_just_link_to_gif_reaction(reply.body) and site.enable_gif_reply_rep_decrease:
             user.reputation -= 1
-            raise Exception('Gif comment ignored')
+            raise PostReplyValidationError(_('Gif comment ignored'))
 
         if reply_is_stupid(reply.body) and site.enable_this_comment_filter:
-            raise Exception('Low quality reply')
+            raise PostReplyValidationError(_('Low quality reply'))
 
         try:
             db.session.add(reply)
@@ -2122,12 +2120,6 @@ class PostReply(db.Model):
             cache.delete_memoized(recently_upvoted_post_replies, user.id)
 
         reply.ap_id = reply.profile_id()
-        if user.reputation > 100:
-            reply.score += 1
-            reply.ranking += 1
-        elif user.reputation < -100:
-            reply.score -= 1
-            reply.ranking -= 1
         if not user.bot:
             post.reply_count += 1
             post.community.post_reply_count += 1
@@ -2263,6 +2255,7 @@ class PostReply(db.Model):
             return cls._confidence(ups, downs)
 
     def vote(self, user: User, vote_direction: str):
+        from app import redis_client
         existing_vote = PostReplyVote.query.filter_by(user_id=user.id, post_reply_id=self.id).first()
         if existing_vote and vote_direction == 'reversal':                            # api sends '1' for upvote, '-1' for downvote, and '0' for reversal
             if existing_vote.effect == 1:
@@ -2272,9 +2265,10 @@ class PostReply(db.Model):
         assert vote_direction == 'upvote' or vote_direction == 'downvote'
         undo = None
         if existing_vote:
-            with db.session.begin_nested():
+            with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
                 db.session.execute(text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
                                    {'effect': existing_vote.effect, 'user_id': self.user_id})
+                db.session.commit()
             if existing_vote.effect > 0:  # previous vote was up
                 if vote_direction == 'upvote':  # new vote is also up, so remove it
                     db.session.delete(existing_vote)
@@ -2314,31 +2308,20 @@ class PostReply(db.Model):
             self.score += effect
             vote = PostReplyVote(user_id=user.id, post_reply_id=self.id, author_id=self.author.id,
                                  effect=effect)
-            with db.session.begin_nested():
+            with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
                 db.session.execute(text('UPDATE "user" SET reputation = reputation + :effect WHERE id = :user_id'),
                                    {'effect': effect, 'user_id': self.user_id})
+                db.session.commit()
             db.session.add(vote)
-        db.session.commit()
-        
-        # Update user and ranking in separate transactions to avoid deadlocks
-        with db.session.begin_nested():
-            db.session.execute(text('UPDATE "user" SET last_seen=:last_seen WHERE id=:user_id'),
-                             {"last_seen": utcnow(), "user_id": user.id})
         db.session.commit()
         
         # Calculate the new ranking value
         new_ranking = PostReply.confidence(self.up_votes, self.down_votes)
         
-        # Update ranking in a separate transaction to avoid deadlocks
-        with db.session.begin_nested():
+        with redis_client.lock(f"lock:post_reply:{self.id}", timeout=10, blocking_timeout=6):
             db.session.execute(text("UPDATE post_reply SET ranking=:ranking WHERE id=:post_reply_id"),
-                             {"ranking": new_ranking, "post_reply_id": self.id})
-        
-        # Update user's attitude in another separate transaction
-        with db.session.begin_nested():
-            user.recalculate_attitude()
-        
-        db.session.commit()
+                              {"ranking": new_ranking, "post_reply_id": self.id})
+            db.session.commit()
         return undo
 
 
@@ -2805,7 +2788,7 @@ class Site(db.Model):
     allowlist = db.Column(db.Text, default='')
     blocklist = db.Column(db.Text, default='')
     blocked_phrases = db.Column(db.Text, default='')                     # discard incoming content with these phrases
-    auto_decline_referrers = db.Column(db.Text, default='rdrama.net\nahrefs.com')   # automatically decline registration requests if the referrer is one of these
+    auto_decline_referrers = db.Column(db.Text, default='rdrama.net\nahrefs.com\nkiwifarms.sh')   # automatically decline registration requests if the referrer is one of these
     created_at = db.Column(db.DateTime, default=utcnow)
     updated = db.Column(db.DateTime, default=utcnow)
     last_active = db.Column(db.DateTime, default=utcnow)
@@ -2822,6 +2805,7 @@ class Site(db.Model):
     show_inoculation_block = db.Column(db.Boolean, default=True)
     additional_css = db.Column(db.Text)
     private_instance = db.Column(db.Boolean, default=False)
+    language_id = db.Column(db.Integer)
 
     @staticmethod
     def admins() -> List[User]:
@@ -2920,6 +2904,7 @@ class Feed(db.Model):
     def __repr__(self):
         return '<Feed {}_{}>'.format(self.name, self.id)
 
+    @cache.memoize(timeout=500)
     def icon_image(self, size='default') -> str:
         if self.icon_id is not None:
             if size == 'default':
@@ -3004,6 +2989,10 @@ class Feed(db.Model):
             return False
         subscription:FeedMember = FeedMember.query.filter_by(user_id=user_id, feed_id=self.id).first()
         if subscription:
+            if subscription.is_owner:
+                return SUBSCRIPTION_OWNER
+            elif subscription.is_banned:
+                return SUBSCRIPTION_BANNED
             return SUBSCRIPTION_MEMBER
         else:
             join_request = FeedJoinRequest.query.filter_by(user_id=user_id, feed_id=self.id).first()
@@ -3060,6 +3049,7 @@ class Feed(db.Model):
 
 class FeedJoinRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(UUID(as_uuid=True), index=True, default=uuid.uuid4)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     feed_id = db.Column(db.Integer, db.ForeignKey('feed.id'), index=True)
 

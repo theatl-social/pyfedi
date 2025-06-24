@@ -5,7 +5,7 @@ from io import BytesIO
 
 from feedgen.feed import FeedGenerator
 from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, json, g, send_file
-from flask_login import logout_user, current_user, login_required
+from flask_login import logout_user, current_user
 from flask_babel import _, lazy_gettext as _l
 
 from app import db, cache, celery
@@ -23,6 +23,7 @@ from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, \
     FilterForm, KeywordFilterEditForm, RemoteFollowForm, ImportExportForm, UserNoteForm, BanUserForm
 from app.user.utils import purge_user_then_delete, unsubscribe_from_community, search_for_user
+from app.ldap_utils import sync_user_to_ldap
 from app.utils import render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     gibberish, file_get_contents, community_membership, user_filters_home, \
     user_filters_posts, user_filters_replies, theme_list, \
@@ -30,7 +31,7 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     blocked_communities, piefed_markdown_to_lemmy_markdown, \
     read_language_choices, request_etag_matches, return_304, mimetype_from_url, notif_id_to_string, \
     login_required_if_private_instance, recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
-    recently_downvoted_post_replies, reported_posts, user_notes
+    recently_downvoted_post_replies, reported_posts, user_notes, login_required
 from sqlalchemy import desc, or_, text, asc
 from sqlalchemy.orm.exc import NoResultFound
 import os
@@ -85,11 +86,48 @@ def _get_user_post_replies(user, replies_page):
             desc(PostReply.posted_at)).paginate(page=replies_page, per_page=20, error_out=False)
 
 
-def _get_user_moderates(user):
-    """Get communities moderated by user based on current user's permissions."""
-    if not (current_user.is_authenticated and (user.id == current_user.get_id() or current_user.is_staff() or current_user.is_admin())):
-        return []
+def _get_user_posts_and_replies(user, page):
+    """Get list of posts and replies in reverse chronological order based on current user's permissions"""
+    engine = db.session.get_bind()
+    connection = engine.connect()
+    returned_list = []
+    user_id = user.id
+    per_page = 20
+    offset_val = (page - 1) * per_page
+    next_page = False
+
+    if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()):
+        # Admins see everything
+        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id}"
+        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id = {user_id}"
+    elif current_user.is_authenticated and current_user.id == user_id:
+        # Users see their own posts/replies including soft-deleted ones they deleted
+        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND (deleted = 'False' OR deleted_by = {user_id})"
+        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND (deleted = 'False' OR deleted_by = {user_id})"
+    else:
+        # Everyone else sees only non-deleted posts/replies
+        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND deleted = 'False'"
+        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND deleted = 'False'"
+
+    full_query = post_select + " UNION " + reply_select + f" ORDER BY posted_at DESC LIMIT {per_page + 1} OFFSET {offset_val};"
+    query_result = connection.execute(text(full_query))
+
+    for row in query_result:
+        if row.type == "post":
+            returned_list.append(Post.query.get(row.id))
+        elif row.type == "reply":
+            returned_list.append(PostReply.query.get(row.id))
     
+    if len(returned_list) > per_page:
+        next_page = True
+        returned_list = returned_list[:-1]
+    
+    return (returned_list, next_page)
+
+
+def _get_user_moderates(user):
+    """Get communities moderated by user."""
+
     moderates = Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == user.id).\
         filter(or_(CommunityMember.is_moderator, CommunityMember.is_owner))
     
@@ -127,6 +165,7 @@ def show_profile(user):
 
     post_page = request.args.get('post_page', 1, type=int)
     replies_page = request.args.get('replies_page', 1, type=int)
+    overview_page = request.args.get('overview_page', 1, type=int)
 
     # Get data using helper functions
     moderates = _get_user_moderates(user)
@@ -134,11 +173,14 @@ def show_profile(user):
     subscribed = _get_user_subscribed_communities(user)
     posts = _get_user_posts(user, post_page)
     post_replies = _get_user_post_replies(user, replies_page)
+    overview_items, overview_has_next_page = _get_user_posts_and_replies(user, overview_page)
 
     # profile info
     canonical = user.ap_public_url if user.ap_public_url else None
     description = shorten_string(markdown_to_text(user.about), 150) if user.about else None
     user.recalculate_post_stats()
+    if current_user.is_authenticated and current_user.is_admin_or_staff():
+        user.recalculate_attitude()
     db.session.commit()
 
     # find all user feeds marked as public
@@ -157,6 +199,10 @@ def show_profile(user):
                        replies_page=post_replies.next_num) if post_replies.has_next else None
     replies_prev_url = url_for('activitypub.user_profile', actor=user.ap_id if user.ap_id is not None else user.user_name,
                        replies_page=post_replies.prev_num) if post_replies.has_prev and replies_page != 1 else None
+    overview_next_url = url_for('activitypub.user_profile', actor=user.ap_id if user.ap_id is not None else user.user_name,
+                        overview_page=overview_page + 1) if overview_has_next_page else None
+    overview_prev_url = url_for('activitypub.user_profile', actor=user.ap_id if user.ap_id is not None else user.user_name,
+                        overview_page=overview_page - 1) if overview_page != 1 else None
 
     return render_template('user/show_profile.html', user=user, posts=posts, post_replies=post_replies,
                            moderates=moderates, canonical=canonical, title=_('Posts by %(user_name)s',
@@ -165,12 +211,13 @@ def show_profile(user):
                            user_notes=user_notes(current_user.get_id()),
                            post_next_url=post_next_url, post_prev_url=post_prev_url,
                            replies_next_url=replies_next_url, replies_prev_url=replies_prev_url,
-                           noindex=not user.indexable, show_post_community=True, hide_vote_buttons=True,
+                           noindex=not user.indexable, show_post_community=True, hide_vote_buttons=True, show_deleted=current_user.is_authenticated and current_user.is_admin_or_staff(),
                            reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
                            rss_feed=f"https://{current_app.config['SERVER_NAME']}/u/{user.link()}/feed" if user.post_count > 0 else None,
                            rss_feed_name=f"{user.display_name()} on {g.site.name}" if user.post_count > 0 else None,
-                           user_has_public_feeds=user_has_public_feeds,
-                           user_public_feeds=user_public_feeds)
+                           user_has_public_feeds=user_has_public_feeds, user_public_feeds=user_public_feeds,
+                           overview_items=overview_items, overview_next_url=overview_next_url,
+                           overview_prev_url=overview_prev_url)
 
 
 @bp.route('/u/<actor>/profile', methods=['GET', 'POST'])
@@ -196,8 +243,10 @@ def edit_profile(actor):
             send_verification_email(current_user)
             flash(_('You have changed your email address so we need to verify it. Please check your email inbox for a verification link.'), 'warning')
         current_user.email = form.email.data.strip()
+        password_updated = False
         if form.password_field.data.strip() != '':
             current_user.set_password(form.password_field.data)
+            password_updated = True
         current_user.about = piefed_markdown_to_lemmy_markdown(form.about.data)
         current_user.about_html = markdown_to_html(form.about.data)
         current_user.matrix_user_id = form.matrixuserid.data
@@ -241,6 +290,14 @@ def edit_profile(actor):
                 cache.delete_memoized(User.cover_image, current_user)
 
         db.session.commit()
+
+        # Sync to LDAP if password was provided
+        if password_updated:
+            try:
+                sync_user_to_ldap(current_user.user_name, current_user.email, form.password_field.data.strip())
+            except Exception as e:
+                # Log error but don't fail the profile update
+                current_app.logger.error(f"LDAP sync failed for user {current_user.user_name}: {e}")
 
         flash(_('Your changes have been saved.'), 'success')
 
@@ -603,11 +660,14 @@ def ban_profile(actor):
                         flash(_('%(actor)s has been banned, deleted and all their content deleted. This might take a few minutes.',
                               actor=actor))
                     else:
-                        user.deleted = True
-                        user.deleted_by = current_user.id
                         user.delete_dependencies()
                         user.purge_content()
-                        db.session.commit()
+                        from app import redis_client
+                        with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=6):
+                            user = User.query.get(user.id)
+                            user.deleted = True
+                            user.deleted_by = current_user.id
+                            db.session.commit()
                         flash(_('%(actor)s has been banned, deleted and all their content deleted.', actor=actor))
 
                     add_to_modlog('delete_user', reason=form.reason.data, link_text=user.display_name(), link=user.link())
@@ -640,14 +700,14 @@ def ban_profile(actor):
                 form.ip_address.render_kw = {'disabled': True}
                 form.ip_address.data = False
 
-            return render_template('generic_form.html', form=form, title=_('Ban %(name)s', name=actor))
+            return render_template('user/user_ban.html', form=form, title=_('Ban %(name)s', name=actor), user=user)
     else:
         abort(401)
 
 
 
 
-@bp.route('/u/<actor>/unban', methods=['GET'])
+@bp.route('/u/<actor>/unban', methods=['POST'])
 @login_required
 def unban_profile(actor):
     if user_access('ban users', current_user.id):
@@ -674,12 +734,16 @@ def unban_profile(actor):
     return redirect(goto)
 
 
-@bp.route('/u/<actor>/block', methods=['GET'])
+@bp.route('/u/<actor>/block', methods=['POST'])
 @login_required
 def block_profile(actor):
     actor = actor.strip()
-    user = User.query.filter_by(user_name=actor, deleted=False).first()
-    if user is None:
+    if "@" not in actor or actor.endswith("@" + current_app.config['SERVER_NAME']):
+        # Local user
+        user = User.query.filter_by(user_name=actor, deleted=False).filter(
+            or_(User.ap_id == None, User.ap_domain == current_app.config['SERVER_NAME'])).first()
+    else:
+        # Remote user
         user = User.query.filter_by(ap_id=actor, deleted=False).first()
         if user is None:
             abort(404)
@@ -701,12 +765,23 @@ def block_profile(actor):
 
         flash(_('%(actor)s has been blocked.', actor=actor))
         cache.delete_memoized(blocked_users, current_user.id)
+    
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        curr_url = request.headers.get('HX-Current-Url')
+
+        if "/user/" in curr_url:
+            resp.headers['HX-Redirect'] = curr_url
+        else:
+            resp.headers['HX-Redirect'] = url_for("main.index")
+        
+        return resp
 
     goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
     return redirect(goto)
 
 
-@bp.route('/u/<actor>/block_instance', methods=['GET', 'POST'])
+@bp.route('/u/<actor>/block_instance', methods=['POST'])
 @login_required
 def user_block_instance(actor):
     actor = actor.strip()
@@ -715,16 +790,34 @@ def user_block_instance(actor):
         abort(404)
     block_remote_instance(user.instance_id, SRC_WEB)
     flash(_('Content from %(name)s will be hidden.', name=user.ap_domain))
+
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        curr_url = request.headers.get('HX-Current-Url')
+
+        if user.ap_domain in curr_url:
+            resp.headers["HX-Redirect"] = url_for("main.index")
+        elif "/u/" in curr_url:
+            resp.headers["HX-Redirect"] = url_for("main.index")
+        else:
+            resp.headers["HX-Redirect"] = curr_url
+        
+        return resp
+
     goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
     return redirect(goto)
 
 
-@bp.route('/u/<actor>/unblock', methods=['GET'])
+@bp.route('/u/<actor>/unblock', methods=['POST'])
 @login_required
 def unblock_profile(actor):
     actor = actor.strip()
-    user = User.query.filter_by(user_name=actor, deleted=False).first()
-    if user is None:
+    if "@" not in actor or actor.endswith("@" + current_app.config['SERVER_NAME']):
+        # Local user
+        user = User.query.filter_by(user_name=actor, deleted=False).filter(
+            or_(User.ap_id == None, User.ap_domain == current_app.config['SERVER_NAME'])).first()
+    else:
+        # Remote user
         user = User.query.filter_by(ap_id=actor, deleted=False).first()
         if user is None:
             abort(404)
@@ -743,6 +836,13 @@ def unblock_profile(actor):
 
         flash(_('%(actor)s has been unblocked.', actor=actor))
         cache.delete_memoized(blocked_users, current_user.id)
+    
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        curr_url = request.headers.get('HX-Current-Url')
+        resp.headers['HX-Redirect'] = curr_url
+        
+        return resp
 
     goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
     return redirect(goto)
@@ -799,7 +899,7 @@ def report_profile(actor):
     return render_template('user/user_report.html', title=_('Report user'), form=form, user=user)
 
 
-@bp.route('/u/<actor>/delete', methods=['GET'])
+@bp.route('/u/<actor>/delete', methods=['POST'])
 @login_required
 def delete_profile(actor):
     if user_access('manage users', current_user.id):
@@ -812,6 +912,9 @@ def delete_profile(actor):
         if user.id == current_user.id:
             flash(_('You cannot delete yourself.'), 'error')
         else:
+            if user.id == 1:
+                flash('This user cannot be deleted.')
+                return redirect(request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}')
             user.banned = True
             user.deleted = True
             user.deleted_by = current_user.id
@@ -832,7 +935,7 @@ def delete_profile(actor):
     return redirect(goto)
 
 
-@bp.route('/user/community/<int:community_id>/unblock', methods=['GET'])
+@bp.route('/user/community/<int:community_id>/unblock', methods=['POST'])
 @login_required
 def user_community_unblock(community_id):
     community = Community.query.get_or_404(community_id)
@@ -842,6 +945,17 @@ def user_community_unblock(community_id):
         db.session.commit()
         cache.delete_memoized(blocked_communities, current_user.id)
         flash(_('%(community_name)s has been unblocked.', community_name=community.display_name()))
+    
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        curr_url = request.headers.get('HX-Current-Url')
+
+        if "/user/" in curr_url:
+            resp.headers['HX-Redirect'] = curr_url
+        else:
+            resp.headers['HX-Redirect'] = url_for("main.index")
+        
+        return resp
 
     goto = request.args.get('redirect') if 'redirect' in request.args else url_for('user.user_settings_filters')
     return redirect(goto)
@@ -877,7 +991,9 @@ def delete_account():
         flash(_('Account deletion in progress. Give it a few minutes.'), 'success')
         return redirect(url_for('main.index'))
     elif request.method == 'GET':
-        ...
+        if current_user.id == 1:
+            flash('This user cannot be deleted.')
+            return redirect(url_for('main.index'))
 
     return render_template('user/delete_account.html', title=_('Delete my account'), form=form, user=current_user)
 
@@ -1212,7 +1328,7 @@ def user_settings_filters_edit(filter_id):
     return render_template('user/edit_filters.html', title=_('Edit filter'), form=form, content_filter=content_filter, user=current_user)
 
 
-@bp.route('/user/settings/filters/<int:filter_id>/delete', methods=['GET', 'POST'])
+@bp.route('/user/settings/filters/<int:filter_id>/delete', methods=['POST'])
 @login_required
 def user_settings_filters_delete(filter_id):
     content_filter = Filter.query.get_or_404(filter_id)
@@ -1451,7 +1567,7 @@ def user_read_posts(sort=None):
                            next_url=next_url, prev_url=prev_url)
 
 
-@bp.route('/read-posts/delete')
+@bp.route('/read-posts/delete', methods=['POST'])
 @login_required
 def user_read_posts_delete():
     db.session.execute(text('DELETE FROM "read_posts" WHERE user_id = :user_id'), {'user_id': current_user.id})

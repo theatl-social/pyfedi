@@ -1,6 +1,6 @@
 import random
 from flask import request, flash, url_for, current_app, redirect, g, abort
-from flask_login import login_required, current_user
+from flask_login import current_user
 from flask_babel import _
 
 from app import db, cache
@@ -11,7 +11,7 @@ from app.dev.forms import AddTestCommunities, AddTestTopics, DeleteTestCommuniti
 from app.inoculation import inoculation
 from app.models import Site, User, Community, CommunityMember, Language, Topic, utcnow
 from app.utils import render_template, community_membership, moderating_communities, joined_communities, menu_topics, \
-    markdown_to_html, permission_required, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds
+    markdown_to_html, permission_required, login_required
 
 
 # a page for handy dev tools
@@ -41,8 +41,7 @@ def tools():
             rules = "dev_Community_" + loop_num + "Rules"
             community = Community(title=title, name=name, description=description,
                                   rules=rules, nsfw=False, private_key=private_key,
-                                  public_key=public_key, description_html=markdown_to_html(description),
-                                  rules_html=markdown_to_html(rules), local_only=True,
+                                  public_key=public_key, description_html=markdown_to_html(description), local_only=True,
                                   ap_profile_id='https://' + current_app.config['SERVER_NAME'] + '/c/' + name.lower(),
                                   ap_public_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + name.lower(),
                                   ap_followers_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + name.lower() + '/followers',

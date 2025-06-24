@@ -1,5 +1,9 @@
 # if commands in this file are not working (e.g. 'flask translate') make sure you set the FLASK_APP environment variable.
 # e.g. export FLASK_APP=pyfedi.py
+
+# This file is part of PieFed, which is licensed under the GNU General Public License (GPL) version 3.0.
+# You should have received a copy of the GPL along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 import imaplib
 import re
 from datetime import datetime, timedelta
@@ -84,11 +88,17 @@ def register(app):
     @app.cli.command("init-db")
     def init_db():
         with app.app_context():
+            # Check if alembic_version table exists
+            inspector = db.inspect(db.engine)
+            if 'alembic_version' not in inspector.get_table_names():
+                print("Error: alembic_version table not found. Please run 'flask db upgrade' first.")
+                return
+            
             db.drop_all()
             db.configure_mappers()
             db.create_all()
             private_key, public_key = RsaKeys.generate_keypair()
-            db.session.add(Site(name="PieFed", description='Explore Anything, Discuss Everything.', public_key=public_key, private_key=private_key))
+            db.session.add(Site(name="PieFed", description='Explore Anything, Discuss Everything.', public_key=public_key, private_key=private_key, language_id=2))
             db.session.add(Instance(domain=app.config['SERVER_NAME'], software='PieFed'))   # Instance 1 is always the local instance
             db.session.add(Settings(name='allow_nsfw', value=json.dumps(False)))
             db.session.add(Settings(name='allow_nsfl', value=json.dumps(False)))
@@ -96,8 +106,6 @@ def register(app):
             db.session.add(Settings(name='allow_local_image_posts', value=json.dumps(True)))
             db.session.add(Settings(name='allow_remote_image_posts', value=json.dumps(True)))
             db.session.add(Settings(name='federation', value=json.dumps(True)))
-            db.session.add(Language(name='Undetermined', code='und'))
-            db.session.add(Language(name='English', code='en'))
             banned_instances = ['anonib.al','lemmygrad.ml', 'gab.com', 'rqd2.net', 'exploding-heads.com', 'hexbear.net',
                                 'threads.net', 'noauthority.social', 'pieville.net', 'links.hackliberty.org',
                                 'poa.st', 'freespeechextremist.com', 'bae.st', 'nicecrew.digital', 'detroitriotcity.com',
@@ -122,11 +130,20 @@ def register(app):
                     db.session.add(BannedInstances(domain=domain.strip()))
                 print("Added 'Peertube Isolation' blocklist, see https://peertube_isolation.frama.io/")
 
+            # Initial languages
+            db.session.add(Language(name='Undetermined', code='und'))
+            db.session.add(Language(code='en', name='English'))
+            db.session.add(Language(code='de', name='Deutsch'))
+            db.session.add(Language(code='es', name='Español'))
+            db.session.add(Language(code='fr', name='Français'))
+            db.session.add(Language(code='hi', name='हिन्दी'))
+            db.session.add(Language(code='ja', name='日本語'))
+            db.session.add(Language(code='zh', name='中文'))
+
             # Initial roles
             # These roles will create rows in the 'role' table with IDs of 1,2,3,4. There are some constants (ROLE_*) in
             # constants.py that will need to be updated if the role IDs ever change.
             anon_role = Role(name='Anonymous user', weight=0)
-            anon_role.permissions.append(RolePermission(permission='register'))
             db.session.add(anon_role)
 
             auth_role = Role(name='Authenticated user', weight=1)
@@ -147,9 +164,11 @@ def register(app):
             admin_role.permissions.append(RolePermission(permission='change instance settings'))
             admin_role.permissions.append(RolePermission(permission='administer all communities'))
             admin_role.permissions.append(RolePermission(permission='administer all users'))
+            admin_role.permissions.append(RolePermission(permission='edit cms pages'))
             db.session.add(admin_role)
 
             # Admin user
+            print('The admin user created here should be reserved for admin tasks and not used as a primary daily identity (unless this instance will only be for personal use).')
             user_name = input("Admin user name (ideally not 'admin'): ")
             email = input("Admin email address: ")
             password = input("Admin password: ")
@@ -285,6 +304,7 @@ def register(app):
             # update and sync defederation subscriptions
             print(f'update and sync defederation subscriptions {datetime.now()}')
             db.session.execute(text('DELETE FROM banned_instances WHERE subscription_id is not null'))
+            db.session.commit()
             for defederation_sub in DefederationSubscription.query.all():
                 download_defeds(defederation_sub.id, defederation_sub.domain)
 
@@ -464,6 +484,11 @@ def register(app):
                 db.session.rollback()
                 current_app.logger.error(f"Error in daily maintenance: {e}")
 
+            # recalculate recent active user's attitude
+            print(f'recalcuating attitudes {datetime.now()}')
+            for user in User.query.filter(User.last_seen > utcnow() - timedelta(days=1)):
+                user.recalculate_attitude()
+
             print(f'Done {datetime.now()}')
 
     @app.cli.command('send-queue')
@@ -590,7 +615,7 @@ def register(app):
             from app.utils import move_file_to_s3
             import boto3
             processed = 0
-            print(f'Beginning move of post images... this could take a long time. Use tmux.')
+            print('Beginning move of post images... this could take a long time. Use tmux.')
             local_post_image_ids = list(db.session.execute(text('SELECT image_id FROM "post" WHERE deleted is false and image_id is not null and instance_id = 1 ORDER BY id DESC')).scalars())
             remote_post_image_ids = list(db.session.execute(text('SELECT image_id FROM "post" WHERE deleted is false and image_id is not null and instance_id != 1 ORDER BY id DESC')).scalars())
             boto3_session = boto3.session.Session()
@@ -634,7 +659,7 @@ def register(app):
             for file_id in file_ids:
                 file = File.query.get(file_id)
                 content_type = guess_mime_type(file.source_url)
-                new_path = file.source_url.replace('/static/media/', f"/")
+                new_path = file.source_url.replace('/static/media/', "/")
                 s3_path = new_path.replace(f'https://{server_name}/', '')
                 new_path = new_path.replace(server_name, current_app.config['S3_PUBLIC_URL'])
                 local_file = file.source_url.replace(f'https://{server_name}/static/media/', 'app/static/media/')
@@ -1074,9 +1099,9 @@ def register(app):
                 errors.append("   ❌ SECRET_KEY is not set or using default value")
             elif len(secret_key) < 32:
                 warnings.append("   ⚠️  SECRET_KEY should be at least 32 characters long")
-                print(f"   ✅ SECRET_KEY is configured (but short)")
+                print("   ✅ SECRET_KEY is configured (but short)")
             else:
-                print(f"   ✅ SECRET_KEY is configured")
+                print("   ✅ SECRET_KEY is configured")
 
             # Check DATABASE_URL
             database_url = current_app.config.get('SQLALCHEMY_DATABASE_URI')
@@ -1084,11 +1109,11 @@ def register(app):
                 errors.append("   ❌ DATABASE_URL is not set")
             elif database_url.startswith('sqlite://'):
                 warnings.append("   ⚠️  Using SQLite database - consider PostgreSQL for production")
-                print(f"   ✅ DATABASE_URL is configured (SQLite)")
+                print("   ✅ DATABASE_URL is configured (SQLite)")
             elif database_url.startswith('postgresql'):
-                print(f"   ✅ DATABASE_URL is configured (PostgreSQL)")
+                print("   ✅ DATABASE_URL is configured (PostgreSQL)")
             else:
-                print(f"   ✅ DATABASE_URL is configured")
+                print("   ✅ DATABASE_URL is configured")
 
             # Check numeric environment variables
             print("\n   Checking numeric environment variables...")
@@ -1256,6 +1281,17 @@ def register(app):
             else:
                 warnings.append(
                     "   ⚠️  Admin user not found - run 'flask init-db' if this is a new installation")
+
+            # Check migration system
+            print("\n9. Checking database migration system...")
+            try:
+                inspector = db.inspect(db.engine)
+                if 'alembic_version' in inspector.get_table_names():
+                    print("   ✅ Database migration system is initialized")
+                else:
+                    errors.append("   ❌ alembic_version table not found")
+            except Exception as e:
+                errors.append(f"   ❌ Error checking database migration system: {e}")
 
             # Summary
             print("\n" + "=" * 40)

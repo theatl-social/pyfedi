@@ -1,17 +1,18 @@
 <form>
     <div class="row">
         <div class="col">
-                <textarea name="body" class="form-control" rows="5" autofocus="autofocus" required="required" aria-required="true"></textarea>
+                <textarea name="body" id="textarea_in_reply_to_{{ comment_id }}" class="form-control" rows="5" autofocus="autofocus" required="required" aria-required="true"></textarea>
         </div>
     </div>
     <div class="row mb-3">
         <div class="col-8">
             <a href="#"
                    class="btn btn-primary mt-2"
-                   hx-post="{{ url_for('post.add_reply_inline', post_id=post_id, comment_id=comment_id) }}"
+                   hx-post="{{ url_for('post.add_reply_inline', post_id=post_id, comment_id=comment_id, nonce=nonce) }}"
                    hx-target="#reply_to_{{ comment_id }}"
                    hx-swap="outerHTML"
                 >{{ _('Comment') }}</a>
+            <a href="#" class="btn btn-outline mt-2" hx-post="{{ url_for('post.preview') }}" hx-target="#textarea_in_reply_to_preview_{{ comment_id }}">{{ _('Preview') }}</a>
         </div>
         <div class="col-4 text-right">
             <select name="language_id" class="form-select mt-2">
@@ -22,3 +23,23 @@
         </div>
     </div>
 </form>
+{% if not low_bandwidth -%}
+    {% if markdown_editor %}
+        <script nonce="{{ nonce }}">
+            var downarea = new DownArea({
+                elem: document.querySelector('#textarea_in_reply_to_{{ comment_id }}'),
+                resize: DownArea.RESIZE_VERTICAL,
+                hide: ['heading', 'bold-italic'],
+                value: document.getElementById("body").value
+            });
+            setupAutoResize('textarea_in_reply_to_{{ comment_id }}');
+        </script>
+    {% else %}
+        <a href="#" aria-hidden="true" class="markdown_editor_enabler create_post_markdown_editor_enabler" data-id="textarea_in_reply_to_{{ comment_id }}">{{ _('Enable markdown editor') }}</a>
+    {% endif %}
+    <div class="row">
+        <div class="col">
+            <div id="textarea_in_reply_to_preview_{{ comment_id }}"></div>
+        </div>
+    </div>
+{% endif -%}

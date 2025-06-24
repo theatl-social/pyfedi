@@ -49,6 +49,7 @@ limiter = Limiter(get_remote_address, storage_uri='redis+'+Config.CACHE_REDIS_UR
 celery = Celery(__name__, broker=Config.CELERY_BROKER_URL)
 httpx_client = httpx.Client(http2=True)
 oauth = OAuth()
+redis_client = None  # Will be initialized in create_app()
 
 
 def create_app(config_class=Config):
@@ -74,6 +75,12 @@ def create_app(config_class=Config):
     cache.init_app(app)
     limiter.init_app(app)
     celery.conf.update(app.config)
+    
+    # Initialize redis_client
+    global redis_client
+    from app.utils import get_redis_connection
+    redis_client = get_redis_connection(app.config['CACHE_REDIS_URL'])
+
     if app.config['GOOGLE_OAUTH_CLIENT_ID']:
         oauth.init_app(app)
         oauth.register(

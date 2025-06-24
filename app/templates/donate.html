@@ -1,19 +1,24 @@
-{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
-    {% extends 'themes/' + theme() + '/base.html' %}
-{% else %}
-    {% extends "base.html" %}
-{% endif %}
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
 
 {% block app_content %}
 <div class="row">
     <main class="col-12 col-lg-8 position-relative main_pane">
-        <h1>{{ _('Donate') }}</h1>
-        <p>{{ _('PieFed is free and open-source software while operating without any advertising, monetization, or reliance on venture capital. Your donations are vital in supporting the PieFed development effort, allowing us to expand and enhance PieFed with new features.') }}</p>
 
-        <div class="btn-group btn-group-lg" role="group" aria-label="Donation options">
-          <a type="button" class="btn btn-primary" href="https://www.patreon.com/PieFed">{{ _('Donate using Patreon') }}</a>
-        </div>
+        {% if cms_page -%}
+            <h1>{{ cms_page.title | safe }}</h1>
+            {{ cms_page.body_html | safe }}
+        {% else %}
+            <h1>{{ _('Donate') }}</h1>
+            <p>{{ _('PieFed is free and open-source software while operating without any advertising, monetization, or reliance on venture capital. Your donations are vital in supporting the PieFed development effort, allowing us to expand and enhance PieFed with new features.') }}</p>
 
+            <div class="btn-group btn-group-lg" role="group" aria-label="Donation options">
+              <a type="button" class="btn btn-primary" href="https://www.patreon.com/PieFed">{{ _('Donate using Patreon') }}</a>
+            </div>
+        {% endif -%}
     </main>
 
     <aside id="side_pane" class="col-12 col-lg-4 side_pane" role="complementary">

@@ -10,25 +10,25 @@ from app.models import User, ChatMessage, Notification, utcnow, Conversation
 from app.utils import shorten_string, gibberish, markdown_to_html
 
 
-def send_message(message: str, conversation_id: int) -> ChatMessage:
+def send_message(message: str, conversation_id: int, user: User = current_user) -> ChatMessage:
     conversation = Conversation.query.get(conversation_id)
-    reply = ChatMessage(sender_id=current_user.id, conversation_id=conversation.id,
+    reply = ChatMessage(sender_id=user.id, conversation_id=conversation.id,
                         body=message, body_html=markdown_to_html(message))
     conversation.updated_at = utcnow()
     db.session.add(reply)
     db.session.commit()
     for recipient in conversation.members:
-        if recipient.id != current_user.id:
+        if recipient.id != user.id:
             reply.recipient_id = recipient.id
             reply.ap_id = f"https://{current_app.config['SERVER_NAME']}/private_message/{reply.id}"
             db.session.commit()
             if recipient.is_local():
                 # Notify local recipient
                 targets_data = {'conversation_id':conversation.id,'message_id': reply.id}
-                notify = Notification(title=shorten_string('New message from ' + current_user.display_name()),
+                notify = Notification(title=shorten_string('New message from ' + user.display_name()),
                                       url=f'/chat/{conversation_id}#message_{reply.id}',
                                       user_id=recipient.id,
-                                      author_id=current_user.id,
+                                      author_id=user.id,
                                       notif_type=NOTIF_MESSAGE,
                                       subtype='chat_message',
                                       targets=targets_data)
@@ -39,10 +39,10 @@ def send_message(message: str, conversation_id: int) -> ChatMessage:
                 ap_type = "ChatMessage" if recipient.instance.software == "lemmy" else "Note"
                 # Federate reply
                 reply_json = {
-                    "actor": current_user.public_url(),
+                    "actor": user.public_url(),
                     "id": f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}",
                     "object": {
-                        "attributedTo": current_user.public_url(),
+                        "attributedTo": user.public_url(),
                         "content": reply.body_html,
                         "id": reply.ap_id,
                         "inReplyTo": conversation.last_ap_id(recipient.id),
@@ -66,8 +66,8 @@ def send_message(message: str, conversation_id: int) -> ChatMessage:
                         "type": "Mention"
                       }
                     ]
-                send_post_request(recipient.ap_inbox_url, reply_json, current_user.private_key,
-                                  current_user.public_url() + '#main-key')
+                send_post_request(recipient.ap_inbox_url, reply_json, user.private_key,
+                                  user.public_url() + '#main-key')
 
     flash(_('Message sent.'))
     return reply

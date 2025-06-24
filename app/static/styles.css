@@ -383,6 +383,10 @@ h1 .fe-bell, h1 .fe-no-bell {
   content: "\e9be";
 }
 
+.fe-rules::before {
+  content: "\e907";
+}
+
 .fe-cross-post::before {
   content: "\e9ba";
 }
@@ -648,12 +652,12 @@ div.navbar {
   outline-style: none;
 }
 
-.dropdown-menu .dropdown-item {
+.navbar .dropdown-menu .dropdown-item {
   white-space: break-spaces;
   break-inside: avoid;
 }
 @media (min-width: 992px) {
-  .dropdown-menu .dropdown-item {
+  .navbar .dropdown-menu .dropdown-item {
     max-width: 200px;
   }
 }
@@ -920,7 +924,7 @@ div.navbar {
   height: auto;
 }
 
-#choose_topics_card label.form-control-label {
+#choose_topics_card label.form-label {
   display: none;
 }
 #choose_topics_card .form-group {
@@ -964,7 +968,7 @@ ul.form-multicheck-columns {
   overflow-y: auto;
 }
 
-.add_reply .form-control-label {
+.add_reply .form-label {
   display: none;
 }
 
@@ -1118,6 +1122,13 @@ ul.form-multicheck-columns {
   text-overflow: ellipsis;
   white-space: normal;
 }
+.post_teaser_article_preview.blur, .post_teaser_link_preview.blur {
+  overflow: hidden;
+}
+.post_teaser_article_preview.blur p, .post_teaser_link_preview.blur p {
+  filter: blur(6px);
+  user-select: none;
+}
 
 .post_teaser_image_preview {
   text-align: center;
@@ -1191,6 +1202,8 @@ time {
   max-width: 512px;
   display: inline-block;
   width: 100%;
+  overflow: hidden;
+  border-radius: 5px;
 }
 
 .post_utilities_bar {
@@ -1848,11 +1861,31 @@ a.unread:before {
   height: auto;
 }
 .post_body blockquote, .comment_body blockquote {
-  padding: 0.1em 5px;
+  padding: 0.2em 5px;
   font-style: italic;
   font-family: "Open Sans", "Segoe UI", Tahoma, Arial, sans-serif;
-  margin: 0 3%;
+  margin: 0 3% 6px 3%;
   font-size: 95%;
+  border-left-style: solid;
+  border-left-width: 4px;
+}
+.post_body blockquote p, .comment_body blockquote p {
+  margin-bottom: 0px;
+}
+.post_body pre, .comment_body pre {
+  background: var(--bs-secondary-bg);
+  font-family: monospace;
+  padding-left: 0.5rem;
+  margin-left: 1.25rem;
+  border-style: solid;
+  border-color: var(--bs-secondary-border-subtle);
+  border-width: 2px;
+  border-radius: 5px;
+}
+.post_body p > code, .comment_body p > code {
+  background: var(--bs-secondary-bg);
+  padding: 0.25rem 0.5rem;
+  border-radius: 5px;
 }
 .post_body table.table, .comment_body table.table {
   display: block;
@@ -1941,7 +1974,7 @@ h1 .warning_badge {
 .conversation .message_created_at {
   float: right;
 }
-.conversation form .form-control-label {
+.conversation form .form-label {
   display: none;
 }
 .conversation .conversation_options {
@@ -1997,6 +2030,9 @@ h1 .warning_badge {
 .responsive-video {
   max-width: 100%;
   max-height: 90vh;
+}
+.responsive-video.blur {
+  filter: blur(24px);
 }
 
 @media (min-width: 768px) {
@@ -2451,6 +2487,10 @@ form h5 {
   max-width: 100%;
 }
 
+.preview_avatar_image {
+  max-width: 64px;
+}
+
 #preview:has(p, a, h1, h2, h3, ul, ol) {
   border: solid 1px #ddd;
   border-radius: 5px;
@@ -2460,6 +2500,28 @@ form h5 {
 
 #typeTab a:not(.btn):active {
   border-width: 1px;
+}
+
+#communitySidebar {
+  color: var(--bs-body-color);
+  background-color: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+  max-width: 345px;
+  max-height: 90vh;
+  padding: 1rem;
+  box-shadow: var(--bs-box-shadow);
+}
+#communitySidebar::backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+#communitySidebar img {
+  max-width: 100%;
+}
+
+.options_fediverse_logo {
+  width: 16px;
+  height: 16px;
 }
 
 .blink {

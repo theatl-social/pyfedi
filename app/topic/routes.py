@@ -5,7 +5,7 @@ from typing import List
 
 from feedgen.feed import FeedGenerator
 from flask import request, flash, url_for, current_app, redirect, abort, make_response, g
-from flask_login import login_required, current_user
+from flask_login import current_user
 from flask_babel import _
 from sqlalchemy import text, desc, or_
 
@@ -19,9 +19,8 @@ from app.email import send_topic_suggestion
 from app import db, cache
 from app.topic.forms import SuggestTopicsForm
 from app.utils import render_template, user_filters_posts, moderating_communities, joined_communities, \
-    validation_required, mimetype_from_url, \
-    menu_topics, menu_instance_feeds, \
-    menu_my_feeds, menu_subscribed_feeds, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, \
+    validation_required, mimetype_from_url, login_required, \
+    gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, \
     recently_upvoted_posts, recently_downvoted_posts, blocked_instances, blocked_users, joined_or_modding_communities, \
     login_required_if_private_instance, communities_banned_from, reported_posts, user_notes
 
@@ -83,16 +82,13 @@ def show_topic(topic_path):
             prev_url = url_for('topic.show_topic', topic_path=topic_path, result_id=result_id,
                                page=page - 1, sort=sort, layout=post_layout) if page > 0 else None
         elif content_type == 'comments':
-            content_filters = {}
             comments = PostReply.query.filter(PostReply.community_id.in_(list(community_ids)))
 
             # filter out nsfw and nsfl if desired
             if current_user.is_anonymous:
                 comments = comments.filter(PostReply.from_bot == False, PostReply.nsfw == False,
                                            PostReply.deleted == False)
-                user = None
             else:
-                user = current_user
                 if current_user.ignore_bots == 1:
                     comments = comments.filter(PostReply.from_bot == False)
                 if current_user.hide_nsfw == 1:

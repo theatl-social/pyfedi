@@ -14,6 +14,9 @@
     --bs-body-color: #DCD7C9;
     --bs-body-color-rgb: #DCD7C9;
 }
+a {
+    color: #53614f;
+}
 [data-bs-theme="dark"] a {
     color: white;
 }

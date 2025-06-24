@@ -552,10 +552,6 @@ def refresh_community_profile_task(community_id, activity_json):
                 else:
                     community.description = html_to_text(community.description_html)
 
-            if 'rules' in activity_json:
-                community.rules_html = allowlist_html(activity_json['rules'])
-                community.rules = html_to_text(community.rules_html)
-
             icon_changed = cover_changed = False
             if 'icon' in activity_json:
                 if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
@@ -921,10 +917,10 @@ def actor_json_to_model(activity_json, address, server):
                               ap_domain=server.lower(),
                               public_key=activity_json['publicKey']['publicKeyPem'],
                               # language=community_json['language'][0]['identifier'] # todo: language
-                              instance_id=find_instance_id(server),
-                              low_quality='memes' in activity_json['preferredUsername'] or 'shitpost' in activity_json['preferredUsername']
+                              instance_id=find_instance_id(server)
                               )
-
+        if get_setting('meme_comms_low_quality', False):
+            community.low_quality = 'memes' in activity_json['preferredUsername'] or 'shitpost' in activity_json['preferredUsername']
         description_html = ''
         if 'summary' in activity_json:
             description_html = activity_json['summary']
@@ -942,10 +938,6 @@ def actor_json_to_model(activity_json, address, server):
                 community.description_html = markdown_to_html(community.description)          # prefer Markdown if provided, overwrite version obtained from HTML
             else:
                 community.description = html_to_text(community.description_html)
-
-        if 'rules' in activity_json:
-            community.rules_html = allowlist_html(activity_json['rules'])
-            community.rules = html_to_text(community.rules_html)
 
         if 'icon' in activity_json and activity_json['icon'] is not None:
             if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
@@ -1364,12 +1356,13 @@ def find_instance_id(server):
     else:
         # Our instance does not know about {server} yet. Initially, create a sparse row in the 'instance' table and spawn a background
         # task to update the row with more details later
-        new_instance = Instance(domain=server, software='unknown', inbox=f'https://{server}/inbox', created_at=utcnow(),
-                                trusted=server == 'piefed.social')
+        new_instance = Instance(domain=server, software='unknown', inbox=f'https://{server}/inbox', created_at=utcnow())
+        
         try:
             db.session.add(new_instance)
             db.session.commit()
         except IntegrityError:
+            db.session.rollback()
             return Instance.query.filter_by(domain=server).one()
 
         # Spawn background task to fill in more details
@@ -1401,7 +1394,7 @@ def new_instance_profile_task(instance_id: int):
         except Exception:
             instance_json = {}
         if 'type' in instance_json and instance_json['type'] == 'Application':
-            instance.inbox = instance_json['inbox']
+            instance.inbox = instance_json['inbox'] if 'inbox' in instance_json else f"https://{instance.domain}/inbox"
             instance.outbox = instance_json['outbox']
         else:   # it's pretty much always /inbox so just assume that it is for whatever this instance is running
             instance.inbox = f"https://{instance.domain}/inbox"
@@ -1779,8 +1772,8 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
             language = find_language(next(iter(request_json['object']['contentMap'])))  # Combination of next and iter gets the first key in a dict
             language_id = language.id if language else None
         else:
-            from app.utils import english_language_id
-            language_id = english_language_id()
+            from app.utils import site_language_id
+            language_id = site_language_id()
 
         distinguished = request_json['object']['distinguished'] if 'distinguished' in request_json['object'] else False
 
@@ -2144,7 +2137,9 @@ def update_post_from_activity(post: Post, request_json: dict):
     # Tags
     if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
         post.tags.clear()
-        post.flair.clear()
+        # change back when lemmy supports flairs
+        #post.flair.clear()
+        flair_tags = []
         for json_tag in request_json['object']['tag']:
             if json_tag['type'] == 'Hashtag':
                 if json_tag['name'][1:].lower() != post.community.name.lower():             # Lemmy adds the community slug as a hashtag on every post in the community, which we want to ignore
@@ -2152,9 +2147,11 @@ def update_post_from_activity(post: Post, request_json: dict):
                     if hashtag:
                         post.tags.append(hashtag)
             if json_tag['type'] == 'lemmy:CommunityTag':
-                flair = find_flair_or_create(json_tag, post.community_id)
-                if flair:
-                    post.flair.append(flair)
+                # change back when lemmy supports flairs
+                #flair = find_flair_or_create(json_tag, post.community_id)
+                #if flair:
+                #    post.flair.append(flair)
+                flair_tags.append(json_tag)
             if 'type' in json_tag and json_tag['type'] == 'Mention':
                 profile_id = json_tag['href'] if 'href' in json_tag else None
                 if profile_id and isinstance(profile_id, str) and profile_id.startswith('https://' + current_app.config['SERVER_NAME']):
@@ -2173,6 +2170,14 @@ def update_post_from_activity(post: Post, request_json: dict):
                                                             targets=targets_data)
                                 recipient.unread_notifications += 1
                                 db.session.add(notification)
+        # remove when lemmy supports flairs
+        # for now only clear tags if there's new ones or if maybe another PieFed instance is trying to remove them
+        if len(flair_tags) > 0 or post.instance.software == 'piefed':
+            post.flair.clear()
+            for ft in flair_tags:
+                flair = find_flair_or_create(ft, post.community_id)
+                if flair:
+                    post.flair.append(flair)
 
     post.comments_enabled = request_json['object']['commentsEnabled'] if 'commentsEnabled' in request_json['object'] else True
     try:
@@ -2388,7 +2393,9 @@ def undo_vote(comment, post, target_ap_id, user):
         post = voted_on
         existing_vote = PostVote.query.filter_by(user_id=user.id, post_id=post.id).first()
         if existing_vote:
-            post.author.reputation -= existing_vote.effect
+            with db.session.begin_nested():
+                db.session.execute(text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
+                                   {'effect': existing_vote.effect, 'user_id': post.user_id})
             if existing_vote.effect < 0:  # Lemmy sends 'like' for upvote and 'dislike' for down votes. Cool! When it undoes an upvote it sends an 'Undo Like'. Fine. When it undoes a downvote it sends an 'Undo Like' - not 'Undo Dislike'?!
                 post.down_votes -= 1
             else:
@@ -2401,7 +2408,9 @@ def undo_vote(comment, post, target_ap_id, user):
         comment = voted_on
         existing_vote = PostReplyVote.query.filter_by(user_id=user.id, post_reply_id=comment.id).first()
         if existing_vote:
-            comment.author.reputation -= existing_vote.effect
+            with db.session.begin_nested():
+                db.session.execute(text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
+                                   {'effect': existing_vote.effect, 'user_id': comment.user_id})
             if existing_vote.effect < 0:  # Lemmy sends 'like' for upvote and 'dislike' for down votes. Cool! When it undoes an upvote it sends an 'Undo Like'. Fine. When it undoes a downvote it sends an 'Undo Like' - not 'Undo Dislike'?!
                 comment.down_votes -= 1
             else:
@@ -2575,7 +2584,7 @@ def lemmy_site_data():
         }
       },
       "admins": [],
-      "version": "1.0.0",
+      "version": current_app.config['VERSION'],
       "all_languages": [],
       "discussion_languages": [],
       "taglines": [],
@@ -2721,14 +2730,18 @@ def resolve_remote_post(uri: str, community, announce_id, store_ap_json, nodebb=
     announce_actor_domain = parsed_url.netloc
     if announce_actor_domain != 'a.gup.pe' and not nodebb and announce_actor_domain != uri_domain:
         return None
-    actor_domain = None
-    actor = None
 
     post_data = remote_object_to_json(uri)
     if not post_data:
         return None
 
+    return create_resolved_object(uri, post_data, uri_domain, community, announce_id, store_ap_json)
+
+
+def create_resolved_object(uri, post_data, uri_domain, community, announce_id, store_ap_json):
     # find the author. Make sure their domain matches the site hosting it to mitigate impersonation attempts
+    actor_domain = None
+    actor = None
     if 'attributedTo' in post_data:
         attributed_to = post_data['attributedTo']
         if isinstance(attributed_to, str):
@@ -2791,6 +2804,7 @@ def resolve_remote_post(uri: str, community, announce_id, store_ap_json, nodebb=
                 return post
 
     return None
+
 
 
 @celery.task
@@ -3034,33 +3048,22 @@ def find_community(request_json):
                             if potential_community:
                                 return potential_community
 
-    # used for manual retrieval of a PeerTube vid
-    if request_json['type'] == 'Video':
-        if 'attributedTo' in request_json and isinstance(request_json['attributedTo'], list):
-            for a in request_json['attributedTo']:
-                if a['type'] == 'Group':
-                    potential_community = Community.query.filter_by(ap_profile_id=a['id'].lower()).first()
-                    if potential_community:
-                        return potential_community
-
-    # change this if manual retrieval of comments is allowed in future
-    if not 'object' in request_json:
-        return None
+    rj = request_json['object'] if 'object' in request_json else request_json
 
     # Create/Update Note from platform that didn't include the Community in 'audience', 'cc', or 'to' (e.g. Mastodon reply to Lemmy post)
-    if 'inReplyTo' in request_json['object'] and request_json['object']['inReplyTo'] is not None:
-        post_being_replied_to = Post.get_by_ap_id(request_json['object']['inReplyTo'])
+    if 'inReplyTo' in rj and rj['inReplyTo'] is not None:
+        post_being_replied_to = Post.get_by_ap_id(rj['inReplyTo'])
         if post_being_replied_to:
             return post_being_replied_to.community
         else:
-            comment_being_replied_to = PostReply.get_by_ap_id(request_json['object']['inReplyTo'])
+            comment_being_replied_to = PostReply.get_by_ap_id(rj['inReplyTo'])
             if comment_being_replied_to:
                 return comment_being_replied_to.community
 
     # Update / Video from PeerTube (possibly an edit, more likely an invite to query Likes / Replies endpoints)
-    if request_json['object']['type'] == 'Video':
-        if 'attributedTo' in request_json['object'] and isinstance(request_json['object']['attributedTo'], list):
-            for a in request_json['object']['attributedTo']:
+    if rj['type'] == 'Video':
+        if 'attributedTo' in rj and isinstance(rj['attributedTo'], list):
+            for a in rj['attributedTo']:
                 if a['type'] == 'Group':
                     potential_community = Community.query.filter_by(ap_profile_id=a['id'].lower()).first()
                     if potential_community:

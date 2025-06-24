@@ -18,7 +18,7 @@ def check_user_application(application_id, send_async=True):
 
     num_banned = 0
 
-    for domain in get_setting('ban_check_servers', 'piefed.social').split('\n'):
+    for domain in get_setting('ban_check_servers', '').split('\n'):
         if not domain.strip():
             continue
 

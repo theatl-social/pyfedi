@@ -1,9 +1,9 @@
-{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
     {% extends 'themes/' + theme() + '/base.html' -%}
 {% else -%}
     {% extends "base.html" -%}
-{% endif -%} -%}
-{% from 'bootstrap/form.html' import render_field -%}
+{% endif -%}
+{% from 'bootstrap5/form.html' import render_field -%}
 {% from "_macros.html" import render_username, render_communityname, render_feedname -%}
 {% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video -%}
 {% from "post/reply/_macros.html" import render_comment_voting_buttons, render_reply_notification_toggle -%}
@@ -24,7 +24,7 @@
         {% include 'post/_post_full.html' -%}
         {% if post.comments_enabled -%}
             {% if current_user.is_authenticated -%}
-                {% if current_user.verified -%}
+                {% if current_user.verified and not banned_from_community -%}
                     <div class="row post_reply_form">
                         <hr class="mt-1" />
                         <div class="col">
@@ -70,7 +70,9 @@
                         {% endif -%}
                     </div>
                 {% else -%}
-                    <p><a href="{{ url_for('auth.validation_required') }}">{{ _('Verify your email address to comment') }}</a></p>
+                    {% if not current_user.verified -%}
+                        <p><a href="{{ url_for('auth.validation_required') }}">{{ _('Verify your email address to comment') }}</a></p>
+                    {% endif -%}
                 {% endif -%}
             {% else -%}
                 <p><a href="{{ url_for('auth.login', next='/post/' + str(post.id)) }}">{{ _('Log in to comment') }}</a></p>
@@ -111,7 +113,9 @@
                     {% for community, replies in more_replies.items() -%}
                         <div class="row mt-4">
                             <div class="col-10">
-                                <h4 class="mt-1"><a href="/post/{{ replies[0]['comment'].post_id }}#post_replies">{{ _('Comments in %(name)s', name=community.display_name()) }}</a></h4>
+                                <h4 class="mt-1"><a href="/post/{{ replies[0]['comment'].post_id }}#post_replies">{{ _('Comments in %(name)s', name=community.display_name()) }}</a>
+                                    {% if community.description %}<a data-id="{{ community.id }}" href="/community/get_sidebar/{{ community.id }}" class="showPopupCommunitySidebar"><span class="small fe fe-rules"></span></a>{% endif -%}
+                                </h4>
                             </div>
                             <div class="col-2" style="text-align: right; padding-right: 20px;">
                                 {% if current_user.is_authenticated -%}
@@ -129,6 +133,8 @@
                                                      <span class="fe fe-plus"></span> {{ _('Join') }}</a></li>
                                                 <li><hr class="dropdown-divider"></li>
                                             {% endif -%}
+                                            <li><a href="/community/get_sidebar/{{ community.id }}" class="dropdown-item no-underline white-space-normal" rel="nofollow">
+                                                <span class="fe fe-rules"></span> {{ _('Community description') }}</a></li>
                                             <li><a href="{{ url_for('community.community_block', community_id=community.id) }}" class="dropdown-item no-underline white-space-normal" rel="nofollow">
                                                 <span class="fe fe-delete"></span> {{ _('Block community %(community_name)s', community_name=community.display_name()) }}</a></li>
                                         </ul>
@@ -156,6 +162,7 @@
         {% include "_side_pane.html" %}
     {% endwith -%}
 </div>
+<dialog id="communitySidebar"></dialog>
 <script nonce="{{ nonce }}">
     window.addEventListener("load", function () {
         currentPost = document.querySelector('.post_col');  // set the current post, so A and Z voting keys work when viewing a post page

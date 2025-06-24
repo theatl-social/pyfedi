@@ -1,9 +1,9 @@
-{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
-    {% extends 'themes/' + theme() + '/base.html' %}
-{% else %}
-    {% extends "base.html" %}
-{% endif %}
-{% from 'bootstrap/form.html' import render_form %}
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
+{% from 'bootstrap5/form.html' import render_form %}
 
 {% block app_content %}
 <div class="row">
@@ -28,9 +28,9 @@
             <div class="card-body">
                 {% if current_user.is_authenticated -%}
                     {% if current_user.has_blocked_instance(instance.id) -%}
-                        <a class="btn btn-primary" href="{{ url_for('instance.instance_unblock', instance_id=instance.id, redirect='/instance/' + instance.domain) }}" rel="nofollow">{{ _('Unblock %(instance_name)s', instance_name=instance.domain) }}</a>
+                      <a class="btn btn-primary" role="button" aria-label="{{ _('Unblock %(instance_name)s', instance_name=instance.domain) }}" hx-post="/instance/{{ instance.id }}/unblock" hx-trigger="click throttle:1s"tabindex="0">{{ _('Unblock') }}</a>
                     {% else %}
-                        <a class="btn btn-primary confirm_first" href="{{ url_for('instance.instance_block', instance_id=instance.id, redirect='/instance/' + instance.domain) }}" rel="nofollow">{{ _('Block everyone from %(instance_name)s', instance_name=instance.domain) }}</a>
+                      <a class="btn btn-primary confirm_first" role="button" aria-label="{{ _('Block everyone from %(instance_name)s', instance_name=instance.domain) }}" hx-post="/instance/{{ instance.id }}/block" hx-trigger="click throttle:1s"tabindex="0">{{ _('Block') }}</a>
                     {% endif -%}
                 {% endif -%}
             </div>

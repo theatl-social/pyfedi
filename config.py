@@ -1,6 +1,8 @@
 import os
 from dotenv import load_dotenv
 
+import app.constants
+
 basedir = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(os.path.join(basedir, '.env'))
 
@@ -57,6 +59,8 @@ class Config(object):
 
     IPINFO_TOKEN = os.environ.get('IPINFO_TOKEN') or ''
 
+    NUM_CPU = int(os.environ.get('NUM_CPU') or 0)
+
     DB_POOL_SIZE = os.environ.get('DB_POOL_SIZE') or 10
     DB_MAX_OVERFLOW = os.environ.get('DB_MAX_OVERFLOW') or 30
 
@@ -95,3 +99,18 @@ class Config(object):
     CORS_ALLOW_ORIGIN = os.environ.get('CORS_ALLOW_ORIGIN') or '*'
 
     PAGE_LENGTH = int(os.environ.get('PAGE_LENGTH') or 100)
+
+    # LDAP configuration
+    LDAP_SERVER = os.environ.get('LDAP_SERVER') or ''
+    LDAP_PORT = int(os.environ.get('LDAP_PORT') or 389)
+    LDAP_USE_SSL = os.environ.get('LDAP_USE_SSL', '0') in ('1', 'true', 'True')
+    LDAP_USE_TLS = os.environ.get('LDAP_USE_TLS', '0') in ('1', 'true', 'True')
+    LDAP_BIND_DN = os.environ.get('LDAP_BIND_DN') or ''
+    LDAP_BIND_PASSWORD = os.environ.get('LDAP_BIND_PASSWORD') or ''
+    LDAP_BASE_DN = os.environ.get('LDAP_BASE_DN') or ''
+    LDAP_USER_FILTER = os.environ.get('LDAP_USER_FILTER') or '(uid={username})'
+    LDAP_ATTR_USERNAME = os.environ.get('LDAP_ATTR_USERNAME') or 'uid'
+    LDAP_ATTR_EMAIL = os.environ.get('LDAP_ATTR_EMAIL') or 'mail'
+    LDAP_ATTR_PASSWORD = os.environ.get('LDAP_ATTR_PASSWORD') or 'userPassword'
+
+    VERSION = app.constants.VERSION

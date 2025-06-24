@@ -1,12 +1,12 @@
 from app import db, cache
-from app.api.alpha.views import community_view, user_view, post_view
+from app.api.alpha.views import community_view, user_view, post_view, cached_modlist_for_community
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected, array_of_integers_expected
 from app.community.util import search_for_community
 from app.utils import authorise_api_user
 from app.constants import *
 from app.models import Community, CommunityMember, User, CommunityBan, Notification, CommunityJoinRequest, \
      NotificationSubscription, Post
-from app.shared.community import join_community, leave_community, block_community, unblock_community, make_community, edit_community, subscribe_community, delete_community, restore_community
+from app.shared.community import join_community, leave_community, block_community, unblock_community, make_community, edit_community, subscribe_community, delete_community, restore_community, add_mod_to_community, remove_mod_from_community
 from app.shared.tasks import task_selector
 from app.utils import communities_banned_from, blocked_instances, blocked_communities, shorten_string, \
      joined_communities, moderating_communities
@@ -23,16 +23,15 @@ def get_community_list(auth, data):
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 10
 
-    user_id = authorise_api_user(auth) if auth else None
+    user = authorise_api_user(auth, return_type='model') if auth else None
+    user_id = user.id if user else None
 
     query = data['q'] if data and 'q' in data else ''
     if user_id and '@' in query and '.' in query and query.startswith('!'):
         search_for_community(query)
         query = query[1:]
 
-    user_id = authorise_api_user(auth) if auth else None
-
-    if type == 'Subscribed':
+    if user_id and type == 'Subscribed':
         communities = Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == user_id)
     elif type == 'Local':
         communities = Community.query.filter_by(ap_id=None, banned=False)
@@ -49,12 +48,20 @@ def get_community_list(auth, data):
         blocked_community_ids = blocked_communities(user_id)
         if blocked_community_ids:
             communities = communities.filter(Community.id.not_in(blocked_community_ids))
+        if user.hide_nsfw:
+            communities = communities.filter_by(nsfw=False)
+        if user.hide_nsfl:
+            communities = communities.filter_by(nsfl=False)
+    else:
+        communities = communities.filter_by(nsfl=False, nsfw=False)
 
     if query:
         communities = communities.filter(or_(Community.title.ilike(f"%{query}%"), Community.ap_id.ilike(f"%{query}%")))
 
     if sort == 'New':
         communities = communities.order_by(desc(Community.created_at))
+    elif sort.startswith('Top'):
+        communities = communities.order_by(desc(Community.post_count))
     else:
         communities = communities.order_by(desc(Community.last_active))
 
@@ -78,6 +85,8 @@ def get_community(auth, data):
         community = int(data['id'])
     elif 'name' in data:
         community = data['name']
+        if '@' not in community:
+            community = f"{community}@{current_app.config['SERVER_NAME']}"
 
     user_id = authorise_api_user(auth) if auth else None
 
@@ -436,3 +445,24 @@ def post_community_moderate_post_nsfw(auth, data):
     res = post_view(post=post, variant=2, stub=True, user_id=mod_user.id)
 
     return res
+
+
+def post_community_mod(auth, data):
+    required(['community_id', 'person_id', 'added'], data)
+    integer_expected(['community_id', 'person_id'], data)
+    boolean_expected(['added'], data)
+
+    community_id = data['community_id']
+    person_id = data['person_id']
+    added = data['added']
+
+    if added:
+        add_mod_to_community(community_id, person_id, SRC_API, auth)
+    else:
+        remove_mod_from_community(community_id, person_id, SRC_API, auth)
+    cache.delete_memoized(cached_modlist_for_community)
+    community_json = {
+        'moderators': cached_modlist_for_community(community_id)
+    }
+    return community_json
+

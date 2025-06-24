@@ -1,9 +1,9 @@
-{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
-    {% extends 'themes/' + theme() + '/base.html' %}
-{% else %}
-    {% extends "base.html" %}
-{% endif %}
-{% from 'bootstrap/form.html' import render_form %}
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
+{% from 'bootstrap5/form.html' import render_form %}
 {% set active_child = 'admin_approve_registrations' %}
 
 {% block app_content %}
@@ -41,9 +41,9 @@
                     <td>{{ arrow.get(registration.created_at).humanize(locale=locale) }}</td>
                     <td>{{ registration.user.ip_address if registration.user.ip_address }}<br />{{ registration.user.ip_address_country if registration.user.ip_address_country }}</td>
                     <td>{{ registration.user.referrer if registration.user.referrer }} </td>
-                    <td><a href="{{ url_for('admin.admin_approve_registrations_approve', user_id=registration.user.id) }}" class="btn btn-sm btn-primary">{{ _('Approve') }}</a>
+                    <td><a href="#" data-url="{{ url_for('admin.admin_approve_registrations_approve', user_id=registration.user.id) }}" class="btn btn-sm btn-primary send_post">{{ _('Approve') }}</a>
                         <a href="/u/{{ registration.user.link() }}">{{ _('View') }}</a> |
-                        <a href="{{ url_for('admin.admin_user_delete', user_id=registration.user.id) }}" class="confirm_first">{{ _('Delete') }}</a>
+                        <a href="#" data-url="{{ url_for('admin.admin_user_delete', user_id=registration.user.id) }}" class="confirm_first send_post">{{ _('Delete') }}</a>
                     </td>
                 </tr>
             {% endfor %}
