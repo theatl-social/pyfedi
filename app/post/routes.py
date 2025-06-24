@@ -1110,6 +1110,18 @@ def post_block_instance(post_id: int):
     post = Post.query.get_or_404(post_id)
     block_remote_instance(post.instance_id, SRC_WEB)
     flash(_('Content from %(name)s will be hidden.', name=post.instance.domain))
+
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        curr_url = request.headers.get('HX-Current-Url')
+
+        if post.instance.domain in curr_url or "/post/" in curr_url:
+            resp.headers["HX-Redirect"] = url_for("main.index")
+        else:
+            resp.headers["HX-Redirect"] = curr_url
+        
+        return resp
+
     return redirect(post.community.local_url())
 
 
@@ -1291,6 +1303,24 @@ def post_reply_block_instance(post_id: int, comment_id: int):
     post_reply = PostReply.query.get_or_404(comment_id)
     block_remote_instance(post_reply.instance_id, SRC_WEB)
     flash(_('Content from %(name)s will be hidden.', name=post_reply.instance.domain))
+
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        curr_url = request.headers.get('HX-Current-Url')
+
+        if post_reply.instance.domain in curr_url:
+            resp.headers["HX-Redirect"] = url_for("main.index")
+        elif "/post/" in curr_url:
+            post = Post.query.get(post_id)
+            if post is not None and post.instance_id == post_reply.instance_id:
+                resp.headers["HX-Redirect"] = url_for("main.index")
+            else:
+                resp.headers["HX-Redirect"] = curr_url
+        else:
+            resp.headers["HX-Redirect"] = curr_url
+        
+        return resp
+
     return redirect(url_for('activitypub.post_ap', post_id=post_id))
 
 

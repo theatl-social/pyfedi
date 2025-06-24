@@ -1,6 +1,6 @@
 from collections import namedtuple
 
-from flask import request, url_for, g, abort, flash, redirect
+from flask import request, url_for, g, abort, flash, redirect, make_response
 from flask_login import current_user
 from flask_babel import _
 from sqlalchemy import or_, desc
@@ -53,14 +53,12 @@ def list_instances():
 
 @bp.route('/instance/<instance_domain>', methods=['GET'])
 def instance_overview(instance_domain):
-    low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
     instance = Instance.query.filter(Instance.domain == instance_domain).first()
     if instance is None:
         abort(404)
 
     return render_template('instance/overview.html', instance=instance,
-                           
                            title=_('%(instance)s overview', instance=instance.domain),
                            )
 
@@ -68,8 +66,6 @@ def instance_overview(instance_domain):
 @bp.route('/instance/<instance_domain>/people', methods=['GET'])
 def instance_people(instance_domain):
     page = request.args.get('page', 1, type=int)
-    search = request.args.get('search', '')
-    filter = request.args.get('filter', '')
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
     instance = Instance.query.filter(Instance.domain == instance_domain).first()
@@ -87,7 +83,6 @@ def instance_people(instance_domain):
     prev_url = url_for('instance.instance_people', page=people.prev_num, instance_domain=instance_domain) if people.has_prev and page != 1 else None
 
     return render_template('instance/people.html', people=people, instance=instance, next_url=next_url, prev_url=prev_url,
-                           
                            title=_('People from %(instance)s', instance=instance.domain),
                            )
 
@@ -180,6 +175,13 @@ def instance_block(instance_id):
     instance = Instance.query.get_or_404(instance_id)
     block_remote_instance(instance_id, SRC_WEB)
     flash(_('Content from %(instance_domain)s will be hidden.', instance_domain=instance.domain))
+
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        resp.headers["HX-Redirect"] = url_for("instance.instance_overview", instance_domain=instance.domain)
+        
+        return resp
+
     goto = request.args.get('redirect') if 'redirect' in request.args else url_for('user.user_settings_filters')
     return redirect(goto)
 
@@ -190,5 +192,12 @@ def instance_unblock(instance_id):
     instance = Instance.query.get_or_404(instance_id)
     unblock_remote_instance(instance_id, SRC_WEB)
     flash(_('%(instance_domain)s has been unblocked.', instance_domain=instance.domain))
+
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        resp.headers["HX-Redirect"] = request.headers.get('HX-Current-Url')
+        
+        return resp
+
     goto = request.args.get('redirect') if 'redirect' in request.args else url_for('user.user_settings_filters')
     return redirect(goto)

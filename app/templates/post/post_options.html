@@ -61,8 +61,8 @@
           hx-post="/post/{{ post.id }}/block_domain" hx-trigger="click throttle:1s"tabindex="0"><span class="fe fe-block"></span> {{ _('Block domain %(domain)s', domain=post.domain.name) }}</a></li>
         {% endif -%}
         {% if post.instance_id and post.instance_id != 1 -%}
-        <li><a href="#" data-url="{{ url_for('post.post_block_instance', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline send_post"><span class="fe fe-block"></span>
-            {{ _("Hide every post from author's instance: %(name)s", name=post.instance.domain) }}</a></li>
+        <li><a class="dropdown-item no-underline" role="button" style="white-space: normal" aria-label="{{ _("Hide every post from author's instance: %(name)s", name=post.instance.domain) }}"
+          hx-post="/post/{{ post.id }}/block_instance" hx-trigger="click throttle:1s"tabindex="0"><span class="fe fe-block"></span> {{ _("Hide every post from author's instance: %(name)s", name=post.instance.domain) }}</a></li>
         {% endif -%}
     {% endif -%}
     {% if post.type == POST_TYPE_IMAGE and post.image.hash and (current_user.get_id() in admin_ids or current_user.is_staff()) -%}
