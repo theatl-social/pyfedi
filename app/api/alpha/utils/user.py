@@ -9,6 +9,8 @@ from app.models import Conversation, ChatMessage, Notification, PostReply, User,
 from app.shared.user import block_another_user, unblock_another_user, subscribe_user
 from app.constants import *
 
+from flask import current_app
+
 from sqlalchemy import text, desc, func, literal_column
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -16,22 +18,24 @@ from sqlalchemy.orm.exc import NoResultFound
 def get_user(auth, data):
     if not data or ('person_id' not in data and 'username' not in data):
         raise Exception('missing_parameters')
-
-    # user_id = logged in user, person_id = person who's posts, comments etc are being fetched
-    # 'username' can be provided instead, to populate person_id
-
-    person_id = None
     if 'person_id' in data:
-        person_id = int(data['person_id'])
+        person = int(data['person_id'])
     elif 'username' in data:
-        if '@' in data['username']:
-            person_id = User.query.filter(func.lower(User.ap_id) == data['username'].lower(), User.deleted == False).first().id
+        person = data['username']
+        if '@' not in person:
+            name = person.lower()
+            ap_domain = None
         else:
-            person_id = User.query.filter(func.lower(User.user_name) == data['username'].lower(), User.ap_id == None, User.deleted == False).first().id
-
-        data['person_id'] = person_id
-
-    include_content = data.get('include_content', False)
+            name, ap_domain = person.strip().split('@')
+            name = name.lower()
+            if ap_domain == current_app.config['SERVER_NAME']:
+                ap_domain = None
+            else:
+                ap_domain = ap_domain.lower()
+        person = User.query.filter(func.lower(User.user_name) == name, func.lower(User.ap_domain) == ap_domain, User.deleted == False).one()
+        data['person_id'] = person.id
+    include_content = data['include_content'] if 'include_content' in data else 'false'
+    include_content = True if include_content == 'true' else False
 
     user_id = None
     if auth:
@@ -42,7 +46,7 @@ def get_user(auth, data):
     post_list = get_post_list(auth, data, user_id) if include_content else {'posts': []}
     reply_list = get_reply_list(auth, data, user_id) if include_content else {'comments': []}
 
-    user_json = user_view(user=person_id, variant=3, user_id=user_id)
+    user_json = user_view(user=person, variant=3, user_id=user_id)
     user_json['posts'] = post_list['posts']
     user_json['comments'] = reply_list['comments']
     return user_json
@@ -54,6 +58,7 @@ def get_user_list(auth, data):
 
     type = data['type_'] if data and 'type_' in data else "All"
     page = int(data['page']) if data and 'page' in data else 1
+    sort = data['sort'] if data and 'sort' in data else "Hot"
     limit = int(data['limit']) if data and 'limit' in data else 10
 
     query = data['q'] if data and 'q' in data else ''
@@ -61,15 +66,22 @@ def get_user_list(auth, data):
     user_id = authorise_api_user(auth) if auth else None
 
     if type == 'Local':
-        users = User.query.filter_by(instance_id=1, deleted=False).order_by(User.id)
+        users = User.query.filter_by(instance_id=1, deleted=False, verified=True)
     else:
-        users = User.query.filter(User.instance_id != 1, User.deleted == False).order_by(desc(User.id))
+        users = User.query.filter(User.instance_id != 1, User.deleted == False)
 
     if query:
         if '@' in query:
             users = users.filter(User.ap_id.ilike(f"%{query}%"))
         else:
             users = users.filter(User.user_name.ilike(f"%{query}%"))
+
+    if sort == 'New':
+        users = users.order_by(desc(User.created))
+    elif sort.startswith('Top'):
+        users = users.order_by(desc(User.post_count))
+    else:
+        users = users.order_by(User.id)
 
     users = users.paginate(page=page, per_page=limit, error_out=False)
 

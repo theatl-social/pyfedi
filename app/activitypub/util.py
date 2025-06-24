@@ -1401,6 +1401,7 @@ def find_instance_id(server):
             db.session.add(new_instance)
             db.session.commit()
         except IntegrityError:
+            db.session.rollback()
             return Instance.query.filter_by(domain=server).one()
 
         # Spawn background task to fill in more details
@@ -1432,7 +1433,7 @@ def new_instance_profile_task(instance_id: int):
         except Exception:
             instance_json = {}
         if 'type' in instance_json and instance_json['type'] == 'Application':
-            instance.inbox = instance_json['inbox']
+            instance.inbox = instance_json['inbox'] if 'inbox' in instance_json else f"https://{instance.domain}/inbox"
             instance.outbox = instance_json['outbox']
         else:   # it's pretty much always /inbox so just assume that it is for whatever this instance is running
             instance.inbox = f"https://{instance.domain}/inbox"
@@ -2622,7 +2623,7 @@ def lemmy_site_data():
         }
       },
       "admins": [],
-      "version": "1.0.0",
+      "version": current_app.config['VERSION'],
       "all_languages": [],
       "discussion_languages": [],
       "taglines": [],

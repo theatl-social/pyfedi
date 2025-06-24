@@ -81,7 +81,7 @@
         <div class="comment_actions hidable">
             <div class="post_replies_link">
                 <a href="{{ url_for('post.add_reply', post_id=post_reply.post.id, comment_id=post_reply.id) }}"
-                   hx-get="{{ url_for('post.add_reply_inline', post_id=post_reply.post.id, comment_id=post_reply.id) }}"
+                   hx-get="{{ url_for('post.add_reply_inline', post_id=post_reply.post.id, comment_id=post_reply.id, nonce=nonce) }}"
                    hx-target="#reply_to_{{ post_reply.id }}"
                    hx-swap="innerHTML"
                    rel="nofollow noindex"><span class="fe fe-reply"></span><span class="hide_skinny_mobile">reply</span></a>

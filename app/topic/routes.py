@@ -82,16 +82,13 @@ def show_topic(topic_path):
             prev_url = url_for('topic.show_topic', topic_path=topic_path, result_id=result_id,
                                page=page - 1, sort=sort, layout=post_layout) if page > 0 else None
         elif content_type == 'comments':
-            content_filters = {}
             comments = PostReply.query.filter(PostReply.community_id.in_(list(community_ids)))
 
             # filter out nsfw and nsfl if desired
             if current_user.is_anonymous:
                 comments = comments.filter(PostReply.from_bot == False, PostReply.nsfw == False,
                                            PostReply.deleted == False)
-                user = None
             else:
-                user = current_user
                 if current_user.ignore_bots == 1:
                     comments = comments.filter(PostReply.from_bot == False)
                 if current_user.hide_nsfw == 1:

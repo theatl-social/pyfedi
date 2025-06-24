@@ -25,7 +25,7 @@ from app.post.util import post_replies, get_comment_branch, tags_to_string, url_
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
     POST_TYPE_IMAGE, \
     POST_TYPE_ARTICLE, POST_TYPE_VIDEO, NOTIF_REPLY, NOTIF_POST, POST_TYPE_POLL, SRC_WEB, SRC_API
-from app.models import Post, PostReply, \
+from app.models import Post, PostReply, PostReplyValidationError, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, Report, Site, Community, \
     Topic, User, Instance, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
     PostReplyBookmark, CommunityBlock, File, CommunityFlair, UserFlair, BlockedImage, CommunityBan
@@ -100,9 +100,8 @@ def show_post(post_id: int):
         form = NewReplyForm()
         form.language_id.choices = languages_for_form() if current_user.is_authenticated else []
 
-        if current_user.is_authenticated and (current_user.id == post.user_id or current_user.is_admin() or current_user.is_staff()):
-            if post.status == POST_STATUS_SCHEDULED:
-                flash(_('This post is scheduled to be published at %(when)s', when=str(post.scheduled_for)))    # todo: convert into current_user.timezone
+        if post.status == POST_STATUS_SCHEDULED:
+            flash(_('This post is scheduled to be published at %(when)s UTC', when=str(post.scheduled_for)))    # todo: convert into current_user.timezone
 
         if current_user.is_authenticated:
             if not post.community.is_moderator() and not post.community.is_owner() and not current_user.is_staff() and not current_user.is_admin():
@@ -233,7 +232,7 @@ def show_post(post_id: int):
                                poll_form=poll_form, poll_results=poll_results, poll_data=poll_data, poll_choices=poll_choices, poll_total_votes=poll_total_votes,
                                canonical=post.ap_id, form=form, replies=replies, more_replies=more_replies, user_flair=user_flair,
                                THREAD_CUTOFF_DEPTH=constants.THREAD_CUTOFF_DEPTH,
-                               description=description, og_image=og_image,
+                               description=description, og_image=og_image, show_deleted=current_user.is_authenticated and current_user.is_admin_or_staff(),
                                autoplay=request.args.get('autoplay', False), archive_link=archive_link,
                                noindex=not post.author.indexable, preconnect=post.url if post.url else None,
                                recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
@@ -300,8 +299,6 @@ def post_embed_code(post_id):
     breadcrumbs.append(breadcrumb)
 
     if community.topic_id:
-        related_communities = Community.query.filter_by(topic_id=community.topic_id). \
-            filter(Community.id != community.id, Community.banned == False).order_by(Community.name)
         topics = []
         previous_topic = Topic.query.get(community.topic_id)
         topics.append(previous_topic)
@@ -329,7 +326,6 @@ def post_embed_code(post_id):
         breadcrumb.url = f'/post/{post.id}'
         breadcrumbs.append(breadcrumb)
     else:
-        related_communities = []
 
         breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
         breadcrumb.text = _('Communities')
@@ -520,11 +516,12 @@ def add_reply(post_id: int, comment_id: int):
                                )
 
 
-@bp.route('/post/<int:post_id>/comment/<int:comment_id>/reply_inline', methods=['GET', 'POST'])
+@bp.route('/post/<int:post_id>/comment/<int:comment_id>/reply_inline/<nonce>', methods=['GET', 'POST'])
 @login_required
-def add_reply_inline(post_id: int, comment_id: int):
+def add_reply_inline(post_id: int, comment_id: int, nonce):
     # this route is called by htmx and returns a html fragment representing a form that can be submitted to make a new reply
-    # it also accepts the POST from that form and makes the reply
+    # it also accepts the POST from that form and makes the reply. All the JS in the response needs a nonce from the parent page
+    # to keep CSP happy and that nonce needs to be used by any replies to this reply so it's nonces all the way down.
     if current_user.banned or current_user.ban_comments:
         return _('You have been banned.')
     post = Post.query.get_or_404(post_id)
@@ -540,16 +537,20 @@ def add_reply_inline(post_id: int, comment_id: int):
         return _('You cannot reply to %(name)s', name=in_reply_to.author.display_name())
 
     if request.method == 'GET':
-        return render_template('post/add_reply_inline.html', post_id=post_id, comment_id=comment_id, languages=languages_for_form())
+        return render_template('post/add_reply_inline.html', post_id=post_id, comment_id=comment_id, nonce=nonce,
+                               languages=languages_for_form(), markdown_editor=current_user.markdown_editor)
     else:
         content = request.form.get('body', '').strip()
         language_id = int(request.form.get('language_id'))
 
         if content == '':
             return f'<div id="reply_to_{comment_id}" class="hidable"></div>' # do nothing, just hide the form
-        reply = PostReply.new(current_user, post, in_reply_to=in_reply_to, body=piefed_markdown_to_lemmy_markdown(content),
-                              body_html=markdown_to_html(content), notify_author=True,
-                              language_id=language_id, distinguished=False)
+        try:
+            reply = PostReply.new(current_user, post, in_reply_to=in_reply_to, body=piefed_markdown_to_lemmy_markdown(content),
+                                  body_html=markdown_to_html(content), notify_author=True,
+                                  language_id=language_id, distinguished=False)
+        except PostReplyValidationError as e:
+            return '<div id="reply_to_{comment_id}" class="hidable"><span class="red">' + str(e) + '</span></div>'
 
         current_user.language_id = language_id
         reply.ap_id = reply.profile_id()
@@ -564,7 +565,7 @@ def add_reply_inline(post_id: int, comment_id: int):
                                                   UserFlair.user_id == current_user.id):
                 user_flair[u_flair.user_id] = u_flair.flair
 
-        return render_template('post/add_reply_inline_result.html', post_reply=reply, user_flair=user_flair)
+        return render_template('post/add_reply_inline_result.html', post_reply=reply, user_flair=user_flair, nonce=nonce)
 
 
 @bp.route('/post/<int:post_id>/options_menu', methods=['GET'])
@@ -911,7 +912,7 @@ def post_bookmark(post_id: int):
     except NoResultFound:
         abort(404)
 
-    return redirect(referrer(url_for('activitypub.post_ap', post_id=post_id)))
+    return render_template('post/_add_remove_bookmark.html', post_id=post_id, action_type="add", item_type="post")
 
 
 @bp.route('/post/<int:post_id>/remove_bookmark', methods=['POST'])
@@ -922,7 +923,19 @@ def post_remove_bookmark(post_id: int):
     except NoResultFound:
         abort(404)
 
-    return redirect(referrer(url_for('activitypub.post_ap', post_id=post_id)))
+    return render_template('post/_add_remove_bookmark.html', post_id=post_id, action_type="remove", item_type="post")
+
+
+@bp.route('/post/<int:post_id>/comment/<int:comment_id>/bookmark', methods=['POST'])
+@login_required
+def post_reply_bookmark(post_id: int, comment_id: int):
+    try:
+        bookmark_reply(comment_id, SRC_WEB)
+    except NoResultFound:
+        abort(404)
+
+    return render_template('post/_add_remove_bookmark.html', post_id=post_id, reply_id=comment_id,
+                           action_type="add", item_type="reply")
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/remove_bookmark', methods=['POST'])
@@ -933,7 +946,8 @@ def post_reply_remove_bookmark(post_id: int, comment_id: int):
     except NoResultFound:
         abort(404)
 
-    return redirect(url_for('activitypub.post_ap', post_id=post_id))
+    return render_template('post/_add_remove_bookmark.html', post_id=post_id, reply_id=comment_id,
+                           action_type="remove", item_type="reply")
 
 
 @bp.route('/post/<int:post_id>/report', methods=['GET', 'POST'])
@@ -1020,7 +1034,21 @@ def post_block_user(post_id: int):
     flash(_('%(name)s has been blocked.', name=post.author.user_name))
     cache.delete_memoized(blocked_users, current_user.id)
 
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        curr_url = request.headers.get('HX-Current-Url')
+
+        if "/post/" in curr_url:
+            resp.headers['HX-Redirect'] = post.community.local_url()
+        elif "/u/" in curr_url:
+            resp.headers['HX-Redirect'] = url_for("main.index")
+        else:
+            resp.headers['HX-Redirect'] = curr_url
+        
+        return resp
+
     # todo: federate block to post author instance
+    # task_selector()...
 
     return redirect(post.community.local_url())
 
@@ -1035,6 +1063,18 @@ def post_block_domain(post_id: int):
         db.session.commit()
         cache.delete_memoized(blocked_domains, current_user.id)
     flash(_('Posts linking to %(name)s will be hidden.', name=post.domain.name))
+    
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        curr_url = request.headers.get('HX-Current-Url')
+        
+        if "/post/" in curr_url:
+            resp.headers['HX-Redirect'] = url_for("main.index")
+        else:
+            resp.headers['HX-Redirect'] = curr_url
+        
+        return resp
+    
     return redirect(post.community.local_url())
 
 
@@ -1048,6 +1088,19 @@ def post_block_community(post_id: int):
         db.session.commit()
         cache.delete_memoized(blocked_communities, current_user.id)
     flash(_('Posts in %(name)s will be hidden.', name=post.community.display_name()))
+    
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        curr_url = request.headers.get('HX-Current-Url')
+        redir_home = ["/c/", "/post/"]
+        
+        if any(found_str in curr_url for found_str in redir_home):
+            resp.headers['HX-Redirect'] = url_for("main.index")
+        else:
+            resp.headers['HX-Redirect'] = curr_url
+        
+        return resp
+    
     return redirect(post.community.local_url())
 
 
@@ -1057,6 +1110,18 @@ def post_block_instance(post_id: int):
     post = Post.query.get_or_404(post_id)
     block_remote_instance(post.instance_id, SRC_WEB)
     flash(_('Content from %(name)s will be hidden.', name=post.instance.domain))
+
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        curr_url = request.headers.get('HX-Current-Url')
+
+        if post.instance.domain in curr_url or "/post/" in curr_url:
+            resp.headers["HX-Redirect"] = url_for("main.index")
+        else:
+            resp.headers["HX-Redirect"] = curr_url
+        
+        return resp
+
     return redirect(post.community.local_url())
 
 
@@ -1199,17 +1264,6 @@ def post_reply_report(post_id: int, comment_id: int):
     return render_template('post/post_reply_report.html', title=_('Report comment'), form=form, post=post, post_reply=post_reply)
 
 
-@bp.route('/post/<int:post_id>/comment/<int:comment_id>/bookmark', methods=['POST'])
-@login_required
-def post_reply_bookmark(post_id: int, comment_id: int):
-    try:
-        bookmark_reply(comment_id, SRC_WEB)
-    except NoResultFound:
-        abort(404)
-
-    return redirect(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{comment_id}'))
-
-
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/block_user', methods=['POST'])
 @login_required
 def post_reply_block_user(post_id: int, comment_id: int):
@@ -1222,6 +1276,22 @@ def post_reply_block_user(post_id: int, comment_id: int):
     flash(_('%(name)s has been blocked.', name=post_reply.author.user_name))
     cache.delete_memoized(blocked_users, current_user.id)
 
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        curr_url = request.headers.get('HX-Current-Url')
+        
+        if "/post/" in curr_url:
+            if post_reply.author.id != post.author.id:
+                resp.headers['HX-Redirect'] = url_for('activitypub.post_ap', post_id=post.id)
+            else:
+                resp.headers['HX-Redirect'] = post.community.local_url()
+        elif "/u/" in curr_url:
+            resp.headers['HX-Redirect'] = url_for("main.index")
+        else:
+            resp.headers['HX-Redirect'] = curr_url
+        
+        return resp
+
     # todo: federate block to post_reply author instance
 
     return redirect(url_for('activitypub.post_ap', post_id=post.id))
@@ -1233,6 +1303,24 @@ def post_reply_block_instance(post_id: int, comment_id: int):
     post_reply = PostReply.query.get_or_404(comment_id)
     block_remote_instance(post_reply.instance_id, SRC_WEB)
     flash(_('Content from %(name)s will be hidden.', name=post_reply.instance.domain))
+
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        curr_url = request.headers.get('HX-Current-Url')
+
+        if post_reply.instance.domain in curr_url:
+            resp.headers["HX-Redirect"] = url_for("main.index")
+        elif "/post/" in curr_url:
+            post = Post.query.get(post_id)
+            if post is not None and post.instance_id == post_reply.instance_id:
+                resp.headers["HX-Redirect"] = url_for("main.index")
+            else:
+                resp.headers["HX-Redirect"] = curr_url
+        else:
+            resp.headers["HX-Redirect"] = curr_url
+        
+        return resp
+
     return redirect(url_for('activitypub.post_ap', post_id=post_id))
 
 

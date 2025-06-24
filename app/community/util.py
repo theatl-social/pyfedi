@@ -111,7 +111,7 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                             db.session.add(new_membership)
                         try:
                             db.session.commit()
-                        except IntegrityError as e:
+                        except IntegrityError:
                             db.session.rollback()
 
         elif community_json and 'attributedTo' in community_json:
@@ -129,7 +129,7 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                                 db.session.add(new_membership)
                             try:
                                 db.session.commit()
-                            except IntegrityError as e:
+                            except IntegrityError:
                                 db.session.rollback()
         if is_peertube:
             community.restricted_to_mods = True

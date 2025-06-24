@@ -14,13 +14,13 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from app import db, cache, celery, httpx_client, limiter
 from app.activitypub.signature import RsaKeys, post_request, send_post_request
-from app.activitypub.util import extract_domain_and_actor
+from app.activitypub.util import extract_domain_and_actor, find_actor_or_create
 from app.chat.util import send_message
 from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, CreateImageForm, CreateLinkForm, \
     ReportCommunityForm, \
     DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm, \
     EscalateReportForm, ResolveReportForm, CreateVideoForm, CreatePollForm, EditCommunityWikiPageForm, \
-    InviteCommunityForm, MoveCommunityForm, EditCommunityFlairForm, SetMyFlairForm
+    InviteCommunityForm, MoveCommunityForm, EditCommunityFlairForm, SetMyFlairForm, FindAndBanUserCommunityForm
 from app.community.util import search_for_community, actor_to_community, \
     save_icon_file, save_banner_file, \
     delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users, find_potential_moderators
@@ -1307,33 +1307,75 @@ def community_moderate(actor):
         abort(404)
 
 
-@bp.route('/<actor>/moderate/subscribers', methods=['GET'])
+@bp.route('/<actor>/moderate/subscribers', methods=['GET','POST'])
 @login_required
 def community_moderate_subscribers(actor):
     community = actor_to_community(actor)
+    ban_user_form = FindAndBanUserCommunityForm()
 
-    if community is not None:
+    if ban_user_form.submit.data and ban_user_form.validate():
+        # find the user
+        user_to_ban = find_actor_or_create(ban_user_form.user_name.data)
+
+        if isinstance(user_to_ban, User):
+            return redirect(url_for('community.community_ban_user', community_id=community.id, user_id=user_to_ban.id))
+        else:
+            flash(_(f'User: {ban_user_form.user_name.data} unable to be found'))
+            return redirect(url_for('community.community_moderate_subscribers',actor=actor))
+    elif community is not None:
         if community.is_moderator() or current_user.is_admin():
 
             page = request.args.get('page', 1, type=int)
             low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+            sort_by = request.args.get('sort_by', 'last_seen DESC')
+            search = request.args.get('search', '')
+            
+            # Handle sort_by_btn redirects
+            sort_by_btn = request.args.get('sort_by_btn', '')
+            if sort_by_btn:
+                return redirect(url_for('community.community_moderate_subscribers', actor=actor, page=page, sort_by=sort_by_btn, search=search))
 
-            subscribers = User.query.join(CommunityMember, CommunityMember.user_id == User.id).filter(CommunityMember.community_id == community.id)
+            subscribers = db.session.query(User, CommunityMember.created_at).join(CommunityMember, CommunityMember.user_id == User.id).filter(CommunityMember.community_id == community.id)
             subscribers = subscribers.filter(CommunityMember.is_banned == False)
+            
+            # Apply search filter
+            if search:
+                subscribers = subscribers.filter(User.user_name.ilike(f'%{search}%'))
+            
+            # Apply sorting
+            if sort_by.startswith('joined'):
+                if 'DESC' in sort_by:
+                    subscribers = subscribers.order_by(desc(CommunityMember.created_at))
+                else:
+                    subscribers = subscribers.order_by(CommunityMember.created_at)
+            elif sort_by.startswith('last_seen'):
+                if 'DESC' in sort_by:
+                    subscribers = subscribers.order_by(desc(User.last_seen))
+                else:
+                    subscribers = subscribers.order_by(User.last_seen)
+            elif sort_by.startswith('local_remote'):
+                if 'DESC' in sort_by:
+                    subscribers = subscribers.order_by(desc(User.ap_id.is_(None)))
+                else:
+                    subscribers = subscribers.order_by(User.ap_id.is_(None))
+            else:
+                subscribers = subscribers.order_by(desc(User.last_seen))
 
             # Pagination
             subscribers = subscribers.paginate(page=page, per_page=100 if not low_bandwidth else 50, error_out=False)
-            next_url = url_for('community.community_moderate_subscribers', actor=actor, page=subscribers.next_num) if subscribers.has_next else None
-            prev_url = url_for('community.community_moderate_subscribers', actor=actor, page=subscribers.prev_num) if subscribers.has_prev and page != 1 else None
+            next_url = url_for('community.community_moderate_subscribers', actor=actor, page=subscribers.next_num, sort_by=sort_by, search=search) if subscribers.has_next else None
+            prev_url = url_for('community.community_moderate_subscribers', actor=actor, page=subscribers.prev_num, sort_by=sort_by, search=search) if subscribers.has_prev and page != 1 else None
 
             banned_people = User.query.join(CommunityBan, CommunityBan.user_id == User.id).filter(CommunityBan.community_id == community.id).all()
 
             return render_template('community/community_moderate_subscribers.html', title=_('Moderation of %(community)s', community=community.display_name()),
                                    community=community, current='subscribers', subscribers=subscribers, banned_people=banned_people,
+                                   ban_user_form=ban_user_form, sort_by=sort_by, search=search,
                                    next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
         else:
             abort(401)
+
     else:
         abort(404)
 
@@ -2077,6 +2119,6 @@ def retrieve_title_of_url(url):
             return ""
         else:
             return ""
-    except Exception as e:
+    except Exception:
         return ""
 

@@ -22,6 +22,7 @@ from app.activitypub.util import instance_allowed, extract_domain_and_actor
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm, \
     EditInstanceForm, RemoteInstanceScanForm, MoveCommunityForm, EditBlockedImageForm, AddBlockedImageForm, CmsPageForm
+from flask_wtf import FlaskForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form, move_community_images_to_here
 from app.community.util import save_icon_file, save_banner_file, search_for_community
@@ -44,7 +45,10 @@ from app.admin import bp
 @login_required
 def admin_home():
     load1, load5, load15 = os.getloadavg()
-    num_cores = os.cpu_count()
+    if current_app.config["NUM_CPU"] and current_app.config["NUM_CPU"] != 0:
+        num_cores = current_app.config["NUM_CPU"]
+    else:
+        num_cores = os.cpu_count()
     path = os.getcwd()
     usage = shutil.disk_usage(path)
 
@@ -232,7 +236,7 @@ def admin_misc():
         form.filter_selection.data = get_setting('filter_selection', True)
         form.private_instance.data = site.private_instance
         form.registration_approved_email.data = get_setting('registration_approved_email', '')
-        form.ban_check_servers.data = get_setting('ban_check_servers', 'piefed.social')
+        form.ban_check_servers.data = get_setting('ban_check_servers', '')
     return render_template('admin/misc.html', title=_('Misc settings'), form=form)
 
 
@@ -1002,7 +1006,6 @@ def admin_community_edit(community_id):
         community.description = form.description.data
         community.description_html = markdown_to_html(form.description.data)
         community.rules = form.rules.data
-        community.rules_html = markdown_to_html(form.rules.data)
         community.nsfw = form.nsfw.data
         community.banned = form.banned.data
         community.local_only = form.local_only.data
@@ -1454,6 +1457,9 @@ def admin_users_add():
 @permission_required('administer all users')
 @login_required
 def admin_user_delete(user_id):
+    if user_id == 1:
+        flash(_('This user cannot be deleted.'))
+        return redirect(referrer())
     user = User.query.get_or_404(user_id)
 
     user.banned = True  # Unsubscribing everyone could take a long time so until that is completed hide this user from the UI by banning it.
@@ -1519,6 +1525,7 @@ def newsletter():
 @permission_required('change user roles')
 @login_required
 def admin_permissions():
+    form = FlaskForm()
     if request.method == 'POST':
         permissions = db.session.execute(text('SELECT DISTINCT permission FROM "role_permission"')).fetchall()
         db.session.execute(text('DELETE FROM "role_permission"'))
@@ -1538,7 +1545,7 @@ def admin_permissions():
     permissions = db.session.execute(text('SELECT DISTINCT permission FROM "role_permission"')).fetchall()
 
     return render_template('admin/permissions.html', title=_('Role permissions'), roles=roles,
-                           permissions=permissions)
+                           form=form, permissions=permissions)
 
 
 @bp.route('/instances', methods=['GET', 'POST'])
@@ -1731,6 +1738,7 @@ def admin_blocked_image_add():
 @permission_required('administer all communities')
 @login_required
 def admin_blocked_image_purge_posts():
+    form = FlaskForm()
     if request.method == 'POST':
         post_ids = request.form.getlist('post_ids')
 
@@ -1742,7 +1750,7 @@ def admin_blocked_image_purge_posts():
 
     posts = Post.query.filter(Post.id.in_(posts_with_blocked_images()), Post.deleted == False).order_by(desc(Post.posted_at)).all()
     return render_template('post/post_block_image_purge_posts.html', posts=posts, title=_('Posts containing blocked images'),
-                           referrer=request.args.get('referrer'))
+                           form=form, referrer=request.args.get('referrer'))
 
 
 @bp.route('/blocked_image/<int:image_id>/delete', methods=['POST'])

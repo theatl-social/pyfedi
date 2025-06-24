@@ -76,7 +76,7 @@
                 {% if not post_reply.post.deleted and not post_reply.deleted -%}
                     {% if current_user.is_authenticated -%}
                         <a href="{{ url_for('post.add_reply', post_id=post_reply.post.id, comment_id=post_reply.id) }}"
-                           hx-get="{{ url_for('post.add_reply_inline', post_id=post_reply.post.id, comment_id=post_reply.id) }}"
+                           hx-get="{{ url_for('post.add_reply_inline', post_id=post_reply.post.id, comment_id=post_reply.id, nonce=nonce) }}"
                            hx-target="#reply_to_{{ post_reply.id }}"
                            hx-swap="innerHTML focus-scroll:true"
                            rel="nofollow noindex"><span class="fe fe-reply"></span><span class="hide_skinny_mobile">&nbsp;reply</span></a>

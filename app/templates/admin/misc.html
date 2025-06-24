@@ -1,12 +1,17 @@
-{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
-    {% extends 'themes/' + theme() + '/base.html' %}
-{% else %}
-    {% extends "base.html" %}
-{% endif %}
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
 {% from 'bootstrap5/form.html' import render_field %}
 {% set active_child = 'admin_misc' %}
 
+{% block extra_css %}
+    <link href="{{ url_for('static', filename='js/tomselect/tom-select.css') }}" type="text/css" rel="stylesheet" />
+{% endblock %}
+
 {% block app_content %}
+<script src="/static/js/tomselect/tom-select.complete.min.js"></script>
 {% include 'admin/_tabbed_nav.html' %}
 <br>
 <div class="row">
@@ -30,7 +35,9 @@
             {{ render_field(form.enable_nsfl) }}
             {{ render_field(form.community_creation_admin_only) }}
             {{ render_field(form.reports_email_admins) }}
-            {{ render_field(form.language_id) }}
+            <div id="tom_select">
+                {{ render_field(form.language_id) }}
+            </div>
             <hr>
             <h3>{{ _('Registration') }}</h3>
             {{ render_field(form.registration_mode) }}

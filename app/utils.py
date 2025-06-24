@@ -100,9 +100,9 @@ def getmtime(filename):
 def get_request(uri, params=None, headers=None) -> httpx.Response:
     timeout = 15 if 'washingtonpost.com' in uri else 10  # Washington Post is really slow on og:image for some reason
     if headers is None:
-        headers = {'User-Agent': f'PieFed/1.0; +https://{current_app.config["SERVER_NAME"]}'}
+        headers = {'User-Agent': f'PieFed/{current_app.config["VERSION"]}; +https://{current_app.config["SERVER_NAME"]}'}
     else:
-        headers.update({'User-Agent': f'PieFed/1.0; +https://{current_app.config["SERVER_NAME"]}'})
+        headers.update({'User-Agent': f'PieFed/{current_app.config["VERSION"]}; +https://{current_app.config["SERVER_NAME"]}'})
     if params and '/webfinger' in uri:
         payload_str = urllib.parse.urlencode(params, safe=':@')
     else:
@@ -144,9 +144,9 @@ def get_request_instance(uri, instance: Instance, params=None, headers=None) -> 
 # do a HEAD request to a uri, return the result
 def head_request(uri, params=None, headers=None) -> httpx.Response:
     if headers is None:
-        headers = {'User-Agent': f'PieFed/1.0; +https://{current_app.config["SERVER_NAME"]}'}
+        headers = {'User-Agent': f'PieFed/{current_app.config["VERSION"]}; +https://{current_app.config["SERVER_NAME"]}'}
     else:
-        headers.update({'User-Agent': f'PieFed/1.0; +https://{current_app.config["SERVER_NAME"]}'})
+        headers.update({'User-Agent': f'PieFed/{current_app.config["VERSION"]}; +https://{current_app.config["SERVER_NAME"]}'})
     try:
         response = httpx_client.head(uri, params=params, headers=headers, timeout=5, allow_redirects=True)
     except httpx.HTTPError as er:
@@ -268,7 +268,7 @@ def mime_type_using_head(url):
 
 allowed_tags = ['p', 'strong', 'a', 'ul', 'ol', 'li', 'em', 'blockquote', 'cite', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre',
                 'code', 'img', 'details', 'summary', 'table', 'tr', 'td', 'th', 'tbody', 'thead', 'hr', 'span', 'small', 'sub', 'sup',
-                's', 'tg-spoiler']
+                's', 'tg-spoiler', 'ruby', 'rt', 'rp']
 
 # sanitise HTML using an allow list
 def allowlist_html(html: str, a_target='_blank') -> str:
@@ -362,6 +362,10 @@ def allowlist_html(html: str, a_target='_blank') -> str:
     # replace the 'static' for images hotlinked to fandom sites with 'vignette'
     re_fandom_hotlink = re.compile(r'<img alt="(.*?)" loading="lazy" src="https://static.wikia.nocookie.net')
     clean_html = re_fandom_hotlink.sub(r'<img alt="\1" loading="lazy" src="https://vignette.wikia.nocookie.net', clean_html)
+
+    # replace ruby markdown like {漢字|かんじ}
+    re_ruby = re.compile(r'\{(.+?)\|(.+?)\}')
+    clean_html = re_ruby.sub(r'<ruby>\1<rp>(</rp><rt>\2</rt><rp>)</rp></ruby>', clean_html)
 
     return clean_html
 
@@ -605,6 +609,8 @@ def digits(input: int) -> int:
 def user_access(permission: str, user_id: int) -> bool:
     if user_id == 0:
         return False
+    if user_id == 1:
+        return True
     has_access = db.session.execute(text('SELECT * FROM "role_permission" as rp ' +
                                     'INNER JOIN user_role ur on rp.role_id = ur.role_id ' +
                                     'WHERE ur.user_id = :user_id AND rp.permission = :permission'),
@@ -777,26 +783,37 @@ def permission_required(permission):
     return decorator
 
 
-def login_required(func):
 
-    @wraps(func)
-    def decorated_view(*args, **kwargs):
-        if request.method in {"OPTIONS"} or current_app.config.get("LOGIN_DISABLED"):
-            pass
-        elif not current_user.is_authenticated:
-            return current_app.login_manager.unauthorized()
+def login_required(csrf=True):
+    def decorator(func):
+        @wraps(func)
+        def decorated_view(*args, **kwargs):
+            if request.method in {"OPTIONS"} or current_app.config.get("LOGIN_DISABLED"):
+                pass
+            elif not current_user.is_authenticated:
+                return current_app.login_manager.unauthorized()
 
-        # Validate CSRF token for POST requests
-        if request.method == 'POST':
-            validate_csrf(request.form.get('csrf_token', request.headers.get('x-csrftoken')))
+            # Validate CSRF token for POST requests
+            if request.method == 'POST' and csrf:
+                validate_csrf(request.form.get('csrf_token', request.headers.get('x-csrftoken')))
 
-        # flask 1.x compatibility
-        # current_app.ensure_sync is only available in Flask >= 2.0
-        if callable(getattr(current_app, "ensure_sync", None)):
-            return current_app.ensure_sync(func)(*args, **kwargs)
-        return func(*args, **kwargs)
+            # flask 1.x compatibility
+            # current_app.ensure_sync is only available in Flask >= 2.0
+            if callable(getattr(current_app, "ensure_sync", None)):
+                return current_app.ensure_sync(func)(*args, **kwargs)
+            return func(*args, **kwargs)
 
-    return decorated_view
+        return decorated_view
+    
+    # Handle both @login_required and @login_required()
+    if callable(csrf):
+        # Called as @login_required (csrf is actually the function)
+        func = csrf
+        csrf = True
+        return decorator(func)
+    else:
+        # Called as @login_required(csrf=False)
+        return decorator
 
 
 def debug_mode_only(func):
@@ -1470,14 +1487,14 @@ def current_theme():
         if current_user.theme is not None and current_user.theme != '':
             return current_user.theme
         else:
-            return site.default_theme if site.default_theme is not None else ''
+            return site.default_theme if site.default_theme is not None else 'piefed'
     else:
-        return site.default_theme if site.default_theme is not None else ''
+        return site.default_theme if site.default_theme is not None else 'piefed'
 
 
 def theme_list():
     """ All the themes available, by looking in the templates/themes directory """
-    result = [('', 'PieFed')]
+    result = [('piefed', 'PieFed')]
     for root, dirs, files in os.walk('app/templates/themes'):
         for dir in dirs:
             if os.path.exists(f'app/templates/themes/{dir}/{dir}.json'):
@@ -1661,6 +1678,7 @@ def languages_for_form(all=False):
             if id:
                 used_languages.append((id, ""))
 
+    other_languages = []
     for language in Language.query.order_by(Language.name).all():
         try:
             i = used_languages.index((language.id, ""))
@@ -1668,8 +1686,6 @@ def languages_for_form(all=False):
         except:
             if all and language.code != "und":
                 other_languages.append((language.id, language.name))
-    else:
-        other_languages = []
 
     return used_languages + other_languages
 
@@ -1771,7 +1787,6 @@ def authorise_api_user(auth, return_type=None, id_match=None) -> User | int:
     decoded = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
     if decoded:
         user_id = decoded['sub']
-        issued_at = decoded['iat']      # use to check against blacklisted JWTs
         user = User.query.filter_by(id=user_id, ap_id=None, verified=True, banned=False, deleted=False).one()
         if id_match and user.id != id_match:
             raise Exception('incorrect_login')
@@ -1988,11 +2003,10 @@ def paginate_post_ids(post_ids, page: int, page_length: int):
 
 
 def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) -> List[int]:
+    from app import redis_client
     if community_ids is None or len(community_ids) == 0:
         return []
-    redis_client = None
     if result_id:
-        redis_client = get_redis_connection()
         if redis_client.exists(result_id):
             return json.loads(redis_client.get(result_id))
 
@@ -2085,8 +2099,6 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
     post_ids = dedupe_post_ids(post_ids)
 
     if current_user.is_authenticated:
-        if redis_client is None:
-            redis_client = get_redis_connection()
         redis_client.set(result_id, json.dumps(post_ids), ex=86400)    # 86400 is 1 day
     return post_ids
 
@@ -2121,7 +2133,7 @@ def move_file_to_s3(file_id, s3):
                     'app/static/media'):
                 if os.path.isfile(file.thumbnail_path):
                     content_type = guess_mime_type(file.thumbnail_path)
-                    new_path = file.thumbnail_path.replace('app/static/media/', f"")
+                    new_path = file.thumbnail_path.replace('app/static/media/', "")
                     s3.upload_file(file.thumbnail_path, current_app.config['S3_BUCKET'], new_path, ExtraArgs={'ContentType': content_type})
                     os.unlink(file.thumbnail_path)
                     file.thumbnail_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
@@ -2131,7 +2143,7 @@ def move_file_to_s3(file_id, s3):
                     'app/static/media'):
                 if os.path.isfile(file.file_path):
                     content_type = guess_mime_type(file.file_path)
-                    new_path = file.file_path.replace('app/static/media/', f"")
+                    new_path = file.file_path.replace('app/static/media/', "")
                     s3.upload_file(file.file_path, current_app.config['S3_BUCKET'], new_path, ExtraArgs={'ContentType': content_type})
                     os.unlink(file.file_path)
                     file.file_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
@@ -2141,7 +2153,7 @@ def move_file_to_s3(file_id, s3):
                     'app/static/media'):
                 if os.path.isfile(file.source_url):
                     content_type = guess_mime_type(file.source_url)
-                    new_path = file.source_url.replace('app/static/media/', f"")
+                    new_path = file.source_url.replace('app/static/media/', "")
                     s3.upload_file(file.source_url, current_app.config['S3_BUCKET'], new_path, ExtraArgs={'ContentType': content_type})
                     os.unlink(file.source_url)
                     file.source_url = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
@@ -2348,3 +2360,35 @@ def on_unread_notifications_set(target, value, oldvalue, initiator):
 def publish_sse_event(key, value):
     r = get_redis_connection()
     r.publish(key, value)
+
+def apply_feed_url_rules(self):
+    if '-' in self.url.data.strip():
+        self.url.errors.append(_l('- cannot be in Url. Use _ instead?'))
+        return False
+
+    if not self.public.data and not '/' in self.url.data.strip():
+        self.url.data = self.url.data.strip().lower() + '/' + current_user.user_name.lower()
+    elif self.public.data and '/' in self.url.data.strip():
+        self.url.data = self.url.data.strip().split('/', 1)[0]
+    else:
+        self.url.data = self.url.data.strip().lower()
+
+    # Allow alphanumeric characters and underscores (a-z, A-Z, 0-9, _)
+    if self.public.data:
+        regex = r'^[a-zA-Z0-9_]+$'
+    else:
+        regex = r'^[a-zA-Z0-9_]+(?:/' + current_user.user_name.lower() + ')?$'
+    if not re.match(regex, self.url.data):
+        self.url.errors.append(_l('Feed urls can only contain letters, numbers, and underscores.'))
+        return False
+
+    try:
+        self.feed_id
+    except AttributeError:
+        feed = Feed.query.filter(Feed.name == self.url.data).first()
+    else:
+        feed = Feed.query.filter(Feed.name == self.url.data).filter(Feed.id != self.feed_id).first()
+    if feed is not None:
+        self.url.errors.append(_l('A Feed with this url already exists.'))
+        return False
+    return True

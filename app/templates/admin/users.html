@@ -1,8 +1,8 @@
-{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
-    {% extends 'themes/' + theme() + '/base.html' %}
-{% else %}
-    {% extends "base.html" %}
-{% endif %}
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
 {% from "_macros.html" import render_username %}
 {% set active_child = 'admin_users' %}
@@ -70,6 +70,12 @@
                    </button>
                </th>
                <th>
+                   <button form="searchUsers" name="sort_by_btn" value="created{{' ASC' if sort_by == 'created DESC' else ' DESC' }}" class="btn" title="{{ _('Created') }}">
+                       {{ _('Created') }}
+                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'created ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'created DESC' }}"></span>
+                   </button>
+               </th>
+               <th>
                    <button form="searchUsers" name="sort_by_btn" value="last_seen{{' ASC' if sort_by == 'last_seen DESC' else ' DESC' }}" class="btn" title="{{ _('Last seen.') }}">
                        {{ _('Seen') }}
                        <span class="{{ 'fe fe-chevron-up' if sort_by == 'last_seen ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'last_seen DESC' }}"></span>
@@ -86,6 +92,7 @@
                     <td><span title="{{ _('Reports') }}">{{ user.reports if user.reports > 0 }}</span></td>
                     <td><span title="{{ _('Attitude') }}">{% if user.attitude %}{{ (user.attitude * 100) | round | int }}%{% endif %}</span></td>
                     <td><span title="{{ _('Reputation') }}">{% if user.reputation %}R {{ user.reputation | round | int }}{% endif %}</span></td>
+                    <td><span title="{{ _('Created') }}: {{ user.created }}">{{ arrow.get(user.created).humanize(locale=locale) }}</span></td>
                     <td><span title="{{ _('Last Seen') }}: {{ user.last_seen }}">{{ arrow.get(user.last_seen).humanize(locale=locale) }}</span></td>
                     <td><a href="{{ url_for('admin.admin_user_edit', user_id=user.id) }}">{{ ('Edit') }}</a>,
                         <a href="#" data-url="{{ url_for('admin.admin_user_delete', user_id=user.id) }}" class="confirm_first send_post">{{ ('Delete') }}</a>,

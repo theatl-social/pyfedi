@@ -133,6 +133,10 @@ class BanUserCommunityForm(FlaskForm):
     submit = SubmitField(_l('Ban'))
 
 
+class FindAndBanUserCommunityForm(FlaskForm):
+    user_name = StringField(_l('User name'), validators=[DataRequired()])
+    submit = SubmitField(_l('Find'))
+
 class CreatePostForm(FlaskForm):
     communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select',
                                                                                                    'hx-get': '/community/community_changed',

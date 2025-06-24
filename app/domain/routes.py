@@ -200,6 +200,13 @@ def domain_block(domain_id):
         db.session.commit()
     cache.delete_memoized(blocked_domains, current_user.id)
     flash(_('%(name)s blocked.', name=domain.name))
+
+    if request.headers.get("HX-Request"):
+        resp = make_response()
+        resp.headers["HX-Redirect"] = url_for("domain.show_domain", domain_id=domain.id)
+        
+        return resp
+
     return redirect(url_for('domain.show_domain', domain_id=domain.id))
 
 
@@ -213,6 +220,18 @@ def domain_unblock(domain_id):
         db.session.commit()
     cache.delete_memoized(blocked_domains, current_user.id)
     flash(_('%(name)s un-blocked.', name=domain.name))
+
+    if request.headers.get("HX-Request"):
+        resp = make_response()
+        curr_url = request.headers.get("HX-Current-Url")
+
+        if "/d/" in curr_url:
+            resp.headers["HX-Redirect"] = url_for("domain.show_domain", domain_id=domain.id)
+        else:
+            resp.headers["HX-Redirect"] = curr_url
+        
+        return resp
+
     return redirect(url_for('domain.show_domain', domain_id=domain.id))
 
 

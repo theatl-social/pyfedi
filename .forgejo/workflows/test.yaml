@@ -1,0 +1,26 @@
+on:
+  push:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  lint:
+    runs-on: codeberg-tiny
+    env:
+      FORCE_COLOR: "1"
+
+    steps:
+      - name: Checkout
+        uses: https://code.forgejo.org/actions/checkout@v4
+        with:
+          show-progress: "false"
+
+      - name: Lint code with Ruff
+        uses: docker://ghcr.io/astral-sh/ruff:0.12
+        with:
+          args: check --target-version=py39
+
+      - name: Check code formatting with Ruff
+        uses: docker://ghcr.io/astral-sh/ruff:0.12
+        with:
+          args: format --diff --target-version=py39

@@ -1117,6 +1117,16 @@ function setupFancySelects() {
     if(community && community.type === 'select-one') {
         new TomSelect('#community', {maxOptions: null, maxItems: 1});
     }
+
+    var languageSelect = document.querySelector('#tom_select div #language_id');
+    if (languageSelect) {
+        new TomSelect('#tom_select #language_id', {maxOptions: null, maxItems: 1});
+    }
+
+    var languageSelect2 = document.querySelector('#tom_select div #languages');
+    if (languageSelect2) {
+        new TomSelect('#tom_select #languages', {maxOptions: null});
+    }
 }
 
 function setupImagePreview() {

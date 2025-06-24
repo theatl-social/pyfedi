@@ -1,4 +1,4 @@
-REQUEST_TIMEOUT = 2
+VERSION = '1.0.0'
 
 POST_TYPE_LINK = 1
 POST_TYPE_ARTICLE = 2
@@ -107,3 +107,5 @@ APLOG_REMOVE        = (True, 'Remove')
 
 APLOG_ANNOUNCE      = (True, 'Announce')
 APLOG_PT_VIEW       = (True, 'PeerTube View')
+
+REQUEST_TIMEOUT = 2
