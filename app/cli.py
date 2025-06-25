@@ -18,6 +18,7 @@ from sqlalchemy import or_, desc, text
 from app import db, cache
 import click
 import os
+import redis
 
 from app.activitypub.signature import RsaKeys, send_post_request
 from app.activitypub.util import find_actor_or_create, extract_domain_and_actor, notify_about_post
@@ -494,50 +495,40 @@ def register(app):
     @app.cli.command('send-queue')
     def send_queue():
         with app.app_context():
-            # Semaphore to avoid parallel runs of this task
-            if get_setting('send-queue-running', False):
+            from app import redis_client
+            try:    # avoid parallel runs of this task using Redis lock
+                with redis_client.lock("lock:send-queue", timeout=300, blocking_timeout=1):
+                    # Check size of redis memory. Abort if > 200 MB used
+                    try:
+                        if redis_client and redis_client.memory_stats()['total.allocated'] > 200000000:
+                            print('Redis memory is quite full - stopping send queue to avoid making it worse.')
+                            return
+                    except: # retrieving memory stats fails on recent versions of redis. Once the redis package is fixed this problem should go away.
+                        ...
+
+                    to_be_deleted = []
+                    # Send all waiting Activities that are due to be sent
+                    for to_send in SendQueue.query.filter(SendQueue.send_after < utcnow()):
+                        if instance_online(to_send.destination_domain):
+                            if to_send.retries <= to_send.max_retries:
+                                send_post_request(to_send.destination, json.loads(to_send.payload), to_send.private_key, to_send.actor,
+                                                  retries=to_send.retries + 1)
+                            to_be_deleted.append(to_send.id)
+                        elif instance_gone_forever(to_send.destination_domain):
+                            to_be_deleted.append(to_send.id)
+                    # Remove them once sent - send_post_request will have re-queued them if they failed
+                    if len(to_be_deleted):
+                        db.session.execute(text('DELETE FROM "send_queue" WHERE id IN :to_be_deleted'), {'to_be_deleted': tuple(to_be_deleted)})
+                        db.session.commit()
+
+                    publish_scheduled_posts()
+
+            except redis.exceptions.LockError:
                 print('Send queue is still running - stopping this process to avoid duplication.')
                 return
-            set_setting('send-queue-running', True)
-
-            # Check size of redis memory. Abort if > 200 MB used
-            try:
-                redis = get_redis_connection()
-                try:
-                    if redis and redis.memory_stats()['total.allocated'] > 200000000:
-                        print('Redis memory is quite full - stopping send queue to avoid making it worse.')
-                        set_setting('send-queue-running', False)
-                        return
-                except: # retrieving memory stats fails on recent versions of redis. Once the redis package is fixed this problem should go away.
-                    ...
-            except:
-                print('Could not connect to redis')
-                set_setting('send-queue-running', False)
-                return
-
-            to_be_deleted = []
-            try:
-                # Send all waiting Activities that are due to be sent
-                for to_send in SendQueue.query.filter(SendQueue.send_after < utcnow()):
-                    if instance_online(to_send.destination_domain):
-                        if to_send.retries <= to_send.max_retries:
-                            send_post_request(to_send.destination, json.loads(to_send.payload), to_send.private_key, to_send.actor,
-                                              retries=to_send.retries + 1)
-                        to_be_deleted.append(to_send.id)
-                    elif instance_gone_forever(to_send.destination_domain):
-                        to_be_deleted.append(to_send.id)
-                # Remove them once sent - send_post_request will have re-queued them if they failed
-                if len(to_be_deleted):
-                    db.session.execute(text('DELETE FROM "send_queue" WHERE id IN :to_be_deleted'), {'to_be_deleted': tuple(to_be_deleted)})
-                    db.session.commit()
-
-                publish_scheduled_posts()
-
             except Exception as e:
-                set_setting('send-queue-running', False)
+                print('Could not connect to redis or other error occurred')
                 raise e
-            finally:
-                set_setting('send-queue-running', False)
 
     @app.cli.command('publish-scheduled-posts')
     def publish_scheduled_posts_command():
