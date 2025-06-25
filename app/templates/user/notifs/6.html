@@ -6,19 +6,21 @@
             :
         </div>
         {% if notification.subtype == "comment_mention" %}
-            <div class="overflow-ellipses-parent">
-                <div class="child">
+            <fieldset class="coolfieldset collapsed">
+                <legend class="w-100">Comment details</legend>
+                <p>
                     <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}"
                         class="{% if not notification.read %}unread{% endif %}">{{ notification.targets.comment_body }}</a>
-                </div>
-            </div>
+                </p>
+            </fieldset>
         {% else %}
-            <div class="overflow-ellipses-parent">
-                <div class="child">
+            <fieldset class="coolfieldset collapsed">
+                <legend class="w-100">Post details</legend>
+                <p>
                     <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}"
                         class="{% if not notification.read %}unread{% endif %}">{{ notification.targets.post_body }}</a>
-                </div>
-            </div>
+                </p>
+            </fieldset>
         {% endif %}
     </td>
     <td class="text-nowrap" width="120">{{ arrow.get(notification.created_at).humanize(locale=locale) }}</td>
