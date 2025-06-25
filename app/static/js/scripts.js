@@ -50,6 +50,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupPopupCommunitySidebar();
     setupVideoSpoilers();
     setupDynamicContentObserver();
+    setupCommunityFilter();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
@@ -1481,4 +1482,127 @@ function setupDynamicContent() {
     setupShowElementLinks();
     setupShowMoreLinks();
     setupUserPopup();
+}
+
+// Community filter (search box)
+function setupCommunityFilter() {
+    // Try and hookup the filter first (in case HTMX already loaded)
+    hookupCommunityFilter();
+
+    // HTMX event listeners for dynamic content loading
+    document.addEventListener('htmx:afterSwap', function(event) {
+        // Check if the swapped content contains the communities menu
+        if (event.target.classList && event.target.classList.contains('communities_menu')) {
+            hookupCommunityFilter();
+        }
+        
+        // Also check if the swapped content is inside the communities menu
+        const communitiesMenu = event.target.closest('.communities_menu');
+        if (communitiesMenu) {
+            hookupCommunityFilter();
+        }
+    });
+
+    document.addEventListener('htmx:afterSettle', function(event) {
+        // Double-check after settle in case afterSwap missed it
+        if (event.target.classList && event.target.classList.contains('communities_menu')) {
+            hookupCommunityFilter();
+        }
+    });
+}
+
+function hookupCommunityFilter() {
+    // Set up community filter functionality for the communities dropdown
+    const filterInput = document.getElementById('community-filter');
+    const clearButton = document.getElementById('clear-community-filter');
+
+    if (!filterInput) {
+        return; // Only run if filter element exists in current theme
+    }
+    
+    const communityItems = document.querySelectorAll('.community-item');
+    const communitySections = document.querySelectorAll('.community-section');
+
+    function filterCommunities() {
+        const filterText = filterInput.value.toLowerCase().trim();
+        
+        let visibleInModerating = false;
+        let visibleInJoined = false;
+        
+        // Show/hide clear button
+        if (clearButton) {
+            clearButton.style.display = filterText ? 'block' : 'none';
+        }
+        
+        communityItems.forEach((item, index) => {
+            const communityName = item.getAttribute('data-community-name') || '';
+            const isVisible = !filterText || communityName.includes(filterText);
+            
+            item.style.display = isVisible ? 'list-item' : 'none';
+            
+            // Track which sections have visible items
+            if (isVisible) {
+                const prevSection = item.previousElementSibling;
+                if (prevSection && prevSection.classList.contains('community-section')) {
+                    const sectionText = prevSection.textContent.toLowerCase();
+                    if (sectionText.includes('moderating')) {
+                        visibleInModerating = true;
+                    } else if (sectionText.includes('joined')) {
+                        visibleInJoined = true;
+                    }
+                }
+            }
+        });
+        
+        // Show/hide section headers based on whether they have visible items
+        communitySections.forEach((section, index) => {
+            const sectionText = section.textContent.toLowerCase();
+            let shouldShow = false;
+            
+            if (sectionText.includes('moderating')) {
+                shouldShow = visibleInModerating;
+            } else if (sectionText.includes('joined')) {
+                shouldShow = visibleInJoined;
+            }
+            
+            section.style.display = shouldShow ? 'list-item' : 'none';
+        });
+    }
+    
+    function clearFilter() {
+        filterInput.value = '';
+        filterCommunities();
+        filterInput.focus();
+    }
+    
+    // Event listeners
+    filterInput.addEventListener('input', filterCommunities);
+    filterInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            clearFilter();
+        }
+    });
+    
+    if (clearButton) {
+        clearButton.addEventListener('click', clearFilter);
+    }
+    
+    // Focus the input when the dropdown becomes visible
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'childList' && mutation.target.classList.contains('communities_menu')) {
+                // Check if the filter input is now in the DOM and visible
+                const currentFilter = document.getElementById('community-filter');
+                if (currentFilter && currentFilter.offsetParent !== null) {
+                    setTimeout(() => currentFilter.focus(), 100);
+                }
+            }
+        });
+    });
+    
+    // Observe the communities menu for changes (HTMX loading)
+    const communitiesMenu = document.querySelector('.communities_menu');
+    if (communitiesMenu) {
+        observer.observe(communitiesMenu, { childList: true, subtree: true });
+    }
 }
