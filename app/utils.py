@@ -1374,6 +1374,7 @@ def url_to_thumbnail_file(filename) -> File:
         response = httpx_client.get(filename, timeout=timeout)
     except:
         return None
+    
     if response.status_code == 200:
         content_type = response.headers.get('content-type')
         if content_type and content_type.startswith('image'):
@@ -1399,16 +1400,39 @@ def url_to_thumbnail_file(filename) -> File:
                 directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
             ensure_directory_exists(directory)
             final_place = os.path.join(directory, new_filename + file_extension)
+
             with open(final_place, 'wb') as f:
                 f.write(response.content)
             response.close()
+
+            # Use environment variables to determine URL thumbnail
+
+            medium_image_format = os.getenv('MEDIA_IMAGE_MEDIUM_FORMAT')
+            medium_image_quality = os.getenv('MEDIA_IMAGE_MEDIUM_QUALITY')
+
+            final_ext = file_extension
+
+            if medium_image_format == 'AVIF':
+                import pillow_avif
+
             Image.MAX_IMAGE_PIXELS = 89478485
             with Image.open(final_place) as img:
                 img = ImageOps.exif_transpose(img)
-                img.thumbnail((170, 170))
-                img.save(final_place)
+                img = img.convert('RGB' if (medium_image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
+                img.thumbnail((170, 170), resample=Image.LANCZOS)
+
+                kwargs = {}
+                if medium_image_format:
+                    kwargs['format'] = medium_image_format.upper()
+                    final_ext = '.' + medium_image_format.lower()
+                    final_place = os.path.splitext(final_place)[0] + final_ext
+                if medium_image_quality:
+                    kwargs['quality'] = int(medium_image_quality)
+
+                img.save(final_place, optimize=True, **kwargs)
                 thumbnail_width = img.width
                 thumbnail_height = img.height
+                
             if store_files_in_s3():
                 content_type = guess_mime_type(final_place)
                 boto3_session = boto3.session.Session()
@@ -1420,12 +1444,12 @@ def url_to_thumbnail_file(filename) -> File:
                     aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
                 )
                 s3.upload_file(final_place, current_app.config['S3_BUCKET'], 'posts/' +
-                               new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + file_extension,
+                               new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext,
                                ExtraArgs={'ContentType': content_type})
                 os.unlink(final_place)
                 final_place = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/{new_filename[0:2]}/{new_filename[2:4]}" + \
-                              '/' + new_filename + file_extension
-            return File(file_name=new_filename + file_extension, thumbnail_width=thumbnail_width,
+                              '/' + new_filename + final_ext
+            return File(file_name=new_filename + final_ext, thumbnail_width=thumbnail_width,
                         thumbnail_height=thumbnail_height, thumbnail_path=final_place,
                         source_url=filename)
 
