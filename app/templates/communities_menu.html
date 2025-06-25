@@ -54,16 +54,16 @@
             <li><a class="dropdown-item{% if active_child == 'list_communities_local' %} active{% endif %}" href="/communities/local">{{ _('Local communities') }}</a></li>
             <li><a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a></li>
           {% if moderating_communities %}
-            <li><h6 class="dropdown-header">{{ _('Moderating') }}</h6></li>
+            <li class="community-section"><h6 class="dropdown-header">{{ _('Moderating') }}</h6></li>
             {% for community_menu_item in moderating_communities -%}
-                <li><a class="dropdown-item{% if community and community.id == community_menu_item.id%} active{% endif %}"
+                <li class="community-item" data-community-name="{{ community_menu_item.title.lower() }}"><a class="dropdown-item{% if community and community.id == community_menu_item.id%} active{% endif %}"
                        href="/c/{{ community_menu_item.link() }}">{% if community_menu_item.is_duplicate %}{{ community_menu_item.title }}<span class="text-muted small">@{{ community_menu_item.ap_domain | shorten(13) }}</span>{% else %}{{ community_menu_item.title }}{% endif %}</a></li>
             {% endfor -%}
           {% endif %}
           {% if joined_communities %}
-            <li><h6 class="dropdown-header">{{ _('Joined communities') }}</h6></li>
+            <li class="community-section"><h6 class="dropdown-header">{{ _('Joined communities') }}</h6></li>
             {% for community_menu_item in joined_communities -%}
-                <li><a class="dropdown-item{% if community and community.id == community_menu_item.id%} active{% endif %}"
+                <li class="community-item" data-community-name="{{ community_menu_item.title.lower() }}"><a class="dropdown-item{% if community and community.id == community_menu_item.id%} active{% endif %}"
                        href="/c/{{ community_menu_item.link() }}">{% if community_menu_item.is_duplicate %}{{ community_menu_item.title }}<span class="text-muted small">@{{ community_menu_item.ap_domain | shorten(13) }}</span>{% else %}{{ community_menu_item.title }}{% endif %}</a></li>
             {% endfor -%}
           {% endif %}
