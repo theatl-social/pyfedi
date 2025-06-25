@@ -6,7 +6,7 @@ from random import randint
 
 from flask import redirect, url_for, flash, current_app, abort, request, g, make_response, jsonify
 from flask_login import current_user
-from flask_babel import _
+from flask_babel import _, force_locale, gettext
 from sqlalchemy import text, desc
 from sqlalchemy.orm.exc import NoResultFound
 from furl import furl
@@ -41,7 +41,7 @@ from app.utils import render_template, markdown_to_html, validation_required, \
     permission_required, blocked_users, get_request, is_local_image_url, is_video_url, can_upvote, can_downvote, \
     referrer, can_create_post_reply, communities_banned_from, \
     block_bots, flair_for_form, login_required_if_private_instance, retrieve_image_hash, posts_with_blocked_images, \
-    possible_communities, user_notes, login_required
+    possible_communities, user_notes, login_required, get_recipient_language
 from app.post.util import post_type_to_form_url_type
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, \
     delete_reply, mod_remove_reply, vote_for_reply
@@ -980,24 +980,26 @@ def post_report(post_id: int):
                         'orig_post_body': post.body
                         }
         for mod in post.community.moderators():
-            notification = Notification(user_id=mod.user_id, title=_('A post has been reported'),
-                                        url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
-                                        author_id=current_user.id, notif_type=NOTIF_REPORT,
-                                        subtype='post_reported',
-                                        targets=targets_data)
-            db.session.add(notification)
-            already_notified.add(mod.user_id)
+            with force_locale(get_recipient_language(mod.id)):
+                notification = Notification(user_id=mod.user_id, title=gettext('A post has been reported'),
+                                            url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
+                                            author_id=current_user.id, notif_type=NOTIF_REPORT,
+                                            subtype='post_reported',
+                                            targets=targets_data)
+                db.session.add(notification)
+                already_notified.add(mod.user_id)
 
         # only notify admins for certain types of report
         if '5' in form.reasons.data or '6' in form.reasons.data:
             for admin in Site.admins():
                 if admin.id not in already_notified:
-                    notify = Notification(title=_('Reported content'), url='/admin/reports', user_id=admin.id,
-                                          author_id=current_user.id, notif_type=NOTIF_REPORT,
-                                          subtype='post_reported',
-                                          targets=targets_data)
-                    db.session.add(notify)
-                    admin.unread_notifications += 1
+                    with force_locale(get_recipient_language(admin.id)):
+                        notify = Notification(title=gettext('Reported content'), url='/admin/reports', user_id=admin.id,
+                                            author_id=current_user.id, notif_type=NOTIF_REPORT,
+                                            subtype='post_reported',
+                                            targets=targets_data)
+                        db.session.add(notify)
+                        admin.unread_notifications += 1
 
         post.reports += 1
         db.session.commit()
@@ -1231,13 +1233,14 @@ def post_reply_report(post_id: int, comment_id: int):
                         'orig_comment_body':post_reply.body
                         }
         for mod in post.community.moderators():
-            notification = Notification(user_id=mod.user_id, title=_('A comment has been reported'),
-                                        url=f"https://{current_app.config['SERVER_NAME']}/comment/{post_reply.id}",
-                                        author_id=current_user.id, notif_type=NOTIF_REPORT,
-                                        subtype='comment_reported',
-                                        targets=targets_data)
-            db.session.add(notification)
-            already_notified.add(mod.user_id)
+            with force_locale(get_recipient_language(mod.id)):
+                notification = Notification(user_id=mod.user_id, title=gettext('A comment has been reported'),
+                                            url=f"https://{current_app.config['SERVER_NAME']}/comment/{post_reply.id}",
+                                            author_id=current_user.id, notif_type=NOTIF_REPORT,
+                                            subtype='comment_reported',
+                                            targets=targets_data)
+                db.session.add(notification)
+                already_notified.add(mod.user_id)
 
         if '5' in form.reasons.data or '6' in form.reasons.data:
             for admin in Site.admins():

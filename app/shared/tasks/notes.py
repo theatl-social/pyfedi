@@ -6,10 +6,11 @@ from app.models import Community, CommunityBan, CommunityJoinRequest, CommunityM
     PostReply, utcnow, User
 from app.user.utils import search_for_user
 from app.utils import community_membership, gibberish, joined_communities, instance_banned, ap_datetime, \
-                      recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies
+                      recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
+                      recently_downvoted_post_replies, get_recipient_language
 
 from flask import current_app
-from flask_babel import _
+from flask_babel import _, force_locale, gettext
 
 import re
 
@@ -113,14 +114,15 @@ def send_reply(reply_id, parent_id, edit=False):
                                 'comment_id': reply.id,
                                 'comment_body': reply.body
                                 }
-                notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in comment {reply.id}"),
-                                            url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
-                                            author_id=user.id, notif_type=NOTIF_MENTION,
-                                            subtype='comment_mention',
-                                            targets=targets_data)
-                recipient.unread_notifications += 1
-                db.session.add(notification)
-                db.session.commit()
+                with force_locale(get_recipient_language(recipient.id)):
+                    notification = Notification(user_id=recipient.id, title=gettext(f"You have been mentioned in comment {reply.id}"),
+                                                url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
+                                                author_id=user.id, notif_type=NOTIF_MENTION,
+                                                subtype='comment_mention',
+                                                targets=targets_data)
+                    recipient.unread_notifications += 1
+                    db.session.add(notification)
+                    db.session.commit()
 
     if community.local_only or not community.instance.online():
         return

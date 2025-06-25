@@ -7,6 +7,7 @@ from urllib.parse import urlparse, parse_qs, urlencode
 import arrow
 import boto3
 from flask import current_app
+from flask_babel import force_locale, gettext
 from flask_login import UserMixin, current_user
 from sqlalchemy import or_, text, desc, Index
 from sqlalchemy.exc import IntegrityError
@@ -1633,14 +1634,17 @@ class Post(db.Model):
                                                     'post_title': post.title,
                                                     'author_user_name': author.ap_id if author.ap_id else author.user_name,
                                                     }
-                                    notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in post {post.id}"),
-                                                                url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
-                                                                author_id=post.user_id, notif_type=NOTIF_MENTION,
-                                                                subtype='post_mention',
-                                                                targets=targets_data)
-                                    recipient.unread_notifications += 1
-                                    db.session.add(notification)
-                                    db.session.commit()
+                                    # import here to avoid circular import errors
+                                    from app.utils import get_recipient_language
+                                    with force_locale(get_recipient_language(recipient.id)):
+                                        notification = Notification(user_id=recipient.id, title=gettext(f"You have been mentioned in post {post.id}"),
+                                                                    url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
+                                                                    author_id=post.user_id, notif_type=NOTIF_MENTION,
+                                                                    subtype='post_mention',
+                                                                    targets=targets_data)
+                                        recipient.unread_notifications += 1
+                                        db.session.add(notification)
+                                        db.session.commit()
 
             # Polls need to be processed quite late because they need a post_id to refer to
             if request_json['object']['type'] == 'Question':

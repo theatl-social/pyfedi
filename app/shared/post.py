@@ -12,10 +12,10 @@ from app.utils import render_template, authorise_api_user, shorten_string, gibbe
     piefed_markdown_to_lemmy_markdown, markdown_to_html, fixup_url, domain_from_url, \
     opengraph_parse, url_to_thumbnail_file, can_create_post, is_video_hosting_site, recently_upvoted_posts, \
     is_image_url, add_to_modlog_activitypub, store_files_in_s3, guess_mime_type, retrieve_image_hash, \
-    hash_matches_blocked_image, can_upvote, can_downvote
+    hash_matches_blocked_image, can_upvote, can_downvote, get_recipient_language
 
 from flask import abort, flash, request, current_app, g
-from flask_babel import _
+from flask_babel import _, force_locale, gettext
 from flask_login import current_user
 import boto3
 from pillow_heif import register_heif_opener
@@ -624,13 +624,14 @@ def report_post(post_id, input, src, auth=None):
     for mod in post.community.moderators():
         moderator = User.query.get(mod.user_id)
         if moderator and moderator.is_local():
-            notification = Notification(user_id=mod.user_id, title=_('A post has been reported'),
-                                        url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
-                                        author_id=user_id, notif_type=NOTIF_REPORT,
-                                        subtype='post_reported',
-                                        targets=targets_data)
-            db.session.add(notification)
-            already_notified.add(mod.user_id)
+            with force_locale(get_recipient_language(moderator.id)):
+                notification = Notification(user_id=mod.user_id, title=gettext('A post has been reported'),
+                                            url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
+                                            author_id=user_id, notif_type=NOTIF_REPORT,
+                                            subtype='post_reported',
+                                            targets=targets_data)
+                db.session.add(notification)
+                already_notified.add(mod.user_id)
     post.reports += 1
     # todo: only notify admins for certain types of report
     for admin in Site.admins():

@@ -11,7 +11,7 @@ import arrow
 import httpx
 import boto3
 from flask import current_app, request, g, url_for, json
-from flask_babel import _
+from flask_babel import _, force_locale, gettext
 from sqlalchemy import text, func, desc
 from sqlalchemy.exc import IntegrityError
 
@@ -36,7 +36,7 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     html_to_text, add_to_modlog_activitypub, joined_communities, \
     moderating_communities, get_task_session, is_video_hosting_site, opengraph_parse, instance_banned, \
     mastodon_extra_field_link, blocked_users, piefed_markdown_to_lemmy_markdown, actor_profile_contains_blocked_words, \
-    store_files_in_s3, guess_mime_type
+    store_files_in_s3, guess_mime_type, get_recipient_language
 
 from sqlalchemy import or_
 
@@ -1871,14 +1871,15 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
                                         'comment_body': post_reply.body,
                                         'author_user_name': author.ap_id if author.ap_id else author.user_name
                                         }
-                        notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in comment {post_reply.id}"),
-                                                    url=f"https://{current_app.config['SERVER_NAME']}/comment/{post_reply.id}",
-                                                    author_id=user.id, notif_type=NOTIF_MENTION,
-                                                    subtype='comment_mention',
-                                                    targets=targets_data)
-                        recipient.unread_notifications += 1
-                        db.session.add(notification)
-                        db.session.commit()
+                        with force_locale(get_recipient_language(recipient.id)):
+                            notification = Notification(user_id=recipient.id, title=gettext(f"You have been mentioned in comment {post_reply.id}"),
+                                                        url=f"https://{current_app.config['SERVER_NAME']}/comment/{post_reply.id}",
+                                                        author_id=user.id, notif_type=NOTIF_MENTION,
+                                                        subtype='comment_mention',
+                                                        targets=targets_data)
+                            recipient.unread_notifications += 1
+                            db.session.add(notification)
+                            db.session.commit()
 
             return post_reply
         except Exception as ex:
@@ -1967,7 +1968,8 @@ def notify_about_post_task(post_id):
 
     # NOTIF_TOPIC    
     topic_send_notifs_to = notification_subscribers(post.community.topic_id, NOTIF_TOPIC)
-    topic = Topic.query.get(post.community.topic_id)
+    if post.community.topic_id:
+        topic = Topic.query.get(post.community.topic_id)
     for notify_id in topic_send_notifs_to:
         if notify_id != post.user_id and notify_id not in notifications_sent_to:
             targets_data = {'gen':'0',
@@ -2057,13 +2059,14 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
                                     'comment_body': new_reply.body,
                                     'author_id':new_reply.user_id,
                                     'author_user_name': author.ap_id if author.ap_id else author.user_name,}
-                    new_notification = Notification(title=shorten_string(_('Reply to comment on %(post_title)s',
-                                                                           post_title=parent_reply.post.title), 150),
-                                                    url=f"/post/{parent_reply.post.id}#comment_{new_reply.id}",
-                                                    user_id=notify_id, author_id=new_reply.user_id,
-                                                    notif_type=NOTIF_REPLY,
-                                                    subtype='new_reply_on_followed_comment',
-                                                    targets=targets_data)
+                    with force_locale(get_recipient_language(notify_id)):
+                        new_notification = Notification(title=shorten_string(gettext('Reply to comment on %(post_title)s',
+                                                                            post_title=parent_reply.post.title), 150),
+                                                        url=f"/post/{parent_reply.post.id}#comment_{new_reply.id}",
+                                                        user_id=notify_id, author_id=new_reply.user_id,
+                                                        notif_type=NOTIF_REPLY,
+                                                        subtype='new_reply_on_followed_comment',
+                                                        targets=targets_data)
                 else:
                     targets_data = {'gen':'0',
                                     'post_id':parent_reply.post.id,
@@ -2073,13 +2076,14 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
                                     'comment_body': new_reply.body,
                                     'author_id':new_reply.user_id,
                                     'author_user_name': author.ap_id if author.ap_id else author.user_name,}
-                    new_notification = Notification(title=shorten_string(_('Reply to comment on %(post_title)s',
-                                                                           post_title=parent_reply.post.title), 150),
-                                                    url=f"/post/{parent_reply.post.id}/comment/{parent_reply.id}#comment_{new_reply.id}",
-                                                    user_id=notify_id, author_id=new_reply.user_id,
-                                                    notif_type=NOTIF_REPLY,
-                                                    subtype='new_reply_on_followed_comment',
-                                                    targets=targets_data)
+                    with force_locale(get_recipient_language(notify_id)):
+                        new_notification = Notification(title=shorten_string(gettext('Reply to comment on %(post_title)s',
+                                                                            post_title=parent_reply.post.title), 150),
+                                                        url=f"/post/{parent_reply.post.id}/comment/{parent_reply.id}#comment_{new_reply.id}",
+                                                        user_id=notify_id, author_id=new_reply.user_id,
+                                                        notif_type=NOTIF_REPLY,
+                                                        subtype='new_reply_on_followed_comment',
+                                                        targets=targets_data)
                 db.session.add(new_notification)
                 user = User.query.get(notify_id)
                 user.unread_notifications += 1
@@ -2165,13 +2169,14 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
                                                     'comment_body': reply.body,
                                                     'author_user_name': author.ap_id if author.ap_id else author.user_name
                                                     }
-                                    notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in comment {reply.id}"),
-                                                                url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
-                                                                author_id=reply.user_id, notif_type=NOTIF_MENTION,
-                                                                subtype='comment_mention',
-                                                                targets=targets_data)
-                                    recipient.unread_notifications += 1
-                                    db.session.add(notification)
+                                    with force_locale(get_recipient_language(recipient.id)):
+                                        notification = Notification(user_id=recipient.id, title=gettext(f"You have been mentioned in comment {reply.id}"),
+                                                                    url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
+                                                                    author_id=reply.user_id, notif_type=NOTIF_MENTION,
+                                                                    subtype='comment_mention',
+                                                                    targets=targets_data)
+                                        recipient.unread_notifications += 1
+                                        db.session.add(notification)
 
     db.session.commit()
 

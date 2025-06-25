@@ -5,10 +5,10 @@ from app.constants import POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, PO
     POST_TYPE_POLL, MICROBLOG_APPS, NOTIF_MENTION
 from app.models import CommunityBan, Instance, Notification, Poll, PollChoice, Post, User, UserFollower, utcnow
 from app.user.utils import search_for_user
-from app.utils import gibberish, instance_banned, ap_datetime
+from app.utils import gibberish, instance_banned, ap_datetime, get_recipient_language
 
 from flask import current_app
-from flask_babel import _
+from flask_babel import _, force_locale, gettext
 
 import re
 
@@ -117,14 +117,15 @@ def send_post(post_id, edit=False):
                                 'post_title': post.title,
                                 'author_user_name': user.ap_id if user.ap_id else user.user_name
                                 }
-                notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in post {post.id}"),
-                                            url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
-                                            author_id=user.id, notif_type=NOTIF_MENTION,
-                                            subtype='post_mention',
-                                            targets=targets_data)
-                recipient.unread_notifications += 1
-                db.session.add(notification)
-                db.session.commit()
+                with force_locale(get_recipient_language(recipient.id)):
+                    notification = Notification(user_id=recipient.id, title=gettext(f"You have been mentioned in post {post.id}"),
+                                                url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
+                                                author_id=user.id, notif_type=NOTIF_MENTION,
+                                                subtype='post_mention',
+                                                targets=targets_data)
+                    recipient.unread_notifications += 1
+                    db.session.add(notification)
+                    db.session.commit()
 
     if not community.instance.online():
         return

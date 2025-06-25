@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 
 from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, g, json
 from flask_login import current_user
-from flask_babel import _
+from flask_babel import _, force_locale, gettext
 from slugify import slugify
 from sqlalchemy import or_, asc, desc, text
 from sqlalchemy.orm.exc import NoResultFound
@@ -49,6 +49,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     possible_communities, reported_posts, user_notes, login_required
 from app.shared.post import make_post, sticky_post
 from app.shared.tasks import task_selector
+from app.utils import get_recipient_language
 from feedgen.feed import FeedGenerator
 from datetime import timezone, timedelta
 
@@ -864,13 +865,14 @@ def community_report(community_id: int):
         admins = [User.query.get_or_404(1)]
         targets_data = {'suspect_community_id':community.id,'reporter_id':current_user.id}
         for admin in admins:
-            notification = Notification(user_id=admin.id, title=_('A community has been reported'),
-                                            url=community.local_url(),
-                                            author_id=current_user.id, notif_type=NOTIF_REPORT,
-                                            subtype='community_reported',
-                                            targets=targets_data)
-            db.session.add(notification)
-            admin.unread_notifications += 1
+            with force_locale(get_recipient_language(admin.id)):
+                notification = Notification(user_id=admin.id, title=gettext('A community has been reported'),
+                                                url=community.local_url(),
+                                                author_id=current_user.id, notif_type=NOTIF_REPORT,
+                                                subtype='community_reported',
+                                                targets=targets_data)
+                db.session.add(notification)
+                admin.unread_notifications += 1
         db.session.commit()
 
         # todo: federate report to originating instance

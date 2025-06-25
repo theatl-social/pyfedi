@@ -2417,6 +2417,7 @@ def publish_sse_event(key, value):
     r = get_redis_connection()
     r.publish(key, value)
 
+
 def apply_feed_url_rules(self):
     if '-' in self.url.data.strip():
         self.url.errors.append(_l('- cannot be in Url. Use _ instead?'))
@@ -2448,3 +2449,27 @@ def apply_feed_url_rules(self):
         self.url.errors.append(_l('A Feed with this url already exists.'))
         return False
     return True
+
+# notification destination user helper function to make sure the
+# notification text is stored in the database using the language of the
+# recipient, rather than the language of the originator
+def get_recipient_language(user_id):
+    lang_to_use = ''
+
+    # look up the user in the db based on the id
+    recipient = User.query.get(user_id)
+
+    # if the user has language_id set, use that
+    if recipient.language_id:
+        lang = Language.query.get(recipient.language_id)
+        lang_to_use = lang.code
+
+    # else if the user has interface_language use that
+    elif recipient.interface_language:
+        lang_to_use = recipient.interface_language
+
+    # else default to english
+    else:
+        lang_to_use = 'en'
+
+    return lang_to_use
