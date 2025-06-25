@@ -234,7 +234,7 @@ def put_user_save_user_settings(auth, data):
             if remove_file:
                 remove_file.delete_from_disk()
             user.cover_id = None
-        file = File(source_url=avatar)
+        file = File(source_url=cover)
         db.session.add(file)
         db.session.commit()
         user.cover_id = file.id
