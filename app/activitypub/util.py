@@ -1210,10 +1210,10 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
 
                             # Use environment variables to determine medium and thumbnail format and quality
 
-                            medium_image_format = os.getenv('MEDIA_IMAGE_MEDIUM_FORMAT')
-                            medium_image_quality = os.getenv('MEDIA_IMAGE_MEDIUM_QUALITY')
-                            thumbnail_image_format = os.getenv('MEDIA_IMAGE_THUMBNAIL_FORMAT', 'WEBP')
-                            thumbnail_image_quality = os.getenv('MEDIA_IMAGE_THUMBNAIL_QUALITY', 93)
+                            medium_image_format = current_app.config['MEDIA_IMAGE_MEDIUM_FORMAT']
+                            medium_image_quality = current_app.config['MEDIA_IMAGE_MEDIUM_QUALITY']
+                            thumbnail_image_format = current_app.config['MEDIA_IMAGE_THUMBNAIL_FORMAT']
+                            thumbnail_image_quality = current_app.config['MEDIA_IMAGE_THUMBNAIL_QUALITY']
 
                             final_ext = file_ext # track file extension for conversion
                             thumbnail_ext = file_ext

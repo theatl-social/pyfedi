@@ -439,10 +439,10 @@ def save_icon_file(icon_file, directory='communities') -> File:
             img_width = img.width
             img_height = img.height
 
-            image_format = os.getenv('MEDIA_IMAGE_FORMAT')
-            image_quality = os.getenv('MEDIA_IMAGE_QUALITY')
-            thumbnail_image_format = os.getenv('MEDIA_IMAGE_THUMBNAIL_FORMAT', 'WEBP')
-            thumbnail_image_quality = os.getenv('MEDIA_IMAGE_THUMBNAIL_QUALITY', 93)
+            image_format = current_app.config['MEDIA_IMAGE_FORMAT']
+            image_quality = current_app.config['MEDIA_IMAGE_QUALITY']
+            thumbnail_image_format = current_app.config['MEDIA_IMAGE_THUMBNAIL_FORMAT']
+            thumbnail_image_quality = current_app.config['MEDIA_IMAGE_THUMBNAIL_QUALITY']
 
             final_ext = file_ext
             thumbnail_ext = file_ext
@@ -547,10 +547,10 @@ def save_banner_file(banner_file, directory='communities') -> File:
     if '.' + img.format.lower() in allowed_extensions:
         img = ImageOps.exif_transpose(img)
 
-        image_format = os.getenv('MEDIA_IMAGE_FORMAT')
-        image_quality = os.getenv('MEDIA_IMAGE_QUALITY')
-        thumbnail_image_format = os.getenv('MEDIA_IMAGE_THUMBNAIL_FORMAT', 'WEBP')
-        thumbnail_image_quality = os.getenv('MEDIA_IMAGE_THUMBNAIL_QUALITY', 93)
+        image_format = current_app.config['MEDIA_IMAGE_FORMAT']
+        image_quality = current_app.config['MEDIA_IMAGE_QUALITY']
+        thumbnail_image_format = current_app.config['MEDIA_IMAGE_THUMBNAIL_FORMAT']
+        thumbnail_image_quality = current_app.config['MEDIA_IMAGE_THUMBNAIL_QUALITY']
 
         final_ext = file_ext
         thumbnail_ext = file_ext

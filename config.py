@@ -100,6 +100,18 @@ class Config(object):
 
     PAGE_LENGTH = int(os.environ.get('PAGE_LENGTH') or 100)
 
+    # Image formats
+    MEDIA_IMAGE_MAX_DIMENSION = int(os.environ.get('MEDIA_IMAGE_MAX_DIMENSION') or 2000)
+
+    MEDIA_IMAGE_FORMAT = os.environ.get('MEDIA_IMAGE_FORMAT') or ''
+    MEDIA_IMAGE_QUALITY = int(os.environ.get('MEDIA_IMAGE_QUALITY') or 90)
+
+    MEDIA_IMAGE_MEDIUM_FORMAT = os.environ.get('MEDIA_IMAGE_MEDIUM_FORMAT') or 'JPEG'
+    MEDIA_IMAGE_MEDIUM_QUALITY = int(os.environ.get('MEDIA_IMAGE_MEDIUM_QUALITY') or 90)
+
+    MEDIA_IMAGE_THUMBNAIL_FORMAT = os.environ.get('MEDIA_IMAGE_THUMBNAIL_FORMAT') or 'WEBP'
+    MEDIA_IMAGE_THUMBNAIL_QUALITY = int(os.environ.get('MEDIA_IMAGE_THUMBNAIL_QUALITY') or 93)
+
     # LDAP configuration
     LDAP_SERVER = os.environ.get('LDAP_SERVER') or ''
     LDAP_PORT = int(os.environ.get('LDAP_PORT') or 389)

@@ -41,9 +41,9 @@ def process_upload(image_file, destination='posts'):
     Image.MAX_IMAGE_PIXELS = 89478485
 
     # Use environment variables to determine image max dimension, format, and quality
-    image_max_dimension = int(os.getenv('MEDIA_IMAGE_MAX_DIMENSION', 2000))
-    image_format = os.getenv('MEDIA_IMAGE_FORMAT')
-    image_quality = os.getenv('MEDIA_IMAGE_QUALITY')
+    image_max_dimension = current_app.config['MEDIA_IMAGE_MAX_DIMENSION']
+    image_format = current_app.config['MEDIA_IMAGE_FORMAT']
+    image_quality = current_app.config['MEDIA_IMAGE_QUALITY']
 
     if image_format == 'AVIF':
         import pillow_avif

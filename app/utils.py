@@ -1407,8 +1407,8 @@ def url_to_thumbnail_file(filename) -> File:
 
             # Use environment variables to determine URL thumbnail
 
-            medium_image_format = os.getenv('MEDIA_IMAGE_MEDIUM_FORMAT')
-            medium_image_quality = os.getenv('MEDIA_IMAGE_MEDIUM_QUALITY')
+            medium_image_format = current_app.config['MEDIA_IMAGE_MEDIUM_FORMAT']
+            medium_image_quality = current_app.config['MEDIA_IMAGE_MEDIUM_QUALITY']
 
             final_ext = file_extension
 
