@@ -339,6 +339,8 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         uploaded_file.seek(0)
         uploaded_file.save(final_place)
 
+        final_ext = file_ext # track file extension for conversion
+
         if file_ext.lower() == '.heic':
             register_heif_opener()
         if file_ext.lower() == '.avif':
@@ -346,14 +348,30 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
 
         Image.MAX_IMAGE_PIXELS = 89478485
 
-        # limit full sized version to 2000px
+        # Use environment variables to determine image max dimension, format, and quality
+        image_max_dimension = int(os.getenv('MEDIA_IMAGE_MAX_DIMENSION', 2000))
+        image_format = os.getenv('MEDIA_IMAGE_FORMAT')
+        image_quality = os.getenv('MEDIA_IMAGE_QUALITY')
+
+        if image_format == 'AVIF':
+            import pillow_avif
+
         if not final_place.endswith('.svg') and not final_place.endswith('.gif'):
             img = Image.open(final_place)
             if '.' + img.format.lower() in allowed_extensions:
                 img = ImageOps.exif_transpose(img)
+                img = img.convert('RGB' if (image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
+                img.thumbnail((image_max_dimension, image_max_dimension), resample=Image.LANCZOS)
 
-                img.thumbnail((2000, sys.maxsize))
-                img.save(final_place)
+                kwargs = {}
+                if image_format:
+                    kwargs['format'] = image_format.upper()
+                    final_ext = '.' + image_format.lower()
+                    final_place = os.path.splitext(final_place)[0] + final_ext
+                if image_quality:
+                    kwargs['quality'] = int(image_quality)
+
+                img.save(final_place, optimize=True, **kwargs)
             else:
                 raise Exception('filetype not allowed')
         
@@ -362,6 +380,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
             gif_image.save(final_place[:-4] + ".webp", format="WEBP", save_all=True, loop=0)
             os.remove(final_place)
             final_place = final_place[:-4] + ".webp"
+            final_ext = '.webp'
 
         url = f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
 
@@ -381,10 +400,10 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
                 aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
             )
             s3.upload_file(final_place, current_app.config['S3_BUCKET'], 'posts/' +
-                           new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + file_ext,
-                           ExtraArgs={'ContentType': guess_mime_type(final_place)})
+                        new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext,
+                        ExtraArgs={'ContentType': guess_mime_type(final_place)})
             url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/" + \
-                  new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + file_ext
+                new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext
             s3.close()
             os.unlink(final_place)
 
