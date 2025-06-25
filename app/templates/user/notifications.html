@@ -33,7 +33,7 @@
                         {% include "user/notifs/" + str(notification.notif_type) + ".html" %}
                     {% else %}
                         <tr>
-                            <td class="text-nowrap" width="*">
+                            <td width="*">
                                 <div class="overflow-ellipses-parent">
                                     <div class="child">
                                         <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}"
