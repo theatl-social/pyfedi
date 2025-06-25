@@ -19,34 +19,40 @@
         <div class="col">
             <h1>{{ title }}</h1>
             <table class="table table-striped">
-                <tr>
-                   <th>{{ _('Title') }}</th>
-                   <th>{{ _('Scheduled for') }}</th>
-                   <th>{{ _('Frequency') }}</th>
-                   <th>{{ _('Actions') }}</th>
-                   <th></th>
-                </tr>
-                {% for post in entities %}
+
+                {% if entities %}
                     <tr>
-                        <td><span title="{{ post.title }}">{{ post.title }}</span></td>
-                        <td><span title="{{ _('Scheduled for') }}">{{ post.scheduled_for }}</span></td>
-                        <td><span title="{{ _('Frequency') }}">
-                        {% if post.repeat == 'daily' %}
-                            {{ _('Daily') }}
-                        {% elif post.repeat == 'weekly' %}
-                            {{ _('Weekly') }}
-                        {% elif post.repeat == 'monthly' %}
-                            {{ _('Monthly') }}
-                        {% else %}
-                            {{ _('Only once') }}
-                        {% endif %}
-                        </span></td>
-                        <td><span title="{{ _('Actions')}}">
-                            <a href="{{ url_for('post.post_edit', post_id=post.id)}}">{{ _('Edit') }}</a>
-                            <a href="{{ url_for('post.post_delete', post_id=post.id)}}">{{ _('Delete') }}</a>
-                        </td></span>
+                       <th>{{ _('Title') }}</th>
+                       <th>{{ _('Scheduled for') }}</th>
+                       <th>{{ _('Frequency') }}</th>
+                       <th>{{ _('Actions') }}</th>
                     </tr>
-                {% endfor %}
+                    {% for post in entities %}
+                        <tr>
+                            <td><span title="{{ post.title }}">{{ post.title }}</span></td>
+                            <td><span title="{{ _('Scheduled for') }}">{{ post.scheduled_for }}</span></td>
+                            <td><span title="{{ _('Frequency') }}">
+                            {% if post.repeat == 'daily' %}
+                                {{ _('Daily') }}
+                            {% elif post.repeat == 'weekly' %}
+                                {{ _('Weekly') }}
+                            {% elif post.repeat == 'monthly' %}
+                                {{ _('Monthly') }}
+                            {% else %}
+                                {{ _('Only once') }}
+                            {% endif %}
+                            </span></td>
+                            <td><span title="{{ _('Actions')}}">
+                                <a href="{{ url_for('post.post_edit', post_id=post.id)}}">{{ _('Edit') }}</a>
+                                <a href="{{ url_for('post.post_delete', post_id=post.id)}}">{{ _('Delete') }}</a>
+                            </td></span>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        {{ _('No scheduled posts yet. To schedule a post, create one in your favorite community and set up a date and frequency.') }}
+                    </tr>
+                {% endif %}
             </table>
         </div>
     </main>
