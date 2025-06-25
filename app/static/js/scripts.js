@@ -1523,11 +1523,23 @@ function hookupCommunityFilter() {
     const communityItems = document.querySelectorAll('.community-item');
     const communitySections = document.querySelectorAll('.community-section');
 
+    function prevSection(communityItem) {
+        let current = communityItem.previousElementSibling;
+        
+        while (current) {
+            if (current.classList.contains('community-section')) {
+                return current;
+            }
+            current = current.previousElementSibling;
+        }
+        
+        return null; // No section found
+    }
+
     function filterCommunities() {
         const filterText = filterInput.value.toLowerCase().trim();
         
-        let visibleInModerating = false;
-        let visibleInJoined = false;
+        let visibleInSection = {};
         
         // Show/hide clear button
         if (clearButton) {
@@ -1542,13 +1554,11 @@ function hookupCommunityFilter() {
             
             // Track which sections have visible items
             if (isVisible) {
-                const prevSection = item.previousElementSibling;
-                if (prevSection && prevSection.classList.contains('community-section')) {
-                    const sectionText = prevSection.textContent.toLowerCase();
-                    if (sectionText.includes('moderating')) {
-                        visibleInModerating = true;
-                    } else if (sectionText.includes('joined')) {
-                        visibleInJoined = true;
+                const parentSection = prevSection(item);
+                if (parentSection) {
+                    const sectionType = parentSection.getAttribute('data-community-section');
+                    if (sectionType) {
+                        visibleInSection[sectionType] = true;
                     }
                 }
             }
@@ -1556,13 +1566,11 @@ function hookupCommunityFilter() {
         
         // Show/hide section headers based on whether they have visible items
         communitySections.forEach((section, index) => {
-            const sectionText = section.textContent.toLowerCase();
             let shouldShow = false;
             
-            if (sectionText.includes('moderating')) {
-                shouldShow = visibleInModerating;
-            } else if (sectionText.includes('joined')) {
-                shouldShow = visibleInJoined;
+            const sectionType = section.getAttribute('data-community-section');
+            if (sectionType) {
+                shouldShow = visibleInSection[sectionType];
             }
             
             section.style.display = shouldShow ? 'list-item' : 'none';
