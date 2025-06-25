@@ -10,11 +10,12 @@ from app.shared.tasks import task_selector
 from app.user.utils import search_for_user
 from app.utils import authorise_api_user, blocked_communities, shorten_string, gibberish, markdown_to_html, \
     instance_banned, community_membership, joined_communities, moderating_communities, is_image_url, \
-    communities_banned_from, piefed_markdown_to_lemmy_markdown, community_moderators, add_to_modlog, add_to_modlog_activitypub
+    communities_banned_from, piefed_markdown_to_lemmy_markdown, community_moderators, add_to_modlog, \
+    add_to_modlog_activitypub, get_recipient_language
 from app.constants import *
 
 from flask import current_app, flash, render_template
-from flask_babel import _
+from flask_babel import _, force_locale, gettext
 from flask_login import current_user
 
 from slugify import slugify
@@ -457,14 +458,15 @@ def add_mod_to_community(community_id: int, person_id: int, src, auth=None):
     # Notify new mod
     if new_moderator.is_local():
         targets_data = {'community_id':community.id}
-        notify = Notification(title=_('You are now a moderator of %(name)s', name=community.display_name()),
-                              url='/c/' + community.name, user_id=new_moderator.id,
-                              author_id=user.id, notif_type=NOTIF_NEW_MOD,
-                              subtype='new_moderator',
-                              targets=targets_data)
-        new_moderator.unread_notifications += 1
-        db.session.add(notify)
-        db.session.commit()
+        with force_locale(get_recipient_language(new_moderator.id)):
+            notify = Notification(title=gettext('You are now a moderator of %(name)s', name=community.display_name()),
+                                url='/c/' + community.name, user_id=new_moderator.id,
+                                author_id=user.id, notif_type=NOTIF_NEW_MOD,
+                                subtype='new_moderator',
+                                targets=targets_data)
+            new_moderator.unread_notifications += 1
+            db.session.add(notify)
+            db.session.commit()
     else:
 	      # for remote users, send a chat message to let them know
         existing_conversation = Conversation.find_existing_conversation(recipient=new_moderator,
