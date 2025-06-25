@@ -509,6 +509,10 @@ ul.form-multicheck-columns {
   flex-direction: column;
   flex-wrap: wrap;
   overflow-y: auto;
+
+  li {
+    margin-right: 5px;
+  }
 }
 
 .add_reply {

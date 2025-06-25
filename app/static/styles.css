@@ -967,6 +967,9 @@ ul.form-multicheck-columns {
   flex-wrap: wrap;
   overflow-y: auto;
 }
+ul.form-multicheck-columns li {
+  margin-right: 5px;
+}
 
 .add_reply .form-label {
   display: none;
