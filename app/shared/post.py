@@ -189,8 +189,6 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
     db.session.commit()
 
     post.up_votes = 1
-    if user.reputation > 100:
-        post.up_votes += 1
     effect = user.instance.vote_weight
     post.score = post.up_votes * effect
     post.ranking = post.post_ranking(post.score, post.posted_at)

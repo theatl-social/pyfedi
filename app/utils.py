@@ -1399,9 +1399,9 @@ def url_to_thumbnail_file(filename) -> File:
             else:
                 directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
             ensure_directory_exists(directory)
-            final_place = os.path.join(directory, new_filename + file_extension)
+            temp_file_path = os.path.join(directory, new_filename + file_extension)
 
-            with open(final_place, 'wb') as f:
+            with open(temp_file_path, 'wb') as f:
                 f.write(response.content)
             response.close()
 
@@ -1416,25 +1416,39 @@ def url_to_thumbnail_file(filename) -> File:
                 import pillow_avif
 
             Image.MAX_IMAGE_PIXELS = 89478485
-            with Image.open(final_place) as img:
+            with Image.open(temp_file_path) as img:
                 img = ImageOps.exif_transpose(img)
                 img = img.convert('RGB' if (medium_image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
-                img.thumbnail((170, 170), resample=Image.LANCZOS)
+                
+                # Create 170px thumbnail
+                img_170 = img.copy()
+                img_170.thumbnail((170, 170), resample=Image.LANCZOS)
 
                 kwargs = {}
                 if medium_image_format:
                     kwargs['format'] = medium_image_format.upper()
                     final_ext = '.' + medium_image_format.lower()
-                    final_place = os.path.splitext(final_place)[0] + final_ext
+                    temp_file_path = os.path.splitext(temp_file_path)[0] + final_ext
                 if medium_image_quality:
                     kwargs['quality'] = int(medium_image_quality)
 
-                img.save(final_place, optimize=True, **kwargs)
-                thumbnail_width = img.width
-                thumbnail_height = img.height
+                img_170.save(temp_file_path, optimize=True, **kwargs)
+                thumbnail_width = img_170.width
+                thumbnail_height = img_170.height
+                
+                # Create 512px thumbnail
+                img_512 = img.copy()
+                img_512.thumbnail((512, 512), resample=Image.LANCZOS)
+                
+                # Create filename for 512px thumbnail
+                temp_file_path_512 = os.path.splitext(temp_file_path)[0] + '_512' + final_ext
+                img_512.save(temp_file_path_512, optimize=True, **kwargs)
+                thumbnail_512_width = img_512.width
+                thumbnail_512_height = img_512.height
+
                 
             if store_files_in_s3():
-                content_type = guess_mime_type(final_place)
+                content_type = guess_mime_type(temp_file_path)
                 boto3_session = boto3.session.Session()
                 s3 = boto3_session.client(
                     service_name='s3',
@@ -1443,14 +1457,26 @@ def url_to_thumbnail_file(filename) -> File:
                     aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
                     aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
                 )
-                s3.upload_file(final_place, current_app.config['S3_BUCKET'], 'posts/' +
+                # Upload 170px thumbnail
+                s3.upload_file(temp_file_path, current_app.config['S3_BUCKET'], 'posts/' +
                                new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext,
                                ExtraArgs={'ContentType': content_type})
-                os.unlink(final_place)
-                final_place = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/{new_filename[0:2]}/{new_filename[2:4]}" + \
+                # Upload 512px thumbnail
+                s3.upload_file(temp_file_path_512, current_app.config['S3_BUCKET'], 'posts/' +
+                               new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + '_512' + final_ext,
+                               ExtraArgs={'ContentType': content_type})
+                os.unlink(temp_file_path)
+                os.unlink(temp_file_path_512)
+                thumbnail_170_url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/{new_filename[0:2]}/{new_filename[2:4]}" + \
                               '/' + new_filename + final_ext
-            return File(file_name=new_filename + final_ext, thumbnail_width=thumbnail_width,
-                        thumbnail_height=thumbnail_height, thumbnail_path=final_place,
+                thumbnail_512_url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/{new_filename[0:2]}/{new_filename[2:4]}" + \
+                                  '/' + new_filename + '_512' + final_ext
+            else:
+                # For local storage, use the temp file paths as final URLs
+                thumbnail_170_url = temp_file_path
+                thumbnail_512_url = temp_file_path_512
+            return File(file_path=thumbnail_512_url, thumbnail_width=thumbnail_width, width=thumbnail_512_width, height=thumbnail_512_height,
+                        thumbnail_height=thumbnail_height, thumbnail_path=thumbnail_170_url,
                         source_url=filename)
 
 
