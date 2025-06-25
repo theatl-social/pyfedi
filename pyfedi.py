@@ -122,3 +122,10 @@ def after_request(response):
             if '/embed' not in request.path:
                 response.headers['X-Frame-Options'] = 'DENY'
     return response
+
+
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    if exception:
+        db.session.rollback()
+    db.session.remove()
