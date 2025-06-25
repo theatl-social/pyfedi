@@ -1,0 +1,110 @@
+<tr>
+    <td class="text-nowrap" width="*">
+        {% if notification.subtype == "post_reported" %}
+            <h4>Post Reported</h4>
+            <p>
+                <div class="overflow-ellipses-parent">
+                    <div class="child">
+                        <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}"
+                            class="{% if not notification.read %}unread{% endif %}">{{ notification.targets.orig_post_title }}</a>
+                    </div>
+                </div>
+            </p>
+            <p>At the time of reporting:</p>
+            <p>
+                Post Title: {{ notification.targets.orig_post_title }}
+            </p>
+            <p>Post Body:
+            {{ notification.targets.orig_post_body }}
+            </p>
+            <p>
+                Post Author: <a href="/u/{{ notification.targets.suspect_user_user_name }}">{{ notification.targets.suspect_user_user_name }}</a>
+            </p>
+        {% elif notification.subtype == "user_reported" %}
+            <h4>User Reported</h4>
+            <p>
+                <div class="overflow-ellipses-parent">
+                    <div class="child">
+                        Username: <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}"
+                            class="{% if not notification.read %}unread{% endif %}">{{ notification.targets.suspect_user_user_name }}</a>
+                    </div>
+                </div>
+            </p>
+            <p>
+                Reported by: <a href="/u/{{ notification.targets.reporter_user_name }}">{{ notification.targets.reporter_user_name }}</a>
+            </p>
+            {% if notification.targets.reasons %}
+                <p>Reasons:
+                {{ notification.targets.reasons }}
+                </p>
+            {% endif %}
+            {% if notification.targets.description %}
+                <p>Description:
+                {{ notification.targets.description }}
+                </p>
+            {% endif %}
+        {% elif notification.subtype == "comment_reported" %}
+            <h4>Comment Reported</h4>
+            <p>
+                Comment Author: <a href="/u/{{ notification.targets.suspect_user_user_name }}">{{ notification.targets.suspect_user_user_name }}</a>
+            </p>        
+            <p>At the time of reporting:</p>
+            <p>
+                <div class="overflow-ellipses-parent">
+                    <div class="child">
+                        Comment: <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}"
+                            class="{% if not notification.read %}unread{% endif %}">{{ notification.targets.orig_comment_body }}</a>
+                    </div>
+                </div>
+            </p>
+            <p>
+                Reported by: <a href="/u/{{ notification.targets.reporter_user_name }}">{{ notification.targets.reporter_user_name }}</a>
+            </p>
+        {% elif notification.subtype == "post_from_suspicious_domain" %}
+            <h4>Post From Suspicious Domain</h4>
+            <p>
+                <div class="overflow-ellipses-parent">
+                    <div class="child">
+                        <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}"
+                            class="{% if not notification.read %}unread{% endif %}">{{ notification.targets.orig_post_title }}</a>
+                    </div>
+                </div>
+            </p>
+            <p>At the time of reporting:</p>
+            <p>
+                Post Title: {{ notification.targets.orig_post_title }}
+            </p>
+            <p>Post Body:
+            {{ notification.targets.orig_post_body }}
+            </p>
+            <p>
+                Post Author: <a href="/u/{{ notification.targets.suspect_user_user_name }}">{{ notification.targets.suspect_user_user_name }}</a>
+            </p>        
+        {% elif notification.subtype == "post_with_suspicious_image" %}
+            <h4>Post With Suspicious Image</h4>
+            <p>
+                <div class="overflow-ellipses-parent">
+                    <div class="child">
+                        <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}"
+                            class="{% if not notification.read %}unread{% endif %}">{{ notification.targets.orig_post_title }}</a>
+                    </div>
+                </div>
+            </p>
+            <p>At the time of reporting:</p>
+            <p>
+                Post Title: {{ notification.targets.orig_post_title }}
+            </p>
+            <p>Post Body:
+            {{ notification.targets.orig_post_body }}
+            </p>
+            <p>
+                Post Author: <a href="/u/{{ notification.targets.suspect_user_user_name }}">{{ notification.targets.suspect_user_user_name }}</a>
+            </p>          
+        {% endif %}
+    </td>
+    <td class="text-nowrap" width="120">{{ arrow.get(notification.created_at).humanize(locale=locale) }}</td>
+    <td width="30">
+        <a href="{{ url_for('user.notification_delete', notification_id=notification.id) }}"
+            class="no-underline"><span class="fe fe-delete"></span></a>
+    </td>
+</tr>

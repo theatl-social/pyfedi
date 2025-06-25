@@ -111,12 +111,17 @@ def send_post(post_id, edit=False):
             else:
                 existing_notification = None
             if not existing_notification:
-                targets_data = {'post_id':post.id}
+                targets_data = {'gen':'0',
+                                'post_id':post.id,
+                                'post_body':post.body,
+                                'post_title': post.title,
+                                'author_user_name': user.ap_id if user.ap_id else user.user_name
+                                }
                 notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in post {post.id}"),
                                             url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
                                             author_id=user.id, notif_type=NOTIF_MENTION,
                                             subtype='post_mention',
-                                            targets_data=targets_data)
+                                            targets=targets_data)
                 recipient.unread_notifications += 1
                 db.session.add(notification)
                 db.session.commit()

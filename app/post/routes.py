@@ -969,7 +969,16 @@ def post_report(post_id: int):
         # Notify moderators
         already_notified = set()
 
-        targets_data = {'suspect_post_id': post.id, 'suspect_user_id': post.author.id, 'reporter_id': current_user.id}
+        suspect_user = User.query.get(post.author.id)
+        targets_data = {'gen':'0',
+                        'suspect_post_id': post.id, 
+                        'suspect_user_id': post.author.id, 
+                        'suspect_user_user_name': suspect_user.ap_id if suspect_user.ap_id else suspect_user.user_name,
+                        'reporter_id': current_user.id,
+                        'reporter_user_name':current_user.user_name,
+                        'orig_post_title': post.title,
+                        'orig_post_body': post.body
+                        }
         for mod in post.community.moderators():
             notification = Notification(user_id=mod.user_id, title=_('A post has been reported'),
                                         url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
@@ -1212,7 +1221,15 @@ def post_reply_report(post_id: int, comment_id: int):
 
         # Notify moderators
         already_notified = set()
-        targets_data = {'suspect_comment_id':post_reply.id,'suspect_user_id':post_reply.author.id,'reporter_id':current_user.id}
+        suspect_author = User.query.get(post_reply.author.id)
+        targets_data = {'gen':'0',
+                        'suspect_comment_id':post_reply.id,
+                        'suspect_user_id':post_reply.author.id,
+                        'suspect_user_user_name': suspect_author.ap_id if suspect_author.ap_id else suspect_author.user_name,
+                        'reporter_id':current_user.id,
+                        'reporter_user_name':current_user.user_name,
+                        'orig_comment_body':post_reply.body
+                        }
         for mod in post.community.moderators():
             notification = Notification(user_id=mod.user_id, title=_('A comment has been reported'),
                                         url=f"https://{current_app.config['SERVER_NAME']}/comment/{post_reply.id}",

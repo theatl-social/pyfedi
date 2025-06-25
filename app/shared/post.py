@@ -416,7 +416,13 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
             post.domain = domain
             domain.post_count += 1
             already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
-            targets_data = {'post_id': post.id}
+            targets_data = {'gen':'0',
+                            'post_id': post.id,
+                            'orig_post_title':post.title,
+                            'orig_post_body':post.body,
+                            'orig_post_domain':post.domain,
+                            'author_user_name':user.ap_id if user.ap_id else user.user_name
+                            }
             if domain.notify_mods:
                 for community_member in post.community.moderators():
                     if community_member.is_local():
@@ -604,7 +610,17 @@ def report_post(post_id, input, src, auth=None):
 
     # Notify moderators
     already_notified = set()
-    targets_data = {'suspect_post_id':post.id,'suspect_user_id':post.user_id,'reporter_id':user_id}
+    suspect_user = User.query.get(post.user_id)
+    reporter_user = User.query.get(user_id)
+    targets_data = {'gen':'0',
+                    'suspect_post_id':post.id,
+                    'suspect_user_id':post.user_id,
+                    'suspect_user_user_name':suspect_user.ap_id if suspect_user.ap_id else suspect_user.user_name,
+                    'reporter_id':user_id,
+                    'reporter_user_name':reporter_user.ap_id if reporter_user.ap_id else reporter_user.user_name,
+                    'orig_post_title':post.title,
+                    'orig_post_body':post.body
+                    }
     for mod in post.community.moderators():
         moderator = User.query.get(mod.user_id)
         if moderator and moderator.is_local():

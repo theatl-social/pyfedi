@@ -2,7 +2,8 @@ import json
 from app import cache, celery, db
 from app.activitypub.signature import default_context, post_request, send_post_request
 from app.constants import NOTIF_MENTION
-from app.models import Community, CommunityBan, CommunityJoinRequest, CommunityMember, Notification, Post, PostReply, utcnow
+from app.models import Community, CommunityBan, CommunityJoinRequest, CommunityMember, Notification, Post, \
+    PostReply, utcnow, User
 from app.user.utils import search_for_user
 from app.utils import community_membership, gibberish, joined_communities, instance_banned, ap_datetime, \
                       recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies
@@ -105,7 +106,13 @@ def send_reply(reply_id, parent_id, edit=False):
             else:
                 existing_notification = None
             if not existing_notification:
-                targets_data = {'post_id':reply.post_id,'comment_id': reply.id}
+                author = User.query.get(user.id)
+                targets_data = {'gen':'0',
+                                'post_id':reply.post_id,
+                                'author_user_name': author.ap_id if author.ap_id else author.user_name,
+                                'comment_id': reply.id,
+                                'comment_body': reply.body
+                                }
                 notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in comment {reply.id}"),
                                             url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
                                             author_id=user.id, notif_type=NOTIF_MENTION,

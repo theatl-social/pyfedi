@@ -1520,8 +1520,13 @@ class Post(db.Model):
             domain = domain_from_url(post.url)
             # notify about links to banned websites.
             already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
+            targets_data = {'gen':'0',
+                            'post_id': post.id,
+                            'orig_post_title': post.title,
+                            'orig_post_body': post.body,
+                            'orig_post_domain':post.domain,
+                            }
             if domain.notify_mods:
-                targets_data = {'post_id': post.id}
                 for community_member in post.community.moderators():
                     notify = Notification(title='Suspicious content', url=post.ap_id,
                                           user_id=community_member.user_id,
@@ -1621,7 +1626,13 @@ class Post(db.Model):
                             if recipient:
                                 blocked_senders = blocked_users(recipient.id)
                                 if post.user_id not in blocked_senders:
-                                    targets_data = {'post_id': post.id}
+                                    author = User.query.get(post.user_id).first()
+                                    targets_data = {'gen':'0',
+                                                    'post_id': post.id,
+                                                    'post_body': post.body,
+                                                    'post_title': post.title,
+                                                    'author_user_name': author.ap_id if author.ap_id else author.user_name,
+                                                    }
                                     notification = Notification(user_id=recipient.id, title=_(f"You have been mentioned in post {post.id}"),
                                                                 url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
                                                                 author_id=post.user_id, notif_type=NOTIF_MENTION,

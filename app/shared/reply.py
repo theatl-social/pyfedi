@@ -299,7 +299,16 @@ def report_reply(reply_id, input, src, auth=None):
 
     # Notify moderators
     already_notified = set()
-    targets_data = {'suspect_comment_id':reply.id,'suspect_user_id':reply.author.id,'reporter_id':user_id}
+    suspect_author = User.query.get(reply.author.id)
+    reporter_user = User.query.get(user_id)
+    targets_data = {'gen':'0',
+                    'suspect_comment_id':reply.id,
+                    'suspect_user_id':reply.author.id,
+                    'suspect_user_user_name':suspect_author.ap_id if suspect_author.ap_id else suspect_author.user_name,
+                    'reporter_id':user_id,
+                    'reporter_user_name':reporter_user.ap_id if reporter_user.ap_id else reporter_user.user_name,
+                    'orig_comment_body':reply.body
+                    }
     for mod in reply.community.moderators():
         moderator = User.query.get(mod.user_id)
         if moderator and moderator.is_local():
