@@ -7,7 +7,7 @@
         </div>
         <br>
         {% if notification.subtype == "comment_mention" %}
-            <fieldset class="coolfieldset collapsed">
+            <fieldset class="coolfieldset collapsed mt-3">
                 <legend class="w-100">{{ _('Comment details') }}</legend>
                 <p>
                     <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}"

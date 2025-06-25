@@ -1463,7 +1463,7 @@ fieldset {
   }
 }
 
-a.unread {
+a.unread, div.unread {
   font-weight: bold;
 
   &:before {

@@ -1791,10 +1791,10 @@ fieldset legend {
   font-weight: bold;
 }
 
-a.unread {
+a.unread, div.unread {
   font-weight: bold;
 }
-a.unread:before {
+a.unread:before, div.unread:before {
   content: "";
   display: inline-block;
   width: 8px;
