@@ -2454,27 +2454,22 @@ def apply_feed_url_rules(self):
 # notification text is stored in the database using the language of the
 # recipient, rather than the language of the originator
 def get_recipient_language(user_id):
-    print('in get_recipient_language')
     lang_to_use = ''
 
     # look up the user in the db based on the id
     recipient = User.query.get(user_id)
-    print(f'recipient user_name: {recipient.user_name}')
 
     # if the user has language_id set, use that
     if recipient.language_id:
         lang = Language.query.get(recipient.language_id)
         lang_to_use = lang.code
-        print(f'using language_id. language code: {lang_to_use}')
 
     # else if the user has interface_language use that
     elif recipient.interface_language:
         lang_to_use = recipient.interface_language
-        print(f'using interface_language. language code: {lang_to_use}')
 
     # else default to english
     else:
         lang_to_use = 'en'
-        print(f'using default. language code: {lang_to_use}')
 
     return lang_to_use
