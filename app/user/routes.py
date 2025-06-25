@@ -530,7 +530,6 @@ def user_settings():
         current_user.font = form.font.data
         current_user.additional_css = form.additional_css.data
         session['ui_language'] = form.interface_language.data
-        session['compact_level'] = form.compaction.data
         current_user.vote_privately = form.vote_privately.data
         if form.vote_privately.data:
             if current_user.alt_user_name is None or current_user.alt_user_name == '':
@@ -543,7 +542,11 @@ def user_settings():
         db.session.commit()
 
         flash(_('Your changes have been saved.'), 'success')
-        return redirect(url_for('user.user_settings'))
+
+        resp = make_response(redirect(url_for('user.user_settings')))
+        resp.set_cookie('compact_level', form.compaction.data, expires=datetime(year=2099, month=12, day=30))
+        return resp
+
     elif request.method == 'GET':
         form.newsletter.data = current_user.newsletter
         form.email_unread.data = current_user.email_unread
@@ -559,7 +562,7 @@ def user_settings():
         form.feed_auto_follow.data = current_user.feed_auto_follow
         form.feed_auto_leave.data = current_user.feed_auto_leave
         form.read_languages.data = current_user.read_language_ids
-        form.compaction.data = session.get('compact_level', '')
+        form.compaction.data = request.cookies.get('compact_level', '')
         form.accept_private_messages.data = current_user.accept_private_messages
         form.font.data = current_user.font
         form.additional_css.data = current_user.additional_css
