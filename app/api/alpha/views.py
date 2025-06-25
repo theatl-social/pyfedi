@@ -36,12 +36,14 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0) ->
                 v1['url'] = post.url
             if post.image_id:
                 v1['thumbnail_url'] = post.image.medium_url()
+                v1['small_thumbnail_url'] = post.image.thumbnail_url()
                 if post.image.alt_text:
                     v1['alt_text'] = post.image.alt_text
         if post.type == POST_TYPE_IMAGE:
             if post.image_id:
                 v1['url'] = post.image.view_url()
                 v1['thumbnail_url'] = post.image.medium_url()
+                v1['small_thumbnail_url'] = post.image.thumbnail_url()
                 if post.image.alt_text:
                     v1['alt_text'] = post.image.alt_text
 

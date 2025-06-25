@@ -974,6 +974,7 @@ def register(app):
     @app.cli.command("remove-unnecessary-images")
     def remove_unnecessary_images():
         # link posts only need a thumbnail but for a long time we have been generating both a thumbnail and a medium-sized image
+        # AS OF JUN 2025 link posts DO need a medium-sized version, as some mobile apps need larger images. DO NOT RUN THIS.
         with app.app_context():
             import boto3
             sql = '''select file_path from "file" as f 
