@@ -11,7 +11,7 @@
                 </div>
             </p>
             <fieldset class="coolfieldset collapsed">
-                <legend class="w-100">{{ _('More details') }}: {{ notification.targets.orig_post_title }}</legend>
+                <legend class="w-100">{{ _('Post details') }}</legend>
                 <p>
                 {{ notification.targets.orig_post_body }}
                 </p>
@@ -43,12 +43,12 @@
                 <div class="overflow-ellipses-parent">
                     <div class="child">
                         <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}"
-                            class="{% if not notification.read %}unread{% endif %}">{{ notification.targets.orig_comment_body }}</a>
+                            class="{% if not notification.read %}unread{% endif %}">{{ notification.targets.orig_comment_body | shorten }}</a>
                     </div>
                 </div>
             </p>
             <fieldset class="coolfieldset collapsed">
-                <legend class="w-100">{{ _('More details') }}</legend>
+                <legend class="w-100">{{ _('Comment details') }}</legend>
                 <p>
                 {{ notification.targets.orig_comment_body }}
                 </p>
@@ -65,7 +65,7 @@
                 </div>
             </p>
             <fieldset class="coolfieldset collapsed">
-                <legend class="w-100">{{ _('More details') }}: {{ notification.targets.orig_post_title }}</legend>
+                <legend class="w-100">{{ _('More details') }}</legend>
                 <p>
                 {{ notification.targets.orig_post_body }}
                 </p>
@@ -82,7 +82,7 @@
                 </div>
             </p>
             <fieldset class="coolfieldset collapsed">
-                <legend class="w-100">{{ _('More details') }}: {{ notification.targets.orig_post_title }}</legend>
+                <legend class="w-100">{{ _('More details') }}</legend>
                 <p>
                 {{ notification.targets.orig_post_body }}
                 </p>
