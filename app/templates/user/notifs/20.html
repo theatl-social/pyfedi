@@ -1,7 +1,7 @@
 <tr>
     <td width="*">
         {% if notification.subtype == "post_reported" %}
-            <h4>Post Reported</h4>
+            <h4>{{ _('Post Reported') }}</h4>
             <p>
                 <div class="overflow-ellipses-parent">
                     <div class="child">
@@ -11,37 +11,34 @@
                 </div>
             </p>
             <fieldset class="coolfieldset collapsed">
-                <legend class="w-100">More details: {{ notification.targets.orig_post_title }}</legend>
+                <legend class="w-100">{{ _('More details') }}: {{ notification.targets.orig_post_title }}</legend>
                 <p>
                 {{ notification.targets.orig_post_body }}
                 </p>
-                <p>Author: <a href="/u/{{ notification.targets.suspect_user_user_name }}">{{ notification.targets.suspect_user_user_name }}</a></p>
+                <p>{{ _('Author') }}: <a href="/u/{{ notification.targets.suspect_user_user_name }}">{{ notification.targets.suspect_user_user_name }}</a></p>
             </fieldset>
         {% elif notification.subtype == "user_reported" %}
-            <h4>User Reported</h4>
+            <h4>{{ _('User Reported') }}</h4>
             <p>
                 <div class="overflow-ellipses-parent">
                     <div class="child">
-                        Username: <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}"
+                        {{ _('Username') }}: <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}"
                             class="{% if not notification.read %}unread{% endif %}">{{ notification.targets.suspect_user_user_name }}</a>
                     </div>
                 </div>
             </p>
-            <p>
-                Reported by: <a href="/u/{{ notification.targets.reporter_user_name }}">{{ notification.targets.reporter_user_name }}</a>
-            </p>
             {% if notification.targets.reasons %}
-                <p>Reasons:
+                <p>{{ _('Reasons') }}:
                 {{ notification.targets.reasons }}
                 </p>
             {% endif %}
             {% if notification.targets.description %}
-                <p>Description:
+                <p>{{ _('Description') }}:
                 {{ notification.targets.description }}
                 </p>
             {% endif %}
         {% elif notification.subtype == "comment_reported" %}
-            <h4>Comment Reported</h4>
+            <h4>{{ _('Comment Reported') }}</h4>
             <p>
                 <div class="overflow-ellipses-parent">
                     <div class="child">
@@ -51,15 +48,14 @@
                 </div>
             </p>
             <fieldset class="coolfieldset collapsed">
-                <legend class="w-100">More details</legend>
+                <legend class="w-100">{{ _('More details') }}</legend>
                 <p>
                 {{ notification.targets.orig_comment_body }}
                 </p>
-                <p>Author: <a href="/u/{{ notification.targets.suspect_user_user_name }}">{{ notification.targets.suspect_user_user_name }}</a></p>
-                <p>Reported by: <a href="/u/{{ notification.targets.reporter_user_name }}">{{ notification.targets.reporter_user_name }}</a></p>
+                <p>{{ _('Author') }}: <a href="/u/{{ notification.targets.suspect_user_user_name }}">{{ notification.targets.suspect_user_user_name }}</a></p>
             </fieldset>
         {% elif notification.subtype == "post_from_suspicious_domain" %}
-            <h4>Post From Suspicious Domain</h4>
+            <h4>{{ _('Post From Suspicious Domain') }}</h4>
             <p>
                 <div class="overflow-ellipses-parent">
                     <div class="child">
@@ -69,14 +65,14 @@
                 </div>
             </p>
             <fieldset class="coolfieldset collapsed">
-                <legend class="w-100">More details: {{ notification.targets.orig_post_title }}</legend>
+                <legend class="w-100">{{ _('More details') }}: {{ notification.targets.orig_post_title }}</legend>
                 <p>
                 {{ notification.targets.orig_post_body }}
                 </p>
-                <p>Author: <a href="/u/{{ notification.targets.suspect_user_user_name }}">{{ notification.targets.suspect_user_user_name }}</a></p>
+                <p>{{ _('Author') }}: <a href="/u/{{ notification.targets.suspect_user_user_name }}">{{ notification.targets.suspect_user_user_name }}</a></p>
             </fieldset>        
         {% elif notification.subtype == "post_with_suspicious_image" %}
-            <h4>Post With Suspicious Image</h4>
+            <h4>{{ _('Post With Suspicious Image') }}</h4>
             <p>
                 <div class="overflow-ellipses-parent">
                     <div class="child">
@@ -86,11 +82,11 @@
                 </div>
             </p>
             <fieldset class="coolfieldset collapsed">
-                <legend class="w-100">More details: {{ notification.targets.orig_post_title }}</legend>
+                <legend class="w-100">{{ _('More details') }}: {{ notification.targets.orig_post_title }}</legend>
                 <p>
                 {{ notification.targets.orig_post_body }}
                 </p>
-                <p>Author: <a href="/u/{{ notification.targets.suspect_user_user_name }}">{{ notification.targets.suspect_user_user_name }}</a></p>
+                <p>{{ _('Author') }}: <a href="/u/{{ notification.targets.suspect_user_user_name }}">{{ notification.targets.suspect_user_user_name }}</a></p>
             </fieldset>          
         {% endif %}
     </td>
