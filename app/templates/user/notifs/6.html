@@ -5,7 +5,6 @@
             <a href="/u/{{ notification.targets.author_user_name }}">{{ notification.targets.author_user_name }}</a>
             :
         </div>
-        <br>
         {% if notification.subtype == "comment_mention" %}
             <fieldset class="coolfieldset collapsed mt-3">
                 <legend class="w-100">{{ _('Comment details') }}</legend>
