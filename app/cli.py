@@ -36,7 +36,8 @@ from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_bl
     shorten_string, get_request, blocked_communities, gibberish, get_request_instance, \
     instance_banned, recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, download_defeds, \
     get_setting, set_setting, get_redis_connection, instance_online, instance_gone_forever, find_next_occurrence, \
-    guess_mime_type, communities_banned_from, joined_communities, moderating_communities, ensure_directory_exists
+    guess_mime_type, communities_banned_from, joined_communities, moderating_communities, ensure_directory_exists, \
+    render_from_tpl
 
 
 def register(app):
@@ -539,8 +540,8 @@ def register(app):
     def publish_scheduled_posts():
         with app.app_context():
             for post in Post.query.filter(Post.status == POST_STATUS_SCHEDULED, Post.scheduled_for < utcnow(),
-                                          Post.deleted == False):
-                if post.repeat and post.repeat != 'none':
+                                          Post.deleted == False, Post.repeat != 'none'):
+                if post.repeat and post.repeat != 'once':
                     next_occurrence = post.scheduled_for + find_next_occurrence(post)
                 else:
                     next_occurrence = None
@@ -550,6 +551,7 @@ def register(app):
                     post.scheduled_for = None
                     post.posted_at = utcnow()
                     post.edited_at = None
+                    post.title = render_from_tpl(post.title)
                     db.session.commit()
 
                     # Federate post
@@ -570,6 +572,7 @@ def register(app):
                     scheduled_post.posted_at = utcnow()
                     scheduled_post.edited_at = None
                     scheduled_post.status = POST_STATUS_PUBLISHED
+                    scheduled_post.title = render_from_tpl(scheduled_post.title)
                     db.session.add(scheduled_post)
                     db.session.commit()
 
@@ -579,7 +582,7 @@ def register(app):
                     vote = PostVote(user_id=post.user_id, post_id=scheduled_post.id, author_id=scheduled_post.user_id, effect=1)
                     db.session.add(vote)
                     db.session.commit()
-    
+
                     task_selector('make_post', post_id=scheduled_post.id)
                     notify_about_post(scheduled_post)
 

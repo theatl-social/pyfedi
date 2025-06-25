@@ -2448,3 +2448,28 @@ def apply_feed_url_rules(self):
         self.url.errors.append(_l('A Feed with this url already exists.'))
         return False
     return True
+
+def render_from_tpl(tpl: str) -> str:
+    """
+    Replace tags in `template` like {% week %}, {%day%}, {% month %}, {%year%}
+    with the corresponding values.
+    """
+    date = utcnow()
+
+    # Words to replace
+    replacements = {
+        "week": f"{date.isocalendar()[1]:02d}",
+        "day": f"{date.day:02d}",
+        "month": f"{date.month:02d}",
+        "year": str(date.year)
+    }
+
+    # Regex to find {%   word   %}, spaces will be ignored
+    pattern = re.compile(r"\{\%\s*(week|day|month|year)\s*\%\}")
+
+    # Substitute each match with its replacement
+    def _sub(match):
+        key = match.group(1)
+        return replacements.get(key, match.group(0))
+
+    return pattern.sub(_sub, tpl)
