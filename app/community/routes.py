@@ -73,7 +73,7 @@ def add_local():
     if g.site.enable_nsfw is False:
         form.nsfw.render_kw = {'disabled': True}
 
-    form.languages.choices = languages_for_form()
+    form.languages.choices = languages_for_form(all=True)
 
     if form.validate_on_submit():
         if form.url.data.strip().lower().startswith('/c/'):

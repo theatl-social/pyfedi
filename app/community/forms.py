@@ -29,7 +29,7 @@ class AddCommunityForm(FlaskForm):
     banner_file = FileField(_l('Banner image'), render_kw={'accept': 'image/*'})
     nsfw = BooleanField('NSFW')
     local_only = BooleanField('Local only')
-    languages = SelectMultipleField(_l('Languages'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
+    languages = MultiCheckboxField(_l('Languages'), coerce=int, validators=[Optional()], render_kw={'class': 'form-multicheck-columns'})
     submit = SubmitField(_l('Create'))
 
     def validate(self, extra_validators=None):
@@ -83,7 +83,7 @@ class EditCommunityForm(FlaskForm):
     ]
     downvote_accept_mode = SelectField(_l('Accept downvotes from'), coerce=int, choices=downvote_accept_modes, validators=[Optional()], render_kw={'class': 'form-select'})
     topic = SelectField(_l('Topic'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
-    languages = SelectMultipleField(_l('Languages'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
+    languages = MultiCheckboxField(_l('Languages'), coerce=int, validators=[Optional()], render_kw={'class': 'form-multicheck-columns'})
     layouts = [('', _l('List')),
                ('masonry', _l('Masonry')),
                ('masonry_wide', _l('Wide masonry'))]
