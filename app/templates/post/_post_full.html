@@ -187,6 +187,9 @@
     {% endif -%}
 
     <div class="post_utilities_bar">
+        <div style="justify-content: left;">
+          <a href="#post_replies"><span class="fe fe-reply"></span> {{ post.reply_count }}</a>
+        </div>
         <div class="voting_buttons_new" aria-live="assertive">
             {% include "post/_post_voting_buttons.html" -%}
         </div>
@@ -214,9 +217,6 @@
                 <a rel="nofollow" aria-label="{{ _('Cross-post') }}" title="{{ _('Cross-post') }}" href="{{ url_for('post.post_cross_post', post_id=post.id) }}"><span class="fe fe-cross-post"></span></a>
             </div>
         {% endif -%}
-        <div class="mx-2">
-          <a href="#post_replies"><span class="fe fe-reply"></span> {{ post.reply_count }} {{ _('Comments') }}</a>
-        </div>
         <div class="notify_toggle pull-right">
             {% if current_user.is_authenticated and current_user.verified -%}
                 {% include 'post/_post_notification_toggle.html' -%}
