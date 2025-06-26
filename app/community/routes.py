@@ -1735,7 +1735,7 @@ def community_moderate_report_escalate(community_id, report_id):
         if report:
             form = EscalateReportForm()
             if form.validate_on_submit():
-                targets_data = {'community_id': community.id,'report_id':report_id}
+                targets_data = {'gen':'0', 'community_id': community.id,'report_id':report_id}
                 notify = Notification(title='Escalated report', url='/admin/reports', user_id=1,
                                       author_id=current_user.id, notif_type=NOTIF_REPORT_ESCALATION,
                                       subtype='report_escalation_from_community_mod',
