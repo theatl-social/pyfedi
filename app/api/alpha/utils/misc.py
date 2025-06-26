@@ -106,6 +106,15 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
     ap_json = remote_object_to_json(query)
     if not ap_json:
         raise Exception('No object found.')
+    if not 'id' in ap_json:
+        raise Exception('No object found.')
+    if query != ap_json['id']:
+        query = ap_json['id']
+        ap_json = remote_object_to_json(query)
+        if not ap_json:
+            raise Exception('No object found.')
+        parsed_url = urlparse(query)
+        server = parsed_url.netloc.lower()
 
     # a user or a community
     if not 'type' in ap_json:
