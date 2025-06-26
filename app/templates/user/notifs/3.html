@@ -1,10 +1,12 @@
 <tr>
     <td>
-        <div class="child my-1 {% if not notification.read %}unread{% endif %}">
-            <a href="/u/{{ notification.targets.author_user_name }}">{{ notification.targets.author_user_name }}</a>
-            {{ _('replied to') }}
-            <a href="/post/{{ notification.targets.post_id }}">{{ notification.targets.post_title }}</a>
-            :
+        <div class="overflow-ellipses-parent text-truncate">
+          <div class="child my-1 {% if not notification.read %}unread{% endif %}">
+              <a href="/u/{{ notification.targets.author_user_name }}">{{ notification.targets.author_user_name }}</a>
+              {{ _('replied to') }}
+              <a href="/post/{{ notification.targets.post_id }}">{{ notification.targets.post_title }}</a>
+              :
+          </div>
         </div>
         <div class="accordion" id="accordion-{{ notification.id }}">
           <div class="accordion-item">

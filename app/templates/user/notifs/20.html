@@ -2,7 +2,7 @@
     <td width="*">
         {% if notification.subtype == "post_reported" %}
             <h4>{{ _('Post Reported') }}</h4>
-            <div class="overflow-ellipses-parent">
+            <div class="overflow-ellipses-parent text-truncate">
                 <div class="child my-1 {% if not notification.read %}unread{% endif %}">
                     <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">{{ notification.targets.orig_post_title }}</a>
                 </div>
@@ -26,7 +26,7 @@
             </div>
         {% elif notification.subtype == "user_reported" %}
             <h4>{{ _('User Reported') }}</h4>
-            <div class="overflow-ellipses-parent">
+            <div class="overflow-ellipses-parent text-truncate">
                 <div class="child my-1 {% if not notification.read %}unread{% endif %}">
                     {{ _('Username') }}: <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">{{ notification.targets.suspect_user_user_name }}</a>
                 </div>
@@ -52,7 +52,7 @@
             {% endif %}
         {% elif notification.subtype == "comment_reported" %}
             <h4>{{ _('Comment Reported') }}</h4>
-            <div class="overflow-ellipses-parent">
+            <div class="overflow-ellipses-parent text-truncate">
                 <div class="child my-1 {% if not notification.read %}unread{% endif %}">
                     <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
                       {{ notification.targets.orig_comment_body | shorten }}</a>
@@ -77,7 +77,7 @@
             </div>
         {% elif notification.subtype == "post_from_suspicious_domain" %}
             <h4>{{ _('Post From Suspicious Domain') }}</h4>
-            <div class="overflow-ellipses-parent">
+            <div class="overflow-ellipses-parent text-truncate">
                 <div class="child my-1 {% if not notification.read %}unread{% endif %}">
                     <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}"
                         class="{% if not notification.read %}unread{% endif %}">{{ notification.targets.orig_post_title }}</a>
@@ -102,7 +102,7 @@
             </div>
         {% elif notification.subtype == "post_with_suspicious_image" %}
             <h4>{{ _('Post With Suspicious Image') }}</h4>
-            <div class="overflow-ellipses-parent">
+            <div class="overflow-ellipses-parent text-truncate">
                 <div class="child my-1 {% if not notification.read %}unread{% endif %}">
                     <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">{{ notification.targets.orig_post_title }}</a>
                 </div>
