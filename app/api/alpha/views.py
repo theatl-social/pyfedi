@@ -25,12 +25,16 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0) ->
                         'ap_id': post.profile_id(),
                         'local': post.is_local(),
                         'language_id': post.language_id if post.language_id else 0,
-                        'removed': post.deleted,
+                        'removed': False,
                         'locked': not post.comments_enabled})
         if post.body:
             v1['body'] = post.body
         if post.edited_at:
             v1['edited_at'] = post.edited_at.isoformat() + 'Z'
+        if post.deleted == True:
+            if post.deleted_by and post.user_id != post.deleted_by:
+                v1['removed'] = True
+                v1['deleted'] = False
         if post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO:
             if post.url:
                 v1['url'] = post.url
@@ -363,6 +367,7 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
             v1['body'] = ''
             if reply.deleted_by and reply.user_id != reply.deleted_by:
                 v1['removed'] = True
+                v1['deleted'] = False
 
         return v1
 
