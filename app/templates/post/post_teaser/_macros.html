@@ -60,7 +60,7 @@
     <div class="post_replies_link">
         <a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None, _anchor='post_replies') }}" {{ 'target="_blank"' if embed }} aria-label="{{ _('View comments') }}"><span class="fe fe-reply"></span> <span aria-label="{{ _('Number of comments:') }}">{{ post.reply_count }}</span></a>
     </div>
-    <div class="voting_buttons_new" aria-live="assertive">
+    <div class="voting_buttons_new" data-base-url="/post/{{ post.id }}" aria-live="assertive">
         {% if current_user.is_authenticated and current_user.verified -%}
                 {% if (can_upvote_here or can_upvote(current_user, post.community, communities_banned_from_list)) and not disable_voting -%}
                         <div class="upvote_button {{ 'voted_up' if in_sorted_list(recently_upvoted, post.id) }}" role="button" aria-label="{{ _('UpVote button, %(count)d upvotes so far.', count=post.up_votes) }}" aria-live="assertive"

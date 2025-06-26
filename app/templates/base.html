@@ -242,6 +242,28 @@
             <p class="text-center"><a href="/privacy">{{ _('Privacy policy') }}</a></p>
             <p role="timer" id="timeSpent" class="text-center mt-4" title="This is how long you have spent using PieFed during this month. We hope this use of your time aligns with your priorities and values."></p>
         </footer>
+        <dialog id="voting_dialog">
+            <div class="p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">{{ _('Voting Options') }}</h5>
+                    <button type="button" class="btn-close" aria-label="{{ _('Close') }}" id="voting_dialog_close"></button>
+                </div>
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-success" id="voting_dialog_upvote_public">
+                        <i class="fe fe-thumbs-up"></i> {{ _('Upvote Publicly') }}
+                    </button>
+                    <button type="button" class="btn btn-outline-success" id="voting_dialog_upvote_private">
+                        <i class="fe fe-thumbs-up"></i> {{ _('Upvote Privately') }}
+                    </button>
+                    <button type="button" class="btn btn-outline-danger" id="voting_dialog_downvote_private">
+                        <i class="fe fe-thumbs-down"></i> {{ _('Downvote Privately') }}
+                    </button>
+                    <button type="button" class="btn btn-danger" id="voting_dialog_downvote_public">
+                        <i class="fe fe-thumbs-down"></i> {{ _('Downvote Publicly') }}
+                    </button>
+                </div>
+            </div>
+        </dialog>
     {% endblock -%}
 
     {% block scripts -%}

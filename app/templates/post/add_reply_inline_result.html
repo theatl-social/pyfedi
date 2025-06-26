@@ -86,7 +86,7 @@
                    hx-swap="innerHTML"
                    rel="nofollow noindex"><span class="fe fe-reply"></span><span class="hide_skinny_mobile">reply</span></a>
             </div>
-            <div class="voting_buttons_new">
+            <div class="voting_buttons_new" data-base-url="/comment/{{ post_reply.id }}">
                 {% with comment=post_reply, community=post_reply.post.community -%}
                     {% include "post/_comment_voting_buttons.html" -%}
                 {% endwith -%}
