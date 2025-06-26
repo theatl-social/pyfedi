@@ -195,7 +195,7 @@ def register():
                             disposable_domains = [line.rstrip('\n') for line in f]
                         if user.email_domain() in disposable_domains:
                             # todo: notify everyone with the "approve registrations" permission, instead of just all admins?
-                            targets_data = {'suspect_user_id': user.id, 'reporter_id': 1}
+                            targets_data = {'gen': '0', 'suspect_user_id': user.id, 'reporter_id': 1}
                             notify_admin(_('Throwaway email used for account %(username)s', username=user.user_name),
                                          url=f'/u/{user.link()}', author_id=1, notif_type=NOTIF_REPORT,
                                          subtype='user_reported', targets=targets_data)
