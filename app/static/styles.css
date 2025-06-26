@@ -192,6 +192,10 @@
   content: "\e92b";
 }
 
+.fe-read::before {
+  content: "\e92c";
+}
+
 .fe-user::before {
   content: "\e9f1";
 }

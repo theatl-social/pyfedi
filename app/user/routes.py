@@ -1143,7 +1143,37 @@ def notification_delete(notification_id):
             current_user.unread_notifications -= 1
         db.session.delete(notification)
         db.session.commit()
+        if request.headers.get("HX-Request"):
+            return ""
     return redirect(url_for('user.notifications'))
+
+
+@bp.route('/notification/<int:notification_id>/read', methods=['POST'])
+@login_required
+def notification_read(notification_id):
+    notification = Notification.query.get_or_404(notification_id)
+    if notification.user_id == current_user.id:
+        if not notification.read:
+            current_user.unread_notifications -= 1
+        notification.read = True
+        db.session.commit()
+        return render_template(f"user/notifs/{notification.notif_type}.html", notification=notification)
+    else:
+        abort(403)
+
+
+@bp.route('/notification/<int:notification_id>/unread', methods=['POST'])
+@login_required
+def notification_unread(notification_id):
+    notification = Notification.query.get_or_404(notification_id)
+    if notification.user_id == current_user.id:
+        if notification.read:
+            current_user.unread_notifications += 1
+        notification.read = False
+        db.session.commit()
+        return render_template(f"user/notifs/{notification.notif_type}.html", notification=notification)
+    else:
+        abort(403)
 
 
 @bp.route('/notifications/all_read', methods=['GET', 'POST'])

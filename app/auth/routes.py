@@ -176,7 +176,7 @@ def register():
                 if g.site.registration_mode == 'RequireApplication' and g.site.application_question:
                     application = UserRegistration(user_id=user.id, answer=form.question.data)
                     db.session.add(application)
-                    targets_data = {'application_id':application.id,'user_id':user.id}
+                    targets_data = {'gen':'0', 'application_id':application.id,'user_id':user.id}
                     for admin in Site.admins():
                         notify = Notification(title='New registration', url=f'/admin/approve_registrations?account={user.id}', user_id=admin.id,
                                           author_id=user.id, notif_type=NOTIF_REGISTRATION,
@@ -195,7 +195,7 @@ def register():
                             disposable_domains = [line.rstrip('\n') for line in f]
                         if user.email_domain() in disposable_domains:
                             # todo: notify everyone with the "approve registrations" permission, instead of just all admins?
-                            targets_data = {'suspect_user_id': user.id, 'reporter_id': 1}
+                            targets_data = {'gen': '0', 'suspect_user_id': user.id, 'reporter_id': 1}
                             notify_admin(_('Throwaway email used for account %(username)s', username=user.user_name),
                                          url=f'/u/{user.link()}', author_id=1, notif_type=NOTIF_REPORT,
                                          subtype='user_reported', targets=targets_data)
@@ -373,7 +373,7 @@ def google_authorize():
         if g.site.registration_mode == 'RequireApplication' and g.site.application_question:
             application = UserRegistration(user_id=user.id, answer='Signed in with Google')
             db.session.add(application)
-            targets_data = {'application_id':application.id,'user_id':user.id}
+            targets_data = {'gen':'0', 'application_id':application.id,'user_id':user.id}
             for admin in Site.admins():
                 notify = Notification(title='New registration', url=f'/admin/approve_registrations?account={user.id}',
                                       user_id=admin.id,

@@ -175,7 +175,7 @@ def chat_report(conversation_id):
 
             # Notify site admin
             already_notified = set()
-            targets_data = {'suspect_conversation_id':conversation.id,'reporter_id':current_user.id}
+            targets_data = {'gen':'0', 'suspect_conversation_id':conversation.id,'reporter_id':current_user.id}
             for admin in Site.admins():
                 if admin.id not in already_notified:
                     notify = Notification(title='Reported conversation with user', url='/admin/reports', user_id=admin.id,

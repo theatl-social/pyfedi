@@ -218,7 +218,7 @@ def register(app):
                 community = Community.query.get(expired_ban.community_id)
                 if blocked.is_local():
                     # Notify unbanned person
-                    targets_data = {'community_id': community.id}
+                    targets_data = {'gen':'0', 'community_id': community.id}
                     notify = Notification(title=shorten_string('You have been unbanned from ' + community.display_name()),
                                           url=f'/chat/ban_from_mod/{blocked.id}/{community.id}', user_id=blocked.id,
                                           author_id=1, notif_type=NOTIF_UNBAN,

@@ -1711,7 +1711,7 @@ def ban_user(blocker, blocked, community, core_activity):
             db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == community.id, CommunityJoinRequest.user_id == blocked.id).delete()
 
             # Notify banned person
-            targets_data = {'community_id': community.id}
+            targets_data = {'gen':'0', 'community_id': community.id}
             notify = Notification(title=shorten_string('You have been banned from ' + community.title),
                                   url=f'/chat/ban_from_mod/{blocked.id}/{community.id}', user_id=blocked.id,
                                   author_id=blocker.id, notif_type=NOTIF_BAN, subtype='user_banned_from_community',
@@ -1746,7 +1746,7 @@ def unban_user(blocker, blocked, community, core_activity):
 
     if blocked.is_local():
         # Notify unbanned person
-        targets_data = {'community_id': community.id}
+        targets_data = {'gen':'0', 'community_id': community.id}
         notify = Notification(title=shorten_string('You have been unbanned from ' + community.display_name()),
                               url=f'/chat/ban_from_mod/{blocked.id}/{community.id}', user_id=blocked.id, 
                               author_id=blocker.id, notif_type=NOTIF_UNBAN,

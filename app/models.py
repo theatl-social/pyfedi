@@ -1537,7 +1537,7 @@ class Post(db.Model):
                     db.session.add(notify)
                     already_notified.add(community_member.user_id)
             if domain.notify_admins:
-                targets_data = {'post_id': post.id}
+                targets_data = {'gen':'0', 'post_id': post.id}
                 for admin in Site.admins():
                     if admin.id not in already_notified:
                         notify = Notification(title='Suspicious content',
