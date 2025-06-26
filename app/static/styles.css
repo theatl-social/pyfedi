@@ -1239,6 +1239,10 @@ time {
 .post_full .post_utilities_bar .voting_buttons_new {
   margin-left: -15px;
 }
+.post_full .post_utilities_bar .post_reply_count {
+  justify-content: left;
+  margin-right: 8px;
+}
 
 #masonry {
   display: flex;
