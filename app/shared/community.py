@@ -457,7 +457,7 @@ def add_mod_to_community(community_id: int, person_id: int, src, auth=None):
 
     # Notify new mod
     if new_moderator.is_local():
-        targets_data = {'community_id':community.id}
+        targets_data = {'gen':'0', 'community_id':community.id}
         with force_locale(get_recipient_language(new_moderator.id)):
             notify = Notification(title=gettext('You are now a moderator of %(name)s', name=community.display_name()),
                                 url='/c/' + community.name, user_id=new_moderator.id,
