@@ -1157,7 +1157,7 @@ def community_ban_user(community_id: int, user_id: int):
 
             cache.delete_memoized(joined_communities, user.id)
             cache.delete_memoized(moderating_communities, user.id)
-            targets_data = {'community_id': community.id}
+            targets_data = {'gen':'0', 'community_id': community.id}
             notify = Notification(title=shorten_string('You have been banned from ' + community.title),
                                   url='/notifications', user_id=user.id,
                                   author_id=1, notif_type=NOTIF_BAN,
@@ -1210,7 +1210,7 @@ def community_unban_user(community_id: int, user_id: int):
     if user.is_local():
         cache.delete_memoized(joined_communities, user.id)
         cache.delete_memoized(moderating_communities, user.id)
-        targets_data = {'community_id': community.id}
+        targets_data = {'gen':'0', 'community_id': community.id}
         notify = Notification(title=shorten_string('You have been un-banned from ' + community.title),
                               url='/notifications', user_id=user.id,
                               author_id=1, notif_type=NOTIF_UNBAN,
