@@ -49,9 +49,9 @@ def get_community_list(auth, data):
         if blocked_community_ids:
             communities = communities.filter(Community.id.not_in(blocked_community_ids))
         if user.hide_nsfw:
-            communities = communities.filter_by(nsfw=False)
+            communities = communities.filter(Community.nsfw == False)
         if user.hide_nsfl:
-            communities = communities.filter_by(nsfl=False)
+            communities = communities.filter(Community.nsfl == False)
     else:
         communities = communities.filter_by(nsfl=False, nsfw=False)
 
