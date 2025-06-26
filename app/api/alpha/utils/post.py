@@ -1,6 +1,6 @@
 from app import db
 from app.api.alpha.views import post_view, post_report_view
-from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
+from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected, array_of_integers_expected
 from app.constants import *
 from app.models import Post, PostVote, Community, CommunityMember, utcnow, User
 from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, subscribe_post, make_post, edit_post, \
@@ -336,3 +336,49 @@ def post_post_remove(auth, data):
 
     post_json = post_view(post=post, variant=4, user_id=user_id)
     return post_json
+
+
+def post_post_mark_as_read(auth, data):
+    required(['read'], data)
+    integer_expected(['post_id'], data)
+    array_of_integers_expected(['post_ids'], data)
+    boolean_expected(['read'], data)
+
+    if not 'post_id' in data and not 'post_ids' in data:
+      raise Exception('post_id or post_ids required')
+
+    user_id = authorise_api_user(auth)
+
+    if 'post_id' in data:
+        post = Post.query.filter_by(id=data['post_id']).one()
+        if data['read'] == True:
+            # no compound primary key on user_id and read_post_id ??
+            existing = db.session.execute(text('SELECT user_id FROM "read_posts" WHERE user_id = :user_id AND read_post_id = :post_id'),
+                                          {"user_id": user_id, "post_id": post.id}).scalar()
+            if not existing:
+                db.session.execute(text('INSERT INTO "read_posts" (user_id, read_post_id, interacted_at) VALUES (:user_id, :post_id, :stamp)'),
+                                   {"user_id": user_id, "post_id": post.id, "stamp": utcnow()})
+                db.session.commit()
+        else:
+            db.session.execute(text('DELETE FROM "read_posts" WHERE user_id = :user_id AND read_post_id = :post_id'),
+                               {"user_id": user_id, "post_id": post.id})
+            db.session.commit()
+    elif 'post_ids' in data:
+        posts = Post.query.filter(Post.id.in_(data['post_ids']))
+        if posts.count() == 0:
+            raise Exception('No posts from post_ids array found')
+        if data['read'] == True:
+            for post in posts:
+                existing = db.session.execute(text('SELECT user_id FROM "read_posts" WHERE user_id = :user_id AND read_post_id = :post_id'),
+                                              {"user_id": user_id, "post_id": post.id}).scalar()
+                if not existing:
+                    db.session.execute(text('INSERT INTO "read_posts" (user_id, read_post_id, interacted_at) VALUES (:user_id, :post_id, :stamp)'),
+                                       {"user_id": user_id, "post_id": post.id, "stamp": utcnow()})
+            db.session.commit()
+        else:
+            for post in posts:
+                db.session.execute(text('DELETE FROM "read_posts" WHERE user_id = :user_id AND read_post_id = :post_id'),
+                                   {"user_id": user_id, "post_id": post.id})
+            db.session.commit()
+
+    return {"success": True}
