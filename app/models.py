@@ -2819,6 +2819,7 @@ class Site(db.Model):
     logo_16 = db.Column(db.String(40), default='')
     show_inoculation_block = db.Column(db.Boolean, default=True)
     additional_css = db.Column(db.Text)
+    additional_js = db.Column(db.Text)
     private_instance = db.Column(db.Boolean, default=False)
     language_id = db.Column(db.Integer)
 

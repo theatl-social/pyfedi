@@ -267,5 +267,10 @@
     {% block end_scripts -%}
 
     {% endblock -%}
+    {% if g.site.additional_js -%}
+        <script nonce="{{ nonce }}">
+            {{ g.site.additional_js | safe }}
+        </script>
+    {% endif -%}
   </body>
 </html>
