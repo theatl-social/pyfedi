@@ -1170,12 +1170,8 @@ class User(UserMixin, db.Model):
         result = self.ap_profile_id if self.ap_profile_id else f"https://{current_app.config['SERVER_NAME']}/u/{self.user_name.lower()}"
         return result
 
-    def public_url(self, main_user_name=True):
-        if main_user_name:
-            result = self.ap_public_url if self.ap_public_url else f"https://{current_app.config['SERVER_NAME']}/u/{self.user_name}"
-        else:
-            result = f"https://{current_app.config['SERVER_NAME']}/u/{self.alt_user_name}" if self.alt_user_name else self.public_url(True)
-        return result
+    def public_url(self):
+        return self.ap_public_url if self.ap_public_url else f"https://{current_app.config['SERVER_NAME']}/u/{self.user_name}"
 
     def created_recently(self):
         return self.created and self.created > utcnow() - timedelta(days=7)
