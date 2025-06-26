@@ -5,7 +5,7 @@ from app.models import Notification, PostReply, Post
 from app.constants import *
 from app.shared.reply import vote_for_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, make_reply, edit_reply, \
                              delete_reply, restore_reply, report_reply, mod_remove_reply, mod_restore_reply
-from app.utils import authorise_api_user, blocked_users, blocked_instances, site_language_id
+from app.utils import authorise_api_user, blocked_users, blocked_instances, site_language_id, recently_upvoted_post_replies
 
 from sqlalchemy import desc, or_, text
 
@@ -19,9 +19,10 @@ def get_reply_list(auth, data, user_id=None):
     parent_id = data['parent_id'] if data and 'parent_id' in data else None
     person_id = data['person_id'] if data and 'person_id' in data else None
     community_id = data['community_id'] if data and 'community_id' in data else None
-
-    if data and not (post_id or parent_id or person_id or community_id):
-        raise Exception('missing parameters for reply')
+    liked_only = data['liked_only'] if data and 'liked_only' in data else 'false'
+    liked_only = True if liked_only == 'true' else False
+    saved_only = data['saved_only'] if data and 'saved_only' in data else 'false'
+    saved_only = True if saved_only == 'true' else False
 
     # user_id: the logged in user
     # person_id: the author of the posts being requested
@@ -51,6 +52,8 @@ def get_reply_list(auth, data, user_id=None):
     elif community_id:
         replies = PostReply.query.filter_by(community_id=community_id)
         community_is_same = True
+    else:
+        replies = PostReply.query
 
     if max_depth:
         replies = replies.filter(PostReply.depth <= max_depth)
@@ -62,6 +65,13 @@ def get_reply_list(auth, data, user_id=None):
         blocked_instance_ids = blocked_instances(user_id)
         if blocked_instance_ids:
             replies = replies.filter(PostReply.instance_id.not_in(blocked_instance_ids))
+
+    if user_id and liked_only:
+        upvoted_reply_ids = recently_upvoted_post_replies(user_id)
+        replies = replies.filter(PostReply.id.in_(upvoted_reply_ids), PostReply.user_id != user_id)
+    elif user_id and saved_only:
+        bookmarked_reply_ids = db.session.execute(text('SELECT post_reply_id FROM "post_reply_bookmark" WHERE user_id = :user_id'), {"user_id": user_id}).scalars()
+        replies = replies.filter(PostReply.id.in_(bookmarked_reply_ids))
 
     if sort == "Hot":
         replies = replies.order_by(desc(PostReply.ranking)).order_by(desc(PostReply.posted_at))

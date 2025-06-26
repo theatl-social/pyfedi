@@ -24,6 +24,8 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     limit = int(data['limit']) if data and 'limit' in data else 50
     liked_only = data['liked_only'] if data and 'liked_only' in data else 'false'
     liked_only = True if liked_only == 'true' else False
+    saved_only = data['saved_only'] if data and 'saved_only' in data else 'false'
+    saved_only = True if saved_only == 'true' else False
 
     query = data['q'] if data and 'q' in data else ''
 
@@ -96,6 +98,9 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     if user_id and liked_only:
         upvoted_post_ids = recently_upvoted_posts(user_id)
         posts = posts.filter(Post.id.in_(upvoted_post_ids), Post.user_id != user_id)
+    elif user_id and saved_only:
+        bookmarked_post_ids = db.session.execute(text('SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'), {"user_id": user_id}).scalars()
+        posts = posts.filter(Post.id.in_(bookmarked_post_ids))
     elif user_id and user.hide_read_posts:
         u_rp_ids = db.session.execute(text('SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id'), {"user_id": user_id}).scalars()
         posts = posts.filter(Post.id.not_in(u_rp_ids))
