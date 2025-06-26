@@ -163,12 +163,10 @@
     </h2>
     <div id="flush-collapseOne" class="accordion-collapse collapse" data-bs-parent="#accordionFlushExample">
       <div class="accordion-body">
-            {% raw %}
-            <p>Tags available :<code>{% week %}, {% day %}, {% month %}, {% year %}</code></p>
-            <p>Example: <code>[Topic week {% week %}] Today's date {% year %}-{% month %}-{% day %}</code></p>
-            <p>...will generate</p>
+            <p>{{ _('Tags available') }}:<code>{% raw %}{% week %}, {% day %}, {% month %}, {% year %}{% endraw %}</code></p>
+            <p>{{ _('Example') }}: <code>{% raw %}[Topic week {% week %}] Today's date {% year %}-{% month %}-{% day %}{% endraw %}</code></p>
+            <p>{{ _('...will generate') }}</p>
             <p>[Topic week 27] Today's date 2025-06-25</p>
-            {% endraw %}
         </div>
     </div>
   </div>
