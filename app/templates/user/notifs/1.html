@@ -10,9 +10,18 @@
             </div>
         </div>
     </td>
-    <td class="text-nowrap" width="120">{{ arrow.get(notification.created_at).humanize(locale=locale) }}</td>
-    <td width="30">
-        <a href="{{ url_for('user.notification_delete', notification_id=notification.id) }}"
-            class="no-underline"><span class="fe fe-delete"></span></a>
+    <td class="text-nowrap align-middle" width="120">{{ arrow.get(notification.created_at).humanize(locale=locale) }}</td>
+    <td width="30" class="align-middle">
+      {% if not notification.read -%}
+        <a class="no-underline" role="button" aria-label="{{ _('Mark as read') }}" tabindex="0" title="{{ _('Mark as read') }}" 
+          hx-post="/notification/{{ notification.id }}/read" hx-trigger="click throttle:1s" hx-target="closest tr" hx-swap="outerHTML"><span class="fe fe-read"></span></a>
+      {% else -%}
+        <a class="no-underline" role="button" aria-label="{{ _('Mark as unread') }}" tabindex="0" title="{{ _('Mark as unread') }}" 
+          hx-post="/notification/{{ notification.id }}/unread" hx-trigger="click throttle:1s" hx-target="closest tr" hx-swap="outerHTML"><span class="fe fe-circle"></span></a>
+      {% endif -%}
+    </td>
+    <td width="30" class="align-middle">
+        <a class="no-underline" role="button" aria-label="{{ _('Delete') }}" tabindex="0" title="{{ _('Delete') }}" 
+          hx-post="/notification/{{ notification.id }}/delete" hx-trigger="click throttle:1s" hx-target="closest tr" hx-swap="outerHTML"><span class="fe fe-delete"></span></a>
     </td>
 </tr>
