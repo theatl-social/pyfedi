@@ -980,7 +980,7 @@ def post_report(post_id: int):
                         'orig_post_body': post.body
                         }
         for mod in post.community.moderators():
-            with force_locale(get_recipient_language(mod.id)):
+            with force_locale(get_recipient_language(mod.user_id)):
                 notification = Notification(user_id=mod.user_id, title=gettext('A post has been reported'),
                                             url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
                                             author_id=current_user.id, notif_type=NOTIF_REPORT,
@@ -1233,7 +1233,7 @@ def post_reply_report(post_id: int, comment_id: int):
                         'orig_comment_body':post_reply.body
                         }
         for mod in post.community.moderators():
-            with force_locale(get_recipient_language(mod.id)):
+            with force_locale(get_recipient_language(mod.user_id)):
                 notification = Notification(user_id=mod.user_id, title=gettext('A comment has been reported'),
                                             url=f"https://{current_app.config['SERVER_NAME']}/comment/{post_reply.id}",
                                             author_id=current_user.id, notif_type=NOTIF_REPORT,
