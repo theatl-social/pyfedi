@@ -22,6 +22,9 @@ def get_community_list(auth, data):
     sort = data['sort'] if data and 'sort' in data else "Hot"
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 10
+    show_nsfw = data['show_nsfw'] if data and 'show_nsfw' in data else 'false'
+    show_nsfw = True if show_nsfw == 'true' else False
+    show_nsfl = show_nsfw
 
     user = authorise_api_user(auth, return_type='model') if auth else None
     user_id = user.id if user else None
@@ -48,12 +51,15 @@ def get_community_list(auth, data):
         blocked_community_ids = blocked_communities(user_id)
         if blocked_community_ids:
             communities = communities.filter(Community.id.not_in(blocked_community_ids))
-        if user.hide_nsfw:
+        if user.hide_nsfw and not show_nsfw:
             communities = communities.filter(Community.nsfw == False)
-        if user.hide_nsfl:
+        if user.hide_nsfl and not show_nsfl:
             communities = communities.filter(Community.nsfl == False)
     else:
-        communities = communities.filter_by(nsfl=False, nsfw=False)
+        if not show_nsfw:
+            communities = communities.filter_by(nsfw=False)
+        if not show_nsfl:
+            communities = communities.filter_by(nsfl=False)
 
     if query:
         communities = communities.filter(or_(Community.title.ilike(f"%{query}%"), Community.ap_id.ilike(f"%{query}%")))
