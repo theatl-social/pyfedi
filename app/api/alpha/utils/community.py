@@ -18,7 +18,7 @@ from sqlalchemy import desc, or_
 
 
 def get_community_list(auth, data):
-    type = data['type_'] if data and 'type_' in data else "All"
+    type_ = data['type_'] if data and 'type_' in data else "All"
     sort = data['sort'] if data and 'sort' in data else "Hot"
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 10
@@ -34,9 +34,9 @@ def get_community_list(auth, data):
         search_for_community(query)
         query = query[1:]
 
-    if user_id and type == 'Subscribed':
+    if user_id and type_ == 'Subscribed':
         communities = Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == user_id)
-    elif type == 'Local':
+    elif type_ == 'Local':
         communities = Community.query.filter_by(ap_id=None, banned=False)
     else:
         communities = Community.query.filter_by(banned=False)
