@@ -260,6 +260,8 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
                    'ap_domain': community.ap_domain})
         if community.description and not stub:
             v1['description'] = community.description
+        if not stub:
+            v1['posting_warning'] = community.posting_warning
         if community.icon_id:
             v1['icon'] = community.icon.medium_url()
         if community.image_id and not stub:

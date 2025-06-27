@@ -459,6 +459,7 @@ def community_profile(actor):
                 "type": "Group",
                 "id": f"https://{server}/c/{actor}",
                 "name": community.title,
+                "postingWarning": community.posting_warning,
                 "sensitive": True if community.nsfw or community.nsfl else False,
                 "preferredUsername": actor,
                 "inbox": f"https://{server}/c/{actor}/inbox",

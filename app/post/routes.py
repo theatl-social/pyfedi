@@ -538,7 +538,8 @@ def add_reply_inline(post_id: int, comment_id: int, nonce):
 
     if request.method == 'GET':
         return render_template('post/add_reply_inline.html', post_id=post_id, comment_id=comment_id, nonce=nonce,
-                               languages=languages_for_form(), markdown_editor=current_user.markdown_editor)
+                               languages=languages_for_form(), markdown_editor=current_user.markdown_editor,
+                               in_reply_to=in_reply_to)
     else:
         content = request.form.get('body', '').strip()
         language_id = int(request.form.get('language_id'))

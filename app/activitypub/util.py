@@ -527,6 +527,7 @@ def refresh_community_profile_task(community_id, activity_json):
             if 'nsfl' in activity_json and activity_json['nsfl']:
                 community.nsfl = activity_json['nsfl']
             community.title = activity_json['name'].strip()
+            community.posting_warning = activity_json['postingWarning'].strip() if 'postingWarning' in activity_json else None
             community.restricted_to_mods = activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else False
             community.new_mods_wanted = activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False
             community.private_mods = activity_json['privateMods'] if 'privateMods' in activity_json else False
@@ -534,7 +535,6 @@ def refresh_community_profile_task(community_id, activity_json):
             community.ap_fetched_at = utcnow()
             community.public_key=activity_json['publicKey']['publicKeyPem']
 
-            description_html = ''
             if 'summary' in activity_json:
                 description_html = activity_json['summary']
             elif 'content' in activity_json:
@@ -905,6 +905,7 @@ def actor_json_to_model(activity_json, address, server):
                               private_mods=activity_json['privateMods'] if 'privateMods' in activity_json else False,
                               created_at=activity_json['published'] if 'published' in activity_json else utcnow(),
                               last_active=activity_json['updated'] if 'updated' in activity_json else utcnow(),
+                              posting_warning=activity_json['postingWarning'] if 'postingWarning' in activity_json else None,
                               ap_id=f"{address[1:].lower()}@{server.lower()}" if address.startswith('!') else f"{address.lower()}@{server.lower()}",
                               ap_public_url=activity_json['id'],
                               ap_profile_id=activity_json['id'].lower(),
