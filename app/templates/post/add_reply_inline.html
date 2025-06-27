@@ -1,6 +1,10 @@
 <form>
     <div class="row">
         <div class="col">
+            <div id="comment_language_warning_{{ comment_id }}" class="alert alert-warning d-none">
+                <i class="fas fa-language"></i>
+                {{ _('Warning: You are writing in a language that isn\'t the same as the user you are replying to uses! (%(language)s)', language=recipient_language_name) }}
+            </div>
                 <textarea name="body" id="textarea_in_reply_to_{{ comment_id }}" class="form-control" rows="5" autofocus="autofocus" required="required" aria-required="true"></textarea>
         </div>
     </div>
@@ -15,7 +19,10 @@
             <a href="#" class="btn btn-outline mt-2" hx-post="{{ url_for('post.preview') }}" hx-target="#textarea_in_reply_to_preview_{{ comment_id }}">{{ _('Preview') }}</a>
         </div>
         <div class="col-4 text-right">
-            <select name="language_id" class="form-select mt-2">
+            <select name="language_id" class="form-select mt-2" id="language_select_{{ comment_id }}"
+                    data-recipient-language="{{ recipient_language_id }}"
+                    data-warning-div-id="comment_language_warning_{{ comment_id }}"
+            >
                 {% for language in languages %}
                     <option value="{{ language[0] }}">{{ language[1] }}</option>
                 {% endfor %}
@@ -24,6 +31,14 @@
     </div>
 </form>
 {% if not low_bandwidth -%}
+    <script nonce="{{ nonce }}">
+        addLanguageCheck(
+            '#language_select_{{ comment_id }}',
+            undefined,
+            undefined,
+        )
+    </script>
+    
     {% if markdown_editor %}
         <script nonce="{{ nonce }}">
             var downarea = new DownArea({

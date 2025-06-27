@@ -28,7 +28,7 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_
 from app.models import Post, PostReply, PostReplyValidationError, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, Report, Site, Community, \
     Topic, User, Instance, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
-    PostReplyBookmark, CommunityBlock, File, CommunityFlair, UserFlair, BlockedImage, CommunityBan
+    PostReplyBookmark, CommunityBlock, File, CommunityFlair, UserFlair, BlockedImage, CommunityBan, Language
 from app.post import bp
 from app.shared.tasks import task_selector
 from app.utils import render_template, markdown_to_html, validation_required, \
@@ -225,26 +225,38 @@ def show_post(post_id: int):
             user = None
 
         community_flair = CommunityFlair.query.filter(CommunityFlair.community_id == post.community_id).order_by(CommunityFlair.flair).all()
-
+        # Get the language of the user being replied to
+        recipient_language_id = post.author.language_id
+        recipient_language_code = None
+        recipient_language_name = None
+        if recipient_language_id:
+            lang = Language.query.get(recipient_language_id)
+            if lang:
+                recipient_language_code = lang.code
+                recipient_language_name = lang.name
+                
         response = render_template('post/post.html', title=post.title, post=post, is_moderator=is_moderator, is_owner=community.is_owner(),
-                               community=post.community, community_flair=community_flair,
-                               breadcrumbs=breadcrumbs, related_communities=related_communities, mods=mod_list,
-                               poll_form=poll_form, poll_results=poll_results, poll_data=poll_data, poll_choices=poll_choices, poll_total_votes=poll_total_votes,
-                               canonical=post.ap_id, form=form, replies=replies, more_replies=more_replies, user_flair=user_flair,
-                               THREAD_CUTOFF_DEPTH=constants.THREAD_CUTOFF_DEPTH,
-                               description=description, og_image=og_image, show_deleted=current_user.is_authenticated and current_user.is_admin_or_staff(),
-                               autoplay=request.args.get('autoplay', False), archive_link=archive_link,
-                               noindex=not post.author.indexable, preconnect=post.url if post.url else None,
-                               recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
-                               recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies,
-                               reply_collapse_threshold=reply_collapse_threshold,
-                               etag=f"{post.id}{sort}_{hash(post.last_active)}", markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
-                               can_upvote_here=can_upvote(user, community),
-                               can_downvote_here=can_downvote(user, community),
-                               user_notes=user_notes(current_user.get_id()),
-                               banned_from_community=banned_from_community,
-                               low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
-                               inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                                community=post.community, community_flair=community_flair,
+                                breadcrumbs=breadcrumbs, related_communities=related_communities, mods=mod_list,
+                                poll_form=poll_form, poll_results=poll_results, poll_data=poll_data, poll_choices=poll_choices, poll_total_votes=poll_total_votes,
+                                canonical=post.ap_id, form=form, replies=replies, more_replies=more_replies, user_flair=user_flair,
+                                THREAD_CUTOFF_DEPTH=constants.THREAD_CUTOFF_DEPTH,
+                                description=description, og_image=og_image, show_deleted=current_user.is_authenticated and current_user.is_admin_or_staff(),
+                                autoplay=request.args.get('autoplay', False), archive_link=archive_link,
+                                noindex=not post.author.indexable, preconnect=post.url if post.url else None,
+                                recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
+                                recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies,
+                                reply_collapse_threshold=reply_collapse_threshold,
+                                etag=f"{post.id}{sort}_{hash(post.last_active)}", markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
+                                can_upvote_here=can_upvote(user, community),
+                                can_downvote_here=can_downvote(user, community),
+                                user_notes=user_notes(current_user.get_id()),
+                                banned_from_community=banned_from_community,
+                                low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
+                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                                recipient_language_id=recipient_language_id,
+                                recipient_language_code=recipient_language_code,
+                                recipient_language_name=recipient_language_name,
                                )
         response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
         response.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/post/{post.id}>; rel="alternate"; type="application/activity+json"')
@@ -537,8 +549,21 @@ def add_reply_inline(post_id: int, comment_id: int, nonce):
         return _('You cannot reply to %(name)s', name=in_reply_to.author.display_name())
 
     if request.method == 'GET':
+        # Get the language of the user being replied to
+        recipient_language_id = in_reply_to.author.language_id
+        recipient_language_code = None
+        recipient_language_name = None
+        if recipient_language_id:
+            lang = Language.query.get(recipient_language_id)
+            if lang:
+                recipient_language_code = lang.code
+                recipient_language_name = lang.name
+                
         return render_template('post/add_reply_inline.html', post_id=post_id, comment_id=comment_id, nonce=nonce,
-                               languages=languages_for_form(), markdown_editor=current_user.markdown_editor)
+                               languages=languages_for_form(), markdown_editor=current_user.markdown_editor,
+                               recipient_language_id=recipient_language_id,
+                               recipient_language_code=recipient_language_code,
+                               recipient_language_name=recipient_language_name)
     else:
         content = request.form.get('body', '').strip()
         language_id = int(request.form.get('language_id'))
@@ -1055,7 +1080,7 @@ def post_block_user(post_id: int):
             resp.headers['HX-Redirect'] = url_for("main.index")
         else:
             resp.headers['HX-Redirect'] = curr_url
-        
+
         return resp
 
     # todo: federate block to post author instance
@@ -1074,18 +1099,18 @@ def post_block_domain(post_id: int):
         db.session.commit()
         cache.delete_memoized(blocked_domains, current_user.id)
     flash(_('Posts linking to %(name)s will be hidden.', name=post.domain.name))
-    
+
     if request.headers.get('HX-Request'):
         resp = make_response()
         curr_url = request.headers.get('HX-Current-Url')
-        
+
         if "/post/" in curr_url:
             resp.headers['HX-Redirect'] = url_for("main.index")
         else:
             resp.headers['HX-Redirect'] = curr_url
-        
+
         return resp
-    
+
     return redirect(post.community.local_url())
 
 
@@ -1099,19 +1124,19 @@ def post_block_community(post_id: int):
         db.session.commit()
         cache.delete_memoized(blocked_communities, current_user.id)
     flash(_('Posts in %(name)s will be hidden.', name=post.community.display_name()))
-    
+
     if request.headers.get('HX-Request'):
         resp = make_response()
         curr_url = request.headers.get('HX-Current-Url')
         redir_home = ["/c/", "/post/"]
-        
+
         if any(found_str in curr_url for found_str in redir_home):
             resp.headers['HX-Redirect'] = url_for("main.index")
         else:
             resp.headers['HX-Redirect'] = curr_url
-        
+
         return resp
-    
+
     return redirect(post.community.local_url())
 
 
@@ -1130,7 +1155,7 @@ def post_block_instance(post_id: int):
             resp.headers["HX-Redirect"] = url_for("main.index")
         else:
             resp.headers["HX-Redirect"] = curr_url
-        
+
         return resp
 
     return redirect(post.community.local_url())
@@ -1299,7 +1324,7 @@ def post_reply_block_user(post_id: int, comment_id: int):
     if request.headers.get('HX-Request'):
         resp = make_response()
         curr_url = request.headers.get('HX-Current-Url')
-        
+
         if "/post/" in curr_url:
             if post_reply.author.id != post.author.id:
                 resp.headers['HX-Redirect'] = url_for('activitypub.post_ap', post_id=post.id)
@@ -1309,7 +1334,7 @@ def post_reply_block_user(post_id: int, comment_id: int):
             resp.headers['HX-Redirect'] = url_for("main.index")
         else:
             resp.headers['HX-Redirect'] = curr_url
-        
+
         return resp
 
     # todo: federate block to post_reply author instance
@@ -1338,7 +1363,7 @@ def post_reply_block_instance(post_id: int, comment_id: int):
                 resp.headers["HX-Redirect"] = curr_url
         else:
             resp.headers["HX-Redirect"] = curr_url
-        
+
         return resp
 
     return redirect(url_for('activitypub.post_ap', post_id=post_id))
