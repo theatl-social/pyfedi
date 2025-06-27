@@ -137,6 +137,7 @@ def get_reply(auth, data):
 def post_reply_like(auth, data):
     required(['comment_id', 'score'], data)
     integer_expected(['comment_id', 'score'], data)
+    boolean_expected(['private'], data)
 
     score = data['score']
     reply_id = data['comment_id']
@@ -147,8 +148,9 @@ def post_reply_like(auth, data):
     else:
         score = 0
         direction = 'reversal'
+    private = data['private'] if 'private' in data else False
 
-    user_id = vote_for_reply(reply_id, direction, SRC_API, auth)
+    user_id = vote_for_reply(reply_id, direction, not private, SRC_API, auth)
     reply_json = reply_view(reply=reply_id, variant=4, user_id=user_id, my_vote=score)
     return reply_json
 

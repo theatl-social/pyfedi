@@ -328,21 +328,18 @@ def user_profile(actor):
         if '@' in actor:
             user: User = User.query.filter_by(ap_id=actor.lower()).first()
         else:
-            user: User = User.query.filter(or_(User.user_name == actor, User.alt_user_name == actor)).filter_by(ap_id=None).first()
+            user: User = User.query.filter(or_(User.user_name == actor)).filter_by(ap_id=None).first()
             if user is None:
                 user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor.lower()}', ap_id=None).first()
     else:
         if '@' in actor:
             user: User = User.query.filter_by(ap_id=actor.lower()).first()
         else:
-            user: User = User.query.filter(or_(User.user_name == actor, User.alt_user_name == actor)).filter_by(ap_id=None).first()
+            user: User = User.query.filter(or_(User.user_name == actor)).filter_by(ap_id=None).first()
             if user is None:
                 user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor.lower()}', ap_id=None).first()
 
     if user is not None:
-        main_user_name = True
-        if user.alt_user_name == actor:
-            main_user_name = False
         if request.method == 'HEAD':
             if is_activitypub_request():
                 resp = jsonify('')
@@ -354,18 +351,18 @@ def user_profile(actor):
             server = current_app.config['SERVER_NAME']
             actor_data = {  "@context": default_context(),
                             "type": "Person" if not user.bot else "Service",
-                            "id": user.public_url(main_user_name),
+                            "id": user.public_url(),
                             "preferredUsername": actor,
                             "name": user.title if user.title else user.user_name,
-                            "inbox": f"{user.public_url(main_user_name)}/inbox",
-                            "outbox": f"{user.public_url(main_user_name)}/outbox",
+                            "inbox": f"{user.public_url()}/inbox",
+                            "outbox": f"{user.public_url()}/outbox",
                             "discoverable": user.searchable,
                             "indexable": user.indexable,
                             "acceptPrivateMessages": user.accept_private_messages,
                             "manuallyApprovesFollowers": False if not user.ap_manually_approves_followers else user.ap_manually_approves_followers,
                             "publicKey": {
-                                "id": f"{user.public_url(main_user_name)}#main-key",
-                                "owner": user.public_url(main_user_name),
+                                "id": f"{user.public_url()}#main-key",
+                                "owner": user.public_url(),
                                 "publicKeyPem": user.public_key
                             },
                             "endpoints": {
@@ -374,11 +371,7 @@ def user_profile(actor):
                             "published": ap_datetime(user.created),
                         }
 
-            if not main_user_name:
-                actor_data['name'] = 'Anonymous'
-                actor_data['published'] = ap_datetime(user.created + timedelta(minutes=randint(-2592000, 0)))
-                actor_data['summary'] = '<p>This is an anonymous alternative account of another account. It has been generated automatically for a Piefed user who chose to keep their interactions private. They cannot reply to your messages using this account, but only upvote (like) or downvote (dislike). For more information about Piefed and this feature see <a href="https://piefed.social/post/205362">https://piefed.social/post/205362</a>.</p>'
-            if user.avatar_id is not None and main_user_name:
+            if user.avatar_id is not None:
                 avatar_image = user.avatar_image()
                 if avatar_image.startswith('http'):
                     actor_data["icon"] = {
@@ -390,7 +383,7 @@ def user_profile(actor):
                         "type": "Image",
                         "url": f"https://{current_app.config['SERVER_NAME']}{user.avatar_image()}"
                     }
-            if user.cover_id is not None and main_user_name:
+            if user.cover_id is not None:
                 cover_image = user.cover_image()
                 if cover_image.startswith('http'):
                     actor_data["image"] = {
@@ -402,10 +395,10 @@ def user_profile(actor):
                         "type": "Image",
                         "url": f"https://{current_app.config['SERVER_NAME']}{user.cover_image()}"
                     }
-            if user.about_html and main_user_name:
+            if user.about_html:
                 actor_data['summary'] = user.about_html
                 actor_data['source'] = {'content': user.about, 'mediaType': 'text/markdown'}
-            if user.matrix_user_id and main_user_name:
+            if user.matrix_user_id:
                 actor_data['matrixUserId'] = user.matrix_user_id
             if user.extra_fields.count() > 0:
                 actor_data['attachment'] = []
@@ -418,10 +411,7 @@ def user_profile(actor):
             resp.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/u/{actor}>; rel="alternate"; type="text/html"')
             return resp
         else:
-            if main_user_name:
-                return show_profile(user)
-            else:
-                return render_template('errors/alt_profile.html')
+            return show_profile(user)
     else:
         abort(404)
 

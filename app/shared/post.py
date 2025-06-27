@@ -24,7 +24,7 @@ from PIL import Image, ImageOps
 from sqlalchemy import text
 
 
-def vote_for_post(post_id: int, vote_direction, src, auth=None):
+def vote_for_post(post_id: int, vote_direction, federate: bool, src, auth=None):
     if src == SRC_API:
         post = Post.query.filter_by(id=post_id).one()
         user = authorise_api_user(auth, return_type='model')
@@ -41,7 +41,7 @@ def vote_for_post(post_id: int, vote_direction, src, auth=None):
     # mark the post as read for the user
     user.mark_post_as_read(post)
 
-    task_selector('vote_for_post', user_id=user.id, post_id=post_id, vote_to_undo=undo, vote_direction=vote_direction)
+    task_selector('vote_for_post', user_id=user.id, post_id=post_id, vote_to_undo=undo, vote_direction=vote_direction, federate=federate)
 
     if src == SRC_API:
         return user.id
