@@ -800,12 +800,18 @@ function setupKeyboardShortcuts() {
             }
         }
 
-        // While typing a post or reply, Ctrl + Enter submits the form
+        // While typing a post or reply, Ctrl + Enter (or Cmd + Enter on Mac) submits the form
         if(document.activeElement.tagName === 'TEXTAREA') {
-            if (event.ctrlKey && event.key === 'Enter') {
-                var form = document.activeElement.closest('form');
-                if (form) {
-                    form.submit.click();
+            if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+                // Special handling for textareas with name "body"
+                if (document.activeElement.name === 'body') {
+                    event.preventDefault();
+                    handleCtrlEnterForBodyTextarea(document.activeElement);
+                } else {
+                    var form = document.activeElement.closest('form');
+                    if (form) {
+                        form.submit.click();
+                    }
                 }
             }
         }
@@ -1474,6 +1480,30 @@ function setupDynamicContentObserver() {
     });
 }
 
+// handle Ctrl+Enter for comment textareas
+function handleCtrlEnterForBodyTextarea(textarea) {
+    // First try to find btn-primary within the same form
+    const form = textarea.closest('form');
+    if (form) {
+        const btnPrimary = form.querySelector('.btn-primary');
+        if (btnPrimary) {
+            btnPrimary.click();
+            return;
+        }
+    }
+    
+    // If no form or no btn-primary in form, search in the parent container
+    let container = textarea.parentElement;
+    while (container && container !== document.body) {
+        const btnPrimary = container.querySelector('.btn-primary');
+        if (btnPrimary) {
+            btnPrimary.click();
+            return;
+        }
+        container = container.parentElement;
+    }
+}
+
 // Re-run specific setup functions for dynamically loaded content
 function setupDynamicContent() {
     // These are the key functions needed for post options and other dynamic content
@@ -1482,6 +1512,26 @@ function setupDynamicContent() {
     setupShowElementLinks();
     setupShowMoreLinks();
     setupUserPopup();
+    setupDynamicKeyboardShortcuts();
+}
+
+// Setup keyboard shortcuts for dynamically loaded content
+function setupDynamicKeyboardShortcuts() {
+    // Add event listeners to any new textarea elements with name "body"
+    document.querySelectorAll('textarea[name="body"]').forEach(textarea => {
+        // Remove existing listener to avoid duplicates
+        textarea.removeEventListener('keydown', handleDynamicCtrlEnter);
+        // Add new listener
+        textarea.addEventListener('keydown', handleDynamicCtrlEnter);
+    });
+}
+
+// Handler for dynamic textarea keydown events
+function handleDynamicCtrlEnter(event) {
+    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && event.target.name === 'body') {
+        event.preventDefault();
+        handleCtrlEnterForBodyTextarea(event.target);
+    }
 }
 
 // Community filter (search box)
