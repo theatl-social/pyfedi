@@ -55,6 +55,7 @@ class SettingsForm(FlaskForm):
     searchable = BooleanField(_l('Show profile in user list'))
     indexable = BooleanField(_l('My posts appear in search results'))
     hide_read_posts = BooleanField(_l('Do not display posts with which I have already interacted (opened/upvoted/downvoted)'))
+    show_subscribed_communities = BooleanField(_l("Show communities I've joined on my profile"))
     manually_approves_followers = BooleanField(_l('Manually approve followers'))
     vote_privately = BooleanField(_l('Vote privately'))
     feed_auto_follow = BooleanField(_l('Enable Automatic Follow of Feed Communities.'), default=True)

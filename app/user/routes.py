@@ -148,7 +148,7 @@ def _get_user_upvoted_posts(user):
 
 def _get_user_subscribed_communities(user):
     """Get communities subscribed to by user."""
-    if current_user.is_authenticated and (user.id == current_user.get_id() or current_user.is_staff() or current_user.is_admin()):
+    if current_user.is_authenticated and (user.id == current_user.get_id() or current_user.is_staff() or current_user.is_admin() or user.show_subscribed_communities):
         return Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == user.id).all()
     return []
 
@@ -531,6 +531,7 @@ def user_settings():
         current_user.additional_css = form.additional_css.data
         session['ui_language'] = form.interface_language.data
         current_user.vote_privately = form.vote_privately.data
+        current_user.show_subscribed_communities = form.show_subscribed_communities.data
         if form.vote_privately.data:
             if current_user.alt_user_name is None or current_user.alt_user_name == '':
                 current_user.alt_user_name = gibberish(randint(8, 20))
@@ -566,6 +567,7 @@ def user_settings():
         form.accept_private_messages.data = current_user.accept_private_messages
         form.font.data = current_user.font
         form.additional_css.data = current_user.additional_css
+        form.show_subscribed_communities.data = current_user.show_subscribed_communities
 
     return render_template('user/edit_settings.html', title=_('Change settings'), form=form, user=current_user,
                            )
