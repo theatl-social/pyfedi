@@ -1889,38 +1889,39 @@ class Post(db.Model):
         assert vote_direction == 'upvote' or vote_direction == 'downvote'
         undo = None
         if existing_vote:
-            if not self.community.low_quality:
-                with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
-                    db.session.execute(text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
-                                       {'effect': existing_vote.effect, 'user_id': self.user_id})
-                    db.session.commit()
-            if existing_vote.effect > 0:  # previous vote was up
-                if vote_direction == 'upvote':  # new vote is also up, so remove it
-                    db.session.delete(existing_vote)
-                    db.session.commit()
-                    self.up_votes -= 1
-                    self.score -= existing_vote.effect              # score - (+1) = score-1
-                    undo = 'Like'
-                else:  # new vote is down while previous vote was up, so reverse their previous vote
-                    existing_vote.effect = -1
-                    db.session.commit()
-                    self.up_votes -= 1
-                    self.down_votes += 1
-                    self.score += existing_vote.effect * 2          # score + (-2) = score-2
-            else:  # previous vote was down
-                if vote_direction == 'downvote':  # new vote is also down, so remove it
-                    db.session.delete(existing_vote)
-                    db.session.commit()
-                    self.down_votes -= 1
-                    self.score -= existing_vote.effect              # score - (-1) = score+1
-                    undo = 'Dislike'
-                else:  # new vote is up while previous vote was down, so reverse their previous vote
-                    existing_vote.effect = 1
-                    db.session.commit()
-                    self.up_votes += 1
-                    self.down_votes -= 1
-                    self.score += existing_vote.effect * 2          # score + (+2) = score+2
-            db.session.commit()
+            with redis_client.lock(f"lock:vote:{existing_vote.id}", timeout=10, blocking_timeout=6):
+                if not self.community.low_quality:
+                    with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
+                        db.session.execute(text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
+                                           {'effect': existing_vote.effect, 'user_id': self.user_id})
+                        db.session.commit()
+                if existing_vote.effect > 0:  # previous vote was up
+                    if vote_direction == 'upvote':  # new vote is also up, so remove it
+                        db.session.delete(existing_vote)
+                        db.session.commit()
+                        self.up_votes -= 1
+                        self.score -= existing_vote.effect              # score - (+1) = score-1
+                        undo = 'Like'
+                    else:  # new vote is down while previous vote was up, so reverse their previous vote
+                        existing_vote.effect = -1
+                        db.session.commit()
+                        self.up_votes -= 1
+                        self.down_votes += 1
+                        self.score += existing_vote.effect * 2          # score + (-2) = score-2
+                else:  # previous vote was down
+                    if vote_direction == 'downvote':  # new vote is also down, so remove it
+                        db.session.delete(existing_vote)
+                        db.session.commit()
+                        self.down_votes -= 1
+                        self.score -= existing_vote.effect              # score - (-1) = score+1
+                        undo = 'Dislike'
+                    else:  # new vote is up while previous vote was down, so reverse their previous vote
+                        existing_vote.effect = 1
+                        db.session.commit()
+                        self.up_votes += 1
+                        self.down_votes -= 1
+                        self.score += existing_vote.effect * 2          # score + (+2) = score+2
+                db.session.commit()
         else:
             if vote_direction == 'upvote':
                 effect = Instance.weight(user.ap_domain)
@@ -2277,36 +2278,37 @@ class PostReply(db.Model):
         assert vote_direction == 'upvote' or vote_direction == 'downvote'
         undo = None
         if existing_vote:
-            with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
-                db.session.execute(text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
-                                   {'effect': existing_vote.effect, 'user_id': self.user_id})
-                db.session.commit()
-            if existing_vote.effect > 0:  # previous vote was up
-                if vote_direction == 'upvote':  # new vote is also up, so remove it
-                    db.session.delete(existing_vote)
+            with redis_client.lock(f"lock:vote:{existing_vote.id}", timeout=10, blocking_timeout=6):
+                with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
+                    db.session.execute(text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
+                                       {'effect': existing_vote.effect, 'user_id': self.user_id})
                     db.session.commit()
-                    self.up_votes -= 1
-                    self.score -= 1
-                    undo = 'Like'
-                else:  # new vote is down while previous vote was up, so reverse their previous vote
-                    existing_vote.effect = -1
-                    db.session.commit()
-                    self.up_votes -= 1
-                    self.down_votes += 1
-                    self.score -= 2
-            else:  # previous vote was down
-                if vote_direction == 'downvote':  # new vote is also down, so remove it
-                    db.session.delete(existing_vote)
-                    db.session.commit()
-                    self.down_votes -= 1
-                    self.score += 1
-                    undo = 'Dislike'
-                else:  # new vote is up while previous vote was down, so reverse their previous vote
-                    existing_vote.effect = 1
-                    db.session.commit()
-                    self.up_votes += 1
-                    self.down_votes -= 1
-                    self.score += 2
+                if existing_vote.effect > 0:  # previous vote was up
+                    if vote_direction == 'upvote':  # new vote is also up, so remove it
+                        db.session.delete(existing_vote)
+                        db.session.commit()
+                        self.up_votes -= 1
+                        self.score -= 1
+                        undo = 'Like'
+                    else:  # new vote is down while previous vote was up, so reverse their previous vote
+                        existing_vote.effect = -1
+                        db.session.commit()
+                        self.up_votes -= 1
+                        self.down_votes += 1
+                        self.score -= 2
+                else:  # previous vote was down
+                    if vote_direction == 'downvote':  # new vote is also down, so remove it
+                        db.session.delete(existing_vote)
+                        db.session.commit()
+                        self.down_votes -= 1
+                        self.score += 1
+                        undo = 'Dislike'
+                    else:  # new vote is up while previous vote was down, so reverse their previous vote
+                        existing_vote.effect = 1
+                        db.session.commit()
+                        self.up_votes += 1
+                        self.down_votes -= 1
+                        self.score += 2
         else:
             if user.cannot_vote():
                 effect = 0
