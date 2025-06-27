@@ -530,7 +530,7 @@ def user_settings():
         current_user.font = form.font.data
         current_user.additional_css = form.additional_css.data
         session['ui_language'] = form.interface_language.data
-        current_user.vote_privately = form.vote_privately.data
+        current_user.vote_privately = not form.federate_votes.data
         current_user.show_subscribed_communities = form.show_subscribed_communities.data
         if propagate_indexable:
             db.session.execute(text('UPDATE "post" set indexable = :indexable WHERE user_id = :user_id'),
