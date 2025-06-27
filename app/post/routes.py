@@ -368,7 +368,10 @@ def post_oembed(post_id):
 @login_required
 @validation_required
 def post_vote(post_id: int, vote_direction, federate):
-    federate = federate == 'public'
+    if federate == 'default':
+        federate = not current_user.vote_privately
+    else:
+        federate = federate == 'public'
     return vote_for_post(post_id, vote_direction, federate, SRC_WEB)
 
 
@@ -376,7 +379,10 @@ def post_vote(post_id: int, vote_direction, federate):
 @login_required
 @validation_required
 def comment_vote(comment_id, vote_direction, federate):
-    federate = federate == 'public'
+    if federate == 'default':
+        federate = not current_user.vote_privately
+    else:
+        federate = federate == 'public'
     return vote_for_reply(comment_id, vote_direction, federate, SRC_WEB)
 
 

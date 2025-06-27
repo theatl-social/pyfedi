@@ -18,6 +18,8 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
     }
+    setupVotingLongPress();
+    setupVotingDialogHandlers();
     setupCommunityNameInput();
     setupShowMoreLinks();
     setupConfirmFirst();
@@ -51,8 +53,6 @@ document.addEventListener("DOMContentLoaded", function () {
     setupVideoSpoilers();
     setupDynamicContentObserver();
     setupCommunityFilter();
-    setupVotingLongPress();
-    setupVotingDialogHandlers();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
@@ -1684,8 +1684,31 @@ function openVotingDialog(votingElement) {
     dialog.dataset.currentBaseUrl = baseUrl;
     dialog.originalVotingElement = votingElement;
     
-    // Show the dialog
+    // Get position of triggering element
+    const rect = votingElement.getBoundingClientRect();
+    
+    // Show the dialog first to get its dimensions
     dialog.showModal();
+    
+    // Now get the dialog dimensions and position it
+    const dialogRect = dialog.getBoundingClientRect();
+    
+    // Calculate position - center dialog over the voting element
+    const left = rect.left + (rect.width / 2) - (dialogRect.width / 2);
+    const top = rect.top + (rect.height / 2) - (dialogRect.height / 2);
+    
+    // Keep dialog within viewport bounds
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    const finalLeft = Math.max(10, Math.min(left, viewportWidth - dialogRect.width - 10));
+    const finalTop = Math.max(10, Math.min(top, viewportHeight - dialogRect.height - 10));
+    
+    // Apply positioning
+    dialog.style.position = 'fixed';
+    dialog.style.left = finalLeft + 'px';
+    dialog.style.top = finalTop + 'px';
+    dialog.style.margin = '0';
 }
 
 function setupVotingDialogHandlers() {

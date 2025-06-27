@@ -530,10 +530,7 @@ def user_settings():
         current_user.font = form.font.data
         current_user.additional_css = form.additional_css.data
         session['ui_language'] = form.interface_language.data
-        current_user.vote_privately = form.vote_privately.data
-        if form.vote_privately.data:
-            if current_user.alt_user_name is None or current_user.alt_user_name == '':
-                current_user.alt_user_name = gibberish(randint(8, 20))
+        current_user.vote_privately = not form.federate_votes.data
         if propagate_indexable:
             db.session.execute(text('UPDATE "post" set indexable = :indexable WHERE user_id = :user_id'),
                                {'user_id': current_user.id,
@@ -558,7 +555,7 @@ def user_settings():
         form.theme.data = current_user.theme
         form.markdown_editor.data = current_user.markdown_editor
         form.interface_language.data = current_user.interface_language
-        form.vote_privately.data = current_user.vote_privately
+        form.federate_votes.data = not current_user.vote_privately
         form.feed_auto_follow.data = current_user.feed_auto_follow
         form.feed_auto_leave.data = current_user.feed_auto_leave
         form.read_languages.data = current_user.read_language_ids
