@@ -155,7 +155,7 @@ class CreatePostForm(FlaskForm):
     notify_author = BooleanField(_l('Notify about replies'))
     language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
     scheduled_for = DateTimeLocalField(_l('Publish at'), validators=[Optional()], format="%Y-%m-%dT%H:%M")
-    repeat = SelectField(_l('Repeat'), validators=[Optional()], choices=[('none', _l('')), ('once', _l('Only once')), ('daily', _l('Daily')), ('weekly', _l('Weekly')), ('monthly', _l('Monthly'))],
+    repeat = SelectField(_l('Repeat'), validators=[Optional()], choices=[('none', _l('None')), ('once', _l('Only once')), ('daily', _l('Daily')), ('weekly', _l('Weekly')), ('monthly', _l('Monthly'))],
         render_kw={'class': 'form-select'})
     timezone = HiddenField(render_kw={'id': 'timezone'})
     submit = SubmitField(_l('Publish'))
