@@ -4,9 +4,10 @@ from unicodedata import normalize
 
 from flask import current_app
 
-from app import cache
-from app.models import Site, utcnow
+from app import cache, db
+from app.models import Site, utcnow, Notification, UserRegistration, User
 from app.utils import get_request
+from app.constants import NOTIF_REGISTRATION
 
 
 # Return a random string of 6 letter/digits.
@@ -56,3 +57,20 @@ def no_admins_logged_in_recently():
             return False
 
     return True
+
+
+def create_user_application(user: User, registration_answer: str):
+    application = UserRegistration(user_id=user.id, answer='Signed in with Google')
+    db.session.add(application)
+    targets_data = {'application_id':application.id,'user_id':user.id}
+    for admin in Site.admins():
+        notify = Notification(title='New registration', url=f'/admin/approve_registrations?account={user.id}',
+                              user_id=admin.id,
+                              author_id=user.id, notif_type=NOTIF_REGISTRATION,
+                              subtype='new_registration_for_approval',
+                              targets=targets_data)
+        admin.unread_notifications += 1
+        db.session.add(notify)
+        # todo: notify everyone with the "approve registrations" permission, instead of just all admins
+    db.session.commit()
+

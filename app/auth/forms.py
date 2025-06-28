@@ -118,3 +118,9 @@ class ChooseTrumpMuskForm(FlaskForm):
 class ChooseTopicsForm(FlaskForm):
     chosen_topics = MultiCheckboxField(_l('Choose some topics you are interested in'), coerce=int)
     submit = SubmitField(_l('Choose'))
+
+
+class RegisterByMastodonForm(FlaskForm):
+    email = EmailField(_l('Email'), validators=[DataRequired(), Email()], render_kw={'autofocus': True})
+    submit = SubmitField(_l("Set email"))
+
