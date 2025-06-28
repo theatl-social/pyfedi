@@ -1833,10 +1833,12 @@ function setupVotingDialogHandlers() {
 }
 
 function setupPopupTooltips() {
-    // Find all elements with a title
+    // Find all elements with a title, add the necessary bootstrap attributes
     document.querySelectorAll('[title]').forEach(el => {
-      el.setAttribute('data-bs-toggle', 'tooltip');
-      el.setAttribute('data-bs-placement', 'top'); // optional
+      if (!el.hasAttribute('data-bs-toggle')) {     // don't mess with dropdowns that use data-bs-toggle
+        el.setAttribute('data-bs-toggle', 'tooltip');
+        el.setAttribute('data-bs-placement', 'top');
+      }
     });
 
     // Initialize tooltips
