@@ -7,7 +7,6 @@ from werkzeug.urls import url_parse
 from flask_login import login_user, logout_user, current_user
 from flask_babel import _
 from wtforms import Label
-from urllib.request import urlretrieve
 
 from app import db, cache, limiter, oauth
 from app.auth import bp
@@ -406,22 +405,28 @@ def google_authorize():
 
 @bp.route("/mastodon_login")
 def mastodon_login():
-    redirect_uri = url_for('auth.mastodon_authorize', _external=True)
+    redirect_uri = "urn:ietf:wg:oauth:2.0:oob"#url_for('auth.mastodon_authorize', _external=True)
     return oauth.mastodon.authorize_redirect(redirect_uri=redirect_uri)
 
 
 @bp.route("/mastodon_authorize", methods=['GET', 'POST'])
 def mastodon_authorize():
-    try:
-        token = oauth.mastodon.authorize_access_token()
-    except Exception as e:
-        current_app.logger.exception("Mastodon OAuth error")
-        flash(_('Login failed due to a problem with Mastodon server.'), 'error')
-        return redirect(url_for('auth.login'))
+    if not session.get("mastodon_token"):
+        try:
+            token = oauth.mastodon.authorize_access_token()
+            session["mastodon_token"] = token 
+        except Exception as e:
+            current_app.logger.exception(e)
+            flash(_('Login failed due to a problem with Mastodon server.'), 'error')
+            return redirect(url_for('auth.login'))
+    else:
+        token = session.get("mastodon_token")
+
     resp = oauth.mastodon.get('v1/accounts/verify_credentials', token=token)
     user_info = resp.json()
     mastodon_id = user_info['id']
     username = user_info.get('username', '')
+    display_name = user_info.get("display_name", "")
 
     user = User.query.filter_by(mastodon_oauth_id=mastodon_id).first()
     if not user:
@@ -433,39 +438,29 @@ def mastodon_authorize():
             return redirect(url_for('auth.please_wait'))
         # if IP is not banned and there is no user just display form to fill additional data
         form = RegisterByMastodonForm()
-        if request.method == "GET":
+        if request.method == "GET" or not form.validate_on_submit():
             return render_template(
                 'auth/mastodon_authorize.html', form=form, user_info=user_info
             ) 
         # Note - get from form additional data
-        if not form.validate_on_submit():
-            return render_template(
-                'auth/mastodon_authorize.html', form=form, user_info=user_info
-            ) 
-
         email = form.email.data
-        password = form.password.data
+        # password = form.password.data
         # get avatar also
-        avatar_url = user_info.get("avatar", '')
-        avatar_extension = avatar_url.split("/")[-1].split(".")[-1]
-        filename = f"{username}_avatar.{avatar_extension}"
-        avatar = save_icon_file(urlretrieve(avatar_url, filename))
-        
-        user = User(user_name=username, title=name, email=email, verified=True,
+        user = User(user_name=username, title=display_name, email=email, verified=True,
                     verification_token='', instance_id=1, ip_address=ip_address(),
                     banned=user_ip_banned() or user_cookie_banned(), email_unread_sent=False,
-                    referrer='', alt_user_name=gibberish(randint(8, 20)), mastodon_oauth_id=mastdon_id)
+                    referrer='', alt_user_name=gibberish(randint(8, 20)), mastodon_oauth_id=mastodon_id)
+        ip_address_info = ip2location(user.ip_address)
         user.ip_address_country = ip_address_info['country'] if ip_address_info else ''
-        user.set_password(password)
-        user.avatar = avatar
+        # user.set_password(password)
         db.session.add(user)
 
-    db.session.commit()
-    if get_setting('ban_check_servers', 'piefed.social'):
-        task_selector('check_application', application_id=application.id)
-    if g.site.registration_mode == 'RequireApplication' and g.site.application_question:
-        create_user_application(user, "Signed in with Mastodon")
-        return redirect(url_for('auth.please_wait'))
+        db.session.commit()
+        if g.site.registration_mode == 'RequireApplication' and g.site.application_question:
+            application = create_user_application(user, "Signed in with Mastodon")
+            if get_setting('ban_check_servers', 'piefed.social'):
+                task_selector('check_application', application_id=application.id)
+            return redirect(url_for('auth.please_wait'))
     else:
         if user.verified:
             finalize_user_setup(user)

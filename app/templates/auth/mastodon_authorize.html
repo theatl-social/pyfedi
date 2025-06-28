@@ -12,14 +12,8 @@
         <div class="col col-login mx-auto">
             <div class="card mt-5">
                 <div class="card-body p-6">
-                    <div class="card-title text-center">{{ _('Mastodon user') }}</div>
-                        <div><img src="user_info['avatar_url']"/></div>
-                </div>
-            </div>
-            <div class="card mt-5">
-                <div class="card-body p-6">
                     <div class="card-title text-center">{{ _('Fill Mastodon data') }}</div>
-                        <form metgod="post">
+                        <form method="post">
                             {{ render_form(form) }}
                         </form>
                 </div>
