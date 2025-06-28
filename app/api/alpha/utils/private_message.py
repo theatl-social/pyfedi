@@ -1,5 +1,7 @@
 from app.api.alpha.views import private_message_view
-from app.models import ChatMessage
+from app.api.alpha.utils.validators import required, string_expected, integer_expected
+from app.chat.util import send_message
+from app.models import ChatMessage, Conversation, User
 from app.utils import authorise_api_user
 
 from flask import current_app
@@ -21,11 +23,32 @@ def get_private_message_list(auth, data):
 
     pm_list = []
     for private_message in private_messages:
-        ap_id = 'https://' + current_app.config['SERVER_NAME'] + '/chat/' + str(private_message.conversation_id) + '#message_' +  str(private_message.id)
-        pm_list.append(private_message_view(private_message, user_id, ap_id))
+        pm_list.append(private_message_view(private_message, variant=1))
 
     pm_json = {
         "private_messages": pm_list,
         'next_page': str(private_messages.next_num) if private_messages.next_num else None
     }
+    return pm_json
+
+
+def post_private_message(auth, data):
+    required(['content', 'recipient_id'], data)
+    string_expected(['content'], data)
+    integer_expected(['recipient_id'], data)
+
+    sender = authorise_api_user(auth, return_type='model')
+    recipient = User.query.filter_by(id=data['recipient_id']).one()
+
+    existing_conversation = Conversation.find_existing_conversation(recipient=recipient, sender=sender)
+    if not existing_conversation:
+        existing_conversation = Conversation(user_id=sender.id)
+        existing_conversation.members.append(recipient)
+        existing_conversation.members.append(sender)
+        db.session.add(existing_conversation)
+        db.session.commit()
+
+    private_message = send_message(data['content'], existing_conversation.id, user=sender)
+
+    pm_json = private_message_view(private_message, variant=2)
     return pm_json
